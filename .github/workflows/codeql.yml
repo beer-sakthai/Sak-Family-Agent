@@ -50,12 +50,20 @@ jobs:
           # interpreted or declarative, so there is nothing to compile. The
           # stock template's "Run manual build steps" placeholder — which ended
           # in `exit 1` — was dead for the same reason and has been removed.
+          #
+          # `queries:` is set per leg rather than in the config file, because a
+          # config file's `queries:` applies to every language at once and the
+          # three legs do not want the same suite. See the note on the init
+          # step for why only `actions` is widened.
           - language: actions             # the workflow files in this directory
             build-mode: none
+            queries: security-extended
           - language: javascript-typescript  # apps/sak_agent_dashboard
             build-mode: none
+            queries: ""
           - language: python              # the sakthai package and everything around it
             build-mode: none
+            queries: ""
 
     steps:
       - name: Harden the runner
@@ -76,10 +84,31 @@ jobs:
           build-mode: ${{ matrix.build-mode }}
           # The scope decision, with the measurement behind each exclusion.
           config-file: ./.github/codeql/codeql-config.yml
-          # Left at the default query suite on purpose. `security-extended`
-          # would widen the net against a dashboard that still has ~243
-          # first-party alerts to triage; widening before that backlog is read
-          # buys noise, not coverage.
+          # Python and JavaScript stay on the default query suite on purpose.
+          # `security-extended` there would widen the net against a dashboard
+          # that still has ~243 first-party alerts to triage; widening before
+          # that backlog is read buys noise, not coverage.
+          #
+          # `actions` is the exception, and it is not a change of mind about
+          # the above — it is a different backlog. The extended suite for the
+          # `actions` language is the workflow-security rule set: untrusted
+          # checkout on `pull_request_target`, expression injection into `run:`
+          # blocks, secrets reaching a step that executes contributor code,
+          # over-broad `permissions:`. Those are precisely the failures this
+          # repository has already been bitten by — commit 93e306a silently
+          # reverted the `self-healing-ci.yml` fork guard, and nothing caught
+          # it until `tests/test_workflow_hygiene.py` was written to assert
+          # that one condition by hand. A hand-written assertion covers the one
+          # bypass someone thought to write down; this suite covers the shape.
+          # It also starts from a small surface: 40-odd workflow files against
+          # ~40 rules, not a whole repository.
+          queries: ${{ matrix.queries }}
+          # Cache the dependencies CodeQL resolves for the python extractor.
+          # Without it every analysis re-resolves the locked closure from PyPI
+          # before it can start extracting, on push, on every pull request and
+          # weekly. The input is a no-op for the other two legs, which have no
+          # dependency install step to cache.
+          dependency-caching: true
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4

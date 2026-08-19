@@ -1,5 +1,5 @@
 ---
-name: SakJules-stitch::code-to-design
+name: SakJules-stitch-code-to-design
 description: '>-   Convert frontend code (Vite, React, Angular, Vue, etc.) to a Stitch Design by
   chaining   static HTML extraction, design system extraction, and file upload. **ALWAYS**
   use this skill when the users intent is to move existing web apps or React/Ang'

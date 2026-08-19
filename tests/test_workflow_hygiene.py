@@ -37,6 +37,34 @@ that disappeared inside a commit whose message described something else.
 * **``.bandit`` is an ini file.** It was committed as a pasted fragment of
   GitHub Actions YAML, so bandit logged "Unable to parse config file" and every
   bare invocation ran with no configuration at all.
+
+* **Pull-request workflows serialise per ref.** Until 2026-08-18 not one of the
+  eleven push/pull-request workflows declared ``concurrency:``, so every
+  force-push left the previous CI, Pylint, CodeQL, Bandit, SonarCloud, ESLint
+  and subproject runs to finish against a commit nobody would look at again.
+  The repository had accumulated 27,417 workflow runs. Every stock starter
+  template omits the block, which is how it stayed missing.
+
+* **Every job declares a timeout.** A job with no ``timeout-minutes`` holds a
+  runner for GitHub's six-hour default. Four workflows set one; the other
+  sixteen did not.
+
+* **Composite actions are held to the same pinning rule.** Moving the shared
+  Python bootstrap into ``.github/actions/setup-uv-python`` moved four
+  workflows' ``uses:`` lines out of the directory this file used to scan. An
+  unpinned action inside a composite is exactly as unpinned as one in a
+  workflow, and it is now referenced by every gating Python job at once —
+  ``ci.yml``, ``pylint.yml``, ``dependency-audit.yml`` and both of
+  ``subprojects.yml``'s Python jobs — so the blast radius went up, not down,
+  while the coverage would have gone to zero.
+
+* **The self-hosted runner stays opt-in.** ``ci.yml`` selects its runner with
+  ``vars.CI_RUNNER_LABEL || 'ubuntu-latest'``. A hard-coded ``[self-hosted]``
+  does not *fail* when the host is unreachable — the job queues for up to 24
+  hours and then expires, so the whole repository stops reporting with nothing
+  red to point at. The fallback is what makes turning the runner off a
+  settings-page action instead of a pull request, and it is one careless edit
+  away from being lost.
 """
 
 from __future__ import annotations
@@ -50,6 +78,7 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
+ACTIONS_DIR = REPO_ROOT / ".github" / "actions"
 CODEQL_CONFIG = REPO_ROOT / ".github" / "codeql" / "codeql-config.yml"
 BANDIT_INI = REPO_ROOT / ".bandit"
 
@@ -71,6 +100,48 @@ def _workflow_files() -> list[Path]:
 
 def _yaml_workflows() -> list[Path]:
     return [p for p in _workflow_files() if p.suffix in {".yml", ".yaml"}]
+
+
+def _authored_workflows() -> list[Path]:
+    """The workflows a human edits — the ``.lock.yml`` files are compiler output.
+
+    gh-aw generates its lock files from the Markdown sources, and the shape of
+    that output is upstream's decision: it emits a top-level ``concurrency:``
+    but sets ``timeout-minutes`` on only one of each workflow's five-to-eight
+    generated jobs. Holding generated files to a rule the generator does not
+    follow would fail on every recompile, so the two rules below apply to the
+    hand-written workflows and say so.
+    """
+    return [p for p in _yaml_workflows() if not p.name.endswith(".lock.yml")]
+
+
+def _composite_actions() -> list[Path]:
+    """The repository's own composite actions, if it has any.
+
+    ``.github/actions/<name>/action.yml`` is where a local action lives; a
+    workflow reaches it as ``uses: ./.github/actions/<name>``, which the
+    pinning check skips (correctly — a local action is versioned with the
+    repository, so there is no third-party commit to pin). What it must not
+    skip is what the action itself pulls in.
+    """
+    if not ACTIONS_DIR.is_dir():
+        return []
+    return sorted(p for p in ACTIONS_DIR.glob("*/action.y*ml") if p.suffix in {".yml", ".yaml"})
+
+
+def _triggers(data: dict) -> set[str]:
+    """The event names in a workflow's ``on:``, however it was written.
+
+    ``on:`` accepts a list (``on: [push]``), a mapping (``on:\\n  push:``) or a
+    bare string, and PyYAML resolves the unquoted key ``on`` to the boolean
+    ``True`` under YAML 1.1 — so the key itself has to be looked up both ways.
+    """
+    on = data.get("on", data.get(True))
+    if isinstance(on, dict):
+        return set(on)
+    if isinstance(on, list):
+        return set(on)
+    return {on} if isinstance(on, str) else set()
 
 
 def _load(path: Path) -> dict:
@@ -236,4 +307,104 @@ def test_bandit_ini_exclusions_are_anchored() -> None:
     assert not unanchored, (
         "Every .bandit exclusion must start with './' so it can only match at "
         f"the repository root. Unanchored: {unanchored}"
+    )
+
+
+@pytest.mark.parametrize("path", _composite_actions(), ids=lambda p: p.parent.name)
+def test_composite_actions_pin_what_they_use(path: Path) -> None:
+    """Scorecard ``PinnedDependenciesID``, one directory along.
+
+    Extracting the shared Python bootstrap into ``.github/actions/`` moved four
+    workflows' ``uses:`` lines out of ``.github/workflows/``, which is the only
+    place :func:`test_actions_are_pinned_to_a_commit_sha` looks. The action is
+    referenced by every gating Python job in the repository, so an unpinned
+    ``uses:`` inside it reaches further than an unpinned one in any single
+    workflow — and nothing would have said so.
+    """
+    unpinned: list[str] = []
+    for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        match = _USES.match(line)
+        if not match:
+            continue
+        ref = match.group(1)
+        if ref.startswith("./") or ref.startswith("docker://"):
+            continue
+        if "@" not in ref or not _SHA_REF.match(ref.rsplit("@", 1)[1]):
+            unpinned.append(f"{path.parent.name}/{path.name}:{lineno}: {ref}")
+    assert not unpinned, (
+        "A composite action must pin its own dependencies to a commit SHA:\n" + "\n".join(unpinned)
+    )
+
+
+@pytest.mark.parametrize("path", _composite_actions(), ids=lambda p: p.parent.name)
+def test_composite_actions_are_well_formed(path: Path) -> None:
+    """A composite action needs ``runs:`` to be an action at all.
+
+    A file that parses as YAML but declares no ``runs:`` block is not ignored
+    the way a misnamed workflow is — every workflow referencing it fails at
+    once, with ``Can't find 'action.yml'``-shaped errors that point at the
+    caller rather than at the file that is actually wrong.
+    """
+    data = _load(path)
+    assert data.get("runs", {}).get("using") == "composite", (
+        f"{path.parent.name}/{path.name}: not a composite action "
+        "(`runs.using` must be `composite`)."
+    )
+    assert data.get("name"), f"{path.parent.name}/{path.name}: no `name:`"
+    assert data.get("description"), (
+        f"{path.parent.name}/{path.name}: no `description:` — required by "
+        "GitHub, and the action fails to load without it."
+    )
+
+
+def test_ci_keeps_its_hosted_runner_fallback() -> None:
+    """The self-hosted runner must stay opt-in, and reversible from a settings page.
+
+    ``runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}`` means: use the
+    self-hosted host when the repository variable names one, otherwise use a
+    GitHub-hosted runner. Deleting the variable reverts CI to hosted runners on
+    the very next run.
+
+    Hard-coding ``runs-on: [self-hosted]`` instead is not a symmetric choice,
+    because an unavailable runner does not produce a failure. A job dispatched
+    to a label with nothing online **queues** — for up to 24 hours, then
+    expires. Every pull request in the repository would stop reporting, with
+    nothing red anywhere to explain why. Restoring service would then need a
+    pull request, which needs CI, which is queued.
+
+    See ``infra/self-hosted-runner/README.md``.
+    """
+    runs_on = str(_load(WORKFLOWS_DIR / "ci.yml")["jobs"]["test"]["runs-on"])
+    normalised = " ".join(runs_on.split())
+    assert "vars.CI_RUNNER_LABEL" in normalised, (
+        "ci.yml's `test` job no longer selects its runner from the "
+        "`CI_RUNNER_LABEL` repository variable."
+    )
+    assert "ubuntu-latest" in normalised, (
+        "ci.yml's `test` job lost its GitHub-hosted fallback. Without it, an "
+        "unreachable self-hosted runner does not fail CI — it queues every job "
+        "for 24 hours and then expires them, silently."
+    )
+
+
+def test_cache_cleanup_never_runs_a_fork_pull_request() -> None:
+    """``cache-cleanup.yml`` holds ``actions: write`` on a ``pull_request`` event.
+
+    That combination is only safe because the job checks out nothing and the
+    fork guard keeps it from running at all on a fork's pull request — where
+    the token is read-only regardless of the declared permissions, so the
+    delete would 403 and fail a run nobody can fix.
+    """
+    job = _load(WORKFLOWS_DIR / "cache-cleanup.yml")["jobs"]["purge"]
+
+    condition = " ".join(str(job["if"]).split())
+    assert "github.event.pull_request.head.repo.full_name == github.repository" in condition, (
+        "cache-cleanup.yml's `purge` job lost its fork guard."
+    )
+
+    uses = [str(step.get("uses", "")) for step in job["steps"]]
+    assert not any("actions/checkout" in u for u in uses), (
+        "cache-cleanup.yml must not check out the repository. It runs on "
+        "`pull_request` with `actions: write`; fetching the pull request's code "
+        "into that job is Scorecard's `DangerousWorkflowID`."
     )

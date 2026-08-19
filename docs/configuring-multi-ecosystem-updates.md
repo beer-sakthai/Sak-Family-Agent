@@ -14,7 +14,7 @@ subproject knows where their entry goes and why the obvious approach is wrong.
 |---|---|---|
 | `uv` | `/`, `/sakthai-chat-cli`, `/services/teams-copilot-mcp` | 5 |
 | `pip` | 12 — the Poetry SDK copy, 3 × `agent-self-evolution`, 6 `requirements.txt` dirs, 2 gradio `templates/` dirs | 5 |
-| `npm` | `/apps/sak_agent_dashboard` (pnpm), `/infra/pw-poc`, 2 × `SakSee-stitch::*` | 4 |
+| `npm` | `/apps/sak_agent_dashboard` (pnpm), `/infra/pw-poc`, 2 × `SakSee-stitch-*` | 4 |
 | `docker` | `/` (`Dockerfile.sandbox`), `/infra/sakthai-training-space` | 2 |
 | `github-actions` | `/` | 3 |
 

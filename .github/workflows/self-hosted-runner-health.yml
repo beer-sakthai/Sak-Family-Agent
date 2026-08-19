@@ -1,0 +1,126 @@
+# Is the self-hosted runner actually there, and does it still have the
+# toolchain the gating workflows expect?
+#
+# WHY THIS IS NOT PARANOIA
+#
+# A job dispatched to a label with no online runner does not fail. It queues —
+# for up to 24 hours, showing "Waiting for a runner to pick up this job", and
+# then expires. So the failure mode of a self-hosted runner going away is
+# *silence*: pull requests stop reporting, nothing turns red, and the first
+# signal is somebody noticing that CI has not finished in a while.
+#
+# The same is true one layer in. The runner can be online while `uv` is missing
+# from its PATH, or while Node is a major version below the floor the
+# dashboard's locked tree needs — and then it is `ci.yml` that fails, on step
+# three, for a reason that has nothing to do with the commit under test.
+#
+# This workflow answers both questions in under a minute, on demand and once a
+# day, and its ten-minute timeout means an absent runner fails *here* rather
+# than queueing in the workflow that gates merges.
+#
+# It gates nothing. `ci.yml` is the gate; this only tells you where to look.
+name: Self-hosted runner health
+
+on:
+  schedule:
+    # 06:15 UTC daily — before the working day, after cache-warm.yml's Monday
+    # 04:00 slot, so a Monday failure here is about the host and not about a
+    # cache job still holding it.
+    - cron: "15 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: Probe ${{ vars.CI_RUNNER_LABEL || '(no runner configured)' }}
+    # Skipped entirely when no runner is configured, so this costs nothing on a
+    # repository that has not set one up. Without the guard the job would fall
+    # back to `ubuntu-latest` and cheerfully report that a runner which does
+    # not exist is healthy.
+    if: vars.CI_RUNNER_LABEL != ''
+    runs-on: ${{ vars.CI_RUNNER_LABEL }}
+    # Short on purpose. This is the whole point of the workflow: ten minutes to
+    # discover the runner is gone, rather than a gating job queueing for a day.
+    timeout-minutes: 10
+    steps:
+      # Deliberately no harden-runner step. It installs an eBPF egress monitor,
+      # which is a GitHub-hosted-runner control — on hardware you own it is
+      # both unnecessary and, on some kernels, the thing that fails and makes
+      # this probe report a problem it invented itself.
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Report the host
+        run: |
+          {
+            echo "### Runner \`${{ runner.name }}\`"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| label | \`${{ vars.CI_RUNNER_LABEL }}\` |"
+            echo "| os / arch | ${{ runner.os }} / ${{ runner.arch }} |"
+            echo "| kernel | $(uname -sr) |"
+            echo "| uptime | $(uptime -p 2>/dev/null || echo unknown) |"
+            echo "| disk free on \$HOME | $(df -h "${HOME}" | awk 'NR==2 {print $4" of "$2}') |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      # The toolchain check is the half that catches a runner which is up but
+      # useless. Each entry is something a gating workflow actually invokes:
+      # git and uv for ci.yml and pylint.yml, node and pnpm for subprojects.yml
+      # and the two dashboard gates.
+      - name: Verify the toolchain the gating workflows need
+        run: |
+          set -uo pipefail
+          missing=0
+
+          check() {
+            local name="$1"; shift
+            if command -v "${name}" >/dev/null 2>&1; then
+              printf '| `%s` | ok | %s |\n' "${name}" "$("$@" 2>&1 | head -1)" >> "${GITHUB_STEP_SUMMARY}"
+            else
+              printf '| `%s` | **MISSING** | — |\n' "${name}" >> "${GITHUB_STEP_SUMMARY}"
+              echo "::error::${name} is not on the runner's PATH"
+              missing=1
+            fi
+          }
+
+          {
+            echo
+            echo "| tool | state | version |"
+            echo "|---|---|---|"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          check git git --version
+          check uv uv --version
+          check node node --version
+          check pnpm pnpm --version
+
+          if [ "${missing}" -ne 0 ]; then
+            echo "::error::Re-run infra/self-hosted-runner/bootstrap-toolchain.sh on this host."
+            exit 1
+          fi
+
+          # Node 22 is a floor, not a preference: on Node 20 every vitest worker
+          # in apps/sak_agent_dashboard dies at startup inside undici before a
+          # single test runs. A runner one major behind passes every check above
+          # and then fails subprojects.yml in a way that reads as a code problem.
+          node_major="$(node -v | cut -c2- | cut -d. -f1)"
+          if [ "${node_major}" -lt 22 ]; then
+            echo "::error::Node ${node_major} is below the floor of 22 that the dashboard's locked tree requires."
+            exit 1
+          fi
+
+      - name: Confirm the runner can build the project environment
+        # The end-to-end check: a runner that has `uv` on PATH but cannot
+        # resolve the locked closure (no network to PyPI, a full disk, a
+        # corrupted cache) is a runner that will fail ci.yml and not this
+        # workflow — unless this workflow does the same thing ci.yml does.
+        run: uv sync --locked --all-extras
