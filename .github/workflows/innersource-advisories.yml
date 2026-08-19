@@ -41,6 +41,9 @@ jobs:
   advisories:
     name: Publish dependency advisory report
     runs-on: ubuntu-latest
+    # One API read plus one issue write. If this is still running after five
+    # minutes it is wedged, not busy.
+    timeout-minutes: 5
     permissions:
       contents: read
       # Only to create/update the standing issue. Reading the alerts is the
