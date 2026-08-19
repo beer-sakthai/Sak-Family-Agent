@@ -1,0 +1,25 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "docs/OPERATING_CONTRACT.md"
+  ],
+  "permission": {
+    "edit": "deny",
+    "bash": "allow",
+    "webfetch": "allow"
+  },
+  "mcp": {
+    "sakthai": {
+      "type": "local",
+      "command": ["uv", "run", "--project", ".", "sakthai", "mcp"],
+      "enabled": true
+    },
+    "huggingface": {
+      "type": "local",
+      "command": ["npx", "-y", "@huggingface/mcp-server"],
+      "enabled": false
+    }
+  }
+}
