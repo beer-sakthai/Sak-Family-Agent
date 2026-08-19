@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
+import os
 import secrets
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -36,9 +38,26 @@ TIER_PRICING: dict[TenantTier, tuple[float, float]] = {
 }
 
 
+API_KEY_HASH_SECRET_ENV = "SAKTHAI_API_KEY_HASH_SECRET"
+
+
+def _get_api_key_hash_secret() -> bytes:
+    """Load and validate API key hashing secret used for deterministic keyed hashing."""
+    secret = os.getenv(API_KEY_HASH_SECRET_ENV)
+    if not secret:
+        raise RuntimeError(
+            f"Missing required environment variable: {API_KEY_HASH_SECRET_ENV}"
+        )
+    return secret.encode("utf-8")
+
+
 def hash_api_key(raw_key: str) -> str:
-    """Hash an API key with SHA-256 for secure storage."""
-    return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+    """Hash an API key with HMAC-SHA-256 for secure storage and lookup."""
+    return hmac.new(
+        _get_api_key_hash_secret(),
+        raw_key.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
 
 
 def generate_api_key(prefix: str = "sak_live_") -> tuple[str, str]:
