@@ -38,7 +38,7 @@ TIER_PRICING: dict[TenantTier, tuple[float, float]] = {
 }
 
 
-API_KEY_HASH_SECRET_ENV = "SAKTHAI_API_KEY_HASH_SECRET"
+API_KEY_HASH_SECRET_ENV = "SAKTHAI_API_KEY_HASH_SECRET"  # nosec B105 - environment variable name, not a secret value
 
 
 def _get_api_key_hash_secret() -> bytes:
