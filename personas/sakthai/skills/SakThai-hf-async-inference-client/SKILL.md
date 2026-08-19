@@ -1,6 +1,7 @@
 ---
 name: SakThai-hf-async-inference-client
-description: "Master async inference patterns with HFs AsyncInferenceClient — concurrent requests, streaming, MCP integration."
+description: "Master async inference patterns with HFs AsyncInferenceClient \u2014 concurrent requests,\
+  \ streaming, MCP integration."
 ---
 
 # HF Async Inference Client

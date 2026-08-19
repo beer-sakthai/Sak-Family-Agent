@@ -1,6 +1,7 @@
 ---
 name: SakJules-SakThai-playwright-auth-flow-state-testing
-description: "Scripted auth workflow coverage: login, session reuse, logout, and redirect   state transitions with Playwright."
+description: 'Scripted auth workflow coverage: login, session reuse, logout, and redirect   state
+  transitions with Playwright.'
 ---
 
 # Playwright Auth Flow State Testing

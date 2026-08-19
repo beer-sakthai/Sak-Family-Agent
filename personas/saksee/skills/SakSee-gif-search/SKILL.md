@@ -1,6 +1,7 @@
 ---
 name: SakSee-gif-search
-description: "Search/download GIFs from Tenor via curl + jq."
+description: Search/download GIFs from Tenor via curl + jq.
+...
 ---
 
 # GIF Search (Tenor API)

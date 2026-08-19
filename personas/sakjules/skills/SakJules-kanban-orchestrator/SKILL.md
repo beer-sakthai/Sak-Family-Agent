@@ -1,6 +1,7 @@
 ---
 name: SakJules-SakSit-kanban-orchestrator
-description: "Orchestrate multi-agent kanban workflows."
+description: Orchestrate multi-agent kanban workflows.
+...
 ---
 
 # Kanban Orchestrator — Decomposition Playbook

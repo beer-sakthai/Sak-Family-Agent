@@ -1,6 +1,8 @@
 ---
 name: SakThai-hub-api
-description: "Use when the user mentions huggingface_hub, HfApi, upload, download, create repo, manage models/datasets/spaces programmatically, collections, or Hub operations beyond simple push_to_hub. Phase: ALL."
+description: 'Use when the user mentions huggingface_hub, HfApi, upload, download, create repo,
+  manage models/datasets/spaces programmatically, collections, or Hub operations beyond
+  simple push_to_hub. Phase: ALL.'
 ---
 
 # Hub Python Library — SakThai Operations

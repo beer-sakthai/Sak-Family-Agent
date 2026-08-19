@@ -1,6 +1,7 @@
 ---
 name: SakJules-SakSit-continuous-learning-loop
-description: "Automated research cron feeding back into skills."
+description: Automated research cron feeding back into skills.
+...
 ---
 
 # SakSit Continuous Learning Loop

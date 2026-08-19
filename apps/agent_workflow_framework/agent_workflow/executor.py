@@ -193,7 +193,6 @@ def _validate_filepath(filepath: Any) -> Path:
         raise ValueError("File path cannot be empty.")
 
     path_str = str(filepath).strip()
-
     if any(ord(c) < 32 or ord(c) == 127 for c in path_str):
         raise ValueError("Control characters are not allowed in file paths")
 
@@ -472,7 +471,7 @@ def _validate_shell_command(cmd_str: str) -> None:
             if not sub:
                 continue
             # Strip curl-style upload prefix if present
-            if sub.startswith("@") and len(sub) > 1:
+            if sub.startswith("@"):
                 sub = sub.lstrip("@")
 
             try:

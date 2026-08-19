@@ -1,6 +1,7 @@
 ---
 name: SakThai-hf-datasets-library
-description: "Deep dive into the Hugging Face `datasets` Python library — Arrow-backed memory mapping, caching architecture, Dataset.map() operations, and processing pipelines."
+description: "Deep dive into the Hugging Face `datasets` Python library \u2014 Arrow-backed memory\
+  \ mapping, caching architecture, Dataset.map() operations, and processing pipelines."
 ---
 
 # Hugging Face Datasets Library Deep Dive

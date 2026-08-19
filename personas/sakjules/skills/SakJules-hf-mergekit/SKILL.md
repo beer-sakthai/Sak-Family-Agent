@@ -1,6 +1,7 @@
 ---
 name: SakJules-SakThai-hf-mergekit
-description: "Merge pre-trained language models in weight space using mergekit: algorithms, configuration, LoRA extraction, MoE merging, evolutionary optimization, and tokenizer transplantation."
+description: 'Merge pre-trained language models in weight space using mergekit: algorithms, configuration,
+  LoRA extraction, MoE merging, evolutionary optimization, and tokenizer transplantation.'
 ---
 
 # Hugging Face mergekit

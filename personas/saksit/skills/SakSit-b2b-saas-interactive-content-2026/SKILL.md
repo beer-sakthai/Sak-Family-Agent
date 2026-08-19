@@ -1,6 +1,7 @@
 ---
 name: SakSit-b2b-saas-interactive-content-2026
-description: "Saksit B2B Saas Interactive Content 2026"
+description: Saksit B2B Saas Interactive Content 2026
+...
 ---
 
 # B2B SaaS Interactive Content Strategy 2026

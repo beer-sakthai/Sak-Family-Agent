@@ -1,6 +1,6 @@
 ---
 name: SakSee-polymarket
-description: "Query Polymarket: markets, prices, orderbooks, history."
+description: 'Query Polymarket: markets, prices, orderbooks, history.'
 ---
 
 # Polymarket — Prediction Market Data
