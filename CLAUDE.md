@@ -233,7 +233,6 @@ The ones that gate a change:
 | `secret-scan.yml` | push to `main`, all PRs | gitleaks (config `.gitleaks.toml`, which allowlists persona docs) |
 | `dependency-audit.yml` | PRs touching `pyproject.toml`/`uv.lock`, weekly | pip-audit over `uv.lock` |
 | `dependency-review.yml` | all PRs | GitHub dependency-review on the PR's diff |
-| `ossar.yml` | push/PR to `main`, weekly | open-source static analysis |
 | `sonarcloud.yml` | push to `main` | SonarCloud analysis |
 | `pylint.yml` | push/PR to `main` | pylint over `personas/sakthai/sakthai` + `tests` |
 | `secret-scan.yml` | push to `main`, all PRs, manual | gitleaks (config `.gitleaks.toml`, which allowlists persona docs) |
@@ -253,52 +252,26 @@ The ones that gate a change:
 | `self-healing-ci.yml` | `workflow_run` completion of `CI` on `main` (failure only), or manual | runs `sakthai heal run` over the failed job's log and opens a `selfheal/` fix PR when the patch is safe and locally verified. Gates nothing — it only ever adds a PR |
 | `auto-merge.yml` | `pull_request_target` labeled/unlabeled/ready_for_review | turns GitHub's **native** auto-merge on for a PR carrying the `automerge` label (squash), off when the label is removed. Gates nothing and waives nothing — GitHub still holds the merge until branch protection is satisfied, including the non-author approval. Uses no checkout, so the `pull_request_target` token never meets PR code |
 
-Scheduled / manual only, so they never block a PR: `continuous-security.yml`
-(nightly), `verify-assets.yml` (daily HF asset check), `run-evals.yml` (weekly
-lm-eval, installs the `evals` dependency group), `auto-dependency-update.yml`
-(weekly), `stale.yml` (daily), `summary.yml` (on new issues), `OSPS.yml` (weekly
-security-baseline assessment), `code-scanning-cleanup.yml` (manual, retires
-orphaned code-scanning alerts), `manual.yml`.
-| `ossar.yml` | push/PR to `main`, weekly Monday | open-source static analysis on `windows-latest` → SARIF. Retired 2026-08-18, re-added 2026-08-19 as the stock starter template and repaired the same day — **read the callout below before editing it** |
-
-**`ossar.yml` was re-added on 2026-08-19 and needed two separate repairs.**
-It was retired on 2026-08-18 for the reasons in the removal note below, then
-re-added by commit `52be3a6` as GitHub's stock OSSAR starter template,
-unmodified, which turned `main` red. Both defects are fixed now, but the shape
-of them is worth keeping:
-
-1. **It could not check this repository out.** The stock template runs
-   `runs-on: windows-latest` (`github/ossar-action` supports no other runner),
-   and the repo contained eight skill directories with `::` in their names —
-   `SakJules-stitch::code-to-design` and seven `SakSee-stitch::*`. `::` is not a
-   legal NTFS path character, so `actions/checkout` exited 128 with
-   `invalid path '.../SakJules-stitch::code-to-design/SKILL.md'` before OSSAR
-   started. **Those directories are now `stitch-*` rather than `stitch::*`.**
-   Note the retired version of this workflow ran MSDO on `ubuntu-latest` and so
-   never hit this; the constraint arrived with the Windows-only action.
-2. **It violated three invariants `tests/test_workflow_hygiene.py` enforces**,
-   so it failed `ci.yml` as well as its own job: unpinned action tags, no
-   top-level `concurrency:`, and no `timeout-minutes`. All three are pinned and
-   declared now.
-
-3. **It still could not check out after the rename**, for an unrelated Windows
-   reason: three vendored paths under
-   `apps/sak_agent_dashboard/microsoft_agents_m365copilot/` are 274-278
-   characters, past Windows' 260-character `MAX_PATH`. Git wrote all 6,250
-   files and then exited 1 with no message naming a file. The workflow now runs
-   `git config --global core.longpaths true` before `actions/checkout`.
-
-The trap here is that (2) is mechanical while (1) and (3) are not. Pinning the
-SHAs alone would have turned `ci.yml` green while leaving a workflow that still
-could not check the repository out — a quieter failure, not a fixed one, and
-each layer only became visible once the one above it was cleared.
-
-**Two standing constraints follow from this, and they bind any future
-Windows-runner workflow, not just OSSAR:** a `::` in a path makes checkout fail
-immediately with `invalid path`, and a path over 260 characters makes it fail
-at the end with a bare exit 1. Both are properties of this repository's tree —
-the `stitch-*` skill names and the vendored M365 SDK — rather than of the
-workflow that trips over them.
+**`ossar.yml` was retired again on 2026-08-19 and should not come back.** It
+was re-added earlier the same day as GitHub's stock OSSAR starter template and
+repaired three times — once for `stitch::*` skill names Windows rejects as
+`invalid path`, once for the workflow hygiene invariants (SHA pins, top-level
+`concurrency:`, `timeout-minutes`), and once for the vendored M365 SDK paths
+that exceed `MAX_PATH` (fixed with `git config --global core.longpaths true`
+before `actions/checkout`). Each fix cleared one layer and revealed the next.
+The fourth layer is not fixable: MSDO's `bandit_runner.exe` globs every `.py`
+file in the repo and passes them as CLI args, producing a ~177,000-character
+command line — six times past Windows' 32,767-char `CreateProcess` limit — and
+Guardian's policy file controls detections, not scan targets. Bandit is already
+run properly by `bandit.yml` (`-c pyproject.toml` over first-party code) and
+ESLint by `eslint.yml` (`eslint src` over the one JS/TS subproject), so OSSAR
+adds no coverage worth the recurring red main. **Do not re-add it.** If a
+future Windows-runner workflow lands for a different reason, the two standing
+constraints from the earlier repairs still apply: a `::` in a path makes
+checkout fail immediately with `invalid path`, and a path over 260 characters
+makes it fail at the end with a bare exit 1. Both are properties of this
+repository's tree — the `stitch-*` skill names and the vendored M365 SDK —
+rather than of any one workflow.
 
 Note that the two `*-gate.yml` dashboard workflows are triggered by `personas/**`
 as well as `apps/sak_agent_dashboard/**`, but both run entirely inside
@@ -345,9 +318,10 @@ Docker / Actions), `continuous-security.yml` (nightly, but every run skipped its
 agent step because there is no `ANTHROPIC_API_KEY` — `security-audit.md` replaces
 it on the Gemini engine the rest of the agentic workflows already use),
 `ossar.yml` (MSDO with `tools: eslint` at a repository root that has no
-`package.json`, duplicating what `eslint.yml` does properly — **note it was
-re-added on 2026-08-19 as the stock OSSAR template and repaired rather than
-re-retired; see the callout above**), `stale.yml` (still
+`package.json`, duplicating what `eslint.yml` does properly — re-added later
+the same day as the stock OSSAR template, patched three times, and retired
+again on 2026-08-19 after a fourth defect proved unfixable; see the callout
+above), `stale.yml` (still
 carrying the starter template's literal `'Stale issue message'` placeholder), and
 `manual.yml` (a greeting echo). Before adding a workflow back, check the Actions
 tab for what it actually did.

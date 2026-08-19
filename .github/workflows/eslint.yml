@@ -24,9 +24,8 @@
 # Scope note: this does not gate anything. `subprojects.yml` runs
 # `pnpm lint` -> `typecheck` -> `test` -> `build` as the dashboard's actual
 # quality gate; this workflow exists to put the same findings on the Security
-# tab. The `category` below keeps its analyses separate from the ESLint SARIF
-# that `ossar.yml` uploads via Microsoft Security DevOps — two producers under
-# one tool name would otherwise take turns closing each other's alerts.
+# tab. The `category` below is kept for continuity with earlier uploads, so
+# alerts opened under it are not orphaned by this workflow's re-runs.
 name: ESLint
 
 on:
@@ -140,6 +139,5 @@ jobs:
         uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4
         with:
           sarif_file: eslint-results.sarif
-          # Keeps these analyses distinct from ossar.yml's MSDO ESLint upload.
           category: eslint-dashboard
           wait-for-processing: true
