@@ -136,6 +136,12 @@ jobs:
       - name: Build once to populate the Next.js compiler cache
         run: pnpm build
 
+      - name: Clean up old Next.js cache entries
+        run: |
+          # Remove build artifacts older than 7 days to prevent unbounded cache growth
+          find apps/sak_agent_dashboard/.next/cache -type f -atime +7 -delete 2>/dev/null || true
+          echo "Cleaned up stale cache entries"
+
       - name: Save the Next.js build cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
