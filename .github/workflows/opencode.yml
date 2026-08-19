@@ -9,6 +9,14 @@ on:
 permissions:
   contents: read
 
+# Serialise per issue/PR thread. `cancel-in-progress: false` on purpose: two `/oc`
+# comments are two different tasks, so cancelling the first would discard work the
+# commenter asked for. Queueing them also caps how fast an unattended run can spend
+# the OpenCode Go budget, which is shared with interactive usage.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: false
+
 jobs:
   opencode:
     if: |
@@ -25,11 +33,16 @@ jobs:
       )
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # `use_github_token: true` below skips the OIDC exchange, so no `id-token:
+    # write` is needed. It also means these four lines are the real ceiling on
+    # what the agent can do: the CLI runs on GITHUB_TOKEN, which Actions scopes
+    # to exactly this block. The OpenCode App token it would otherwise fetch
+    # carries the *app installation's* permissions and ignores this block
+    # entirely — which is why the default is not what we want here.
     permissions:
-      id-token: write
       contents: read
       pull-requests: read
-      issues: read
+      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6
@@ -39,8 +52,28 @@ jobs:
       - name: Run opencode
         uses: anomalyco/opencode/github@14b37df39168eaf6a6faf862ec4a7bbe9c825bbd  # v1.18.18
         env:
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # The OpenCode Go subscription key (https://opencode.ai/auth). The action
+          # forwards only its own declared inputs to the CLI, but step-level `env:`
+          # is inherited by the composite's run steps — the same route the Gemini
+          # key used before this workflow moved onto Go.
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          # Read by the CLI because of `use_github_token: true`. Actions does not
+          # export this on its own — only the `github.token` context exists — so
+          # it has to be passed explicitly.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          model: google/gemini-3.6-flash
+          # Authenticate to GitHub with the job's own GITHUB_TOKEN instead of
+          # exchanging an OIDC token for an OpenCode GitHub App installation
+          # token. Two reasons: the app token's permissions come from the app
+          # install rather than this workflow's `permissions:` block, so the
+          # read-only posture above would not actually bind; and the default
+          # path requires github.com/apps/opencode-agent to be installed on the
+          # repository, making the workflow fail closed on a missing install.
+          use_github_token: "true"
+          # Go plan provider. $0.22/$0.66 per Mtok, 1M context, tool calling — and
+          # the model docs/SOUL.md already names as SakThai's model policy.
+          model: opencode-go/deepseek-v4-flash
+          # This repository is public, and `share` defaults to true for public
+          # repos — which publishes an opencode.ai session link carrying the
+          # agent's reasoning trace on every run. Opt out explicitly.
+          share: "false"
