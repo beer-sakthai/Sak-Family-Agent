@@ -74,9 +74,7 @@ def _raise_429(*args: Any, **kwargs: Any) -> Any:
     raise Exception("HTTP 429 Too Many Requests")
 
 
-def test_run_agent_heals_provider_failure(
-    store: MemoryStore, tmp_path, monkeypatch
-) -> None:
+def test_run_agent_heals_provider_failure(store: MemoryStore, tmp_path, monkeypatch) -> None:
     # Bypass the provider retry layer deterministically (repo-sanctioned patch point).
     monkeypatch.setattr(loop, "_call_anthropic", _raise_429)
 

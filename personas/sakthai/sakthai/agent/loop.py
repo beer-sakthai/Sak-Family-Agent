@@ -402,9 +402,7 @@ def _dispatch_tool_calls(
         return
 
     messages.append({"role": "assistant", "content": response.content})
-    results = _process_tool_uses(
-        tool_uses, registry, store, notify, tool_calls, policy, heal
-    )
+    results = _process_tool_uses(tool_uses, registry, store, notify, tool_calls, policy, heal)
     messages.append({"role": "user", "content": results})
 
 
@@ -552,9 +550,7 @@ def run_agent(
         if supervisor is not None:
             persona_key = persona or "sakthai"
             try:
-                checkpoint_id = supervisor.snapshot_mgr.create_checkpoint(
-                    store, label="run_agent"
-                )
+                checkpoint_id = supervisor.snapshot_mgr.create_checkpoint(store, label="run_agent")
             except Exception as exc:  # noqa: BLE001 — fail-safe
                 logger.warning("Healing checkpoint failed (continuing without): %s", exc)
                 checkpoint_id = None
