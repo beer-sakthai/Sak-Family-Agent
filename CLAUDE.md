@@ -174,12 +174,11 @@ Other `make` targets: `compose-personas` (rebuild full skill trees into
 
 ### CI
 
-Thirty workflows live in `.github/workflows/`, plus four gh-aw Markdown
-sources compiled to `.lock.yml` beside them. The ones that gate a change:
-Twenty hand-written workflows live in `.github/workflows/`, plus **eight** gh-aw
-Markdown sources compiled to `.lock.yml` beside them. None of the eight runs on
-Copilot any more: seven run on `engine: gemini` and one on a vendored OpenCode
-engine driving a Gemini model — see
+Twenty-three hand-written workflows live in `.github/workflows/`, plus **eight**
+gh-aw Markdown sources compiled to `.lock.yml` beside them — 31 `.yml` files in
+all, plus `shared/opencode.md`, which is an import rather than a workflow of its
+own. None of the eight runs on Copilot any more: seven run on `engine: gemini`
+and one on a vendored OpenCode engine driving a Gemini model — see
 [`docs/gh-aw-engines.md`](docs/gh-aw-engines.md) and the gh-aw note below.
 
 Every hand-written workflow that a pull request can trigger declares a top-level
@@ -198,33 +197,55 @@ The ones that gate a change:
 |---|---|---|
 | `ci.yml` | push/PR to `main` | ruff check + format → mypy + bandit → pytest with coverage, on Python **3.11 and 3.12** |
 | `pylint.yml` | push/PR to `main` | pylint over `personas/sakthai/sakthai` + `tests` |
-| `secret-scan.yml` | push to `main`, all PRs | gitleaks (config `.gitleaks.toml`, which allowlists persona docs) |
-| `dependency-audit.yml` | PRs touching `pyproject.toml`/`uv.lock`, weekly | pip-audit over `uv.lock` |
+| `secret-scan.yml` | push to `main`, all PRs, manual | gitleaks (config `.gitleaks.toml`, which allowlists persona docs) |
+| `dependency-audit.yml` | PRs touching `pyproject.toml`/`uv.lock`, weekly Monday, manual | pip-audit over `uv.lock` |
 | `dependency-review.yml` | all PRs | GitHub dependency-review on the PR's diff |
-| `innersource-advisories.yml` | daily, manual | reads the open Dependabot alert list and rewrites one standing issue with it. **Needs `DEPENDABOT_ALERTS_TOKEN`** — `GITHUB_TOKEN` cannot read Dependabot alerts, and `security-events: read` does not grant it (the Actions app lacks the permission entirely). Gates nothing |
-| `ossar.yml` | push/PR to `main`, weekly | open-source static analysis |
-| `sonarcloud.yml` | push to `main` | SonarCloud analysis |
-| `sonarcloud.yml` | push/PR to `main`, manual | SonarCloud analysis (skipped on a fork's PR, which has no `SONAR_TOKEN`) |
 | `subprojects.yml` | push/PR touching `apps/agent_workflow_framework/**`, `apps/sak_agent_dashboard/**`, or `services/teams-copilot-mcp/**` | the two out-of-tree pytest suites + the dashboard's lint/typecheck/test/build chain |
-| `agent-self-evolution.yml` | push/PR touching `personas/sakthai/agent-self-evolution/**` | that subproject's own suite |
+| `quality-flywheel-gate.yml` | push/PR touching `apps/sak_agent_dashboard/**` or `personas/**`, manual | runs `apps/sak_agent_dashboard/scripts/run_eval_quality_gate.sh` — the eval-engine/API/component vitest files, then `tsc --noEmit`, then `pnpm build`. Runs on pnpm/Node 22, `working-directory: apps/sak_agent_dashboard` |
+| `mutation-self-healing-gate.yml` | push/PR touching `apps/sak_agent_dashboard/**` or `personas/**`, manual | runs `apps/sak_agent_dashboard/scripts/run_mutation_gate.sh` — the five `mutation_*` vitest files, then `tsc --noEmit`, then `pnpm build`. Same runner shape as the flywheel gate |
+| `agent-self-evolution.yml` | push/PR touching `personas/sakthai/agent-self-evolution/**`, manual | that subproject's own suite |
 | `labeler.yml` | `pull_request_target` | PR labelling |
-| `scorecard.yml` | push to `main`, weekly | OpenSSF Scorecard → SARIF to code scanning |
-| `codeql.yml` | push/PR to `main`, weekly | CodeQL **advanced** setup over `actions`, `javascript-typescript`, `python`; scope from `.github/codeql/codeql-config.yml` via `config-file:` |
-| `bandit.yml` | push/PR to `main`, weekly | bandit with `-c pyproject.toml` over first-party Python → SARIF to code scanning. Publishes, does not gate — `ci.yml` is the gate |
-| `eslint.yml` | push/PR touching `apps/sak_agent_dashboard/**`, weekly | `eslint src` with the app's own flat config → SARIF (`category: eslint-dashboard`). Publishes, does not gate — `subprojects.yml` is the gate |
+| `scorecard.yml` | push to `main`, weekly Thursday, `branch_protection_rule` | OpenSSF Scorecard → SARIF to code scanning |
+| `codeql.yml` | push/PR to `main`, weekly Sunday | CodeQL **advanced** setup over `actions`, `javascript-typescript`, `python`; scope from `.github/codeql/codeql-config.yml` via `config-file:` |
+| `sonarcloud.yml` | push/PR to `main`, manual | SonarCloud analysis (skipped on a fork's PR, which has no `SONAR_TOKEN`) |
+| `bandit.yml` | push/PR to `main`, weekly Wednesday | bandit with `-c pyproject.toml` over first-party Python → SARIF to code scanning. Publishes, does not gate — `ci.yml` is the gate |
+| `eslint.yml` | push/PR touching `apps/sak_agent_dashboard/**`, weekly Sunday | `eslint src` with the app's own flat config → SARIF (`category: eslint-dashboard`). Publishes, does not gate — `subprojects.yml` is the gate |
+| `innersource-advisories.yml` | daily 01:00 UTC, manual | reads the open Dependabot alert list and rewrites one standing issue with it. **Needs `DEPENDABOT_ALERTS_TOKEN`** — `GITHUB_TOKEN` cannot read Dependabot alerts, and `security-events: read` does not grant it (the Actions app lacks the permission entirely). Gates nothing |
 | `self-healing-ci.yml` | `workflow_run` completion of `CI` on `main` (failure only), or manual | runs `sakthai heal run` over the failed job's log and opens a `selfheal/` fix PR when the patch is safe and locally verified. Gates nothing — it only ever adds a PR |
 | `auto-merge.yml` | `pull_request_target` labeled/unlabeled/ready_for_review | turns GitHub's **native** auto-merge on for a PR carrying the `automerge` label (squash), off when the label is removed. Gates nothing and waives nothing — GitHub still holds the merge until branch protection is satisfied, including the non-author approval. Uses no checkout, so the `pull_request_target` token never meets PR code |
 
-Scheduled / manual only, so they never block a PR: `verify-assets.yml` (daily HF
-asset check), `run-evals.yml` (weekly lm-eval, installs the `evals` dependency
-group), `summary.yml` (on new issues), `OSPS.yml` (weekly security-baseline
-assessment), `code-scanning-cleanup.yml` (manual, retires orphaned code-scanning
-alerts), and four agentic audit workflows — `security-audit.md` (weekly Thursday,
-triages bandit + pip-audit + the guardrail suite), `shared-package-drift.md`
-(weekly, audits the `personas/shared/sakthai/` divergence register),
-`skills-hygiene.md` (weekly, runs `sakthai skills validate --naming`), and
-`opencode-smoke.md` (weekly, proves the vendored OpenCode engine still runs). All
-four report by opening an issue and none can open a pull request.
+Note that the two `*-gate.yml` dashboard workflows are triggered by `personas/**`
+as well as `apps/sak_agent_dashboard/**`, but both run entirely inside
+`apps/sak_agent_dashboard` — a persona-only change fires them and they still only
+exercise the dashboard.
+
+Scheduled, manual, or event-driven only, so they never block a PR:
+`verify-assets.yml` (daily HF asset check), `run-evals.yml` (weekly Sunday
+lm-eval, installs the `evals` dependency group), `summary.yml` (on new issues),
+`OSPS.yml` (weekly Monday security-baseline assessment), and
+`code-scanning-cleanup.yml` (manual, retires orphaned code-scanning alerts).
+
+The eight agentic gh-aw workflows also never block a PR, but **they do not all
+merely report** — check the `safe-outputs:` block before assuming one is
+read-only:
+
+| Source | Trigger | Output |
+|---|---|---|
+| `security-audit.md` | weekly Thursday | triages bandit + pip-audit + the guardrail suite; issue only |
+| `shared-package-drift.md` | weekly Tuesday | audits the `personas/shared/sakthai/` divergence register; one issue, `close-older-issues` |
+| `skills-hygiene.md` | weekly Wednesday | runs `sakthai skills validate --naming`; issue only |
+| `opencode-smoke.md` | weekly Monday | proves the vendored OpenCode engine still runs; one issue, `close-older-issues` |
+| `ci-doctor.md` | `workflow_run` completion of **`CI`, `Pylint`, `Subproject tests`** on `main`, failure only | root-causes the failure; opens a `[ci-doctor] ` issue and may `add-comment` |
+| `maintain-docs.md` | daily on weekdays | **opens a draft PR** (`[docs] `, max 1) for docs out of sync with recent commits |
+| `maintain-agents-md.md` | weekly Monday | **opens a draft PR** (`[agents-md] `, max 1) keeping `AGENTS.md` current with merged PRs |
+| `release.md` | `workflow_dispatch` only, `roles: [admin, maintainer]` | builds/tests/publishes a release for a `patch`/`minor`/`major` input; `safe-outputs: update-release` |
+
+So four report by issue only, `ci-doctor.md` reports by issue and comment, two
+open draft pull requests, and `release.md` writes a GitHub release. The
+`ci-doctor.md` `workflows:` list matches on `name:` values exactly — verify a new
+entry against `grep -h '^name:' .github/workflows/*.yml` before adding it, as the
+file's own comment records an entry that matched nothing for as long as it was
+there.
 
 **Five workflows were removed on 2026-08-18** after their run history was read
 rather than their files: `auto-dependency-update.yml` (22 runs, 22 failures — it
