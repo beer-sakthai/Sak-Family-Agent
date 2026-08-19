@@ -2,27 +2,22 @@
 
 from __future__ import annotations
 
-import enum
 import logging
 import traceback
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from ..memory.cache import CircuitBreaker
+from .circuit_breaker import DynamicCircuitBreaker
 from .dlq import DeadLetterItem, DeadLetterQueue
+from .models import DLQItem, ErrorSeverity, classify_exception
 from .snapshot import MemorySnapshotManager
 
 if TYPE_CHECKING:
-    from ..memory.store import MemoryStore
+    pass
 
 logger = logging.getLogger(__name__)
-
-
-class ErrorSeverity(enum.StrEnum):
-    TRANSIENT = "transient"  # 429, timeouts, connection resets
-    STATE_CORRUPT = "state_corrupt"  # partial transaction fail, db lock
-    FATAL = "fatal"  # auth fail, invalid schema, unrecoverable
 
 
 @dataclass
@@ -45,33 +40,36 @@ class SelfHealingSupervisor:
     ):
         self.dlq = dlq or DeadLetterQueue()
         self.snapshot_mgr = snapshot_mgr or MemorySnapshotManager()
-        self._circuit_breakers: dict[str, CircuitBreaker] = {}
+        self._circuit_breakers: dict[str, DynamicCircuitBreaker] = {}
 
-    def get_circuit_breaker(self, persona: str) -> CircuitBreaker:
+    def get_circuit_breaker(self, persona: str) -> DynamicCircuitBreaker:
         if persona not in self._circuit_breakers:
-            self._circuit_breakers[persona] = CircuitBreaker(
+            self._circuit_breakers[persona] = DynamicCircuitBreaker(
                 failure_threshold=3, recovery_time_sec=30.0
             )
         return self._circuit_breakers[persona]
 
     def classify_error(self, error: Exception | str) -> ErrorSeverity:
-        err_str = str(error).lower()
+        return classify_exception(error)
 
-        # Transient / Rate Limit patterns
-        if any(
-            w in err_str
-            for w in ["429", "rate limit", "timeout", "connection reset", "econnrefused"]
-        ):
-            return ErrorSeverity.TRANSIENT
-
-        # State corruption patterns
-        if any(
-            w in err_str
-            for w in ["database is locked", "sqlite_busy", "integrity", "savepoint", "rollback"]
-        ):
-            return ErrorSeverity.STATE_CORRUPT
-
-        return ErrorSeverity.FATAL
+    def handle_exception(
+        self,
+        persona: str,
+        exception: Exception | str,
+        payload: dict[str, Any],
+        db_path: Path | str | None = None,
+        checkpoint_id: str | None = None,
+    ) -> RecoveryResult:
+        """Alias for handle_execution_failure accepting direct db_path or payload."""
+        store_or_path = db_path
+        return self.handle_execution_failure(
+            persona=persona,
+            action="execution",
+            payload=payload,
+            error=exception if isinstance(exception, Exception) else Exception(str(exception)),
+            store=store_or_path,
+            checkpoint_id=checkpoint_id,
+        )
 
     def handle_execution_failure(
         self,
@@ -79,7 +77,7 @@ class SelfHealingSupervisor:
         action: str,
         payload: dict[str, Any],
         error: Exception,
-        store: MemoryStore | None = None,
+        store: Any | None = None,
         checkpoint_id: str | None = None,
     ) -> RecoveryResult:
         """Handle execution exception with automated remediation strategy."""
@@ -92,11 +90,7 @@ class SelfHealingSupervisor:
         action_taken = "none"
 
         # 1. State Rollback if checkpoint provided
-        if (
-            checkpoint_id
-            and store
-            and severity in (ErrorSeverity.STATE_CORRUPT, ErrorSeverity.FATAL)
-        ):
+        if checkpoint_id and store:
             rolled_back = self.snapshot_mgr.rollback(store, checkpoint_id)
             if rolled_back:
                 action_taken = "memory_rollback"
@@ -110,9 +104,9 @@ class SelfHealingSupervisor:
             stack_trace=stack,
         )
         if action_taken == "none":
-            action_taken = "enqueued_to_dlq"
+            action_taken = "enqueued_dlq"
         else:
-            action_taken += "+enqueued_to_dlq"
+            action_taken += "+enqueued_dlq"
 
         logger.warning(
             "Self-healing remediation executed: persona=%s, severity=%s, action=%s, dlq_id=%s",
@@ -124,36 +118,42 @@ class SelfHealingSupervisor:
 
         return RecoveryResult(
             action_taken=action_taken,
-            remediated=rolled_back or (severity == ErrorSeverity.TRANSIENT),
+            remediated=rolled_back or (severity == ErrorSeverity.TRANSIENT) or (dlq_id is not None),
             severity=severity,
             dlq_id=dlq_id,
             rolled_back=rolled_back,
             error_message=str(error),
         )
 
-    def replay_dlq_item(self, item_id: str, executor_fn: Callable[[DeadLetterItem], Any]) -> bool:
+    def replay_dlq_item(
+        self, item_id: str, executor_fn: Callable[[DeadLetterItem | DLQItem], Any]
+    ) -> bool:
         """Execute replay callback for a DLQ task."""
-        item = self.dlq.get_item(item_id)
-        if not item or item.status != "pending":
-            return False
+        with self.dlq._get_conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM dead_letter_items WHERE item_id = ?", (item_id,)
+            ).fetchone()
+            if not row or row["status"] not in ("pending", "PENDING", "retrying", "RETRYING"):
+                return False
 
-        try:
-            executor_fn(item)
-            self.dlq.mark_replayed(item_id)
-            cb = self.get_circuit_breaker(item.persona)
-            cb.record_success()
-            logger.info("Successfully replayed DLQ task: %s", item_id)
-            return True
-        except Exception as err:
-            self.dlq.record_retry_failure(item_id, str(err))
-            logger.error("Failed to replay DLQ task %s: %s", item_id, err)
-            return False
+            item = self.dlq._row_to_item(row)
+            try:
+                executor_fn(item)
+                self.dlq.resolve(item_id)
+                cb = self.get_circuit_breaker(item.persona)
+                cb.record_success()
+                logger.info("Successfully replayed DLQ task: %s", item_id)
+                return True
+            except Exception as err:
+                self.dlq.record_retry_attempt(item_id)
+                logger.error("Failed to replay DLQ task %s: %s", item_id, err)
+                return False
 
     def get_health_status(self, persona: str) -> dict[str, Any]:
         cb = self.get_circuit_breaker(persona)
         return {
             "persona": persona,
-            "circuit_state": cb.state,
+            "circuit_state": cb.state.value,
             "failure_count": cb.failure_count,
-            "healthy": cb.state == "CLOSED",
+            "healthy": cb.state == "closed",
         }

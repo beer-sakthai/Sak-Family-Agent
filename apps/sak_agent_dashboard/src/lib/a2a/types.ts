@@ -1,8 +1,42 @@
 /**
  * Agent-to-Agent (A2A) Protocol & Service Registry Domain Types.
  * Standardized JSON-RPC 2.0 framing, capability descriptors, health telemetry,
- * and cryptographic message envelopes for Sak-Family agents.
+ * real-time chunk streaming, and consensus voting models for Sak-Family agents.
  */
+
+export type ChunkType = "token" | "tool_call" | "tool_result" | "vote";
+export type VoteChoice = "approve" | "reject" | "abstain" | "veto";
+
+export interface A2AStreamChunk {
+  seq: number;
+  persona: string;
+  turn: number;
+  chunkType: ChunkType;
+  delta: string;
+  timestamp: string;
+  metadata?: Record<string, unknown>;
+  stopReason?: string | null;
+}
+
+export interface A2AVoteBallot {
+  sessionId: string;
+  persona: string;
+  choice: VoteChoice;
+  weight: number;
+  rationale?: string;
+  timestamp: string;
+}
+
+export interface A2AConsensusSession {
+  sessionId: string;
+  topic: string;
+  domain: "security" | "vision" | "content" | "devops" | "governance" | "general";
+  quorumThreshold: number;
+  resolved: boolean;
+  outcome: "PENDING" | "APPROVED" | "REJECTED" | "VETOED";
+  createdAt: string;
+  ballots: A2AVoteBallot[];
+}
 
 export interface A2AMessageEnvelope<T = Record<string, unknown>> {
   jsonrpc: "2.0";
