@@ -65,10 +65,6 @@ jobs:
           use-policy-store: true
           api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
 
-      # No checkout. This job talks to the REST API and never reads the
-      # repository's contents, so the pull request's code is never fetched and
-      # never executed — which is the property that makes a `pull_request`
-      # workflow holding a write scope safe to have at all.
       - name: Delete the caches scoped to this ref
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

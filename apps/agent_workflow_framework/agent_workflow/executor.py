@@ -213,6 +213,15 @@ def _validate_filepath(filepath: Any) -> Path:
         "etc", "bin", "var", "boot", "dev", "lib", "lib64", "proc", "sys", "sbin", "usr", "root", "opt",
     }
 
+    # Block relative paths targeting system roots (e.g., 'etc/hosts', 'var/log/syslog').
+    # Exception: a bare single-component 'tmp' is allowed as a common safe local name.
+    if not (path_str.startswith("/") or path_str.startswith("\\")):
+        rel_parts = [p.lower() for p in Path(normalized_str).parts if p]
+        if rel_parts:
+            first_component = rel_parts[0]
+            if first_component in system_roots and not (first_component == "tmp" and len(rel_parts) == 1):
+                raise PermissionError(f"Access to critical system directory is prohibited: '{path_str}'")
+
     # Blocks access to sensitive directories (e.g., .git, .ssh, .aws)
     sensitive_dirs = {
         ".git", ".ssh", ".aws", ".jules", ".config", ".npm",
