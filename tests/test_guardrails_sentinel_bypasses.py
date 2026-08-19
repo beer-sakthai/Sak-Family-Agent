@@ -1,10 +1,13 @@
+import json
 import os
 import shutil
 import tempfile
 import unittest
+from unittest import mock
 
 from sakthai.agent.guardrails import (
     GuardrailAction,
+    GuardrailPolicy,
     _block_dangerous_shell_commands,
 )
 from sakthai.agent.tools import Tool
@@ -521,6 +524,98 @@ class TestGuardrailsBypass(unittest.TestCase):
         tmp_dir, _ = self._make_dir()
         self._write_makefile(tmp_dir, "all:\n\t@echo 'Hello from safe Makefile'\n")
         self._assert_allowed(f"make -C {os.path.abspath(tmp_dir)}")
+
+
+class TestPreExecutionSecretGuardrails(unittest.TestCase):
+    def setUp(self):
+        self.tool = Tool(
+            name="send_telegram_message",
+            description="Send a message",
+            input_schema={},
+            handler=lambda args, store: "OK",
+        )
+        self.store = MemoryStore(":memory:")
+
+    def tearDown(self):
+        self.store.close()
+
+    def test_block_raw_telegram_bot_token_in_arguments(self):
+        token = "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+        with mock.patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": token}):
+            res = GuardrailPolicy().check_pre_execution(
+                self.tool,
+                {"message": f"Here is my token: {token}"},
+                self.store,
+            )
+            self.assertEqual(res.action, GuardrailAction.DENY)
+            self.assertIn("blocked", res.reason)
+
+    def test_block_private_key_block_in_nested_arguments(self):
+        pem_key = (
+            "-----BEGIN PRIVATE KEY-----\n"
+            "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC...\n"
+            "-----END PRIVATE KEY-----"
+        )
+        res = GuardrailPolicy().check_pre_execution(
+            self.tool,
+            {"data": {"nested": {"key": pem_key}}},
+            self.store,
+        )
+        self.assertEqual(res.action, GuardrailAction.DENY)
+        self.assertIn("blocked", res.reason)
+
+    # The four tests below pin the recursion arms of _contains_secret_value.
+    # Each asserts the *match kind* the reason carries, not just DENY: the
+    # private-key regex and SECRET_PATTERN arms would also deny these payloads,
+    # so a bare DENY assertion can pass while the arm under test never runs.
+
+    def test_block_secret_inside_json_encoded_string_argument(self):
+        """A credential smuggled inside a JSON string is parsed, then rescanned."""
+        token = "987654321:ZYXwvuTSRqponMLKjihGFEdcba"
+        with mock.patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": token}):
+            res = GuardrailPolicy().check_pre_execution(
+                self.tool,
+                {"payload": json.dumps({"outer": {"inner": token}})},
+                self.store,
+            )
+        self.assertEqual(res.action, GuardrailAction.DENY)
+        self.assertIn("active credential matched", res.reason)
+
+    def test_block_secret_inside_list_argument(self):
+        """Sequence arguments are walked element by element."""
+        token = "111222333:AAAbbbCCCdddEEEfffGGGhhh"
+        with mock.patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": token}):
+            res = GuardrailPolicy().check_pre_execution(
+                self.tool,
+                {"attachments": ["harmless.txt", ["nested", token]]},
+                self.store,
+            )
+        self.assertEqual(res.action, GuardrailAction.DENY)
+        self.assertIn("active credential matched", res.reason)
+
+    def test_block_secret_used_as_a_dict_key(self):
+        """A mapping's keys are scanned, not only its values."""
+        token = "444555666:KKKlllMMMnnnOOOpppQQQrrr"
+        with mock.patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": token}):
+            res = GuardrailPolicy().check_pre_execution(
+                self.tool,
+                {"headers": {token: "authorization"}},
+                self.store,
+            )
+        self.assertEqual(res.action, GuardrailAction.DENY)
+        self.assertIn("active credential matched", res.reason)
+
+    def test_block_secret_used_as_a_dict_value(self):
+        """The value arm returns even when the key beside it is innocuous."""
+        token = "777888999:SSStttUUUvvvWWWxxxYYYzzz"
+        with mock.patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": token}):
+            res = GuardrailPolicy().check_pre_execution(
+                self.tool,
+                {"headers": {"authorization": token}},
+                self.store,
+            )
+        self.assertEqual(res.action, GuardrailAction.DENY)
+        self.assertIn("active credential matched", res.reason)
 
 
 if __name__ == "__main__":
