@@ -1,6 +1,9 @@
 ---
 name: SakThai-hf-hub-model-download-stats
-description: ">-   Complete reference for Hugging Face Hub model download counting methodology —   query files system per library, countDownloads ElasticSearch query DSL,   diffusers edge case, GGUF handling, Publisher Analytics CSV export, and   granular access l"
+description: ">-   Complete reference for Hugging Face Hub model download counting methodology\
+  \ \u2014   query files system per library, countDownloads ElasticSearch query DSL,\
+  \   diffusers edge case, GGUF handling, Publisher Analytics CSV export, and   granular\
+  \ access l"
 ---
 
 # HF Hub Model Download Stats: Counting Methodology & Analytics

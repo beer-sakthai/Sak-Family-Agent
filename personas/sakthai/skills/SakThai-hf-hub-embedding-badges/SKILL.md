@@ -1,6 +1,6 @@
 ---
 name: SakThai-hf-hub-embedding-badges
-description: "name: SakThai-hf-hub-embedding-badges"
+description: 'name: SakThai-hf-hub-embedding-badges'
 ---
 
 # Hugging Face Hub Embedding, Badges & oEmbed API

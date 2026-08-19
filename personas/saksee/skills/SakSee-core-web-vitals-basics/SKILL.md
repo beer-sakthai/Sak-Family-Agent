@@ -1,6 +1,7 @@
 ---
 name: SakSee-SakKing-core-web-vitals-basics
-description: "Core Web Vitals (LCP, CLS, INP): definitions, thresholds, and when to measure them for web performance and SEO."
+description: 'Core Web Vitals (LCP, CLS, INP): definitions, thresholds, and when to measure them
+  for web performance and SEO.'
 ---
 
 # Core Web Vitals Basics

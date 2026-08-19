@@ -1,94 +1,297 @@
+# Dependabot version updates for the Sak-Family-Agent monorepo.
+#
+# What this file does NOT govern: Dependabot *security* updates and the alerts
+# on /security/dependabot are driven by the dependency graph, not by this file.
+# They reach manifests that have no entry here, and they ignore
+# `open-pull-requests-limit` entirely. This file governs the routine bump queue —
+# how much of it exists, how it is batched, and how it is labelled.
+#
+# Every pull request into `main` needs an approving review from a non-author
+# (docs/CONTRIBUTING.md), so PR count is a direct tax on the repository owner's
+# attention. The previous version of this file budgeted 95 simultaneous open
+# pull requests across 16 entries (3 at limit 10, 13 at the default 5). This one
+# budgets 19, across 5 entries, by collapsing directories with `directories:`
+# and batching minor+patch into one pull request per ecosystem.
+#
+# --- Why there is no `target-branch: main` -----------------------------------
+# `main` IS the default branch, so `target-branch` would be a no-op for routing.
+# It is not a no-op for security updates: naming a target-branch scopes the
+# entry to version updates only, so these labels, commit prefixes and groups
+# would stop applying to the security pull requests — the ones that matter most.
+# Redundant to add, expensive to add.
+#
+# --- Why `directories:` and never a glob -------------------------------------
+# `directories` supports `*` and `**`; `directory` does not. Do not use globs
+# here. `/personas/*/skills/*` matches 826 directories, and
+# `/personas/*/agent-self-evolution` matches five SYMLINKS into
+# `personas/shared/` (see `ls -la personas/*/`). Dependabot's file fetchers
+# select entries of Contents-API type "file", so a symlinked directory yields a
+# job that permanently finds no manifest — a dead entry that looks like
+# coverage. Literal paths only; tests/test_dependabot_config.py enforces it.
+#
+# The upside of `directories` is not brevity, it is atomicity: a group spanning
+# several directories lands as ONE pull request. The three `agent-self-evolution`
+# pyproject.toml files are byte-identical and must move together, and so do the
+# two SakThai-hf-gradio `space-requirements.txt` copies. See
+# docs/dependabot-sweep-2026-08-18.md, where each set was bumped by hand in one
+# pass. It also collapses twelve independent 5-PR budgets into one.
+#
+# --- Labels must already exist -----------------------------------------------
+# Dependabot creates `dependencies` on its own and SILENTLY DROPS labels that do
+# not exist. Create the rest once (see docs/dependabot-setup.md):
+#   gh label create python         -c 3572A5 -d "Python dependencies"
+#   gh label create javascript     -c F1E05A -d "JavaScript/Node dependencies"
+#   gh label create docker         -c 384D54 -d "Container base images"
+#   gh label create github_actions -c 2088FF -d "GitHub Actions versions"
+#
+# --- Deliberately uncovered --------------------------------------------------
+# Three manifest families are left out on purpose. tests/test_dependabot_config.py
+# pins the list in UNCOVERED_BY_DESIGN so these stay decisions rather than drift:
+#
+#  * `*-requirements.in` paired with a `.lock` — `.github/bandit-requirements.in`,
+#    `infra/sakthai-training-space/{deepspeed-trl,ml-stack}-requirements.in`, and
+#    the three `comfy-cli-requirements.in`. Dependabot's pip-compile support
+#    regenerates a `.txt` beside the `.in`, never a `.lock`. bandit.yml installs
+#    from the `.lock` with `--require-hashes`, so a bump to the `.in` alone
+#    changes nothing while looking like it did. Cover these the day
+#    scripts/gen_hash_lock.py runs on Dependabot branches.
+#  * `personas/*/skills/*-google-workspace/scripts/setup.py` — not packaging
+#    files. They declare `REQUIRED_PACKAGES = [...]` and shell out to pip; there
+#    is no setup() call, so Dependabot would accept the directory and extract
+#    zero dependencies.
+#  * `apps/agent_workflow_framework` — has a CI job in subprojects.yml but no
+#    manifest of any kind. Its dependencies are undeclared; that is a separate
+#    bug, not something an entry here can fix.
 version: 2
+
 updates:
-  - package-ecosystem: "pip"
-    directory: "/" 
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "02:00"
-    open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-    target-branch: "main"
-
-  - package-ecosystem: "npm"
-    directory: "/" 
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "03:00"
-    open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-    target-branch: "main"
-
-  - package-ecosystem: "github-actions"
-    directory: "/" 
+  # === uv =====================================================================
+  # The three projects that actually have a uv.lock. `uv` is a distinct
+  # ecosystem from `pip`, not an alias: it resolves `[dependency-groups]`, which
+  # is the exact blind spot that hid sqlitedict from pip-audit (see
+  # docs/dependabot-sweep-2026-08-18.md) and which `pip` does not model.
+  #
+  # NOT listed here despite having a pyproject.toml: microsoft_agents_m365copilot
+  # (Poetry) and the three agent-self-evolution copies (PEP 621, no lock). They
+  # are `pip` below. Listing a directory under both ecosystems yields two
+  # competing pull requests for every bump.
+  - package-ecosystem: "uv"
+    directories:
+      - "/"
+      - "/sakthai-chat-cli"
+      - "/services/teams-copilot-mcp"
     schedule:
       interval: "daily"
-      day: "monday"
-      time: "04:00"
-    open-pull-requests-limit: 10
+      time: "07:00"
+      timezone: "Asia/Bangkok"
+    open-pull-requests-limit: 5
     labels:
       - "dependencies"
-    target-branch: "main"
+      - "python"
+    commit-message:
+      # Repo convention is conventional commits with a scope: `feat(scope): …`.
+      # `include: scope` turns this into `chore(deps):` / `chore(deps-dev):`.
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    cooldown:
+      # docs/CONTRIBUTING.md: "a freshly published malicious version passes
+      # tests as happily as a good one." A week of soak time means a yanked or
+      # compromised release is usually gone before it is ever proposed.
+      # cooldown applies to VERSION updates only — it never delays a security fix.
+      default-days: 7
+      semver-major-days: 14
+    groups:
+      # One pull request for the whole minor+patch sweep across all three
+      # projects. Majors stay ungrouped on purpose: a breaking change deserves
+      # its own diff and its own approval, not a seat in a batch of twelve.
+      uv-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Security pull requests ignore open-pull-requests-limit, so left
+      # ungrouped a bad week can produce a dozen. One urgent PR beats twelve.
+      uv-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
-  - package-ecosystem: docker
-    directory: /
+  # === pip ====================================================================
+  # Every Python manifest without a uv.lock. Mixed on purpose — Poetry, PEP 621,
+  # and requirements.txt are all the `pip` ecosystem.
+  #
+  # Read this list knowing most of it is currently inert, and why that is fine:
+  # an unpinned requirement (python-telegram-bot, boto3, awscli, google-auth,
+  # requests) gives Dependabot no version to move, and a satisfied range
+  # (`gradio>=6.15.1,<7.0`) gives it nothing to propose. Those directories are
+  # listed so the coverage already exists on the day someone adds a pin, and so
+  # security pull requests against them inherit these labels and this prefix.
+  - package-ecosystem: "pip"
+    directories:
+      # Poetry — vendored Microsoft SDK, `[tool.poetry.dependencies]`.
+      - "/apps/sak_agent_dashboard/microsoft_agents_m365copilot"
+      # PEP 621, no lock. All three are byte-identical and MUST stay that way;
+      # one entry means one pull request touching all three.
+      - "/personas/sakthai/agent-self-evolution"
+      - "/personas/shared/agent-self-evolution"
+      - "/sakthai-chat-cli/personas/sakthai/agent-self-evolution"
+      # `==` pins — the one directory here that reliably produces bumps.
+      - "/personas/sakking/skills/SakKing-agent-platform-tuning/references"
+      # Unpinned; carried for security-PR routing, see the note above.
+      - "/personas/sakking/skills/SakKing-agent-platform-skill-registry/scripts"
+      - "/personas/sakthai/skills/SakThai-hf-cloud-python-env-setup"
+      - "/personas/sakthai/sakthai/telegram"
+      - "/personas/shared/sakthai/telegram"
+      - "/sakthai-chat-cli/sakthai/telegram"
+      # space-requirements.txt — the gradio floor from the 2026-08-18 sweep.
+      # Two identical copies; one entry keeps them from drifting apart again.
+      - "/personas/sakthai/skills/SakThai-hf-gradio/templates"
+      - "/sakthai-chat-cli/personas/sakthai/skills/mlops/SakThai-hf-gradio/templates"
     schedule:
-      interval: daily
+      interval: "daily"
+      time: "07:00"
+      timezone: "Asia/Bangkok"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+    groups:
+      pip-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      pip-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
-  - package-ecosystem: npm
-    directory: /apps/sak_agent_dashboard
+  # === npm ====================================================================
+  # Four package.json trees, two lockfile flavours (pnpm at the dashboard, npm
+  # at the other three). Dependabot reads whichever lockfile is present.
+  #
+  # The `::` in the SakSee-stitch paths is legal in a YAML scalar and legal as a
+  # directory name, but `::` is not legal in a git ref. Dependabot's branch
+  # namer sanitizes with `gsub(%r{[^A-Za-z0-9/\-_.(){}]}, "")`, which DELETES
+  # the colons — branches read `…SakSee-stitchreact-components`. The two remain
+  # distinct, so this is cosmetic; do not be surprised by the branch name.
+  - package-ecosystem: "npm"
+    directories:
+      - /apps/sak_agent_dashboard
+      - /infra/pw-poc
+      - /personas/saksee/skills/SakSee-stitch-react-components
+      - /personas/saksee/skills/SakSee-stitch-react-native
     schedule:
-      interval: daily
+      interval: "daily"
+      time: "07:00"
+      timezone: "Asia/Bangkok"
+    open-pull-requests-limit: 4
+    labels:
+      - "dependencies"
+      - "javascript"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+    groups:
+      npm-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      npm-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
-  - package-ecosystem: npm
-    directory: /infra/pw-poc
+  # === docker =================================================================
+  # `/` is here for `Dockerfile.sandbox`, and it genuinely works: the docker
+  # fetcher's DOCKER_REGEXP is /dockerfile|containerfile/i — UNANCHORED and
+  # case-insensitive, matched against the bare filename in a flat (non-recursive)
+  # listing of the configured directory. "Dockerfile.sandbox" contains
+  # "dockerfile", so it matches. dependabot-core#4449 says otherwise; it is from
+  # 2021 and predates the current regex. tests/test_dependabot_config.py mirrors
+  # that regex verbatim, so renaming the file to something non-matching fails a
+  # test instead of silently ending coverage.
+  #
+  # Base images are not in the dependency graph, so docker gets version updates
+  # but NO security updates: this entry is the only automation watching these
+  # two images. Hence the shorter cooldown and no security group.
+  - package-ecosystem: "docker"
+    directories:
+      - "/"
+      - "/infra/sakthai-training-space"
     schedule:
-      interval: daily
+      interval: "daily"
+      time: "07:00"
+      timezone: "Asia/Bangkok"
+    open-pull-requests-limit: 2
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    cooldown:
+      default-days: 3
+    groups:
+      docker-images:
+        applies-to: version-updates
+        patterns:
+          - "*"
 
-  - package-ecosystem: docker
-    directory: /infra/sakthai-training-space
+  # === github-actions =========================================================
+  # `directory: "/"` means the whole of .github/workflows/ — the path is fixed
+  # by the ecosystem, not by this value. Every `uses:` in this repo is SHA-pinned
+  # and tests/test_workflow_hygiene.py enforces that; Dependabot rewrites the SHA
+  # and the trailing `# vX.Y.Z` comment together, so pinning survives a bump.
+  #
+  # KNOWN GAP, read this before reviewing one of these pull requests: four
+  # workflows are gh-aw agentic sources compiled to `*.lock.yml` (ci-doctor,
+  # maintain-agents-md, maintain-docs, release). The `uses:` pins inside those
+  # lock files are GENERATED from the neighbouring `.md`, which pins by tag.
+  # Dependabot edits the `.lock.yml` and the next `gh aw compile` reverts it.
+  # Dependabot has no per-file exclusion for this ecosystem, so the fix is to
+  # bump the `.md` and recompile — not to merge the `.lock.yml` half of the pull
+  # request and assume it sticks.
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
-      interval: daily
-
-  - package-ecosystem: pip
-    directory: /personas/sakking/skills/SakKing-agent-platform-skill-registry/scripts
-    schedule:
-      interval: daily
-
-  - package-ecosystem: pip
-    directory: /personas/sakking/skills/SakKing-agent-platform-tuning/references
-    schedule:
-      interval: daily
-
-  - package-ecosystem: npm
-    directory: /personas/saksee/skills/SakSee-stitch::react-components
-    schedule:
-      interval: daily
-
-  - package-ecosystem: npm
-    directory: /personas/saksee/skills/SakSee-stitch::react-native
-    schedule:
-      interval: daily
-
-  - package-ecosystem: pip
-    directory: /personas/sakthai/sakthai/telegram
-    schedule:
-      interval: daily
-
-  - package-ecosystem: pip
-    directory: /personas/sakthai/skills/SakThai-hf-cloud-python-env-setup
-    schedule:
-      interval: daily
-
-  - package-ecosystem: pip
-    directory: /personas/shared/sakthai/telegram
-    schedule:
-      interval: daily
-
-  - package-ecosystem: pip
-    directory: /sakthai-chat-cli/sakthai/telegram
-    schedule:
-      interval: daily
+      interval: "daily"
+      time: "06:00"
+      timezone: "Asia/Bangkok"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "github_actions"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    cooldown:
+      default-days: 3
+    groups:
+      actions-all:
+        applies-to: version-updates
+        patterns:
+          - "*"
+      actions-security:
+        applies-to: security-updates
+        patterns:
+          - "*"

@@ -1,13 +1,29 @@
 name: Pylint
 
-on: [push]
+# Scoped to `main` and the pull requests targeting it, matching ci.yml. This
+# used to be a bare `on: [push]`, which re-ran the two-version matrix on every
+# push to every branch — including the ones that already had a pull request
+# open, so each commit paid for this job twice on top of the ruff/format gate
+# ci.yml runs against the same commit.
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 permissions:
   contents: read
 
+concurrency:
+  # See the note in ci.yml: cancel superseded pull-request runs, never a run on
+  # `main`.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       matrix:
         python-version: ["3.11", "3.12"]
@@ -28,19 +44,23 @@ jobs:
     # SHA, every wheel by the sha256 recorded in the committed uv.lock — so the
     # job installs the same bytes on every run and there is no unpinned install
     # command left to flag.
-    - name: Install uv
-      uses: step-security/setup-uv@edab89485182ad96613ff847804c272ab5d1e03f # v10.0.0
+    # --locked: install exactly what uv.lock says, and fail if the lock has
+    # drifted from pyproject.toml rather than silently re-resolving — a plain
+    # `uv sync` would re-lock on drift, which is how an unpinned install gets
+    # back in. --all-extras brings in the dev extra so pylint can resolve the
+    # test suite's imports; --group lint brings in pylint itself. The evals
+    # group stays out (see pyproject.toml).
+    #
+    # `cache-suffix` is explicit here because this job installs a *different*
+    # dependency set from the same lockfile than ci.yml does — the `lint` group
+    # on top of the extras. Sharing ci.yml's entry would mean each workflow
+    # evicting the other's cache on every run.
+    - name: Set up Python ${{ matrix.python-version }} and uv
+      uses: ./.github/actions/setup-uv-python
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Install dependencies
-      # --locked: install exactly what uv.lock says, and fail if the lock has
-      # drifted from pyproject.toml rather than silently re-resolving — a plain
-      # `uv sync` would re-lock on drift, which is how an unpinned install gets
-      # back in. --all-extras brings in the dev extra so pylint can resolve the
-      # test suite's imports; --group lint brings in pylint itself. The evals
-      # group stays out (see pyproject.toml).
-      run: uv sync --locked --all-extras --group lint
+        sync-args: "--locked --all-extras --group lint"
+        cache-suffix: "pylint-py${{ matrix.python-version }}"
 
     - name: Analysing the code with pylint
       run: |

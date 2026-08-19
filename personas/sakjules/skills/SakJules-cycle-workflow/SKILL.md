@@ -1,6 +1,8 @@
 ---
 name: SakJules-cycle-workflow
-description: "Master operation flow for every task. Follows SakThai 6-stage energy cycle: Dream → Hope → Care → Joy → Trust → Growth. Every action passes through all 6 stages. Never skip a stage."
+description: "Master operation flow for every task. Follows SakThai 6-stage energy cycle: Dream\
+  \ \u2192 Hope \u2192 Care \u2192 Joy \u2192 Trust \u2192 Growth. Every action passes\
+  \ through all 6 stages. Never skip a stage."
 ---
 
 # SakThai Cycle Workflow

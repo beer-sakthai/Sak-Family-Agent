@@ -1,6 +1,8 @@
 ---
 name: SakJules-SakThai-playwright-element-state-gating
-description: "Robust Playwright interaction patterns that gate automated actions on   validated element states to eliminate flaky tests before they happen."
+description: Robust Playwright interaction patterns that gate automated actions on   validated
+  element states to eliminate flaky tests before they happen.
+...
 ---
 
 # Playwright Element State Gating

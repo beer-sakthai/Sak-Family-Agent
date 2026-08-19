@@ -1,6 +1,7 @@
 ---
 name: SakJules-opencode
-description: "Delegate coding to OpenCode CLI (features, PR review)."
+description: Delegate coding to OpenCode CLI (features, PR review).
+...
 ---
 
 # OpenCode CLI

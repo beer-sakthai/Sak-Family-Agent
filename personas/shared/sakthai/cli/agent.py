@@ -218,6 +218,16 @@ def _run_in_sandbox(
         "unscoped memory.db (unchanged pre-existing behavior)."
     ),
 )
+@click.option(
+    "--heal",
+    is_flag=True,
+    help=(
+        "Enable the self-healing supervisor: intercept provider/tool failures, "
+        "buffer them to the DLQ (~/.sakthai/recovery.db), isolate degraded "
+        "providers via a per-persona circuit breaker, and roll back memory on "
+        "state-corrupting errors. Also enabled by SAKTHAI_SELF_HEAL=1."
+    ),
+)
 def run(
     task: str,
     model: str,
@@ -235,6 +245,7 @@ def run(
     caveman: str | None,
     sandbox: bool,
     persona: str | None,
+    heal: bool,
 ) -> None:
     """Run TASK through the standalone SakThai agent.
 
@@ -316,6 +327,12 @@ def run(
     # passed, run_agent() opens/closes its own default MemoryStore()).
     persona_store = MemoryStore(config.persona_memory_db_path(persona)) if persona else None
     system_prompt_prefix = load_persona_soul(persona) if persona else ""
+    heal_enabled = heal or bool(os.environ.get("SAKTHAI_SELF_HEAL"))
+    supervisor = None
+    if heal_enabled:
+        from ..healing.supervisor import SelfHealingSupervisor
+
+        supervisor = SelfHealingSupervisor()
     try:
         with _tool_context(no_mcp=no_mcp, verbose=verbose, persona=persona) as tools:
             result = run_agent(
@@ -335,6 +352,7 @@ def run(
                 store=persona_store,
                 system_prompt_prefix=system_prompt_prefix,
                 persona=persona,
+                supervisor=supervisor,
             )
     except AgentError as exc:
         raise click.ClickException(str(exc)) from exc
@@ -358,6 +376,6 @@ def mcp() -> None:
     requests on stdin and writes responses on stdout, exposing the same tools as
     ``sakthai run`` backed by the shared memory store.
     """
-    from ..mcp import serve
+    from ..mcp.server import serve
 
     serve()

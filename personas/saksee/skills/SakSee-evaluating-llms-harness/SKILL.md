@@ -1,6 +1,6 @@
 ---
 name: SakSee-evaluating-llms-harness
-description: "lm-eval-harness: benchmark LLMs (MMLU, GSM8K, etc.)."
+description: 'lm-eval-harness: benchmark LLMs (MMLU, GSM8K, etc.).'
 ---
 
 # lm-evaluation-harness - LLM Benchmarking
@@ -484,6 +484,3 @@ lm_eval --model hf \
 - Docs: https://github.com/EleutherAI/lm-evaluation-harness/tree/main/docs
 - Task library: 60+ tasks including MMLU, GSM8K, HumanEval, TruthfulQA, HellaSwag, ARC, WinoGrande, etc.
 - Leaderboard: https://huggingface.co/spaces/HuggingFaceH4/open_llm_leaderboard (uses this harness)
-
-
-

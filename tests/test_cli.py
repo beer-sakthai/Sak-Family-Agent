@@ -899,7 +899,7 @@ def test_run_reports_agent_error(runner: CliRunner, monkeypatch: pytest.MonkeyPa
 
 
 def test_mcp_invokes_serve(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
-    import sakthai.mcp as mcp_pkg
+    import sakthai.mcp.server as mcp_pkg
 
     called = {"n": 0}
 
@@ -1049,7 +1049,7 @@ def test_run_dry_run_reports_unresolved_skill_without_credentials(
     Validating skill names is a normal reason to run --dry-run somewhere that
     deliberately has no credentials, such as CI. The credentials check used to
     run first and short-circuit, so the unresolved name was never printed —
-    which is how `continuous-security.yml` went on passing
+    which is how the since-retired `continuous-security.yml` went on passing
     `--with-skills SakThai-coding-security`, a skill that does not exist, for
     as long as it did. The sibling test above stubs credentials as present, so
     it cannot catch this.

@@ -46,10 +46,17 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  # See the note in ci.yml — and in codeql.yml for why a `main` run is never
+  # cancelled: this workflow's upload is what closes its own earlier alerts.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   eslint:
     name: Run eslint scanning
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: apps/sak_agent_dashboard
@@ -64,13 +71,16 @@ jobs:
           use-policy-store: true
           api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
 
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        uses: step-security/action-setup@7734f5522f614a4cf2820ad19aa26717c7abfd96 # v6.0.9
         with:
           package_json_file: apps/sak_agent_dashboard/package.json
 
@@ -112,14 +122,13 @@ jobs:
         run: >-
           pnpm exec eslint src
           --format @microsoft/eslint-formatter-sarif
-          --output-file "${{ github.workspace }}/eslint-results.sarif"
+          --output-file "eslint-results.sarif"
 
       # The step the stock template was missing. Without it, any failure to
       # *run* ESLint surfaces as "Path does not exist" from the upload action —
       # which is what happened on every run of this workflow before it was
       # rewritten, and it points at the wrong step.
       - name: Verify ESLint produced a report
-        working-directory: ${{ github.workspace }}
         run: |
           if [ ! -s eslint-results.sarif ]; then
             echo "::error::ESLint did not produce eslint-results.sarif — it failed to run (bad config, missing toolchain) rather than finding lint problems." >&2
@@ -139,7 +148,8 @@ jobs:
       - name: Upload results to the code-scanning dashboard
         uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4
         with:
-          sarif_file: eslint-results.sarif
+          sarif_file: apps/sak_agent_dashboard/eslint-results.sarif
+          checkout_path: apps/sak_agent_dashboard
           # Keeps these analyses distinct from ossar.yml's MSDO ESLint upload.
           category: eslint-dashboard
           wait-for-processing: true

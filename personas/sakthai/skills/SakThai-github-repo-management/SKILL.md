@@ -1,15 +1,9 @@
 ---
 name: Sak-github-repo-management
-author: SakThai
-license: MIT
-description: "Clone/create/fork repos; manage remotes, releases."
-version: 1.1.0
-platforms: [linux, macos, windows]
-metadata:
-  hermes:
-    tags: [GitHub, Repositories, Git, Releases, Secrets, Configuration]
-    related_skills: [github-auth, github-pr-workflow, github-issues]
+description: Clone/create/fork repos; manage remotes, releases.
+...
 ---
+
 # GitHub Repository Management
 
 Create, clone, fork, configure, and manage GitHub repositories. Each section shows `gh` first, then the `git` + `curl` fallback.

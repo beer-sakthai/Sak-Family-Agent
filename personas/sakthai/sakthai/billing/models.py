@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
+import os
 import secrets
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -36,20 +38,55 @@ TIER_PRICING: dict[TenantTier, tuple[float, float]] = {
 }
 
 
-def hash_api_key(raw_key: str) -> str:
-    """Hash an API key with SHA-256 for secure storage."""
-    return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+API_KEY_HASH_SECRET_ENV = "SAKTHAI_API_KEY_HASH_SECRET"  # nosec B105 - environment variable name, not a secret value
+
+
+def _get_api_key_hash_secret() -> bytes:
+    """Load and validate API key hashing secret used for deterministic keyed hashing."""
+    secret = os.getenv(API_KEY_HASH_SECRET_ENV)
+    if not secret:
+        raise RuntimeError(f"Missing required environment variable: {API_KEY_HASH_SECRET_ENV}")
+    return secret.encode("utf-8")
+
+
+def hash_api_key(raw_key: str, stored_hash: str | None = None) -> str | bool:
+    """Create a PBKDF2 hash or verify a raw key against a stored hash.
+
+    With no ``stored_hash``, returns ``pbkdf2_sha256$iterations$salt$digest``.
+    With a stored value, returns a boolean and rejects malformed or unsupported
+    encodings without raising.
+    """
+    if stored_hash is None:
+        iterations = 310_000
+        secret = _get_api_key_hash_secret()
+        salt = hashlib.sha256(secret + b":sakthai_api_key_salt:v1").digest()[:16]
+        digest = hashlib.pbkdf2_hmac("sha256", raw_key.encode("utf-8"), secret + salt, iterations)
+        return f"pbkdf2_sha256${iterations}${salt.hex()}${digest.hex()}"
+
+    try:
+        algorithm, iteration_text, salt_hex, digest_hex = stored_hash.split("$", 3)
+        if algorithm != "pbkdf2_sha256":
+            return False
+        iterations = int(iteration_text)
+        salt = bytes.fromhex(salt_hex)
+        expected = bytes.fromhex(digest_hex)
+        if iterations <= 0 or len(salt) != 16 or len(expected) != 32:
+            return False
+    except (TypeError, ValueError):
+        return False
+
+    actual = hashlib.pbkdf2_hmac(
+        "sha256", raw_key.encode("utf-8"), _get_api_key_hash_secret() + salt, iterations
+    )
+    return hmac.compare_digest(actual, expected)
 
 
 def generate_api_key(prefix: str = "sak_live_") -> tuple[str, str]:
-    """Generate a raw API key and its SHA-256 hash digest.
-
-    Returns:
-        tuple[str, str]: (raw_secret_key, hashed_storage_key)
-    """
+    """Generate a raw API key and its PBKDF2 storage encoding."""
     token = secrets.token_urlsafe(32)
     raw_key = f"{prefix}{token}"
     hashed_key = hash_api_key(raw_key)
+    assert isinstance(hashed_key, str)
     return raw_key, hashed_key
 
 

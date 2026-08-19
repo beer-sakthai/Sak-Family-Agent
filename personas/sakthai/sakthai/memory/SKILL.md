@@ -1,14 +1,8 @@
 ---
 name: supply-chain-forecast
-category: business
-description: "Forecast future supply chain events (e.g., demand, lead times) based on historical data from memory."
-version: 1.0.0
-author: Sak-Family-Agent
-platforms: [linux, macos, windows]
-metadata:
-  sakthai:
-    tags: [supply-chain, forecasting, business-intelligence, prediction]
-    related_skills: [supply-chain-monitor, supply-chain-optimizer]
+description: Forecast future supply chain events (e.g., demand, lead times) based on historical
+  data from memory.
+...
 ---
 
 # Supply Chain Forecasting

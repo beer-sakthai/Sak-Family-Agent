@@ -1,6 +1,9 @@
 ---
 name: SakThai-hf-data-juicer
-description: "Data-Juicer — the open-source data processing framework for foundation model data (text, image, audio, video, multimodal). 200+ operators (filters, mappers, deduplicators, selectors), cloud-native Ray execution, Hugging Face Datasets integration, and"
+description: "Data-Juicer \u2014 the open-source data processing framework for foundation model\
+  \ data (text, image, audio, video, multimodal). 200+ operators (filters, mappers,\
+  \ deduplicators, selectors), cloud-native Ray execution, Hugging Face Datasets integration,\
+  \ and"
 ---
 
 # Data-Juicer: Data Operating System for Foundation Models
