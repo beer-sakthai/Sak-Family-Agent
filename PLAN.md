@@ -33,8 +33,6 @@ never duplicate content across files.
 
 | Area | Status |
 |---|---|
-| **Workflow ecosystem cleanup** — audited all 32 files in `.github/workflows/` against their real run history: removed five that did nothing (`auto-dependency-update.yml` 22/22 failed on a missing PAT, `continuous-security.yml` skipped nightly with no `ANTHROPIC_API_KEY`, `ossar.yml` duplicated `eslint.yml`, `stale.yml` still carried template placeholders, `manual.yml` echoed a greeting), replaced the nightly scan with the gh-aw Gemini `security-audit.md`, fixed `ci-doctor.md`'s `workflow_run` name that never matched, added `concurrency:` + `timeout-minutes` across the hand-written workflows, and pinned both as new invariants in `tests/test_workflow_hygiene.py` | [x] 2026-08-18 |
-| **Gemini CLI + OpenCode full setup** — first-class config for both external coding agents alongside Claude Code: `GEMINI.md` + `.gemini/settings.json`, `opencode.json` with all six personas as agents, the `sakthai mcp` server wired into both, `docs/multi-agent-cli-setup.md`, and `tests/test_agent_cli_configs.py` pinning the invariants (21 tests green) | [x] 2026-08-18 |
 | Repository hygiene — persona SOULs | ✅ All 6 personas done (2026-07-02) |
 | Business strategy — market analysis | ✅ Done (2026-07-02) |
 | MVP definition | ✅ Done (2026-07-02) — ServiceQuoteBot |
@@ -129,7 +127,6 @@ never duplicate content across files.
 | **Repo Hygiene Round 2** | [SCRATCH_ORGANISATION_PLAN](#scratch-organisation-plan) | 🟡 Active — root cleanup |
 | **HF Ecosystem Improvement (19 models · 16 datasets · 7 Spaces)** | [`docs/hf-cards-improvement-plan.md`](./docs/hf-cards-improvement-plan.md) | 🟡 Active — Phase 1 (broken repos) next |
 | **Multi-Agent Telegram & Live Chat Routing Gateway** | [`docs/multi-agent-gateway-plan.md`](./docs/multi-agent-gateway-plan.md) | ✅ Complete — 2026-08-18 (Subagent-Driven Execution) |
-| **Dependabot multi-ecosystem + innersource advisories** | [`docs/configuring-multi-ecosystem-updates.md`](./docs/configuring-multi-ecosystem-updates.md) · [`docs/dependabot-setup.md`](./docs/dependabot-setup.md) | ✅ Complete — 2026-08-19 (5 ecosystems / 22 dirs, open-PR budget 95→19, `tests/test_dependabot_config.py`, daily advisory report) |
 
 ## 🔧 Runtime Notes
 

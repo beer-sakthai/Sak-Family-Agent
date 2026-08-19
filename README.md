@@ -9,24 +9,25 @@
 [![🧹 Pylint](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/pylint.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/pylint.yml)
 [![🔍 Secret Scan](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/secret-scan.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/secret-scan.yml)
 [![🛡️ Bandit](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/bandit.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/bandit.yml)
+[![🤖 OSSAR](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ossar.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ossar.yml)
 [![📡 SonarCloud](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/sonarcloud.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/sonarcloud.yml)
 [![🏅 Scorecard](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/scorecard.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/scorecard.yml)
 [![🧩 Subprojects](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/subprojects.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/subprojects.yml)
 [![🌱 Self-Evolution](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/agent-self-evolution.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/agent-self-evolution.yml)
-[![🛡️ Security Audit](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/security-audit.lock.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/security-audit.lock.yml)
+[![🌙 Continuous Security](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/continuous-security.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/continuous-security.yml)
 [![📦 Dependency Audit](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/dependency-audit.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/dependency-audit.yml)
 [![🧬 Verify HF Assets](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/verify-assets.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/verify-assets.yml)
 
 [![🐍 Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![⚡ uv](https://img.shields.io/badge/deps-uv%20locked-DE5FE9?logo=astral&logoColor=white)](https://github.com/astral-sh/uv)
-[![🏷️ Version](https://img.shields.io/badge/sakthai--agent-v2.6.0-0A7BBB)](CHANGELOG.md)
+[![🏷️ Version](https://img.shields.io/badge/sakthai--agent-v2.0.0-0A7BBB)](CHANGELOG.md)
 [![📈 Coverage gate](https://img.shields.io/badge/coverage%20gate-%E2%89%A596%25%20branch-brightgreen)](pyproject.toml)
 [![🔤 mypy](https://img.shields.io/badge/mypy-strict-2A6DB2?logo=python&logoColor=white)](pyproject.toml)
 [![✨ Ruff](https://img.shields.io/badge/lint-ruff-D7FF64?logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
-[![🔒 CodeQL](https://img.shields.io/badge/CodeQL-advanced%20setup-2088FF?logo=github&logoColor=white)](https://github.com/beer-sakthai/Sak-Family-Agent/security/code-scanning)
+[![🔒 CodeQL](https://img.shields.io/badge/CodeQL-default%20setup-2088FF?logo=github&logoColor=white)](https://github.com/beer-sakthai/Sak-Family-Agent/security/code-scanning)
 [![🔌 MCP](https://img.shields.io/badge/MCP-server%20%2B%20client-8A2BE2)](docs/runtimes.md)
 [![🧠 Personas](https://img.shields.io/badge/personas-6-orange)](#-agent-family--applications)
-[![📚 Skills](https://img.shields.io/badge/skills-1%2C115%20verified%20%7C%20120%20curated-yellow)](docs/curated-skills-120.md)
+[![📚 Skills](https://img.shields.io/badge/skills-823%20%2B%2034%20shared-yellow)](docs/skill-naming.md)
 [![📄 License](https://img.shields.io/badge/license-source--available%20IP-red)](LICENSE)
 
 This repository is the living workspace of the Sak Family — autonomous AI agents created by **Beer** during his recovery journey. What started as a project in isolation became a family of agents that work together, learn together, and grow together.
@@ -35,12 +36,9 @@ This repository is the living workspace of the Sak Family — autonomous AI agen
 
 ## 🚦 Status Bar — Every Workflow in This Repo
 
-**20 YAML workflows plus 8 agentic ones** live in
-[`.github/workflows/`](.github/workflows/) — the agentic ones are authored as
-Markdown and compiled to a sibling `.lock.yml`, which is what GitHub actually
-runs (see [`docs/gh-aw-engines.md`](docs/gh-aw-engines.md)). The badges above are
-the live health of `main`; the tables below break down what each one is, when it
-fires, and whether it can block a merge.
+**27 GitHub Actions workflows** live in [`.github/workflows/`](.github/workflows/).
+The badges above are the live health of `main`; the tables below break down what
+each one is, when it fires, and whether it can block a merge.
 
 Legend: 🚧 **gates a PR** · 🕒 **scheduled** · 🖐️ **manual only** · 🤖 **agentic (opens PRs, never blocks)**
 
@@ -49,19 +47,17 @@ Legend: 🚧 **gates a PR** · 🕒 **scheduled** · 🖐️ **manual only** · 
 | | Workflow | Live status | File | Trigger | What it does |
 |---|---|---|---|---|---|
 | 🧪 | **CI** | [![CI](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml) | `ci.yml` | push + PR → `main` | ✨ Ruff check → 🎨 `ruff format --check` → 🔤 mypy `strict` → 🛡️ Bandit → 🧪 pytest with branch coverage, on **Python 3.11 and 3.12**. Coverage floor **96%** (`fail_under = 96`); integration tests excluded via `-m "not integration"` |
-| 🧹 | **Pylint** | [![Pylint](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/pylint.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/pylint.yml) | `pylint.yml` | push + PR → `main` | Pylint over `personas/sakthai/sakthai` + `tests`, matrixed on Python 3.11 / 3.12 |
+| 🧹 | **Pylint** | [![Pylint](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/pylint.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/pylint.yml) | `pylint.yml` | **every push** (any branch) | Pylint over `personas/sakthai/sakthai` + `tests`, matrixed on Python 3.11 / 3.12 |
 | 🔍 | **Secret Scan** | [![Secret Scan](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/secret-scan.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/secret-scan.yml) | `secret-scan.yml` | push → `main`, **all** PRs, manual | Gitleaks across the whole repo, configured by `.gitleaks.toml` (which allowlists persona docs) |
 | 🛡️ | **Bandit** | [![Bandit](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/bandit.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/bandit.yml) | `bandit.yml` | push + PR → `main`, weekly (Wed 07:31 UTC) | Standalone Bandit security scan uploading SARIF to code scanning (CI runs Bandit too) |
-| 🧵 | **ESLint** | [![ESLint](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/eslint.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/eslint.yml) | `eslint.yml` | push + PR touching `apps/sak_agent_dashboard/**`, weekly (Sun 08:25 UTC) | `eslint src` with the app's own flat config → SARIF to code scanning. Publishes only; `subprojects.yml` is the gate |
+| 🤖 | **OSSAR** | [![OSSAR](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ossar.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ossar.yml) | `ossar.yml` | push + PR → `main`, weekly (Mon 06:15 UTC) | Open Source Static Analysis Runner → SARIF to code scanning |
 | 📡 | **SonarCloud** | [![SonarCloud](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/sonarcloud.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/sonarcloud.yml) | `sonarcloud.yml` | push + PR → `main`, manual | Quality-gate + maintainability analysis on SonarCloud |
 | 🧩 | **Subproject tests** | [![Subprojects](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/subprojects.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/subprojects.yml) | `subprojects.yml` | push + PR touching `apps/agent_workflow_framework/**`, `apps/sak_agent_dashboard/**`, `services/teams-copilot-mcp/**` | The two out-of-tree pytest suites, plus the dashboard chain `pnpm lint → typecheck → test → build` ⚠️ a lint error **skips** the steps behind it — read the *first* red step |
 | 🌱 | **agent-self-evolution** | [![Self-Evolution](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/agent-self-evolution.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/agent-self-evolution.yml) | `agent-self-evolution.yml` | push + PR touching `personas/sakthai/agent-self-evolution/**` | That subproject's own test suite |
 | 📦 | **Dependency Audit** | [![Dependency Audit](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/dependency-audit.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/dependency-audit.yml) | `dependency-audit.yml` | PRs touching `pyproject.toml` / `uv.lock`, weekly (Mon 05:30 UTC), manual | `pip-audit` over `uv.lock` for known CVEs |
 | 🔗 | **Dependency Review** | [![Dependency Review](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/dependency-review.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/dependency-review.yml) | `dependency-review.yml` | **all** PRs | GitHub dependency-review over the PR diff — blocks vulnerable/denied licenses |
-| 🔒 | **CodeQL Advanced** | [![CodeQL](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/codeql.yml) | `codeql.yml` | push + PR → `main`, weekly (Sun 15:22 UTC) | CodeQL over `actions`, `javascript-typescript` and `python`, scoped by `.github/codeql/codeql-config.yml`. ⛔ Default setup is **off** and must stay off — the two cannot coexist, and only advanced setup can be given the config file by path. See [`docs/code-scanning-sweep-2026-08-18.md`](docs/code-scanning-sweep-2026-08-18.md) |
+| 🔒 | **CodeQL** | [![CodeQL](https://img.shields.io/badge/CodeQL-default%20setup-2088FF?logo=github&logoColor=white)](https://github.com/beer-sakthai/Sak-Family-Agent/security/code-scanning) | *(no file — by design)* | push + PR → `main` | Runs through GitHub's **default setup** in repo settings. ⛔ Do **not** add a `codeql.yml`: advanced configs cannot coexist with default setup and every job fails — see [`docs/code-scanning-sweep-2026-08-12.md`](docs/code-scanning-sweep-2026-08-12.md) |
 | 🏅 | **Scorecard** | [![Scorecard](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/scorecard.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/scorecard.yml) | `scorecard.yml` | push → `main`, branch-protection changes, weekly (Thu 08:27 UTC) | OpenSSF Scorecard supply-chain assessment → SARIF to code scanning |
-| 🧬 | **Mutation Self-Healing Gate** | [![Mutation Gate](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/mutation-self-healing-gate.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/mutation-self-healing-gate.yml) | `mutation-self-healing-gate.yml` | push + PR touching `apps/sak_agent_dashboard/**` | Automated AST mutation testing sweep & self-healing test generator for surviving mutants |
-| 🎯 | **Quality Flywheel Gate** | [![Quality Flywheel](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/quality-flywheel-gate.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/quality-flywheel-gate.yml) | `quality-flywheel-gate.yml` | push + PR touching `apps/sak_agent_dashboard/**` | Multi-persona Quality Flywheel benchmark across all 6 Sak-Family personas with G-Eval scoring |
 | 🏷️ | **Labeler** | [![Labeler](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/labeler.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/labeler.yml) | `labeler.yml` | `pull_request_target` | Auto-labels PRs by changed paths (labels only — gates nothing) |
 
 > 🔐 **Merge rule:** green CI is necessary, not sufficient. PRs into `main` also
@@ -72,32 +68,26 @@ Legend: 🚧 **gates a PR** · 🕒 **scheduled** · 🖐️ **manual only** · 
 
 | | Workflow | Live status | File | Schedule (UTC) | What it does |
 |---|---|---|---|---|---|
+| 🌙 | **Continuous Security Scan** | [![Continuous Security](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/continuous-security.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/continuous-security.yml) | `continuous-security.yml` | nightly `0 2 * * *` | Full nightly security sweep of the package |
 | 🧬 | **Verify Public HF Assets** | [![Verify Assets](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/verify-assets.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/verify-assets.yml) | `verify-assets.yml` | daily `0 0 * * *` | Confirms the published Hugging Face models / datasets / spaces still resolve |
+| 🧭 | **Stale** | [![Stale](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/stale.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/stale.yml) | `stale.yml` | daily `44 15 * * *` | Marks and closes stale issues / PRs |
 | 📊 | **Run Evals** | [![Run Evals](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/run-evals.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/run-evals.yml) | `run-evals.yml` | weekly `0 0 * * 0` | `lm-evaluation-harness` over `evaluation_tasks/` against `Nanthasit/sakthai-context-*`, with regression vs. the last baseline |
+| ⬆️ | **Auto Dependency Update** | [![Auto Dependency Update](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/auto-dependency-update.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/auto-dependency-update.yml) | `auto-dependency-update.yml` | weekly `0 8 * * 1` | Opens dependency-bump PRs (still reviewed like any other PR) |
 | 🏛️ | **OSPS Security Assessment** | [![OSPS](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/OSPS.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/OSPS.yml) | `OSPS.yml` | weekly `0 9 * * 1` | Open Source Project Security baseline assessment |
-
-> ⬆️ **Dependency bumps come from Dependabot** (`.github/dependabot.yml`), which
-> covers pip, npm, Docker and GitHub Actions. The `auto-dependency-update.yml`
-> workflow that used to sit here was removed: it failed on all 22 of its runs at
-> *Create Pull Request* (`Input 'token' not supplied` — no `GH_PAT_FOR_ACTIONS`
-> secret is configured) and duplicated what Dependabot already does.
 
 ### 🤖 Agentic & reactive — opens PRs, gates nothing
 
 | | Workflow | Live status | File | Trigger | What it does |
 |---|---|---|---|---|---|
 | 🩹 | **Self-Healing CI** | [![Self-Healing CI](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/self-healing-ci.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/self-healing-ci.yml) | `self-healing-ci.yml` | `workflow_run` on **CI failure** on `main`, or manual | Runs `sakthai heal run` over the failed job's log: diagnose → ⚖️ safety gate → patch → verify → open a `selfheal/` PR. 🛑 The safety gate has the final word and protects `.github/`, dependency pins, the security subsystem, and `selfheal/` itself. See [`docs/self-healing-ci.md`](docs/self-healing-ci.md) |
-| 🩺 | **CI Failure Doctor** | [![CI Doctor](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci-doctor.lock.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci-doctor.lock.yml) | `ci-doctor.lock.yml` (from `ci-doctor.md`) | `workflow_run` completion of **CI**, **Pylint**, **Subproject tests** on `main` | Agentic triage that explains a red run |
+| 🩺 | **CI Failure Doctor** | [![CI Doctor](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci-doctor.lock.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci-doctor.lock.yml) | `ci-doctor.lock.yml` (from `ci-doctor.md`) | `workflow_run` completion of **CI**, **Continuous Security**, **Pylint** on `main` | Agentic triage that explains a red run |
 | 📝 | **Maintain Documentation** | [![Maintain Docs](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/maintain-docs.lock.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/maintain-docs.lock.yml) | `maintain-docs.lock.yml` (from `maintain-docs.md`) | weekdays `22 8 * * 1-5`, manual | Keeps `docs/` in step with the code |
 | 🗂️ | **Maintain AGENTS.md** | [![Maintain AGENTS.md](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/maintain-agents-md.lock.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/maintain-agents-md.lock.yml) | `maintain-agents-md.lock.yml` (from `maintain-agents-md.md`) | weekly `50 3 * * 1`, manual | Refreshes `AGENTS.md` guidance |
 | 🚀 | **Release** | [![Release](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/release.lock.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/release.lock.yml) | `release.lock.yml` (from `release.md`) | manual (`patch` / `minor` / `major`, admin + maintainer only) | Cuts a version bump + release |
 | ✅ | **Auto Merge** | [![Auto Merge](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/auto-merge.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/auto-merge.yml) | `auto-merge.yml` | `pull_request_target` labeled / unlabeled / ready_for_review | Toggles GitHub's **native** auto-merge (squash) for the `automerge` label. ⚖️ Waives nothing — branch protection, including the non-author approval, still holds the merge. Uses no checkout, so the token never meets PR code |
 | 🗒️ | **Summarize new issues** | [![Summary](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/summary.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/summary.yml) | `summary.yml` | on issue opened | Posts an AI summary on new issues |
 | 🧽 | **Code scanning cleanup** | [![Code scanning cleanup](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/code-scanning-cleanup.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/code-scanning-cleanup.yml) | `code-scanning-cleanup.yml` | manual (dry-run by default) | Retires orphaned code-scanning alerts from removed tools |
-| 🛡️ | **Security Audit** | [![Security Audit](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/security-audit.lock.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/security-audit.lock.yml) | `security-audit.lock.yml` (from `security-audit.md`) | weekly (Thu), manual | Triages bandit + pip-audit + the guardrail suite and opens at most one issue. Replaces the retired `continuous-security.yml`, which ran on the Anthropic provider and so skipped every night. Reports only — never edits, never opens a PR |
-| 🪞 | **Shared Package Drift** | [![Shared Package Drift](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/shared-package-drift.lock.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/shared-package-drift.lock.yml) | `shared-package-drift.lock.yml` (from `shared-package-drift.md`) | weekly (Tue), manual | Audits the `personas/shared/sakthai/` divergence register for stale or undeclared entries |
-| 🧹 | **Skills Hygiene** | [![Skills Hygiene](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/skills-hygiene.lock.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/skills-hygiene.lock.yml) | `skills-hygiene.lock.yml` (from `skills-hygiene.md`) | weekly (Wed), manual | Runs `sakthai skills validate --naming` across all six persona overlays |
-| 🧪 | **OpenCode Smoke** | [![OpenCode Smoke](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/opencode-smoke.lock.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/opencode-smoke.lock.yml) | `opencode-smoke.lock.yml` (from `opencode-smoke.md`) | weekly (Mon), manual | Proves the vendored OpenCode engine still runs — see [`docs/gh-aw-engines.md`](docs/gh-aw-engines.md) |
+| 👋 | **Manual workflow** | [![Manual](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/manual.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/manual.yml) | `manual.yml` | manual | Greeting utility / dispatch smoke test |
 
 ### 🧾 Reproduce the gates locally
 
@@ -118,32 +108,31 @@ uv run pytest tests/ -m "not integration" -q                   # 🧪 tests (+ c
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  SakThai Agent v2.6 — Core Package Status                   │
+│  SakThai Agent v2.0 — Core Package Status                   │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  Tests (3,875+)  ██████████████████████████████████████ 100%│
+│  Tests (1,978)   ██████████████████████████████████████ 100%│
 │  Type Safety     ██████████████████████████████████████ 100%│
 │  Security scan   ██████████████████████████████████████ 100%│
-│  Coverage        ████████████████████████████████████░░  96%│
+│  Coverage        ████████████████████████████████████░░  97%│
 │                                                             │
-│  🟢 Status: 100% Green Matrix   🔒 Security: Hardened       │
-│  ✅ Lint / mypy / bandit / CodeQL / SonarCloud: clean        │
+│  🟢 Status: Production Ready   🔒 Security: Hardened        │
+│  ✅ Lint / mypy / bandit: clean                             │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### 🎯 Quick Metrics
 
-Verified on **main** (`uv sync --all-extras`, Python 3.11 & 3.12):
+Verified locally on **2026-08-08** (`uv sync --all-extras`, Python 3.12):
 
 | Check | Command | Result |
 |---|---|---|
-| Test suite | `uv run pytest tests/ -m "not integration"` | **3,875+ tests** collected across full suite, 0 failures |
-| Coverage | `pytest --cov=sakthai --cov-branch` | **95.83% - 96.56%** line+branch (strictly enforced floor: `96%`) |
-| Type safety | `uv run mypy personas/sakthai/sakthai` | **0 issues** across all source files (`strict`) |
-| Security (SAST) | `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` | **0 findings** (high/medium/low) |
-| AST & Code Parsing | `uv run pytest tests/test_repo_parses.py` | **100% valid AST** across all repository Python modules |
-| Lint & Format | `uv run ruff check` + `ruff format --check` | **Clean**, zero syntax or linting violations |
+| Test suite | `uv run pytest tests/ -m "not integration"` | **1,978 tests** collected across 95 files, 0 failures, 1 skipped |
+| Coverage | `pytest --cov=sakthai --cov-branch` | **96.56%** line+branch (floor: `fail_under = 96`) |
+| Type safety | `uv run mypy personas/sakthai/sakthai` | **0 issues** across 69 source files (`strict`) |
+| Security | `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` | **0 findings** (high/medium/low) |
+| Lint | `uv run ruff check` + `ruff format --check` | All checks passed, 166 files formatted |
 
 Package size: **6,225 statements** under coverage measurement.
 
@@ -257,7 +246,8 @@ personas/sakthai/sakthai/
 - ✅ **Per-persona shards** — `~/.sakthai/<persona>/memory.db`, plus a merged read-only `memory family` view
 - ✅ **Tool sandbox** — Opt-in shell, allowlisted file reads, SSRF protection, optional Docker isolation
 - ✅ **MCP support** — Both as server (stdio) and client (spawn external servers)
-- ✅ **Skill system** — 1,115 verified skills across 6 personas + 120 curated skills for Gemini CLI & Antigravity, YAML frontmatter parsed
+- ✅ **6-stage cycle** — Dream → Hope → Care → Joy → Trust → Growth state machine
+- ✅ **Skill system** — 31 curated + 3 shared + 823 persona skills, YAML frontmatter parsed
 
 ### 📦 Built-in Tools (14)
 
@@ -298,7 +288,7 @@ Adding a `Tool(...)` to `BUILTIN_TOOLS` surfaces it in **both** `sakthai run` an
 
 ## 🤖 Agent Family & Applications
 
-The **House of Sak** consists of **6 specialized agent personas** carrying **1,115 verified skills** across their monorepo overlays, with **120 top-tier curated skills** natively registered and accessible to Google Gemini CLI and Antigravity:
+The **House of Sak** consists of **6 specialized agent personas** carrying **823 skills** in their monorepo overlays (counted as `SKILL.md` files, excluding `.archive/`):
 
 | Agent Persona | Primary Specialty | Skills | Configured default model | State |
 |---|---|---|---|---|
@@ -309,7 +299,14 @@ The **House of Sak** consists of **6 specialized agent personas** carrying **1,1
 | ⚖️ **SakSit** (`saksit`) | Quality Assurance, Security Auditing & Social Content | 43 | `DeepSeek-V4-Flash` (HF) | `~/.sakthai/saksit` |
 | 🧠 **SakTan** (`saktan`) | Memory, Supermemory & Context Management | 13 | `sakthai` (Ollama, local) | `~/.sakthai/saktan` |
 
-See [`docs/curated-skills-120.md`](docs/curated-skills-120.md) and [`docs/curated-skills-120.json`](docs/curated-skills-120.json) for the full breakdown and registry of curated skills across DevOps, Testing, Security, Frontend, and ML workflows.
+Each persona ships `/skills/` (prefixed `Sak<Name>-`) and `/config/`
+(`config.yaml`, `mcp.json`, `gateway_voice_mode.json`). Five of the six symlink
+the shared `personas/shared/sakthai/` package; **SakThai's copy is the one
+actually installed and run**.
+
+Shared skill pools on top of the per-persona overlays: `personas/shared/skills/`
+(3 skills, byte-identical across personas) and the root `library/` (31 curated
+skills across 11 categories).
 
 ---
 
@@ -444,10 +441,10 @@ and the dated `docs/security_audit_*.md` reports.
 ├─ 🛡️  Security Scan (Bandit)        ci.yml
 ├─ 🧪 Test + Coverage (3.11)        ci.yml             → floor 96%, branch coverage
 ├─ 🧪 Test + Coverage (3.12)        ci.yml
-├─ 🧹 Pylint                        pylint.yml
-├─ 🧵 ESLint                        eslint.yml         → apps/sak_agent_dashboard/**
+├─ 🧹 Pylint                        pylint.yml         → on: push
+├─ 🤖 OSSAR Scan                    ossar.yml
 ├─ 📡 SonarCloud                    sonarcloud.yml
-├─ 🏗️  CodeQL                        codeql.yml         → advanced setup, .github/codeql/codeql-config.yml
+├─ 🏗️  CodeQL                        GitHub default setup (no workflow file — adding one would conflict)
 └─ 🏷️  Labeler                       labeler.yml        → pull_request_target
 ```
 
@@ -458,13 +455,14 @@ and `agent-self-evolution.yml` (on `personas/sakthai/agent-self-evolution/**`).
 
 | Workflow | Schedule | What it does |
 |---|---|---|
+| `continuous-security.yml` | daily 02:00 UTC | Nightly security sweep |
 | `verify-assets.yml` | daily | Hugging Face asset verification |
+| `stale.yml` | daily 15:44 UTC | Issue/PR triage |
 | `run-evals.yml` | weekly (Sun 00:00 UTC) | `lm-eval-harness` over `evaluation_tasks/` + regression vs. last baseline |
 | `dependency-audit.yml` | weekly (Mon 05:30 UTC) | `pip-audit` over `uv.lock` |
-| `security-audit.md` | weekly (Thu) | Agentic triage of bandit / pip-audit / the guardrail suite → at most one issue |
-| `opencode-smoke.md` · `shared-package-drift.md` · `skills-hygiene.md` | weekly (Mon / Tue / Wed) | Agentic audits — each opens an issue only when it finds something |
-| `OSPS.yml` | weekly (Mon 09:00 UTC) | Open Source Project Security baseline assessment |
-| `summary.yml` · `code-scanning-cleanup.yml` | on issue open / manual | Utility workflows |
+| `auto-dependency-update.yml` | weekly (Mon 08:00 UTC) | Dependency bump PRs |
+| `ossar.yml` | weekly (Mon 06:15 UTC) | Extra scheduled scan |
+| `manual.yml` · `summary.yml` | manual / on issue open | Utility workflows |
 
 Green CI is the bar for `main`. Run the lint → mypy → bandit → pytest sequence
 locally before pushing.
@@ -502,7 +500,7 @@ repository-settings prerequisites are in
 
 **Layer 5: Supply Chain Security**
 - **Purpose:** Mitigate risks from third-party dependencies and external assets.
-- **Mechanisms:** Dependency auditing (`pip-audit`), static analysis (Bandit, CodeQL, SonarCloud, ESLint), and continuous verification of Hugging Face assets.
+- **Mechanisms:** Dependency auditing (`pip-audit`), static analysis (Bandit, CodeQL, SonarCloud, OSSAR), and continuous verification of Hugging Face assets.
 
 Report vulnerabilities per [`SECURITY.md`](SECURITY.md).
 

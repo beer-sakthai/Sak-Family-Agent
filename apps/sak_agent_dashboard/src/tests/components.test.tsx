@@ -105,11 +105,12 @@ describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
   });
 
   describe("Demo Mode Toggle Component", () => {
-    it("renders demo mode toggle button and handles click state toggle", () => {
+    it("renders demo mode toggle button with aria-pressed state and handles click state toggle", () => {
       const handleToggle = vi.fn();
 
       render(<DemoModeToggle isDemo={false} onToggle={handleToggle} />);
-      const btn = screen.getByRole("button", { name: /demo/i });
+      const btn = screen.getByRole("button", { name: /demo mode/i });
+      expect(btn.getAttribute("aria-pressed")).toBe("false");
       fireEvent.click(btn);
       expect(handleToggle).toHaveBeenCalled();
     });

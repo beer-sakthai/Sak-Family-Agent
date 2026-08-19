@@ -37,17 +37,6 @@ that disappeared inside a commit whose message described something else.
 * **``.bandit`` is an ini file.** It was committed as a pasted fragment of
   GitHub Actions YAML, so bandit logged "Unable to parse config file" and every
   bare invocation ran with no configuration at all.
-
-* **Pull-request workflows serialise per ref.** Until 2026-08-18 not one of the
-  eleven push/pull-request workflows declared ``concurrency:``, so every
-  force-push left the previous CI, Pylint, CodeQL, Bandit, SonarCloud, ESLint
-  and subproject runs to finish against a commit nobody would look at again.
-  The repository had accumulated 27,417 workflow runs. Every stock starter
-  template omits the block, which is how it stayed missing.
-
-* **Every job declares a timeout.** A job with no ``timeout-minutes`` holds a
-  runner for GitHub's six-hour default. Four workflows set one; the other
-  sixteen did not.
 """
 
 from __future__ import annotations
@@ -82,34 +71,6 @@ def _workflow_files() -> list[Path]:
 
 def _yaml_workflows() -> list[Path]:
     return [p for p in _workflow_files() if p.suffix in {".yml", ".yaml"}]
-
-
-def _authored_workflows() -> list[Path]:
-    """The workflows a human edits — the ``.lock.yml`` files are compiler output.
-
-    gh-aw generates its lock files from the Markdown sources, and the shape of
-    that output is upstream's decision: it emits a top-level ``concurrency:``
-    but sets ``timeout-minutes`` on only one of each workflow's five-to-eight
-    generated jobs. Holding generated files to a rule the generator does not
-    follow would fail on every recompile, so the two rules below apply to the
-    hand-written workflows and say so.
-    """
-    return [p for p in _yaml_workflows() if not p.name.endswith(".lock.yml")]
-
-
-def _triggers(data: dict) -> set[str]:
-    """The event names in a workflow's ``on:``, however it was written.
-
-    ``on:`` accepts a list (``on: [push]``), a mapping (``on:\\n  push:``) or a
-    bare string, and PyYAML resolves the unquoted key ``on`` to the boolean
-    ``True`` under YAML 1.1 — so the key itself has to be looked up both ways.
-    """
-    on = data.get("on", data.get(True))
-    if isinstance(on, dict):
-        return set(on)
-    if isinstance(on, list):
-        return set(on)
-    return {on} if isinstance(on, str) else set()
 
 
 def _load(path: Path) -> dict:
@@ -180,52 +141,6 @@ def test_actions_are_pinned_to_a_commit_sha(path: Path) -> None:
             unpinned.append(f"{path.name}:{lineno}: {ref}")
     assert not unpinned, "Actions must be pinned to a 40-character commit SHA:\n" + "\n".join(
         unpinned
-    )
-
-
-@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
-def test_pull_request_workflows_serialise_per_ref(path: Path) -> None:
-    """A pull-request workflow must group its runs, or force-pushes pile up.
-
-    Without a ``concurrency:`` block every push to a branch starts a fresh run
-    and leaves the previous one running to completion against a commit that has
-    already been replaced. On a repository where agents push repeatedly to the
-    same branch that is most of the minutes spent.
-
-    This only requires the block to exist; each workflow decides its own
-    ``cancel-in-progress``. The convention here is to cancel pull-request runs
-    and never a run on ``main`` — a cancelled analysis uploads no SARIF, and an
-    alert is only ever closed by a newer analysis from the same tool.
-    """
-    data = _load(path)
-    if not _triggers(data) & {"pull_request", "pull_request_target"}:
-        pytest.skip("not triggered by a pull request")
-    assert "concurrency" in data, (
-        f"{path.name}: no top-level `concurrency:` block. Add\n"
-        "  concurrency:\n"
-        "    group: ${{ github.workflow }}-${{ github.ref }}\n"
-        "    cancel-in-progress: ${{ github.event_name == 'pull_request' }}\n"
-        "so a force-push cancels the run it supersedes."
-    )
-
-
-@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
-def test_every_job_declares_a_timeout(path: Path) -> None:
-    """A job without ``timeout-minutes`` holds a runner for six hours.
-
-    That is GitHub's default, and it is never the right answer: the longest job
-    in this repository (the dashboard's install → lint → typecheck → 172 vitest
-    tests → build chain) is budgeted at thirty minutes. A hung install or a
-    wedged test process should fail the run, not occupy a runner for the rest of
-    the working day.
-    """
-    jobs = _load(path).get("jobs", {})
-    missing = [
-        name for name, job in jobs.items() if isinstance(job, dict) and "timeout-minutes" not in job
-    ]
-    assert not missing, (
-        f"{path.name}: job(s) {missing} declare no `timeout-minutes`. Give each "
-        "one a budget it should never legitimately reach."
     )
 
 

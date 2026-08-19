@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { VoiceWaveformPreviewer } from './telegram/VoiceWaveformPreviewer';
-import { VoiceStudioWorkbench } from './telegram/VoiceStudioWorkbench';
 import { IncidentAlertFeed } from './telegram/IncidentAlertFeed';
 import { TelegramWebhookTester } from './telegram/TelegramWebhookTester';
 import {
@@ -156,9 +155,6 @@ export const TelegramVoiceBridgePanel: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Real-time Gemini 2.0 Multimodal Live Voice & WebRTC Duplex Studio */}
-      <VoiceStudioWorkbench />
 
       {/* Voice Waveform & Persona TTS Previewer */}
       <VoiceWaveformPreviewer voices={voices} onSynthesize={handleSynthesize} />

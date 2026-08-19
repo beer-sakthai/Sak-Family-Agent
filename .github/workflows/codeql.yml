@@ -32,21 +32,10 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  # See the note in ci.yml. Never cancel on `main`: a cancelled analysis
-  # uploads nothing, and an alert is only ever closed by a newer analysis from
-  # the same tool — so a gap here leaves fixed alerts open on the Security tab.
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
-    # Generous: the python and javascript-typescript legs walk the whole
-    # repository. Still well under GitHub's 6-hour default, which is what a
-    # hung analysis would otherwise hold a runner for.
-    timeout-minutes: 60
     permissions:
       security-events: write  # upload the analysis to the code-scanning API
       packages: read          # fetch CodeQL query packs
