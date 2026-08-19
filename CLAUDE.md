@@ -174,8 +174,8 @@ Other `make` targets: `compose-personas` (rebuild full skill trees into
 
 ### CI
 
-Twenty-three hand-written workflows live in `.github/workflows/`, plus **eight**
-gh-aw Markdown sources compiled to `.lock.yml` beside them — 31 `.yml` files in
+Twenty-four hand-written workflows live in `.github/workflows/`, plus **eight**
+gh-aw Markdown sources compiled to `.lock.yml` beside them — 32 `.yml` files in
 all, plus `shared/opencode.md`, which is an import rather than a workflow of its
 own. None of the eight runs on Copilot any more: seven run on `engine: gemini`
 and one on a vendored OpenCode engine driving a Gemini model — see
@@ -213,6 +213,33 @@ The ones that gate a change:
 | `innersource-advisories.yml` | daily 01:00 UTC, manual | reads the open Dependabot alert list and rewrites one standing issue with it. **Needs `DEPENDABOT_ALERTS_TOKEN`** — `GITHUB_TOKEN` cannot read Dependabot alerts, and `security-events: read` does not grant it (the Actions app lacks the permission entirely). Gates nothing |
 | `self-healing-ci.yml` | `workflow_run` completion of `CI` on `main` (failure only), or manual | runs `sakthai heal run` over the failed job's log and opens a `selfheal/` fix PR when the patch is safe and locally verified. Gates nothing — it only ever adds a PR |
 | `auto-merge.yml` | `pull_request_target` labeled/unlabeled/ready_for_review | turns GitHub's **native** auto-merge on for a PR carrying the `automerge` label (squash), off when the label is removed. Gates nothing and waives nothing — GitHub still holds the merge until branch protection is satisfied, including the non-author approval. Uses no checkout, so the `pull_request_target` token never meets PR code |
+| `ossar.yml` | push/PR to `main`, weekly Monday | open-source static analysis on `windows-latest` → SARIF. **Re-added 2026-08-19 and red ever since — see below before touching it** |
+
+**`ossar.yml` is currently broken and is breaking `main` with it.** It was
+retired on 2026-08-18 for the reasons in the removal note below, then re-added
+on 2026-08-19 by commit `52be3a6` as GitHub's stock OSSAR starter template,
+unmodified. `main`'s CI was green through `cd250bd` and went red on that commit.
+Two independent things are wrong with it:
+
+1. **It cannot check out this repository.** It runs `runs-on: windows-latest`,
+   and this repo contains paths that are illegal on NTFS — the `stitch::`
+   skill directories under `personas/sakjules/skills/` and
+   `personas/saksee/skills/`. `actions/checkout` dies before OSSAR ever starts:
+   `error: invalid path 'personas/sakjules/skills/SakJules-stitch::code-to-design/SKILL.md'`,
+   exit 128. No Windows-runner workflow can check this repository out while
+   those directory names exist.
+2. **It violates three of the invariants `tests/test_workflow_hygiene.py`
+   enforces**, so it fails `ci.yml` as well as its own job:
+   `test_actions_are_pinned_to_a_commit_sha` (it uses `actions/checkout@v4`,
+   `github/ossar-action@v1`, `github/codeql-action/upload-sarif@v3` — tags, not
+   SHAs), `test_pull_request_workflows_serialise_per_ref` (no `concurrency:`
+   block), and `test_every_job_declares_a_timeout` (the `OSSAR-Scan` job has no
+   `timeout-minutes`).
+
+Fixing (2) is mechanical; fixing (1) is not, and pinning the SHAs would leave a
+workflow that still cannot check the repo out. Deciding between re-retiring it
+and renaming the `stitch::` skill directories is a live question — do not
+"fix the lint" on this file and assume it works.
 
 Note that the two `*-gate.yml` dashboard workflows are triggered by `personas/**`
 as well as `apps/sak_agent_dashboard/**`, but both run entirely inside
@@ -255,7 +282,9 @@ Docker / Actions), `continuous-security.yml` (nightly, but every run skipped its
 agent step because there is no `ANTHROPIC_API_KEY` — `security-audit.md` replaces
 it on the Gemini engine the rest of the agentic workflows already use),
 `ossar.yml` (MSDO with `tools: eslint` at a repository root that has no
-`package.json`, duplicating what `eslint.yml` does properly), `stale.yml` (still
+`package.json`, duplicating what `eslint.yml` does properly — **note it was
+re-added on 2026-08-19 and is currently red; see the callout above**),
+`stale.yml` (still
 carrying the starter template's literal `'Stale issue message'` placeholder), and
 `manual.yml` (a greeting echo). Before adding a workflow back, check the Actions
 tab for what it actually did.
