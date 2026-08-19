@@ -1,6 +1,7 @@
 ---
 name: SakSit-b2b-saas-brand-journalism-storytelling-2026
-description: "Saksit B2B Saas Brand Journalism Storytelling 2026"
+description: Saksit B2B Saas Brand Journalism Storytelling 2026
+...
 ---
 
 # B2B SaaS Brand Journalism & Storytelling Strategy 2026

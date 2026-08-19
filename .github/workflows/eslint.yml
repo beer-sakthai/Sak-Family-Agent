@@ -145,8 +145,6 @@ jobs:
                 f"{total} result(s) across {len(runs)} run(s)")
           EOF
 
-      - name: Upload analysis results to GitHub
-        uses: github/codeql-action/upload-sarif@f3712979fa5f215279b101dd0a2e3bdfb4353324 # v3.37.7
       - name: Upload results to the code-scanning dashboard
         uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4
         with:

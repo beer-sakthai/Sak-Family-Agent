@@ -1,6 +1,9 @@
 ---
 name: SakThai-hf-gradio-6-theme-customization
-description: ">   Complete guide to Gradio 6s theming system — the theming class hierarchy   (ThemeClass → Base → Default/Soft/Hard), 200+ CSS variables organized by   category (body, blocks, inputs, buttons, checkboxes, shadows, text),   color palette system (10 "
+description: ">   Complete guide to Gradio 6s theming system \u2014 the theming class hierarchy\
+  \   (ThemeClass \u2192 Base \u2192 Default/Soft/Hard), 200+ CSS variables organized\
+  \ by   category (body, blocks, inputs, buttons, checkboxes, shadows, text),   color\
+  \ palette system (10 "
 ---
 
 # HF Gradio 6 Theme Customization

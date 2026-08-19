@@ -1,6 +1,7 @@
 ---
 name: SakSee-imessage
-description: "Send and read iMessages via terminal using messages-cli."
+description: Send and read iMessages via terminal using messages-cli.
+...
 ---
 
 # iMessage

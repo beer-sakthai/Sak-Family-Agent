@@ -1,6 +1,7 @@
 ---
 name: SakSee-obsidian
-description: "Read, search, create, and edit notes in the Obsidian vault."
+description: Read, search, create, and edit notes in the Obsidian vault.
+...
 ---
 
 # Obsidian Vault

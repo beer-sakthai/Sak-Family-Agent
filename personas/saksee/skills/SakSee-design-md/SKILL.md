@@ -1,6 +1,7 @@
 ---
 name: SakSee-design-md
-description: "Author/validate/export Googles DESIGN.md token spec files."
+description: Author/validate/export Googles DESIGN.md token spec files.
+...
 ---
 
 # DESIGN.md Skill

@@ -1,6 +1,7 @@
 ---
 name: SakJules-SakThai-github-ci-fix
-description: "Diagnose and repair GitHub Actions CI failures."
+description: Diagnose and repair GitHub Actions CI failures.
+...
 ---
 
 # GitHub CI Fix

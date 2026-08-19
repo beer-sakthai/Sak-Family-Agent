@@ -1,6 +1,8 @@
 ---
 name: SakJules-SakSit-founder-story-three-act
-description: "Tool-based workflow for structuring founder origin stories with the three-act architecture (Before State → Turning Point → New Reality), including platform-specific compression rules (LinkedIn/X/Reels), the 60/30/10 content ratio, origin archetypes, "
+description: "Tool-based workflow for structuring founder origin stories with the three-act architecture\
+  \ (Before State \u2192 Turning Point \u2192 New Reality), including platform-specific\
+  \ compression rules (LinkedIn/X/Reels), the 60/30/10 content ratio, origin archetypes, "
 ---
 
 # SakSit Founder Story — Three-Act Architecture

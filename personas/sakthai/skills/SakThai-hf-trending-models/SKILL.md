@@ -1,6 +1,7 @@
 ---
 name: SakThai-hf-trending-models
-description: "Tracked snapshot of trending models from Hugging Face Hub"
+description: Tracked snapshot of trending models from Hugging Face Hub
+...
 ---
 
 # Trending Models — 23 Jul 2026 (Tick 14:52 UTC)

@@ -1,6 +1,7 @@
 ---
 name: SakThai-huggingface-cli
-description: "Use when working with Hugging Face Hub via the hf CLI — auth, upload, download, jobs, repos, endpoints, and SakThai pipeline operations."
+description: "Use when working with Hugging Face Hub via the hf CLI \u2014 auth, upload, download,\
+  \ jobs, repos, endpoints, and SakThai pipeline operations."
 ---
 
 # Hugging Face CLI (`hf`)

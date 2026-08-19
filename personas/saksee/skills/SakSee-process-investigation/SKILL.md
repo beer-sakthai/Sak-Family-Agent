@@ -1,6 +1,8 @@
 ---
 name: SakSee-process-investigation
-description: "Investigate and manage system processes for debugging, monitoring, and verification purposes."
+description: Investigate and manage system processes for debugging, monitoring, and verification
+  purposes.
+...
 ---
 
 # Process Investigation

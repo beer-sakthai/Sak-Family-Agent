@@ -1,6 +1,7 @@
 ---
 name: SakThai-hf-smol-course
-description: "Fine-tune LLMs with TRL, PEFT, and alignment methods."
+description: Fine-tune LLMs with TRL, PEFT, and alignment methods.
+...
 ---
 
 # Fine-Tuning LLMs — a smol course
