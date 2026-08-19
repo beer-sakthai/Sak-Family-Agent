@@ -36,6 +36,13 @@ jobs:
     timeout-minutes: 20
 
     steps:
+    # Three vendored paths under apps/sak_agent_dashboard/microsoft_agents_m365copilot/
+    # are 274-278 characters, past Windows' 260-character MAX_PATH. Without this,
+    # git writes every other file and then exits 1, which reads as a checkout
+    # failure with no explanation. This is a Windows-runner concern only.
+    - name: Allow long paths on the Windows runner
+      run: git config --global core.longpaths true
+
     - name: Checkout repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 

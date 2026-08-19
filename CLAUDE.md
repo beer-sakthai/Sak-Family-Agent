@@ -235,12 +235,24 @@ of them is worth keeping:
    top-level `concurrency:`, and no `timeout-minutes`. All three are pinned and
    declared now.
 
-The trap here is that (2) is mechanical and (1) is not. Pinning the SHAs alone
-would have turned `ci.yml` green while leaving a workflow that still could not
-check the repository out — a quieter failure, not a fixed one. **No
-Windows-runner workflow can check this repository out if a `::` path is
-reintroduced**, so treat that as a constraint on skill directory names rather
-than a one-off cleanup.
+3. **It still could not check out after the rename**, for an unrelated Windows
+   reason: three vendored paths under
+   `apps/sak_agent_dashboard/microsoft_agents_m365copilot/` are 274-278
+   characters, past Windows' 260-character `MAX_PATH`. Git wrote all 6,250
+   files and then exited 1 with no message naming a file. The workflow now runs
+   `git config --global core.longpaths true` before `actions/checkout`.
+
+The trap here is that (2) is mechanical while (1) and (3) are not. Pinning the
+SHAs alone would have turned `ci.yml` green while leaving a workflow that still
+could not check the repository out — a quieter failure, not a fixed one, and
+each layer only became visible once the one above it was cleared.
+
+**Two standing constraints follow from this, and they bind any future
+Windows-runner workflow, not just OSSAR:** a `::` in a path makes checkout fail
+immediately with `invalid path`, and a path over 260 characters makes it fail
+at the end with a bare exit 1. Both are properties of this repository's tree —
+the `stitch-*` skill names and the vendored M365 SDK — rather than of the
+workflow that trips over them.
 
 Note that the two `*-gate.yml` dashboard workflows are triggered by `personas/**`
 as well as `apps/sak_agent_dashboard/**`, but both run entirely inside
