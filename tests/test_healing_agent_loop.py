@@ -8,7 +8,6 @@ import pytest
 
 from sakthai.agent import loop as loop
 from sakthai.agent.loop import run_agent
-from sakthai.agent.tools import Tool
 from sakthai.healing.dlq import DeadLetterQueue
 from sakthai.healing.snapshot import MemorySnapshotManager
 from sakthai.healing.supervisor import SelfHealingSupervisor
