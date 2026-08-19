@@ -1,6 +1,8 @@
 ---
 name: SakSee-benchmarking
-description: "Two-pass cold/hot benchmarking methodology for measuring file I/O, API latency, tool performance, and system throughput."
+description: Two-pass cold/hot benchmarking methodology for measuring file I/O, API latency, tool
+  performance, and system throughput.
+...
 ---
 
 # Benchmarking Pattern

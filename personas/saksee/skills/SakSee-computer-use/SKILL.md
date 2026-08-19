@@ -1,6 +1,6 @@
 ---
 name: SakSee-computer-use
-description: "Drive the users desktop in the background — clicking, typing, scrolling, dragging."
+description: "Drive the users desktop in the background \u2014 clicking, typing, scrolling, dragging."
 ---
 
 # Computer Use (universal, any-model, cross-platform)

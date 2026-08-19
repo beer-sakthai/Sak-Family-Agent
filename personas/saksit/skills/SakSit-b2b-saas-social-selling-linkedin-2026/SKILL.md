@@ -1,6 +1,8 @@
 ---
 name: SakSit-b2b-saas-social-selling-linkedin-2026
-description: ">   A practical playbook for B2B SaaS sales reps, SDRs, and founders to generate   pipeline through LinkedIn social selling. Covers profile optimization, signal-based   prospecting, SSI improvement, content cadence, and warm outreach sequences   that"
+description: '>   A practical playbook for B2B SaaS sales reps, SDRs, and founders to generate   pipeline
+  through LinkedIn social selling. Covers profile optimization, signal-based   prospecting,
+  SSI improvement, content cadence, and warm outreach sequences   that'
 ---
 
 # B2B SaaS LinkedIn Social Selling Strategy 2026

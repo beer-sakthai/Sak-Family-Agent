@@ -1,6 +1,8 @@
 ---
 name: SakJules-SakKing-hf-accelerate
-description: "Hugging Face Accelerate: distributed/mixed-precision training, device mapping, and the accelerate launch CLI — unify CPU/GPU/TPU/FSDP/DeepSpeed workflows with a single PyTorch-compatible API."
+description: "Hugging Face Accelerate: distributed/mixed-precision training, device mapping, and\
+  \ the accelerate launch CLI \u2014 unify CPU/GPU/TPU/FSDP/DeepSpeed workflows with\
+  \ a single PyTorch-compatible API."
 ---
 
 # Hugging Face Accelerate

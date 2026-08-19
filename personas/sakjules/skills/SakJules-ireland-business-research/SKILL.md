@@ -1,6 +1,8 @@
 ---
 name: SakJules-SakKing-ireland-business-research
-description: "Structured Ireland business research workflow for company verification, market analysis, sector intelligence, and regulatory context."
+description: Structured Ireland business research workflow for company verification, market analysis,
+  sector intelligence, and regulatory context.
+...
 ---
 
 # Ireland Business Research Skill

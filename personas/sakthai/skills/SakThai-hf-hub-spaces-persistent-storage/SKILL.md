@@ -1,6 +1,8 @@
 ---
 name: SakThai-hf-hub-spaces-persistent-storage
-description: "Knowledge about Hugging Face Spaces persistent storage via Storage Buckets — creating, attaching, mounting, and managing persistent volumes in Spaces for zero-cost operation."
+description: "Knowledge about Hugging Face Spaces persistent storage via Storage Buckets \u2014\
+  \ creating, attaching, mounting, and managing persistent volumes in Spaces for zero-cost\
+  \ operation."
 ---
 
 # HF Hub Spaces Persistent Storage

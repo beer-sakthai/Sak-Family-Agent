@@ -1,6 +1,7 @@
 ---
 name: SakJules-SakSee-research-diary-documentation
-description: "Create and save research diaries to GitHub for documentation safety."
+description: Create and save research diaries to GitHub for documentation safety.
+...
 ---
 
 # Research Diary Documentation

@@ -1,6 +1,7 @@
 ---
 name: SakSit-personal-narrative-cold-email
-description: "Cold email using personal narrative as hook."
+description: Cold email using personal narrative as hook.
+...
 ---
 
 # Personal Narrative Cold Email Outreach

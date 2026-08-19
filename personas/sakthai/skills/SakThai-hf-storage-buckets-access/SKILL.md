@@ -1,6 +1,9 @@
 ---
 name: SakThai-hf-storage-buckets-access
-description: "Complete reference for HF Storage Bucket access patterns and data integrations — five access methods (hf-mount, volume mounts, hf:// fsspec, CLI sync, S3 API), Python data tool integrations (pandas, DuckDB, Dask, Daft, PyArrow, PySpark, Datasets, Ins"
+description: "Complete reference for HF Storage Bucket access patterns and data integrations \u2014\
+  \ five access methods (hf-mount, volume mounts, hf:// fsspec, CLI sync, S3 API),\
+  \ Python data tool integrations (pandas, DuckDB, Dask, Daft, PyArrow, PySpark, Datasets,\
+  \ Ins"
 ---
 
 # HF Hub Storage Buckets — Access Patterns & Data Integration

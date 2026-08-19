@@ -1,6 +1,9 @@
 ---
 name: SakJules-SakThai-hf-community-evals
-description: ">-   Complete reference on HF Community Evals (decentralized eval results   on model pages and benchmark leaderboards) and its cross-compatibility   with Every Eval Ever (EEE) — the EvalEval Coalitions universal eval   schema. Covers eval.yaml spec, "
+description: ">-   Complete reference on HF Community Evals (decentralized eval results   on model\
+  \ pages and benchmark leaderboards) and its cross-compatibility   with Every Eval\
+  \ Ever (EEE) \u2014 the EvalEval Coalitions universal eval   schema. Covers eval.yaml\
+  \ spec, "
 ---
 
 # Hugging Face Community Evals

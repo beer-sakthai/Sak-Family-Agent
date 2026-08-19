@@ -1,6 +1,8 @@
 ---
 name: SakThai-hf-sglang-integration
-description: "Complete reference on SGLang serving frameworks Hugging Face integration — loading HF models, OpenAI-compatible APIs, offline inference, quantization, LoRA, tool calling, and multi-GPU deployment."
+description: "Complete reference on SGLang serving frameworks Hugging Face integration \u2014 loading\
+  \ HF models, OpenAI-compatible APIs, offline inference, quantization, LoRA, tool\
+  \ calling, and multi-GPU deployment."
 ---
 
 # SGLang + Hugging Face Integration

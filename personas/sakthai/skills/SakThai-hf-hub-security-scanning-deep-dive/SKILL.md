@@ -1,6 +1,6 @@
 ---
 name: SakThai-hf-hub-security-scanning-deep-dive
-description: "name: SakThai-hf-hub-security-scanning-deep-dive"
+description: 'name: SakThai-hf-hub-security-scanning-deep-dive'
 ---
 
 # Hugging Face Hub Security Scanning — Deep Dive

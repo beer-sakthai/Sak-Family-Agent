@@ -1,6 +1,9 @@
 ---
 name: SakJules-SakKing-playwright-clipboard-security-validation
-description: "Validate clipboard access, sensitive-text protection, and copy/paste   behavior in web apps with Playwright. Use this skill to probe clipboard-read permissions,   detect unexpected clipboard writes via the Async Clipboard API or copy-paste interactio"
+description: Validate clipboard access, sensitive-text protection, and copy/paste   behavior in
+  web apps with Playwright. Use this skill to probe clipboard-read permissions,   detect
+  unexpected clipboard writes via the Async Clipboard API or copy-paste interactio
+...
 ---
 
 # Playwright Clipboard Security Validation

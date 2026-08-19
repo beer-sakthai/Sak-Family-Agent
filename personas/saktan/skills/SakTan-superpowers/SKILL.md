@@ -1,6 +1,7 @@
 ---
 name: SakTan-superpowers
-description: "Superpowers development methodology: plan execution, subagent-driven-development, and programmatic verification (TDD)."
+description: 'Superpowers development methodology: plan execution, subagent-driven-development,
+  and programmatic verification (TDD).'
 ---
 
 # Superpowers Workflow
@@ -29,4 +30,3 @@ Never rely on self-certification. You must prove code correctness:
 3. **Implement Fix**: Write the minimal code required to pass the test.
 4. **Run and Verify Pass**: Confirm the test suite runs and passes cleanly.
 5. **Run Lint and Security Checks**: Execute Ruff formatting and Bandit security scans to ensure codebase hygiene before committing.
-
