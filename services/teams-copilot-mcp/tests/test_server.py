@@ -130,3 +130,9 @@ def test_get_meeting_transcript_calls_graph_client():
         "GET", "/users/u1/onlineMeetings/m1/transcripts/t1/content"
     )
     assert result == "WEBVTT\n..."
+
+
+def test_main_runs_mcp_server():
+    with patch.object(server.mcp, "run") as mock_run:
+        server.main()
+        mock_run.assert_called_once()
