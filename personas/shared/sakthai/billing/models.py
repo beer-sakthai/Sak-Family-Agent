@@ -45,9 +45,7 @@ def _get_api_key_hash_secret() -> bytes:
     """Load and validate API key hashing secret used for deterministic keyed hashing."""
     secret = os.getenv(API_KEY_HASH_SECRET_ENV)
     if not secret:
-        raise RuntimeError(
-            f"Missing required environment variable: {API_KEY_HASH_SECRET_ENV}"
-        )
+        raise RuntimeError(f"Missing required environment variable: {API_KEY_HASH_SECRET_ENV}")
     return secret.encode("utf-8")
 
 
@@ -62,9 +60,7 @@ def hash_api_key(raw_key: str, stored_hash: str | None = None) -> str | bool:
         iterations = 310_000
         secret = _get_api_key_hash_secret()
         salt = secrets.token_bytes(16)
-        digest = hashlib.pbkdf2_hmac(
-            "sha256", raw_key.encode("utf-8"), secret + salt, iterations
-        )
+        digest = hashlib.pbkdf2_hmac("sha256", raw_key.encode("utf-8"), secret + salt, iterations)
         return f"pbkdf2_sha256${iterations}${salt.hex()}${digest.hex()}"
 
     try:
