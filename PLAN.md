@@ -132,7 +132,6 @@ never duplicate content across files.
 | **Repo Hygiene Round 2** | [SCRATCH_ORGANISATION_PLAN](#scratch-organisation-plan) | 🟡 Active — root cleanup |
 | **HF Ecosystem Improvement (19 models · 16 datasets · 7 Spaces)** | [`docs/hf-cards-improvement-plan.md`](./docs/hf-cards-improvement-plan.md) | 🟡 Active — Phase 1 (broken repos) next |
 | **Multi-Agent Telegram & Live Chat Routing Gateway** | [`docs/multi-agent-gateway-plan.md`](./docs/multi-agent-gateway-plan.md) | ✅ Complete — 2026-08-18 (Subagent-Driven Execution) |
-| **Dependabot multi-ecosystem + innersource advisories** | [`docs/configuring-multi-ecosystem-updates.md`](./docs/configuring-multi-ecosystem-updates.md) · [`docs/dependabot-setup.md`](./docs/dependabot-setup.md) | ✅ Complete — 2026-08-19 (5 ecosystems / 22 dirs, open-PR budget 95→19, `tests/test_dependabot_config.py`, daily advisory report) |
 
 ## 🔧 Runtime Notes
 

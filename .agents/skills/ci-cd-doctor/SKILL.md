@@ -1,8 +1,6 @@
 ---
 name: ci-cd-doctor
-description: Use when GitHub Actions checks fail, CI workflows report errors, CodeQL alerts trigger,
-  or ESLint and Vitest gates block pull request merging
-...
+description: Use when GitHub Actions checks fail, CI workflows report errors, CodeQL alerts trigger, or ESLint and Vitest gates block pull request merging
 ---
 
 # CI/CD Doctor

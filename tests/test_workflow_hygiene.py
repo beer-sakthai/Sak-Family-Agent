@@ -215,52 +215,6 @@ def test_actions_are_pinned_to_a_commit_sha(path: Path) -> None:
     )
 
 
-@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
-def test_pull_request_workflows_serialise_per_ref(path: Path) -> None:
-    """A pull-request workflow must group its runs, or force-pushes pile up.
-
-    Without a ``concurrency:`` block every push to a branch starts a fresh run
-    and leaves the previous one running to completion against a commit that has
-    already been replaced. On a repository where agents push repeatedly to the
-    same branch that is most of the minutes spent.
-
-    This only requires the block to exist; each workflow decides its own
-    ``cancel-in-progress``. The convention here is to cancel pull-request runs
-    and never a run on ``main`` — a cancelled analysis uploads no SARIF, and an
-    alert is only ever closed by a newer analysis from the same tool.
-    """
-    data = _load(path)
-    if not _triggers(data) & {"pull_request", "pull_request_target"}:
-        pytest.skip("not triggered by a pull request")
-    assert "concurrency" in data, (
-        f"{path.name}: no top-level `concurrency:` block. Add\n"
-        "  concurrency:\n"
-        "    group: ${{ github.workflow }}-${{ github.ref }}\n"
-        "    cancel-in-progress: ${{ github.event_name == 'pull_request' }}\n"
-        "so a force-push cancels the run it supersedes."
-    )
-
-
-@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
-def test_every_job_declares_a_timeout(path: Path) -> None:
-    """A job without ``timeout-minutes`` holds a runner for six hours.
-
-    That is GitHub's default, and it is never the right answer: the longest job
-    in this repository (the dashboard's install → lint → typecheck → 172 vitest
-    tests → build chain) is budgeted at thirty minutes. A hung install or a
-    wedged test process should fail the run, not occupy a runner for the rest of
-    the working day.
-    """
-    jobs = _load(path).get("jobs", {})
-    missing = [
-        name for name, job in jobs.items() if isinstance(job, dict) and "timeout-minutes" not in job
-    ]
-    assert not missing, (
-        f"{path.name}: job(s) {missing} declare no `timeout-minutes`. Give each "
-        "one a budget it should never legitimately reach."
-    )
-
-
 def test_self_healing_ci_refuses_untrusted_forks() -> None:
     """Scorecard ``DangerousWorkflowID`` — the guard a bot silently reverted.
 

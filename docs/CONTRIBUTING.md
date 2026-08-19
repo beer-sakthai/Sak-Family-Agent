@@ -162,10 +162,10 @@ What this does *not* do, deliberately:
   to merge"; it does not say "merge this".
 - It does not apply itself. The label is a per-PR opt-in — nothing merges
   because it matched a branch pattern or an author.
-- It is not for dependency bumps. Those come from Dependabot
-  (`.github/dependabot.yml`), and a freshly published malicious version passes
-  tests as happily as a good one — so a person reads the diff and the changelog.
-  Labelling a bump is a deliberate override, not the default.
+- It is not for dependency bumps. `auto-dependency-update.yml` opens those as
+  drafts on purpose: a freshly published malicious version passes tests as
+  happily as a good one, so a person reads the diff. Labelling one is a
+  deliberate override, not the default.
 
 Prerequisites, all in repository settings:
 

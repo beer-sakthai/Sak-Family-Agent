@@ -32,11 +32,6 @@ import {
   Swords,
   BrainCircuit,
   Radio,
-  Target,
-  Zap,
-  Dna,
-  ShieldAlert,
-  Command,
 } from "lucide-react";
 import DemoModeToggle from "@/components/DemoModeToggle";
 import AgentOverview from "@/components/AgentOverview";
@@ -64,13 +59,6 @@ import { ChatStudioPanel } from "@/components/ChatStudioPanel";
 import { FinetuningPanel } from "@/components/FinetuningPanel";
 import { GoogleAdkBridgePanel } from "@/components/GoogleAdkBridgePanel";
 import { TelegramVoiceBridgePanel } from "@/components/TelegramVoiceBridgePanel";
-import { EvalQualityFlywheelPanel } from "@/components/EvalQualityFlywheelPanel";
-import { AgentWarRoomPanel } from "@/components/AgentWarRoomPanel";
-import { A2APanel } from "@/components/A2APanel";
-import { SemanticCachePanel } from "@/components/cache/SemanticCachePanel";
-import { MutationStudioPanel } from "@/components/mutation/MutationStudioPanel";
-import { RedTeamStudioPanel } from "@/components/redteam/RedTeamStudioPanel";
-import { CommandPaletteModal } from "@/components/CommandPaletteModal";
 import { LiveTelemetryFeed } from "@/components/LiveTelemetryFeed";
 import { WorkflowFrameworkPanel } from "@/components/WorkflowFrameworkPanel";
 import { ProviderMatrixPanel } from "@/components/ProviderMatrixPanel";
@@ -131,15 +119,9 @@ export default function Home() {
   const [isDemo, setIsDemo] = useState(false);
   const [activeTab, setActiveTab] = useState<
     | "overview"
-    | "war_room"
     | "arena"
     | "finetune"
     | "adk_bridge"
-    | "eval_flywheel"
-    | "a2a_registry"
-    | "semantic_cache"
-    | "mutation_studio"
-    | "red_team"
     | "telegram_hub"
     | "analytics"
     | "sessions"
@@ -330,19 +312,6 @@ export default function Home() {
     fetchAllData(isDemo);
   }, [isDemo, fetchAllData]);
 
-  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setIsCommandPaletteOpen((prev) => !prev);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
   const handleToggleDemo = (newVal?: boolean) => {
     const nextVal = typeof newVal === "boolean" ? newVal : !isDemo;
     setIsDemo(nextVal);
@@ -445,21 +414,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Navigation Tab Bar Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="text-xs text-slate-400 font-mono">
-          <span>Active Fleet Studio Panels (15 Modules)</span>
-        </div>
-        <button
-          onClick={() => setIsCommandPaletteOpen(true)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-cyan-500 text-slate-300 hover:text-white text-xs font-mono transition-all shadow"
-        >
-          <Command className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Quick Actions &amp; Search</span>
-          <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-400 font-bold border border-slate-700">Ctrl+K</kbd>
-        </button>
-      </div>
-
       {/* Navigation Tab Bar */}
       <div className="flex items-center p-1.5 rounded-2xl bg-slate-900/90 border border-slate-800/80 font-mono text-xs gap-2">
         <button
@@ -472,21 +426,6 @@ export default function Home() {
         >
           <Cpu className="h-4 w-4 text-cyan-400" />
           Agent Overview ({agents.length})
-        </button>
-
-        <button
-          onClick={() => setActiveTab("war_room")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
-            activeTab === "war_room"
-              ? "bg-gradient-to-r from-purple-600/30 via-indigo-600/30 to-blue-600/30 text-purple-300 border border-purple-500/50 shadow-lg shadow-purple-950/50 ring-1 ring-purple-500/30"
-              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          }`}
-        >
-          <Activity className="h-4 w-4 text-purple-400" />
-          War Room Mesh ⚡
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800/50">
-            Live
-          </span>
         </button>
 
         <button
@@ -531,81 +470,6 @@ export default function Home() {
           ADK Bridge
           <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/50">
             Cloud Run
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("eval_flywheel")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
-            activeTab === "eval_flywheel"
-              ? "bg-gradient-to-r from-emerald-600/30 via-teal-600/30 to-blue-600/30 text-emerald-300 border border-emerald-500/50 shadow-lg shadow-emerald-950/50 ring-1 ring-emerald-500/30"
-              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          }`}
-        >
-          <Target className="h-4 w-4 text-emerald-400" />
-          Eval & Quality Flywheel
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/50">
-            G-Eval
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("a2a_registry")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
-            activeTab === "a2a_registry"
-              ? "bg-gradient-to-r from-cyan-600/30 via-blue-600/30 to-indigo-600/30 text-cyan-300 border border-cyan-500/50 shadow-lg shadow-cyan-950/50 ring-1 ring-cyan-500/30"
-              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          }`}
-        >
-          <Network className="h-4 w-4 text-cyan-400" />
-          A2A Registry
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800/50">
-            JSON-RPC
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("semantic_cache")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
-            activeTab === "semantic_cache"
-              ? "bg-gradient-to-r from-amber-600/30 via-orange-600/30 to-rose-600/30 text-amber-300 border border-amber-500/50 shadow-lg shadow-amber-950/50 ring-1 ring-amber-500/30"
-              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          }`}
-        >
-          <Zap className="h-4 w-4 text-amber-400" />
-          Semantic Cache
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800/50">
-            Optimizer
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("mutation_studio")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
-            activeTab === "mutation_studio"
-              ? "bg-gradient-to-r from-rose-600/30 via-pink-600/30 to-purple-600/30 text-rose-300 border border-rose-500/50 shadow-lg shadow-rose-950/50 ring-1 ring-rose-500/30"
-              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          }`}
-        >
-          <Dna className="h-4 w-4 text-rose-400" />
-          Mutation Studio
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800/50">
-            Self-Heal
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("red_team")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
-            activeTab === "red_team"
-              ? "bg-gradient-to-r from-red-700/30 via-rose-600/30 to-orange-600/30 text-rose-300 border border-rose-500/50 shadow-lg shadow-rose-950/50 ring-1 ring-rose-500/30"
-              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          }`}
-        >
-          <ShieldAlert className="h-4 w-4 text-rose-500" />
-          Red Team Fuzzer
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800/50">
-            Jailbreak
           </span>
         </button>
 
@@ -1010,23 +874,11 @@ export default function Home() {
           </div>
         )}
 
-        {activeTab === "war_room" && <AgentWarRoomPanel />}
-
         {activeTab === "arena" && <ChatStudioPanel />}
 
         {activeTab === "finetune" && <FinetuningPanel />}
 
         {activeTab === "adk_bridge" && <GoogleAdkBridgePanel />}
-
-        {activeTab === "eval_flywheel" && <EvalQualityFlywheelPanel />}
-
-        {activeTab === "a2a_registry" && <A2APanel />}
-
-        {activeTab === "semantic_cache" && <SemanticCachePanel />}
-
-        {activeTab === "mutation_studio" && <MutationStudioPanel />}
-
-        {activeTab === "red_team" && <RedTeamStudioPanel />}
 
         {activeTab === "telegram_hub" && <TelegramVoiceBridgePanel />}
 
@@ -1111,13 +963,6 @@ export default function Home() {
 
         {activeTab === "stitch" && <StitchStudio />}
       </div>
-
-      {/* Global Quick Action & Navigation Command Palette */}
-      <CommandPaletteModal
-        isOpen={isCommandPaletteOpen}
-        onClose={() => setIsCommandPaletteOpen(false)}
-        onNavigate={(tab) => setActiveTab(tab as any)}
-      />
     </div>
   );
 }
