@@ -21,6 +21,7 @@ module enforces two separate invariants:
    fail loudly rather than be silently inherited.
 """
 
+import json
 import unittest
 from pathlib import Path
 
@@ -264,6 +265,48 @@ class TestVulnerableDependencyPinsStayFixed(unittest.TestCase):
                         "and say why in docs/dependency-audit-2026-08-18.md.",
                     )
         self.assertGreater(checked, 0, "no pinned versions were checked — did the .in files move?")
+
+
+class TestSecurityToolingIsPresent(unittest.TestCase):
+    """Pin the existence of security tooling that nothing else references.
+
+    ``.claude-plugins/sak-security/`` defines the ``security-reviewer`` agent.
+    No test imports it, no workflow runs it, and nothing else in the repository
+    mentions it -- so it can be deleted without a single check going red. That
+    has now happened twice: once under a commit message about a Hugging Face
+    token path, and again under "perf: optimize portfolio CSV loading with
+    ThreadPoolExecutor" (26 files, 885 deletions).
+
+    A presence check is the cheapest thing that turns a silent deletion into a
+    failing test. It asserts the files exist and are non-empty; it deliberately
+    does not pin their contents, so the agent can be edited freely.
+    """
+
+    PLUGIN_FILES = (
+        Path(".claude-plugins/sak-security/.claude-plugin/plugin.json"),
+        Path(".claude-plugins/sak-security/README.md"),
+        Path(".claude-plugins/sak-security/agents/security-reviewer.md"),
+    )
+
+    def test_sak_security_plugin_files_exist(self):
+        for rel in self.PLUGIN_FILES:
+            with self.subTest(file=rel.as_posix()):
+                path = REPO_ROOT / rel
+                self.assertTrue(
+                    path.is_file(),
+                    f"{rel.as_posix()} is missing. Nothing else in the repo "
+                    "references the sak-security plugin, so its deletion is "
+                    "invisible without this check. Restore it rather than "
+                    "removing this test.",
+                )
+                self.assertGreater(path.stat().st_size, 0, f"{rel.as_posix()} exists but is empty")
+
+    def test_sak_security_plugin_manifest_is_valid_json(self):
+        """A truncated or half-written manifest is as broken as a missing one."""
+        manifest = REPO_ROOT / ".claude-plugins/sak-security/.claude-plugin/plugin.json"
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        self.assertEqual(data.get("name"), "sak-security")
+        self.assertTrue(data.get("description"), "plugin manifest has no description")
 
 
 class TestShadowInventory(unittest.TestCase):

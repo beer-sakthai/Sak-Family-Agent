@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import tempfile
@@ -562,6 +563,59 @@ class TestPreExecutionSecretGuardrails(unittest.TestCase):
         )
         self.assertEqual(res.action, GuardrailAction.DENY)
         self.assertIn("blocked", res.reason)
+
+    # The four tests below pin the recursion arms of _contains_secret_value.
+    # Each asserts the *match kind* the reason carries, not just DENY: the
+    # private-key regex and SECRET_PATTERN arms would also deny these payloads,
+    # so a bare DENY assertion can pass while the arm under test never runs.
+
+    def test_block_secret_inside_json_encoded_string_argument(self):
+        """A credential smuggled inside a JSON string is parsed, then rescanned."""
+        token = "987654321:ZYXwvuTSRqponMLKjihGFEdcba"
+        with mock.patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": token}):
+            res = GuardrailPolicy().check_pre_execution(
+                self.tool,
+                {"payload": json.dumps({"outer": {"inner": token}})},
+                self.store,
+            )
+        self.assertEqual(res.action, GuardrailAction.DENY)
+        self.assertIn("active credential matched", res.reason)
+
+    def test_block_secret_inside_list_argument(self):
+        """Sequence arguments are walked element by element."""
+        token = "111222333:AAAbbbCCCdddEEEfffGGGhhh"
+        with mock.patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": token}):
+            res = GuardrailPolicy().check_pre_execution(
+                self.tool,
+                {"attachments": ["harmless.txt", ["nested", token]]},
+                self.store,
+            )
+        self.assertEqual(res.action, GuardrailAction.DENY)
+        self.assertIn("active credential matched", res.reason)
+
+    def test_block_secret_used_as_a_dict_key(self):
+        """A mapping's keys are scanned, not only its values."""
+        token = "444555666:KKKlllMMMnnnOOOpppQQQrrr"
+        with mock.patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": token}):
+            res = GuardrailPolicy().check_pre_execution(
+                self.tool,
+                {"headers": {token: "authorization"}},
+                self.store,
+            )
+        self.assertEqual(res.action, GuardrailAction.DENY)
+        self.assertIn("active credential matched", res.reason)
+
+    def test_block_secret_used_as_a_dict_value(self):
+        """The value arm returns even when the key beside it is innocuous."""
+        token = "777888999:SSStttUUUvvvWWWxxxYYYzzz"
+        with mock.patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": token}):
+            res = GuardrailPolicy().check_pre_execution(
+                self.tool,
+                {"headers": {"authorization": token}},
+                self.store,
+            )
+        self.assertEqual(res.action, GuardrailAction.DENY)
+        self.assertIn("active credential matched", res.reason)
 
 
 if __name__ == "__main__":

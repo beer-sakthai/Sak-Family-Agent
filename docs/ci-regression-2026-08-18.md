@@ -78,6 +78,36 @@ pre-deletion version was itself garbled (the `_get_hf_token()` helper spliced
 into the middle of the summary loop, with a duplicate import at the end), so
 this needs rewriting rather than reverting.
 
+## Recurrence: the plugin was deleted again
+
+`04bbce0` — **"perf: optimize portfolio CSV loading with ThreadPoolExecutor"**,
+26 files, 32 insertions / **885 deletions** — deleted
+`.claude-plugins/sak-security/**` a second time, along with
+`.github/workflows/publish-npm.yml` and `tests/test_workbench_api_token.py`.
+Same signature as the rest: a message describing something unrelated to most
+of the diff.
+
+Nothing failed, for the same structural reason as before: **no test imports the
+plugin, no workflow runs it, and nothing else in the repository references it**,
+so its deletion is invisible to every check.
+
+**Restored** (the plugin only) and pinned by
+`tests/test_persona_guardrails_parity.py::TestSecurityToolingIsPresent`, which
+asserts the three files exist, are non-empty, and that the manifest is valid
+JSON naming `sak-security`. Contents are deliberately not pinned, so the agent
+can still be edited freely. Verified by replaying the deletion: all three
+subtests plus the manifest check fail, and pass once restored.
+
+**`.github/security-insights.yml` was deliberately NOT restored.** It is not
+this repository's file — the copy in git history is the OpenSSF Scorecard
+project's own, naming that project and an unrelated administrator at Bloomberg.
+Restoring it would republish false provenance claims. Deleting it was correct;
+if the repo wants a security-insights file, it needs one written from its own
+facts (this is the same conclusion the 2026-08-18 code-scanning sweep reached).
+
+`tests/test_workbench_api_token.py` and `publish-npm.yml` were also left out,
+for the reasons already given above.
+
 ## Prevention
 
 The guard is back, so a fourth recurrence fails CI rather than landing quietly.

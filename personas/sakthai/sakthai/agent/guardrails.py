@@ -1532,7 +1532,9 @@ def _block_output_with_secrets(
     if secret_match is not None:
         reason = (
             "Tool output blocked because it appears to contain a private key block."
-            if secret_match == "private key block"
+            # nosec B105 — a marker returned by _contains_secret_value to pick the
+            # wording of the denial, not a credential.
+            if secret_match == "private key block"  # nosec B105
             else "Tool output blocked because it appears to contain a secret."
         )
         return GuardrailResult(GuardrailAction.DENY, reason=reason)

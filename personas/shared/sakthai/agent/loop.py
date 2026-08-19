@@ -265,7 +265,6 @@ def _execute_tool(
         output = tool.handler(args, store)
         return redact_secrets(output), False
     except Exception as exc:  # noqa: BLE001 — surfaced back to the model
-        logger.debug("Tool %r raised %s: %s", tool.name, type(exc).__name__, exc)
         if heal is not None:
             _handle_healing_failure(heal, store, action=tool.name, payload=args, error=exc)
         logger.warning(
