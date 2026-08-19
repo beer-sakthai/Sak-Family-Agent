@@ -17,9 +17,13 @@
   - Plan: `conductor/tracks/003-hybrid-memory-vector-mesh/plan.md`
   - Status: Completed & Verified (15/15 tests passed across vector mesh, BM25, RRF).
 
+- [x] **Track 004: Autonomous CI/CD Self-Healing Doctor & Continuous Mutation Governance Daemon** (v2.6.0)
+  - Spec: `docs/prds/0004_prd_autonomous_cicd_doctor.md`
+  - Plan: `conductor/tracks/004-autonomous-cicd-doctor/plan.md`
+  - Status: Completed & Verified (16/16 tests passed across doctor, parity, and mutation daemon).
+
 ---
 
 ## Queued Tracks
 
-- [ ] **Track 004: Autonomous CI/CD Self-Healing Doctor & Continuous Mutation Governance Daemon**
 - [ ] **Track 005: Remote MCP Tool Federation & Dynamic Secure Agent Gateway**
