@@ -40,6 +40,12 @@ jobs:
     # are 274-278 characters, past Windows' 260-character MAX_PATH. Without this,
     # git writes every other file and then exits 1, which reads as a checkout
     # failure with no explanation. This is a Windows-runner concern only.
+    - name: Harden the runner
+      uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+      with:
+        use-policy-store: true
+        api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
     - name: Allow long paths on the Windows runner
       run: git config --global core.longpaths true
 
