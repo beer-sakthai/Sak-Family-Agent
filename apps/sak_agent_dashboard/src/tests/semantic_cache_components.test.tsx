@@ -13,4 +13,14 @@ describe('SemanticCachePanel Component', () => {
     expect(screen.getByText(/Interactive Semantic Cache Query Tester/i)).toBeDefined();
     expect(screen.getByText(/Active Semantic Cache Entries/i)).toBeDefined();
   });
+
+  it('provides accessible labels for input and interactive action buttons', () => {
+    render(<SemanticCachePanel />);
+
+    expect(screen.getByLabelText(/Filter prompt patterns/i)).toBeDefined();
+    expect(screen.getByLabelText(/Refresh Cache/i)).toBeDefined();
+
+    const invalidateButtons = screen.getAllByLabelText(/Invalidate cache entry for/i);
+    expect(invalidateButtons.length).toBeGreaterThan(0);
+  });
 });
