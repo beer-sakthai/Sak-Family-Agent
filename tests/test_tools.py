@@ -1436,3 +1436,47 @@ def test_send_telegram_message_redacts_secrets_in_errors(store: MemoryStore, mon
     out = tool_by_name("send_telegram_message").handler({"message": "test"}, store)
     assert fake_token not in out
     assert "[REDACTED]" in out
+
+
+def test_telegram_message_logging_on_errors(monkeypatch, tmp_path, caplog) -> None:
+    """_send_telegram_message emits warning/error log messages on failures."""
+    import logging
+    import urllib.error
+
+    from sakthai.agent.tools import tool_by_name
+    from sakthai.memory.store import MemoryStore
+
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "987654321")
+
+    # HTTPError
+    def mock_httperror(*args, **kwargs):
+        raise urllib.error.HTTPError(
+            url="https://api.telegram.org",
+            code=400,
+            msg="Bad Request",
+            hdrs={},
+            fp=None,
+        )
+
+    monkeypatch.setattr("urllib.request.urlopen", mock_httperror)
+    with MemoryStore(tmp_path / "test.db") as store, caplog.at_level(logging.WARNING):
+        tool_by_name("send_telegram_message").handler({"message": "test"}, store)
+
+    assert any("Telegram API HTTP error (400)" in record.message for record in caplog.records)
+
+
+def test_graph_safe_logging_on_errors(monkeypatch, tmp_path, caplog) -> None:
+    """_graph_safe emits warning/error log messages on failures."""
+    import logging
+
+    from sakthai.agent.tools import _graph_safe
+
+    # RuntimeError
+    with caplog.at_level(logging.WARNING):
+        _graph_safe("test_action", lambda: (_ for _ in ()).throw(RuntimeError("Config error")))
+
+    assert any(
+        "Microsoft Graph config/runtime error test_action: Config error" in record.message
+        for record in caplog.records
+    )

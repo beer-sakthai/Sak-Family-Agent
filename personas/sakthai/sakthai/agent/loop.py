@@ -268,6 +268,13 @@ def _execute_tool(
         logger.debug("Tool %r raised %s: %s", tool.name, type(exc).__name__, exc)
         if heal is not None:
             _handle_healing_failure(heal, store, action=tool.name, payload=args, error=exc)
+        logger.warning(
+            "Tool %r execution failed with %s: %s",
+            tool.name,
+            type(exc).__name__,
+            exc,
+            exc_info=True,
+        )
         return redact_secrets(f"{type(exc).__name__}: {exc}"), True
 
 
