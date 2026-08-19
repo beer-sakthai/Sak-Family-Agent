@@ -174,8 +174,8 @@ Other `make` targets: `compose-personas` (rebuild full skill trees into
 
 ### CI
 
-Twenty-four hand-written workflows live in `.github/workflows/`, plus **eight**
-gh-aw Markdown sources compiled to `.lock.yml` beside them — 32 `.yml` files in
+Twenty-seven hand-written workflows live in `.github/workflows/`, plus **eight**
+gh-aw Markdown sources compiled to `.lock.yml` beside them — 35 `.yml` files in
 all, plus `shared/opencode.md`, which is an import rather than a workflow of its
 own. None of the eight runs on Copilot any more: seven run on `engine: gemini`
 and one on a vendored OpenCode engine driving a Gemini model — see
@@ -190,6 +190,37 @@ a run on `main`, because a cancelled analysis uploads no SARIF and an alert is
 only ever closed by a newer analysis from the same tool. The `.lock.yml` files
 are exempt from both rules: they are compiler output and gh-aw sets
 `timeout-minutes` on only one of each workflow's generated jobs.
+
+**Python setup is one composite action, and it caches.** Every workflow that
+needs Python goes through `./.github/actions/setup-uv-python`, which installs a
+SHA-pinned uv, provisions the interpreter, restores uv's dependency cache (keyed
+on `**/uv.lock` + `**/pyproject.toml`, partitioned by `cache-suffix`) and runs
+`uv sync --locked`. Before it, `ci.yml` and `subprojects.yml` ran
+`pipx install uv` — an unpinned install — and no workflow in the repository
+cached a single Python wheel. Pass `sync: "false"` for jobs that only need the
+binary (`uv export`, `uvx <tool>`). `tests/test_workflow_hygiene.py` holds the
+action to the same SHA-pinning rule as the workflows, since extracting it moved
+those `uses:` lines out of the directory that check scans.
+
+**Caches are warmed on `main` and evicted at PR close.** Actions scopes caches so
+a branch reads only its own ref, its base, and the default branch — an entry
+first written by a PR run is invisible to every other branch, which for a
+short-lived agent branch means it never hits. `cache-warm.yml` therefore
+populates the uv, pnpm and `.next/cache` entries on `main` (on lockfile changes,
+weekly Monday, and on demand), and `cache-cleanup.yml` deletes a PR's caches when
+it closes so dead entries do not push the warm baseline out of the repository's
+10 GB budget by LRU. Neither gates anything.
+
+**`ci.yml` can run on a self-hosted runner, opt-in.** Its `runs-on` is
+`${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}` — set that repository variable
+to move CI onto your own hardware, delete it to move back, no workflow edit
+either way. The fallback is load-bearing and pinned by a test: a job dispatched
+to a label with no online runner does not fail, it *queues* for 24 hours and then
+expires, so the repository would stop reporting with nothing red to point at.
+Setup lives in [`infra/self-hosted-runner/`](infra/self-hosted-runner/README.md);
+read its first section before setting the variable, since a self-hosted runner
+must not be reachable by a fork's pull request. Only `ci.yml` is wired this way —
+the security scanners stay on GitHub-hosted runners on purpose.
 
 The ones that gate a change:
 
@@ -206,7 +237,7 @@ The ones that gate a change:
 | `agent-self-evolution.yml` | push/PR touching `personas/sakthai/agent-self-evolution/**`, manual | that subproject's own suite |
 | `labeler.yml` | `pull_request_target` | PR labelling |
 | `scorecard.yml` | push to `main`, weekly Thursday, `branch_protection_rule` | OpenSSF Scorecard → SARIF to code scanning |
-| `codeql.yml` | push/PR to `main`, weekly Sunday | CodeQL **advanced** setup over `actions`, `javascript-typescript`, `python`; scope from `.github/codeql/codeql-config.yml` via `config-file:` |
+| `codeql.yml` | push/PR to `main`, weekly Sunday | CodeQL **advanced** setup over `actions`, `javascript-typescript`, `python`; scope from `.github/codeql/codeql-config.yml` via `config-file:`. Query suites are per language (set on `matrix.include`, since a config file's `queries:` applies to every language at once): `actions` runs `security-extended` — the workflow-security rules — and the other two stay on the default suite until the ~243 first-party alerts are triaged. See [`.github/codeql/README.md`](.github/codeql/README.md), and `scripts/codeql_local.sh` to run the same scoped analysis locally |
 | `sonarcloud.yml` | push/PR to `main`, manual | SonarCloud analysis (skipped on a fork's PR, which has no `SONAR_TOKEN`) |
 | `bandit.yml` | push/PR to `main`, weekly Wednesday | bandit with `-c pyproject.toml` over first-party Python → SARIF to code scanning. Publishes, does not gate — `ci.yml` is the gate |
 | `eslint.yml` | push/PR touching `apps/sak_agent_dashboard/**`, weekly Sunday | `eslint src` with the app's own flat config → SARIF (`category: eslint-dashboard`). Publishes, does not gate — `subprojects.yml` is the gate |
@@ -262,8 +293,12 @@ exercise the dashboard.
 Scheduled, manual, or event-driven only, so they never block a PR:
 `verify-assets.yml` (daily HF asset check), `run-evals.yml` (weekly Sunday
 lm-eval, installs the `evals` dependency group), `summary.yml` (on new issues),
-`OSPS.yml` (weekly Monday security-baseline assessment), and
-`code-scanning-cleanup.yml` (manual, retires orphaned code-scanning alerts).
+`OSPS.yml` (weekly Monday security-baseline assessment),
+`code-scanning-cleanup.yml` (manual, retires orphaned code-scanning alerts),
+`cache-warm.yml` (weekly Monday and on lockfile changes to `main`, primes the
+dependency caches), `cache-cleanup.yml` (on a pull request closing, evicts that
+PR's caches), and `self-hosted-runner-health.yml` (daily, skipped entirely unless
+`CI_RUNNER_LABEL` is set; probes the runner and its toolchain).
 
 The eight agentic gh-aw workflows also never block a PR, but **they do not all
 merely report** — check the `safe-outputs:` block before assuming one is
@@ -1019,6 +1054,8 @@ A skill directory may also carry `commands/<name>.md` files, which become
 | `docs/skill-naming.md` | The `Sak-` / `Sak<Name>-` naming convention |
 | `docs/agent-diagnosis.md` | Standalone run checklist and runtime notes |
 | `docs/self-healing-ci.md` | The `sakthai heal` pipeline, its safety model, and the workflow that drives it |
+| `.github/codeql/README.md` | Why CodeQL runs as an advanced setup, how the scope config reaches it, the per-language query suites, and `scripts/codeql_local.sh` |
+| `infra/self-hosted-runner/README.md` | Installing and operating a self-hosted Actions runner, and the `CI_RUNNER_LABEL` opt-in that keeps it reversible |
 | `docs/configuring-multi-ecosystem-updates.md` · `docs/dependabot-setup.md` | The five-ecosystem Dependabot config and why it is shaped that way · enabling the repository settings the config cannot |
 | `.github/INNERSOURCE.md` | Advisory ownership, severity SLAs, and how accepted-risk advisories are recorded |
 | `docs/SOUL.md` · `docs/USER.md` · `docs/OPERATING_CONTRACT.md` | Team identity · Beer's profile · agent operating rules |

@@ -95,3 +95,8 @@ crash-*
 leak-*
 timeout-*
 oom-*
+
+# Local CodeQL databases built by scripts/codeql_local.sh. A python database
+# over this repository is hundreds of megabytes and is pure derived output —
+# rebuild it with `scripts/codeql_local.sh --rebuild`.
+/.codeql/
