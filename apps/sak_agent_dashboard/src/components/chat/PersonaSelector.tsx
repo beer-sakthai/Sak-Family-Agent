@@ -41,7 +41,9 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
               key={preset.id}
               type="button"
               onClick={() => onSelectPreset(preset.id)}
-              className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
+              aria-pressed={selectedPreset === preset.id}
+              aria-label={`Select ${preset.name} preset`}
+              className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                 selectedPreset === preset.id
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
@@ -60,10 +62,13 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
           const mapping = currentPreset.personaMappings[persona.id];
 
           return (
-            <div
+            <button
               key={persona.id}
+              type="button"
               onClick={() => onTogglePersona(persona.id)}
-              className={`cursor-pointer rounded-lg border p-2.5 transition-all select-none ${
+              aria-pressed={isActive}
+              aria-label={`Toggle ${persona.name} persona (${persona.role})`}
+              className={`text-left rounded-lg border p-2.5 transition-all select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-950 ${
                 isActive
                   ? 'border-blue-500/50 bg-blue-950/20 text-slate-100 shadow-sm'
                   : 'border-slate-800 bg-slate-950/40 text-slate-500 opacity-60 hover:opacity-100'
@@ -84,7 +89,7 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
                   {mapping.provider}: {mapping.model}
                 </div>
               )}
-            </div>
+            </button>
           );
         })}
       </div>
