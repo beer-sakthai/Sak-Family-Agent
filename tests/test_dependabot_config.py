@@ -124,7 +124,17 @@ UNCOVERED_BY_DESIGN: dict[str, str] = {
 
 # Trees that are not ours to update, or not real source.
 SKIP_DIR_NAMES = frozenset(
-    {".git", "node_modules", ".venv", "venv", "build", "dist", ".mypy_cache", ".pytest_cache", ".next"}
+    {
+        ".git",
+        "node_modules",
+        ".venv",
+        "venv",
+        "build",
+        "dist",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".next",
+    }
 )
 
 # Filenames that make a directory a candidate for Dependabot coverage. Kept
