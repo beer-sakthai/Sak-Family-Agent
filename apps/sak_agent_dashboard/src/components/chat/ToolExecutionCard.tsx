@@ -66,6 +66,16 @@ export const ToolExecutionCard: React.FC<ToolExecutionCardProps> = ({
         </pre>
       </div>
 
+      {requiresApproval && (
+        <div className="sr-only" aria-live="polite" aria-atomic="true">
+          {approvedState === 'approved'
+            ? `Tool execution for ${tool} approved.`
+            : approvedState === 'rejected'
+            ? `Tool execution for ${tool} rejected.`
+            : `Tool execution for ${tool} requires manual user approval.`}
+        </div>
+      )}
+
       {requiresApproval && approvedState === 'pending' && (
         <div className="mt-3 rounded border border-amber-500/40 bg-amber-950/30 p-2.5">
           <div className="flex items-center gap-2 text-amber-300 font-medium">
@@ -79,18 +89,34 @@ export const ToolExecutionCard: React.FC<ToolExecutionCardProps> = ({
             <button
               type="button"
               onClick={handleApprove}
-              className="rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500"
+              aria-label={`Approve and run execution of ${tool}`}
+              className="rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-950"
             >
               Approve &amp; Run
             </button>
             <button
               type="button"
               onClick={handleReject}
-              className="rounded bg-rose-600/80 px-3 py-1 text-xs font-semibold text-white hover:bg-rose-500"
+              aria-label={`Reject execution of ${tool}`}
+              className="rounded bg-rose-600/80 px-3 py-1 text-xs font-semibold text-white hover:bg-rose-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-950"
             >
               Reject
             </button>
           </div>
+        </div>
+      )}
+
+      {requiresApproval && approvedState === 'approved' && (
+        <div className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400">
+          <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+          <span>✓ Execution Approved</span>
+        </div>
+      )}
+
+      {requiresApproval && approvedState === 'rejected' && (
+        <div className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-rose-400">
+          <span className="h-2 w-2 rounded-full bg-rose-400" />
+          <span>✕ Execution Rejected</span>
         </div>
       )}
 
