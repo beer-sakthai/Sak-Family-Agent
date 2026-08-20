@@ -1,8 +1,6 @@
 ---
 name: SakThai-hf-argilla
-description: "Argilla \u2014 open-source data annotation and collaboration platform for building\
-  \ high-quality AI datasets. Deep integration with Hugging Face Hub for deployment,\
-  \ authentication, and dataset import/export."
+description: "Argilla — open-source data annotation and collaboration platform for building high-quality AI datasets. Deep integration with Hugging Face Hub for deployment, authentication, and dataset import/export."
 ---
 
 # Argilla — Data Annotation & Curation for AI Datasets

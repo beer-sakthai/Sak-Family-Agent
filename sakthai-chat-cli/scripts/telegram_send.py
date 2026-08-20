@@ -69,36 +69,8 @@ def discover_chat_id(token: str) -> str | None:
     return chat_id
 
 
-def resolve_sakthai_bin() -> str | None:
-    """Return a trusted sakthai executable reference or None if invalid."""
-    configured = os.environ.get("SAKTHAI_BIN")
-    if not configured:
-        return "sakthai"
-
-    candidate = Path(configured)
-
-    # Allow explicit command name only.
-    if configured == "sakthai":
-        return configured
-
-    # For custom binaries, require an absolute executable path named sakthai.
-    if not candidate.is_absolute():
-        print("  SAKTHAI_BIN must be 'sakthai' or an absolute path.", file=sys.stderr)
-        return None
-    if candidate.name != "sakthai":
-        print("  SAKTHAI_BIN must point to a binary named 'sakthai'.", file=sys.stderr)
-        return None
-    if not candidate.is_file() or not os.access(candidate, os.X_OK):
-        print("  SAKTHAI_BIN is not an executable file.", file=sys.stderr)
-        return None
-
-    return str(candidate)
-
-
 def send_via_mcp(message: str) -> int:
-    sakthai_bin = resolve_sakthai_bin()
-    if sakthai_bin is None:
-        return 1
+    sakthai_bin = os.environ.get("SAKTHAI_BIN", "sakthai")
     env = dict(os.environ)
     env["SAKTHAI_HOME"] = tempfile.mkdtemp(prefix="sakthai-tg.")
     requests = [

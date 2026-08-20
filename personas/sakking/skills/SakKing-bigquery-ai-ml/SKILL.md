@@ -1,8 +1,6 @@
 ---
 name: SakKing-bigquery-ai-ml
-description: '>-   Leverages BigQuerys built-in machine learning and GenAI capabilities   for advanced
-  data analytics. Use when you need to write SQL queries   that perform time-series
-  forecasting, detect outliers, find key drivers, or leverage generative AI capab'
+description: ">-   Leverages BigQuerys built-in machine learning and GenAI capabilities   for advanced data analytics. Use when you need to write SQL queries   that perform time-series forecasting, detect outliers, find key drivers, or leverage generative AI capab"
 ---
 
 # BigQuery AI & ML

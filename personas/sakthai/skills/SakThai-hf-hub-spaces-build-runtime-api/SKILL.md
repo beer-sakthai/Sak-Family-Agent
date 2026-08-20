@@ -1,9 +1,17 @@
 ---
 name: SakThai-hf-hub-spaces-build-runtime-api
-description: "Complete reference for the Hugging Face Spaces Build, Runtime, and Management API\
-  \ \u2014 covering SpaceRuntime stages, hardware management, secrets/variables, dev\
-  \ mode, logs streaming, wait_for_space, pause/restart, and duplicate workflows via\
-  \ huggingface_hub."
+author: SakThai
+license: MIT
+title: Spaces Build, Runtime & Management API — Complete Reference
+category: mlops
+tags: [spaces, runtime, build, api, huggingface-hub, management, secrets, hardware]
+related_skills:
+  - hf-spaces-secrets-management
+  - hf-spaces-persistent-storage-zero-cost
+  - hf-spaces-logs-monitoring-and-debugging-deep-dive
+  - hf-hub-python-api
+description: Complete reference for the Hugging Face Spaces Build, Runtime, and Management API — covering SpaceRuntime stages, hardware management, secrets/variables, dev mode, logs streaming, wait_for_space, pause/restart, and duplicate workflows via huggingface_hub.
+version: 1.0.0
 ---
 
 # Spaces Build, Runtime & Management API — Complete Reference

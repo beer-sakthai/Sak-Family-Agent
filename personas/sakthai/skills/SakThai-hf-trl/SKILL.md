@@ -1,8 +1,11 @@
 ---
 name: SakThai-hf-trl
-description: "Hugging Face TRL (Transformer Reinforcement Learning): post-training library for\
-  \ LLMs \u2014 trainer taxonomy (SFT, GRPO, DPO, PPO, KTO, ORPO, etc.), vLLM/PEFT/DeepSpeed\
-  \ integrations, Harbor/OpenEnv agent training, and installation/usage patterns."
+description: "Hugging Face TRL (Transformer Reinforcement Learning): post-training library for LLMs — trainer taxonomy (SFT, GRPO, DPO, PPO, KTO, ORPO, etc.), vLLM/PEFT/DeepSpeed integrations, Harbor/OpenEnv agent training, and installation/usage patterns."
+version: 1.0.0
+author: SakThai
+license: MIT
+tags: [huggingface, trl, rlhf, dpo, grpo, sft, peft, vllm, post-training, alignment]
+platforms: [linux, macos, windows]
 ---
 
 # Hugging Face TRL — Post-Training Library

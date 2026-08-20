@@ -1,7 +1,6 @@
 ---
 name: SakJules-github-family-stewardship
-description: 'GitHub family stewardship management: repo inventory, support rotation, archiving,
-  labels, and family-agent coordination.'
+description: "GitHub family stewardship management: repo inventory, support rotation, archiving, labels, and family-agent coordination."
 ---
 
 # GitHub Family Stewardship

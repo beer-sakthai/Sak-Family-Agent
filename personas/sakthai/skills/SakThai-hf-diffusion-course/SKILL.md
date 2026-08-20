@@ -1,8 +1,10 @@
 ---
 name: SakThai-hf-diffusion-course
-description: "Comprehensive guide to Hugging Face Diffusers library (v0.39+) \u2014 pipelines,\
-  \ schedulers, models, training, optimization, and the Diffusion Models Course. Covers\
-  \ image, video, audio, and 3D generation."
+author: SakThai
+license: MIT
+description: "Comprehensive guide to Hugging Face Diffusers library (v0.39+) — pipelines, schedulers, models, training, optimization, and the Diffusion Models Course. Covers image, video, audio, and 3D generation."
+version: 1.0.0
+tags: [Diffusion, Diffusers, StableDiffusion, Flux, SD3, ImageGeneration, VideoGeneration, AudioGeneration, ControlNet, LoRA, HuggingFace]
 ---
 
 # Hugging Face Diffusers & Diffusion Models Course

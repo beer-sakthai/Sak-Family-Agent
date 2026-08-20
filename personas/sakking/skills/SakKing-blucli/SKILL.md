@@ -1,7 +1,6 @@
 ---
 name: SakKing-blucli
-description: BluOS CLI (blu) for discovery, playback, grouping, and volume.
-...
+description: "BluOS CLI (blu) for discovery, playback, grouping, and volume."
 ---
 
 # blucli (blu)

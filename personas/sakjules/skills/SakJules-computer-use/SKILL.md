@@ -1,9 +1,6 @@
 ---
 name: SakJules-computer-use
-description: "|   Drive the users desktop in the background \u2014 clicking, typing,   scrolling,\
-  \ dragging \u2014 without stealing the cursor, keyboard focus,   or switching virtual\
-  \ desktops / Spaces. Cross-platform: macOS,   Windows, Linux. Works with any tool-capable\
-  \ mode"
+description: "|   Drive the users desktop in the background — clicking, typing,   scrolling, dragging — without stealing the cursor, keyboard focus,   or switching virtual desktops / Spaces. Cross-platform: macOS,   Windows, Linux. Works with any tool-capable mode"
 ---
 
 # Computer Use (universal, any-model, cross-platform)

@@ -1,8 +1,6 @@
 ---
 name: SakJules-permissioned-github
-description: Guidelines for interacting with GitHub and request permissions from the user when
-  commands fail due to restrictions in the agent environment.
-...
+description: "Guidelines for interacting with GitHub and request permissions from the user when commands fail due to restrictions in the agent environment."
 ---
 
 # GitHub Skill

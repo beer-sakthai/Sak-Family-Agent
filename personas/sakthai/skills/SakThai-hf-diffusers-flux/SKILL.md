@@ -1,9 +1,6 @@
 ---
 name: SakThai-hf-diffusers-flux
-description: Comprehensive reference for Hugging Face Diffusers integration with Black Forest Labs
-  Flux models (FLUX.1-dev, FLUX.1-schnell). Covers FluxPipeline, FluxFillPipeline,
-  FluxControlPipeline, IP-Adapter, LoRA stacking, optimization techniques (group offl
-...
+description: "Comprehensive reference for Hugging Face Diffusers integration with Black Forest Labs Flux models (FLUX.1-dev, FLUX.1-schnell). Covers FluxPipeline, FluxFillPipeline, FluxControlPipeline, IP-Adapter, LoRA stacking, optimization techniques (group offl"
 ---
 
 # SakThai-hf-diffusers-flux

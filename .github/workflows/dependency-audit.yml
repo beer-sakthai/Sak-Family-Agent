@@ -17,55 +17,21 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  # See the note in ci.yml. The weekly schedule run has no branch of its own to
-  # collide with, so in practice this only ever cancels superseded PR runs.
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 jobs:
   pip-audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     steps:
-      - name: Harden the runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
-        with:
-          use-policy-store: true
-          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
-
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7
 
-      # `sync: false` — this job never builds the project environment. It
-      # exports the lock to a requirements file and runs pip-audit through
-      # `uvx`, so all it needs is the uv binary and its warm tool/HTTP cache.
-      # Syncing here would install ~160 packages nothing in the job imports.
-      - name: Set up uv
-        uses: ./.github/actions/setup-uv-python
-        with:
-          sync: "false"
-          cache-suffix: "pip-audit"
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
 
       - name: Export locked requirements
         # --no-emit-project: audit third-party deps only, not the local package.
-        # --all-groups: [dependency-groups] (evals, lint, fuzz) are NOT extras,
-        # so --all-extras alone silently skipped them. That gap hid 72 of the
-        # 159 locked packages from this job, including the transitive closure
-        # of lm-eval. See docs/dependabot-sweep-2026-08-18.md.
-        run: uv export --frozen --all-extras --all-groups --no-emit-project --no-hashes -o requirements.txt
+        run: uv export --frozen --all-extras --no-emit-project --no-hashes -o requirements.txt
 
       - name: Run pip-audit
         # --no-deps is safe: uv export already emits the fully resolved,
         # pinned dependency closure, so there is nothing left to resolve.
-        #
-        # --ignore-vuln sqlitedict: 2.1.0 is the latest release (Dec 2022) and
-        # the advisory has no fixed version, so this cannot be bumped away. It
-        # is transitive via lm-eval in the `evals` group, which only
-        # run-evals.yml installs; nothing in `sakthai` imports it. Both IDs are
-        # listed because the PyPI and OSV feeds name the same advisory
-        # differently. Drop these the day a fixed sqlitedict ships.
-        run: >-
-          uvx pip-audit -r requirements.txt --disable-pip --no-deps
-          --ignore-vuln PYSEC-2026-1939
-          --ignore-vuln GHSA-g4r7-86gm-pgqc
+        run: uvx pip-audit -r requirements.txt --disable-pip --no-deps

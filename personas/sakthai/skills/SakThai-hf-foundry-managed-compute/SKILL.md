@@ -1,8 +1,6 @@
 ---
 name: SakThai-hf-foundry-managed-compute
-description: "Comprehensive reference on Hugging Face models deployed through Microsoft Foundry\
-  \ Managed Compute \u2014 curated catalog, supported runtimes, deployment templates,\
-  \ SDK patterns, and enterprise security model."
+description: "Comprehensive reference on Hugging Face models deployed through Microsoft Foundry Managed Compute — curated catalog, supported runtimes, deployment templates, SDK patterns, and enterprise security model."
 ---
 
 # HF Models on Foundry Managed Compute
