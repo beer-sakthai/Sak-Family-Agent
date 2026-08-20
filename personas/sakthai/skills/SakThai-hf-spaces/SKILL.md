@@ -1,6 +1,8 @@
 ---
 name: SakThai-hf-spaces
-description: "Tracked snapshots of trending Hugging Face Spaces with methodology for search, analysis, and reporting"
+description: Tracked snapshots of trending Hugging Face Spaces with methodology for search, analysis,
+  and reporting
+...
 ---
 
 # HF Spaces — Trend Monitoring

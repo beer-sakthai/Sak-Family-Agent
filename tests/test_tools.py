@@ -145,11 +145,31 @@ def test_read_file_blocks_outside_roots(tmp_path: Path, store) -> None:
         tool_by_name("read_file").handler({"path": str(secret)}, store)
 
 
+def test_read_file_blocks_control_characters_in_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    control_paths = [
+        "path\nwith\nnewline",
+        "path\rwith\rreturn",
+        "path\twith\ttab",
+        "path\0with\0null",
+    ]
+    for p in control_paths:
+        with pytest.raises(ValueError, match="Control characters are not allowed"):
+            tool_by_name("read_file").handler({"path": p}, store)
+
+
 @pytest.mark.parametrize(
     "name",
     [
         ".env",
         ".env.production",
+        ".env-prod",
+        ".env_local",
+        "id_rsa.bak",
+        "id_ed25519.old",
+        "id_ecdsa.pub",
         "id_rsa",
         "server.pem",
         "credentials.json",
@@ -166,7 +186,6 @@ def test_read_file_blocks_outside_roots(tmp_path: Path, store) -> None:
         ".gitconfig",
         "authorized_keys",
         "known_hosts",
-        "memory.db",
         ".sqlite_history",
         ".psql_history",
     ],
@@ -181,6 +200,26 @@ def test_read_file_blocks_sensitive_names_even_in_cwd(
     secret.write_text("TOKEN=abc", encoding="utf-8")
     with pytest.raises(PermissionError):
         tool_by_name("read_file").handler({"path": name}, store)
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "memory.db",
+        "memory.db-wal",
+        "memory.db-shm",
+    ],
+)
+def test_read_file_blocks_memory_db_files_without_touching_db(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store, name: str
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    sub = tmp_path / "subdir"
+    sub.mkdir()
+    secret = sub / name
+    secret.write_text("TOKEN=abc", encoding="utf-8")
+    with pytest.raises(PermissionError):
+        tool_by_name("read_file").handler({"path": f"subdir/{name}"}, store)
 
 
 def test_read_file_blocks_dot_ssh_directory(
@@ -1421,3 +1460,47 @@ def test_send_telegram_message_redacts_secrets_in_errors(store: MemoryStore, mon
     out = tool_by_name("send_telegram_message").handler({"message": "test"}, store)
     assert fake_token not in out
     assert "[REDACTED]" in out
+
+
+def test_telegram_message_logging_on_errors(monkeypatch, tmp_path, caplog) -> None:
+    """_send_telegram_message emits warning/error log messages on failures."""
+    import logging
+    import urllib.error
+
+    from sakthai.agent.tools import tool_by_name
+    from sakthai.memory.store import MemoryStore
+
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "987654321")
+
+    # HTTPError
+    def mock_httperror(*args, **kwargs):
+        raise urllib.error.HTTPError(
+            url="https://api.telegram.org",
+            code=400,
+            msg="Bad Request",
+            hdrs={},
+            fp=None,
+        )
+
+    monkeypatch.setattr("urllib.request.urlopen", mock_httperror)
+    with MemoryStore(tmp_path / "test.db") as store, caplog.at_level(logging.WARNING):
+        tool_by_name("send_telegram_message").handler({"message": "test"}, store)
+
+    assert any("Telegram API HTTP error (400)" in record.message for record in caplog.records)
+
+
+def test_graph_safe_logging_on_errors(monkeypatch, tmp_path, caplog) -> None:
+    """_graph_safe emits warning/error log messages on failures."""
+    import logging
+
+    from sakthai.agent.tools import _graph_safe
+
+    # RuntimeError
+    with caplog.at_level(logging.WARNING):
+        _graph_safe("test_action", lambda: (_ for _ in ()).throw(RuntimeError("Config error")))
+
+    assert any(
+        "Microsoft Graph config/runtime error test_action: Config error" in record.message
+        for record in caplog.records
+    )

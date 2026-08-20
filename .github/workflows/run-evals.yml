@@ -24,6 +24,8 @@ jobs:
           - 'yaml_validity'
       fail-fast: false # Allow all jobs to run even if some fail
     runs-on: ubuntu-latest
+    # Each cell downloads a model from the Hub and runs lm-eval on CPU.
+    timeout-minutes: 60
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
@@ -108,6 +110,7 @@ jobs:
   # Aggregate by downloading every per-cell artifact instead.
   aggregate-results:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [run-evaluations]
     if: always() # Run even if some evals fail
     steps:
@@ -154,6 +157,7 @@ jobs:
 
   post-summary:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [aggregate-results]
     if: always() # Run even if some evals fail
     env:
@@ -215,6 +219,7 @@ jobs:
 
   check-regressions:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [aggregate-results]
     if: always() # Run even if some evals fail
     permissions:
@@ -234,7 +239,7 @@ jobs:
         continue-on-error: true
 
       - name: Download baseline results artifact
-        uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21
+        uses: dawidd6/action-download-artifact@57aa996fc1713cc1579039614f4645a7f4841fd4 # v23
         with:
           # Download from the last successful workflow run on the main branch
           workflow: ${{ github.workflow_id }}

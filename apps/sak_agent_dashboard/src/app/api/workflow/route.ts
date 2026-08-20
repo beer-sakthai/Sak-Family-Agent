@@ -1,66 +1,23 @@
-import { NextRequest, NextResponse } from "next/server";
+import { createApiHandler, createMutationHandler, ApiError } from "@/lib/api/handler";
 import { getWorkflows, getWorkflowById, executeWorkflow } from "@/lib/workflowEngine";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
+export const GET = createApiHandler("/api/workflow", async (ctx) => {
+  const id = ctx.params["id"];
 
-    if (id) {
-      const wf = getWorkflowById(id);
-      if (!wf) {
-        return NextResponse.json(
-          { success: false, error: `Workflow with id '${id}' not found` },
-          { status: 404 }
-        );
-      }
-      return NextResponse.json({ success: true, workflow: wf });
-    }
-
-    const workflows = getWorkflows();
-    return NextResponse.json({
-      success: true,
-      workflows,
-      total: workflows.length,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to fetch workflows",
-      },
-      { status: 500 }
-    );
+  if (id) {
+    const workflow = getWorkflowById(id);
+    if (!workflow) throw new ApiError(404, `Workflow with id '${id}' not found`);
+    return { workflow };
   }
-}
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { workflowId } = body;
+  const workflows = getWorkflows();
+  return { workflows, total: workflows.length, timestamp: new Date().toISOString() };
+});
 
-    if (!workflowId) {
-      return NextResponse.json(
-        { success: false, error: "Missing required field 'workflowId'" },
-        { status: 400 }
-      );
-    }
-
-    const result = await executeWorkflow(String(workflowId));
-    return NextResponse.json({
-      success: true,
-      result,
-    });
-  } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to execute workflow",
-      },
-      { status: 500 }
-    );
-  }
-}
+export const POST = createMutationHandler("/api/workflow", async (body) => {
+  const { workflowId } = body as Record<string, unknown>;
+  if (!workflowId) throw new ApiError(400, "Missing required field 'workflowId'");
+  return { result: await executeWorkflow(String(workflowId)) };
+});

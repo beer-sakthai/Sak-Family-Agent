@@ -1,12 +1,6 @@
 ---
 name: SakThai-hf-operations
-author: Hermes
-description: "Manage HF assets: cards, evals, collections, and API access."
-version: 0.2.0
-metadata:
-  hermes:
-    tags: [HuggingFace, Models, Datasets, Spaces, API]
-category: mlops
+description: 'Manage HF assets: cards, evals, collections, and API access.'
 ---
 
 # Hugging Face Operations

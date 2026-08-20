@@ -1,6 +1,9 @@
 ---
 name: SakThai-hf-cloud-aws-context-discovery
-description: "Discover the users local AWS context (active profile, region, account ID, caller identity) at the start of any AWS task. Use this skill before any other AWS work — deploying to SageMaker, creating resources, calling AWS APIs, or anything that touches"
+description: "Discover the users local AWS context (active profile, region, account ID, caller\
+  \ identity) at the start of any AWS task. Use this skill before any other AWS work\
+  \ \u2014 deploying to SageMaker, creating resources, calling AWS APIs, or anything\
+  \ that touches"
 ---
 
 # AWS Context Discovery

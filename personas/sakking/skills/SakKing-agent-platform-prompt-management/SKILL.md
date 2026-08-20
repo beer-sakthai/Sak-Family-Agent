@@ -1,6 +1,8 @@
 ---
 name: SakKing-agent-platform-prompt-management
-description: ">-   Manages and orchestrates prompts in Agent Platform. Use when you need to create,   list, retrieve, version, or delete managed prompts in Agent Platform. Dont use   for model training, model deployment to endpoints, or managing non-Agent Platform"
+description: '>-   Manages and orchestrates prompts in Agent Platform. Use when you need to create,   list,
+  retrieve, version, or delete managed prompts in Agent Platform. Dont use   for model
+  training, model deployment to endpoints, or managing non-Agent Platform'
 ---
 
 ## Usage Guide

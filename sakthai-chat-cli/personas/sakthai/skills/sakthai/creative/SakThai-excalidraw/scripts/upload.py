@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import json
-import mimetypes
 import boto3
 
 class ExcalidrawService:

@@ -64,6 +64,44 @@ back so the dashboard stays self-contained and license-clean.
 - [x] Types added to `src/lib/types.ts`.
 - [x] Tab wired in `src/app/page.tsx`.
 
+## 6. Collaborative Chat Arena & Studio — new tab
+
+- [x] `src/lib/safety/ast_sandbox.ts` — AST guardrails and dangerous pattern validator.
+- [x] `src/lib/learning/dataset_staging.ts` — PII scrubbing & training dataset staging engine.
+- [x] `src/lib/orchestrator/supervisor.ts` — Supervisor-led multi-agent planner and synthesizer.
+- [x] `src/app/api/chatkit/dispatch/route.ts` — SSE streaming dispatch endpoint.
+- [x] `src/components/chat/` — UI components (`AgentThoughtBlock`, `ToolExecutionCard`, `PersonaSelector`, `SynthesisCard`, `ChatStudio`).
+- [x] `src/components/ChatStudioPanel.tsx` — Main panel container.
+- [x] `src/tests/chat_studio_core.test.ts` & `src/tests/chat_components.test.tsx` — Unit, API, and UI tests.
+- [x] Tab wired in `src/app/page.tsx`.
+
+## 7. LoRA Fine-Tuning & Dataset Curation — new tab
+
+- [x] `src/lib/learning/lora_engine.ts` — ChatML formatting, hyperparameter validation, and job spawner.
+- [x] `src/app/api/learning/finetune/route.ts` — GET metadata & POST training triggers.
+- [x] `src/components/finetune/` — UI components (`TrainingConfigForm`, `TrainingJobMonitor`, `DatasetCardViewer`).
+- [x] `src/components/FinetuningPanel.tsx` — Main studio container.
+- [x] `src/tests/lora_engine.test.ts`, `src/tests/finetune_api.test.ts`, `src/tests/finetune_components.test.tsx` — Unit, API, and UI tests.
+- [x] Tab wired in `src/app/page.tsx`.
+
+## 8. Google ADK & Cloud Run / GKE Deployment Bridge — new tab
+
+- [x] `src/lib/adk/adk_engine.ts` — Python ADK generator, Cloud Run Knative & GKE manifest scaffolder, Quality Flywheel evaluator.
+- [x] `src/app/api/adk/bridge/route.ts` — GET fleet specs & POST generator/deployer actions.
+- [x] `src/components/adk/` — UI components (`AdkCodeViewer`, `CloudDeploymentBuilder`, `QualityFlywheelGauge`).
+- [x] `src/components/GoogleAdkBridgePanel.tsx` — Main bridge studio container.
+- [x] `src/tests/adk_engine.test.ts`, `src/tests/adk_bridge_api.test.ts`, `src/tests/adk_components.test.tsx` — Unit, API, and UI tests.
+- [x] Tab wired in `src/app/page.tsx`.
+
+## 9. Telegram Voice Bridge & Mobile Incident Alerting Hub — new tab
+
+- [x] `src/lib/telegram/voice_bridge.ts` — Voice STT transcription, TTS synthesis simulator, and incident dispatcher.
+- [x] `src/app/api/telegram/webhook/route.ts` & `src/app/api/telegram/incidents/route.ts` — Webhook and incident API endpoints.
+- [x] `src/components/telegram/` — UI components (`VoiceWaveformPreviewer`, `IncidentAlertFeed`, `TelegramWebhookTester`).
+- [x] `src/components/TelegramVoiceBridgePanel.tsx` — Main mobile hub container.
+- [x] `src/tests/voice_bridge.test.ts`, `src/tests/telegram_api.test.ts`, `src/tests/telegram_components.test.tsx` — Unit, API, and UI tests.
+- [x] Tab wired in `src/app/page.tsx`.
+
 ---
 
 ## Cross-cutting

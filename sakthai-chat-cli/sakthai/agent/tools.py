@@ -133,6 +133,16 @@ _SENSITIVE_READ_BASENAMES: frozenset[str] = frozenset(
     }
 )
 _SENSITIVE_READ_SUFFIXES: tuple[str, ...] = (".pem", ".key", ".pfx", ".p12")
+_SENSITIVE_READ_PREFIXES: tuple[str, ...] = (".env.", ".env-", ".env_", "memory.db-")
+_SENSITIVE_READ_KEY_STEMS: tuple[str, ...] = (
+    "id_rsa",
+    "id_dsa",
+    "id_ecdsa",
+    "id_ed25519",
+    "id_ecdsa_sk",
+    "id_ed25519_sk",
+    "id_xmss",
+)
 # Path fragments (relative to a root) that indicate a secret store.
 _SENSITIVE_READ_FRAGMENTS: tuple[tuple[str, ...], ...] = (
     (".aws", "credentials"),
@@ -145,7 +155,11 @@ def _is_sensitive_read_target(resolved: Path) -> bool:
     """Return True if ``resolved`` names a well-known secret file."""
     name = resolved.name
     lower = name.lower()
-    if lower in _SENSITIVE_READ_BASENAMES or lower.startswith(".env."):
+    if (
+        lower in _SENSITIVE_READ_BASENAMES
+        or lower.startswith(_SENSITIVE_READ_PREFIXES)
+        or any(lower.startswith(stem + ".") for stem in _SENSITIVE_READ_KEY_STEMS)
+    ):
         return True
     if lower.endswith(_SENSITIVE_READ_SUFFIXES):
         return True
@@ -161,6 +175,8 @@ def _is_sensitive_read_target(resolved: Path) -> bool:
 
 def _resolve_and_validate_path(path_str: str) -> Path:
     """Resolve a path and ensure it is a file within the allowed roots."""
+    if any(ord(c) < 32 or ord(c) == 127 for c in path_str):
+        raise ValueError("Control characters are not allowed in file paths")
     candidate = Path(path_str).expanduser()
     try:
         resolved = candidate.resolve(strict=True)

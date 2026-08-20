@@ -42,11 +42,29 @@ concurrency:
 
 jobs:
   heal:
-    # Only act on a genuine failure, and never on a run that was itself started
-    # from a fix branch — that is how an agent ends up healing its own output.
+    # Three conditions, and the first is a security boundary rather than a
+    # convenience filter.
+    #
+    # `workflow_run` runs in the context of the *base* repository: it gets this
+    # job's `contents: write` / `pull-requests: write` token and the
+    # `ANTHROPIC_API_KEY` secret, and it then checks out
+    # `workflow_run.head_sha` and executes it (`uv sync --all-extras` alone runs
+    # arbitrary build hooks from the checked-out tree). The `branches: [main]`
+    # filter on the trigger does *not* make that safe — it matches the head
+    # branch *name*, so a pull request opened from a fork's own `main` branch
+    # produces a CI run whose `head_branch` is `main` and whose `head_sha` is the
+    # contributor's commit. Without the repository check below, that commit would
+    # be checked out and run with write credentials. This is Scorecard's
+    # `DangerousWorkflowID` (untrusted code checkout), and it is the reason this
+    # workflow may only ever heal commits that are already in this repository.
+    #
+    # The other two are the original behaviour: act only on a genuine failure,
+    # and never on a run that was itself started from a fix branch — that is how
+    # an agent ends up healing its own output.
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'failure' &&
+      (github.event.workflow_run.head_repository.full_name == github.repository &&
+       github.event.workflow_run.conclusion == 'failure' &&
        !startsWith(github.event.workflow_run.head_branch, 'selfheal/'))
     runs-on: ubuntu-latest
     timeout-minutes: 30

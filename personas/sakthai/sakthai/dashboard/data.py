@@ -56,6 +56,32 @@ def _parse_team_roster(soul_path: Path | None = None) -> list[dict[str, str]]:
         return []
 
 
+def _parse_fact_json_batch(facts: list[Any]) -> list[Any]:
+    """Batch-parse a list of facts whose .value contains a JSON string.
+
+    Uses a single json.loads call over a constructed JSON array string for speed,
+    falling back to element-by-element parsing if array decoding fails.
+    """
+    if not facts:
+        return []
+
+    try:
+        raw_array = "[" + ",".join(f.value for f in facts) + "]"
+        parsed = json.loads(raw_array)
+        if isinstance(parsed, list) and len(parsed) == len(facts):
+            return parsed
+    except (TypeError, ValueError):
+        pass
+
+    results = []
+    for f in facts:
+        try:
+            results.append(json.loads(f.value))
+        except (TypeError, ValueError):
+            results.append(None)
+    return results
+
+
 def collect_dashboard_data(days: int = 30, store: MemoryStore | None = None) -> dict[str, Any]:
     """Collect KPI and timeline metrics for both SakKing OS and ServiceQuoteBot.
 
@@ -139,13 +165,13 @@ def _collect(store: MemoryStore, days: int) -> dict[str, Any]:
 
     # Parse lead facts
     leads_list = []
-    for lf in lead_facts:
-        try:
-            payload = json.loads(lf.value)
-            if not isinstance(payload, dict):
+    parsed_leads = _parse_fact_json_batch(lead_facts)
+    for lf, payload in zip(lead_facts, parsed_leads, strict=False):
+        if not isinstance(payload, dict):
+            if payload is None:
+                payload = {"query": lf.value}
+            else:
                 payload = {"query": str(payload)}
-        except (TypeError, ValueError):
-            payload = {"query": lf.value}
         payload["id"] = lf.id
         payload["date"] = datetime.fromtimestamp(lf.created_at, UTC).strftime("%Y-%m-%d")
         leads_list.append(payload)
@@ -155,10 +181,9 @@ def _collect(store: MemoryStore, days: int) -> dict[str, Any]:
     total_revenue = 0.0
     mrr = 0.0
 
-    for rf in revenue_facts:
-        try:
-            payload = json.loads(rf.value)
-        except (TypeError, ValueError):
+    parsed_revenue = _parse_fact_json_batch(revenue_facts)
+    for rf, payload in zip(revenue_facts, parsed_revenue, strict=False):
+        if not isinstance(payload, dict):
             # Fallback if key/value are not JSON
             payload = {
                 "client": rf.key or "Unknown",
@@ -199,6 +224,10 @@ def _collect(store: MemoryStore, days: int) -> dict[str, Any]:
 
     # Lead Conversion Rate logic
     # Match lead contacts to revenue clients
+    # Bolt ⚡ Optimization: Pre-extract and normalize non-empty revenue client names to avoid redundant
+    # dictionary lookups, string stripping, and lowercasing inside the O(N x M) nested lead matching loop.
+    rev_clients = [c for rev in revenue_list if (c := rev.get("client", "").strip().lower())]
+
     converted_leads_count = 0
     for lead in leads_list:
         lead_name = lead.get("name", "").strip().lower()
@@ -206,10 +235,7 @@ def _collect(store: MemoryStore, days: int) -> dict[str, Any]:
         lead_phone = lead.get("phone", "").strip().lower()
 
         matched = False
-        for rev in revenue_list:
-            rev_client = rev.get("client", "").strip().lower()
-            if not rev_client:
-                continue
+        for rev_client in rev_clients:
             # Match on name, or email username, or if name is in client name
             if (lead_name and lead_name in rev_client) or (rev_client in lead_name):
                 matched = True

@@ -40,18 +40,45 @@ include = [
 
 [tool.poetry.dependencies]
 python = ">=3.9,<4.0"
-microsoft-kiota-authentication-azure = ">=1.8.0,<2.0.0"
-microsoft-kiota-bundle = ">=1.8.0,<2.0.0"
+# Floors raised from 1.8.0 for CVE-2026-44503 / GHSA-7j59-v9qr-6fq9 (HIGH):
+# kiota's RedirectHandler stripped only `Authorization` on a cross-host 3xx and
+# forwarded `Cookie`, `Proxy-Authorization`, and every custom header to the
+# redirect target. Fixed in microsoft-kiota-http 1.9.9. The kiota-python
+# packages release in lockstep and bundle 1.9.9 requires kiota-http >=1.9.9, so
+# these floors are what keep a vulnerable kiota-http out of the resolution --
+# `microsoft-agents-m365copilot-core` below still declares kiota-http >=1.8.0.
+microsoft-kiota-authentication-azure = ">=1.9.9,<2.0.0"
+microsoft-kiota-bundle = ">=1.9.9,<2.0.0"
+# Imported directly (`kiota_http.middleware.options`) and the package the CVE is
+# filed against, so it is constrained here rather than left to the bundle's
+# transitive floor.
+microsoft-kiota-http = ">=1.9.9,<2.0.0"
 httpx = {extras = ["http2"], version = ">=0.23.0"}
+# The http2 extra resolves `h2>=3,<5`, a range that on its own admits h2
+# releases vulnerable to request smuggling: CVE-2025-57804 (illegal header
+# characters, fixed in 4.3.0) and CVE-2026-71554 (duplicate Host header, fixed
+# in 4.4.1). h2 4.4.x requires Python >=3.10, so 3.9 pins to the highest patched
+# release it can install and stays exposed to CVE-2026-71554 -- no h2 release
+# fixes that one on 3.9, which is itself past end of life.
+h2 = [
+    {version = ">=4.4.1", python = ">=3.10"},
+    {version = ">=4.3.0", python = "<3.10"},
+]
 microsoft-agents-m365copilot-core = ">=1.0.0rc1"
+aiohttp = ">=3.14.3"
+cryptography = ">=48.0.1"
+dulwich = ">=1.2.5"
+msgpack = ">=1.2.1"
+urllib3 = ">=2.7.0"
 
 [tool.poetry.group.dev.dependencies]
 yapf = ">=0.40.2,<0.44.0"
 isort = ">=5.13.2,<7.0.0"
 pylint = "^3.2.7"
-pytest = "^8.3.2"
-pytest-asyncio = ">=0.24,<0.26"
+pytest = ">=9.0.3"
+pytest-asyncio = ">=0.24,<1.3"
 pytest-mock = "^3.14.0"
+poetry = ">=2.3.4"
 poetry-plugin-mono-repo-deps = ">=0.2.1,<0.4.0"
 
 [tool.mypy]

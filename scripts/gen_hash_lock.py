@@ -21,9 +21,11 @@ Requires `uv` on PATH. Network access needed (queries PyPI / the given index).
 """
 
 import argparse
+import re
 import subprocess
 import sys
 from collections import OrderedDict
+from urllib.parse import urlparse
 
 
 def parse(text):
@@ -59,9 +61,50 @@ def parse(text):
     return entries
 
 
+def _validate_req_file(req_file):
+    if not req_file:
+        raise ValueError("req_file must not be empty")
+    with open(req_file, "r", encoding="utf-8"):
+        pass
+
+
+def _validate_constraints(constraints):
+    for c in constraints or []:
+        if not c:
+            raise ValueError("constraint path must not be empty")
+        with open(c, "r", encoding="utf-8"):
+            pass
+
+
+def _validate_platform(platform):
+    # Target triples and similar platform tags (e.g. x86_64-unknown-linux-gnu)
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+", platform or ""):
+        raise ValueError(f"invalid platform value: {platform!r}")
+
+
+def _validate_python_version(python_version):
+    if not re.fullmatch(r"\d+(\.\d+){1,2}", python_version or ""):
+        raise ValueError(f"invalid python version: {python_version!r}")
+
+
+def _validate_url(url, field_name):
+    parsed = urlparse(url or "")
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise ValueError(f"invalid {field_name}: {url!r}")
+
+
 def compile_for_platform(
     req_file, platform, python_version, index_url, extra_index_url, index_strategy, constraints
 ):
+    _validate_req_file(req_file)
+    _validate_platform(platform)
+    _validate_python_version(python_version)
+    if index_url:
+        _validate_url(index_url, "index-url")
+    for url in extra_index_url or []:
+        _validate_url(url, "extra-index-url")
+    _validate_constraints(constraints)
+
     cmd = [
         "uv",
         "pip",

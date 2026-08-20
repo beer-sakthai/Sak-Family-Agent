@@ -1,6 +1,6 @@
 ---
 name: SakSee-llm-wiki
-description: "Karpathys LLM Wiki: build/query interlinked markdown KB."
+description: 'Karpathys LLM Wiki: build/query interlinked markdown KB.'
 ---
 
 # Karpathy's LLM Wiki

@@ -12,13 +12,14 @@ permissions:
   contents: read
   pull-requests: read
   issues: read
-  copilot-requests: write
+
+engine: gemini
 
 network: defaults
 
 steps:
   - name: Collect merged PRs and recent repository changes
-    uses: actions/github-script@v9
+    uses: actions/github-script@v9.0.0
     with:
       script: |
         const fs = require('fs');

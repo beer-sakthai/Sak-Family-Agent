@@ -1,6 +1,7 @@
 ---
 name: SakSee-cycle-joy
-description: "Package and ship through CI without breaking the loop."
+description: Package and ship through CI without breaking the loop.
+...
 ---
 
 # Sak-cycle-joy

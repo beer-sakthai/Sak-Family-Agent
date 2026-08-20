@@ -1,19 +1,32 @@
-import { NextResponse } from "next/server";
+import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
 import { getAutoCycleData } from "@/lib/autoCycle";
+import { CycleEngine } from "@/lib/cycle/cycleEngine";
 
-export async function GET() {
-  try {
-    const autocycle = getAutoCycleData();
-    return NextResponse.json({ success: true, autocycle });
-  } catch (error: any) {
-    console.error("Secure Log [GET /api/auto-cycle]: Failed to load auto-cycle data:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        autocycle: null,
-        error: "An unexpected error occurred while loading auto-cycle data.",
-      },
-      { status: 500 }
-    );
+export const GET = createApiHandler("/api/auto-cycle", async () => {
+  const autocycle = getAutoCycleData();
+  const cycleStates = CycleEngine.getAllPersonaStates();
+  return { autocycle, cycleStates };
+});
+
+export const POST = createMutationHandler("/api/auto-cycle", async (body) => {
+  const { action, persona = "SakThai", task } = body as Record<string, unknown>;
+
+  if (action === "step") {
+    const stepResult = await CycleEngine.stepStage(String(persona), task as string | undefined);
+    const state = CycleEngine.getPersonaState(String(persona));
+    return { stepResult, state };
   }
-}
+
+  if (action === "run_round") {
+    const steps = await CycleEngine.runFullCycle(String(persona), task as string | undefined);
+    const state = CycleEngine.getPersonaState(String(persona));
+    return { steps, state };
+  }
+
+  if (action === "reset") {
+    const state = CycleEngine.resetCycle(String(persona));
+    return { state };
+  }
+
+  throw new Error(`Invalid action: ${action}`);
+});

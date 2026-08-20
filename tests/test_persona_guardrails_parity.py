@@ -21,6 +21,7 @@ module enforces two separate invariants:
    fail loudly rather than be silently inherited.
 """
 
+import json
 import unittest
 from pathlib import Path
 
@@ -121,6 +122,191 @@ class TestPersonaSecurityFileParity(unittest.TestCase):
             canonical_guardrails.read_bytes(),
             "sakthai-chat-cli/sakthai/agent/guardrails.py has drifted from the canonical copy.",
         )
+
+
+class TestSecurityPropertiesArePresent(unittest.TestCase):
+    """Assert security properties *exist*, not merely that copies agree.
+
+    Parity is necessary but not sufficient. On 2026-08-18 a commit reverted the
+    ``do_HEAD`` authentication gate in **all five** persona copies of
+    ``web/server.py`` at once, and deleted the regression tests in
+    ``tests/test_web_auth.py`` in the same diff. Every parity assertion above
+    still passed, because the copies remained byte-identical to each other --
+    uniformly reverted. Nothing in the suite noticed.
+
+    These checks close that blind spot: they pin the presence of the property
+    itself, in a file that four successive reverts have left alone. They are
+    deliberately coarse (a substring, not a behavioural test) so they stay cheap
+    and stable; the behavioural coverage lives in ``tests/test_web_auth.py``.
+    """
+
+    def _server_copies(self):
+        """Yield (label, path) for every persona copy of web/server.py."""
+        rel = Path("web") / "server.py"
+        yield "canonical", CANONICAL_PKG / rel
+        yield "shared", PERSONAS_DIR / "shared" / "sakthai" / rel
+        for persona in PERSONA_NAMES:
+            candidate = PERSONAS_DIR / persona / "sakthai" / rel
+            if candidate.is_file():
+                yield persona, candidate
+
+    def test_head_requests_are_gated_in_every_web_server_copy(self):
+        """``SimpleHTTPRequestHandler`` supplies its own ``do_HEAD``.
+
+        Inheriting it unchanged serves HEAD straight out of ``send_head()``,
+        skipping the bearer-token check and the static-root containment check
+        that ``do_GET`` performs. An explicit ``do_HEAD`` must therefore exist
+        in every copy.
+        """
+        for label, path in self._server_copies():
+            with self.subTest(copy=label):
+                source = path.read_text(encoding="utf-8")
+                self.assertIn(
+                    "def do_HEAD",
+                    source,
+                    f"{path} has no explicit do_HEAD, so it inherits "
+                    "SimpleHTTPRequestHandler's, which bypasses authentication.",
+                )
+
+    def test_serve_api_script_gates_head_and_redacts_the_token(self):
+        """``scripts/serve_api.py`` is a second, standalone copy of the server.
+
+        It is outside the package (ruff and mypy skip ``scripts/``), so nothing
+        else in the suite covers it, yet it serves the same API on port 3002.
+        """
+        source = (REPO_ROOT / "scripts" / "serve_api.py").read_text(encoding="utf-8")
+        self.assertIn(
+            "def do_HEAD",
+            source,
+            "scripts/serve_api.py inherits SimpleHTTPRequestHandler.do_HEAD, "
+            "which bypasses its bearer-token check.",
+        )
+        self.assertIn(
+            "_redact_query_token",
+            source,
+            "scripts/serve_api.py logs the request line, which carries any "
+            "?token= credential; it must redact it before logging.",
+        )
+
+
+class TestVulnerableDependencyPinsStayFixed(unittest.TestCase):
+    """Pin *minimum safe versions* for dependencies with known advisories.
+
+    The training-stack pins in ``infra/sakthai-training-space/*.in`` were raised
+    on 2026-08-18 to clear a CRITICAL ``torch.load`` RCE and several HIGH
+    advisories (see ``docs/dependency-audit-2026-08-18.md``). They were then
+    reverted wholesale by a commit whose message described an unrelated
+    hardcoded-API-key fix, putting the vulnerable versions back on ``main``
+    with nothing failing.
+
+    Nothing else in the suite reads these files: ``dependency-audit.yml`` runs
+    ``pip-audit`` over the root ``uv.lock`` only, and cannot audit these at all
+    (``torch==…+cu124`` is a local-version wheel absent from PyPI, so pip-audit's
+    dry-run install errors out). This is the only automated floor.
+
+    Raising a pin is always fine; these assertions only fail when one moves
+    *below* a version known to carry an advisory. Update the floor here when
+    deliberately upgrading.
+    """
+
+    # package -> (minimum safe version tuple, advisory cleared at that version)
+    MINIMUM_SAFE = {
+        "torch": ((2, 6, 0), "GHSA-53q9-r3pm-6pq6 (CRITICAL) torch.load RCE"),
+        "torchvision": ((0, 21, 0), "must match torch 2.6 minor"),
+        "torchaudio": ((2, 6, 0), "must match torch 2.6 minor"),
+        "transformers": ((4, 53, 0), "3 HIGH advisories cleared at 4.53.0"),
+        "sentencepiece": ((0, 2, 1), "GHSA-38vq-g6vr-w8wf (HIGH) heap overflow"),
+    }
+
+    REQUIREMENT_INPUTS = (
+        Path("infra/sakthai-training-space/ml-stack-requirements.in"),
+        Path("infra/sakthai-training-space/deepspeed-trl-requirements.in"),
+    )
+
+    @staticmethod
+    def _version_tuple(raw):
+        """Parse ``2.6.0+cu124`` -> ``(2, 6, 0)``; local/pre-release parts dropped."""
+        base = raw.split("+")[0].strip()
+        parts = []
+        for chunk in base.split("."):
+            digits = ""
+            for ch in chunk:
+                if not ch.isdigit():
+                    break
+                digits += ch
+            if not digits:
+                break
+            parts.append(int(digits))
+        return tuple(parts)
+
+    def test_pinned_versions_are_at_or_above_the_safe_floor(self):
+        checked = 0
+        for rel in self.REQUIREMENT_INPUTS:
+            path = REPO_ROOT / rel
+            self.assertTrue(path.is_file(), f"missing {path}")
+            for line in path.read_text(encoding="utf-8").splitlines():
+                line = line.split("#")[0].strip()
+                if "==" not in line:
+                    continue
+                name, _, raw = line.partition("==")
+                floor = self.MINIMUM_SAFE.get(name.strip().lower())
+                if floor is None:
+                    continue
+                minimum, why = floor
+                actual = self._version_tuple(raw)
+                checked += 1
+                with self.subTest(package=name.strip(), file=rel.as_posix()):
+                    self.assertGreaterEqual(
+                        actual,
+                        minimum,
+                        f"{name.strip()}=={raw.strip()} in {rel.as_posix()} is below the "
+                        f"safe floor {'.'.join(map(str, minimum))} — {why}. "
+                        "If this is a deliberate downgrade, update MINIMUM_SAFE here "
+                        "and say why in docs/dependency-audit-2026-08-18.md.",
+                    )
+        self.assertGreater(checked, 0, "no pinned versions were checked — did the .in files move?")
+
+
+class TestSecurityToolingIsPresent(unittest.TestCase):
+    """Pin the existence of security tooling that nothing else references.
+
+    ``.claude-plugins/sak-security/`` defines the ``security-reviewer`` agent.
+    No test imports it, no workflow runs it, and nothing else in the repository
+    mentions it -- so it can be deleted without a single check going red. That
+    has now happened twice: once under a commit message about a Hugging Face
+    token path, and again under "perf: optimize portfolio CSV loading with
+    ThreadPoolExecutor" (26 files, 885 deletions).
+
+    A presence check is the cheapest thing that turns a silent deletion into a
+    failing test. It asserts the files exist and are non-empty; it deliberately
+    does not pin their contents, so the agent can be edited freely.
+    """
+
+    PLUGIN_FILES = (
+        Path(".claude-plugins/sak-security/.claude-plugin/plugin.json"),
+        Path(".claude-plugins/sak-security/README.md"),
+        Path(".claude-plugins/sak-security/agents/security-reviewer.md"),
+    )
+
+    def test_sak_security_plugin_files_exist(self):
+        for rel in self.PLUGIN_FILES:
+            with self.subTest(file=rel.as_posix()):
+                path = REPO_ROOT / rel
+                self.assertTrue(
+                    path.is_file(),
+                    f"{rel.as_posix()} is missing. Nothing else in the repo "
+                    "references the sak-security plugin, so its deletion is "
+                    "invisible without this check. Restore it rather than "
+                    "removing this test.",
+                )
+                self.assertGreater(path.stat().st_size, 0, f"{rel.as_posix()} exists but is empty")
+
+    def test_sak_security_plugin_manifest_is_valid_json(self):
+        """A truncated or half-written manifest is as broken as a missing one."""
+        manifest = REPO_ROOT / ".claude-plugins/sak-security/.claude-plugin/plugin.json"
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        self.assertEqual(data.get("name"), "sak-security")
+        self.assertTrue(data.get("description"), "plugin manifest has no description")
 
 
 class TestShadowInventory(unittest.TestCase):

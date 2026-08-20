@@ -9,6 +9,7 @@ import asyncio
 import copy
 import json
 import os
+import shlex
 import sys
 import time
 import types
@@ -191,7 +192,12 @@ def _validate_filepath(filepath: Any) -> Path:
     if not filepath:
         raise ValueError("File path cannot be empty.")
 
-    path_str = str(filepath).strip()
+    path_str = str(filepath).strip().lstrip("@")
+    if not path_str:
+        raise ValueError("File path cannot be empty.")
+
+    if any(ord(c) < 32 or ord(c) == 127 for c in path_str):
+        raise ValueError("Control characters are not allowed in file paths")
 
     # Block path traversal segments like '..' or leading '~'. Backslashes are
     # normalized first so Windows-style separators can't smuggle a '..' segment
@@ -208,6 +214,15 @@ def _validate_filepath(filepath: Any) -> Path:
     system_roots = {
         "etc", "bin", "var", "boot", "dev", "lib", "lib64", "proc", "sys", "sbin", "usr", "root", "opt",
     }
+
+    # Block relative paths targeting system roots (e.g., 'etc/hosts', 'var/log/syslog').
+    # Exception: a bare single-component 'tmp' is allowed as a common safe local name.
+    if not (path_str.startswith("/") or path_str.startswith("\\")):
+        rel_parts = [p.lower() for p in Path(normalized_str).parts if p]
+        if rel_parts:
+            first_component = rel_parts[0]
+            if first_component in system_roots and not (first_component == "tmp" and len(rel_parts) == 1):
+                raise PermissionError(f"Access to critical system directory is prohibited: '{path_str}'")
 
     # Blocks access to sensitive directories (e.g., .git, .ssh, .aws)
     sensitive_dirs = {
@@ -468,8 +483,8 @@ def _validate_shell_command(cmd_str: str) -> None:
             if not sub:
                 continue
             # Strip curl-style upload prefix if present
-            if sub.startswith("@") and len(sub) > 1:
-                sub = sub[1:]
+            if sub.startswith("@"):
+                sub = sub.lstrip("@")
 
             try:
                 _validate_filepath(sub)
@@ -485,9 +500,9 @@ def _validate_shell_command(cmd_str: str) -> None:
         if not cmd_str_stripped:
             continue
 
-        # 1. Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh)
+        # 1. Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh or curl ... |& bash)
         if "|" in cmd_str_stripped:
-            segments = cmd_str_stripped.split("|")
+            segments = re.split(r"\|&?", cmd_str_stripped)
             for segment in segments[1:]:
                 segment = segment.strip(" \t\n\r\"'()$&;")
                 if segment:
@@ -687,6 +702,15 @@ def _validate_shell_command(cmd_str: str) -> None:
                     "to prevent command execution bypass."
                 )
 
+            has_heredoc_or_herestring = any(
+                re.search(r"<<<?", p) for p in parts
+            ) or bool(re.search(r"<<<?", cmd_str_stripped))
+            if is_outer_interp and has_heredoc_or_herestring:
+                raise PermissionError(
+                    f"Interpreter {effective_outer!r} with heredoc/herestring redirection is prohibited "
+                    "to prevent command execution bypass."
+                )
+
         proc_matches = re.findall(r"[<>]\s*\(([^)]+)\)", cmd_str_stripped)
         for proc_inner in proc_matches:
             proc_inner_clean = proc_inner.strip()
@@ -735,14 +759,32 @@ class WorkflowExecutor:
             cmd = params.get("cmd") or params.get("command") or params.get("script") or ""
             if not cmd:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'cmd' or 'command' parameter.")
-            
+
             _validate_shell_command(str(cmd))
 
-            proc = await asyncio.create_subprocess_shell(
-                str(cmd),
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
+            cmd_str = str(cmd)
+            proc = None
+            has_shell_operators = any(op in cmd_str for op in ("<", ">", "|", "&", ";", "\n", "\r"))
+            if not has_shell_operators:
+                try:
+                    cmd_args = shlex.split(cmd_str)
+                    if cmd_args:
+                        proc = await asyncio.create_subprocess_exec(
+                            *cmd_args,
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE,
+                        )
+                except (ValueError, FileNotFoundError, PermissionError):
+                    proc = None
+
+            if proc is None:
+                proc = await asyncio.create_subprocess_exec(
+                    "sh",
+                    "-c",
+                    cmd_str,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
             stdout_b, stderr_b = await proc.communicate()
             exit_code = proc.returncode or 0
 
@@ -834,7 +876,10 @@ class WorkflowExecutor:
             normalized_code = unicodedata.normalize("NFKC", code)
             try:
                 tree = ast.parse(normalized_code)
-                for node in ast.walk(tree):
+            except (SyntaxError, TypeError, ValueError) as exc:
+                raise SyntaxError(f"Invalid syntax in Python code block: {exc}") from exc
+
+            for node in ast.walk(tree):
                     if isinstance(node, ast.Attribute):
                         if node.attr.startswith("__") and node.attr.endswith("__"):
                             raise PermissionError(f"Access to dunder attribute '{node.attr}' is prohibited.")
@@ -865,11 +910,7 @@ class WorkflowExecutor:
                     elif isinstance(node, ast.Name):
                         if node.id.startswith("__") and node.id.endswith("__"):
                             raise PermissionError(f"Access to dunder name '{node.id}' is prohibited.")
-            except (SyntaxError, TypeError, ValueError) as exc:
-                if isinstance(exc, PermissionError):
-                    raise
-                # Syntax errors will be caught later when executing
-                pass
+
 
             # Secure execution context: remove direct access to dangerous os/sys modules
             # and restrict __builtins__ to prevent arbitrary file reading, execution, or
@@ -923,15 +964,26 @@ class WorkflowExecutor:
             _assert_no_modules(eval_locals, "step params")
 
 
-            try:
-                # Try evaluating as expression first. Execute the SAME
-                # normalized source the AST validator inspected above — never
-                # the raw ``code`` — so validation and execution cannot diverge.
-                res = eval(normalized_code, eval_globals, eval_locals)  # nosec B307
+            # Deterministically determine whether code is a single expression or a statement block
+            is_expression = len(tree.body) == 1 and isinstance(tree.body[0], ast.Expr)
+
+            if is_expression:
+                expr_ast = ast.Expression(body=tree.body[0].value)
+                ast.fix_missing_locations(expr_ast)
+                compiled_code = compile(expr_ast, filename="<python_sandbox>", mode="eval")
+                res = eval(compiled_code, eval_globals, eval_locals)  # nosec B307
                 return {"result": res, "output": res}
-            except SyntaxError:
-                # Execute as statement block
-                exec(normalized_code, eval_globals, eval_locals)  # nosec B102
+            else:
+                allowed_stmt_nodes = (ast.Assign, ast.AugAssign, ast.AnnAssign, ast.Expr, ast.Pass)
+                for stmt in tree.body:
+                    if not isinstance(stmt, allowed_stmt_nodes):
+                        stmt_type = type(stmt).__name__
+                        raise PermissionError(
+                            f"Statement type '{stmt_type}' is prohibited in python sandbox statement blocks."
+                        )
+                ast.fix_missing_locations(tree)
+                compiled_code = compile(tree, filename="<python_sandbox>", mode="exec")
+                exec(compiled_code, eval_globals, eval_locals)  # nosec B102
                 out_locals = {k: v for k, v in eval_locals.items() if k not in params and not k.startswith("_")}
                 return out_locals if out_locals else {"status": "success"}
 
@@ -966,7 +1018,7 @@ class WorkflowExecutor:
 
             req = urllib.request.Request(url_str, headers=headers)
             opener = urllib.request.build_opener(SafeRedirectHandler)
-            
+
             loop = asyncio.get_event_loop()
             def _fetch():
                 with opener.open(req, timeout=params.get("timeout", 10)) as resp:
@@ -1084,7 +1136,7 @@ class WorkflowExecutor:
                         # Interpolate step parameters using current state context
                         interpolated_params = state_ctx.interpolate(step.params)
                         out = await self._execute_action(step.action, interpolated_params, step.id)
-                        
+
                         step_res = StepResult(
                             step_id=step.id,
                             status=StepStatus.COMPLETED,

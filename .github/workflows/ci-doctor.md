@@ -6,7 +6,11 @@ description: |
 
 on:
   workflow_run:
-    workflows: ["CI", "Continuous Security", "Pylint", "CodeQL"]
+    # Matched against each workflow's `name:` value, exactly. "Continuous
+    # Security" was removed on 2026-08-18 and matched nothing for as long as it
+    # stayed here; "Subproject tests" is the third gating suite and was missing.
+    # Verify any new entry against `grep -h '^name:' .github/workflows/*.yml`.
+    workflows: ["CI", "Pylint", "Subproject tests"]
     types:
       - completed
     branches:
@@ -14,12 +18,13 @@ on:
 
 if: ${{ github.event.workflow_run.conclusion == 'failure' }}
 
+engine: gemini
+
 permissions:
   contents: read
   pull-requests: read
   issues: read
   actions: read
-  copilot-requests: write
 
 network: defaults
 

@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -77,8 +78,37 @@ def discover_chat_id(token: str) -> str | None:
     return chat_id
 
 
+def _resolve_sakthai_bin(raw_value: str) -> str | None:
+    """Resolve and validate the sakthai executable path."""
+    candidate = raw_value.strip()
+    if not candidate:
+        return None
+
+    has_path_component = os.path.sep in candidate or (os.path.altsep and os.path.altsep in candidate)
+    if has_path_component:
+        resolved = os.path.realpath(candidate)
+        if not (os.path.isfile(resolved) and os.access(resolved, os.X_OK)):
+            return None
+    else:
+        resolved = shutil.which(candidate)
+        if resolved is None:
+            return None
+
+    # Only allow the expected executable name.
+    if os.path.basename(resolved) != "sakthai":
+        return None
+    return resolved
+
+
 def send_via_mcp(message: str) -> int:
-    sakthai_bin = os.environ.get("SAKTHAI_BIN", "sakthai")
+    raw_sakthai_bin = os.environ.get("SAKTHAI_BIN", "sakthai")
+    sakthai_bin = _resolve_sakthai_bin(raw_sakthai_bin)
+    if sakthai_bin is None:
+        print(
+            "Invalid SAKTHAI_BIN: must resolve to an executable named 'sakthai'.",
+            file=sys.stderr,
+        )
+        return 1
     env = dict(os.environ)
     env["SAKTHAI_HOME"] = tempfile.mkdtemp(prefix="sakthai-tg.")
     requests = [

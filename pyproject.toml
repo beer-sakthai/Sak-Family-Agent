@@ -76,7 +76,7 @@ fail_under = 96
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-exclude = ["library", "scripts"]
+exclude = ["library", "scripts", "apps", "services", "training", "infra", "build", ".venv"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]

@@ -1,6 +1,7 @@
 ---
 name: SakSit-milestone-content
-description: "Create multi-platform content from achievement data."
+description: Create multi-platform content from achievement data.
+...
 ---
 
 # SakSit Milestone Content

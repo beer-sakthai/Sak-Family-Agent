@@ -15,34 +15,94 @@ import {
   Clock,
 } from "lucide-react";
 import { useAgentStream } from "@/lib/hooks/useAgentStream";
-import { TelemetryEvent, TelemetryEventType } from "@/lib/types";
+import { TelemetryEventType } from "@/lib/types";
+import { formatLatency, formatTokenCount } from "@/lib/uiUtils";
 
-const eventBadgeStyles: Record<TelemetryEventType, { bg: string; text: string; icon: React.ReactNode }> = {
-  connected: { bg: "bg-emerald-500/10 border-emerald-500/30", text: "text-emerald-400", icon: <Radio className="h-3.5 w-3.5" /> },
-  agent_start: { bg: "bg-cyan-500/10 border-cyan-500/30", text: "text-cyan-400", icon: <Zap className="h-3.5 w-3.5" /> },
-  agent_dispatch: { bg: "bg-teal-500/10 border-teal-500/30", text: "text-teal-400", icon: <Zap className="h-3.5 w-3.5" /> },
-  agent_step: { bg: "bg-sky-500/10 border-sky-500/30", text: "text-sky-400", icon: <Activity className="h-3.5 w-3.5" /> },
-  token_delta: { bg: "bg-indigo-500/10 border-indigo-500/30", text: "text-indigo-400", icon: <Sparkles className="h-3.5 w-3.5" /> },
-  tool_call: { bg: "bg-amber-500/10 border-amber-500/30", text: "text-amber-400", icon: <Wrench className="h-3.5 w-3.5" /> },
-  tool_result: { bg: "bg-purple-500/10 border-purple-500/30", text: "text-purple-400", icon: <Terminal className="h-3.5 w-3.5" /> },
-  guardrail_check: { bg: "bg-rose-500/10 border-rose-500/30", text: "text-rose-400", icon: <ShieldAlert className="h-3.5 w-3.5" /> },
-  memory_mutation: { bg: "bg-blue-500/10 border-blue-500/30", text: "text-blue-400", icon: <Activity className="h-3.5 w-3.5" /> },
-  agent_complete: { bg: "bg-emerald-500/10 border-emerald-500/30", text: "text-emerald-400", icon: <Clock className="h-3.5 w-3.5" /> },
-  agent_error: { bg: "bg-red-500/20 border-red-500/40", text: "text-red-400", icon: <ShieldAlert className="h-3.5 w-3.5" /> },
-  heartbeat: { bg: "bg-slate-500/10 border-slate-500/30", text: "text-slate-400", icon: <Activity className="h-3.5 w-3.5" /> },
+const eventBadgeStyles: Record<
+  TelemetryEventType,
+  { bg: string; text: string; icon: React.ReactNode }
+> = {
+  connected: {
+    bg: "bg-emerald-500/10 border-emerald-500/30",
+    text: "text-emerald-400",
+    icon: <Radio className="h-3.5 w-3.5" />,
+  },
+  agent_start: {
+    bg: "bg-cyan-500/10 border-cyan-500/30",
+    text: "text-cyan-400",
+    icon: <Zap className="h-3.5 w-3.5" />,
+  },
+  agent_message: {
+    bg: "bg-cyan-500/10 border-cyan-500/30",
+    text: "text-cyan-400",
+    icon: <Zap className="h-3.5 w-3.5" />,
+  },
+  agent_dispatch: {
+    bg: "bg-teal-500/10 border-teal-500/30",
+    text: "text-teal-400",
+    icon: <Zap className="h-3.5 w-3.5" />,
+  },
+  agent_step: {
+    bg: "bg-sky-500/10 border-sky-500/30",
+    text: "text-sky-400",
+    icon: <Activity className="h-3.5 w-3.5" />,
+  },
+  token_delta: {
+    bg: "bg-indigo-500/10 border-indigo-500/30",
+    text: "text-indigo-400",
+    icon: <Sparkles className="h-3.5 w-3.5" />,
+  },
+  tool_call: {
+    bg: "bg-amber-500/10 border-amber-500/30",
+    text: "text-amber-400",
+    icon: <Wrench className="h-3.5 w-3.5" />,
+  },
+  tool_result: {
+    bg: "bg-purple-500/10 border-purple-500/30",
+    text: "text-purple-400",
+    icon: <Terminal className="h-3.5 w-3.5" />,
+  },
+  guardrail_check: {
+    bg: "bg-rose-500/10 border-rose-500/30",
+    text: "text-rose-400",
+    icon: <ShieldAlert className="h-3.5 w-3.5" />,
+  },
+  memory_mutation: {
+    bg: "bg-blue-500/10 border-blue-500/30",
+    text: "text-blue-400",
+    icon: <Activity className="h-3.5 w-3.5" />,
+  },
+  agent_complete: {
+    bg: "bg-emerald-500/10 border-emerald-500/30",
+    text: "text-emerald-400",
+    icon: <Clock className="h-3.5 w-3.5" />,
+  },
+  agent_error: {
+    bg: "bg-red-500/20 border-red-500/40",
+    text: "text-red-400",
+    icon: <ShieldAlert className="h-3.5 w-3.5" />,
+  },
+  heartbeat: {
+    bg: "bg-slate-500/10 border-slate-500/30",
+    text: "text-slate-400",
+    icon: <Activity className="h-3.5 w-3.5" />,
+  },
 };
+
+const ALL_PERSONAS = [
+  "SakThai",
+  "SakKing",
+  "SakSee",
+  "SakSit",
+  "SakJules",
+  "SakTan",
+];
 
 export function LiveTelemetryFeed() {
   const [selectedPersona, setSelectedPersona] = useState<string>("");
   const [isPaused, setIsPaused] = useState(false);
 
-  const {
-    status,
-    events,
-    clearEvents,
-    connect,
-    disconnect,
-  } = useAgentStream({
+  const { status, events, clearEvents, connect, disconnect } = useAgentStream({
     persona: selectedPersona || undefined,
     autoConnect: !isPaused,
     maxEvents: 50,
@@ -64,7 +124,9 @@ export function LiveTelemetryFeed() {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
         <div className="flex items-center space-x-3">
           <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
-            <Radio className={`h-5 w-5 ${status === "connected" ? "animate-pulse" : ""}`} />
+            <Radio
+              className={`h-5 w-5 ${status === "connected" ? "animate-pulse" : ""}`}
+            />
           </div>
           <div>
             <h3 className="text-base font-semibold text-slate-100 flex items-center gap-2">
@@ -92,30 +154,38 @@ export function LiveTelemetryFeed() {
           <select
             value={selectedPersona}
             onChange={(e) => setSelectedPersona(e.target.value)}
-            className="bg-slate-800 text-slate-300 text-xs rounded-lg px-3 py-1.5 border border-slate-700 focus:outline-none focus:border-cyan-500"
+            aria-label="Filter by Persona"
+            className="bg-slate-800 text-slate-300 text-xs rounded-lg px-3 py-1.5 border border-slate-700 focus:outline-none focus:border-cyan-500 focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             <option value="">All Personas</option>
-            <option value="SakThai">SakThai</option>
-            <option value="SakKing">SakKing</option>
-            <option value="SakSee">SakSee</option>
-            <option value="SakSit">SakSit</option>
-            <option value="SakJules">SakJules</option>
+            {ALL_PERSONAS.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
           </select>
 
           {/* Pause / Resume Button */}
           <button
             onClick={togglePause}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs border border-slate-700 transition-colors"
+            aria-label={isPaused ? "Resume stream" : "Pause stream"}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs border border-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
           >
-            {isPaused ? <Play className="h-3.5 w-3.5 text-emerald-400" /> : <Pause className="h-3.5 w-3.5 text-amber-400" />}
+            {isPaused ? (
+              <Play className="h-3.5 w-3.5 text-emerald-400" />
+            ) : (
+              <Pause className="h-3.5 w-3.5 text-amber-400" />
+            )}
             <span>{isPaused ? "Resume" : "Pause"}</span>
           </button>
 
           {/* Clear Feed */}
           <button
             onClick={clearEvents}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-rose-400 border border-slate-700 transition-colors"
-            title="Clear Stream"
+            disabled={events.length === 0}
+            aria-label="Clear stream events"
+            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-400 hover:text-rose-400 border border-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none"
+            title={events.length === 0 ? "Stream is empty" : "Clear stream events"}
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -127,12 +197,17 @@ export function LiveTelemetryFeed() {
         {events.length === 0 ? (
           <div className="p-8 text-center border border-dashed border-slate-800 rounded-xl">
             <Radio className="h-8 w-8 text-slate-600 mx-auto mb-2 animate-pulse" />
-            <p className="text-xs text-slate-400 font-medium">Listening for live agent execution telemetry...</p>
-            <p className="text-[11px] text-slate-500 mt-1">Events will appear here in real-time as agents trigger tasks</p>
+            <p className="text-xs text-slate-400 font-medium">
+              Listening for live agent execution telemetry...
+            </p>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Events will appear here in real-time as agents trigger tasks
+            </p>
           </div>
         ) : (
           events.map((evt) => {
-            const style = eventBadgeStyles[evt.type] || eventBadgeStyles.heartbeat;
+            const style =
+              eventBadgeStyles[evt.type] || eventBadgeStyles.heartbeat;
             return (
               <div
                 key={evt.id}
@@ -140,11 +215,15 @@ export function LiveTelemetryFeed() {
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center space-x-2">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[11px] font-semibold ${style.bg} ${style.text}`}>
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[11px] font-semibold ${style.bg} ${style.text}`}
+                    >
                       {style.icon}
                       {evt.type.toUpperCase()}
                     </span>
-                    <span className="font-semibold text-slate-200">{evt.persona}</span>
+                    <span className="font-semibold text-slate-200">
+                      {evt.persona}
+                    </span>
                     {evt.sessionId && (
                       <span className="text-[10px] text-slate-500 font-normal">
                         ({evt.sessionId.slice(0, 8)})
@@ -161,17 +240,20 @@ export function LiveTelemetryFeed() {
                   {evt.data.message && <span>{evt.data.message}</span>}
                   {evt.data.toolName && (
                     <div className="text-amber-300">
-                      🔧 Tool Invoked: <span className="font-bold">{evt.data.toolName}</span>
+                      🔧 Tool Invoked:{" "}
+                      <span className="font-bold">{evt.data.toolName}</span>
                     </div>
                   )}
                   {evt.data.guardrailRule && (
                     <div className="text-rose-300">
-                      🛡️ Guardrail ({evt.data.guardrailAction}): {evt.data.guardrailRule}
+                      🛡️ Guardrail ({evt.data.guardrailAction}):{" "}
+                      {evt.data.guardrailRule}
                     </div>
                   )}
                   {evt.data.tokensGenerated && (
                     <div className="text-indigo-300">
-                      ⚡ Tokens: +{evt.data.tokensGenerated} ({evt.data.latencyMs}ms)
+                      ⚡ Tokens: +{formatTokenCount(evt.data.tokensGenerated)} (
+                      {formatLatency(evt.data.latencyMs)})
                     </div>
                   )}
                   {evt.data.error && (

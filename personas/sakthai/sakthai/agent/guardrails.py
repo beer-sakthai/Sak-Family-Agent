@@ -206,23 +206,21 @@ def _basename_is_sensitive(basename: str) -> bool:
 def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     """Return True if the path targets a sensitive system directory or uses traversal."""
     path = path.strip(" \t\n\r\"'")
+    # Strip curl-style file upload prefix(es) if present at start.
+    if path.startswith("@"):
+        path = path.lstrip("@")
+
+    if not path:
+        return False
+
     # Support checking flags or arguments with values like --file=/etc, field=@.env,
     # socat's FILE:/etc/passwd, or comma-separated paths (--mount src=/etc,dst=/x).
-    # Every delimited component is checked recursively. Note: we only recurse on
-    # components that differ from the original, and for '@' we only consider it
-    # a separator if it's not the first character (to distinguish it from a curl
-    # @path prefix).
+    # Every delimited component is checked recursively.
     for sep in ("=", "@", ":", ","):
         if sep in path:
-            if sep == "@" and path.startswith("@"):
-                continue
             for val in path.split(sep):
                 if val and val != path and _is_sensitive_path(val, allow_local=allow_local):
                     return True
-
-    # Strip curl-style file upload prefix if present at start.
-    if path.startswith("@") and len(path) > 1:
-        path = path[1:]
 
     # Check for path traversal or home-relative paths.
     if ".." in path or path.startswith("~"):
@@ -422,24 +420,277 @@ def _check_container_tokens(parts: list[str]) -> GuardrailResult:
     return GuardrailResult(GuardrailAction.ALLOW)
 
 
-def _check_destructive_tokens(
+_DESTRUCTIVE_BINARIES = (
+    "rm",
+    "rmdir",
+    "chmod",
+    "mv",
+    "cp",
+    "ln",
+    "tee",
+    "chown",
+    "chgrp",
+    "sed",
+    "truncate",
+    "shred",
+    "openssl",
+    "socat",
+    "ssh-keygen",
+    "ssh-copy-id",
+    "mkdir",
+    "touch",
+    "git",
+    "npm",
+    "yarn",
+    "pnpm",
+    "pip",
+    "pip3",
+    "sqlite",
+    "docker",
+    "podman",
+    "kubectl",
+    "chroot",
+    "nsenter",
+    "uv",
+    "pipx",
+    "bun",
+    "bunx",
+    "tsx",
+    "ts-node",
+    "deno",
+    "npx",
+    "poetry",
+    "pipenv",
+    "conda",
+    "busybox",
+    "toybox",
+    "psql",
+    "mysql",
+    "mariadb",
+    "mongo",
+    "mongosh",
+    "redis-cli",
+    "vim",
+    "vi",
+    "nano",
+    "emacs",
+    "ed",
+    "composer",
+    "cargo",
+)
+
+_EXFILTRATION_BINARIES = (
+    "curl",
+    "wget",
+    "dir",
+    "vdir",
+    "openssl",
+    "socat",
+    "cat",
+    "grep",
+    "head",
+    "tail",
+    "strings",
+    "base64",
+    "awk",
+    "nc",
+    "netcat",
+    "python",
+    "node",
+    "perl",
+    "ruby",
+    "php",
+    "more",
+    "less",
+    "hexdump",
+    "od",
+    "sort",
+    "diff",
+    "tar",
+    "rsync",
+    "zip",
+    "unzip",
+    "7z",
+    "scp",
+    "sftp",
+    "ssh",
+    "ssh-add",
+    "ssh-keygen",
+    "ssh-copy-id",
+    "bash",
+    "sh",
+    "zsh",
+    "dash",
+    "ksh",
+    "fish",
+    "ash",
+    "csh",
+    "tcsh",
+    "ls",
+    "uniq",
+    "cut",
+    "file",
+    "stat",
+    "tac",
+    "rev",
+    "nl",
+    "xxd",
+    "column",
+    "gzip",
+    "gunzip",
+    "zcat",
+    "xz",
+    "xzcat",
+    "bzip2",
+    "bzcat",
+    "jq",
+    "paste",
+    "join",
+    "split",
+    "git",
+    "npm",
+    "yarn",
+    "pnpm",
+    "pip",
+    "pip3",
+    "sqlite",
+    "docker",
+    "podman",
+    "kubectl",
+    "chroot",
+    "nsenter",
+    "uv",
+    "pipx",
+    "bun",
+    "bunx",
+    "tsx",
+    "ts-node",
+    "deno",
+    "npx",
+    "poetry",
+    "pipenv",
+    "conda",
+    "busybox",
+    "toybox",
+    "psql",
+    "mysql",
+    "mariadb",
+    "mongo",
+    "mongosh",
+    "redis-cli",
+    "vim",
+    "vi",
+    "nano",
+    "emacs",
+    "ed",
+    "composer",
+    "cargo",
+)
+
+_INTERPRETER_BINARIES = (
+    "python",
+    "node",
+    "awk",
+    "perl",
+    "ruby",
+    "php",
+    "sed",
+    "grep",
+    "bash",
+    "sh",
+    "zsh",
+    "dash",
+    "ksh",
+    "fish",
+    "ash",
+    "csh",
+    "tcsh",
+    "sqlite",
+    "git",
+    "tsx",
+    "ts-node",
+    "deno",
+    "psql",
+    "mysql",
+    "mariadb",
+    "mongo",
+    "mongosh",
+    "redis-cli",
+    "vim",
+    "vi",
+    "emacs",
+    "composer",
+    "cargo",
+)
+
+_TRANSPARENT_WRAPPERS = (
+    "sudo",
+    "doas",
+    "xargs",
+    "env",
+    "timeout",
+    "nohup",
+    "setsid",
+    "nice",
+    "ionice",
+    "chrt",
+    "taskset",
+    "stdbuf",
+    "chroot",
+    "nsenter",
+    "unshare",
+    "pkexec",
+    "uv",
+    "pipx",
+    "bun",
+    "bunx",
+    "npx",
+    "deno",
+    "poetry",
+    "pipenv",
+    "conda",
+    "pnpm",
+    "yarn",
+    "npm",
+    "cargo",
+    "composer",
+    "busybox",
+    "toybox",
+)
+
+_PIPELINE_INTERPRETERS = (
+    "sh",
+    "bash",
+    "zsh",
+    "dash",
+    "ksh",
+    "fish",
+    "ash",
+    "csh",
+    "tcsh",
+    "python",
+    "node",
+    "perl",
+    "ruby",
+    "php",
+    "deno",
+    "bun",
+    "tsx",
+    "ts-node",
+    "eval",
+    "exec",
+    "source",
+    ".",
+)
+
+
+def _check_make_tokens(
     parts: list[str],
-    context_sensitive: bool = False,
-    checked_makefiles: set[str] | None = None,
-    current_make_dir: str = ".",
+    context_sensitive: bool,
+    checked_makefiles: set[str] | None,
+    current_make_dir: str,
 ) -> GuardrailResult:
-    """Recursively check tokens for destructive commands.
-
-    If ``context_sensitive`` is True, discovery placeholders like '{}' and '+'
-    are treated as sensitive paths (used by find -exec to target the discovered
-    files).
-    """
-    if not parts:
-        return GuardrailResult(GuardrailAction.ALLOW)
-
-    # 1. Handle nested commands in wrappers (recursion)
     for i, part in enumerate(parts):
-        # 1d. make command scanning Makefile recipes
         if _is_binary(part, "make"):
             make_dir = current_make_dir
             makefile_path = None
@@ -506,8 +757,8 @@ def _check_destructive_tokens(
                                 )
 
                         for line in content.splitlines():
-                            if line.startswith("\t"):
-                                recipe = line.lstrip("\t").strip()
+                            if line.startswith("	"):
+                                recipe = line.lstrip("	").strip()
                                 while recipe and recipe[0] in ("@", "-", "+"):
                                     recipe = recipe[1:].strip()
                                 if recipe:
@@ -532,8 +783,17 @@ def _check_destructive_tokens(
                     except Exception:  # nosec B110 — safe swallow of makefile parsing/reading errors
                         pass
 
-        # 1a. bash -c "..." or sh -c "..." (including combined flags like -xc)
-        # Search backwards for the shell binary to handle intermediate flags (e.g. bash -v -c).
+    return GuardrailResult(GuardrailAction.ALLOW)
+
+
+def _check_nested_script_tokens(
+    parts: list[str],
+    context_sensitive: bool,
+    checked_makefiles: set[str] | None,
+    current_make_dir: str,
+) -> GuardrailResult:
+    for i, part in enumerate(parts):
+        # bash -c "..." or sh -c "..." (including combined flags like -xc)
         if (
             part.startswith("-")
             and not part.startswith("--")
@@ -566,10 +826,9 @@ def _check_destructive_tokens(
                 except ValueError:
                     pass
 
-        # 1b. eval "..." or exec "..."
+        # eval "..." or exec "..."
         if _is_binary(part, ("eval", "exec")):
             rest = parts[i + 1 :]
-            # If the next token looks like a quoted command string, split it.
             if len(rest) == 1 and " " in rest[0]:
                 with contextlib.suppress(ValueError):
                     rest = shlex.split(rest[0])
@@ -582,9 +841,7 @@ def _check_destructive_tokens(
             if res.action == GuardrailAction.DENY:
                 return res
 
-        # 1c. interpreter -c "script" or interpreter -e "script" (including combined flags like -ic or -pe)
-        # python -c "..." or node -e "..."
-        # Search backwards for the interpreter binary to handle intermediate flags (e.g. python -v -c).
+        # interpreter -c "script" or interpreter -e "script"
         if (
             part.startswith("-")
             and not part.startswith("--")
@@ -604,9 +861,6 @@ def _check_destructive_tokens(
 
             if interp_idx != -1:
                 script = parts[i + 1]
-                # Scan script for absolute or home-relative paths (including traversal)
-                # or any known sensitive file/directory referenced relatively
-                # (.env, .git, .ssh, .aws, id_rsa, memory.db, ...).
                 for match in re.finditer(_SENSITIVE_SCRIPT_PATH_RE, script):
                     candidate = match.group(0)
                     if _is_sensitive_path(candidate):
@@ -616,221 +870,22 @@ def _check_destructive_tokens(
                             reason=f"Potentially dangerous {binary_name!r} script targeting {candidate!r} blocked.",
                         )
 
-    # 2. Prevent destructive or dangerous commands on sensitive paths.
-    destructive_binaries = (
-        "rm",
-        "rmdir",
-        "chmod",
-        "mv",
-        "cp",
-        "ln",
-        "tee",
-        "chown",
-        "chgrp",
-        "sed",
-        "truncate",
-        "shred",
-        "openssl",
-        "socat",
-        "ssh-keygen",
-        "ssh-copy-id",
-        "mkdir",
-        "touch",
-        "git",
-        "npm",
-        "yarn",
-        "pnpm",
-        "pip",
-        "pip3",
-        "sqlite",
-        "docker",
-        "podman",
-        "kubectl",
-        "chroot",
-        "nsenter",
-        "uv",
-        "pipx",
-        "bun",
-        "bunx",
-        "tsx",
-        "ts-node",
-        "deno",
-        "npx",
-        "poetry",
-        "pipenv",
-        "conda",
-        "busybox",
-        "toybox",
-        "psql",
-        "mysql",
-        "mariadb",
-        "mongo",
-        "mongosh",
-        "redis-cli",
-        "vim",
-        "vi",
-        "nano",
-        "emacs",
-        "ed",
-        "composer",
-        "cargo",
-    )
-    exfiltration_binaries = (
-        "curl",
-        "wget",
-        "dir",
-        "vdir",
-        "openssl",
-        "socat",
-        "cat",
-        "grep",
-        "head",
-        "tail",
-        "strings",
-        "base64",
-        "awk",
-        "nc",
-        "netcat",
-        "python",
-        "node",
-        "perl",
-        "ruby",
-        "php",
-        "more",
-        "less",
-        "hexdump",
-        "od",
-        "sort",
-        "diff",
-        "tar",
-        "rsync",
-        "zip",
-        "unzip",
-        "7z",
-        "scp",
-        "sftp",
-        "ssh",
-        "ssh-add",
-        "ssh-keygen",
-        "ssh-copy-id",
-        "bash",
-        "sh",
-        "zsh",
-        "dash",
-        "ksh",
-        "fish",
-        "ash",
-        "csh",
-        "tcsh",
-        "ls",
-        "uniq",
-        "cut",
-        "file",
-        "stat",
-        "tac",
-        "rev",
-        "nl",
-        "xxd",
-        "column",
-        "gzip",
-        "gunzip",
-        "zcat",
-        "xz",
-        "xzcat",
-        "bzip2",
-        "bzcat",
-        "jq",
-        "paste",
-        "join",
-        "split",
-        "git",
-        "npm",
-        "yarn",
-        "pnpm",
-        "pip",
-        "pip3",
-        "sqlite",
-        "docker",
-        "podman",
-        "kubectl",
-        "chroot",
-        "nsenter",
-        "uv",
-        "pipx",
-        "bun",
-        "bunx",
-        "tsx",
-        "ts-node",
-        "deno",
-        "npx",
-        "poetry",
-        "pipenv",
-        "conda",
-        "busybox",
-        "toybox",
-        "psql",
-        "mysql",
-        "mariadb",
-        "mongo",
-        "mongosh",
-        "redis-cli",
-        "vim",
-        "vi",
-        "nano",
-        "emacs",
-        "ed",
-        "composer",
-        "cargo",
-    )
-    # Common interpreters where sensitive paths can be embedded in arguments.
-    interpreters = (
-        "python",
-        "node",
-        "awk",
-        "perl",
-        "ruby",
-        "php",
-        "sed",
-        "grep",
-        "bash",
-        "sh",
-        "zsh",
-        "dash",
-        "ksh",
-        "fish",
-        "ash",
-        "csh",
-        "tcsh",
-        "sqlite",
-        "git",
-        "tsx",
-        "ts-node",
-        "deno",
-        "psql",
-        "mysql",
-        "mariadb",
-        "mongo",
-        "mongosh",
-        "redis-cli",
-        "vim",
-        "vi",
-        "emacs",
-        "composer",
-        "cargo",
-    )
+    return GuardrailResult(GuardrailAction.ALLOW)
 
+
+def _check_binary_path_tokens(
+    parts: list[str],
+    context_sensitive: bool = False,
+) -> GuardrailResult:
     for i, part in enumerate(parts):
-        is_dest = _is_binary(part, destructive_binaries)
-        is_exfil = _is_binary(part, exfiltration_binaries)
+        is_dest = _is_binary(part, _DESTRUCTIVE_BINARIES)
+        is_exfil = _is_binary(part, _EXFILTRATION_BINARIES)
         if is_dest or is_exfil:
             binary_name = os.path.basename(part)
-            is_interpreter = _is_binary(part, interpreters)
-            # Inspect tokens following the binary until a separator is hit.
+            is_interpreter = _is_binary(part, _INTERPRETER_BINARIES)
             for subpart in parts[i + 1 :]:
                 if subpart in (";", "&&", "||", "|", "|&"):
                     break
-                # For destructive binaries, we don't allow targeting the current directory.
-                # For exfiltration binaries, we allow targeting the current directory.
                 allow_local = is_exfil
                 if _is_sensitive_path(subpart, allow_local=allow_local) or (
                     context_sensitive and subpart in ("{}", "+")
@@ -854,7 +909,13 @@ def _check_destructive_tokens(
                             reason=f"Potentially dangerous '{binary_name}' command with sensitive path in arguments blocked.",
                         )
 
-    # 3. Specialized protection for dd (input/output file).
+    return GuardrailResult(GuardrailAction.ALLOW)
+
+
+def _check_dd_tokens(
+    parts: list[str],
+    context_sensitive: bool = False,
+) -> GuardrailResult:
     for i, part in enumerate(parts):
         if _is_binary(part, "dd"):
             for subpart in parts[i + 1 :]:
@@ -862,8 +923,6 @@ def _check_destructive_tokens(
                     break
                 if subpart.startswith("of=") or subpart.startswith("if="):
                     val = subpart[3:]
-                    # of= targets are destructive; don't allow local path.
-                    # if= targets are potentially dangerous; allow local path.
                     allow_local = subpart.startswith("if=")
                     if _is_sensitive_path(val, allow_local=allow_local) or (
                         context_sensitive and val in ("{}", "+")
@@ -875,15 +934,16 @@ def _check_destructive_tokens(
                             reason=f"{op} {binary_name!r} on {val!r} blocked.",
                         )
 
-    # 4. Prevent shell redirections targeting sensitive paths.
+    return GuardrailResult(GuardrailAction.ALLOW)
+
+
+def _check_redirection_tokens(
+    parts: list[str],
+    context_sensitive: bool = False,
+) -> GuardrailResult:
     for i, part in enumerate(parts):
-        # We look for redirection operators (>, >>, 1>, 2>, &>, >&, >|, <, etc.)
-        # Pattern: optional digit or '&', then '&>>', '>>', '>&', '>|', '<>', '<&', '>', or '<'
-        # Note: longer operators must come before shorter ones to match correctly.
         r_match = re.search(r"(?:[0-9]|&)?(?:&>>|>>|>&|>\||<>|<&|>|<)", part)
         if r_match:
-            # If the operator is at the end of the token or attached to its front,
-            # we need to find the target path.
             target = part[r_match.end() :]
             if not target and i + 1 < len(parts):
                 target = parts[i + 1]
@@ -896,7 +956,13 @@ def _check_destructive_tokens(
                     reason=f"destructive redirection to {target!r} blocked.",
                 )
 
-    # 5. Specialized protection for find (discovery, -delete, -fprint).
+    return GuardrailResult(GuardrailAction.ALLOW)
+
+
+def _check_find_tokens(
+    parts: list[str],
+    context_sensitive: bool = False,
+) -> GuardrailResult:
     find_idx = -1
     for i, part in enumerate(parts):
         if _is_binary(part, "find"):
@@ -905,7 +971,6 @@ def _check_destructive_tokens(
     if find_idx != -1:
         after_find = parts[find_idx + 1 :]
 
-        # 5a. Block destructive file-writing variants (-fprint, etc.)
         for i, part in enumerate(after_find):
             if part in ("-fprint", "-fprint0", "-fls", "-fprintf") and i + 1 < len(after_find):
                 target = after_find[i + 1]
@@ -917,7 +982,6 @@ def _check_destructive_tokens(
                         reason=f"destructive 'find {part}' on {target!r} blocked.",
                     )
 
-        # 5b. Block destructive deletion (-delete) on sensitive paths.
         if "-delete" in after_find:
             for part in after_find:
                 if part.startswith("-"):
@@ -930,8 +994,6 @@ def _check_destructive_tokens(
                         reason=f"destructive 'find -delete' on {part!r} blocked.",
                     )
 
-        # 5c. Block unauthorized discovery of sensitive system roots.
-        # find [path...] [expression]
         for part in after_find:
             if part in (";", "&&", "||", "|", "|&"):
                 break
@@ -943,54 +1005,19 @@ def _check_destructive_tokens(
                     reason=f"Potentially dangerous 'find' command on {part!r} blocked.",
                 )
 
-    # 6. Specialized protection for container tools (docker, podman, kubectl).
-    container_result = _check_container_tokens(parts)
-    if container_result.action == GuardrailAction.DENY:
-        return container_result
+    return GuardrailResult(GuardrailAction.ALLOW)
 
-    # 7. Handle wrappers that don't use -c (sudo, doas, xargs, env, find -exec, timeout, etc.)
+
+def _check_wrapper_tokens(
+    parts: list[str],
+    context_sensitive: bool = False,
+    checked_makefiles: set[str] | None = None,
+    current_make_dir: str = ".",
+) -> GuardrailResult:
     for i, part in enumerate(parts):
-        # sudo command ... or doas command ... or xargs command ... or env [VAR=VAL] command ...
-        transparent_wrappers = (
-            "sudo",
-            "doas",
-            "xargs",
-            "env",
-            "timeout",
-            "nohup",
-            "setsid",
-            "nice",
-            "ionice",
-            "chrt",
-            "taskset",
-            "stdbuf",
-            "chroot",
-            "nsenter",
-            "unshare",
-            "pkexec",
-            "uv",
-            "pipx",
-            "bun",
-            "bunx",
-            "npx",
-            "deno",
-            "poetry",
-            "pipenv",
-            "conda",
-            "pnpm",
-            "yarn",
-            "npm",
-            "cargo",
-            "composer",
-            "busybox",
-            "toybox",
-        )
-        if _is_binary(part, transparent_wrappers):
-            # Most of these wrappers have flags. xargs and env are special.
-            # We skip tokens that are likely arguments to the wrapper's flags.
+        if _is_binary(part, _TRANSPARENT_WRAPPERS):
             start_idx = i + 1
 
-            # If the wrapper is uv, pipx, bun, deno, poetry, pipenv, conda, pnpm, yarn, npm, cargo, or composer, we want to look for subcommands.
             if _is_binary(
                 part,
                 (
@@ -1015,7 +1042,6 @@ def _check_destructive_tokens(
                         break
                 if run_idx == -1:
                     continue
-                # If bun eval or deno eval is found, recursively scan the script argument for sensitive paths
                 if (
                     parts[run_idx] == "eval"
                     and run_idx + 1 < len(parts)
@@ -1044,8 +1070,6 @@ def _check_destructive_tokens(
                     flag_name, flag_val = flag.split("=", 1)
 
                 start_idx += 1
-                # Skip the next token if this flag takes an argument.
-                # This is a heuristic for common wrappers.
                 if (
                     _is_binary(part, "timeout")
                     and flag_name in ("-s", "--signal", "-k", "--kill-after")
@@ -1156,12 +1180,10 @@ def _check_destructive_tokens(
                                 )
                         start_idx += 1
 
-            # env might have arguments like VAR=VAL before the command.
             if _is_binary(part, "env"):
                 while start_idx < len(parts) and "=" in parts[start_idx]:
                     start_idx += 1
 
-            # timeout has a duration argument that is NOT a flag.
             if (
                 _is_binary(part, "timeout")
                 and start_idx < len(parts)
@@ -1169,13 +1191,11 @@ def _check_destructive_tokens(
             ):
                 start_idx += 1
 
-            # chroot has the NEWROOT argument that is NOT a flag.
             if (
                 _is_binary(part, "chroot")
                 and start_idx < len(parts)
                 and not parts[start_idx].startswith("-")
             ):
-                # The NEWROOT itself might be sensitive (e.g. chroot /etc).
                 if _is_sensitive_path(parts[start_idx], allow_local=True):
                     return GuardrailResult(
                         GuardrailAction.DENY,
@@ -1191,13 +1211,10 @@ def _check_destructive_tokens(
             )
             if res.action == GuardrailAction.DENY:
                 return res
-        # find ... -exec/ok command ...
+
         if part in ("-exec", "-execdir", "-ok", "-okdir") and any(
             _is_binary(p, "find") for p in parts[:i]
         ):
-            # We don't filter out {} and + here anymore because we want the
-            # recursive scanner to see them if they are being used destructively.
-            # We still stop at the terminator.
             exec_args: list[str] = []
             for subpart in parts[i + 1 :]:
                 if subpart in ("\\;", ";", "+"):
@@ -1206,16 +1223,19 @@ def _check_destructive_tokens(
                     break
                 exec_args.append(subpart)
 
-            # Heuristic: if find's target is sensitive, set context_sensitive.
             targets_sensitive = False
-            # Search for find targets (tokens starting find's search) between find and -exec.
-            for p in parts[find_idx + 1 : i]:
-                if p.startswith("-"):
-                    continue
-                # For find's targets, we allow local path unless it's destructive.
-                if _is_sensitive_path(p, allow_local=True):
-                    targets_sensitive = True
+            find_idx = -1
+            for p_idx, p in enumerate(parts[:i]):
+                if _is_binary(p, "find"):
+                    find_idx = p_idx
                     break
+            if find_idx != -1:
+                for p in parts[find_idx + 1 : i]:
+                    if p.startswith("-"):
+                        continue
+                    if _is_sensitive_path(p, allow_local=True):
+                        targets_sensitive = True
+                        break
 
             res = _check_destructive_tokens(
                 exec_args,
@@ -1225,7 +1245,6 @@ def _check_destructive_tokens(
             )
             if res.action == GuardrailAction.DENY:
                 if targets_sensitive:
-                    # Specific reason for find-exec when target is sensitive.
                     binary_name = os.path.basename(part)
                     return GuardrailResult(
                         GuardrailAction.DENY,
@@ -1233,38 +1252,16 @@ def _check_destructive_tokens(
                     )
                 return res
 
-    # 8. Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh)
+    return GuardrailResult(GuardrailAction.ALLOW)
+
+
+def _check_pipeline_tokens(parts: list[str]) -> GuardrailResult:
     for i, part in enumerate(parts):
         if part in ("|", "|&"):
             for subpart in parts[i + 1 :]:
                 if subpart in (";", "&&", "||", "|", "|&"):
                     break
-                if _is_binary(
-                    subpart,
-                    (
-                        "sh",
-                        "bash",
-                        "zsh",
-                        "dash",
-                        "ksh",
-                        "fish",
-                        "ash",
-                        "csh",
-                        "tcsh",
-                        "python",
-                        "node",
-                        "perl",
-                        "ruby",
-                        "php",
-                        "deno",
-                        "bun",
-                        "tsx",
-                        "ts-node",
-                        "eval",
-                        "exec",
-                        "source",
-                    ),
-                ):
+                if _is_binary(subpart, _PIPELINE_INTERPRETERS):
                     return GuardrailResult(
                         GuardrailAction.DENY,
                         reason=(
@@ -1274,6 +1271,56 @@ def _check_destructive_tokens(
                     )
 
     return GuardrailResult(GuardrailAction.ALLOW)
+
+
+def _check_destructive_tokens(
+    parts: list[str],
+    context_sensitive: bool = False,
+    checked_makefiles: set[str] | None = None,
+    current_make_dir: str = ".",
+) -> GuardrailResult:
+    """Recursively check tokens for destructive commands.
+
+    If context_sensitive is True, discovery placeholders like '{}' and '+'
+    are treated as sensitive paths (used by find -exec to target the discovered
+    files).
+    """
+    if not parts:
+        return GuardrailResult(GuardrailAction.ALLOW)
+
+    res = _check_make_tokens(parts, context_sensitive, checked_makefiles, current_make_dir)
+    if res.action == GuardrailAction.DENY:
+        return res
+
+    res = _check_nested_script_tokens(parts, context_sensitive, checked_makefiles, current_make_dir)
+    if res.action == GuardrailAction.DENY:
+        return res
+
+    res = _check_binary_path_tokens(parts, context_sensitive)
+    if res.action == GuardrailAction.DENY:
+        return res
+
+    res = _check_dd_tokens(parts, context_sensitive)
+    if res.action == GuardrailAction.DENY:
+        return res
+
+    res = _check_redirection_tokens(parts, context_sensitive)
+    if res.action == GuardrailAction.DENY:
+        return res
+
+    res = _check_find_tokens(parts, context_sensitive)
+    if res.action == GuardrailAction.DENY:
+        return res
+
+    res = _check_container_tokens(parts)
+    if res.action == GuardrailAction.DENY:
+        return res
+
+    res = _check_wrapper_tokens(parts, context_sensitive, checked_makefiles, current_make_dir)
+    if res.action == GuardrailAction.DENY:
+        return res
+
+    return _check_pipeline_tokens(parts)
 
 
 def _block_dangerous_shell_commands(
@@ -1343,50 +1390,8 @@ def _contains_sensitive_path(val: Any) -> str | None:
     return None
 
 
-def _block_sensitive_path_args(
-    tool: Tool, args: dict[str, Any], _store: MemoryStore
-) -> GuardrailResult:
-    """Deny any tool call that targets a sensitive path via its arguments."""
-    # run_command has its own specialized (and recursive) guardrails.
-    if tool.name == "run_command":
-        return GuardrailResult(GuardrailAction.ALLOW)
-
-    for key, value in args.items():
-        sensitive_path = _contains_sensitive_path(value)
-        if sensitive_path is not None:
-            return GuardrailResult(
-                GuardrailAction.DENY,
-                reason=f"Access to sensitive path {sensitive_path!r} via argument {key!r} is blocked.",
-            )
-    return GuardrailResult(GuardrailAction.ALLOW)
-
-
-def _block_output_with_secrets(
-    _tool: Tool,
-    _args: dict[str, Any],
-    output: str,
-    _is_error: bool,
-    _store: MemoryStore,
-) -> GuardrailResult:
-    """Deny any tool output that appears to contain a secret."""
-    # 1. Block common secret patterns (API keys, bot tokens, etc.)
-    if re.search(SECRET_PATTERN, output):
-        return GuardrailResult(
-            GuardrailAction.DENY,
-            reason="Tool output blocked because it appears to contain a secret.",
-        )
-
-    # 2. Block PEM Private Key blocks
-    if re.search(
-        r"-----BEGIN[A-Z0-9\s_]+PRIVATE KEY-----[\s\S]*?-----END[A-Z0-9\s_]+PRIVATE KEY-----",
-        output,
-    ):
-        return GuardrailResult(
-            GuardrailAction.DENY,
-            reason="Tool output blocked because it appears to contain a private key block.",
-        )
-
-    # 3. Block exact active environment credentials or registered extra secrets
+def _get_active_secrets() -> set[str]:
+    """Gather active environment credential values and registered extra secrets."""
     secret_keys = [
         "ANTHROPIC_API_KEY",
         "ANTHROPIC_AUTH_TOKEN",
@@ -1435,13 +1440,105 @@ def _block_output_with_secrets(
     except Exception:  # nosec B110 — safe swallow of environment variable reading error
         pass
 
-    if secrets_to_check:
-        for val in sorted(secrets_to_check, key=len, reverse=True):
-            if val in output:
-                return GuardrailResult(
-                    GuardrailAction.DENY,
-                    reason="Tool output blocked because it appears to contain a secret.",
-                )
+    return secrets_to_check
+
+
+def _contains_secret_value(val: Any, secrets_to_check: set[str]) -> str | None:
+    """Recursively scan nested data structures for secret strings, keys, or patterns."""
+    if isinstance(val, str):
+        stripped = val.strip()
+        if stripped.startswith(("{", "[")):
+            import contextlib
+            import json
+
+            with contextlib.suppress(Exception):
+                parsed = json.loads(stripped)
+                if isinstance(parsed, (list, tuple, set, dict)):
+                    res_json = _contains_secret_value(parsed, secrets_to_check)
+                    if res_json is not None:
+                        return res_json
+
+        if re.search(
+            r"-----BEGIN[A-Z0-9\s_]+PRIVATE KEY-----[\s\S]*?-----END[A-Z0-9\s_]+PRIVATE KEY-----",
+            val,
+        ):
+            return "private key block"
+        if re.search(SECRET_PATTERN, val):
+            return "secret pattern matched"
+        if secrets_to_check:
+            for secret in sorted(secrets_to_check, key=len, reverse=True):
+                if secret in val:
+                    return "active credential matched"
+    elif isinstance(val, (list, tuple, set)):
+        for item in val:
+            res = _contains_secret_value(item, secrets_to_check)
+            if res is not None:
+                return res
+    elif isinstance(val, dict):
+        for k, v in val.items():
+            res_k = _contains_secret_value(k, secrets_to_check)
+            if res_k is not None:
+                return res_k
+            res_v = _contains_secret_value(v, secrets_to_check)
+            if res_v is not None:
+                return res_v
+    return None
+
+
+def _block_sensitive_path_args(
+    tool: Tool, args: dict[str, Any], _store: MemoryStore
+) -> GuardrailResult:
+    """Deny any tool call that targets a sensitive path via its arguments."""
+    # run_command has its own specialized (and recursive) guardrails.
+    if tool.name == "run_command":
+        return GuardrailResult(GuardrailAction.ALLOW)
+
+    for key, value in args.items():
+        sensitive_path = _contains_sensitive_path(value)
+        if sensitive_path is not None:
+            return GuardrailResult(
+                GuardrailAction.DENY,
+                reason=f"Access to sensitive path {sensitive_path!r} via argument {key!r} is blocked.",
+            )
+    return GuardrailResult(GuardrailAction.ALLOW)
+
+
+def _block_input_with_secrets(
+    _tool: Tool,
+    args: dict[str, Any],
+    _store: MemoryStore,
+) -> GuardrailResult:
+    """Deny any tool call that passes sensitive secrets or tokens via its arguments."""
+    secrets_to_check = _get_active_secrets()
+    for key, value in args.items():
+        secret_match = _contains_secret_value(value, secrets_to_check)
+        if secret_match is not None:
+            return GuardrailResult(
+                GuardrailAction.DENY,
+                reason=f"Tool argument {key!r} blocked because it appears to contain a secret ({secret_match}).",
+            )
+    return GuardrailResult(GuardrailAction.ALLOW)
+
+
+def _block_output_with_secrets(
+    _tool: Tool,
+    _args: dict[str, Any],
+    output: str,
+    _is_error: bool,
+    _store: MemoryStore,
+) -> GuardrailResult:
+    """Deny any tool output that appears to contain a secret."""
+    secrets_to_check = _get_active_secrets()
+    secret_match = _contains_secret_value(output, secrets_to_check)
+    if secret_match is not None:
+        reason = (
+            "Tool output blocked because it appears to contain a private key block."
+            # nosec B105 — a marker returned by _contains_secret_value to pick the
+            # wording of the denial, not a credential.
+            if secret_match == "private key block"  # nosec B105
+            else "Tool output blocked because it appears to contain a secret."
+        )
+        return GuardrailResult(GuardrailAction.DENY, reason=reason)
 
     return GuardrailResult(GuardrailAction.ALLOW)
 
@@ -1451,6 +1548,7 @@ DEFAULT_PRE_RULES: list[PreGuardrailRule] = [
     _block_run_command_if_not_allowed,
     _block_dangerous_shell_commands,
     _block_sensitive_path_args,
+    _block_input_with_secrets,
     _enforce_verbose_listing,
 ]
 

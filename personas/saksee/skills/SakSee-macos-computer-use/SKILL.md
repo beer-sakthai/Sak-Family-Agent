@@ -1,7 +1,9 @@
 ---
 name: SakSee-macos-computer-use
-description: "Apple macOS specific computer use tools."
+description: Apple macOS specific computer use tools.
+...
 ---
+
 # macOS Computer Use
 
 macOS-specific automation for desktop control.

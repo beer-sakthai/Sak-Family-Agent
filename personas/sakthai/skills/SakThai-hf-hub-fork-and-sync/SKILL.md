@@ -1,6 +1,6 @@
 ---
 name: SakThai-hf-hub-fork-and-sync
-description: "name: SakThai-hf-hub-fork-and-sync"
+description: 'name: SakThai-hf-hub-fork-and-sync'
 ---
 
 # HF Hub Fork & Sync — Server-Side Repo Duplication, File Copy & Bucket Sync

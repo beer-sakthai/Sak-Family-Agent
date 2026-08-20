@@ -44,21 +44,37 @@ _ERROR_TYPED_RE = re.compile(
 )
 _ERROR_BARE_RE = re.compile(r"^E\s+(?P<message>\S.*)$")
 
-_FAILURES_BANNER_RE = re.compile(r"^=+\s+(?P<kind>FAILURES|ERRORS)\s+=+$")
-_BANNER_RE = re.compile(r"^=+\s+\S.*\s+=+$")
-_BLOCK_HEADER_RE = re.compile(r"^_{3,}\s+(?P<name>.+?)\s+_{3,}$")
 _SUMMARY_RE = re.compile(r"^(?:FAILED|ERROR)\s+(?P<nodeid>\S+)(?:\s+-\s+(?P<message>.*))?$")
 
 _RUFF_RE = re.compile(
     r"^(?P<path>[^\s:][^:]*\.pyi?):(?P<line>\d+):(?P<col>\d+): "
     r"(?P<code>[A-Z]+\d+)\s+(?:\[\*\]\s+)?(?P<message>.*)$"
 )
-_MYPY_RE = re.compile(
-    r"^(?P<path>[^\s:][^:]*\.pyi?):(?P<line>\d+):(?:\d+:)? error: "
-    r"(?P<message>.*?)(?:\s+\[(?P<code>[a-z-]+)\])?\s*$"
+_MYPY_PREFIX_RE = re.compile(
+    r"^(?P<path>[^\s:][^:]*\.pyi?):(?P<line>\d+):(?:\d+:)? error: (?P<rest>.*)$"
 )
 _BANDIT_ISSUE_RE = re.compile(r"^>>\s*Issue:\s*\[(?P<code>[^:\]]+):[^\]]*\]\s*(?P<message>.*)$")
 _BANDIT_LOCATION_RE = re.compile(r"^\s*Location:\s*(?P<path>\S+?):(?P<line>\d+)(?::\d+)?\s*$")
+
+
+def _is_failures_banner(line: str) -> bool:
+    if line.startswith("===") and line.endswith("==="):
+        return line.strip("=").strip() in ("FAILURES", "ERRORS")
+    return False
+
+
+def _is_banner(line: str) -> bool:
+    if line.startswith("===") and line.endswith("==="):
+        return bool(line.strip("=").strip())
+    return False
+
+
+def _extract_block_name(line: str) -> str | None:
+    if line.startswith("___") and line.endswith("___"):
+        trimmed = line.strip("_").strip()
+        if trimmed:
+            return trimmed
+    return None
 
 
 def normalise(text: str) -> list[str]:
@@ -108,11 +124,11 @@ def _failure_sections(lines: list[str]) -> list[tuple[int, int]]:
     sections: list[tuple[int, int]] = []
     start: int | None = None
     for index, line in enumerate(lines):
-        if _FAILURES_BANNER_RE.match(line):
+        if _is_failures_banner(line):
             if start is not None:
                 sections.append((start, index))
             start = index + 1
-        elif start is not None and _BANNER_RE.match(line):
+        elif start is not None and _is_banner(line):
             sections.append((start, index))
             start = None
     if start is not None:
@@ -122,11 +138,11 @@ def _failure_sections(lines: list[str]) -> list[tuple[int, int]]:
 
 def _split_blocks(lines: list[str], start: int, end: int) -> list[tuple[str, int, int]]:
     """Split one FAILURES section into ``(test name, start, end)`` per-test blocks."""
-    headers: list[tuple[str, int]] = [
-        (match.group("name"), index)
-        for index in range(start, end)
-        if (match := _BLOCK_HEADER_RE.match(lines[index]))
-    ]
+    headers: list[tuple[str, int]] = []
+    for index in range(start, end):
+        name = _extract_block_name(lines[index])
+        if name is not None:
+            headers.append((name, index))
     if not headers:
         return [("", start, end)]
 
@@ -231,12 +247,20 @@ def _parse_line_checkers(lines: list[str], skip: set[int]) -> list[FailureSignal
                     excerpt=line,
                 )
             )
-        elif match := _MYPY_RE.match(line):
+        elif match := _MYPY_PREFIX_RE.match(line):
+            rest = match.group("rest").strip()
+            code = "error"
+            message = rest
+            if rest.endswith("]") and " [" in rest:
+                msg, code_part = rest.rsplit(" [", 1)
+                if code_part.endswith("]") and re.match(r"^[a-z-]+\]$", code_part):
+                    code = code_part[:-1]
+                    message = msg
             signals.append(
                 FailureSignal(
                     tool="mypy",
-                    error_type=match.group("code") or "error",
-                    message=match.group("message").strip(),
+                    error_type=code,
+                    message=message.strip(),
                     frames=(LogFrame(match.group("path"), int(match.group("line"))),),
                     excerpt=line,
                 )

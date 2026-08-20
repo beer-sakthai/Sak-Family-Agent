@@ -24,13 +24,12 @@ permissions:
   pull-requests: read
   issues: read
   actions: read
-  copilot-requests: write
 
 sandbox:
   agent:
     sudo: false
 
-engine: copilot
+engine: gemini
 timeout-minutes: 25
 
 network:
@@ -51,14 +50,14 @@ jobs:
       prev_tag: ${{ steps.compute_config.outputs.prev_tag }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Compute Release Config
         id: compute_config
-        uses: actions/github-script@v9
+        uses: actions/github-script@v9.0.0
         with:
           script: |
             const releaseType = context.payload.inputs.release_type;
@@ -152,7 +151,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
@@ -176,7 +175,7 @@ jobs:
       release_id: ${{ steps.create_gh_release.outputs.release_id }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: true

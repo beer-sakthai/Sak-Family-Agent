@@ -1,7 +1,7 @@
-torch==2.5.1+cu124
-torchvision==0.20.1+cu124
-torchaudio==2.5.1+cu124
-transformers==4.47.1
+torch==2.6.0+cu124
+torchvision==0.21.0+cu124
+torchaudio==2.6.0+cu124
+transformers==4.53.0
 datasets==3.2.0
 accelerate==1.2.1
 peft==0.14.0

@@ -28,6 +28,7 @@ import time
 import urllib.request
 from pathlib import Path
 
+
 def resolve_bin() -> str:
     raw = os.environ.get("SAKTHAI_BIN")
     if not raw:
@@ -41,15 +42,14 @@ def resolve_bin() -> str:
             return raw
         raise ValueError("SAKTHAI_BIN must be 'sakthai' or an absolute executable path.")
 
-    # For path-based overrides, require a canonical absolute executable file
-    # rooted in trusted system binary locations.
-    if not candidate.is_absolute():
+    # For path-based overrides, require an absolute path text first.
+    if not os.path.isabs(raw):
         raise ValueError("SAKTHAI_BIN path must be absolute.")
 
-    try:
-        resolved = candidate.expanduser().resolve(strict=True)
-    except (OSError, RuntimeError) as exc:
-        raise ValueError("SAKTHAI_BIN path must point to an existing file.") from exc
+    # Sanitize and canonicalize user-provided path text before using Path APIs.
+    # realpath resolves ".." segments and symlinks; strict existence is checked below.
+    sanitized_path = os.path.abspath(os.path.realpath(os.path.expanduser(raw)))
+    resolved = Path(sanitized_path)
 
     trusted_roots = (
         Path("/usr/bin"),

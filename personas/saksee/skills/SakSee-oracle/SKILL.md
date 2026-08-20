@@ -1,6 +1,8 @@
 ---
 name: SakSee-oracle
-description: "Oracle CLI second-model review/debug/refactor/design with selected files, dry-run token checks, API or browser engine."
+description: Oracle CLI second-model review/debug/refactor/design with selected files, dry-run
+  token checks, API or browser engine.
+...
 ---
 
 # oracle
