@@ -74,9 +74,8 @@ export function createApiHandler<T extends Record<string, unknown>>(
         );
       }
       console.error(`${SECURE_LOG_PREFIX} [GET ${label}]:`, error);
-      const msg = error instanceof Error ? error.message : `An unexpected error occurred while ${label}.`;
       return NextResponse.json(
-        { success: false, error: msg },
+        { success: false, error: "An unexpected error occurred" },
         { status: 500 },
       );
     }
@@ -114,9 +113,8 @@ export function createMutationHandler<T extends Record<string, unknown>>(
         );
       }
       console.error(`${SECURE_LOG_PREFIX} [POST ${label}]:`, error);
-      const msg = error instanceof Error ? error.message : `An unexpected error occurred while ${label}.`;
       return NextResponse.json(
-        { success: false, error: msg },
+        { success: false, error: "An unexpected error occurred" },
         { status: 500 },
       );
     }

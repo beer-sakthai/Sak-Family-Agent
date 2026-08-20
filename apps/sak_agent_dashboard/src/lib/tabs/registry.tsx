@@ -30,6 +30,8 @@ import {
   Fingerprint,
   ScrollText,
   ShieldCheck,
+  DollarSign,
+  AlertTriangle,
 } from "lucide-react";
 import type { SessionTranscript } from "@/lib/types";
 import type { DashboardData } from "@/lib/hooks/useDashboardData";
@@ -67,6 +69,8 @@ import { SkillsToolsPanel } from "@/components/SkillsToolsPanel";
 import { BenchmarkArena } from "@/components/BenchmarkArena";
 import { MemoryRagTelegramPanel } from "@/components/MemoryRagTelegramPanel";
 import { SelfEvolutionPanel } from "@/components/SelfEvolutionPanel";
+import { BillingManagementPanel } from "@/components/BillingManagementPanel";
+import { SelfHealingConsole } from "@/components/SelfHealingConsole";
 import DataSourceBadge from "@/components/DataSourceBadge";
 
 /**
@@ -109,7 +113,9 @@ export type TabId =
   | "autocycle"
   | "specs"
   | "gateway"
-  | "stitch";
+  | "stitch"
+  | "billing"
+  | "incidents";
 
 /** Handlers a tab's render function may need, threaded from the page. */
 export interface TabContext {
@@ -515,5 +521,23 @@ export const TABS: TabDefinition[] = [
     activeClass:
       "bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50",
     render: () => <StitchStudio />,
+  },
+  {
+    id: "billing",
+    label: () => "Billing",
+    icon: DollarSign,
+    iconClass: "text-emerald-400",
+    activeClass:
+      "bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 text-emerald-300 border border-emerald-500/40 shadow-lg shadow-emerald-950/50",
+    render: () => <BillingManagementPanel />,
+  },
+  {
+    id: "incidents",
+    label: () => "Incidents/Self-Healing",
+    icon: AlertTriangle,
+    iconClass: "text-rose-400",
+    activeClass:
+      "bg-gradient-to-r from-rose-500/20 to-amber-500/20 text-rose-300 border border-rose-500/40 shadow-lg shadow-rose-950/50",
+    render: () => <SelfHealingConsole />,
   },
 ];

@@ -31,8 +31,9 @@ export async function POST(req: NextRequest) {
       })),
     });
   } catch (error) {
+    console.error("Secure Log [POST /api/memory/rag]:", error);
     return NextResponse.json(
-      { success: false, error: (error as Error).message },
+      { success: false, error: "An unexpected error occurred" },
       { status: 500 }
     );
   }
