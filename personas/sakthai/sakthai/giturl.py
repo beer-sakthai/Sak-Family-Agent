@@ -24,13 +24,16 @@ def validate_git_url(url: str) -> str:
     """Return ``url`` stripped, or raise :class:`ValueError` if it is unsafe.
 
     Rejects empty values, values starting with ``-`` (option smuggling),
-    remote-helper transports (``ext::…`` runs arbitrary commands), and URL
-    schemes outside http(s)/ssh/git/file. scp-style ``user@host:path``
-    addresses and local filesystem paths are allowed.
+    remote-helper transports (``ext::…`` runs arbitrary commands), URL
+    schemes outside http(s)/ssh/git/file, and control characters (such as
+    newlines, carriage returns, tabs, and null bytes). scp-style
+    ``user@host:path`` addresses and local filesystem paths are allowed.
     """
     candidate = url.strip()
     if not candidate:
         raise ValueError("git URL must be a non-empty string")
+    if any(c in candidate for c in "\n\r\t\x00"):
+        raise ValueError(f"git URL must not contain control characters: {candidate!r}")
     if candidate.startswith("-"):
         raise ValueError(f"git URL must not start with '-': {candidate!r}")
     if _HELPER_TRANSPORT_RE.match(candidate):

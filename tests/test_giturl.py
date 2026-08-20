@@ -63,3 +63,17 @@ def test_rejects_remote_helper_transports(url: str) -> None:
 def test_rejects_unknown_schemes(url: str) -> None:
     with pytest.raises(ValueError, match="unsupported git URL scheme"):
         validate_git_url(url)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://github.com/user/repo.git\n-oProxyCommand=evil",
+        "https://github.com/user/repo.git\r\n[core]",
+        "https://github.com/user/repo.git\thost",
+        "https://github.com/user/repo.git\x00pwned",
+    ],
+)
+def test_rejects_control_characters(url: str) -> None:
+    with pytest.raises(ValueError, match="control characters"):
+        validate_git_url(url)
