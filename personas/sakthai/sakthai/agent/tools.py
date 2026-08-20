@@ -104,6 +104,16 @@ _SENSITIVE_READ_BASENAMES: frozenset[str] = frozenset(
     }
 )
 _SENSITIVE_READ_SUFFIXES: tuple[str, ...] = (".pem", ".key", ".pfx", ".p12")
+_SENSITIVE_READ_PREFIXES: tuple[str, ...] = (".env.", ".env-", ".env_", "memory.db-")
+_SENSITIVE_KEY_STEMS: tuple[str, ...] = (
+    "id_rsa",
+    "id_dsa",
+    "id_ecdsa",
+    "id_ed25519",
+    "id_ecdsa_sk",
+    "id_ed25519_sk",
+    "id_xmss",
+)
 # Path fragments (relative to a root) that indicate a secret store.
 _SENSITIVE_READ_FRAGMENTS: tuple[tuple[str, ...], ...] = (
     (".aws", "credentials"),
@@ -116,9 +126,11 @@ def _is_sensitive_read_target(resolved: Path) -> bool:
     """Return True if ``resolved`` names a well-known secret file."""
     name = resolved.name
     lower = name.lower()
-    if name in _SENSITIVE_READ_BASENAMES or lower.startswith(".env."):
+    if name in _SENSITIVE_READ_BASENAMES or lower.startswith(_SENSITIVE_READ_PREFIXES):
         return True
     if lower.endswith(_SENSITIVE_READ_SUFFIXES):
+        return True
+    if any(lower.startswith(stem + ".") for stem in _SENSITIVE_KEY_STEMS):
         return True
     parts = resolved.parts
     for fragment in _SENSITIVE_READ_FRAGMENTS:
