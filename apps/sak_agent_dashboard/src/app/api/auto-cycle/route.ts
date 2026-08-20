@@ -1,4 +1,4 @@
-import { ApiError, createApiHandler, createMutationHandler } from "@/lib/api/handler";
+import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
 import { getAutoCycleData } from "@/lib/autoCycle";
 import { CycleEngine } from "@/lib/cycle/cycleEngine";
 
@@ -28,5 +28,5 @@ export const POST = createMutationHandler("/api/auto-cycle", async (body) => {
     return { state };
   }
 
-  throw new ApiError(400, `Invalid action: ${action}`);
+  throw new Error(`Invalid action: ${action}`);
 });

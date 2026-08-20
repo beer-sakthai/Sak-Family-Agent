@@ -1,4 +1,4 @@
-import { ApiError, createApiHandler, createMutationHandler } from "@/lib/api/handler";
+import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
 import { MutationEngine } from "@/lib/mutation/mutationEngine";
 import { SelfHealingTestGenerator } from "@/lib/mutation/selfHealingTestGenerator";
 import { MutationOperator } from "@/lib/mutation/types";
@@ -44,7 +44,7 @@ export const POST = createMutationHandler("/api/mutation", async (body) => {
   if (action === "heal") {
     const mutantId = String(body.mutantId ?? "");
     const mutant = MutationEngine.getMutants().find((m) => m.id === mutantId);
-    if (!mutant) throw new ApiError(404, `Mutant ${mutantId} not found`);
+    if (!mutant) throw new Error(`Mutant ${mutantId} not found`);
     return { healResult: SelfHealingTestGenerator.synthesizeHealerTest(mutant) };
   }
 
@@ -53,5 +53,5 @@ export const POST = createMutationHandler("/api/mutation", async (body) => {
     return { healResults: SelfHealingTestGenerator.batchHeal(mutants) };
   }
 
-  throw new ApiError(400, `Invalid action: ${action}`);
+  throw new Error(`Invalid action: ${action}`);
 });

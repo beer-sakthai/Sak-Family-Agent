@@ -1,4 +1,4 @@
-import { ApiError, createApiHandler, createMutationHandler } from "@/lib/api/handler";
+import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
 
 const PERSONA_PROFILES: Record<string, { role: string; specialization: string; defaultCharge: number }> = {
   sakthai: { role: "SakThai · Core Reasoning & Adaptive Coding", specialization: "General reasoning, algorithm optimization, self-healing code", defaultCharge: 100 },
@@ -36,7 +36,7 @@ export const POST = createMutationHandler("/api/gateway", async (body) => {
   const message = (String(body.message ?? "")).toLowerCase().trim();
   const preferred = body.preferred_persona as string | undefined;
 
-  if (!message) throw new ApiError(400, "Message cannot be empty");
+  if (!message) throw new Error("Message cannot be empty");
 
   let selectedPersona = "sakthai";
   let detectedIntent = "core_reasoning";

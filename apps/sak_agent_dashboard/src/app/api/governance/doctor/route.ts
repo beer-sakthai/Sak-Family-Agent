@@ -1,4 +1,4 @@
-import { ApiError, createApiHandler, createMutationHandler } from "@/lib/api/handler";
+import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
 
 export const dynamic = "force-dynamic";
 
@@ -30,5 +30,5 @@ export const POST = createMutationHandler("/api/governance/doctor", async (body)
     };
   }
 
-  throw new ApiError(400, "Unsupported doctor action");
+  throw new Error("Unsupported doctor action");
 });

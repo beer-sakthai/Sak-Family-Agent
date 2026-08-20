@@ -1,10 +1,10 @@
-import { ApiError, createMutationHandler } from "@/lib/api/handler";
+import { createMutationHandler } from "@/lib/api/handler";
 
 export const dynamic = "force-dynamic";
 
 export const POST = createMutationHandler("/api/memory/vector", async (body) => {
   const { queryText, limit = 5 } = body as { queryText?: string; limit?: number };
-  if (!queryText) throw new ApiError(400, "queryText is required");
+  if (!queryText) throw new Error("queryText is required");
 
   const mockResults = [
     {

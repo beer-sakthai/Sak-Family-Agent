@@ -1,4 +1,4 @@
-import { ApiError, createApiHandler, createMutationHandler } from "@/lib/api/handler";
+import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
 import { hfEcosystemEngine } from "@/lib/hfEcosystemEngine";
 
 export const dynamic = "force-dynamic";
@@ -27,5 +27,5 @@ export const POST = createMutationHandler("/api/hf/ecosystem", async (body) => {
     return { previews: hfEcosystemEngine.previewAllCards() };
   }
 
-  throw new ApiError(400, "Invalid action or missing parameters");
+  throw new Error("Invalid action or missing parameters");
 });

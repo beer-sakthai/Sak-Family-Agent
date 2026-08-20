@@ -1,4 +1,4 @@
-import { ApiError, createApiHandler, createMutationHandler } from "@/lib/api/handler";
+import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +33,7 @@ export const GET = createApiHandler("/api/mcp/gateway", async () => ({
 
 export const POST = createMutationHandler("/api/mcp/gateway", async (body) => {
   const { toolName, args } = body as Record<string, unknown>;
-  if (!toolName) throw new ApiError(400, "toolName is required");
+  if (!toolName) throw new Error("toolName is required");
   return {
     tool: toolName,
     result: { executed: true, message: `Dispatched tool ${toolName} safely`, args },
