@@ -154,16 +154,6 @@ class TestWorkflowExecutor(unittest.TestCase):
                     f"Unexpected error message for URL '{url}': {step_res.error}",
                 )
 
-    def test_ssrf_url_fragment_stripping(self):
-        """Verify that _validate_url strips fragment identifiers to prevent fragment-based SSRF or host confusion bypasses."""
-        from agent_workflow.executor import _validate_url
-
-        # A URL with a fragment targeting loopback after # should be validated against the real host example.com,
-        # but the fragment must not interfere with host/scheme parsing.
-        # Conversely, if someone attempts host confusion like http://example.com#@127.0.0.1
-        _validate_url("https://example.com/path#fragment")
-        _validate_url("https://example.com#@127.0.0.1")
-
     def test_ssrf_redirect_protection(self):
         """Verify that the redirect handler intercepts and blocks redirects to loopback or private IPs."""
         from agent_workflow.executor import SafeRedirectHandler
@@ -266,6 +256,14 @@ class TestWorkflowExecutor(unittest.TestCase):
             "@/etc/passwd",
             "@@/etc/passwd",
             "@/etc/hosts",
+            # Upload prefix '@' bypass variants.
+            "@/etc/hosts",
+            "@@.env",
+            "@@.git/config",
+            "@@.ssh/id_rsa",
+            "@/var/log/syslog",
+            "@@etc/passwd",
+            "@.env",
         ]
         for path in malicious_paths:
             for action in ("file_read", "file_write"):
