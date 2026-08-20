@@ -94,6 +94,29 @@ def run(args: list[str], env: dict[str, str], stdin: str | None = None) -> tuple
     return proc.returncode, proc.stdout + proc.stderr
 
 
+def preflight_ok(rc: int, out: str) -> bool:
+    """Did `run --dry-run` get all the way through its preflight?
+
+    The printed report is the deliverable — provider, model, credentials, tool
+    count, runnable — and producing it costs nothing. But `sakthai run
+    --dry-run` deliberately exits 1 when no provider credential resolves
+    ("Not runnable: no credentials found for provider ..."), which is the
+    normal state of a container that has no key. This driver is documented to
+    need neither an API key nor the network, so that specific exit counts as a
+    pass once the report is on stdout. Every other non-zero exit — an
+    unresolved --with-skills name, a bad provider, an import error, a crash —
+    still fails.
+    """
+    if "runnable:" not in out:
+        return False
+    return rc == 0 or "no credentials found" in out
+
+
+def last_line(out: str) -> str:
+    lines = [line for line in out.splitlines() if line.strip()]
+    return lines[-1] if lines else "(no output)"
+
+
 def drive_mcp(env: dict[str, str]) -> dict[int, dict]:
     """Pipe a JSON-RPC session into `sakthai mcp` and collect responses by id."""
     requests = [
@@ -186,7 +209,7 @@ def main() -> int:
 
         print("\nAgent preflight (no API call):")
         rc, out = run(["run", "say hi", "--dry-run", "--no-mcp"], env)
-        check("run --dry-run", rc == 0 and "runnable:" in out)
+        check("run --dry-run", preflight_ok(rc, out), last_line(out))
         rc, out = run(
             [
                 "run",
@@ -198,7 +221,7 @@ def main() -> int:
             ],
             env,
         )
-        check("run --dry-run --with-skills", rc == 0 and "runnable:" in out)
+        check("run --dry-run --with-skills", preflight_ok(rc, out), last_line(out))
 
         print("\nWeb API server (headless):")
         # The `dashboard` CLI command was removed (5de2c25); the JSON surface
@@ -206,7 +229,7 @@ def main() -> int:
         # /api/* endpoints require a Bearer token (web_auth fact in the same
         # MemoryStore the server reads), so fetch it via `sakthai web setup`.
         rc, setup_out = run(["web", "setup"], env)
-        token = ""
+        token = ""  # nosec B105 — empty initialiser; the real token is parsed below
         if rc == 0:
             for line in setup_out.splitlines():
                 if line.strip().startswith("Token:"):

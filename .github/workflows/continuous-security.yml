@@ -14,9 +14,11 @@ on:
     # Runs nightly at 2 AM UTC
     - cron: '0 2 * * *'
 
+# Read-only at the top level; the one job below re-declares the writes it needs.
+# Scorecard scores a top-level `contents: write` as 0 (TokenPermissionsID)
+# because every job in the file inherits a push-capable token by default.
 permissions:
-  contents: write # To create branches and commits for patches
-  pull-requests: write # To create pull requests with fixes
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}
@@ -25,8 +27,19 @@ concurrency:
 jobs:
   devsecops-scan:
     runs-on: ubuntu-latest
+    # `contents: write` to create branches and commits for patches;
+    # `pull-requests: write` to open the fix PR. Job-scoped, not file-scoped.
+    permissions:
+      contents: write
+      pull-requests: write
     timeout-minutes: 45
     steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

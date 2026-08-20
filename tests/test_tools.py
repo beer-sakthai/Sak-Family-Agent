@@ -1387,13 +1387,23 @@ def test_send_telegram_invalid_token_format(
 
 
 def test_load_tool_overrides(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that tool override restrictions are enforced.
+
+    Description can be overridden, but input_schema is frozen to prevent
+    silent mutations of the tool contract.
+    """
     # Mock SAKTHAI_HOME to use tmp_path
     monkeypatch.setenv("SAKTHAI_HOME", str(tmp_path))
 
     from sakthai.agent.tools import _load_tool_overrides, tool_by_name
     from sakthai.config import tool_descriptions_path
 
-    # Write a test overrides file
+    # Capture original schema before override
+    learn_tool = tool_by_name("learn")
+    assert learn_tool is not None
+    original_schema = learn_tool.input_schema
+
+    # Write a test overrides file attempting to override both description and input_schema
     overrides = {
         "learn": {
             "description": "Custom overridden learn description.",
@@ -1413,14 +1423,13 @@ def test_load_tool_overrides(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     # Call override loader
     _load_tool_overrides()
 
-    # Find the learn tool and assert overridden descriptions
+    # Find the learn tool and assert overrides were applied selectively
     learn_tool = tool_by_name("learn")
     assert learn_tool is not None
+    # Description should be overridden
     assert learn_tool.description == "Custom overridden learn description."
-    assert (
-        learn_tool.input_schema["properties"]["value"]["description"]
-        == "Overridden param description."
-    )
+    # input_schema should NOT be overridden (remains unchanged)
+    assert learn_tool.input_schema == original_schema
 
 
 def test_send_telegram_message_redacts_secrets_in_errors(store: MemoryStore, monkeypatch) -> None:
