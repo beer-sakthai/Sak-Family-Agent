@@ -96,6 +96,8 @@ jobs:
     name: pnpm + Next.js build cache
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
     defaults:
       run:
         working-directory: apps/sak_agent_dashboard
