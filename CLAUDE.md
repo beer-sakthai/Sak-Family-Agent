@@ -174,8 +174,8 @@ Other `make` targets: `compose-personas` (rebuild full skill trees into
 
 ### CI
 
-Twenty-nine hand-written workflows live in `.github/workflows/`, plus **eight**
-gh-aw Markdown sources compiled to `.lock.yml` beside them — 37 `.yml` files in
+Thirty hand-written workflows live in `.github/workflows/`, plus **eight**
+gh-aw Markdown sources compiled to `.lock.yml` beside them — 38 `.yml` files in
 all, plus `shared/opencode.md`, which is an import rather than a workflow of its
 own. Seven of the eight run on `engine: gemini` and one on a vendored OpenCode
 engine driving a Gemini model — see
@@ -242,7 +242,7 @@ The ones that gate a change:
 |---|---|---|
 | `ci.yml` | push/PR to `main` | ruff check + format → mypy + bandit → pytest with coverage, on Python **3.11 and 3.12** |
 | `pylint.yml` | push/PR to `main` | pylint over `personas/sakthai/sakthai` + `tests` |
-| `secret-scan.yml` | push to `main`, all PRs, manual | gitleaks (config `.gitleaks.toml`, which allowlists persona docs) |
+| `secret-scan.yml` | push to `main`, all PRs, manual, **weekly Friday** | two jobs. `gitleaks` is the incremental gate on **push/PR only**: gitleaks-action scans the *pushed commit range*, not the tree — and on an event with no range it does not skip, it scans all history and fails on the ~93 already-known findings, so those events are excluded. `branch-sweep` (schedule/manual only) scans **every branch tip's whole tree** with a hash-pinned gitleaks binary and the **default branch's** `.gitleaks.toml`. The sweep exists because `push` is filtered to `main` and a branch with no open PR gets no `pull_request` run either — a real Kaggle token sat on a feature branch for 26 days in that gap |
 | `dependency-audit.yml` | PRs touching `pyproject.toml`/`uv.lock`, weekly Monday, manual | pip-audit over `uv.lock` |
 | `dependency-review.yml` | all PRs | GitHub dependency-review on the PR's diff |
 | `subprojects.yml` | push/PR touching `apps/agent_workflow_framework/**`, `apps/sak_agent_dashboard/**`, or `services/teams-copilot-mcp/**` | the two out-of-tree pytest suites + the dashboard's lint/typecheck/test/build chain |
@@ -392,6 +392,27 @@ re-retired; see the callout above**), `stale.yml` (still
 carrying the starter template's literal `'Stale issue message'` placeholder), and
 `manual.yml` (a greeting echo). Before adding a workflow back, check the Actions
 tab for what it actually did.
+
+**Two of those five came back, and neither came back fixed.** A
+`[StepSecurity] Apply security best practices` commit restored
+`auto-dependency-update.yml` and `continuous-security.yml` — SHA-pinned and
+tidied, but otherwise the same files, still missing the same secrets. Both were
+on `main` failing or hollow while `SECURITY.md`, `PLAN.md` and this file all
+said they were gone. The 2026-08-20 sweep removed
+`auto-dependency-update.yml` again (still 22/22 failures on the missing PAT) and
+`tests/test_workflow_hygiene.py` now fails if it returns a third time.
+
+`continuous-security.yml` is **still present and still hollow**: every run
+reports green with its `Run DevSecOps Skill` step *skipped* and an "Explain why
+the scan was skipped" step in its place, because there is no
+`ANTHROPIC_API_KEY`. It was left on disk rather than deleted a second time —
+adding the secret revives it — but treat a green tick from it as evidence of
+nothing. `security-audit.md` is what actually audits on a schedule.
+
+The general lesson is the one round two of the code-scanning sweep already
+recorded: **a workflow's presence on `main` is not evidence anyone decided it
+should be there**, and a bot commit that improves a file's *form* will happily
+resurrect a file whose *substance* was the reason it was deleted.
 
 CodeQL used to run via GitHub's *default setup*, and the rule was "never add
 `codeql.yml`" — an advanced analysis cannot upload while default setup is

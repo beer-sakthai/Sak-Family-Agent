@@ -83,14 +83,29 @@ esac
 # The dependency graph has no dedicated endpoint on a public repository — it is
 # on by default and cannot be turned off. `security_and_analysis` reports it for
 # private repositories only, so read it from the repo object when present.
-graph="$(
+#
+# The response is captured before it is parsed rather than piped straight into
+# python3. Two reasons, and only the second is about the scanner:
+#
+#   - A failed request used to reach python as an empty stdin and surface as a
+#     JSONDecodeError traceback, which reads like a bug in this script rather
+#     than a network or token problem. It now fails with a sentence.
+#   - `curl … | python3` is the shape Scorecard reports as
+#     PinnedDependenciesID "downloadThenRun not pinned by hash". Here that was
+#     a false positive — the executed code is the literal `-c` string and the
+#     download is only ever data on stdin — but the shape is worth not having.
+repo_json="$(
   curl -sS \
     -H "Authorization: Bearer ${TOKEN}" \
     -H "Accept: application/vnd.github+json" \
     -H "X-GitHub-Api-Version: 2022-11-28" \
-    "${API}/repos/${REPO}" |
-    python3 -c 'import json,sys; d=json.load(sys.stdin); sa=d.get("security_and_analysis") or {}; print(("private" if d.get("private") else "public"), (sa.get("dependency_graph") or {}).get("status","n/a"))'
-)"
+    "${API}/repos/${REPO}"
+)" || { echo "Repository visibility/graph: request to ${API}/repos/${REPO} failed" >&2; exit 1; }
+
+graph="$(
+  python3 -c 'import json,sys; d=json.loads(sys.argv[1]); sa=d.get("security_and_analysis") or {}; print(("private" if d.get("private") else "public"), (sa.get("dependency_graph") or {}).get("status","n/a"))' \
+    "${repo_json}"
+)" || { echo "Repository visibility/graph: could not parse the API response" >&2; exit 1; }
 echo "Repository visibility/graph: ${graph}"
 echo "  (on a public repository the dependency graph is always on and cannot be disabled)"
 echo

@@ -459,3 +459,178 @@ def test_cache_cleanup_never_runs_a_fork_pull_request() -> None:
         "`pull_request` with `actions: write`; fetching the pull request's code "
         "into that job is Scorecard's `DangerousWorkflowID`."
     )
+
+
+@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
+def test_no_authored_workflow_grants_top_level_contents_write(path: Path) -> None:
+    """Scorecard ``TokenPermissionsID``: a push-capable token is job-scoped or absent.
+
+    ``permissions:`` at the top level is the *default* every job in the file
+    inherits, including jobs added later by someone who never read this block.
+    ``contents: write`` there hands all of them a token that can push to the
+    default branch; Scorecard scores it 0 for that reason.
+
+    This is a re-fix, not a new rule. ``PLAN.md`` records the same three
+    workflows being demoted to job scope on 2026-08-12, and the dashboard was
+    still reporting all three as top-level ``contents: write`` on 2026-08-20 —
+    the change had been reverted by a commit about something else, exactly like
+    the ``self-healing-ci.yml`` fork guard above. Nothing failed when it went.
+
+    Job-level ``contents: write`` is still allowed and still flagged by
+    Scorecard; that grant is accepted where a job genuinely pushes. What is not
+    accepted is granting it to the whole file by default.
+    """
+    permissions = _load(path).get("permissions")
+
+    assert permissions != "write-all", (
+        f"{path.name}: top-level `permissions: write-all`. Declare "
+        "`contents: read` at the top level and grant writes on the job."
+    )
+    if isinstance(permissions, dict):
+        assert permissions.get("contents") != "write", (
+            f"{path.name}: top-level `contents: write` grants every job in the "
+            "file a push-capable token. Set `contents: read` at the top level "
+            "and move the write onto the job that pushes."
+        )
+
+
+def test_the_failed_dependency_update_workflow_stays_removed() -> None:
+    """``auto-dependency-update.yml`` is gone, and three documents say so.
+
+    It failed all 22 of its runs with ``Input 'token' not supplied`` — it wants
+    a ``GH_PAT_FOR_ACTIONS`` secret this repository does not have — and it
+    duplicated ``.github/dependabot.yml``, which covers five ecosystems across
+    22 directories and actually works. It was removed on 2026-08-18;
+    ``SECURITY.md`` calls Dependabot "the **only** source of automated
+    dependency bumps" and names this file as removed.
+
+    It came back anyway, inside an unrelated ``[StepSecurity]`` commit, and sat
+    on ``main`` failing weekly while the docs said it was gone. This test is
+    what makes the third resurrection loud.
+
+    **Re-adding it deliberately is fine** — configure the PAT (or switch it to
+    ``GITHUB_TOKEN``), confirm a run goes green, and delete this test with the
+    commit that does so.
+    """
+    assert not (WORKFLOWS_DIR / "auto-dependency-update.yml").exists(), (
+        "auto-dependency-update.yml is back. It fails every run on a missing "
+        "GH_PAT_FOR_ACTIONS secret and duplicates .github/dependabot.yml. If "
+        "this is deliberate, make it pass first and remove this test."
+    )
+
+
+def test_runner_bootstrap_verifies_what_it_downloads() -> None:
+    """``bootstrap-toolchain.sh`` must not pipe a download into a shell.
+
+    Scorecard ``PinnedDependenciesID`` "downloadThenRun not pinned by hash".
+    The script provisions a self-hosted CI runner, so anything it executes runs
+    with that runner's access to this repository. It used to install uv with
+    ``curl … | sh`` and Node with ``curl … | sudo -E bash -`` — the second one
+    remote code as root.
+
+    Both are now verified before they are trusted: the uv installer against a
+    pinned SHA-256 (which is only stable because the URL carries the version),
+    and NodeSource against a pinned key fingerprint, after which apt checks
+    every package signature itself.
+    """
+    script = REPO_ROOT / "infra" / "self-hosted-runner" / "bootstrap-toolchain.sh"
+    body = script.read_text(encoding="utf-8")
+
+    code = "\n".join(line for line in body.splitlines() if not line.lstrip().startswith("#"))
+    piped = re.search(r"curl[^\n|]*\|\s*(sudo\s+)?(-E\s+)?(sh|bash|python3?|perl|ruby)\b", code)
+    assert piped is None, (
+        f"bootstrap-toolchain.sh pipes a download straight into an interpreter: "
+        f"{piped.group(0) if piped else ''!r}. Download it to a file, verify it "
+        "against a pinned digest, then run it."
+    )
+
+    assert re.search(r"UV_INSTALLER_SHA256=\"[0-9a-f]{64}\"", body), (
+        "bootstrap-toolchain.sh lost its pinned uv installer digest."
+    )
+    assert "sha256sum -c -" in body, (
+        "bootstrap-toolchain.sh no longer checks the uv installer's digest."
+    )
+    assert re.search(r"NODESOURCE_GPG_FINGERPRINT=\"[0-9A-F]{40}\"", body), (
+        "bootstrap-toolchain.sh lost its pinned NodeSource key fingerprint."
+    )
+
+
+def test_secret_scan_sweeps_every_branch_tip() -> None:
+    """``secret-scan.yml`` scans branch *trees*, not just pushed commits.
+
+    The incremental ``gitleaks`` job cannot see a secret that is already in a
+    tree: ``gitleaks-action`` derives a commit range from the triggering event
+    and scans only that. Combined with ``push`` being filtered to ``main``, a
+    branch with no open pull request is never looked at by anything — which is
+    how a real Kaggle API token sat in ``scripts/family-status.sh`` on a feature
+    branch of this public repository from 2026-07-25 to 2026-08-20.
+
+    Three properties of the sweep are pinned here because each was a bug or a
+    hole that testing found:
+
+    * **It runs.** A ``schedule`` trigger, or the job never fires on its own.
+    * **The config comes from the default branch.** Reading each branch's own
+      ``.gitleaks.toml`` would let a branch silence a finding about itself by
+      committing an allowlist entry next to the secret.
+    * **It cleans between branches.** ``--no-git`` scans the working directory
+      and ``git checkout`` only manages *tracked* files, so an untracked or
+      gitignored leftover survives into the next branch's scan and is reported
+      against it. Before ``git clean`` was added, one planted file was reported
+      on all four branches, including ones that never contained it.
+    """
+    data = _load(WORKFLOWS_DIR / "secret-scan.yml")
+
+    assert "schedule" in _triggers(data), (
+        "secret-scan.yml lost its `schedule:` trigger — the branch sweep only "
+        "runs on a schedule or a manual dispatch, so without it nothing ever "
+        "looks at a branch that has no open pull request."
+    )
+
+    jobs = data["jobs"]
+    assert "branch-sweep" in jobs, (
+        "secret-scan.yml lost its `branch-sweep` job. The remaining `gitleaks` "
+        "job scans the pushed commit range only and cannot see a secret that "
+        "is already sitting in a branch's tree."
+    )
+
+    sweep = " ".join(str(step.get("run", "")) for step in jobs["branch-sweep"]["steps"])
+
+    assert "git clean" in sweep, (
+        "branch-sweep no longer cleans the working tree between branches. "
+        "`--no-git` scans the directory, and untracked or ignored files survive "
+        "`git checkout`, so one branch's file gets reported against all of them."
+    )
+    assert "--config" in sweep and "DEFAULT_BRANCH" in sweep, (
+        "branch-sweep must scan with the default branch's .gitleaks.toml "
+        "(`--config`), not whatever config each branch happens to carry — "
+        "otherwise a branch can allowlist its own secret."
+    )
+    digests = [
+        str(step.get("env", {}).get("GITLEAKS_SHA256", ""))
+        for step in jobs["branch-sweep"]["steps"]
+    ]
+    assert any(re.fullmatch(r"[0-9a-f]{64}", d) for d in digests), (
+        "branch-sweep lost the pinned gitleaks digest. The binary is fetched "
+        "from a release URL; pin it by hash like every other installer here."
+    )
+    assert "sha256sum -c -" in sweep, (
+        "branch-sweep declares a gitleaks digest but no longer checks it."
+    )
+
+    # The two jobs must cover disjoint events. gitleaks-action does not skip
+    # when an event carries no commit range — it drops `--log-opts` and scans
+    # the whole history, which reports ~93 findings in files long deleted from
+    # `main` and fails every time. Run 32380879026, the first manual dispatch
+    # this workflow ever had, failed exactly that way.
+    incremental = str(jobs["gitleaks"].get("if", ""))
+    for event in ("schedule", "workflow_dispatch"):
+        assert event not in incremental, (
+            f"the incremental `gitleaks` job must not run on `{event}`: with no "
+            "commit range gitleaks-action scans all history and fails on "
+            "already-known, unrotated findings. Those events belong to "
+            "`branch-sweep`."
+        )
+    assert "push" in incremental and "pull_request" in incremental, (
+        "the incremental `gitleaks` job must still gate pushes and pull "
+        "requests — that is the check that stops a new secret landing."
+    )
