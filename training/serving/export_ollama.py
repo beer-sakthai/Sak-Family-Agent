@@ -45,6 +45,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hf-jobs"))
 from build_toolcalling_dataset import SYSTEM_PROMPT  # noqa: E402
 
 BASE_MODEL = os.environ.get("BASE_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
+# Pinned: an unpinned fetch takes whatever the Hub serves at that moment, so a
+# mutated upstream repo would silently change what this trains on. Commit
+# resolved from the Hub on 2026-08-20 — override it together with BASE_MODEL.
+BASE_MODEL_REVISION = os.environ.get(
+    "BASE_MODEL_REVISION", "989aa7980e4cf806f80c7fef2b1adb7bc71aa306"
+)
 ADAPTER_REPO = os.environ.get("ADAPTER_REPO", "Nanthasit/sakthai-toolcalling-1.5b-lora")
 
 MODELFILE = """\
@@ -71,7 +77,9 @@ def main() -> None:
 
     print(f"== Loading base {BASE_MODEL} + adapter {ADAPTER_REPO}")
     tokenizer = AutoTokenizer.from_pretrained(ADAPTER_REPO)
-    base = AutoModelForCausalLM.from_pretrained(BASE_MODEL, torch_dtype=torch.float16)
+    base = AutoModelForCausalLM.from_pretrained(
+        BASE_MODEL, revision=BASE_MODEL_REVISION, torch_dtype=torch.float16
+    )
     model = PeftModel.from_pretrained(base, ADAPTER_REPO)
 
     print("== Merging adapter into base weights")

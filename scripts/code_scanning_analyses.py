@@ -91,7 +91,7 @@ def _request(
     req.add_header("Accept", "application/vnd.github+json")
     req.add_header("X-GitHub-Api-Version", "2022-11-28")
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:  # noqa: S310 - fixed https host
+        with urllib.request.urlopen(req, timeout=60) as resp:  # nosec B310 # noqa: S310
             raw = resp.read().decode("utf-8")
             return resp.status, (json.loads(raw) if raw.strip() else None)
     except urllib.error.HTTPError as exc:

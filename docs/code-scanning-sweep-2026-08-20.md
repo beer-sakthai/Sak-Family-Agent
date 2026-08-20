@@ -477,3 +477,181 @@ Worth naming, because it is the third instance of the same shape in this
 document: **the job that had never run was the one that was broken.** Dispatching
 it on the day it merged, instead of waiting for its first scheduled run, is the
 only reason that was found in minutes rather than on Friday.
+
+---
+
+# Round three — the Bandit backlog, and every branch checked rather than one
+
+Rounds one and two both closed with the same two lines under "what is still not
+done": the 47 Bandit findings, and a branch sweep that had only ever been run
+against `main`'s tip. This round is those two.
+
+## Every branch tip, scanned
+
+Five branches exist. Each tip's **tree** was extracted with `git archive` and
+scanned with the same gitleaks the CI job pins — v8.24.3, downloaded and
+checked against `9991e0b2…f4ee29c` before running — using the **default
+branch's** `.gitleaks.toml`.
+
+```
+main                                          0 findings
+chore/codeowners-add-fuzz-and-security-tests  0
+jules-refactor-eval-viewer-9438d504-…         0
+palette/tool-synthesis-card-accessibility-…   0
+revert/pr-8ced7bfa-restore-security-agents-…  0
+```
+
+The Kaggle token round two found is gone from the branch that carried it. That
+still is not remediation — the value is in three commits of a public, forked
+repository's history, and **rotation at kaggle.com remains the only thing that
+closes it**.
+
+### The first run of that scan reported 7 findings on every branch, and was wrong
+
+Worth recording because it is a trap anyone repeating this will hit. The first
+attempt passed `--source <absolute temp dir>`, so gitleaks reported paths like
+`/tmp/…/tree-main/personas/…/SKILL.md`. `.gitleaks.toml`'s allowlist is anchored
+(`^personas/.*\.md$`, `^security/.*\.md$`), and an anchored pattern cannot match
+a path that has been prefixed. Every allowlisted instructional placeholder came
+back as a finding.
+
+Re-running with the working directory *inside* each tree, so paths are
+repo-relative, gives 0. The lesson is narrow and useful: **a path-anchored
+allowlist is silently inert when the scanner is handed absolute paths**, and the
+failure mode is false positives, which look like the scanner working.
+
+## Bandit 47 → 8
+
+`bandit -c pyproject.toml -r .` locally. The parity invariant the 2026-08-18
+sweep established — local count equals the dashboard's — still holds: both 47.
+
+| Rule | Before | After | How |
+|---|---:|---:|---|
+| `B615` unpinned HF revision | 23 | **8** | 15 pinned to real commit SHAs resolved from the Hub |
+| `B108` hardcoded `/tmp` | 11 | **0** | `tempfile.mkdtemp()`, or a path taken from argv |
+| `B110` try/except/pass | 6 | **0** | narrowed the exception; one made to fail closed |
+| `B112` try/except/continue | 3 | **0** | narrowed the exception |
+| `B310` urllib audit | 4 | **0** | `# nosec B310` — all four URLs are literals |
+| **Total** | **47** | **8** | |
+
+### `B615` — pinned where a commit could be resolved, named where it could not
+
+Every `from_pretrained` / `load_dataset` default repo id was looked up against
+the Hub API. Fifteen call sites resolved and are now pinned to an immutable
+commit, env-overridable alongside the repo id they belong to:
+
+```python
+BASE_MODEL = os.environ.get("BASE_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
+BASE_MODEL_REVISION = os.environ.get(
+    "BASE_MODEL_REVISION", "989aa7980e4cf806f80c7fef2b1adb7bc71aa306"
+)
+```
+
+**The other eight are not pinned, and deliberately so.** They point at six repos
+that do not resolve — `sakthai-coder-3b`, `sakthai-toolcalling-1.5b-lora`,
+`sakthai-combined-v5`, `hermes-dataset`, `sakthai-toolcalling-v1`,
+`sakthai-cycle-6-sft` — none of which appear in the account's public listing,
+and which the scripts themselves push with `private=True`.
+
+Two ways to make those eight go green were available and both were refused.
+`revision="main"` satisfies Bandit while pinning nothing — a branch name is not
+an immutable commit, and that is the check-gaming this document already declined
+once over `DangerousWorkflowID`. Requiring the revision by environment variable
+would close them too, at the cost of breaking scripts that may well run fine
+today against private repos this session cannot see. **A fabricated SHA is worse
+than an open alert**, so the eight stay open with their reason attached:
+
+```
+infra/sakthai-training-space/scripts/sft_cycle6.py:76,83,89
+training/hf-jobs/train_persona_lora.py:75
+training/hf-jobs/train_toolcalling_lora.py:114
+training/sakthai-7b-lora/train.py:67
+training/serving/eval_toolcalling.py:68
+training/serving/export_ollama.py:79
+```
+
+Anyone with access to those repos closes all eight by resolving each commit and
+pinning it the same way the fifteen are pinned.
+
+### `B110` / `B112` — narrowing, and one check that now fails closed
+
+Bandit does not flag `try/except/pass` when the exception is a specific type,
+so narrowing is both the real fix and the one that clears the alert. Four
+workbench scripts had a **bare** `except:` around `json.loads` — which also
+swallows `KeyboardInterrupt` and `SystemExit` — now `except json.JSONDecodeError`.
+
+One is more than a tidy-up. `agent_workflow/executor.py`'s
+`_validate_shell_command` wrapped its path check in `except Exception: pass`:
+
+```python
+try:
+    _validate_filepath(sub)
+except PermissionError as exc:
+    raise PermissionError(f"Prohibited sensitive path in shell command: {exc}") from exc
+except Exception:
+    pass
+```
+
+`_validate_filepath` raises `ValueError` for a token that is not a well-formed
+path (empty, control characters) — a skip, correctly. But the bare `Exception`
+also swallowed *any bug inside the validator*, and a validator that throws
+silently stops checking that token. It is `except ValueError` now, so an
+unexpected error propagates instead of quietly disabling the check.
+
+The stress harness's `except Exception as e: pass` — which also bound an unused
+`e` — now records what it caught into the test's own `details` string, so an
+unexpected rejection type is reported rather than counted as nothing.
+
+### `B108` — a predictable name in a world-writable directory
+
+`/tmp/7b-adapter`, `/tmp/metrics.json`, `/tmp/models.json` and friends. `/tmp`
+is world-writable, so a fixed filename there can be pre-created or symlinked by
+any other user on the host. The training and workbench scripts now write into
+`tempfile.mkdtemp()` (0700, unpredictable). The metrics file gets **its own**
+directory rather than sharing the adapter's, so a later reordering cannot
+accidentally sweep it into the uploaded adapter folder.
+
+The five `scripts/hf/` one-off scrapers read their input from `sys.argv[1]` with
+a usage error instead of a hardcoded `/tmp/*.json`. Nothing calls them — checked
+before changing the interface — and they are now both safer and usable on a file
+that is not in `/tmp`.
+
+### `B310` — four literals, four `nosec`s
+
+All four sites build a `urllib.request.Request` from a compile-time constant:
+two literal `http://127.0.0.1:3001/…` URLs in the smoke-test driver, a fixed
+`https://api.github.com` root, and a literal `https://datasets-server.huggingface.co/…`.
+Bandit cannot see through the `Request` object to the scheme. There is no
+attacker-controlled scheme to guard, so a runtime check would be dead code;
+these carry `# nosec B310` with the reason, in the repository's existing style.
+
+## Verification
+
+ruff check, ruff format, mypy strict and bandit clean; 4,248 tests pass at
+96.22% branch coverage against the 96% floor; the two out-of-tree suites that
+the changed files belong to also pass — `agent_workflow_framework` 172 tests,
+`agent-self-evolution` 149 tests.
+
+## What is still not done
+
+Unchanged from round two, minus the Bandit line:
+
+- **Rotate the credentials.** Kaggle, the Slack app tokens and private key in
+  the deleted `secrets.py`, the old `config.yaml` `api_key`s, and `H9hhwS…`.
+- **The eight remaining `B615`**, listed above with the repos that block them.
+- **`continuous-security.yml` is still green and hollow.**
+- **`SECURITY-INSIGHTS.yml`**, the orphaned BinSkim analyses, the unset
+  `STEP_SECURITY_API_KEY`, and the three repository-settings Scorecard checks.
+- **`jules-refactor-eval-viewer-…` has no merge base with `main`** — a parallel
+  2,565-commit history whose tip carries 201 Bandit findings that never reach
+  the dashboard because nothing analyses it. It is the branch that held the
+  Kaggle token for 26 days. Deleting it is the owner's call, not an agent's.
+
+## A note on method
+
+Round one: a workflow can be on `main`, pinned and green while doing nothing.
+Round two: a scanner can be running and green while structurally unable to see
+the thing it is named for. Round three's is the mirror image — **a scanner can
+report findings that are purely an artefact of how it was invoked**, and the
+seven false positives looked exactly like seven real ones until the invocation,
+rather than the findings, was read.
