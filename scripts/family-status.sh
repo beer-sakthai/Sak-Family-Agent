@@ -1,7 +1,7 @@
 #!/bin/bash
 # Family Systems Status — reports OK for all improvements
-export KAGGLE_USERNAME="nanthasitburankum"
-export KAGGLE_API_TOKEN="KGAT_0acf2e4e5e29aa31f757443fcb1c5351"
+export KAGGLE_USERNAME="${KAGGLE_USERNAME:-nanthasitburankum}"
+export KAGGLE_API_TOKEN="${KAGGLE_API_TOKEN:-placeholder_kaggle_token}"
 
 echo "🏠 SakFamily System Status — $(date '+%Y-%m-%d %H:%M')"
 echo ""

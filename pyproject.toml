@@ -32,9 +32,10 @@ dev = [
     "bandit[toml]>=1.9.4",
     "types-PyYAML>=6.0.12",
     "pandas>=2.0.0",
-    "numpy>=1.24.0",
+    "numpy>=1.24.0,<2.5.0",
     "matplotlib>=3.7.0",
     "yfinance>=0.2.0",
+    "cryptography>=50.0.0",
 ]
 
 # Mutation testing is a local quality gate, not a CI gate (a full run is far too
@@ -190,9 +191,10 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
     "pandas>=2.0.0",
-    "numpy>=1.24.0",
+    "numpy>=1.24.0,<2.5.0",
     "matplotlib>=3.7.0",
     "yfinance>=0.2.0",
+    "cryptography>=50.0.0",
 ]
 # lm-evaluation-harness for the run-evals.yml workflow. Kept as its own group
 # (not a [project.optional-dependencies] extra) so `uv sync --all-extras` in
