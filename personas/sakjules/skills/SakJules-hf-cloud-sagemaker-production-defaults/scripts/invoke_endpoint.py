@@ -30,11 +30,9 @@ import subprocess
 import sys
 import tempfile
 
-from _common import redact_sensitive_text
-
 
 def log(msg: str) -> None:
-    print(f"[invoke] {redact_sensitive_text(msg)}", file=sys.stderr, flush=True)  # codeql[py/clear-text-logging-sensitive-data]
+    print(f"[invoke] {msg}", file=sys.stderr, flush=True)
 
 
 def aws_bin() -> str:

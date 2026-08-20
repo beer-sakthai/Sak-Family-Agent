@@ -1,6 +1,6 @@
 ---
 name: SakSit-xurl
-description: 'X/Twitter via xurl CLI: post, search, DM, media, v2 API.'
+description: "X/Twitter via xurl CLI: post, search, DM, media, v2 API."
 ---
 
 # xurl

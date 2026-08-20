@@ -1,9 +1,6 @@
 ---
 name: SakThai-hf-cosmopedia
-description: "Complete reference on HuggingFace Cosmopedia \u2014 the synthetic dataset generation\
-  \ pipeline for pre-training LLMs, covering v1 and v2, prompt engineering, large-scale\
-  \ generation with llm-swarm, deduplication/decontamination, and integration with\
-  \ SmolLM "
+description: "Complete reference on HuggingFace Cosmopedia — the synthetic dataset generation pipeline for pre-training LLMs, covering v1 and v2, prompt engineering, large-scale generation with llm-swarm, deduplication/decontamination, and integration with SmolLM "
 ---
 
 # HF Cosmopedia — Synthetic Dataset Generation at Scale

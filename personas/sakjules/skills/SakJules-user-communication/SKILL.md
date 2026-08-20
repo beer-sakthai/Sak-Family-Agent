@@ -1,8 +1,6 @@
 ---
 name: SakJules-SakThai-user-communication
-description: Communication preferences and interaction conventions for the primary user (Beer /
-  beer-sakthai). Apply on every interaction.
-...
+description: "Communication preferences and interaction conventions for the primary user (Beer / beer-sakthai). Apply on every interaction."
 ---
 
 # User Communication Preferences

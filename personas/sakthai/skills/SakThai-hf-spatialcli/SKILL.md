@@ -1,9 +1,12 @@
 ---
 name: SakThai-hf-spatialcli
-description: "SpatialCLI \u2014 the tool-use \u2192 capability-internalization paradigm for spatial\
-  \ VLMs (arXiv:2607.27703): 3-stage Call\u2192Learn\u2192Internalize training, Qwen3-VL-8B\
-  \ fine-tune config, SpatialCLI-Bench + CII validation + RL parquet layout, MindCube/BOPASK/DA-2K/MMSI-Bench\
-  \ eval bundles."
+author: SakThai
+license: MIT
+description: "SpatialCLI — the tool-use → capability-internalization paradigm for spatial VLMs (arXiv:2607.27703): 3-stage Call→Learn→Internalize training, Qwen3-VL-8B fine-tune config, SpatialCLI-Bench + CII validation + RL parquet layout, MindCube/BOPASK/DA-2K/MMSI-Bench eval bundles."
+version: 1.0.0
+category: mlops
+tags: [huggingface, spatial-reasoning, vlm, tool-use, internalization, benchmark, embodied-ai]
+platforms: [linux]
 ---
 
 # SpatialCLI — Reasoning With Spatial Tools, Then Without Them

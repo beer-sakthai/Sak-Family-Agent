@@ -1,12 +1,20 @@
 ---
 name: SakThai-hf-mcp-server
-description: "Complete reference on the Hugging Face MCP (Model Context Protocol) Server \u2014\
-  \ connecting MCP-compatible AI assistants (Claude Desktop, Cursor, VS Code, Codex,\
-  \ ChatGPT, Zed) to the Hugging Face Hub. Covers built-in tools (hf_fs, Contribute\
-  \ Repos, Sandboxes, Run Jobs), community tools via Gradio Spaces as MCP servers,\
-  \ configuration workflows at huggingface.co/settings/mcp, and how to build custom\
-  \ MCP servers with Gradio's mcp_server=True flag including private Space auth, gr.Request\
-  \ for header inspection, and gr.Header for token extraction.\n"
+author: SakThai
+license: MIT
+description: >
+  Complete reference on the Hugging Face MCP (Model Context Protocol) Server —
+  connecting MCP-compatible AI assistants (Claude Desktop, Cursor, VS Code, Codex,
+  ChatGPT, Zed) to the Hugging Face Hub. Covers built-in tools (hf_fs, Contribute
+  Repos, Sandboxes, Run Jobs), community tools via Gradio Spaces as MCP servers,
+  configuration workflows at huggingface.co/settings/mcp, and how to build custom
+  MCP servers with Gradio's mcp_server=True flag including private Space auth,
+  gr.Request for header inspection, and gr.Header for token extraction.
+version: 1.0.0
+metadata:
+  hermes:
+    tags: [huggingface, mcp, model-context-protocol, agents, gradio, spaces, tools]
+    category: productivity
 ---
 
 # Hugging Face MCP Server

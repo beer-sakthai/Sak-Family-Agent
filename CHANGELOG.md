@@ -10,62 +10,27 @@ carried forward here.
 
 ## [Unreleased]
 
-### In Progress
-- **Cross-Persona A2A Streaming**: Real-time gRPC/A2A token streaming between SakKing, SakSee, SakSit, SakTan, SakJules, and SakThai.
-- **Distributed Memory Vector Mesh**: High-concurrency embedding sync across external Postgres/pgvector nodes.
-  - Roadmap: [docs/superpowers/plans/](docs/superpowers/plans/)
-
-### Documentation
-- Enhanced onboarding guide with practical "Get Started" tasks
-- Updated README with quick-start section and table of contents
-- Clarified security vulnerability reporting procedures
-- Added code review checklist to CONTRIBUTING.md
-
----
-
-## [2.6.0] — 2026-08-19
-
-### Added
-- **120 Curated Skills & Antigravity Tooling**: Installed and curated top 120 AI agent skills across the House of Sak family, complete with automated YAML frontmatter verification (`docs/curated-skills-120.md`, `docs/curated-skills-120.json`).
-- **Path Traversal & Control Character Guardrail**: Zero-tolerance ASCII control character (`\x00-\x1f\x7f`) and multiple-prefix (`@@`) rejection in `_resolve_and_validate_path` across all tool executors (`personas/sakthai/sakthai/agent/tools.py`, `sakthai-chat-cli`, `apps/agent_workflow_framework/agent_workflow/executor.py`, and `services/teams-copilot-mcp`).
-- **Dashboard Telemetry & React 19 Parity**: Upgraded `apps/sak_agent_dashboard` with `AutoCyclePanel`, `MutationTestingPanel`, `SemanticCachePanel`, and `A2AServiceRegistry` with zero ESLint/React effect lifecycle warnings.
-- **Token Metering & Billing Parity**: Modern PBKDF2 API key hashing with explicit `@overload` signatures and automated byte parity enforcement in `tests/test_shared_package_divergence.py`.
-
 ### Changed
-- **CI/CD Hardening & SHA Pinning**: Pinned all GitHub Actions dependencies to immutable commit SHAs with StepSecurity best practices, strict 20m timeouts, and top-level concurrency groups.
-- **Dependency & Build Matrix 100% Green**: Achieved 100% green status across all 12 GitHub Actions workflows on Python 3.11 and Python 3.12.
-
----
-
-## [2.5.0] — 2026-08-14
+- License posture is now **all rights reserved** (© 2026 beer-sakthai). The
+  `LICENSE` file (MIT) was removed and README, `pyproject.toml`, `SECURITY.md`,
+  and `CODE_OF_CONDUCT.md` were updated to match the source-available,
+  no-redistribution terms.
 
 ### Added
-- **CodeQL Advanced SAST**: Multi-language code scanning across Actions, JavaScript/TypeScript, and Python with custom queries and SARIF reporting.
-- **AST Mutation Testing & Self-Healing Gate**: Integrated mutation testing pipelines and self-healing test generation for surviving code mutants (`mutation-self-healing-gate.yml`).
-- **Quality Flywheel Gate**: Automated multi-persona G-Eval benchmark measuring agent alignment, safety adherence, and task accuracy (`quality-flywheel-gate.yml`).
+- Identity & governance docs re-derived for v2: `SAKTHAI.md`, `CODE_OF_CONDUCT.md`,
+  and this `CHANGELOG.md`.
+- OG→v2 information-parity audit (`docs/og_parity_audit.md`) recording keep/drop
+  decisions for the v1 skills, library corpus, and code modules.
+- Workflows & caveman integration audit (`docs/workflows_caveman_integration_audit.md`).
+- Unified extension discovery across `~/.sakthai/extensions` and `~/.gemini/extensions`.
 
-### Changed
-- **Consolidated Dependabot Updates**: Unified multi-ecosystem update automation for pip (uv), npm/pnpm, Docker, and GitHub Actions under `.github/dependabot.yml`.
+### Removed
+- **Cloud runtime skeleton** — the lazy `sakthai/cloud/` Google ADK / Vertex AI
+  scaffolding, the `cloud` install extra, the `sakthai cloud` commands, the
+  `GOOGLE_CLOUD_*` / `GOOGLE_GENAI_USE_VERTEXAI` config helpers, and `docs/cloud.md`.
+  v2 is local-first; a cloud port is no longer tracked here.
 
----
-
-## [2.4.0] — 2026-08-08
-
-### Added
-- **Extended Test Suite & 96% Coverage Floor**: Expanded unit suite to 3,875+ tests with a strictly enforced 96% branch coverage gate.
-- **Shared Persona Package Divergence Registry**: Automated regression suite detecting drift between core `sakthai` and persona overlay packages (`tests/test_shared_package_divergence.py`).
-
----
-
-## [2.3.0] — 2026-07-20
-
-### Added
-- **Agent Self-Evolution Subsystem**: Independent self-evolution framework under `personas/sakthai/agent-self-evolution/` for continuous capability synthesis.
-- **Teams Copilot MCP Server**: Added high-security Microsoft Teams Copilot bridge in `services/teams-copilot-mcp/`.
-
----
-
-## [2.2.0] — 2026-06-17
+## [2.0.0]
 
 First release of the clean-room rewrite. A personal learning agent with a
 durable SQLite memory exposed three ways — the `sakthai` CLI, the `sakthai run`
