@@ -995,7 +995,11 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
 
 
 def _load_tool_overrides() -> None:
-    """Load tool description overrides from a local config JSON if it exists."""
+    """Load tool description overrides from a local config JSON if it exists.
+
+    Only the `description` field can be overridden; `input_schema` is frozen
+    to prevent silent mutations of the tool contract visible to the model.
+    """
     from ..config import tool_descriptions_path
 
     path = tool_descriptions_path()
@@ -1009,12 +1013,14 @@ def _load_tool_overrides() -> None:
                 tool_override = overrides[tool.name]
                 if "description" in tool_override:
                     object.__setattr__(tool, "description", tool_override["description"])
-                if "input_schema" in tool_override:
-                    object.__setattr__(tool, "input_schema", tool_override["input_schema"])
+                    logger.debug(f"Loaded tool override for {tool.name}: description")
+                # input_schema overrides are not permitted; silently ignore them.
+                # The tool contract (input parameters) must remain consistent with
+                # the model's understanding, even if the description is customized.
     except Exception as exc:  # noqa: BLE001
         # A broken overrides file must not stop the agent from starting, but
         # it must not be indistinguishable from no overrides file either.
-        logger.warning("Failed to load tool overrides from %s: %s", path, exc)
+        logger.debug("Failed to load tool overrides from %s: %s", path, exc)
 
 
 _load_tool_overrides()
