@@ -1,13 +1,10 @@
 ---
 name: SakThai-hf-model-card-yaml-widgets
-author: SakThai
-license: MIT
-title: HF Model Card YAML Metadata & Widget Configuration
-description: Master Hugging Face model card YAML metadata — schema, pipeline_tag, widget config, programmatic creation via huggingface_hub, ModelCard components (Gallery), and metadata validation patterns.
-category: mlops
-tags: [huggingface, model-cards, yaml, metadata, widgets, hub, discoverability]
-created: 2026-07-23
+description: "Master Hugging Face model card YAML metadata \u2014 schema, pipeline_tag, widget\
+  \ config, programmatic creation via huggingface_hub, ModelCard components (Gallery),\
+  \ and metadata validation patterns."
 ---
+
 # HF Model Card YAML Metadata & Widget Configuration
 
 ## Overview

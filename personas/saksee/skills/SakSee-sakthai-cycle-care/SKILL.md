@@ -1,10 +1,9 @@
 ---
 name: SakSee-sakthai-cycle-care
-version: 1.0.0
-description: "Saksee Sakthai Cycle Care"
-category: sakthai-cycle-care
-
+description: Saksee Sakthai Cycle Care
+...
 ---
+
 # SakThai Cycle — Care
 
 Audit correctness, safety, and performance before shipping.

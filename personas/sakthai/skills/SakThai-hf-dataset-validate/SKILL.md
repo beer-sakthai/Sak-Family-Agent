@@ -1,11 +1,7 @@
 ---
 name: SakThai-hf-dataset-validate
-category: mlops
-description: "Validates a JSONL dataset file for LoRA fine-tuning on Hugging Face. Checks schema: input (string), output (valid JSON with tool_name + arguments), max 500 lines."
-author: SakThai
-license: MIT
-version: 1.0
-created: 2026-06-21
+description: 'Validates a JSONL dataset file for LoRA fine-tuning on Hugging Face. Checks schema:
+  input (string), output (valid JSON with tool_name + arguments), max 500 lines.'
 ---
 
 # HF Dataset Validator for LoRA Training

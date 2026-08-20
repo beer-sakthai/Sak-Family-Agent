@@ -1,14 +1,6 @@
 ---
 name: SakSee-baoyu-infographic
-description: "Infographics: 21 layouts x 21 styles (信息图, 可视化)."
-version: 1.56.1
-author: 宝玉 (JimLiu)
-license: MIT
-platforms: [linux, macos, windows]
-metadata:
-  hermes:
-    tags: [infographic, visual-summary, creative, image-generation]
-    homepage: https://github.com/JimLiu/baoyu-skills#baoyu-infographic
+description: "Infographics: 21 layouts x 21 styles (\u4FE1\u606F\u56FE, \u53EF\u89C6\u5316)."
 ---
 
 # Infographic Generator

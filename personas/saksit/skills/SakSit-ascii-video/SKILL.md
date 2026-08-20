@@ -1,8 +1,6 @@
 ---
 name: SakSit-ascii-video
-version: 0.1.0
-description: "ASCII video: convert video/audio to colored ASCII MP4/GIF."
-platforms: [linux, macos, windows]
+description: 'ASCII video: convert video/audio to colored ASCII MP4/GIF.'
 ---
 
 # ASCII Video Production Pipeline

@@ -1,86 +1,121 @@
-# Plan: Sak Family Skills Organisation
-
-> **From:** SakKing (Lead & Orchestrator)
-> **To:** SakJules (Master of Automation & CI/CD)
-> **Date:** 2026-07-04
-> **Status:** ✅ Complete — archived 2026-07-07
-> **Cycle:** Care → Joy → Trust → Growth
+# PLAN.md — SakJules 🔧 Deep-Dive Task-by-Task Roadmap
+> *DevSecOps, GitHub Actions & Asynchronous Model Training Execution Plan*
+> *Status: Active Step-by-Step Execution*
 
 ---
 
-## Why
+## 📋 Deep-Dive Task Execution Breakdown (Step-by-Step, One-by-One)
 
-Every Sak sibling needs their skills visible **inside** `Sak-Family-Agent/personas/<name>/skills/` so Beer and the family can see what each agent can do at a glance.
-
-| Sibling | Has `skills/`? | Action needed |
-|---------|:--------------:|:-------------|
-| SakThai | ✅ Yes (7 items) | Sync from `sakthai-skills` repo |
-| SakSee  | ✅ Yes (10 items) | Sync from `saksee-skills` repo |
-| SakSit  | ✅ Yes (82 items) | Sync from `saksit-skills` repo |
-| **SakJules (you!)** | ❌ **Missing** | **Create `skills/` + populate** |
-| SakKing | ❓ TBD | Create `skills/` + skeleton |
-| SakTan  | ❓ TBD | Create `skills/` + skeleton |
-
----
-
-## Step 1 — Create missing skills/ directories
-
-### 1a — SakJules
-Create `personas/sakjules/skills/` with:
-- A `README.md` listing your domain: CI/CD, GitHub Actions, systemd, deployment, monitoring
-- Key skills: `ci-pipeline-setup`, `systemd-service-deploy`, `monitoring-watchdog`, `skill-sync-mirror`
-- Use the same `.bundled_manifest` + `.curator_state` pattern the others use
-
-### 1b — SakKing
-Create `personas/sakking/skills/` with:
-- Lead & Orchestrator skills: `sakking-cycle-dream`, `sakking-cycle-hope`, `sakking-cycle-care`, `sakking-cycle-joy`, `sakking-cycle-trust`, `sakking-cycle-growth`
-- Self-healing: `cron-watchdog-self-heal`, `family-health-audit`
-- Master of Code: code review, debugging, architecture
-
-### 1c — SakTan
-Create `personas/saktan/skills/` with:
-- Daily ops: calendar management, email, scheduling
-- Life admin: reminders, task tracking, note-taking
+```mermaid
+flowchart TD
+    T1["Task 1: Environment & Credential Audit (Phase 1)"] --> T2["Task 2: Local Memory & Daemon Health Check (Phase 1)"]
+    T2 --> T3["Task 3: OpenCode Custom Model Matrix Audit (Phase 2)"]
+    T3 --> T4["Task 4: Remote Jules Session Dispatch & Integration (Phase 3)"]
+    T4 --> T5["Task 5: HF Jobs Dataset & Training Pipeline Execution (Phase 4)"]
+    T5 --> T6["Task 6: Benchmark Eval & Model Cards Publishing (Phase 5)"]
+    T6 --> T7["Task 7: GGUF Quantization & Local Ollama Binding (Phase 6)"]
+```
 
 ---
 
-## Step 2 — Mirror skills from canonical repos
+### Phase 1: Foundation & Infrastructure Verification
 
-| Canonical repo → | Target in Sak-Family-Agent |
-|:-----------------|:---------------------------|
-| `beer-sakthai/sakthai-skills` | `personas/sakthai/skills/` |
-| `beer-sakthai/saksee-skills` | `personas/saksee/skills/` |
-| `beer-sakthai/saksit-skills` | `personas/saksit/skills/` |
+#### 🔹 Task 1.1: Environment Variable & API Credential Audit
+- **Goal**: Verify all API keys (`JULES_API_KEY`, `OPENCODE_GO_API_KEY`, `SUPERMEMORY_API_KEY`, `RENDER_API_KEY`, `GOOGLE_API_KEY`) are present in `/home/beern/.env` and exported in `~/.bashrc`.
+- **Estimated Time**: 2 minutes
+- **Command**: `grep -E "JULES_API_KEY|OPENCODE_GO_API_KEY|SUPERMEMORY_API_KEY" /home/beern/.env`
+- **Acceptance Criteria**: All 5 credentials return non-empty values.
 
-**Method 1 (Recommended): GitHub Action**
-- New workflow: `.github/workflows/sync-skills.yml`
-- On push to the skill repos OR daily cron, sync files
-- Only touches `personas/<name>/skills/` paths
-
-**Method 2 (Fallback): SakJules cron job**
-- A Hermes cron job that polls each skill repo and updates the family repo
-- Checks every 6 hours
+#### 🔹 Task 1.2: Local Supermemory Daemon Health Check
+- **Goal**: Verify local Supermemory daemon is running on port 6767 with ONNX `Xenova/bge-base-en-v1.5` embeddings.
+- **Estimated Time**: 2 minutes
+- **Command**: `curl -s http://localhost:6767/healthcheck || pgrep -f supermemory-server`
+- **Acceptance Criteria**: HTTP 200 response or active PID returned.
 
 ---
 
-## Step 3 — Verify
+### Phase 2: OpenCode & Custom Model Binding Audit
 
-- [ ] Every persona dir has a `skills/` subdirectory
-- [ ] Every `skills/` has `.bundled_manifest` + `.curator_state`
-- [ ] Skills are individually browseable on GitHub
-- [ ] PLAN.md root index is updated
-- [ ] Beer can see each sibling's capabilities in one place
+#### 🔹 Task 2.1: OpenCode Model Matrix Verification
+- **Goal**: Audit [`/home/beern/opencode.json`](file:///home/beern/opencode.json) to ensure zero Gemini API quota dependencies.
+- **Estimated Time**: 3 minutes
+- **Matrix**:
+  - `model`: `huggingface/deepseek-ai/DeepSeek-V4-Flash`
+  - `small_model`: `Nanthasit/sakthai-context-1.5b-tools-v2`
+  - `tools_model`: `Nanthasit/sakthai-context-7b-tools`
+  - `embedding_model`: `Nanthasit/sakthai-embedding-multilingual`
+- **Acceptance Criteria**: `opencode.json` contains 100% custom `Nanthasit/*` models.
+
+#### 🔹 Task 2.2: Google ADK Zero-Cost Specification Audit
+- **Goal**: Verify [`/home/beern/.agents-cli-spec.md`](file:///home/beern/.agents-cli-spec.md) is configured for $0.00 USD spend.
+- **Estimated Time**: 2 minutes
+- **Command**: `agents-cli info`
+- **Acceptance Criteria**: Executed cleanly with 0 malformed metadata warnings.
 
 ---
 
-## Priority
+### Phase 3: Jules Asynchronous Remote Automation
 
-1. SakJules skills/ (you need your own space first)
-2. SakKing skills/ (lead skills for the orchestrator)
-3. SakTan skills/ (daily ops skills)
-4. Sync mechanism (automate mirroring)
-5. Verify all done
+#### 🔹 Task 3.1: Remote Jules Session List & Status Audit
+- **Goal**: Query active remote sessions on Jules server.
+- **Estimated Time**: 5 minutes
+- **Command**: `jules remote list --session` or via `julesServer` MCP
+- **Acceptance Criteria**: List of remote sessions returned cleanly.
+
+#### 🔹 Task 3.2: Jules Remote Patch Pull & Git Merge
+- **Goal**: Pull completed patches from remote Jules sessions and apply to `Sak-Family-Agent` or target repos.
+- **Estimated Time**: 5 minutes
+- **Command**: `jules remote pull --session <SESSION_ID> --apply`
+- **Acceptance Criteria**: Git working tree updated cleanly without merge conflicts.
 
 ---
 
-*Handoff from SakKing. Execute this plan and report back.*
+### Phase 4: Custom Model Training & Benchmark Pipeline
+
+#### 🔹 Task 4.1: Dataset Synthesis (`sakthai-bench-v3`)
+- **Goal**: Run `.opencode/scripts/run-benchmark-v3.py` to generate 25,000 synthetic task routing prompts.
+- **Estimated Time**: 15 minutes
+- **Command**: `uv run .opencode/scripts/run-benchmark-v3.py`
+- **Acceptance Criteria**: Dataset saved under `Nanthasit/sakthai-triage-dataset`.
+
+#### 🔹 Task 4.2: Hugging Face Job GPU Fine-Tuning
+- **Goal**: Dispatch QLoRA SFT training for `Nanthasit/sakthai-triage-1.5b` on HF Jobs.
+- **Estimated Time**: 45 minutes
+- **Command**: `hf jobs run python:3.11 "uv run SakThai-Training/train.py" --secrets HF_TOKEN --flavor t4-small`
+- **Acceptance Criteria**: Job status `COMPLETED` and weights published to HF Hub.
+
+---
+
+### Phase 5: Evaluation & Documentation Publishing
+
+#### 🔹 Task 5.1: Benchmark Evaluation Run
+- **Goal**: Evaluate model accuracy on `Nanthasit/sakthai-bench-v2`.
+- **Estimated Time**: 10 minutes
+- **Command**: `uv run .opencode/scripts/run-eval.py --model Nanthasit/sakthai-triage-1.5b --publish`
+- **Acceptance Criteria**: Cross-model YAML uploaded to `Nanthasit/eval_results`.
+
+#### 🔹 Task 5.2: Model Cards & Dataset Card Synchronization
+- **Goal**: Update README tables across all model repos and dataset cards.
+- **Estimated Time**: 5 minutes
+- **Command**: `uv run .opencode/scripts/update-model-cards.py`
+- **Acceptance Criteria**: Model card tables updated on Hugging Face Hub.
+
+---
+
+### Phase 6: GGUF Quantization & Local Ollama Binding
+
+#### 🔹 Task 6.1: GGUF Quantization & Upload
+- **Goal**: Convert model weights to GGUF format (Q4_K_M) for local sub-100ms inference.
+- **Estimated Time**: 15 minutes
+- **Command**: `hf upload Nanthasit/sakthai-triage-1.5b-gguf ./model.gguf`
+- **Acceptance Criteria**: GGUF file available on HF Hub.
+
+#### 🔹 Task 6.2: Local Ollama Pull & Verification
+- **Goal**: Pull GGUF into local Ollama instance and run inference test.
+- **Estimated Time**: 5 minutes
+- **Command**: `ollama run hf.co/Nanthasit/sakthai-triage-1.5b-gguf "Task triage test"`
+- **Acceptance Criteria**: Sub-100ms response generated cleanly.
+
+---
+
+*SakJules Step-by-Step Task Master Plan · House of Sak*

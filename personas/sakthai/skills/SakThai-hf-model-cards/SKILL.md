@@ -1,11 +1,7 @@
 ---
 name: SakThai-hf-model-cards
-description: "Hugging Face Model Cards: repository metadata, YAML frontmatter, tags, pipeline types, license, and how to write a great README.md."
-version: 1.0.0
-author: SakThai
-license: MIT
-tags: [huggingface, hf, model-cards, metadata, yaml, readme, hub, documentation]
-platforms: [linux, macos, windows]
+description: 'Hugging Face Model Cards: repository metadata, YAML frontmatter, tags, pipeline types,
+  license, and how to write a great README.md.'
 ---
 
 # Hugging Face Model Cards: Metadata & YAML Frontmatter

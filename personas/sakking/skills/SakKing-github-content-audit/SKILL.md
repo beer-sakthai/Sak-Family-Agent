@@ -1,14 +1,9 @@
 ---
 name: SakKing-github-content-audit
-category: github
-description: Read GitHub repository files, audit directory structures, and extract file contents via the GitHub Contents API — especially useful when CLI/terminal tools are unavailable and you're operating through an API gateway (Composio, MCP, etc.).
-version: 1.0.0
-author: SakKing Agent
-platforms: [linux, macos, windows]
-metadata:
-  hermes:
-    tags: [GitHub, Contents-API, Audit, Repository]
-    related_skills: [github-repo-management, codebase-inspection]
+description: Read GitHub repository files, audit directory structures, and extract    file contents
+  via the GitHub Contents API u2014 especially useful when CLI/terminal    tools are
+  unavailable and youre operating through an API gateway (Composio, MCP,    etc.).
+...
 ---
 
 # GitHub Content Audit

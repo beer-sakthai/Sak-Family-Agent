@@ -86,7 +86,7 @@ def chat(
     # matching the SAKTHAI_HOME-per-persona convention used in production.
     store = MemoryStore(config.persona_memory_db_path(persona))
     try:
-        with _tool_context(no_mcp=no_mcp, verbose=False) as tools:
+        with _tool_context(no_mcp=no_mcp, verbose=False, persona=persona) as tools:
             run_chat(
                 persona=persona,
                 soul_text=soul_text,

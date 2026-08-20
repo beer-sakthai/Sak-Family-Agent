@@ -1,10 +1,7 @@
 ---
 name: SakThai-hf-hub-audit-logs
-author: SakThai
-license: MIT
-description: Complete reference for Hugging Face Hub Audit Logs — event types, access patterns, JSON export, and integration patterns for organization activity tracking
-category: hf-hub
-version: 1.0.0
+description: "Complete reference for Hugging Face Hub Audit Logs \u2014 event types, access patterns,\
+  \ JSON export, and integration patterns for organization activity tracking"
 ---
 
 # HF Hub Audit Logs — Complete Reference

@@ -1,12 +1,8 @@
 ---
 name: SakThai-hf-spaces-docker
-author: SakThai
-license: MIT
-description: "Hugging Face Spaces with Docker SDK — custom Dockerfiles, buildtime vs runtime secrets/variables, GPU support, data persistence via Storage Buckets, permissions, and hardware configuration."
-version: 1.0.0
-tags: [huggingface, spaces, docker, sdk, secrets, gpu, storage, mlops]
-platforms: [linux, macos, windows]
-related_skills: [spaces-zerogpu, huggingface-hub]
+description: "Hugging Face Spaces with Docker SDK \u2014 custom Dockerfiles, buildtime vs runtime\
+  \ secrets/variables, GPU support, data persistence via Storage Buckets, permissions,\
+  \ and hardware configuration."
 ---
 
 # HF Spaces Docker SDK — Custom Docker Spaces

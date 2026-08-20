@@ -1,9 +1,7 @@
 ---
 name: SakThai-hf-safetensors
-author: SakThai
-license: MIT
-description: "A skill for Hf Safetensors."
-version: 0.1.0
+description: A skill for Hf Safetensors.
+...
 ---
 
 # SakThai HF Safetensors Skill

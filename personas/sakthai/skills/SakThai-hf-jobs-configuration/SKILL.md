@@ -1,12 +1,9 @@
 ---
 name: SakThai-hf-jobs-configuration
-author: SakThai
-license: MIT
-description: "Complete reference for configuring Hugging Face Jobs — authentication, UV/Docker job config, environment variables and secrets, volume mounting (repos, datasets, buckets, local dirs), hardware flavors and pricing, port exposure, SSH debugging, timeouts, namespace management, and job labels."
-version: 1.0.0
-category: mlops
-tags: [huggingface, jobs, configuration, compute, mlops, cron]
-platforms: [linux]
+description: "Complete reference for configuring Hugging Face Jobs \u2014 authentication, UV/Docker\
+  \ job config, environment variables and secrets, volume mounting (repos, datasets,\
+  \ buckets, local dirs), hardware flavors and pricing, port exposure, SSH debugging,\
+  \ timeou"
 ---
 
 # HF Jobs Configuration

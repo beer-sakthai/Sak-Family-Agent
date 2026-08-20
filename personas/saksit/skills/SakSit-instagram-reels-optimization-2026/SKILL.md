@@ -1,21 +1,8 @@
 ---
 name: SakSit-instagram-reels-optimization-2026
-description: >
-  Optimize Instagram Reels for the 2026 algorithm — covering retention metrics,
-  hook strategies, AI-assisted production pipelines, and content cadence for
-  maximum organic reach and engagement.
-category: social-media
-domain: social-media
-skills_tags:
-  - instagram
-  - reels
-  - content-strategy
-  - ai-marketing
-  - social-media-growth
-created: 2026-07-02
-version: 1.0.0
-description: "Saksit Instagram Reels Optimization 2026"
-
+description: ">   Optimize Instagram Reels for the 2026 algorithm \u2014 covering retention metrics,\
+  \   hook strategies, AI-assisted production pipelines, and content cadence for \
+  \  maximum organic reach and engagement."
 ---
 
 # Instagram Reels Optimization 2026

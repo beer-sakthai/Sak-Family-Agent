@@ -1,28 +1,8 @@
 ---
 name: SakThai-hf-transformers-5
-author: SakThai
-license: MIT
-description: >-
-  Deep-dive skill for Hugging Face Transformers v5.x architecture. Covers the
-  new cache system (DynamicCache, StaticCache, MtpCache, QuantizedCache),
-  Multi-Token Prediction (MTP), built-in watermarking, continuous batching
-  for production serving, new pipeline architecture (AnyToAny, ImageTextToText),
-  and 100+ new model architectures. Updated for transformers v5.14.1.
-version: 1.0.0
-domain: mlops
-triggers:
-  - transformers v5
-  - transformers 5.x
-  - transformers cache
-  - multi-token prediction
-  - mtp decoding
-  - watermarking
-  - continuous batching
-  - any-to-any pipeline
-  - image-text-to-text
-  - generation config
-  - speculative decoding
-  - cache implementation
+description: '>-   Deep-dive skill for Hugging Face Transformers v5.x architecture. Covers the   new
+  cache system (DynamicCache, StaticCache, MtpCache, QuantizedCache),   Multi-Token
+  Prediction (MTP), built-in watermarking, continuous batching   for production ser'
 ---
 
 # Hugging Face Transformers v5 — Architecture Deep Dive

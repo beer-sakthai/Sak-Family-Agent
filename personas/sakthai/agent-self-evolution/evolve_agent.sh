@@ -1,34 +1,23 @@
 #!/usr/bin/env bash
 #
-# evolve_agent.sh — self-evolution for the six Sak Family agents.
+# evolve_agent.sh — Hermes self-evolution for the four sibling Telegram agents.
 #
 # Evolves ONE skill for ONE agent with DSPy + GEPA, then commits the evolved
 # skill to that agent's OWN GitHub repo (one repo per agent) on a review branch
 # and opens a PR. The live agent is left untouched unless you pass --apply.
 #
-# Each run freshly composes the agent's full skill tree (personas/shared/skills
-# + that persona's own overlay, via scripts/compose_persona.py — the same
-# shared+overlay composition every persona's runtime tree uses) into a local
-# cache dir. This only needs a skills/ directory of SKILL.md files to work, not
-# a real installed Hermes profile — no `hermes` CLI or `~/.hermes/profiles/*`
-# is required. (A genuine hermes-CLI-managed profile, if one exists later, is a
-# separate, not-yet-built enhancement — see agent-self-evolution/AGENTS.md.)
-#
-#   agent      github repo
-#   ------     -------------------------
-#   sakthai    beer-sakthai/sakthai-skills
-#   sakking    beer-sakthai/sakking-skills
-#   saksee     beer-sakthai/saksee-skills
-#   saksit     beer-sakthai/saksit-skills
-#   saktan     beer-sakthai/saktan-skills
-#   sakjules   beer-sakthai/sakjules-skills
+#   agent     profile dir (HERMES_AGENT_REPO)          github repo
+#   ------    --------------------------------------   -------------------------
+#   hermes    ~/.hermes                                beer-sakthai/hermes-skills
+#   sakthai   ~/.hermes/profiles/sakthai               beer-sakthai/sakthai-skills
+#   saksee    ~/.hermes/profiles/saksee                beer-sakthai/saksee-skills
+#   saksit    ~/.hermes/profiles/saksit                beer-sakthai/saksit-skills
 #
 # Usage:
-#   ./evolve_agent.sh <sakthai|sakking|saksee|saksit|saktan|sakjules> --skill <name> [opts...]
-#   ./evolve_agent.sh saksit   --skill github-auth --iterations 8
-#   ./evolve_agent.sh saksee   --skill arxiv --dry-run          # validate, $0 spend
-#   ./evolve_agent.sh sakthai  --skill arxiv --apply --merge    # evolve, apply live, auto-merge
-#   ./evolve_agent.sh sakjules --skill SakJules-devsecops --dry-run
+#   ./evolve_agent.sh <hermes|sakthai|saksee|saksit> --skill <name> [opts...]
+#   ./evolve_agent.sh saksit  --skill github-auth --iterations 8
+#   ./evolve_agent.sh saksee  --skill arxiv --dry-run          # validate, $0 spend
+#   ./evolve_agent.sh sakthai --skill arxiv --apply --merge    # evolve, apply live, auto-merge
 #
 # Flags handled by this wrapper:
 #   --apply       also copy the evolved skill into the LIVE profile skills dir
@@ -40,16 +29,13 @@
 # (e.g. --iterations, --optimizer-model, --eval-source, --run-tests).
 #
 # Env overrides: GH_OWNER (default beer-sakthai), HERMES_SKILLS_REPO_ROOT
-# (default ~/hermes-agent-skills), SAKTHAI_EVOLUTION_CACHE (default
-# ~/.cache/sakthai-evolution/profiles), GIT_AUTHOR_NAME, GIT_AUTHOR_EMAIL,
+# (default ~/hermes-agent-skills), GIT_AUTHOR_NAME, GIT_AUTHOR_EMAIL,
 # REPO_VISIBILITY (private|public, default private).
 
 set -euo pipefail
 
 EVO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$EVO_DIR/../../.." && pwd)"
 SKILLS_REPO_ROOT="${HERMES_SKILLS_REPO_ROOT:-$HOME/hermes-agent-skills}"
-EVOLUTION_CACHE="${SAKTHAI_EVOLUTION_CACHE:-$HOME/.cache/sakthai-evolution/profiles}"
 GH_OWNER="${GH_OWNER:-beer-sakthai}"
 GIT_NAME="${GIT_AUTHOR_NAME:-SakThai Agents}"
 GIT_EMAIL="${GIT_AUTHOR_EMAIL:-gensandee@gmail.com}"
@@ -59,16 +45,13 @@ die() { echo "error: $*" >&2; exit 1; }
 
 AGENT="${1:-}"; shift || true
 case "$AGENT" in
-  sakthai)  REPO="sakthai-skills";;
-  sakking)  REPO="sakking-skills";;
-  saksee)   REPO="saksee-skills";;
-  saksit)   REPO="saksit-skills";;
-  saktan)   REPO="saktan-skills";;
-  sakjules) REPO="sakjules-skills";;
-  *) echo "usage: $0 <sakthai|sakking|saksee|saksit|saktan|sakjules> --skill <name> [opts]"; exit 2;;
+  hermes)  PROFILE_REPO="$HOME/.hermes";                      REPO="hermes-skills";;
+  sakthai) PROFILE_REPO="$HOME/.hermes/profiles/sakthai";     REPO="sakthai-skills";;
+  saksee)  PROFILE_REPO="$HOME/.hermes/profiles/saksee";      REPO="saksee-skills";;
+  saksit)  PROFILE_REPO="$HOME/.hermes/profiles/saksit";      REPO="saksit-skills";;
+  *) echo "usage: $0 <hermes|sakthai|saksee|saksit> --skill <name> [opts]"; exit 2;;
 esac
 FULL_REPO="$GH_OWNER/$REPO"
-PROFILE_REPO="$EVOLUTION_CACHE/$AGENT"
 
 APPLY=0; PUSH=1; MERGE=0; DRYRUN=0; BOOTSTRAP=0; SKILL=""; PASS=()
 while [ $# -gt 0 ]; do
@@ -85,8 +68,7 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-echo "[compose] materializing $AGENT skill tree → $PROFILE_REPO/skills"
-python3 "$REPO_ROOT/scripts/compose_persona.py" "$AGENT" --out "$PROFILE_REPO/skills" >/dev/null
+[ -d "$PROFILE_REPO/skills" ] || die "no skills dir at $PROFILE_REPO/skills"
 
 # Never let agent secrets/state leak into a skills repo — only ship skill text.
 RSYNC_EXCL=(--exclude='.env' --exclude='*.key' --exclude='*.pem'

@@ -1,11 +1,7 @@
 ---
 name: SakThai-hf-async-inference-client
-author: SakThai
-license: MIT
-description: "Master async inference patterns with HF's AsyncInferenceClient — concurrent requests, streaming, MCP integration."
-version: 1.0.0
-tags: [huggingface, inference, async, client, python, streaming, concurrent]
-platforms: [linux, macos, windows]
+description: "Master async inference patterns with HFs AsyncInferenceClient \u2014 concurrent requests,\
+  \ streaming, MCP integration."
 ---
 
 # HF Async Inference Client

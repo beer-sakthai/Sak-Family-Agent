@@ -1,0 +1,36 @@
+name: retry_workflow
+description: Transient retry recovery and downstream terminal failure short-circuiting workflow
+steps:
+  - id: step_transient
+    action: fail_then_succeed
+    params:
+      fail_attempts: 1
+      success_output: "recovered_on_retry"
+    depends_on: []
+    retry: 2
+    retry_delay: 0.1
+
+  - id: step_post_transient
+    action: echo
+    params:
+      data: "${steps.step_transient.output.result}"
+    depends_on:
+      - step_transient
+    retry: 0
+
+  - id: step_terminal_fail
+    action: fail_always
+    params:
+      error_msg: "unrecoverable_error"
+    depends_on:
+      - step_post_transient
+    retry: 1
+    retry_delay: 0.1
+
+  - id: step_downstream_blocked
+    action: echo
+    params:
+      input: "${steps.step_terminal_fail.output.result}"
+    depends_on:
+      - step_terminal_fail
+    retry: 0

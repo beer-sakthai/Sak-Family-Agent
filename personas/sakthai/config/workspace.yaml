@@ -1,0 +1,14 @@
+agent_name: SakThai
+role: Main Lead & HF Master
+domain: Hugging Face Hub, Model Lifecycle, 6-Stage Energy Cycle, QLoRA
+workspace_root: /home/beern/Sak-Family-Agent
+primary_skills:
+  - SakThai-speckit-bridge
+  - SakThai-spec-kit
+  - SakThai-huggingface-cli
+  - SakThai-learning-loop
+allowed_tools:
+  - run_command
+  - view_file
+  - replace_file_content
+  - write_to_file

@@ -1,20 +1,7 @@
 ---
 name: SakSee-full-sak-cycle
-category: cycle
-description: Orchestrate all 6 stages of the Sak family cycle (Dream→Hope→Care→Joy→Trust→Growth) as a solo Hermes agent, without the sakthai CLI.
-version: 1.0.0
-platforms:
-  - linux
-  - macos
-  - windows
-metadata:
-  related_skills:
-    - sakthai-cycle-dream
-    - sakthai-cycle-hope
-    - sakthai-cycle-care
-    - sakthai-cycle-joy
-    - sakthai-cycle-trust
-    - sakthai-cycle-growth
+description: "Orchestrate all 6 stages of the Sak family cycle (Dream\u2192Hope\u2192Care\u2192\
+  Joy\u2192Trust\u2192Growth) as a solo Hermes agent, without the sakthai CLI."
 ---
 
 # Full Sak Cycle

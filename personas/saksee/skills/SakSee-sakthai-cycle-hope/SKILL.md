@@ -1,10 +1,9 @@
 ---
 name: SakSee-sakthai-cycle-hope
-version: 1.0.0
-description: "Saksee Sakthai Cycle Hope"
-category: sakthai-cycle-hope
-
+description: Saksee Sakthai Cycle Hope
+...
 ---
+
 # SakThai Cycle — Hope
 
 Turn the Dream vision into a plan.

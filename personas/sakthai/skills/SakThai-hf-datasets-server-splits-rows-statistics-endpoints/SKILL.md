@@ -1,22 +1,8 @@
 ---
 name: SakThai-hf-datasets-server-splits-rows-statistics-endpoints
-author: SakThai
-license: MIT
-description: >-
-  Deep-dive into the remaining Datasets Server REST API endpoints beyond the
-  well-known filter/search/parquet APIs: /splits, /first-rows, /rows, /size,
-  /statistics, /is-valid, and /siblings.  Each endpoint is documented with the
-  exact request parameters, response schema, real API response examples, and
-  a practical use case for autonomous dataset exploration without loading
-  datasets locally.
-version: 1.0.0
-created: 2026-07-25
-category: mlops
-tags:
-  - datasets-server
-  - api
-  - datasets
-  - rest-api
+description: '>-   Deep-dive into the remaining Datasets Server REST API endpoints beyond the   well-known
+  filter/search/parquet APIs: /splits, /first-rows, /rows, /size,   /statistics, /is-valid,
+  and /siblings.  Each endpoint is documented with the   exact reques'
 ---
 
 # HF Datasets Server — Splits, Rows, Statistics Endpoints (Deep Dive)

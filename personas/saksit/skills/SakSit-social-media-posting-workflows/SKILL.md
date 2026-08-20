@@ -1,18 +1,7 @@
 ---
 name: SakSit-social-media-posting-workflows
 description: Post to Instagram, LinkedIn, Facebook via Composio.
-category: social-media
-author: SakSit Agent (beer-sakthai)
-tags:
-- Instagram
-- LinkedIn
-- Facebook
-- social media
-- Composio
-- posting
-- file-upload
-created: 2026-07-05
-updated: 2026-07-23
+...
 ---
 
 # Social-Media Posting Workflows 2026

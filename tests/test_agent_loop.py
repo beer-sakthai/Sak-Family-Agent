@@ -290,7 +290,7 @@ def test_skills_are_injected_into_system_prompt(
     )
     import sakthai.skills as skills_mod
 
-    monkeypatch.setattr(skills_mod, "default_skill_roots", lambda: (tmp_path,))
+    monkeypatch.setattr(skills_mod, "default_skill_roots", lambda persona=None: (tmp_path,))
 
     captured: dict[str, str] = {}
 
@@ -1857,7 +1857,7 @@ def test_parse_slash_command_finds_command_file(
     cmd_dir = tmp_path / "my-plugin" / "commands"
     cmd_dir.mkdir(parents=True)
     (cmd_dir / "my-cmd.md").write_text("Do something with $ARGUMENTS", encoding="utf-8")
-    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda persona=None: [tmp_path])
 
     result = _parse_slash_command("/my-plugin:my-cmd some args")
     assert result is not None
@@ -1877,7 +1877,7 @@ def test_parse_slash_command_strips_yaml_frontmatter(
     (cmd_dir / "my-cmd.md").write_text(
         "---\ntitle: cmd\n---\nThe actual body content", encoding="utf-8"
     )
-    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda persona=None: [tmp_path])
 
     result = _parse_slash_command("/my-plugin:my-cmd")
     assert result is not None
@@ -1891,7 +1891,7 @@ def test_parse_slash_command_returns_none_for_missing_file(
 ) -> None:
     import sakthai.agent.loop as loop_mod
 
-    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda persona=None: [tmp_path])
     result = _parse_slash_command("/no-plugin:no-cmd")
     assert result is None
 
@@ -1905,7 +1905,7 @@ def test_parse_slash_command_finds_commands_dir_variant(
     cmd_dir = tmp_path / "commands"
     cmd_dir.mkdir(parents=True)
     (cmd_dir / "my-cmd.md").write_text("Do $ARGUMENTS", encoding="utf-8")
-    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda persona=None: [tmp_path])
 
     result = _parse_slash_command("/any-plugin:my-cmd extra-args")
     assert result is not None
@@ -1924,7 +1924,7 @@ def test_parse_slash_command_found_in_extension_plugin_subdir(
     cmd_dir = child / "my-plugin" / "commands"
     cmd_dir.mkdir(parents=True)
     (cmd_dir / "my-cmd.md").write_text("Extension plugin-subdir body", encoding="utf-8")
-    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda persona=None: [tmp_path])
 
     result = _parse_slash_command("/my-plugin:my-cmd")
     assert result is not None
@@ -1942,7 +1942,7 @@ def test_parse_slash_command_found_in_extension_commands_subdir(
     cmd_dir = child / "commands"
     cmd_dir.mkdir(parents=True)
     (cmd_dir / "my-cmd.md").write_text("Extension commands-subdir body", encoding="utf-8")
-    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda persona=None: [tmp_path])
 
     result = _parse_slash_command("/any-plugin:my-cmd")
     assert result is not None
@@ -1959,7 +1959,7 @@ def test_parse_slash_command_returns_none_on_read_error(
     cmd_dir.mkdir(parents=True)
     cmd_file = cmd_dir / "mycmd.md"
     cmd_file.write_text("Body", encoding="utf-8")
-    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda persona=None: [tmp_path])
 
     with patch("pathlib.Path.read_text", side_effect=OSError("permission denied")):
         result = _parse_slash_command("/myplugin:mycmd")
@@ -2098,13 +2098,13 @@ def test_run_agent_skills_and_command_system_are_merged(
         "---\nname: demo-skill\ndescription: d\n---\n\nSKILL BODY HERE.\n",
         encoding="utf-8",
     )
-    monkeypatch.setattr(skills_mod, "default_skill_roots", lambda: (tmp_path,))
+    monkeypatch.setattr(skills_mod, "default_skill_roots", lambda persona=None: (tmp_path,))
 
     # Slash-command file
     cmd_dir = tmp_path / "myplugin" / "commands"
     cmd_dir.mkdir(parents=True)
     (cmd_dir / "mycmd.md").write_text("COMMAND BODY HERE.", encoding="utf-8")
-    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda persona=None: [tmp_path])
 
     captured: dict[str, str] = {}
 
@@ -2145,6 +2145,60 @@ def test_history_seeds_prior_messages(store: MemoryStore) -> None:
     assert sent[0] == prior[0]
     assert sent[1] == prior[1]
     assert sent[2] == {"role": "user", "content": "follow up"}
+
+
+def test_history_is_truncated_by_default_context_filter(store: MemoryStore) -> None:
+    # Long-running chat sessions feed AgentResult.messages back in as `history`
+    # each turn; the default context filter should keep old string turns from
+    # growing the prompt unboundedly, while leaving the most recent turn intact.
+    client = _CapturingClient([_Resp("end_turn", [_Block(type="text", text="ok")])])
+    long_content = "a" * 1000
+    prior = [
+        {"role": "user", "content": long_content},
+        {"role": "assistant", "content": long_content},
+        {"role": "user", "content": "recent question"},
+        {"role": "assistant", "content": "recent answer"},
+    ]
+    run_agent(
+        "follow up",
+        client=client,
+        store=store,
+        provider="anthropic",
+        history=prior,
+    )
+    sent = client.received_messages[0]
+    assert len(sent[0]["content"]) < len(long_content)
+    assert sent[0]["content"].endswith("... [summarized]")
+    # Last two prior turns and the new task are untouched.
+    assert sent[2] == prior[2]
+    assert sent[3] == prior[3]
+    assert sent[4] == {"role": "user", "content": "follow up"}
+
+
+def test_history_context_filter_is_overridable(store: MemoryStore) -> None:
+    client = _CapturingClient([_Resp("end_turn", [_Block(type="text", text="ok")])])
+    long_content = "a" * 1000
+    prior = [
+        {"role": "user", "content": long_content},
+        {"role": "assistant", "content": long_content},
+        {"role": "user", "content": "recent question"},
+        {"role": "assistant", "content": "recent answer"},
+    ]
+    identity_filter = MagicMock()
+    identity_filter.filter.side_effect = lambda messages: list(messages)
+
+    run_agent(
+        "follow up",
+        client=client,
+        store=store,
+        provider="anthropic",
+        history=prior,
+        context_filter=identity_filter,
+    )
+
+    identity_filter.filter.assert_called_once_with(prior)
+    sent = client.received_messages[0]
+    assert sent[0]["content"] == long_content
 
 
 def test_agent_result_messages_include_final_assistant_turn(store: MemoryStore) -> None:
@@ -2240,3 +2294,31 @@ class TestUntrustedDataWrapping:
         assert "⚠️ BEGIN UNTRUSTED DATA" in block
         assert "⚠️ END UNTRUSTED DATA" in block
         assert "test fact from untrusted source" in block
+
+
+def test_execute_tool_logs_warning_on_exception(caplog, tmp_path) -> None:
+    """_execute_tool logs a warning with exc_info when tool execution raises an exception."""
+    import logging
+
+    from sakthai.agent.loop import Tool, _execute_tool
+    from sakthai.memory.store import MemoryStore
+
+    def failing_handler(args, store):
+        raise ValueError("Simulated tool crash")
+
+    tool = Tool(
+        name="failing_tool",
+        description="A tool that fails",
+        input_schema={"type": "object", "properties": {}},
+        handler=failing_handler,
+    )
+
+    with MemoryStore(tmp_path / "test.db") as store, caplog.at_level(logging.WARNING):
+        out, is_error = _execute_tool(tool, {}, store)
+
+    assert is_error is True
+    assert "ValueError: Simulated tool crash" in out
+    assert any(
+        "Tool 'failing_tool' execution failed with ValueError" in record.message
+        for record in caplog.records
+    )

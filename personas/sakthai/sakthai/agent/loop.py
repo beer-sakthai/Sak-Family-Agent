@@ -23,9 +23,11 @@ from typing import Any
 
 from ..auth import get_credential_source
 from ..config import redact_secrets, sessions_dir
+from ..healing.supervisor import RecoveryResult, SelfHealingSupervisor
 from ..memory.store import MemoryStore
 from ..skills import default_skill_roots, find_skill, render_skills_prompt_block
 from . import providers
+from .context_filter import DEFAULT_CONTEXT_FILTER, ContextFilter
 from .eval import EvalRecord, record_eval, task_preview
 from .guardrails import DEFAULT_POLICY, GuardrailAction, GuardrailPolicy
 from .providers import base as _providers_base
@@ -82,10 +84,47 @@ class AgentResult:
     messages: list[dict[str, Any]] = field(default_factory=list)
 
 
+@dataclass
+class _HealState:
+    """Per-run healing context: the supervisor plus the pre-run memory checkpoint."""
+
+    supervisor: SelfHealingSupervisor
+    persona: str
+    checkpoint_id: str | None = None
+
+
+def _handle_healing_failure(
+    heal: _HealState,
+    store: MemoryStore,
+    *,
+    action: str,
+    payload: dict[str, Any],
+    error: Exception,
+) -> RecoveryResult | None:
+    """Route a runtime failure through the supervisor.
+
+    Returns ``None`` if the supervisor itself raised, so the caller can fall back
+    to the pre-healing behavior (re-raise the original error) — fail-safe per the
+    self-healing PRD §7: the recovery subsystem must never hard-crash the runtime.
+    """
+    try:
+        return heal.supervisor.handle_execution_failure(
+            persona=heal.persona,
+            action=action,
+            payload=payload,
+            error=error,
+            store=store,
+            checkpoint_id=heal.checkpoint_id,
+        )
+    except Exception as exc:  # noqa: BLE001 — healing must not crash the run
+        logger.error("Self-healing supervisor raised handling %r: %s", action, exc)
+        return None
+
+
 # -- prompt + tool execution --------------------------------------------
 
 
-def _parse_slash_command(task: str) -> tuple[str, str] | None:
+def _parse_slash_command(task: str, persona: str | None = None) -> tuple[str, str] | None:
     """If task starts with /plugin:command, resolve it and return (injected_system_prompt, active_task)."""
     import re
 
@@ -99,7 +138,7 @@ def _parse_slash_command(task: str) -> tuple[str, str] | None:
     arguments = match.group(3) or ""
 
     cmd_file = None
-    for root in default_skill_roots():
+    for root in default_skill_roots(persona):
         p = root / plugin_name / "commands" / f"{command_name}.md"
         if p.is_file():
             cmd_file = p
@@ -142,16 +181,26 @@ def _parse_slash_command(task: str) -> tuple[str, str] | None:
         return None
 
 
-def _build_skills_block(skills: Sequence[str], command_system: str, caveman: str | None) -> str:
+def _build_skills_block(
+    skills: Sequence[str],
+    command_system: str,
+    caveman: str | None,
+    persona: str | None = None,
+) -> str:
     """Construct the full skills block for the system prompt."""
     parts = []
     if skills:
-        parts.append(render_skills_prompt_block(skills))
+        # Only override roots when a persona is given, so the no-persona path
+        # keeps resolving through render_skills_prompt_block's own internal
+        # default_skill_roots() call unchanged (same object callers already
+        # patch in tests).
+        roots = default_skill_roots(persona) if persona else None
+        parts.append(render_skills_prompt_block(skills, roots=roots))
     if command_system:
         parts.append(command_system)
 
     if caveman:
-        caveman_skill = find_skill("caveman", *default_skill_roots())
+        caveman_skill = find_skill("caveman", *default_skill_roots(persona))
         if caveman_skill:
             caveman_instructions = (
                 f"{caveman_skill.body}\n\nACTIVE CAVEMAN LEVEL: {caveman}\n"
@@ -172,6 +221,7 @@ def _build_system(
     stateless: bool,
     caveman: str | None,
     system_prompt_prefix: str = "",
+    persona: str | None = None,
 ) -> str:
     """Assemble the complete system prompt from all its parts."""
     parts = []
@@ -184,7 +234,7 @@ def _build_system(
         )
     if not stateless and (memory_block := store.render_prompt_block()):
         parts.append(memory_block)
-    skills_block = _build_skills_block(skills, command_system, caveman)
+    skills_block = _build_skills_block(skills, command_system, caveman, persona)
     if skills_block:
         parts.append(skills_block)
     return "\n\n".join(p for p in parts if p)
@@ -202,21 +252,37 @@ def _resolve_model_name(model: str, provider: str) -> str:
     return model
 
 
-def _execute_tool(tool: Tool, args: dict[str, Any], store: MemoryStore) -> tuple[str, bool]:
+def _execute_tool(
+    tool: Tool, args: dict[str, Any], store: MemoryStore, heal: _HealState | None = None
+) -> tuple[str, bool]:
     """Run a tool, returning (output, is_error). Errors are reported, not raised.
 
     All tool output is passed through ``redact_secrets`` as a global fail-safe.
+    When ``heal`` is set, a tool-handler exception is also routed through the
+    self-healing supervisor (DLQ + circuit breaker) before being surfaced.
     """
     try:
         output = tool.handler(args, store)
         return redact_secrets(output), False
     except Exception as exc:  # noqa: BLE001 — surfaced back to the model
-        logger.debug("Tool %r raised %s: %s", tool.name, type(exc).__name__, exc)
+        if heal is not None:
+            _handle_healing_failure(heal, store, action=tool.name, payload=args, error=exc)
+        logger.warning(
+            "Tool %r execution failed with %s: %s",
+            tool.name,
+            type(exc).__name__,
+            exc,
+            exc_info=True,
+        )
         return redact_secrets(f"{type(exc).__name__}: {exc}"), True
 
 
 def _execute_tool_with_guardrails(
-    tool: Tool, args: dict[str, Any], store: MemoryStore, policy: GuardrailPolicy
+    tool: Tool,
+    args: dict[str, Any],
+    store: MemoryStore,
+    policy: GuardrailPolicy,
+    heal: _HealState | None = None,
 ) -> tuple[str, bool]:
     """Check guardrails, then run a tool.
 
@@ -234,7 +300,7 @@ def _execute_tool_with_guardrails(
     # Use the arguments as potentially modified by the guardrail policy.
     final_args = pre_check_result.modified_args or args
 
-    output, is_error = _execute_tool(tool, final_args, store)
+    output, is_error = _execute_tool(tool, final_args, store, heal)
 
     post_check_result = policy.check_post_execution(tool, final_args, output, is_error, store)
     if post_check_result.action == GuardrailAction.DENY:
@@ -281,6 +347,7 @@ def _process_tool_uses(
     notify: Callable[[str, dict[str, Any]], None],
     tool_calls: list[dict[str, Any]],
     policy: GuardrailPolicy,
+    heal: _HealState | None = None,
 ) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for use in tool_uses:
@@ -297,7 +364,7 @@ def _process_tool_uses(
             notify("tool_error", {"name": use.name, "reason": "unknown"})
             continue
         args = dict(use.input or {})
-        output, is_error = _execute_tool_with_guardrails(tool, args, store, policy)
+        output, is_error = _execute_tool_with_guardrails(tool, args, store, policy, heal)
         tool_calls.append({"name": use.name, "input": args, "is_error": is_error})
         notify(
             "tool_call",
@@ -329,6 +396,7 @@ def _dispatch_tool_calls(
     notify: Callable[[str, dict[str, Any]], None],
     tool_calls: list[dict[str, Any]],
     policy: GuardrailPolicy,
+    heal: _HealState | None = None,
 ) -> None:
     """Process tool_use blocks, execute tools, and append results to messages."""
     tool_uses = [b for b in response.content if getattr(b, "type", "") == "tool_use"]
@@ -340,7 +408,7 @@ def _dispatch_tool_calls(
         return
 
     messages.append({"role": "assistant", "content": response.content})
-    results = _process_tool_uses(tool_uses, registry, store, notify, tool_calls, policy)
+    results = _process_tool_uses(tool_uses, registry, store, notify, tool_calls, policy, heal)
     messages.append({"role": "user", "content": results})
 
 
@@ -399,6 +467,9 @@ def run_agent(
     system_prompt_prefix: str = "",
     history: Sequence[dict[str, Any]] | None = None,
     guardrail_policy: GuardrailPolicy | None = None,
+    context_filter: ContextFilter | None = None,
+    persona: str | None = None,
+    supervisor: SelfHealingSupervisor | None = None,
 ) -> AgentResult:
     """Run one task to completion against Claude, Gemini, or an OpenAI endpoint.
 
@@ -406,16 +477,22 @@ def run_agent(
     ``max_iterations``. ``skills`` names skills whose instructions are injected
     into the system prompt. ``on_token`` (when set) receives assistant text
     deltas as they stream from providers that support it.
-    ``client`` and ``store`` are injectable for testing. ``history`` seeds the
+    ``client`` and ``store`` are injectable for testing. ``persona``, when
+    given, resolves ``skills``/caveman/slash-command lookups against that
+    persona's own skill overlay instead of SakThai's. ``history`` seeds the
     conversation with a prior turn's messages (e.g. from a previous
     ``AgentResult.messages``) so multi-turn callers don't lose context.
+    ``context_filter`` (defaults to :data:`DEFAULT_CONTEXT_FILTER`) is applied
+    to ``history`` before the new task is appended, keeping long-running chat
+    sessions (e.g. ``sakthai chat``, which feeds ``result.messages`` back in
+    as ``history`` each turn) from growing the prompt unboundedly.
     """
     if not task.strip():
         raise AgentError("Task must be a non-empty string.")
     if max_seconds is not None and max_seconds <= 0:
         raise AgentError("max_seconds must be positive when set.")
 
-    parsed = _parse_slash_command(task)
+    parsed = _parse_slash_command(task, persona)
     command_system = ""
     if parsed:
         command_system, task = parsed
@@ -442,6 +519,7 @@ def run_agent(
     tool_calls: list[dict[str, Any]] = []
     policy = guardrail_policy or DEFAULT_POLICY
     messages: list[dict[str, Any]] = list(history) if history else []
+    messages = (context_filter or DEFAULT_CONTEXT_FILTER).filter(messages)
     messages.append({"role": "user", "content": task})
     deadline = time.monotonic() + max_seconds if max_seconds is not None else None
 
@@ -474,6 +552,18 @@ def run_agent(
     old_active = os.environ.get("SAKTHAI_AGENT_ACTIVE")
     os.environ["SAKTHAI_AGENT_ACTIVE"] = "1"
     try:
+        heal: _HealState | None = None
+        if supervisor is not None:
+            persona_key = persona or "sakthai"
+            try:
+                checkpoint_id = supervisor.snapshot_mgr.create_checkpoint(store, label="run_agent")
+            except Exception as exc:  # noqa: BLE001 — fail-safe
+                logger.warning("Healing checkpoint failed (continuing without): %s", exc)
+                checkpoint_id = None
+            heal = _HealState(
+                supervisor=supervisor, persona=persona_key, checkpoint_id=checkpoint_id
+            )
+
         for iteration in range(1, max_iterations + 1):
             if deadline is not None and time.monotonic() >= deadline:
                 raise AgentError(f"Agent time budget exhausted (max_seconds={max_seconds}).")
@@ -487,20 +577,76 @@ def run_agent(
                 stateless=stateless,
                 caveman=caveman,
                 system_prompt_prefix=system_prompt_prefix,
+                persona=persona,
             )
-            response = _agent_turn(
-                provider,
-                client,
-                model,
-                system,
-                tools,
-                messages,
-                iteration,
-                on_token,
-                max_tokens,
-                tool_schemas,
-                usage_tracker,
-            )
+            try:
+                response = _agent_turn(
+                    provider,
+                    client,
+                    model,
+                    system,
+                    tools,
+                    messages,
+                    iteration,
+                    on_token,
+                    max_tokens,
+                    tool_schemas,
+                    usage_tracker,
+                )
+            except Exception as exc:
+                if heal is None:
+                    raise
+                recovery = _handle_healing_failure(
+                    heal,
+                    store,
+                    action="provider_turn",
+                    payload={"iteration": iteration},
+                    error=exc,
+                )
+                if recovery is None:
+                    raise  # supervisor broke; preserve the original runtime error
+                notify(
+                    "heal",
+                    {
+                        "action": recovery.action_taken,
+                        "severity": recovery.severity.value,
+                        "dlq_id": recovery.dlq_id,
+                    },
+                )
+                # Transient and the breaker still admits calls: let the model retry.
+                # The breaker consultation is a supervisor call — guard it per the
+                # §7 fail-safe invariant so a supervisor fault cannot mask the
+                # original provider error.
+                try:
+                    can_retry = heal.supervisor.get_circuit_breaker(heal.persona).allow_execution()
+                except Exception:  # noqa: BLE001 - healing must not crash the run
+                    logger.error(
+                        "Circuit breaker consultation failed; defaulting to no-retry: %s",
+                        exc,
+                    )
+                    can_retry = False
+                if recovery.severity.value == "transient" and can_retry:
+                    messages.append(
+                        {
+                            "role": "assistant",
+                            "content": f"[recovery] provider call failed ({recovery.severity.value}); retrying.",
+                        }
+                    )
+                    continue
+                final_text = (
+                    f"[recovery] agent run aborted after self-healing: {recovery.action_taken}"
+                )
+                result = AgentResult(
+                    text=final_text,
+                    iterations=iteration,
+                    stop_reason="healed",
+                    tool_calls=tool_calls,
+                    usage=usage_tracker.to_dict(),
+                    messages=[*messages],
+                )
+                _save_session_log(task, model, messages, result)
+                _record_run_eval(iteration, "healed", had_error=True)
+                return result
 
             stop_reason = getattr(response, "stop_reason", "") or ""
             notify("iteration", {"n": iteration, "stop_reason": stop_reason})
@@ -546,7 +692,9 @@ def run_agent(
                 _record_run_eval(iteration, stop_reason, had_error=False)
                 return result
 
-            _dispatch_tool_calls(response, messages, registry, store, notify, tool_calls, policy)
+            _dispatch_tool_calls(
+                response, messages, registry, store, notify, tool_calls, policy, heal
+            )
 
         _record_run_eval(max_iterations, "max_iterations", had_error=True)
         raise AgentError(

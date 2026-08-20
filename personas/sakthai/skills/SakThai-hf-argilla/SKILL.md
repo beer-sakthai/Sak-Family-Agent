@@ -1,10 +1,8 @@
 ---
 name: SakThai-hf-argilla
-author: SakThai
-license: MIT
-description: Argilla — open-source data annotation and collaboration platform for building high-quality AI datasets. Deep integration with Hugging Face Hub for deployment, authentication, and dataset import/export.
-category: mlops
-version: 1.0.0
+description: "Argilla \u2014 open-source data annotation and collaboration platform for building\
+  \ high-quality AI datasets. Deep integration with Hugging Face Hub for deployment,\
+  \ authentication, and dataset import/export."
 ---
 
 # Argilla — Data Annotation & Curation for AI Datasets

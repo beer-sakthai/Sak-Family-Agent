@@ -1,12 +1,7 @@
 ---
 name: SakSit-css-content-visibility
 description: Use CSS content-visibility to skip off-screen rendering and improve page performance.
-version: 1.0.0
-author: SakSit
-platforms: ["linux", "windows", "macos"]
-metadata:
-  hermes:
-    tags: ["css", "performance", "web", "rendering"]
+...
 ---
 
 # CSS Content-Visibility

@@ -1,10 +1,7 @@
 ---
 name: SakSit-personal-narrative-cold-email
 description: Cold email using personal narrative as hook.
-category: social-media
-tags:
-- Email
-- Outreach
+...
 ---
 
 # Personal Narrative Cold Email Outreach

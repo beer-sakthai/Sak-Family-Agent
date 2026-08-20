@@ -1,26 +1,9 @@
 ---
 name: SakThai-hf-openenv-agentic-execution
-author: SakThai
-license: MIT
-description: >-
-  Comprehensive deep-dive into Hugging Face OpenEnv (v0.4.1) — the unified
-  framework for building, deploying, and interacting with isolated execution
-  environments for agentic reinforcement learning. Covers the Gymnasium-style
-  API (step/reset/state), container-first design, MCP tool integration,
-  Rubric reward system, deployment to Docker and HF Spaces, RL training
-  integration with TRL/Unsloth, and the full environment lifecycle.
-version: 1.0.0
-created: 2026-07-25
-category: mlops
-tags:
-  - openenv
-  - agentic
-  - rl
-  - environments
-  - mcp
-  - training
-  - gymnasium
-  - containers
+description: ">-   Comprehensive deep-dive into Hugging Face OpenEnv (v0.4.1) \u2014 the unified\
+  \   framework for building, deploying, and interacting with isolated execution \
+  \  environments for agentic reinforcement learning. Covers the Gymnasium-style \
+  \  API (step/reset"
 ---
 
 # Hugging Face OpenEnv — Agentic Execution Environments (Deep Dive)

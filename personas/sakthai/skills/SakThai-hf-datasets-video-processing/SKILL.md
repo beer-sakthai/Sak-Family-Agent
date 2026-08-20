@@ -1,16 +1,7 @@
 ---
 name: SakThai-hf-datasets-video-processing
-author: SakThai
-license: MIT
-title: HF Datasets Video Processing
-category: mlops
-tags: [datasets, video, torchcodec, webdataset, lance]
-related_skills:
-  - huggingface-hub
-  - hf-datasets-library
-  - hf-datasets-image-processing
-description: Covers the datasets.Video feature — loading, decoding, transforming, encoding, and streaming video data through the Hugging Face datasets library.
-version: 1.0.0
+description: "Covers the datasets.Video feature \u2014 loading, decoding, transforming, encoding,\
+  \ and streaming video data through the Hugging Face datasets library."
 ---
 
 ## Description

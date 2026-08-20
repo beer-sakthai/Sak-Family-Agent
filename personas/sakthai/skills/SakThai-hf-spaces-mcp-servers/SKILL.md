@@ -1,16 +1,8 @@
 ---
 name: SakThai-hf-spaces-mcp-servers
-author: SakThai
-license: MIT
-description: Complete reference for exposing Hugging Face Spaces as MCP (Model Context Protocol) servers — enabling any Gradio Space to be called as a tool from MCP clients like Claude Desktop, Cursor, Cline, VS Code, and other MCP-compatible agents.
-version: 1.0.0
-tags: [huggingface, spaces, mcp, gradio, agents, tools, llm]
-category: mlops
-trigger: >
-  When asked about exposing Spaces as MCP servers, building Gradio apps with MCP support,
-  adding Spaces as tools to AI clients, converting existing Spaces to MCP servers,
-  using private/ZeroGPU Spaces as MCP endpoints, troubleshooting MCP connections.
-  Also: when deploying a Space intended to be used as an agent tool.
+description: "Complete reference for exposing Hugging Face Spaces as MCP (Model Context Protocol)\
+  \ servers \u2014 enabling any Gradio Space to be called as a tool from MCP clients\
+  \ like Claude Desktop, Cursor, Cline, VS Code, and other MCP-compatible agents."
 ---
 
 # HF Spaces as MCP Servers

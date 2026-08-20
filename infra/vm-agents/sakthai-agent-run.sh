@@ -12,8 +12,11 @@ REPO="$HOME/Sak-Family-Agent"
 get_secret() {
 	local secret_name="$1"
 	local kv_token
-	kv_token=$(curl -s -H "Metadata:true" "http://169.254.169.254/metadata/identity/oauth2/token?resource=https://vault.azure.net&api-version=2018-02-01" | python3 -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
-	curl -s -H "Authorization: Bearer $kv_token" "https://$VAULT.vault.azure.net/secrets/$secret_name?api-version=7.4" | python3 -c "import json,sys; print(json.load(sys.stdin)['value'])"
+	local imds_resp secret_resp
+	imds_resp=$(curl -s -H "Metadata:true" "http://169.254.169.254/metadata/identity/oauth2/token?resource=https://vault.azure.net&api-version=2018-02-01")
+	kv_token=$(printf '%s' "$imds_resp" | python3 -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
+	secret_resp=$(curl -s -H "Authorization: Bearer $kv_token" "https://$VAULT.vault.azure.net/secrets/$secret_name?api-version=7.4")
+	printf '%s' "$secret_resp" | python3 -c "import json,sys; print(json.load(sys.stdin)['value'])"
 }
 
 OPENAI_API_KEY="$(get_secret sakthai-openai-key)"
@@ -27,6 +30,7 @@ export SAKTHAI_WITH_SKILLS=
 export SAKTHAI_FAST=1
 export SAKTHAI_HOME="$HOME/.sakthai/$AGENT"
 export SAKTHAI_SYSTEM_PROMPT_FILE="$REPO/personas/$AGENT/SOUL.md"
+export SAKTHAI_PERSONA="$AGENT"
 
 case "$AGENT" in
 sakking) export SAKTHAI_MODEL=model-router ;;

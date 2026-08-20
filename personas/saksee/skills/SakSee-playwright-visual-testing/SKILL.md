@@ -1,8 +1,8 @@
 ---
 name: SakSee-playwright-visual-testing
-category: testing
-description: Cover image-snapshot regression and responsive viewport checks together; avoids splitting the same visual workflow across skills.
-version: 1.0.0
+description: Cover image-snapshot regression and responsive viewport checks together;   avoids
+  splitting the same visual workflow across skills.
+...
 ---
 
 # Playwright Visual Testing

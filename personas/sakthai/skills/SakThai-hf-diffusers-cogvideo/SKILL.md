@@ -1,13 +1,7 @@
 ---
 name: SakThai-hf-diffusers-cogvideo
-author: SakThai
-license: MIT
-title: HF Diffusers — CogVideoX
-category: mlops
-tags: [diffusers, cogvideo, video-generation, T2V, I2V, V2V]
-description: Expertise in CogVideoX — large diffusion transformer for text-to-video, image-to-video, and video-to-video generation, integrated as a first-class Diffusers pipeline.
-version: 1.0.0
-created: 2026-07-24
+description: "Expertise in CogVideoX \u2014 large diffusion transformer for text-to-video, image-to-video,\
+  \ and video-to-video generation, integrated as a first-class Diffusers pipeline."
 ---
 
 ## Description

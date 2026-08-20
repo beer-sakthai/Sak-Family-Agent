@@ -1,16 +1,7 @@
 ---
 name: SakThai-hf-gradio-6-native-plot-components
-author: SakThai
-license: MIT
-description: Comprehensive reference for Gradio 6 native plot components — gr.LinePlot, gr.ScatterPlot, gr.BarPlot, and gr.Plot with declarative DataFrame-backed charting.
-version: 1.0.0
-created: 2026-07-25
-category: mlops
-tags:
-  - gradio
-  - plots
-  - visualization
-  - components
+description: "Comprehensive reference for Gradio 6 native plot components \u2014 gr.LinePlot, gr.ScatterPlot,\
+  \ gr.BarPlot, and gr.Plot with declarative DataFrame-backed charting."
 ---
 
 # Gradio 6 Native Plot Components

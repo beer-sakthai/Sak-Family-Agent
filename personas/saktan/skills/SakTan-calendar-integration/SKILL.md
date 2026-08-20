@@ -1,14 +1,7 @@
 ---
 name: SakTan-calendar-integration
-category: productivity
-description: Check and reason about Beer's Google Calendar for daily/weekly planning — today's events, conflicts, and free time.
-version: 1.0.0
-author: SakTan
-platforms: [linux, macos, windows]
-metadata:
-  sakthai:
-    tags: [calendar, google-calendar, scheduling, operations]
-    related_skills: [SakTan-google-workspace, SakTan-daily-briefing, SakTan-habit-tracking]
+description: "Check and reason about Beers Google Calendar for daily/weekly planning \u2014 todays\
+  \ events, conflicts, and free time."
 ---
 
 # Calendar Integration

@@ -1,13 +1,9 @@
 ---
 name: SakThai-hf-diffusers-flux
-author: SakThai
-license: MIT
-description: "Comprehensive reference for Hugging Face Diffusers integration with Black Forest Labs Flux models (FLUX.1-dev, FLUX.1-schnell). Covers FluxPipeline, FluxFillPipeline, FluxControlPipeline, IP-Adapter, LoRA stacking, optimization techniques (group offloading, FP16, quantization), and single-file FP8 loading for sub-16GB VRAM inference."
-version: 1.0.0
-metadata:
-  hermes:
-    tags: [huggingface, diffusers, flux, image-generation, diffusion, lora, quantization]
-    category: mlops
+description: Comprehensive reference for Hugging Face Diffusers integration with Black Forest Labs
+  Flux models (FLUX.1-dev, FLUX.1-schnell). Covers FluxPipeline, FluxFillPipeline,
+  FluxControlPipeline, IP-Adapter, LoRA stacking, optimization techniques (group offl
+...
 ---
 
 # SakThai-hf-diffusers-flux

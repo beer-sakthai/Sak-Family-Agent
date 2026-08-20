@@ -1,11 +1,7 @@
 ---
 name: SakThai-hf-hub-models-widgets
-version: 1.0.0
-author: SakThai
-license: MIT
-description: >-
-  HF Hub model page inference widgets — configuration, example inputs/outputs,
-  provider-backed live inference, playground testing, and widget metadata YAML.
+description: ">-   HF Hub model page inference widgets \u2014 configuration, example inputs/outputs,\
+  \   provider-backed live inference, playground testing, and widget metadata YAML."
 ---
 
 # Hugging Face Hub Inference Widgets

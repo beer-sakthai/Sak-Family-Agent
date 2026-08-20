@@ -1,14 +1,8 @@
 ---
 name: SakTan-habit-tracking
-category: productivity
-description: Track recurring habits and routines over time in memory, and report consistency rather than just today's status.
-version: 1.0.0
-author: SakTan
-platforms: [linux, macos, windows]
-metadata:
-  sakthai:
-    tags: [habits, routines, consistency, memory, operations]
-    related_skills: [SakTan-daily-briefing, SakTan-close-the-day, SakTan-weekly-review]
+description: Track recurring habits and routines over time in memory, and report consistency rather
+  than just todays status.
+...
 ---
 
 # Habit Tracking

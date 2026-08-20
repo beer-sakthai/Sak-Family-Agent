@@ -1,10 +1,7 @@
 ---
 name: SakThai-hf-cookbook
-author: SakThai
-license: MIT
-description: "Practical AI notebooks from the Open-Source AI Cookbook."
-version: 0.2.0
-tags: [Cookbook, Notebooks, Recipes, HuggingFace, Community]
+description: Practical AI notebooks from the Open-Source AI Cookbook.
+...
 ---
 
 # Open-Source AI Cookbook

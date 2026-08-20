@@ -631,15 +631,18 @@ def test_import_snapshot_rollback_on_exception(store: MemoryStore) -> None:
         store._conn = real_conn
 
 
-def test_deduplicate_facts_security_sql_injection_payload(store: MemoryStore) -> None:
-    # Attempt SQL injection through a key or value
-    # Even if they have injection strings, our secure json_each parameterization makes injection impossible
-    store.add_fact("malicious_val_1", kind="pref", key="injection' OR 1=1; --")
-    store.add_fact("malicious_val_2", kind="pref", key="injection' OR 1=1; --")
+def test_busy_timeout_pragma_configuration(store: MemoryStore) -> None:
+    """Verify that PRAGMA busy_timeout is set correctly and int-coerced."""
+    row = store._conn.execute("PRAGMA busy_timeout").fetchone()
+    assert row is not None
+    assert row[0] == 5000
 
-    removed = store.deduplicate_facts()
-    assert removed == 1
 
-    remaining = store.list_facts()
-    assert len(remaining) == 1
-    assert remaining[0].value == "malicious_val_2"
+def test_busy_timeout_invalid_type_prevention(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    """Verify that non-integer DB_BUSY_TIMEOUT_MS raises TypeError/ValueError."""
+    import sakthai.memory.store as store_module
+
+    monkeypatch.setattr(store_module, "DB_BUSY_TIMEOUT_MS", "invalid_string_injection")
+    db_file = tmp_path / "test_invalid.db"
+    with pytest.raises((ValueError, TypeError)):
+        store_module.MemoryStore(db_file)

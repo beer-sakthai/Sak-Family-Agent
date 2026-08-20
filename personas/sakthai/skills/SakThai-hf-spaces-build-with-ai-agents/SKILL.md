@@ -1,10 +1,8 @@
 ---
 name: SakThai-hf-spaces-build-with-ai-agents
-version: 1.0.0
-author: SakThai
-license: MIT
-description: Build and deploy Hugging Face Spaces using AI coding agents — generate commands from the new-space page and let agents iterate on Spaces for models, papers, or local folders
-category: mlops
+description: "Build and deploy Hugging Face Spaces using AI coding agents \u2014 generate commands\
+  \ from the new-space page and let agents iterate on Spaces for models, papers, or\
+  \ local folders"
 ---
 
 # HF Spaces — Build with AI Agents

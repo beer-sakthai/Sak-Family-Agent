@@ -1,19 +1,7 @@
 ---
 name: SakTan-sakthai-cycle-growth
-category: cycle
-description: Fold the cycle's lessons back into memory and skills.
-version: 1.0.0
-platforms:
-  - linux
-  - macos
-  - windows
-metadata:
-  sakthai:
-    tags:
-      - cycle
-      - growth
-    related_skills:
-      - SakTan-cycle-dream
+description: Fold the cycles lessons back into memory and skills.
+...
 ---
 
 # sakthai-cycle-growth

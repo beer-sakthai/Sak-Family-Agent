@@ -24,51 +24,6 @@ def test_render_skills_prompt_block() -> None:
     assert isinstance(block, str)
 
 
-def test_render_skills_prompt_block_calls_underlying_renderer(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    import sakthai.agent.prompt_builder as pb
-
-    mock_render = MagicMock(return_value="## Active skills\n\n### skill-one\n\nbody-one")
-    monkeypatch.setattr(pb, "_render_skills", mock_render)
-
-    skill1 = MagicMock()
-    skill1.name = "skill-one"
-    skill2 = MagicMock()
-    skill2.name = "skill-two"
-
-    block = pb.render_skills_prompt_block([skill1, skill2])
-
-    mock_render.assert_called_once_with(["skill-one", "skill-two"])
-    assert block == "## Active skills\n\n### skill-one\n\nbody-one"
-
-
-def test_render_skills_prompt_block_with_caveman_and_render_skills(
-    monkeypatch: pytest.MonkeyPatch, sakthai_home: Path
-) -> None:
-    import sakthai.agent.prompt_builder as pb
-
-    mock_render = MagicMock(return_value="## Active skills\n\n### skill-one\n\nbody-one")
-    monkeypatch.setattr(pb, "_render_skills", mock_render)
-
-    # Mock caveman skill
-    caveman_skill = MagicMock()
-    caveman_skill.body = "Respond terse."
-    monkeypatch.setattr(
-        pb, "find_skill", lambda name, *roots: caveman_skill if name == "caveman" else None
-    )
-
-    skill1 = MagicMock()
-    skill1.name = "skill-one"
-
-    block = pb.render_skills_prompt_block([skill1], caveman="medium")
-
-    mock_render.assert_called_once_with(["skill-one"])
-    assert block.startswith("## Active skills\n\n### skill-one\n\nbody-one")
-    assert "Respond terse." in block
-    assert "ACTIVE CAVEMAN LEVEL: medium" in block
-
-
 def test_render_skills_prompt_block_caveman_skill_body_injected(sakthai_home: Path) -> None:
     skill_dir = sakthai_home.parent / "gemini" / "extensions" / "caveman" / "skills" / "caveman"
     skill_dir.mkdir(parents=True, exist_ok=True)

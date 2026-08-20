@@ -1,21 +1,8 @@
 ---
 name: SakSit-b2b-saas-linkedin-thought-leadership-2026
-title: "B2B SaaS LinkedIn Organic Thought Leadership Strategy 2026"
-description: >
-  A practical playbook for B2B SaaS companies to build executive thought leadership
-  on LinkedIn in the 360Brew algorithm era. Covers founder-led content, Depth Score
-  optimization, document carousel strategy, and measurable pipeline impact.
-version: "1.0.0"
-description: "Saksit B2B Saas Linkedin Thought Leadership 2026"
-category: social-media
-created: 2026-07-02
-author: SakSit Agent
-source: "https://github.com/beer-sakthai/saksit-agent"
-prerequisites:
-  - A personal LinkedIn profile (founder/executive) with 500+ connections
-  - LinkedIn Creator Mode enabled
-  - 30 minutes/day minimum content commitment
-
+description: '>   A practical playbook for B2B SaaS companies to build executive thought leadership   on
+  LinkedIn in the 360Brew algorithm era. Covers founder-led content, Depth Score   optimization,
+  document carousel strategy, and measurable pipeline impact.'
 ---
 
 # B2B SaaS LinkedIn Organic Thought Leadership Strategy 2026

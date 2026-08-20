@@ -1,27 +1,7 @@
 ---
 name: SakSit-milestone-content
-category: social-media
 description: Create multi-platform content from achievement data.
-version: 1.2.0
-author: SakSit
-license: MIT
-platforms:
-- linux
-metadata:
-  hermes:
-    tags:
-    - content-creation
-    - milestones
-    - stat-cards
-    - pillow
-    - multi-platform
-    - huggingface
-    - achievements
-    related_skills:
-    - SakSit-sak-instagram-content-kit
-    - SakSit-linkedin-content-publishing
-    - SakSit-social-media-posting-workflows
-    - SakSit-huggingface-hub
+...
 ---
 
 # SakSit Milestone Content

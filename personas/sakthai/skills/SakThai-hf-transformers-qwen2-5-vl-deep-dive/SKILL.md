@@ -1,11 +1,9 @@
 ---
 name: SakThai-hf-transformers-qwen2-5-vl-deep-dive
-description: >-
-  Complete reference on Qwen2.5-VL — Alibaba's flagship vision-language model
-  integrated in Hugging Face Transformers. Covers architecture, MRoPE, dynamic
-  resolution, video understanding, agentic capabilities, inference patterns,
-  quantization, and structured output generation.
-category: mlops
+description: ">-   Complete reference on Qwen2.5-VL \u2014 Alibabas flagship vision-language model\
+  \   integrated in Hugging Face Transformers. Covers architecture, MRoPE, dynamic\
+  \   resolution, video understanding, agentic capabilities, inference patterns, \
+  \  quantization"
 ---
 
 # Qwen2.5-VL Deep Dive

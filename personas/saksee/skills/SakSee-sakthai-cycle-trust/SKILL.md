@@ -1,10 +1,9 @@
 ---
 name: SakSee-sakthai-cycle-trust
-version: 1.0.0
-description: "Saksee Sakthai Cycle Trust"
-category: sakthai-cycle-trust
-
+description: Saksee Sakthai Cycle Trust
+...
 ---
+
 # SakThai Cycle — Trust
 
 Verify the shipped work is safe to rely on.

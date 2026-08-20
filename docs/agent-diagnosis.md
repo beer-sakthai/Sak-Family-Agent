@@ -31,7 +31,7 @@ The current state is:
 |---|---|---|
 | Live agent config tree | `infra/hermes-agents/` | Holds live profile configs, deploy tooling, and service definitions. |
 | Service launchers | `infra/hermes-agents/systemd/*.service` | Start each live bot/profile on the host. |
-| Default/profile configs | `infra/hermes-agents/default/`, `infra/hermes-agents/profiles/{saksee,sakthai,saksit,saktan,sakjules}/` | Store the live persona/config payloads loaded by deployment scripts. |
+| Default/profile configs | `infra/hermes-agents/default/`, `infra/hermes-agents/profiles/{saksee,sakking,saksit,saktan,sakjules}/` | Store the live persona/config payloads loaded by deployment scripts. |
 | Deployment helpers | `Makefile`, `scripts/export_agent_repo.py`, `scripts/diagnose_personas.py` | Connect the config tree to export and verification workflows. |
 
 ### Documentation surfaces
@@ -49,13 +49,14 @@ Use this as the minimum “can I run this agent by itself?” check.
 
 ### SakKing
 
-- Use the reserved `default` profile.
-- Confirm `infra/hermes-agents/default/SOUL.md` and `config.yaml` exist.
+- Confirm `personas/sakking/SOUL.md` and `personas/sakking/config/` exist.
+- Confirm `infra/hermes-agents/profiles/sakking/SOUL.md` and `config.yaml` exist.
 - Confirm shared memory access is available.
 
 ### SakThai
 
-- Confirm `personas/sakthai/SOUL.md` and `personas/sakthai/config/` exist.
+- Use the reserved `default` profile (SakThai is lead, per `CLAUDE.md`).
+- Confirm `infra/hermes-agents/default/SOUL.md` and `config.yaml` exist.
 - Confirm Hugging Face MCP access is configured.
 - Confirm shared memory access is available.
 
@@ -96,8 +97,8 @@ The family is structurally sound, but the highest-value cleanup areas are:
 
 ## Practical Read
 
-- SakKing: lead/orchestrator, reserved default profile.
-- SakThai: Hugging Face specialist.
+- SakKing: orchestrator.
+- SakThai: lead, Hugging Face specialist, reserved default profile.
 - SakSee: web and browser specialist.
 - SakSit: social/content specialist.
 - SakTan: ops helper, runtime-profile dependent.

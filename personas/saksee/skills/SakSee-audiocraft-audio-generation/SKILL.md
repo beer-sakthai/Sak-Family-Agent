@@ -1,15 +1,6 @@
 ---
 name: SakSee-audiocraft-audio-generation
-description: "AudioCraft: MusicGen text-to-music, AudioGen text-to-sound."
-version: 1.0.0
-author: Orchestra Research
-license: MIT
-dependencies: [audiocraft, torch>=2.0.0, transformers>=4.30.0]
-platforms: [linux, macos]
-metadata:
-  hermes:
-    tags: [Multimodal, Audio Generation, Text-to-Music, Text-to-Audio, MusicGen]
-
+description: 'AudioCraft: MusicGen text-to-music, AudioGen text-to-sound.'
 ---
 
 # AudioCraft: Audio Generation

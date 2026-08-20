@@ -1,19 +1,7 @@
 ---
 name: SakKing-sakthai-cycle-joy
-category: cycle
 description: Package and ship through CI without breaking the loop.
-version: 1.0.0
-platforms:
-  - linux
-  - macos
-  - windows
-metadata:
-  sakthai:
-    tags:
-      - cycle
-      - joy
-    related_skills:
-      - SakKing-cycle-trust
+...
 ---
 
 # sakthai-cycle-joy

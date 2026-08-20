@@ -1,18 +1,9 @@
 ---
 name: SakThai-hf-transformers-watermarking
-author: SakThai
-license: MIT
-description: >
-  Complete reference on AI watermarking in the Hugging Face ecosystem —
-  Transformers watermarking system (Kirchenbauer + SynthID Text), logits
-  processors, detectors (WatermarkDetector, BayesianDetectorModel,
-  SynthIDTextWatermarkDetector), Gradio visible watermarking, and Hub
-  Spaces for watermarking/detection.
-version: 1.0.0
-metadata:
-  hermes:
-    tags: [huggingface, transformers, watermarking, synthid, ai-safety, generation, detection]
-    category: mlops
+description: ">   Complete reference on AI watermarking in the Hugging Face ecosystem \u2014  \
+  \ Transformers watermarking system (Kirchenbauer + SynthID Text), logits   processors,\
+  \ detectors (WatermarkDetector, BayesianDetectorModel,   SynthIDTextWatermarkDetector),\
+  \ Gra"
 ---
 
 # Hugging Face Transformers Watermarking System

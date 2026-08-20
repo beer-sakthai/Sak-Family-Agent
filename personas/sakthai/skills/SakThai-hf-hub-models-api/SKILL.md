@@ -1,11 +1,9 @@
 ---
 name: SakThai-hf-hub-models-api
-author: SakThai
-license: MIT
-description: "Hugging Face Hub Models REST API — search, filter, paginate, and inspect models programmatically. Covers list/search endpoints, cursor pagination, model metadata, siblings, safetensors info, gated access, inference config, and practical zero-cost patterns."
-version: 1.0.0
-platforms: [linux, macos]
-tags: [huggingface, hub, api, models, rest, search, discovery]
+description: "Hugging Face Hub Models REST API \u2014 search, filter, paginate, and inspect models\
+  \ programmatically. Covers list/search endpoints, cursor pagination, model metadata,\
+  \ siblings, safetensors info, gated access, inference config, and practical zero-cost\
+  \ pat"
 ---
 
 # Hugging Face Hub Models API

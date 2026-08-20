@@ -1,14 +1,7 @@
 ---
 name: SakSit-b2b-saas-interactive-content-2026
-version: 1.0.0
-description: "Saksit B2B Saas Interactive Content 2026"
-description: >
-  B2B SaaS interactive content strategy for demand generation 2026 —
-  how to build, deploy, and measure ROI calculators, maturity
-  assessments, configurators, and interactive demos to capture
-  high-intent leads and compress sales cycles.
-category: social-media
-
+description: Saksit B2B Saas Interactive Content 2026
+...
 ---
 
 # B2B SaaS Interactive Content Strategy 2026

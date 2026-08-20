@@ -1,12 +1,8 @@
 ---
 name: SakThai-hf-mage-vl
-author: SakThai
-license: MIT
-description: "Complete reference on Microsoft Mage-VL — a 4B codec-native streaming VLM (Mage-ViT from-scratch encoder + Qwen3-4B decoder + Mamba-1 StreamMind cognition gate). Architecture, codec tokenization, gate, training curriculum, benchmarks, deployment."
-version: 1.0.0
-category: mlops
-tags: [huggingface, vlm, video-understanding, codec, mamba, ssm, streaming, microsoft, transformers]
-platforms: [linux]
+description: "Complete reference on Microsoft Mage-VL \u2014 a 4B codec-native streaming VLM (Mage-ViT\
+  \ from-scratch encoder + Qwen3-4B decoder + Mamba-1 StreamMind cognition gate).\
+  \ Architecture, codec tokenization, gate, training curriculum, benchmarks, deployment."
 ---
 
 # Mage-VL — Codec-Native Streaming Multimodal Foundation Model

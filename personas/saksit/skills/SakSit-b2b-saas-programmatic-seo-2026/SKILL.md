@@ -1,29 +1,7 @@
 ---
 name: SakSit-b2b-saas-programmatic-seo-2026
-version: 1.0.0
-description: "Saksit B2B Saas Programmatic Seo 2026"
-title: "B2B SaaS Programmatic SEO Strategy 2026"
-description: >
-  A complete playbook for B2B SaaS companies to plan, build, launch, and
-  maintain programmatic SEO landing pages at scale — integration pages,
-  comparison pages, alternatives pages, and use-case hubs — using structured
-  data, templates, and automated pipelines while avoiding thin-content penalties.
-category: social-media
-domains:
-  - seo
-  - growth
-  - content
-  - marketing
-agents:
-  - saksit
-created: 2026-07-02
-tags:
-  - programmatic-seo
-  - b2b-saas
-  - seo-2026
-  - landing-pages
-  - content-automation
-
+description: Saksit B2B Saas Programmatic Seo 2026
+...
 ---
 
 # B2B SaaS Programmatic SEO Strategy 2026

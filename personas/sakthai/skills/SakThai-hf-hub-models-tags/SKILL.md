@@ -1,11 +1,9 @@
 ---
 name: SakThai-hf-hub-models-tags
-author: SakThai
-license: MIT
-description: "Hugging Face Hub model tag taxonomy — pipeline tags, architecture tags, library tags, language tags, license tags, and the complete model classification system. Covers automatic tag inference, tag API endpoints, filtering/search patterns, and the 47 task pipeline tags."
-version: 1.0.0
-platforms: [linux, macos]
-tags: [huggingface, hub, models, tags, pipeline, taxonomy, classification, discovery]
+description: "Hugging Face Hub model tag taxonomy \u2014 pipeline tags, architecture tags, library\
+  \ tags, language tags, license tags, and the complete model classification system.\
+  \ Covers automatic tag inference, tag API endpoints, filtering/search patterns,\
+  \ and the 47 "
 ---
 
 # Hugging Face Hub Models — Tag Taxonomy & Architecture Classification

@@ -10,8 +10,12 @@ from ..config import memory_db_path
 
 
 def backup_memory(db_path: Path | None = None) -> Path:
-    """Copy DB_PATH (default: the unscoped memory.db) to a timestamped .bak beside it."""
-    db = db_path or memory_db_path()
+    """Copy the memory DB to ``memory_<timestamp>.db.bak`` beside it.
+
+    ``db_path``, when given, backs up that database instead of the default
+    unscoped ``memory.db`` (used to back up a persona's own shard).
+    """
+    db = db_path if db_path is not None else memory_db_path()
     if not db.is_file():
         raise FileNotFoundError("No memory database exists yet.")
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")

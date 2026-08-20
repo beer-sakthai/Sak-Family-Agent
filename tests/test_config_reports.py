@@ -275,13 +275,14 @@ def test_persona_soul_path() -> None:
     assert config.persona_soul_path("sakking") == config.PERSONAS_DIR / "sakking" / "SOUL.md"
 
 
-def test_persona_memory_db_path_ignores_sakthai_home_override(
+def test_persona_memory_db_path_respects_sakthai_home_override(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The per-persona shard path is independent of the current SAKTHAI_HOME."""
+    """The per-persona shard path respects the SAKTHAI_HOME environment variable."""
+    """The per-persona shard path respects SAKTHAI_HOME override."""
     monkeypatch.setenv("SAKTHAI_HOME", "/somewhere/unrelated")
     assert config.persona_memory_db_path("sakking") == (
-        Path.home() / ".sakthai" / "sakking" / "memory.db"
+        Path("/somewhere/unrelated") / "sakking" / "memory.db"
     )
 
 
@@ -347,3 +348,81 @@ def test_system_prompt_prefix_unset_returns_none(monkeypatch: pytest.MonkeyPatch
     monkeypatch.delenv("SAKTHAI_SYSTEM_PROMPT", raising=False)
     monkeypatch.delenv("SAKTHAI_SYSTEM_PROMPT_FILE", raising=False)
     assert config.sakthai_system_prompt_prefix() is None
+
+
+def test_persona_skills_dir_matches_convention() -> None:
+    for persona in config.PERSONA_NAMES:
+        assert config.persona_skills_dir(persona) == config.PERSONAS_DIR / persona / "skills"
+
+
+def test_persona_skills_dir_rejects_unknown_persona() -> None:
+    with pytest.raises(ValueError, match="Unknown persona"):
+        config.persona_skills_dir("not-a-real-persona")
+
+
+def test_persona_mcp_config_path_matches_convention() -> None:
+    for persona in config.PERSONA_NAMES:
+        assert config.persona_mcp_config_path(persona) == (
+            config.PERSONAS_DIR / persona / "config" / "mcp.json"
+        )
+
+
+def test_persona_mcp_config_path_rejects_unknown_persona() -> None:
+    with pytest.raises(ValueError, match="Unknown persona"):
+        config.persona_mcp_config_path("not-a-real-persona")
+
+
+def test_persona_model_defaults_reads_provider_and_model(tmp_path: Path) -> None:
+    cfg_dir = tmp_path / "personas" / "saksee" / "config"
+    cfg_dir.mkdir(parents=True)
+    (cfg_dir / "config.yaml").write_text(
+        "model:\n  provider: huggingface\n  default: some-model\n", encoding="utf-8"
+    )
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(config, "PERSONAS_DIR", tmp_path / "personas")
+        assert config.persona_model_defaults("saksee") == ("huggingface", "some-model")
+
+
+def test_persona_model_defaults_missing_file_returns_none_none(tmp_path: Path) -> None:
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(config, "PERSONAS_DIR", tmp_path / "personas")
+        assert config.persona_model_defaults("saksee") == (None, None)
+
+
+def test_persona_model_defaults_missing_keys_returns_none_none(tmp_path: Path) -> None:
+    cfg_dir = tmp_path / "personas" / "saktan" / "config"
+    cfg_dir.mkdir(parents=True)
+    (cfg_dir / "config.yaml").write_text("# just a comment, no model key\n", encoding="utf-8")
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(config, "PERSONAS_DIR", tmp_path / "personas")
+        assert config.persona_model_defaults("saktan") == (None, None)
+
+
+def test_persona_model_defaults_invalid_yaml_returns_none_none(tmp_path: Path) -> None:
+    cfg_dir = tmp_path / "personas" / "saktan" / "config"
+    cfg_dir.mkdir(parents=True)
+    (cfg_dir / "config.yaml").write_text("model: [unterminated\n", encoding="utf-8")
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(config, "PERSONAS_DIR", tmp_path / "personas")
+        assert config.persona_model_defaults("saktan") == (None, None)
+
+
+def test_persona_model_defaults_rejects_unknown_persona() -> None:
+    with pytest.raises(ValueError, match="Unknown persona"):
+        config.persona_model_defaults("not-a-real-persona")
+
+
+def test_sakthai_persona_unset_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SAKTHAI_PERSONA", raising=False)
+    assert config.sakthai_persona() is None
+
+
+def test_sakthai_persona_set_returns_value(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SAKTHAI_PERSONA", "saksee")
+    assert config.sakthai_persona() == "saksee"
+
+
+def test_sakthai_persona_unknown_value_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An invalid/typo'd SAKTHAI_PERSONA is ignored rather than trusted blindly."""
+    monkeypatch.setenv("SAKTHAI_PERSONA", "not-a-real-persona")
+    assert config.sakthai_persona() is None

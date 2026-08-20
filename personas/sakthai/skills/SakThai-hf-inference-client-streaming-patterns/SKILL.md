@@ -1,12 +1,9 @@
 ---
 name: SakThai-hf-inference-client-streaming-patterns
-author: SakThai
-license: MIT
-description: "Deep reference on Hugging Face InferenceClient streaming chat completion patterns — SSE event stream architecture, sync/async streaming, streaming with tools and structured outputs, provider-specific behavior, stream lifecycle management, error handling, and best practices for real-time applications."
-version: 1.0.0
-category: mlops
-tags: [huggingface, inference, client, streaming, sse, chat-completion, async, tools, structured-outputs, providers]
-platforms: [linux, macos, windows]
+description: "Deep reference on Hugging Face InferenceClient streaming chat completion patterns\
+  \ \u2014 SSE event stream architecture, sync/async streaming, streaming with tools\
+  \ and structured outputs, provider-specific behavior, stream lifecycle management,\
+  \ error handl"
 ---
 
 # HF InferenceClient Streaming Patterns — Deep Dive

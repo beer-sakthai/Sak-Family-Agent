@@ -1,12 +1,8 @@
 ---
 name: SakThai-hf-hub-dataset-card-metadata-comprehensive-reference
-version: 1.0.0
-author: SakThai
-license: MIT
-description: Comprehensive reference on Hugging Face dataset card YAML metadata — all fields, license identifiers, task categories, size categories, modality tags, library associations, gating configuration, and best practices.
-topic: hf-hub-dataset-card-metadata-comprehensive-reference
-type: skill
-category: mlops
+description: "Comprehensive reference on Hugging Face dataset card YAML metadata \u2014 all fields,\
+  \ license identifiers, task categories, size categories, modality tags, library\
+  \ associations, gating configuration, and best practices."
 ---
 
 # Dataset Card Metadata — Complete Reference

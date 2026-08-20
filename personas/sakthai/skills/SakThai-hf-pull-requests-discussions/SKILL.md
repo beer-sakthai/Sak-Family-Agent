@@ -1,17 +1,9 @@
 ---
 name: SakThai-hf-pull-requests-discussions
-author: SakThai
-license: MIT
-description: >
-  Complete reference on Hugging Face Hub Pull Requests and Discussions API —
-  covering the full lifecycle: creating discussions and PRs, listing, filtering,
-  commenting, editing, hiding, status changes, merging, renaming, and the git
-  ref model underpinning PRs. Includes the Python HfApi SDK and REST API.
-version: 1.0.0
-metadata:
-  hermes:
-    tags: [huggingface, hub, pull-requests, discussions, api, collaboration]
-    category: productivity
+description: ">   Complete reference on Hugging Face Hub Pull Requests and Discussions API \u2014\
+  \   covering the full lifecycle: creating discussions and PRs, listing, filtering,\
+  \   commenting, editing, hiding, status changes, merging, renaming, and the git\
+  \   ref model "
 ---
 
 # HF Hub Pull Requests & Discussions API

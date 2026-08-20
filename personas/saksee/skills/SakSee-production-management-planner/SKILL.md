@@ -1,11 +1,7 @@
 ---
 name: SakSee-production-management-planner
-description: "Plan and optimize House of Sak service delivery for QA, AI, and API projects."
-version: 0.1.0
-author: Hermes
-metadata:
-  hermes:
-    tags: [Production, Planning, Analysis, Metrics]
+description: Plan and optimize House of Sak service delivery for QA, AI, and API projects.
+...
 ---
 
 # Production Management Planner

@@ -1,13 +1,8 @@
 ---
-author: SakThai
-license: MIT
 name: SakThai-hf-spaces-zerogpu
-version: 0.1.0
-title: Hugging Face Spaces ZeroGPU
-description: >
-  Use ZeroGPU — Hugging Face’s dynamic shared GPU allocation — to build, host,
-  and optimize Gradio Spaces without managing dedicated GPU infrastructure.
-  Covers hardware, quotas, decorators, model loading, and queue behavior.
+description: ">   Use ZeroGPU \u2014 Hugging Face\u2019s dynamic shared GPU allocation \u2014 to\
+  \ build, host,   and optimize Gradio Spaces without managing dedicated GPU infrastructure.\
+  \   Covers hardware, quotas, decorators, model loading, and queue behavior."
 ---
 
 # Hugging Face Spaces ZeroGPU

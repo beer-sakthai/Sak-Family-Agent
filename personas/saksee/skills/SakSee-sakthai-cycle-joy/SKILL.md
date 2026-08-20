@@ -1,10 +1,9 @@
 ---
 name: SakSee-sakthai-cycle-joy
-version: 1.0.0
-description: "Saksee Sakthai Cycle Joy"
-category: sakthai-cycle-joy
-
+description: Saksee Sakthai Cycle Joy
+...
 ---
+
 # SakThai Cycle — Joy
 
 Package and ship without breaking the loop.

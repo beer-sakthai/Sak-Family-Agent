@@ -1,18 +1,6 @@
 ---
 name: SakKing-audiocraft
-category: mlops
 description: 'AudioCraft: MusicGen text-to-music, AudioGen text-to-sound.'
-version: 1.0.0
-platforms:
-- linux
-- macos
-metadata:
-  sakthai:
-    tags:
-    - hermes
-    - mlops
-    related_skills: []
-    source: hermes:audiocraft
 ---
 
 # AudioCraft: Audio Generation

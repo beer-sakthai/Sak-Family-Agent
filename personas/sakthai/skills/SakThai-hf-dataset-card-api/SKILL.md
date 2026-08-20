@@ -1,11 +1,9 @@
 ---
 name: SakThai-hf-dataset-card-api
-author: SakThai
-license: MIT
-description: Complete reference for Hugging Face DatasetCard API — creating, editing, validating, and publishing dataset cards via huggingface_hub
-category: mlops
-version: 1.0.0
+description: "Complete reference for Hugging Face DatasetCard API \u2014 creating, editing, validating,\
+  \ and publishing dataset cards via huggingface_hub"
 ---
+
 # HF Dataset Card API
 
 Trigger when: user asks about creating dataset cards, DatasetCard/DatasetCardData, dataset README metadata, dataset card templates, pushing dataset metadata to the Hub.

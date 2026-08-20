@@ -1,14 +1,8 @@
 ---
 name: SakTan-daily-briefing
-category: productivity
-description: Generate Beer's day-start briefing — today's calendar, open tasks, and one clear next action — from stored memory and connected tools.
-version: 1.0.0
-author: SakTan
-platforms: [linux, macos, windows]
-metadata:
-  sakthai:
-    tags: [briefing, daily-flow, operations, memory, calendar, tasks]
-    related_skills: [SakTan-calendar-integration, SakTan-task-tracking, SakTan-google-workspace, SakTan-apple-reminders, SakTan-close-the-day]
+description: Generate Beers day-start briefing u2014 todays calendar, open tasks,    and one clear
+  next action u2014 from stored memory and connected tools.
+...
 ---
 
 # Daily Briefing

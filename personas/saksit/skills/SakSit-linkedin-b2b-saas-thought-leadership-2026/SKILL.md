@@ -1,14 +1,7 @@
 ---
 name: SakSit-linkedin-b2b-saas-thought-leadership-2026
-version: 1.0.0
-description: "Saksit Linkedin B2B Saas Thought Leadership 2026"
-description: >
-  A complete playbook for B2B SaaS companies and founders to build, execute, and measure
-  LinkedIn thought leadership and organic growth strategy in 2026. Covers algorithm mechanics,
-  content formats, posting cadence, engagement tactics, profile positioning, and ROI measurement.
-  Founders/executives post from personal profiles — NOT company pages.
-category: social-media
-
+description: Saksit Linkedin B2B Saas Thought Leadership 2026
+...
 ---
 
 # LinkedIn B2B SaaS Thought Leadership Strategy 2026

@@ -1,17 +1,9 @@
 ---
 name: SakThai-hf-spaces-secrets-management-deep-dive
-author: SakThai
-license: MIT
-title: Spaces Secrets & Variables Management — Complete Deep Dive
-category: mlops
-tags: [spaces, secrets, variables, environment, api, huggingface-hub, security, docker]
-related_skills:
-  - SakThai-hf-hub-spaces-build-runtime-api
-  - hf-spaces-persistent-storage-zero-cost
-  - SakThai-hf-spaces-dependencies-and-sdks
-  - hf-hub-python-api
-description: Comprehensive reference for managing secrets and environment variables in Hugging Face Spaces — covering the conceptual difference between secrets vs variables, full Python API (add/get/delete), the REST API endpoints, Docker buildtime vs runtime behavior, the secrets scanner, and practical zero-cost patterns.
-version: 1.0.0
+description: "Comprehensive reference for managing secrets and environment variables in Hugging\
+  \ Face Spaces \u2014 covering the conceptual difference between secrets vs variables,\
+  \ full Python API (add/get/delete), the REST API endpoints, Docker buildtime vs\
+  \ runtime beh"
 ---
 
 # Spaces Secrets & Variables Management — Complete Deep Dive

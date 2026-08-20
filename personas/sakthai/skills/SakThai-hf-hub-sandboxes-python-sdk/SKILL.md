@@ -1,27 +1,10 @@
 ---
 name: SakThai-hf-hub-sandboxes-python-sdk
-author: SakThai
-license: MIT
-description: >-
-  Comprehensive deep-dive into the Hugging Face Hub Sandboxes Python SDK
-  (huggingface_hub v1.24.0+) — Sandbox and SandboxPool classes, CLI commands,
-  stateless HMAC auth, uid+Landlock pool isolation, file API, proxy for inner
-  servers, lifecycle management, and zero-cost patterns. Sandboxes are isolated
-  cloud VMs spun up in seconds, built on top of HF Jobs.
-version: 1.0.0
-created: 2026-07-25
-category: mlops
-tags:
-  - sandbox
-  - jobs
-  - python-sdk
-  - SakThai-huggingface-hub
-  - cloud-compute
-  - isolation
-  - cli
-  - proxy
-  - hf-sandbox
+description: ">-   Comprehensive deep-dive into the Hugging Face Hub Sandboxes Python SDK   (huggingface_hub\
+  \ v1.24.0+) \u2014 Sandbox and SandboxPool classes, CLI commands,   stateless HMAC\
+  \ auth, uid+Landlock pool isolation, file API, proxy for inner   servers, lifecyc"
 ---
+
 # Hugging Face Sandboxes Python SDK — Deep Dive
 
 ## Overview

@@ -1,11 +1,8 @@
 ---
 name: SakThai-hf-hub-repocard-system
-version: 1.0.0
-author: SakThai
-license: MIT
-description: Programmatic creation, loading, validation, and management of repository cards on the Hugging Face Hub
-category: mlops
-tags: [huggingface, model-cards, metadata, hub]
+description: Programmatic creation, loading, validation, and management of repository cards on
+  the Hugging Face Hub
+...
 ---
 
 # HF Hub RepoCard System (huggingface_hub)

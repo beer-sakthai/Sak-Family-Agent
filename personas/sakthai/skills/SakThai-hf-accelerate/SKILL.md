@@ -1,19 +1,8 @@
 ---
 name: SakThai-hf-accelerate
-author: SakThai
-license: MIT
-description: Comprehensive deep-dive on Hugging Face Accelerate (v1.14.0) — the Accelerator class, distributed training, mixed precision, big model inference, FSDP, DeepSpeed, FP8 training, CLI, and production patterns.
-version: 1.0.0
-type: skill
-tags: [accelerate, distributed-training, mixed-precision, fsdp, deepspeed, big-model-inference, fp8, training]
-related_skills:
-  - mlops/hf-transformers-tipsv2
-  - mlops/hf-transformers-memory-estimation
-  - mlops/hf-kernels-ecosystem
-  - mlops/model-publishing-pipeline
-  - mlops/hf-deepspeed
-references:
-  - references/hf-learnings.md
+description: "Comprehensive deep-dive on Hugging Face Accelerate (v1.14.0) \u2014 the Accelerator\
+  \ class, distributed training, mixed precision, big model inference, FSDP, DeepSpeed,\
+  \ FP8 training, CLI, and production patterns."
 ---
 
 # HF Accelerate Deep Dive

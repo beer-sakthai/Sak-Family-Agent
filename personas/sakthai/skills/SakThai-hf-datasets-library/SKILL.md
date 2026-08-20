@@ -1,14 +1,7 @@
 ---
 name: SakThai-hf-datasets-library
-author: SakThai
-license: MIT
-title: Hugging Face Datasets Library
-category: mlops
-tags: [datasets, arrow, memory-mapping, cache, map, processing, data-loading]
-related_skills:
-  - hf-datasets-server-rest-api
-description: Deep dive into the Hugging Face `datasets` Python library — Arrow-backed memory mapping, caching architecture, Dataset.map() operations, and processing pipelines.
-version: 1.0.0
+description: "Deep dive into the Hugging Face `datasets` Python library \u2014 Arrow-backed memory\
+  \ mapping, caching architecture, Dataset.map() operations, and processing pipelines."
 ---
 
 # Hugging Face Datasets Library Deep Dive

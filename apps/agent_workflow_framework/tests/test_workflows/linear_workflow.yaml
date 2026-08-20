@@ -1,0 +1,29 @@
+name: linear_workflow
+description: Linear 3-step workflow testing sequential execution and state passing
+steps:
+  - id: step_1
+    action: echo
+    params:
+      message: "hello_from_step_1"
+      initial_value: 10
+    depends_on: []
+    retry: 0
+
+  - id: step_2
+    action: transform
+    params:
+      input_msg: "${steps.step_1.output.message}"
+      input_val: "${steps.step_1.output.initial_value}"
+      operation: "append_and_double"
+    depends_on:
+      - step_1
+    retry: 0
+
+  - id: step_3
+    action: echo
+    params:
+      final_msg: "${steps.step_2.output.transformed_msg}"
+      final_result: "${steps.step_2.output.calculated_val}"
+    depends_on:
+      - step_2
+    retry: 0

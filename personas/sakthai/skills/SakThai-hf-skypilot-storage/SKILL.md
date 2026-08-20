@@ -1,17 +1,8 @@
 ---
 name: SakThai-hf-skypilot-storage
-author: SakThai
-license: MIT
-description: >
-  Knowledge of running AI workloads on any cloud while storing data on
-  Hugging Face Hub with zero-egress storage, using SkyPilot for multi-cloud
-  compute orchestration and HF Storage Buckets / Xet for data storage.
-version: 1.0.0
-metadata:
-  hermes:
-    tags: [huggingface, skypilot, storage, cloud, multi-cloud]
-    category: mlops
-category: mlops
+description: '>   Knowledge of running AI workloads on any cloud while storing data on   Hugging
+  Face Hub with zero-egress storage, using SkyPilot for multi-cloud   compute orchestration
+  and HF Storage Buckets / Xet for data storage.'
 ---
 
 # Hugging Face SkyPilot Storage Integration

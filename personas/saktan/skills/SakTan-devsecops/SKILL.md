@@ -1,14 +1,8 @@
 ---
 name: SakTan-devsecops
-category: software-development
-description: Orchestrates static analysis, vulnerability scanning, and automated patching into a continuous security workflow.
-version: 1.0.0
-author: Gemini Code Assist
-platforms: [linux, macos, windows]
-metadata:
-  hermes:
-    tags: [devsecops, security, ci, automation, self-healing, ruff, bandit]
-    related_skills: [automated-vulnerability-patching, systematic-debugging, SakTan-test-driven-development, github-pull-request]
+description: Orchestrates static analysis, vulnerability scanning, and automated patching   into
+  a continuous security workflow.
+...
 ---
 
 # DevSecOps: Continuous Security Workflow

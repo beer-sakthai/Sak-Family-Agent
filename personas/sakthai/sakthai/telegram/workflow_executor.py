@@ -1,7 +1,20 @@
 import asyncio
 import sys
+from pathlib import Path
 
-from ..config import SKILLS_DIR
+from ..config import SKILLS_DIR, persona_skills_dir, sakthai_persona
+
+
+def _skills_dir() -> Path:
+    """The skills directory this gateway process browses/executes workflows from.
+
+    Persona-scoped via ``SAKTHAI_PERSONA`` when set (see
+    ``infra/vm-agents/env-templates/*.env.example``); falls back to
+    ``SKILLS_DIR`` (SakThai's own overlay) unchanged for any deployment that
+    doesn't set it yet.
+    """
+    persona = sakthai_persona()
+    return persona_skills_dir(persona) if persona else SKILLS_DIR
 
 
 def _workflow_command(workflow_name: str) -> list[str]:
@@ -26,9 +39,10 @@ def get_available_workflows():
     """
     Returns a list of available workflows (skills).
     """
-    if not SKILLS_DIR.is_dir():
+    skills_dir = _skills_dir()
+    if not skills_dir.is_dir():
         return []
-    return sorted(d.name for d in SKILLS_DIR.iterdir() if d.is_dir())
+    return sorted(d.name for d in skills_dir.iterdir() if d.is_dir())
 
 
 async def run_workflow(workflow_name: str) -> str:

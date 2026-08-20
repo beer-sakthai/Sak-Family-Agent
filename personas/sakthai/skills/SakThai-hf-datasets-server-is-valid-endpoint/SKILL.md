@@ -1,17 +1,8 @@
 ---
 name: SakThai-hf-datasets-server-is-valid-endpoint
-author: SakThai
-license: MIT
-description: Complete reference for the Datasets Server /is-valid endpoint — checking dataset availability, viewer/preview/search/filter/statistics capabilities, gated dataset access, and integration patterns.
-version: 1.0.0
-created: 2026-07-25
-category: mlops
-tags:
-  - datasets-server
-  - api
-  - validation
-  - endpoint
-  - viewer
+description: "Complete reference for the Datasets Server /is-valid endpoint \u2014 checking dataset\
+  \ availability, viewer/preview/search/filter/statistics capabilities, gated dataset\
+  \ access, and integration patterns."
 ---
 
 # HuggingFace Datasets Server — /is-valid Endpoint

@@ -1,14 +1,8 @@
 ---
 name: SakSee-service-quoting
-description: "Use when constructing a customer quote from stored pricing facts and when deciding whether to capture a lead instead of answering from memory."
-version: 1.0.0
-author: Beer + Hermes Agent
-license: MIT
-platforms: [linux, macos, windows]
-metadata:
-  hermes:
-    tags: [business, quoting, leads, sales, service-bot]
-    related_skills: [ocr-and-documents, sakthai]
+description: Use when constructing a customer quote from stored pricing facts and when deciding
+  whether to capture a lead instead of answering from memory.
+...
 ---
 
 # Service Quoting

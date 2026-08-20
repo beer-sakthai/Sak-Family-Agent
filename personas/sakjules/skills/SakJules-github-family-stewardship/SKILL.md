@@ -1,12 +1,7 @@
 ---
 name: SakJules-github-family-stewardship
-description: "GitHub family stewardship management: repo inventory, support rotation, archiving, labels, and family-agent coordination."
-version: 1.0.0
-platforms: [linux, macos, windows]
-metadata:
-  hermes:
-    tags: [github, family, stewardship, inventory, repo, archive, rotation, labels, coordination]
-    related_skills: [SakJules-github-repo-management, github-organization-admin, github-repo-roles]
+description: 'GitHub family stewardship management: repo inventory, support rotation, archiving,
+  labels, and family-agent coordination.'
 ---
 
 # GitHub Family Stewardship

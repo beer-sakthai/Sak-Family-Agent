@@ -1,16 +1,7 @@
 ---
 name: SakSee-excalidraw
-description: "Hand-drawn Excalidraw JSON diagrams (arch, flow, seq)."
-version: 1.0.0
-author: Hermes Agent
-license: MIT
-dependencies: []
-platforms: [linux, macos, windows]
-metadata:
-  hermes:
-    tags: [Excalidraw, Diagrams, Flowcharts, Architecture, Visualization, JSON]
-    related_skills: []
-
+description: Hand-drawn Excalidraw JSON diagrams (arch, flow, seq).
+...
 ---
 
 # Excalidraw Diagram Skill
@@ -195,5 +186,3 @@ See `references/colors.md` for full color tables. Quick reference:
 - Do NOT use emoji in text -- they don't render in Excalidraw's font
 - For dark mode diagrams, see `references/dark-mode.md`
 - For larger examples, see `references/examples.md`
-
-

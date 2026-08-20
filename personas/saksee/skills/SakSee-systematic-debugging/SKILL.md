@@ -1,9 +1,6 @@
 ---
 name: SakSee-systematic-debugging
-version: 1.0.0
-description: 4-phase root cause debugging: understand bugs before fixing.
-category: software-development
-tags: [debugging, troubleshooting]
+description: '4-phase root cause debugging: understand bugs before fixing.'
 ---
 
 # Systematic Debugging

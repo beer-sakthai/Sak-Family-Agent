@@ -1,10 +1,9 @@
 ---
 name: SakSee-sakthai-cycle-dream
-version: 1.0.0
-description: "Saksee Sakthai Cycle Dream"
-category: sakthai-cycle-dream
-
+description: Saksee Sakthai Cycle Dream
+...
 ---
+
 # SakThai Cycle — Dream
 
 Define the vision.

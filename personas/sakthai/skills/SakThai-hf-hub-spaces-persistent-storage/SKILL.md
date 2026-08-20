@@ -1,13 +1,8 @@
 ---
 name: SakThai-hf-hub-spaces-persistent-storage
-author: SakThai
-license: MIT
-description: Knowledge about Hugging Face Spaces persistent storage via Storage Buckets — creating, attaching, mounting, and managing persistent volumes in Spaces for zero-cost operation.
-version: 1.0.0
-type: reference
-references:
-  - references/hf-learnings.md
-category: mlops
+description: "Knowledge about Hugging Face Spaces persistent storage via Storage Buckets \u2014\
+  \ creating, attaching, mounting, and managing persistent volumes in Spaces for zero-cost\
+  \ operation."
 ---
 
 # HF Hub Spaces Persistent Storage

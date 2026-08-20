@@ -1,0 +1,69 @@
+# Open Source Static Analysis (via Microsoft Security DevOps)
+#
+# Uploads the ESLint SARIF that Microsoft Security DevOps (MSDO) produces to
+# GitHub code scanning. Its findings are the ESLint half of what MSDO scans;
+# `bandit.yml` runs Bandit directly, so this workflow does not.
+#
+# Why not the stock `github/ossar-action`: that wrapper runs Bandit with a
+# CLI listing every .py file in the repository. On Windows-latest that CLI
+# exceeds the ~32K CreateProcess limit and the runner fails with
+# `Win32Exception: The filename or extension is too long`, which reads as a
+# tool-launch error but is really an argument-length overflow. Narrowing MSDO
+# to `tools: eslint` avoids the Bandit invocation entirely; Bandit findings
+# still land on the Security tab via `bandit.yml`.
+name: OSSAR
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: '37 13 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  OSSAR-Scan:
+    permissions:
+      contents: read # for actions/checkout to fetch code
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+      actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+    # Three vendored paths under apps/sak_agent_dashboard/microsoft_agents_m365copilot/
+    # are 274-278 characters, past Windows' 260-character MAX_PATH. Without this,
+    # git writes every other file and then exits 1, which reads as a checkout
+    # failure with no explanation. This is a Windows-runner concern only.
+    - name: Harden the runner
+      uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+      with:
+        use-policy-store: true
+        api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+    - name: Allow long paths on the Windows runner
+      run: git config --global core.longpaths true
+
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    # Run Microsoft Security DevOps scoped to ESLint only. `tools: eslint`
+    # skips the Bandit runner whose CLI-argument list overflows on Windows.
+    - name: Run MSDO (ESLint only)
+      uses: microsoft/security-devops-action@08976cb623803b1b36d7112d4ff9f59eae704de0 # v1.12.0
+      id: msdo
+      with:
+        tools: eslint
+
+      # Upload results to the Security tab
+    - name: Upload OSSAR results
+      uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4
+      with:
+        sarif_file: ${{ steps.msdo.outputs.sarifFile }}

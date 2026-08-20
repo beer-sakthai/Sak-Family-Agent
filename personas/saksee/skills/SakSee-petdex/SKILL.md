@@ -1,15 +1,7 @@
 ---
 name: SakSee-petdex
 description: Install and select animated petdex mascots for Hermes.
-version: 1.0.0
-author: Hermes Agent
-license: MIT
-platforms: [linux, macos, windows]
-metadata:
-  hermes:
-    tags: [petdex, mascot, display, cli, tui, desktop]
-    category: productivity
-    homepage: https://petdex.dev
+...
 ---
 
 # Petdex Skill

@@ -1,8 +1,8 @@
 ---
 name: SakSee-antigravity
-description: Google Antigravity CLI — AI coding agent from Google. "Build, debug, and ship from your terminal. Describe what you need, and Antigravity handles the rest." Similar to Claude Code / Codex CLI.
-category: autonomous-ai-agents
-tags: [google, ai-coding, cli, agent]
+description: "Google Antigravity CLI \u2014 AI coding agent from Google. Build, debug, and ship\
+  \ from your terminal. Describe what you need, and Antigravity handles the rest.\
+  \ Similar to Claude Code / Codex CLI."
 ---
 
 # Google Antigravity CLI (`agy`)

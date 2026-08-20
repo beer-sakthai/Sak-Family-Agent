@@ -1,14 +1,7 @@
 ---
 name: SakSee-github-issues
-description: "Create, triage, label, assign GitHub issues via gh or REST."
-version: 1.1.0
-author: Hermes Agent
-license: MIT
-platforms: [linux, macos, windows]
-metadata:
-  hermes:
-    tags: [GitHub, Issues, Project-Management, Bug-Tracking, Triage]
-    related_skills: [github-auth, github-pr-workflow]
+description: Create, triage, label, assign GitHub issues via gh or REST.
+...
 ---
 
 # GitHub Issues Management

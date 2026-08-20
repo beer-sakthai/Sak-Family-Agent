@@ -1,21 +1,9 @@
 ---
 name: SakThai-hf-write-from-environment
-category: hermes
-author: SakThai
-license: MIT
-description: Guidance for writing files to Hugging Face Hub when standard library
-  upload path fails, including write-token verification, repo creation via HF API,
-  and upload troubleshooting.
-version: 1.0.0
-platforms:
-- linux
-- macos
-metadata:
-  sakthai:
-    tags:
-    - hermes
-    related_skills: []
-    source: hermes:hf-write-from-environment
+description: Guidance for writing files to Hugging Face Hub when standard library   upload path
+  fails, including write-token verification, repo creation via HF API,   and upload
+  troubleshooting.
+...
 ---
 
 # HF write-from-environment

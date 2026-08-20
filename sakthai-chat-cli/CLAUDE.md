@@ -90,6 +90,10 @@ Subsystems:
   other module hard-codes a path or reads an unlisted env var.
 - `telegram/` — early-stage standalone prototype; excluded from strict mypy.
 
+## Local skills for this repo
+
+- `run-sakthai-chat-cli` — use when asked to build, run, smoke-test, or screenshot the SakThai chat REPL/CLI in this subrepo. Prefer this over the broader `run-sakthai-agent-v2` (which lives in the parent monorepo) when working here.
+
 ## Key conventions
 
 - **Dependency injection over globals**: `run_agent()` and MCP

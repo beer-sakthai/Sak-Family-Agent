@@ -1,15 +1,9 @@
 ---
 name: SakThai-hf-transformers-tipsv2
-author: SakThai
-license: MIT
-description: >-
-  TIPSv2 (Text-Image Pre-training with Spatial awareness v2) — Google DeepMind's
-  contrastive vision-language encoder family added in Transformers v5.14.0.
-  Covers architecture (dual ViT + text transformer), dual-class-token design,
-  iBOT++ pretraining objective, zero-shot classification, DPT head for depth/
-  normal/segmentation, and Hugging Face integration.
-category: mlops
-version: 1.0.0
+description: ">-   TIPSv2 (Text-Image Pre-training with Spatial awareness v2) \u2014 Google DeepMinds\
+  \   contrastive vision-language encoder family added in Transformers v5.14.0.  \
+  \ Covers architecture (dual ViT + text transformer), dual-class-token design,  \
+  \ iBOT++ pret"
 ---
 
 # HF Transformers — TIPSv2 Architecture

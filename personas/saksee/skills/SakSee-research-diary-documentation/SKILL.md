@@ -1,11 +1,7 @@
 ---
 name: SakSee-research-diary-documentation
-description: "Create and save research diaries to GitHub for documentation safety."
-version: 0.1.0
-author: Hermes
-metadata:
-  hermes:
-    tags: [Documentation, Research, Diary, GitHub, Git]
+description: Create and save research diaries to GitHub for documentation safety.
+...
 ---
 
 # Research Diary Documentation

@@ -1,11 +1,8 @@
 ---
 name: SakThai-hf-datasets-tabular-loading
-author: SakThai
-license: MIT
-description: Comprehensive guide to loading tabular data with the 🤗 Datasets library — CSV, Pandas, HDF5, SQL, text, XML, and JSON/JSONL formats, with all configuration options and best practices.
-version: 1.0.0
-type: skill
-category: mlops
+description: "Comprehensive guide to loading tabular data with the \U0001F917 Datasets library\
+  \ \u2014 CSV, Pandas, HDF5, SQL, text, XML, and JSON/JSONL formats, with all configuration\
+  \ options and best practices."
 ---
 
 # HF Datasets Tabular Loading

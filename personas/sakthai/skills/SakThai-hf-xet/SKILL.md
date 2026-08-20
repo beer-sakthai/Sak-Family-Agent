@@ -1,13 +1,7 @@
 ---
 name: SakThai-hf-xet
-description: "Hugging Face XET protocol: fast large-file transfers with chunk-based deduplication, CAS backend, and Git-LFS compatibility."
-version: 1.0.0
-author: Hugging Face
-license: Apache-2.0
-tags: [huggingface, xet, hf-xet, deduplication, transfer, protocol, cas, git-lfs]
-platforms: [linux, macos, windows]
-dependencies:
-  - huggingface_hub >= 1.2.2
+description: 'Hugging Face XET protocol: fast large-file transfers with chunk-based deduplication,
+  CAS backend, and Git-LFS compatibility.'
 ---
 
 # Hugging Face XET Protocol & `hf-xet`

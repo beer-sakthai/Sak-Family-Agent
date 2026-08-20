@@ -1,9 +1,6 @@
 ---
 name: SakThai-hf-hub-embedding-badges
-version: 1.0.0
-author: SakThai
-license: MIT
-category: mlops
+description: 'name: SakThai-hf-hub-embedding-badges'
 ---
 
 # Hugging Face Hub Embedding, Badges & oEmbed API

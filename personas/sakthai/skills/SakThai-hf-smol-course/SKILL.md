@@ -1,11 +1,7 @@
 ---
 name: SakThai-hf-smol-course
-author: SakThai
-license: MIT
-description: "Fine-tune LLMs with TRL, PEFT, and alignment methods."
-version: 1.0.0
-related_skills: [hf-trl-deep-dive]
-tags: [FineTuning, LLM, TRL, PEFT, RLHF, HuggingFace, GRPO, DPO]
+description: Fine-tune LLMs with TRL, PEFT, and alignment methods.
+...
 ---
 
 # Fine-Tuning LLMs — a smol course

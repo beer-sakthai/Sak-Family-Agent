@@ -1,9 +1,6 @@
 ---
 name: SakSee-codebase-inspection
-version: 1.0.0
-description: Inspect codebases w/ pygount: LOC, languages, ratios.
-category: github
-tags: [analysis, metrics, codebase]
+description: 'Inspect codebases w/ pygount: LOC, languages, ratios.'
 ---
 
 # Codebase Inspection

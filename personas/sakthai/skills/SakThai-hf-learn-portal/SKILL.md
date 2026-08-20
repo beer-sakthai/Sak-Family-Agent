@@ -1,11 +1,9 @@
 ---
 name: SakThai-hf-learn-portal
-author: SakThai
-license: MIT
-description: "Navigate and recommend Hugging Face Learn courses."
-version: 1.0.0
-tags: [HuggingFace, Courses, Learning, Education, LLM, Agents, NLP]
+description: Navigate and recommend Hugging Face Learn courses.
+...
 ---
+
 # Hugging Face Learn Portal Guide
 
 A catalog of all free courses on the [Hugging Face Learn](https://huggingface.co/learn) portal. Each course uses libraries from the HF ecosystem and is free, self-paced, and open-source. Use this skill to recommend a learning path, find the right course for a task, or explore what's available.

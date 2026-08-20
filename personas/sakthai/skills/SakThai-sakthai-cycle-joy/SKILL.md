@@ -1,0 +1,18 @@
+---
+name: SakThai-SakKing-sakthai-cycle-joy
+description: Package and ship through CI without breaking the loop.
+...
+---
+
+# sakthai-cycle-joy
+
+Stage 4 of 6 in the Sak Family cycle — **Joy**. See [Joy.md](../../../../docs/cycle/Joy.md)
+for the full guidance and [SOUL.md](../../../../docs/SOUL.md) for the charge model.
+
+## What to do
+
+Commit on a branch, push, and open a PR — `gh pr create` if the GitHub CLI is installed, otherwise via the PR-create URL that `git push` prints. Watch CI go green with `gh run watch` (or the PR's Checks tab if `gh` is absent). Don't celebrate before CI passes and Trust signs off.
+
+## Then
+
+Advance with `sakthai cycle next` to move to the next stage (trust).

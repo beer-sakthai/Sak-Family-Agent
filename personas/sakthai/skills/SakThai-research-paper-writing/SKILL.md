@@ -1,19 +1,6 @@
 ---
 name: SakThai-research-paper-writing
-title: Research Paper Writing Pipeline
-description: "Write ML papers for NeurIPS/ICML/ICLR: design→submit."
-version: 1.1.0
-author: Orchestra Research
-license: MIT
-dependencies: [semanticscholar, arxiv, habanero, requests, scipy, numpy, matplotlib, SciencePlots]
-platforms: [linux, macos]
-metadata:
-  hermes:
-    tags: [Research, Paper Writing, Experiments, ML, AI, NeurIPS, ICML, ICLR, ACL, AAAI, COLM, LaTeX, Citations, Statistical Analysis]
-    category: research
-    related_skills: [SakThai-arxiv, ml-paper-writing, subagent-driven-development, SakThai-plan]
-    requires_toolsets: [terminal, files]
-
+description: "Write ML papers for NeurIPS/ICML/ICLR: design\u2192submit."
 ---
 
 # Research Paper Writing Pipeline

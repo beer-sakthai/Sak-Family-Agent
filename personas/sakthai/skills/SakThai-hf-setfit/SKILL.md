@@ -1,13 +1,6 @@
 ---
 name: SakThai-hf-setfit
-author: SakThai
-license: MIT
-description: "SetFit: prompt-free, efficient few-shot text classification using Sentence Transformers"
-version: 1.0.0
-metadata:
-  hermes:
-    tags: [huggingface, setfit, few-shot, classification, sentence-transformers, nlp]
-    category: mlops
+description: 'SetFit: prompt-free, efficient few-shot text classification using Sentence Transformers'
 ---
 
 # SetFit — Efficient Few-Shot Text Classification

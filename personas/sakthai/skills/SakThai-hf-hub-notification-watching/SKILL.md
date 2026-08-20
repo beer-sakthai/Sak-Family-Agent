@@ -1,9 +1,6 @@
 ---
 name: SakThai-hf-hub-notification-watching
-version: 1.0.0
-author: SakThai
-license: MIT
-category: mlops
+description: 'name: SakThai-hf-hub-notification-watching'
 ---
 
 # Hugging Face Hub Notifications & Watching System

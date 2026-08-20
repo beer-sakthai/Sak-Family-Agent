@@ -1,13 +1,8 @@
 ---
 name: SakSee-repository-structure-investigation
-description: "Investigate complex repository structures, especially when processes may be running from integrated components rather than standalone repositories."
-version: 1.0.0
-author: SakSee
-license: MIT
-platforms: [linux, macos]
-metadata:
-  hermes:
-    tags: [repository, investigation, structure, git, process]
+description: Investigate complex repository structures, especially when processes may be running
+  from integrated components rather than standalone repositories.
+...
 ---
 
 # Repository Structure Investigation
