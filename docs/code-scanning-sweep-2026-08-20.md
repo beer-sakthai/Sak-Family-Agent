@@ -275,3 +275,165 @@ Round one's lesson was that a scanner can be configured to ignore its own
 config; round two's was that a plan entry is not evidence code exists. This
 round's is narrower and the same shape: **a workflow that is on `main`, pinned,
 and green is still not necessarily doing anything.**
+
+---
+
+# Round two — the same day, and the thing the dashboard could not tell us
+
+Round one closed with a prediction and a list of what was not done. This
+section is the measurement, plus a finding that no code-scanning tool reports
+because it was never in a scanned commit range.
+
+## The read
+
+**Code scanning cleanup**, no inputs, run
+[32377434087](https://github.com/beer-sakthai/Sak-Family-Agent/actions/runs/32377434087),
+`main` at `3c15d9bf`.
+
+```
+Open code-scanning alerts on beer-sakthai/Sak-Family-Agent: 89
+
+tool         open alerts  analyses  latest analysis
+-----------  -----------  --------  --------------------
+Bandit       47           1416      2026-08-20T13:57:11Z
+BinSkim      0            412       2026-07-06T05:01:03Z
+CodeQL       0            10546     2026-08-20T13:58:00Z
+ESLint       0            3301      2026-08-20T13:57:14Z
+Scorecard    19           1679      2026-08-20T13:57:22Z
+github-repo  23           1         2026-08-17T09:47:23Z
+mobsfscan    0            14        2026-08-12T04:14:21Z
+```
+
+**115 → 89.** Against round one's predictions:
+
+| Tool | Predicted | Actual | |
+|---|---:|---:|---|
+| Bandit | 47 | **47** | exact |
+| Scorecard | 39–40 | **19** | **prediction was wrong, and wrong in an instructive way** |
+| CodeQL / ESLint | 0 / 0 | 0 / 0 | held |
+| github-repo | 23 | 23 | held |
+
+### Correcting round one on `TokenPermissionsID`
+
+Round one said, twice and emphatically, that moving `contents: write` from the
+top level to the job level "does not lower the raw alert count" because
+job-level writes are flagged too, and that counting it as −3 "would be wrong and
+is not claimed."
+
+**All 21 `TokenPermissionsID` alerts are now closed** — including the ten in
+`.lock.yml` files that were never touched. So the caution was misplaced:
+Scorecard re-scored the whole check rather than re-reporting per site. The
+conservative claim was the safer one to publish and it was still incorrect, which
+is worth recording as plainly as the prediction that held.
+
+Both `downloadThenRun` alerts closed as expected. The 19 that remain: 15 ×
+`npmCommand not pinned by hash` in gh-aw `.lock.yml` compiler output, the one
+critical `DangerousWorkflowID` that is displayed-not-live, and the three
+repository-settings checks.
+
+## The finding the dashboard cannot show: a live credential on a branch
+
+A gitleaks sweep across **all four branches and all 3,448 commits** turned up
+one real, unrotated credential:
+
+```
+scripts/family-status.sh:3-4   on jules-refactor-eval-viewer-9438d504-…
+  export KAGGLE_USERNAME="…"
+  export KAGGLE_API_TOKEN="…"     37 chars, entropy 3.99, not a placeholder
+```
+
+Committed 2026-07-25 and still at that branch's tip on 2026-08-20 — **26 days on
+a public repository with a fork.** Neither variable is used; nothing in the
+script references Kaggle. `main` had already dropped both lines; the branch
+never did.
+
+Everything else the sweep found is a false positive, confirmed by reading each
+one: prose (`…Python API, S3-compatible API (AWS CLI, boto3, s5cmd)` — the
+"secret" gitleaks reports is the string `S3-compatible`), and obvious
+placeholders — a `Bearer YOUR_TOKEN` example in a curl snippet, and a commented
+sample token in `security/SECURITY_FIXES_PLAN.md` whose value is the literal
+"abc" / "def" filler. (Quoting that second one verbatim here made *this
+document* trip the scanner, which is its own small illustration of why
+`generic-api-key` fires as often as it does.)
+
+History also holds real credentials in files long deleted from `main` — a
+`secrets.py` with two Slack app tokens and a private key, `api_key` values in old
+`config/config.yaml` and `default/config.yaml`, and the `H9hhwS…` token
+`.gitleaks.toml`'s own comment already says must be rotated.
+
+### Why deleting does not fix any of it
+
+The credential was removed from the branch tip. **That is not remediation.** The
+repository is public and forked; the value is in three commits of that branch's
+history; GitHub keeps unreachable objects fetchable by SHA until Support
+garbage-collects them; and a fork keeps its own copy. A full history rewrite
+(`filter-repo`/BFG) would change every commit SHA, break roughly 1,050 pull
+request references and every existing clone, and *still* not close it.
+
+**Rotation at the provider is the only action that closes a leaked credential.**
+That is what `.gitleaks.toml`'s existing comment argues for the `H9hhwS…` token,
+and it is still outstanding for that one.
+
+## Why it went unreported for 26 days
+
+`secret-scan.yml`'s header claimed it "scans the full git history." It does not,
+and could not have caught this in two independent ways:
+
+1. **`on: push` is filtered to `branches: [main]`.** A push to any other branch
+   is never scanned at all.
+2. **`gitleaks-action` scans the pushed commit *range***, not the tree —
+   `--log-opts=--no-merges --first-parent <before>^..<after>`, visible in any of
+   its run logs. `fetch-depth: 0` makes history available to gitleaks; it does
+   not make the action ask for it.
+
+Together: a branch with no open pull request is looked at by nothing, forever.
+
+### The fix
+
+A second job, `branch-sweep`, on a weekly schedule and manual dispatch. It
+checks out **every branch tip** and scans the **tree** rather than a range, with
+a gitleaks binary pinned by version and SHA-256 (downloaded and checksummed, not
+piped into a shell — the rule round one established).
+
+Two details are load-bearing, and testing found both:
+
+- **The config comes from the default branch**, passed with `--config`. Reading
+  each branch's own `.gitleaks.toml` would let a branch silence a finding about
+  itself by committing an allowlist entry beside the secret.
+- **`git clean -qxffd` runs between branches.** `--no-git` scans the working
+  *directory*, and `git checkout` only manages *tracked* files — so an untracked
+  or gitignored file survives into the next branch's scan. The first version of
+  this job reported a single planted file against **all four branches**,
+  including ones that never contained it. That bug was found by planting a
+  canary, not by reading the script.
+
+Verified in three states before commit: baseline (4 branches clean, exit 0); a
+tracked secret planted on one branch (**only** that branch flagged, exit 1); and
+an untracked gitignored leftover in the workdir (attributed to no branch, exit
+0).
+
+The prose false positive is allowlisted **by value** (`S3-compatible`) rather
+than by path, and that choice was tested too: injecting a Slack token into the
+same allowlisted file is still caught.
+
+`tests/test_workflow_hygiene.py` pins the schedule trigger, the job's existence,
+the `git clean`, the default-branch `--config`, and the pinned digest — each
+verified by breaking it.
+
+## What is still not done
+
+- **Rotate the credentials.** Kaggle (found here), the Slack app tokens and
+  private key in the deleted `secrets.py`, the old `config.yaml` `api_key`s, and
+  `H9hhwS…`. Owner action, and the only real remediation.
+- **The 47 Bandit findings**, 23 of them `B615`.
+- **`continuous-security.yml` is still green and hollow** — see round one.
+- **`SECURITY-INSIGHTS.yml`**, the orphaned BinSkim analyses, the unset
+  `STEP_SECURITY_API_KEY`, and the three repository-settings Scorecard checks.
+
+## A note on method
+
+Round one's lesson was that a workflow can be on `main`, pinned, and green while
+doing nothing. This round's is adjacent: **a scanner can be running, green, and
+structurally incapable of seeing the thing it is named for.** Both were found the
+same way — by reading what the job actually did rather than what its name or its
+header comment said.

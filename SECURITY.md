@@ -42,7 +42,7 @@ These run automatically and are the controls actually enforced on this repositor
 | Gate | Where it's defined | What it covers |
 |---|---|---|
 | Lint + static analysis | `ci.yml` | `ruff`, strict `mypy`, and `bandit` over the core `sakthai` package on every push/PR to `main` |
-| Secret scanning | `secret-scan.yml` | `gitleaks` over the full git history (config: `.gitleaks.toml`) on pushes to `main` and every pull request |
+| Secret scanning | `secret-scan.yml` | Two jobs, config `.gitleaks.toml`. **`gitleaks`** gates pushes to `main` and every pull request — it scans the *pushed commit range*, so it catches secrets as they land but cannot see one already sitting in a tree. **`branch-sweep`** runs weekly (Friday 06:00 UTC) and on demand over **every branch tip's whole tree**, with the default branch's config so a branch cannot allowlist its own secret. Note the first job does **not** scan full history despite `fetch-depth: 0`; that claim was wrong here until 2026-08-20 |
 | Dependency vulnerability audit | `dependency-audit.yml` | `pip-audit` over the locked dependency set (`uv.lock`) — weekly, on dependency changes, and on demand |
 | Code scanning (SAST) | `codeql.yml` | GitHub CodeQL **advanced** setup over `actions`, `javascript-typescript` and `python`, scoped by `.github/codeql/codeql-config.yml` via `config-file:`. Default setup is **off**: the two cannot coexist, so do not re-enable it without deleting the workflow. See `docs/code-scanning-sweep-2026-08-18.md` |
 | Multi-tool SAST | `ossar.yml` | Microsoft Security DevOps (MSDO), results uploaded to the Security tab |
@@ -87,7 +87,7 @@ The workflow currently covers the first of three intended stages:
 1. **Proactive Scanning** (implemented):
     - The agent runs a suite of static analysis tools, including `ruff` for code quality and `bandit` for security vulnerabilities, across the codebase.
     - This process identifies potential bugs, security hotspots, and style issues.
-    - A dedicated `gitleaks` workflow (`.github/workflows/secret-scan.yml`) runs on pushes to `main` and every pull request to detect and prevent hardcoded secrets from being committed to the repository.
+    - A dedicated `gitleaks` workflow (`.github/workflows/secret-scan.yml`) runs on pushes to `main` and every pull request to detect and prevent hardcoded secrets from being committed to the repository. A second job sweeps every branch tip weekly, because the per-push scan only ever sees the commits being pushed — and only on `main`.
 
 2. **Automated Triage** (implemented for CI failures, not for vulnerabilities):
     - `security-audit.md` triages scanner output into a single issue, cross-checked against the prevention table in `docs/security-hardening.md` so a known-and-accepted finding is not re-raised as new. It proposes; it does not patch.

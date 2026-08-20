@@ -242,7 +242,7 @@ The ones that gate a change:
 |---|---|---|
 | `ci.yml` | push/PR to `main` | ruff check + format → mypy + bandit → pytest with coverage, on Python **3.11 and 3.12** |
 | `pylint.yml` | push/PR to `main` | pylint over `personas/sakthai/sakthai` + `tests` |
-| `secret-scan.yml` | push to `main`, all PRs, manual | gitleaks (config `.gitleaks.toml`, which allowlists persona docs) |
+| `secret-scan.yml` | push to `main`, all PRs, manual, **weekly Friday** | two jobs. `gitleaks` is the incremental gate: gitleaks-action scans the *pushed commit range*, not the tree. `branch-sweep` (schedule/manual only) scans **every branch tip's whole tree** with a hash-pinned gitleaks binary and the **default branch's** `.gitleaks.toml`. The sweep exists because `push` is filtered to `main` and a branch with no open PR gets no `pull_request` run either — a real Kaggle token sat on a feature branch for 26 days in that gap |
 | `dependency-audit.yml` | PRs touching `pyproject.toml`/`uv.lock`, weekly Monday, manual | pip-audit over `uv.lock` |
 | `dependency-review.yml` | all PRs | GitHub dependency-review on the PR's diff |
 | `subprojects.yml` | push/PR touching `apps/agent_workflow_framework/**`, `apps/sak_agent_dashboard/**`, or `services/teams-copilot-mcp/**` | the two out-of-tree pytest suites + the dashboard's lint/typecheck/test/build chain |

@@ -553,3 +553,66 @@ def test_runner_bootstrap_verifies_what_it_downloads() -> None:
     assert re.search(r"NODESOURCE_GPG_FINGERPRINT=\"[0-9A-F]{40}\"", body), (
         "bootstrap-toolchain.sh lost its pinned NodeSource key fingerprint."
     )
+
+
+def test_secret_scan_sweeps_every_branch_tip() -> None:
+    """``secret-scan.yml`` scans branch *trees*, not just pushed commits.
+
+    The incremental ``gitleaks`` job cannot see a secret that is already in a
+    tree: ``gitleaks-action`` derives a commit range from the triggering event
+    and scans only that. Combined with ``push`` being filtered to ``main``, a
+    branch with no open pull request is never looked at by anything — which is
+    how a real Kaggle API token sat in ``scripts/family-status.sh`` on a feature
+    branch of this public repository from 2026-07-25 to 2026-08-20.
+
+    Three properties of the sweep are pinned here because each was a bug or a
+    hole that testing found:
+
+    * **It runs.** A ``schedule`` trigger, or the job never fires on its own.
+    * **The config comes from the default branch.** Reading each branch's own
+      ``.gitleaks.toml`` would let a branch silence a finding about itself by
+      committing an allowlist entry next to the secret.
+    * **It cleans between branches.** ``--no-git`` scans the working directory
+      and ``git checkout`` only manages *tracked* files, so an untracked or
+      gitignored leftover survives into the next branch's scan and is reported
+      against it. Before ``git clean`` was added, one planted file was reported
+      on all four branches, including ones that never contained it.
+    """
+    data = _load(WORKFLOWS_DIR / "secret-scan.yml")
+
+    assert "schedule" in _triggers(data), (
+        "secret-scan.yml lost its `schedule:` trigger — the branch sweep only "
+        "runs on a schedule or a manual dispatch, so without it nothing ever "
+        "looks at a branch that has no open pull request."
+    )
+
+    jobs = data["jobs"]
+    assert "branch-sweep" in jobs, (
+        "secret-scan.yml lost its `branch-sweep` job. The remaining `gitleaks` "
+        "job scans the pushed commit range only and cannot see a secret that "
+        "is already sitting in a branch's tree."
+    )
+
+    sweep = " ".join(str(step.get("run", "")) for step in jobs["branch-sweep"]["steps"])
+
+    assert "git clean" in sweep, (
+        "branch-sweep no longer cleans the working tree between branches. "
+        "`--no-git` scans the directory, and untracked or ignored files survive "
+        "`git checkout`, so one branch's file gets reported against all of them."
+    )
+    assert "--config" in sweep and "DEFAULT_BRANCH" in sweep, (
+        "branch-sweep must scan with the default branch's .gitleaks.toml "
+        "(`--config`), not whatever config each branch happens to carry — "
+        "otherwise a branch can allowlist its own secret."
+    )
+    digests = [
+        str(step.get("env", {}).get("GITLEAKS_SHA256", ""))
+        for step in jobs["branch-sweep"]["steps"]
+    ]
+    assert any(re.fullmatch(r"[0-9a-f]{64}", d) for d in digests), (
+        "branch-sweep lost the pinned gitleaks digest. The binary is fetched "
+        "from a release URL; pin it by hash like every other installer here."
+    )
+    assert "sha256sum -c -" in sweep, (
+        "branch-sweep declares a gitleaks digest but no longer checks it."
+    )
