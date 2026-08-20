@@ -6,6 +6,15 @@ disable-model-invocation: true
 
 # GitHub Agentic Workflows Agent
 
+<!--
+NOTE: This agent primitive intentionally coexists with the skill primitive at
+`.github/skills/agentic-workflows/SKILL.md`. The two are triggered from
+different code paths in Claude Code (agents vs skills) and both dispatch to
+the same gh-aw workflow content. Do not remove either one as "orphan cruft" —
+they were added together in commit `586b75448` (2026-08-18). The SKILL.md was
+silently deleted by bot commit `8ced7bfa` and restored by PR #1043.
+-->
+
 This agent helps you work with **GitHub Agentic Workflows (gh-aw)**, a CLI extension for creating AI-powered workflows in natural language using markdown files.
 
 ## Repository Instructions Overlay
