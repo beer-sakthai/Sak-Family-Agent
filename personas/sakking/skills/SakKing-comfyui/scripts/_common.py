@@ -887,11 +887,19 @@ def _redact_sensitive(value: Any) -> Any:
     return _redact_sensitive_text(str(value))
 
 
-def emit_json(obj: Any, *, indent: int = 2) -> None:
-    """Print JSON to stdout after recursively removing credentials."""
+def emit_json(obj: Any, *, indent: int = 2, redact: bool = True) -> None:
+    """Print JSON to stdout after recursively removing credentials.
+
+    Security hardening: output is always redacted to avoid clear-text leakage
+    in logs/terminal output. The `redact` parameter is retained for backward
+    compatibility (some callers pass `redact=False` for `--raw` output) but
+    does not disable redaction.
+    """
+    _ = redact
     print(json.dumps(_redact_sensitive(obj), indent=indent, default=str))
 
 
 def log(msg: str) -> None:
     """stderr log with consistent prefix (so JSON stdout stays clean)."""
+    # codeql[py/clear-text-logging-sensitive-data]
     print(f"[comfyui-skill] {_redact_sensitive_text(msg)}", file=sys.stderr)

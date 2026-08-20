@@ -422,7 +422,7 @@ def print_header(title):
 def verify_scenario_1():
     print_header("Scenario 1: Linear Workflow & Sequential State Passing")
     yaml_path = FIXTURES_DIR / "linear_workflow.yaml"
-    
+
     # 1. Validate
     code, stdout, stderr = run_cmd([sys.executable, "-m", "agent_workflow.cli", "validate", str(yaml_path)])
     if code != 0:
@@ -441,7 +441,7 @@ def verify_scenario_1():
 def verify_scenario_2():
     print_header("Scenario 2: Parallel Fan-Out/Fan-In Execution DAG")
     yaml_path = FIXTURES_DIR / "parallel_workflow.yaml"
-    
+
     # 1. Validate
     code, stdout, stderr = run_cmd([sys.executable, "-m", "agent_workflow.cli", "validate", str(yaml_path)])
     if code != 0:
@@ -459,7 +459,7 @@ def verify_scenario_2():
 def verify_scenario_3():
     print_header("Scenario 3: Transient Retry Recovery & Terminal Short-Circuit")
     yaml_path = FIXTURES_DIR / "retry_workflow.yaml"
-    
+
     # 1. Validate
     code, stdout, stderr = run_cmd([sys.executable, "-m", "agent_workflow.cli", "validate", str(yaml_path)])
     if code != 0:
@@ -477,7 +477,7 @@ def verify_scenario_3():
 def verify_scenario_4():
     print_header("Scenario 4: Multi-Step Data Mutation & Transformation Pipeline")
     yaml_path = FIXTURES_DIR / "mutation_workflow.yaml"
-    
+
     # 1. Validate
     code, stdout, stderr = run_cmd([sys.executable, "-m", "agent_workflow.cli", "validate", str(yaml_path)])
     if code != 0:
@@ -500,7 +500,7 @@ def main():
         verify_scenario_3(),
         verify_scenario_4(),
     ]
-    
+
     if all(results):
         print("\n========================================")
         print("ALL VERIFICATION SCENARIOS PASSED SUCCESSFULLY!")

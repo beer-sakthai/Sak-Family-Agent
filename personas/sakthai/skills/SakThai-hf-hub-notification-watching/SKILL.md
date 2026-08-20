@@ -1,6 +1,6 @@
 ---
 name: SakThai-hf-hub-notification-watching
-description: "name: SakThai-hf-hub-notification-watching"
+description: 'name: SakThai-hf-hub-notification-watching'
 ---
 
 # Hugging Face Hub Notifications & Watching System

@@ -1,6 +1,7 @@
 ---
 name: SakThai-hf-xet
-description: "Hugging Face XET protocol: fast large-file transfers with chunk-based deduplication, CAS backend, and Git-LFS compatibility."
+description: 'Hugging Face XET protocol: fast large-file transfers with chunk-based deduplication,
+  CAS backend, and Git-LFS compatibility.'
 ---
 
 # Hugging Face XET Protocol & `hf-xet`

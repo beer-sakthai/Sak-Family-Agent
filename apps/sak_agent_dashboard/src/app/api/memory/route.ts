@@ -1,26 +1,16 @@
-import { NextResponse } from "next/server";
+import { createApiHandler } from "@/lib/api/handler";
 import { getMemoryData } from "@/lib/db";
 import { getAuditLogs } from "@/lib/sakthai";
 
-export async function GET(request: Request) {
-  try {
-    const url = new URL(request.url);
-    const demo = url.searchParams.get("demo") === "true";
-    const query = url.searchParams.get("query") || undefined;
-    const severity = url.searchParams.get("severity") || undefined;
+export const GET = createApiHandler("/api/memory", async (ctx) => {
+  const query = ctx.params.query || undefined;
+  const severity = ctx.params.severity || undefined;
 
-    const memory = await getMemoryData(demo, query);
-    const auditLogs = await getAuditLogs(demo, severity);
+  const { memory, dataSource } = await getMemoryData(ctx.demo, query);
+  const { logs: auditLogs, dataSource: auditDataSource } = await getAuditLogs(
+    ctx.demo,
+    severity
+  );
 
-    return NextResponse.json({
-      success: true,
-      memory,
-      auditLogs,
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error?.message || "Failed to fetch memory data" },
-      { status: 500 }
-    );
-  }
-}
+  return { memory, auditLogs, dataSource, auditDataSource };
+});

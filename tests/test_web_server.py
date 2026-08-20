@@ -52,17 +52,27 @@ def api_base() -> str:
     srv.shutdown()
 
 
-def _get(url: str, timeout: int = 30) -> tuple[int, dict[str, Any]]:
+def _get(
+    url: str, timeout: int = 30, force_auth: bool = False, token: str | None = None
+) -> tuple[int, dict[str, Any]]:
     """GET url, returning (status_code, parsed_body). 4xx raises are caught."""
     try:
         req = urllib.request.Request(url)
-        if "/api/" in url:
-            token = _get_or_create_bearer_token()
-            req.add_header("Authorization", f"Bearer {token}")
+        if "/api/" in url or force_auth:
+            use_token = token if token is not None else _get_or_create_bearer_token()
+            req.add_header("Authorization", f"Bearer {use_token}")
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.status, json.loads(resp.read().decode("utf-8"))
+            try:
+                body = json.loads(resp.read().decode("utf-8"))
+            except Exception:
+                body = {}
+            return resp.status, body
     except urllib.error.HTTPError as exc:
-        return exc.code, {}
+        try:
+            body = json.loads(exc.read().decode("utf-8"))
+        except Exception:
+            body = {}
+        return exc.code, body
 
 
 # ---------------------------------------------------------------------------
@@ -226,13 +236,17 @@ class TestApiEcosystemEndpoint:
 
 
 class TestStaticFilePathTraversal:
-    def test_path_traversal_blocked_with_403(self, api_base: str) -> None:
-        code, _ = _get(f"{api_base}/../../etc/passwd")
+    def test_path_traversal_blocked_with_403_when_authenticated(self, api_base: str) -> None:
+        code, _ = _get(f"{api_base}/../../etc/passwd", force_auth=True)
         assert code == 403
 
-    def test_deep_traversal_blocked(self, api_base: str) -> None:
-        code, _ = _get(f"{api_base}/../../../../etc/shadow")
+    def test_deep_traversal_blocked_when_authenticated(self, api_base: str) -> None:
+        code, _ = _get(f"{api_base}/../../../../etc/shadow", force_auth=True)
         assert code == 403
+
+    def test_path_traversal_unauthenticated_gets_401(self, api_base: str) -> None:
+        code, _ = _get(f"{api_base}/../../etc/passwd")
+        assert code == 401
 
 
 class TestApiEdgeCases:
@@ -377,7 +391,10 @@ class TestStaticFileServe:
             t.start()
             try:
                 # Use urlopen directly — the response is HTML, not JSON
-                with urllib.request.urlopen(f"http://127.0.0.1:{port}/ok.html", timeout=30) as resp:
+                req = urllib.request.Request(f"http://127.0.0.1:{port}/ok.html")
+                token = srv_mod._get_or_create_bearer_token()
+                req.add_header("Authorization", f"Bearer {token}")
+                with urllib.request.urlopen(req, timeout=30) as resp:
                     status = resp.status
                     body = resp.read().decode("utf-8")
                 assert status == 200
@@ -410,12 +427,15 @@ class TestStaticFileServe:
             t.start()
             try:
                 url = f"http://127.0.0.1:{port}/leak_test_file_xyz.txt"
+                req = urllib.request.Request(url)
+                token = srv_mod._get_or_create_bearer_token()
+                req.add_header("Authorization", f"Bearer {token}")
                 try:
-                    with urllib.request.urlopen(url, timeout=5) as resp:
+                    with urllib.request.urlopen(req, timeout=5) as resp:
                         status = resp.status
                 except urllib.error.HTTPError as exc:
                     status = exc.code
-                assert status != 200
+                assert status == 404
             finally:
                 srv.shutdown()
         finally:
@@ -530,7 +550,7 @@ class TestHandlerEdgePaths:
 
     def test_static_request_403_when_realpath_raises(self, api_base: str) -> None:
         with patch("sakthai.web.server.os.path.realpath", side_effect=OSError("boom")):
-            status, _ = _get(f"{api_base}/index.html")
+            status, _ = _get(f"{api_base}/index.html", force_auth=True)
         assert status == 403
 
     def test_standalone_server_bind_directory(self) -> None:
@@ -575,8 +595,11 @@ class TestHandlerEdgePaths:
         t.start()
         try:
             url = f"http://127.0.0.1:{port}/index.html"
+            req = urllib.request.Request(url)
+            token = standalone_mod._get_or_create_bearer_token()
+            req.add_header("Authorization", f"Bearer {token}")
             try:
-                with urllib.request.urlopen(url, timeout=30) as resp:
+                with urllib.request.urlopen(req, timeout=30) as resp:
                     status = resp.status
             except urllib.error.HTTPError as exc:
                 status = exc.code
@@ -652,3 +675,118 @@ class TestHandlerEdgePaths:
         ):
             standalone_mod.serve(host="0.0.0.0", port=9999)  # noqa: S104 — explicit opt-in
             mock_http.assert_called_once_with(("0.0.0.0", 9999), standalone_mod._Handler)  # noqa: S104
+
+
+class TestEnhancedWebAuth:
+    @pytest.fixture(autouse=True)
+    def setup_static(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        import sakthai.web.server as srv_mod
+
+        self.static_root = tmp_path / "web_auth_test_dist"
+        self.static_root.mkdir()
+        (self.static_root / "index.html").write_text("<html>index</html>", encoding="utf-8")
+        monkeypatch.setattr(srv_mod, "_STATIC_ROOT", self.static_root)
+
+    def test_health_is_public(self, api_base: str) -> None:
+        """The /health endpoint must be public and require no auth."""
+        code, body = _get(f"{api_base}/health")
+        assert code == 200
+        assert body == {"status": "ok"}
+
+    def test_unauthenticated_static_is_gated(self, api_base: str) -> None:
+        """Unauthenticated requests to static paths get 401."""
+        code, _ = _get(f"{api_base}/")
+        assert code == 401
+
+    def test_authenticated_via_query_param(self, api_base: str) -> None:
+        """Providing token as query param is accepted and issues a Cookie."""
+        token = _get_or_create_bearer_token()
+        # Query parameter must hit a real file in self.static_root or "/", which defaults to index.html
+        url = f"{api_base}/index.html?token={token}"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            assert resp.status == 200
+            headers = resp.info()
+            assert "Set-Cookie" in headers
+            assert f"token={token}" in headers["Set-Cookie"]
+
+    def test_authenticated_via_cookie(self, api_base: str) -> None:
+        """Providing token as a Cookie is accepted."""
+        token = _get_or_create_bearer_token()
+        url = f"{api_base}/index.html"
+        req = urllib.request.Request(url)
+        req.add_header("Cookie", f"token={token}")
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            assert resp.status == 200
+            assert b"index" in resp.read()
+
+
+class TestDocsEndpoints:
+    def test_list_docs_authenticated(self, api_base: str) -> None:
+        status, body = _get(f"{api_base}/api/docs")
+        assert status == 200
+        assert body.get("success") is True
+        assert "best-practices" in body.get("docs", [])
+
+    def test_get_best_practices_doc(self, api_base: str) -> None:
+        status, body = _get(f"{api_base}/api/docs/best-practices")
+        assert status == 200
+        assert body.get("success") is True
+        doc = body.get("doc", {})
+        assert doc.get("slug") == "best-practices"
+        assert "Engineering Best Practices" in doc.get("title", "")
+        assert "House of Sak" in doc.get("content", "")
+
+    def test_get_nonexistent_doc_returns_404(self, api_base: str) -> None:
+        status, body = _get(f"{api_base}/api/docs/nonexistent-doc-xyz-123")
+        assert status == 404
+        assert body.get("success") is False
+
+    def test_path_traversal_doc_slug_rejected(self, api_base: str) -> None:
+        status, body = _get(f"{api_base}/api/docs/..%2F..%2Fetc%2Fpasswd")
+        assert status in (403, 404)
+
+
+def test_all_persona_servers_hardened_against_loopback_bypass() -> None:
+    """Ensure that all persona web servers are hardened against empty string loopback bypass."""
+    import py_compile
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parents[1]
+    personas_dir = repo_root / "personas"
+
+    # All persona names including shared
+    personas = ["sakthai", "sakjules", "sakking", "saksee", "saksit", "saktan", "shared"]
+
+    for persona in personas:
+        server_path = personas_dir / persona / "sakthai" / "web" / "server.py"
+        # If the file does not exist (e.g., saktan or sakjules is a symlink, check it too)
+        if not server_path.is_file():
+            # If it's a symlink or missing, continue as it's covered when we check the symlink target (shared)
+            continue
+
+        # Compile the file to ensure no syntax errors
+        try:
+            py_compile.compile(str(server_path), doraise=True)
+        except Exception as exc:
+            pytest.fail(f"Persona {persona} server file {server_path} failed to compile: {exc}")
+
+        content = server_path.read_text(encoding="utf-8")
+
+        # Ensure no merge conflict markers
+        assert "<<<<<<<" not in content, f"Merge conflict marker found in {server_path}"
+        assert "=======" not in content, f"Merge conflict marker found in {server_path}"
+        assert ">>>>>>>" not in content, f"Merge conflict marker found in {server_path}"
+
+        # Ensure empty string is excluded from _LOOPBACK_NAMES
+        assert (
+            '_LOOPBACK_NAMES = frozenset({"localhost"})' in content
+            or "_LOOPBACK_NAMES = frozenset({'localhost'})" in content
+        ), (
+            f"Vulnerability check failed: empty string is not excluded from _LOOPBACK_NAMES in {server_path}"
+        )
+
+        # Ensure compare_digest is used for bearer token verification (timing-attack defense)
+        assert "compare_digest" in content, (
+            f"Timing attack vulnerability: compare_digest not found in {server_path}"
+        )

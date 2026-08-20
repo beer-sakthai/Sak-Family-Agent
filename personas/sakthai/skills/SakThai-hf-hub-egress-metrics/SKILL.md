@@ -1,6 +1,8 @@
 ---
 name: SakThai-hf-hub-egress-metrics
-description: "Complete reference for Hugging Face Hub egress (bandwidth/data transfer) usage metrics for users and organizations — dashboard access, per-user org breakdown, CDN coverage scope, PRO plan bandwidth limits, and zero-cost usage monitoring strategies."
+description: "Complete reference for Hugging Face Hub egress (bandwidth/data transfer) usage metrics\
+  \ for users and organizations \u2014 dashboard access, per-user org breakdown, CDN\
+  \ coverage scope, PRO plan bandwidth limits, and zero-cost usage monitoring strategies."
 ---
 
 # HF Hub Egress Metrics: Bandwidth Usage Monitoring

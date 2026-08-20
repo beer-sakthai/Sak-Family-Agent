@@ -78,10 +78,26 @@ def get_role(role_name: str) -> dict | None:
 
 def trust_allows_sagemaker(role: dict) -> bool:
     """True if the trust policy lets sagemaker.amazonaws.com assume the role."""
-    trust = role.get("AssumeRolePolicyDocument", {})
-    # Substring check over the serialized doc — matches the original shell helper
-    # and is robust to single/list Principal.Service shapes.
-    return "sagemaker.amazonaws.com" in json.dumps(trust)
+    # ``.get(key, default)`` only applies the default when the key is absent,
+    # not when its value is explicitly None, so an ``or`` fallback is needed
+    # at each level to tolerate a malformed/unexpected AWS API response the
+    # same way the original substring check silently did.
+    trust = role.get("AssumeRolePolicyDocument") or {}
+    statements = trust.get("Statement") or []
+    if isinstance(statements, dict):
+        statements = [statements]
+    for statement in statements:
+        if not isinstance(statement, dict) or statement.get("Effect") != "Allow":
+            continue
+        principal = statement.get("Principal") or {}
+        service = (principal.get("Service") if isinstance(principal, dict) else None) or []
+        services = [service] if isinstance(service, str) else service
+        # Exact-match comparison, not a substring/`in` check over a URL or
+        # domain string, so a decoy value elsewhere in the policy can't
+        # produce a false "trusted" result.
+        if any(entry == "sagemaker.amazonaws.com" for entry in services):
+            return True
+    return False
 
 
 def validate_role(role_name: str, quiet: bool = False) -> str | None:

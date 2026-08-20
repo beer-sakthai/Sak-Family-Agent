@@ -12,10 +12,11 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-# A regex for common API key prefixes (sk-, rk-, pk-, ghp-, hf-, github_pat-), Google keys (AIza),
+# A regex for common API key prefixes (sk-, rk-, pk-, ck-, ghp-, hf-, github_pat-, xoxb-, xoxp-, xapp-, xoxr-), Google keys (AIza),
 # Telegram bot tokens (123456789:ABC...), and AWS Access Key IDs (AKIA/ASIA).
 # Handles both underscore (sk_) and hyphen (sk-) used by Anthropic, OpenAI, and HF.
-SECRET_PATTERN = r"\b(?:(?:sk|rk|pk|ghp|hf|github_pat)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,}|[0-9]{8,12}:[a-zA-Z0-9_-]{35,}|(?:AKIA|ASIA)[A-Z0-9]{16})\b"  # nosec B105
+# Updated to catch Stripe consumer keys (ck_ prefix) and Slack tokens (xoxb/xoxp/xapp/xoxr).
+SECRET_PATTERN = r"\b(?:(?:sk|rk|pk|ck|ghp|hf|github_pat|xoxb|xoxp|xapp|xoxr)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,}|[0-9]{8,12}:[a-zA-Z0-9_-]{35,}|(?:AKIA|ASIA)[A-Z0-9]{16})\b"  # nosec B105
 _SECRET_RE = re.compile(SECRET_PATTERN)
 
 # Multiline regex pattern to detect PEM private key blocks.
@@ -43,7 +44,12 @@ SKILLS_DIR = PERSONAS_DIR / "sakthai" / "skills"
 LIBRARY_DIR = PERSONAS_DIR / "shared" / "skills"
 SHARED_SKILLS_DIR = PERSONAS_DIR / "shared" / "skills"
 
-# The five Sak Family personas `sakthai chat --persona` can address.
+# Curated skill catalog at the repo root (pre-dates the SakThai-/Sak- naming
+# convention — its skills keep their original lowercase `sakthai-` names).
+# Kept as a distinct discovery root rather than folded into LIBRARY_DIR, which
+# other code already treats as a synonym for SHARED_SKILLS_DIR.
+CURATED_LIBRARY_DIR = REPO_ROOT / "library"
+
 # The six Sak Family personas `sakthai chat --persona` can address.
 PERSONA_NAMES: tuple[str, ...] = ("sakking", "sakthai", "saksee", "saksit", "sakjules", "saktan")
 
@@ -51,6 +57,51 @@ PERSONA_NAMES: tuple[str, ...] = ("sakking", "sakthai", "saksee", "saksit", "sak
 def persona_soul_path(persona: str) -> Path:
     """Path to a persona's SOUL.md identity file."""
     return PERSONAS_DIR / persona / "SOUL.md"
+
+
+def persona_skills_dir(persona: str) -> Path:
+    """Path to PERSONA's own skill overlay: ``personas/<persona>/skills``."""
+    if persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+    return PERSONAS_DIR / persona / "skills"
+
+
+def persona_mcp_config_path(persona: str) -> Path:
+    """Path to PERSONA's own MCP manifest: ``personas/<persona>/config/mcp.json``."""
+    if persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+    return PERSONAS_DIR / persona / "config" / "mcp.json"
+
+
+def persona_model_defaults(persona: str) -> tuple[str | None, str | None]:
+    """PERSONA's preferred ``(provider, model)`` from its own ``config/config.yaml``.
+
+    Reads only the top-level ``model.provider`` / ``model.default`` keys — the
+    two that are consistently present and meaningful across every persona's
+    config.yaml today. Missing file, unreadable YAML, or missing keys all
+    return ``(None, None)`` rather than raising, so callers can simply fall
+    back to their own defaults.
+    """
+    if persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+    path = PERSONAS_DIR / persona / "config" / "config.yaml"
+    if not path.is_file():
+        return None, None
+    import yaml
+
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError:
+        return None, None
+    model = data.get("model") if isinstance(data, dict) else None
+    if not isinstance(model, dict):
+        return None, None
+    provider = model.get("provider")
+    default_model = model.get("default")
+    return (
+        provider if isinstance(provider, str) else None,
+        default_model if isinstance(default_model, str) else None,
+    )
 
 
 # Environment variables, grouped by how the readiness check treats them.
@@ -75,9 +126,12 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "OLLAMA_HOST": "Ollama host URL (default: http://127.0.0.1:11434)",
     "SAKTHAI_GATEWAY_URL": "Base URL of an OpenAI-compatible AI gateway (OpenRouter, LiteLLM, Vercel, Cloudflare)",
     "SAKTHAI_GATEWAY_API_KEY": "API key/token for the AI gateway (default: nokey)",  # nosec B105 — description text
+    "HF_TOKEN": "Hugging Face access token — used by `sakthai hf` and the `huggingface` provider",  # nosec B105
+    "SAKTHAI_HF_API_BASE": "Hugging Face Inference Providers router base URL (default: https://router.huggingface.co/v1)",
     "SAKTHAI_HOME": "Override the data directory (default: ~/.sakthai)",
     "SAKTHAI_READ_ALLOW": "Extra paths the read_file tool may read (os.pathsep-separated)",
     "SAKTHAI_MCP_CONFIG": "Path to a per-persona mcp.json whose servers override the defaults",
+    "SAKTHAI_PERSONA": "Which Sak Family persona a Telegram/systemd launch is running as",
     "SAKTHAI_MCP_TIMEOUT": "Seconds to wait for an external MCP server reply (default: 30)",
     "TELEGRAM_ALLOWED_USER_IDS": "Comma- or space-separated Telegram user IDs allowed to use the bot",
     "TELEGRAM_BOT_TOKEN": "Telegram bot token used by the Telegram gateway",
@@ -136,18 +190,16 @@ def memory_db_path() -> Path:
 def persona_memory_db_path(persona: str) -> Path:
     """Path to PERSONA's own memory shard, by convention: ``~/.sakthai/<persona>/memory.db``.
 
-    Independent of the current process's ``SAKTHAI_HOME`` override, so callers
-    (e.g. the family/merged view) can address every persona's shard at once
-    regardless of which persona the current process happens to be running as.
-    This mirrors the convention already used in production by
-    ``infra/vm-agents/sakthai-agent-run.sh``, which sets
-    ``SAKTHAI_HOME="$HOME/.sakthai/$AGENT"`` per deployed persona — this
-    function computes the same path directly rather than requiring that env
-    var to be set.
+    When ``SAKTHAI_HOME`` is set (e.g. in tests) the path resolves under that
+    override so tests get proper isolation.  When unset, falls back to
+    ``Path.home() / \".sakthai\"``, matching the production convention used by
+    ``infra/vm-agents/sakthai-agent-run.sh`` where ``SAKTHAI_HOME`` is set
+    to ``$HOME/.sakthai/$AGENT`` per deployed persona.
     """
     if persona not in PERSONA_NAMES:
         raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
-    return Path.home() / ".sakthai" / persona / "memory.db"
+    base = Path(os.environ.get("SAKTHAI_HOME", Path.home() / ".sakthai"))
+    return base / persona / "memory.db"
 
 
 def sessions_dir() -> Path:
@@ -203,6 +255,16 @@ def gateway_base_url() -> str | None:
     return os.environ.get("SAKTHAI_GATEWAY_URL")
 
 
+def huggingface_api_base() -> str:
+    """Return the Hugging Face Inference Providers router base URL.
+
+    Honors ``SAKTHAI_HF_API_BASE`` for a self-hosted or region-pinned router;
+    defaults to the public router (``https://router.huggingface.co/v1``), which
+    is OpenAI-compatible and fronts every model with a hosted Inference Provider.
+    """
+    return os.environ.get("SAKTHAI_HF_API_BASE", "https://router.huggingface.co/v1").rstrip("/")
+
+
 def sakthai_default_provider() -> str | None:
     """Return the default provider override for Telegram/systemd launches."""
     value = os.environ.get("SAKTHAI_PROVIDER", "").strip()
@@ -243,6 +305,21 @@ def sakthai_with_skills() -> list[str]:
     """Return comma-separated skills injected into Telegram/systemd launches."""
     raw = os.environ.get("SAKTHAI_WITH_SKILLS", "")
     return [item.strip() for item in raw.replace(",", " ").split() if item.strip()]
+
+
+def sakthai_persona() -> str | None:
+    """Return the persona a Telegram/systemd launch is running as, if set.
+
+    Set per-deployment via ``SAKTHAI_PERSONA`` (see
+    ``infra/vm-agents/env-templates/*.env.example`` and
+    ``infra/vm-agents/sakthai-agent-run.sh``) — lets a single-token,
+    single-process gateway (e.g. the Telegram bot) resolve that persona's own
+    skill overlay via ``persona_skills_dir()`` instead of always falling back
+    to ``SKILLS_DIR``.
+    """
+    value = os.environ.get("SAKTHAI_PERSONA")
+    value = value.strip() if value else None
+    return value if value in PERSONA_NAMES else None
 
 
 def telegram_bot_token() -> str | None:
@@ -345,6 +422,7 @@ def _auth_report() -> dict[str, Any]:
         anthropic_credential_source,
         gateway_credential_source,
         gemini_credential_source,
+        huggingface_credential_source,
         load_gemini_cli_token,
         openai_credential_source,
     )
@@ -353,6 +431,7 @@ def _auth_report() -> dict[str, Any]:
     openai_source = openai_credential_source()
     gemini_source = gemini_credential_source()
     gateway_source = gateway_credential_source()
+    huggingface_source = huggingface_credential_source()
     return {
         "anthropic_source": anthropic_source,
         "anthropic_ok": anthropic_source is not None,
@@ -361,6 +440,8 @@ def _auth_report() -> dict[str, Any]:
         "openai_ok": openai_source is not None,
         "gateway_source": gateway_source,
         "gateway_ok": gateway_source is not None,
+        "huggingface_source": huggingface_source,
+        "huggingface_ok": huggingface_source is not None,
         "gemini_source": gemini_source,
         "gemini_ok": gemini_source is not None,
     }
@@ -395,6 +476,11 @@ def check_env() -> dict[str, Any]:
 # Extra values to be redacted (e.g. tokens loaded from disk), populated via register_secret.
 _EXTRA_SECRETS: set[str] = set()
 
+# Global cache for exact secrets to avoid rebuilding/sorting and env queries on every call
+_cached_exact_secrets_list: list[str] = []
+_cached_env_values: dict[str, str | None] = {}
+_secrets_dirty: bool = True
+
 
 def register_secret(secret: str) -> None:
     """Register a value to be masked by redact_secrets.
@@ -402,19 +488,19 @@ def register_secret(secret: str) -> None:
     Used by the auth layer to register tokens loaded from disk so they are
     redacted even if they aren't in the environment.
     """
+    global _secrets_dirty
     if isinstance(secret, str) and len(secret) > 5:
         _EXTRA_SECRETS.add(secret)
+        _secrets_dirty = True
 
 
-def redact_secrets(text: str) -> str:
-    """Redact sensitive environment variable values and registered secrets from text."""
-    if not isinstance(text, str) or not text:
-        return text
+def _get_exact_secrets() -> list[str]:
+    """Retrieve the sorted list of exact secrets from cache or environment.
 
-    # First, redact PEM private key blocks.
-    text = _PRIVATE_KEY_RE.sub("[REDACTED PRIVATE KEY]", text)
-
-    # Second, redact based on known exact values (highest precision).
+    Only rebuilds the list if _secrets_dirty is True or any of the tracked
+    environment variables have changed since the last check.
+    """
+    global _secrets_dirty, _cached_exact_secrets_list, _cached_env_values
     secret_keys = [
         "ANTHROPIC_API_KEY",
         "ANTHROPIC_AUTH_TOKEN",
@@ -429,21 +515,59 @@ def redact_secrets(text: str) -> str:
         "AWS_SECRET_ACCESS_KEY",
         "GITHUB_TOKEN",
         "GITHUB_PAT",
+        "STRIPE_API_KEY",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_PUBLISHABLE_KEY",
+        "TWILIO_AUTH_TOKEN",
+        "TWILIO_API_KEY",
+        "MS_GRAPH_CLIENT_SECRET",
+        "MS_GRAPH_REFRESH_TOKEN",
+        "MSGRAPH_CLIENT_SECRET",
+        "SLACK_BOT_TOKEN",
+        "SLACK_USER_TOKEN",
+        "SLACK_APP_TOKEN",
+        "SLACK_SIGNING_SECRET",
+        "SLACK_WEBHOOK_URL",
     ]
 
-    secrets: set[str] = set(_EXTRA_SECRETS)
+    env_changed = False
     for key in secret_keys:
-        if val := os.environ.get(key):
-            secrets.add(val)
+        val = os.environ.get(key)
+        if _cached_env_values.get(key) != val:
+            _cached_env_values[key] = val
+            env_changed = True
 
-    if secrets:
+    if _secrets_dirty or env_changed:
+        secrets = set(_EXTRA_SECRETS)
+        for val in _cached_env_values.values():
+            if val:
+                secrets.add(val)
         # Sort by length descending to ensure longer secrets (e.g. session tokens)
         # are redacted before their potential substrings (e.g. parts of keys).
-        for val in sorted(secrets, key=len, reverse=True):
-            if len(val) > 5:
-                text = text.replace(val, "[REDACTED]")
+        _cached_exact_secrets_list = sorted(
+            [s for s in secrets if len(s) > 5], key=len, reverse=True
+        )
+        _secrets_dirty = False
 
-    # Second, redact based on common patterns (defense-in-depth).
+    return _cached_exact_secrets_list
+
+
+def redact_secrets(text: str) -> str:
+    """Redact sensitive environment variable values and registered secrets from text."""
+    if not isinstance(text, str) or not text:
+        return text
+
+    # First, redact PEM private key blocks. Skip if target header is not present.
+    if "-----BEGIN" in text:
+        text = _PRIVATE_KEY_RE.sub("[REDACTED PRIVATE KEY]", text)
+
+    # Second, redact based on known exact values (highest precision).
+    secrets = _get_exact_secrets()
+    for val in secrets:
+        if val in text:
+            text = text.replace(val, "[REDACTED]")
+
+    # Third, redact based on common patterns (defense-in-depth).
     text = _SECRET_RE.sub("[REDACTED]", text)
 
     return text

@@ -1,0 +1,157 @@
+# ESLint over this repository's only JavaScript/TypeScript project, published to
+# the code-scanning dashboard.
+#
+# What this file replaced, and why it is worth recording: it was GitHub's stock
+# ESLint starter template, and it had never once succeeded. The template runs
+# `npx eslint . --config .eslintrc.js --ext .js,.jsx,.ts,.tsx` at the repository
+# root, and every clause of that is wrong here —
+#
+#   * `.eslintrc.js` does not exist. The one ESLint project in this repository
+#     is `apps/sak_agent_dashboard`, and it uses flat config
+#     (`eslint.config.mjs`). Every run died with
+#     "Cannot read config file: .../.eslintrc.js" and exit code 2.
+#   * `--ext` was removed in ESLint 9; flat config decides its own file set.
+#   * the template installs `eslint@8.10.0`, which cannot read flat config at
+#     all. The project is on ESLint 9 with `eslint-config-next` 16.
+#   * there is no root `package.json` and no root `node_modules`, so nothing it
+#     linted would have resolved even with a valid config.
+#
+# `continue-on-error` on the lint step then hid the failure one step further:
+# ESLint exited 2 without writing the SARIF file, and the job failed on
+# `Path does not exist: eslint-results.sarif` instead of on the real cause.
+# That is the shape this file now guards against explicitly — see "Verify".
+#
+# Scope note: this does not gate anything. `subprojects.yml` runs
+# `pnpm lint` -> `typecheck` -> `test` -> `build` as the dashboard's actual
+# quality gate; this workflow exists to put the same findings on the Security
+# tab. The `category` below keeps its analyses separate from the ESLint SARIF
+# that `ossar.yml` uploads via Microsoft Security DevOps — two producers under
+# one tool name would otherwise take turns closing each other's alerts.
+name: ESLint
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "apps/sak_agent_dashboard/**"
+      - ".github/workflows/eslint.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "apps/sak_agent_dashboard/**"
+      - ".github/workflows/eslint.yml"
+  schedule:
+    - cron: '25 8 * * 0'
+
+permissions:
+  contents: read
+
+concurrency:
+  # See the note in ci.yml — and in codeql.yml for why a `main` run is never
+  # cancelled: this workflow's upload is what closes its own earlier alerts.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  eslint:
+    name: Run eslint scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    defaults:
+      run:
+        working-directory: apps/sak_agent_dashboard
+    permissions:
+      contents: read          # actions/checkout
+      security-events: write  # upload-sarif writes to the code-scanning API
+      actions: read           # upload-sarif reads the run status on a private repo
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: step-security/action-setup@7734f5522f614a4cf2820ad19aa26717c7abfd96 # v6.0.9
+        with:
+          package_json_file: apps/sak_agent_dashboard/package.json
+
+      # Node 22 for the same reason subprojects.yml pins it: jsdom@30 and
+      # undici@8 in the locked tree declare a >=22 floor.
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: apps/sak_agent_dashboard/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The SARIF formatter is not a project dependency and should not become
+      # one — it is needed by this workflow, not by the app. Adding it after the
+      # frozen install mutates only the ephemeral checkout, so the committed
+      # lockfile stays the thing `--frozen-lockfile` verified a step earlier.
+      # `-w` is required, not decoration: this app carries its own
+      # `pnpm-workspace.yaml` (`packages: ['.']`), so pnpm treats the directory
+      # as a workspace root and refuses a bare `pnpm add` with
+      # ERR_PNPM_ADDING_TO_ROOT.
+      - name: Install the SARIF formatter
+        run: pnpm add -D -w @microsoft/eslint-formatter-sarif@3.1.0
+
+      # `pnpm lint` is `eslint src` — the same command and the same flat config
+      # the gating job runs, so the dashboard cannot report a different set of
+      # rules than the one developers see locally.
+      #
+      # `continue-on-error` is scoped to this step alone: lint *violations* are
+      # what we want on the Security tab rather than in a red X. A lint
+      # violation exits 1; a broken config or missing toolchain exits 2 and
+      # writes no file, which the next step turns into a real failure.
+      - name: Run ESLint
+        continue-on-error: true
+        env:
+          SARIF_ESLINT_IGNORE_SUPPRESSED: "true"
+        run: >-
+          pnpm exec eslint src
+          --format @microsoft/eslint-formatter-sarif
+          --output-file "eslint-results.sarif"
+
+      # The step the stock template was missing. Without it, any failure to
+      # *run* ESLint surfaces as "Path does not exist" from the upload action —
+      # which is what happened on every run of this workflow before it was
+      # rewritten, and it points at the wrong step.
+      - name: Verify ESLint produced a report
+        run: |
+          if [ ! -s eslint-results.sarif ]; then
+            echo "::error::ESLint did not produce eslint-results.sarif — it failed to run (bad config, missing toolchain) rather than finding lint problems." >&2
+            exit 1
+          fi
+          python3 - <<'EOF'
+          import json
+          with open("eslint-results.sarif") as fh:
+              report = json.load(fh)
+          runs = report["runs"]
+          total = sum(len(run.get("results", [])) for run in runs)
+          driver = runs[0]["tool"]["driver"]
+          print(f"SARIF {report['version']} from {driver['name']} {driver.get('version')}: "
+                f"{total} result(s) across {len(runs)} run(s)")
+          EOF
+
+      - name: Upload results to the code-scanning dashboard
+        uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4
+        with:
+          sarif_file: apps/sak_agent_dashboard/eslint-results.sarif
+          checkout_path: apps/sak_agent_dashboard
+          # Keeps these analyses distinct from ossar.yml's MSDO ESLint upload.
+          category: eslint-dashboard
+          wait-for-processing: true

@@ -1,6 +1,7 @@
 ---
 name: SakSit-family-agent-knowledge
-description: "Help and support for the Sak-Family-Agent monorepo."
+description: Help and support for the Sak-Family-Agent monorepo.
+...
 ---
 
 # Sak-Family-Agent — Help & Support Knowledge
@@ -216,7 +217,7 @@ and deep-dive research. Key locations:
 - `personas/sakthai/skills/mlops/` — 50+ general HF skills (hub, datasets,
   transformers, spaces, inference, fine-tuning, courses)
 - `personas/sakking/skills/SakKing-hf-*` — additional SakKing-level HF skills
-- `hf-topics-covered.json` at repo root — registry of 230+ covered HF topics
+- `data/hf-topics-covered.json` — registry of 230+ covered HF topics
 
 SakSit's own HF skill: `personas/saksit/skills/mlops/SakSit-huggingface-hub/`.
 

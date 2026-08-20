@@ -1,6 +1,9 @@
 ---
 name: SakThai-hf-mcp
-description: "Use Hugging Face Hub via MCP server tools. Search models, datasets, Spaces, papers. Get repo details, fetch documentation, run compute jobs, and use Gradio Spaces as AI tools. Available when connected to the HF MCP server."
+description: Use Hugging Face Hub via MCP server tools. Search models, datasets, Spaces, papers.
+  Get repo details, fetch documentation, run compute jobs, and use Gradio Spaces as
+  AI tools. Available when connected to the HF MCP server.
+...
 ---
 
 # Hugging Face MCP Server

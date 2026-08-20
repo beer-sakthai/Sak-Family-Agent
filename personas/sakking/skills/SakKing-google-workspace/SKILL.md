@@ -1,6 +1,7 @@
 ---
 name: SakKing-google-workspace
-description: "Gmail, Calendar, Drive, Docs, Sheets via gws CLI or Python."
+description: Gmail, Calendar, Drive, Docs, Sheets via gws CLI or Python.
+...
 ---
 
 # Google Workspace
