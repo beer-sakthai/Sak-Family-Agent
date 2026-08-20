@@ -1,90 +1,45 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { ServiceRegistry } from '@/lib/a2a/serviceRegistry';
-import { A2AEngine } from '@/lib/a2a/a2aEngine';
-import { A2ADelegationRequest } from '@/lib/a2a/types';
+import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
+import { ServiceRegistry } from "@/lib/a2a/serviceRegistry";
+import { A2AEngine } from "@/lib/a2a/a2aEngine";
+import { A2ACapabilityDescriptor, A2ADelegationRequest } from "@/lib/a2a/types";
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const action = searchParams.get('action') || 'all';
+export const dynamic = "force-dynamic";
 
-    if (action === 'fleet') {
-      const fleet = ServiceRegistry.getAllAgents();
-      return NextResponse.json({ success: true, fleet });
-    }
+export const GET = createApiHandler("/api/a2a/registry", async () => {
+  const fleet = ServiceRegistry.getAllAgents();
+  const health = ServiceRegistry.getFleetHealth();
+  const delegations = A2AEngine.getRecentDelegations();
+  return { data: { fleet, health, delegations } };
+});
 
-    if (action === 'health') {
-      const health = ServiceRegistry.getFleetHealth();
-      return NextResponse.json({ success: true, health });
-    }
+export const POST = createMutationHandler(
+  "/api/a2a/registry",
+  async (body) => {
+    const { action } = body as Record<string, string>;
 
-    if (action === 'delegations') {
-      const delegations = A2AEngine.getRecentDelegations();
-      return NextResponse.json({ success: true, delegations });
-    }
-
-    const fleet = ServiceRegistry.getAllAgents();
-    const health = ServiceRegistry.getFleetHealth();
-    const delegations = A2AEngine.getRecentDelegations();
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        fleet,
-        health,
-        delegations
-      }
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown A2A registry error';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { action } = body;
-
-    if (action === 'delegate') {
-      const req: A2ADelegationRequest = {
-        agentFrom: body.agentFrom || 'sakking',
-        agentTo: body.agentTo,
-        capabilityId: body.capabilityId,
-        payload: body.payload || {},
-        timeoutMs: body.timeoutMs || 5000
+    if (action === "delegate") {
+      const delegationReq: A2ADelegationRequest = {
+        agentFrom: String(body.agentFrom ?? ""),
+        agentTo: String(body.agentTo ?? ""),
+        capabilityId: String(body.capabilityId ?? ""),
+        payload: (body.payload as Record<string, unknown>) ?? {},
       };
-
-      if (!req.agentTo || !req.capabilityId) {
-        return NextResponse.json(
-          { success: false, error: 'agentTo and capabilityId are required' },
-          { status: 400 }
-        );
-      }
-
-      const result = await A2AEngine.delegateTask(req);
-      return NextResponse.json({ success: true, result });
+      const result = await A2AEngine.delegateTask(delegationReq);
+      return { result };
     }
 
-    if (action === 'heartbeat') {
-      const { agentSlug } = body;
-      if (!agentSlug) {
-        return NextResponse.json({ success: false, error: 'agentSlug is required' }, { status: 400 });
-      }
-
-      const recorded = ServiceRegistry.recordHeartbeat(agentSlug);
-      return NextResponse.json({ success: recorded });
+    if (action === "heartbeat") {
+      ServiceRegistry.recordHeartbeat(String(body.agentSlug ?? ""));
+      return { recorded: true };
     }
 
-    if (action === 'discover') {
-      const { category } = body;
-      const capabilities = ServiceRegistry.discoverCapabilities(category);
-      return NextResponse.json({ success: true, capabilities });
+    if (action === "discover") {
+      const capabilities = ServiceRegistry.discoverCapabilities(
+        body.category as A2ACapabilityDescriptor["category"],
+      );
+      return { capabilities };
     }
 
-    return NextResponse.json({ success: false, error: `Invalid action: ${action}` }, { status: 400 });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown A2A registry error';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
-  }
-}
+    throw new Error(`Invalid action: ${action}`);
+  },
+);

@@ -165,6 +165,11 @@ def test_read_file_blocks_control_characters_in_path(
     [
         ".env",
         ".env.production",
+        ".env-prod",
+        ".env_local",
+        "id_rsa.bak",
+        "id_ed25519.old",
+        "id_ecdsa.pub",
         "id_rsa",
         "server.pem",
         "credentials.json",
@@ -181,7 +186,6 @@ def test_read_file_blocks_control_characters_in_path(
         ".gitconfig",
         "authorized_keys",
         "known_hosts",
-        "memory.db",
         ".sqlite_history",
         ".psql_history",
     ],
@@ -196,6 +200,26 @@ def test_read_file_blocks_sensitive_names_even_in_cwd(
     secret.write_text("TOKEN=abc", encoding="utf-8")
     with pytest.raises(PermissionError):
         tool_by_name("read_file").handler({"path": name}, store)
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "memory.db",
+        "memory.db-wal",
+        "memory.db-shm",
+    ],
+)
+def test_read_file_blocks_memory_db_files_without_touching_db(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store, name: str
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    sub = tmp_path / "subdir"
+    sub.mkdir()
+    secret = sub / name
+    secret.write_text("TOKEN=abc", encoding="utf-8")
+    with pytest.raises(PermissionError):
+        tool_by_name("read_file").handler({"path": f"subdir/{name}"}, store)
 
 
 def test_read_file_blocks_dot_ssh_directory(

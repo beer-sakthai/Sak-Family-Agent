@@ -129,7 +129,10 @@ describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
   describe("LiveTelemetryFeed Component Accessibility", () => {
     it("renders control buttons and select input with appropriate ARIA labels", () => {
       render(<LiveTelemetryFeed />);
-      expect(screen.getByRole("button", { name: "Clear Stream" })).toBeInTheDocument();
+      const clearBtn = screen.getByRole("button", { name: "Clear Stream" });
+      expect(clearBtn).toBeInTheDocument();
+      expect(clearBtn).toBeDisabled();
+      expect(clearBtn).toHaveAttribute("title", "Stream is empty");
       expect(screen.getByRole("button", { name: "Pause stream" })).toBeInTheDocument();
       expect(screen.getByRole("combobox", { name: "Filter by Persona" })).toBeInTheDocument();
     });

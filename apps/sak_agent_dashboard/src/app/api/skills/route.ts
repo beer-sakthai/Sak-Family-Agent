@@ -1,52 +1,26 @@
-import { NextRequest, NextResponse } from "next/server";
+import { createApiHandler, createMutationHandler, ApiError } from "@/lib/api/handler";
 import { getSkillsCatalogData } from "@/lib/skillsCatalog";
 
-export async function GET() {
-  try {
-    const data = getSkillsCatalogData();
-    return NextResponse.json({
-      success: true,
-      data,
-    });
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: (error as Error).message },
-      { status: 500 }
-    );
-  }
-}
+export const GET = createApiHandler("/api/skills", async () => ({
+  data: getSkillsCatalogData(),
+}));
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { skillSlug, targetPersona, params } = body;
+export const POST = createMutationHandler("/api/skills", async (body) => {
+  const { skillSlug, targetPersona, params } = body as Record<string, unknown>;
+  const catalog = getSkillsCatalogData();
+  const skill = catalog.skills.find((s) => s.slug === skillSlug);
 
-    const catalog = getSkillsCatalogData();
-    const skill = catalog.skills.find((s) => s.slug === skillSlug);
+  if (!skill) throw new ApiError(404, `Skill "${skillSlug}" not found`);
 
-    if (!skill) {
-      return NextResponse.json(
-        { success: false, error: `Skill "${skillSlug}" not found` },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      dispatched: {
-        skillSlug,
-        skillName: skill.name,
-        persona: targetPersona || skill.authorPersona,
-        status: "executed",
-        guardrailCheck: "PASSED (4/4 AST assertions satisfied)",
-        params: params || {},
-        executionTimestamp: new Date().toISOString(),
-      },
-    });
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: (error as Error).message },
-      { status: 500 }
-    );
-  }
-}
+  return {
+    dispatched: {
+      skillSlug,
+      skillName: skill.name,
+      persona: targetPersona ?? skill.authorPersona,
+      status: "executed",
+      guardrailCheck: "PASSED (4/4 AST assertions satisfied)",
+      params: params ?? {},
+      executionTimestamp: new Date().toISOString(),
+    },
+  };
+});
