@@ -459,3 +459,97 @@ def test_cache_cleanup_never_runs_a_fork_pull_request() -> None:
         "`pull_request` with `actions: write`; fetching the pull request's code "
         "into that job is Scorecard's `DangerousWorkflowID`."
     )
+
+
+@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
+def test_no_authored_workflow_grants_top_level_contents_write(path: Path) -> None:
+    """Scorecard ``TokenPermissionsID``: a push-capable token is job-scoped or absent.
+
+    ``permissions:`` at the top level is the *default* every job in the file
+    inherits, including jobs added later by someone who never read this block.
+    ``contents: write`` there hands all of them a token that can push to the
+    default branch; Scorecard scores it 0 for that reason.
+
+    This is a re-fix, not a new rule. ``PLAN.md`` records the same three
+    workflows being demoted to job scope on 2026-08-12, and the dashboard was
+    still reporting all three as top-level ``contents: write`` on 2026-08-20 —
+    the change had been reverted by a commit about something else, exactly like
+    the ``self-healing-ci.yml`` fork guard above. Nothing failed when it went.
+
+    Job-level ``contents: write`` is still allowed and still flagged by
+    Scorecard; that grant is accepted where a job genuinely pushes. What is not
+    accepted is granting it to the whole file by default.
+    """
+    permissions = _load(path).get("permissions")
+
+    assert permissions != "write-all", (
+        f"{path.name}: top-level `permissions: write-all`. Declare "
+        "`contents: read` at the top level and grant writes on the job."
+    )
+    if isinstance(permissions, dict):
+        assert permissions.get("contents") != "write", (
+            f"{path.name}: top-level `contents: write` grants every job in the "
+            "file a push-capable token. Set `contents: read` at the top level "
+            "and move the write onto the job that pushes."
+        )
+
+
+def test_the_failed_dependency_update_workflow_stays_removed() -> None:
+    """``auto-dependency-update.yml`` is gone, and three documents say so.
+
+    It failed all 22 of its runs with ``Input 'token' not supplied`` — it wants
+    a ``GH_PAT_FOR_ACTIONS`` secret this repository does not have — and it
+    duplicated ``.github/dependabot.yml``, which covers five ecosystems across
+    22 directories and actually works. It was removed on 2026-08-18;
+    ``SECURITY.md`` calls Dependabot "the **only** source of automated
+    dependency bumps" and names this file as removed.
+
+    It came back anyway, inside an unrelated ``[StepSecurity]`` commit, and sat
+    on ``main`` failing weekly while the docs said it was gone. This test is
+    what makes the third resurrection loud.
+
+    **Re-adding it deliberately is fine** — configure the PAT (or switch it to
+    ``GITHUB_TOKEN``), confirm a run goes green, and delete this test with the
+    commit that does so.
+    """
+    assert not (WORKFLOWS_DIR / "auto-dependency-update.yml").exists(), (
+        "auto-dependency-update.yml is back. It fails every run on a missing "
+        "GH_PAT_FOR_ACTIONS secret and duplicates .github/dependabot.yml. If "
+        "this is deliberate, make it pass first and remove this test."
+    )
+
+
+def test_runner_bootstrap_verifies_what_it_downloads() -> None:
+    """``bootstrap-toolchain.sh`` must not pipe a download into a shell.
+
+    Scorecard ``PinnedDependenciesID`` "downloadThenRun not pinned by hash".
+    The script provisions a self-hosted CI runner, so anything it executes runs
+    with that runner's access to this repository. It used to install uv with
+    ``curl … | sh`` and Node with ``curl … | sudo -E bash -`` — the second one
+    remote code as root.
+
+    Both are now verified before they are trusted: the uv installer against a
+    pinned SHA-256 (which is only stable because the URL carries the version),
+    and NodeSource against a pinned key fingerprint, after which apt checks
+    every package signature itself.
+    """
+    script = REPO_ROOT / "infra" / "self-hosted-runner" / "bootstrap-toolchain.sh"
+    body = script.read_text(encoding="utf-8")
+
+    code = "\n".join(line for line in body.splitlines() if not line.lstrip().startswith("#"))
+    piped = re.search(r"curl[^\n|]*\|\s*(sudo\s+)?(-E\s+)?(sh|bash|python3?|perl|ruby)\b", code)
+    assert piped is None, (
+        f"bootstrap-toolchain.sh pipes a download straight into an interpreter: "
+        f"{piped.group(0) if piped else ''!r}. Download it to a file, verify it "
+        "against a pinned digest, then run it."
+    )
+
+    assert re.search(r"UV_INSTALLER_SHA256=\"[0-9a-f]{64}\"", body), (
+        "bootstrap-toolchain.sh lost its pinned uv installer digest."
+    )
+    assert "sha256sum -c -" in body, (
+        "bootstrap-toolchain.sh no longer checks the uv installer's digest."
+    )
+    assert re.search(r"NODESOURCE_GPG_FINGERPRINT=\"[0-9A-F]{40}\"", body), (
+        "bootstrap-toolchain.sh lost its pinned NodeSource key fingerprint."
+    )

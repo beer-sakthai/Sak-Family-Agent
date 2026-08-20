@@ -16,7 +16,7 @@ else:
     print("Or set ENDPOINT_URL env var")
     sys.exit(1)
 
-TOKEN_PATH = "/opt/data/profiles/sakthai/home/.cache/huggingface/token"
+TOKEN_PATH = "/opt/data/profiles/sakthai/home/.cache/huggingface/token"  # nosec B105 — filesystem path, not a credential
 with open(TOKEN_PATH) as f:
     HF_TOKEN = f.read().strip()
 

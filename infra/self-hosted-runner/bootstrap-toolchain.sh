@@ -55,14 +55,80 @@ echo "==> uv"
 # uv provisions its own CPython builds, so the host does not need a system
 # Python matching the matrix — `uv sync --locked` fetches 3.11 and 3.12 itself.
 # That is why this script installs uv and not two Python versions.
+#
+# Downloaded to a file and checksummed before it is executed, rather than
+# `curl … | sh`. A pipe straight into a shell runs whatever the endpoint served
+# at that moment, with no chance to inspect it and nothing to compare against
+# if the endpoint is ever compromised — Scorecard reports it as
+# PinnedDependenciesID "downloadThenRun not pinned by hash".
+#
+# The URL carries the version, which is what makes the digest stable: the
+# unversioned https://astral.sh/uv/install.sh is rewritten on every uv release,
+# so pinning a hash against it would break on each upstream bump.
+#
+# To move to a new uv:
+#   V=0.12.6
+#   curl -fsSL "https://astral.sh/uv/${V}/install.sh" | sha256sum
+# then update both constants below.
+UV_VERSION="${UV_VERSION:-0.12.5}"
+UV_INSTALLER_SHA256="504511fbbbd811aeaba6738abc79408956b6c7da0ca35437b3dcc24a41efc111"
+
 if ! command -v uv >/dev/null 2>&1; then
-  curl -fsSL https://astral.sh/uv/install.sh | sh
+  uv_installer="$(mktemp -t uv-installer.XXXXXX.sh)"
+  trap 'rm -f "${uv_installer}"' EXIT
+  curl -fsSL "https://astral.sh/uv/${UV_VERSION}/install.sh" -o "${uv_installer}"
+  if ! echo "${UV_INSTALLER_SHA256}  ${uv_installer}" | sha256sum -c - >/dev/null 2>&1; then
+    echo "ERROR: uv ${UV_VERSION} installer failed checksum verification." >&2
+    echo "  expected ${UV_INSTALLER_SHA256}" >&2
+    echo "  got      $(sha256sum "${uv_installer}" | cut -d' ' -f1)" >&2
+    echo "Refusing to execute it. If uv was bumped upstream, re-pin both" >&2
+    echo "UV_VERSION and UV_INSTALLER_SHA256 above." >&2
+    exit 1
+  fi
+  sh "${uv_installer}"
+  rm -f "${uv_installer}"
+  trap - EXIT
 fi
 export PATH="${HOME}/.local/bin:${PATH}"
 
 echo "==> node ${NODE_MAJOR} + pnpm"
+# NodeSource's own `setup_${NODE_MAJOR}.x` is a shell script meant to be piped
+# into `sudo bash` — remote code as root, and the worst instance of the pattern
+# in this file. All that script ultimately does is register NodeSource's apt
+# key and repository, so this does that directly instead. Nothing downloaded
+# here is executed: the key is data, and apt verifies every package signature
+# against it, which is a stronger guarantee than hashing an installer would be.
+#
+# The fingerprint is pinned. NodeSource rotating its key is indistinguishable
+# from an attacker substituting one, so a mismatch stops the script rather than
+# importing whatever arrived.
+NODESOURCE_GPG_FINGERPRINT="6F71F525282841EEDAF851B42F59B5F99B1BE0B4"
+
 if ! command -v node >/dev/null 2>&1 || [[ "$(node -v | cut -c2- | cut -d. -f1)" -lt "${NODE_MAJOR}" ]]; then
-  curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | sudo -E bash -
+  ns_key="$(mktemp -t nodesource.XXXXXX.asc)"
+  trap 'rm -f "${ns_key}"' EXIT
+  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key -o "${ns_key}"
+
+  if ! gpg --show-keys --with-colons "${ns_key}" 2>/dev/null |
+       awk -F: '/^fpr:/{print $10}' | grep -qx "${NODESOURCE_GPG_FINGERPRINT}"; then
+    echo "ERROR: NodeSource signing key does not match the pinned fingerprint." >&2
+    echo "  expected ${NODESOURCE_GPG_FINGERPRINT}" >&2
+    echo "  got      $(gpg --show-keys --with-colons "${ns_key}" 2>/dev/null |
+                       awk -F: '/^fpr:/{print $10}' | paste -sd, -)" >&2
+    echo "Refusing to trust it. Verify the rotation against nodesource.com" >&2
+    echo "before updating NODESOURCE_GPG_FINGERPRINT above." >&2
+    exit 1
+  fi
+
+  sudo install -d -m 0755 /etc/apt/keyrings
+  sudo gpg --batch --yes --dearmor -o /etc/apt/keyrings/nodesource.gpg "${ns_key}"
+  sudo chmod 0644 /etc/apt/keyrings/nodesource.gpg
+  rm -f "${ns_key}"
+  trap - EXIT
+
+  echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" |
+    sudo tee /etc/apt/sources.list.d/nodesource.list >/dev/null
+  sudo apt-get update -qq
   sudo apt-get install -y nodejs
 fi
 # corepack ships with Node and reads `packageManager: pnpm@9.15.9` from the

@@ -110,7 +110,6 @@ Legend: 🚧 **gates a PR** · 🕒 **scheduled** · 🖐️ **manual only** · 
 | 🧬 | **Verify Public HF Assets** | [![Verify Assets](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/verify-assets.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/verify-assets.yml) | `verify-assets.yml` | daily `0 0 * * *` | Confirms the published Hugging Face models / datasets / spaces still resolve |
 | 🧭 | **Stale** | [![Stale](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/stale.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/stale.yml) | `stale.yml` | daily `44 15 * * *` | Marks and closes stale issues / PRs |
 | 📊 | **Run Evals** | [![Run Evals](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/run-evals.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/run-evals.yml) | `run-evals.yml` | weekly `0 0 * * 0` | `lm-evaluation-harness` over `evaluation_tasks/` against `Nanthasit/sakthai-context-*`, with regression vs. the last baseline |
-| ⬆️ | **Auto Dependency Update** | [![Auto Dependency Update](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/auto-dependency-update.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/auto-dependency-update.yml) | `auto-dependency-update.yml` | weekly `0 8 * * 1` | Opens dependency-bump PRs (still reviewed like any other PR) |
 | 🏛️ | **OSPS Security Assessment** | [![OSPS](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/OSPS.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/OSPS.yml) | `OSPS.yml` | weekly `0 9 * * 1` | Open Source Project Security baseline assessment |
 
 ### 🤖 Agentic & reactive — opens PRs, gates nothing
@@ -498,7 +497,6 @@ and `agent-self-evolution.yml` (on `personas/sakthai/agent-self-evolution/**`).
 | `stale.yml` | daily 15:44 UTC | Issue/PR triage |
 | `run-evals.yml` | weekly (Sun 00:00 UTC) | `lm-eval-harness` over `evaluation_tasks/` + regression vs. last baseline |
 | `dependency-audit.yml` | weekly (Mon 05:30 UTC) | `pip-audit` over `uv.lock` |
-| `auto-dependency-update.yml` | weekly (Mon 08:00 UTC) | Dependency bump PRs |
 | `ossar.yml` | weekly (Mon 06:15 UTC) | Extra scheduled scan |
 | `manual.yml` · `summary.yml` | manual / on issue open | Utility workflows |
 
