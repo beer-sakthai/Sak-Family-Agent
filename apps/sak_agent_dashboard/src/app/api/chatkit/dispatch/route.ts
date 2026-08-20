@@ -171,9 +171,8 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Secure Log [POST /api/chatkit/dispatch]:', error);
     return NextResponse.json(
-      { error: 'An unexpected error occurred' },
+      { error: error instanceof Error ? error.message : 'Unknown error during dispatch' },
       { status: 500 }
     );
   }

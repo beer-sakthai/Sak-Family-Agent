@@ -1,4 +1,4 @@
-import { ApiError, createApiHandler, createMutationHandler } from "@/lib/api/handler";
+import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
 import { selfHealingDashboardEngine } from "@/lib/selfHealingEngine";
 
 export const dynamic = "force-dynamic";
@@ -23,5 +23,5 @@ export const POST = createMutationHandler("/api/recovery", async (body) => {
     return { success: selfHealingDashboardEngine.resetCircuit(persona) };
   }
 
-  throw new ApiError(400, "Invalid recovery action or missing arguments");
+  throw new Error("Invalid recovery action or missing arguments");
 });

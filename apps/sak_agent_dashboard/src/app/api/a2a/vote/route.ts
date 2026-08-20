@@ -1,4 +1,4 @@
-import { ApiError, createApiHandler, createMutationHandler } from "@/lib/api/handler";
+import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
 import { A2AConsensusSession, A2AVoteBallot, VoteChoice } from "@/lib/a2a/types";
 
 export const dynamic = "force-dynamic";
@@ -51,13 +51,13 @@ export const POST = createMutationHandler("/api/a2a/vote", async (body) => {
   const { sessionId, persona, choice, rationale } = body as Record<string, unknown>;
 
   if (!sessionId || !persona || !choice) {
-    throw new ApiError(400, "Missing required voting fields");
+    throw new Error("Missing required voting fields");
   }
 
   const validChoices: VoteChoice[] = ["approve", "reject", "abstain", "veto"];
   const voteChoice = String(choice).toLowerCase() as VoteChoice;
   if (!validChoices.includes(voteChoice)) {
-    throw new ApiError(400, `Invalid choice: ${choice}`);
+    throw new Error(`Invalid choice: ${choice}`);
   }
 
   const ballot: A2AVoteBallot = {

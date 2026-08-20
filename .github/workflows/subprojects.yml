@@ -112,6 +112,8 @@ jobs:
     # tests -> next build.
     timeout-minutes: 30
     env:
+      NEXT_TELEMETRY_DISABLED: 1
+      NODE_OPTIONS: "--max-old-space-size=4096"
       NEXT_TELEMETRY_DISABLED: "1"
     defaults:
       run:
@@ -182,10 +184,10 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: apps/sak_agent_dashboard/.next/cache
-          key: nextjs-v2-${{ runner.os }}-${{ hashFiles('apps/sak_agent_dashboard/pnpm-lock.yaml') }}-${{ github.sha }}
+          key: nextjs-${{ runner.os }}-${{ hashFiles('apps/sak_agent_dashboard/pnpm-lock.yaml') }}-${{ github.sha }}
           restore-keys: |
-            nextjs-v2-${{ runner.os }}-${{ hashFiles('apps/sak_agent_dashboard/pnpm-lock.yaml') }}-
-            nextjs-v2-${{ runner.os }}-
+            nextjs-${{ runner.os }}-${{ hashFiles('apps/sak_agent_dashboard/pnpm-lock.yaml') }}-
+            nextjs-${{ runner.os }}-
 
       - name: Lint
         run: pnpm lint

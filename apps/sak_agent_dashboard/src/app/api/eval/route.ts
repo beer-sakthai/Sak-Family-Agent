@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ApiError, createMutationHandler } from "@/lib/api/handler";
+import { createMutationHandler } from "@/lib/api/handler";
 import { EvalEngine } from "@/lib/eval/evalEngine";
 import { QualityFlywheelEngine } from "@/lib/eval/qualityFlywheel";
 import { GOLDEN_TEST_CASES, generateSyntheticTestCase } from "@/lib/eval/datasets";
@@ -41,8 +41,8 @@ export async function GET(request: NextRequest) {
     const summaries = cachedRunResults.length > 0 ? EvalEngine.calculatePersonaBenchmarkSummaries(cachedRunResults) : [];
     return NextResponse.json({ success: true, data: { datasets, failures, testCases: GOLDEN_TEST_CASES, recentRuns: cachedRunResults.slice(0, 20), summaries } });
   } catch (error) {
-    console.error("Secure Log [GET /api/eval]:", error);
-    return NextResponse.json({ success: false, error: "An unexpected error occurred" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown evaluation error";
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
 
@@ -77,7 +77,7 @@ export const POST = createMutationHandler("/api/eval", async (body) => {
 
   if (action === "triage_failure") {
     const { failureId, triageStatus, promoteToGolden } = body as Record<string, unknown>;
-    if (!failureId) throw new ApiError(400, "failureId is required");
+    if (!failureId) throw new Error("failureId is required");
     const promotedTestCase = promoteToGolden
       ? QualityFlywheelEngine.promoteFailureToGoldenTestCase(String(failureId))
       : null;
@@ -115,5 +115,5 @@ export const POST = createMutationHandler("/api/eval", async (body) => {
     };
   }
 
-  throw new ApiError(400, `Invalid action: ${action}`);
+  throw new Error(`Invalid action: ${action}`);
 });

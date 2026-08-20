@@ -10,7 +10,6 @@ import {
 } from "./types";
 import { PERSONAS, personaName } from "./personas";
 import { getDemoMemoryData as demoMemory } from "./demoData";
-import { DataSourceStrategy, SourceUnavailableError, resolveDataSource } from "./dataSource";
 
 const SAKTHAI_DIR = process.env.SAKTHAI_DIR || path.join(os.homedir(), ".sakthai");
 
@@ -149,27 +148,22 @@ export async function getMemoryData(
   demo?: boolean,
   query?: string
 ): Promise<MemoryResult> {
-  const strategy: DataSourceStrategy<MemoryData> = {
-    readDemo: () => demoMemory(),
+  let memory: MemoryData;
+  let dataSource: DataSource;
 
-    readLive: async () => {
-      const shards = shardPaths();
-      const anyExists = shards.some((s) => fs.existsSync(s.file));
+  if (demo) {
+    memory = demoMemory();
+    dataSource = "demo";
+  } else {
+    const shards = shardPaths();
+    const anyExists = shards.some((s) => fs.existsSync(s.file));
 
-      if (!anyExists) {
-        // No shard and no legacy DB. Say so rather than serving demo data as
-        // if it were real — but still attach the real (all-absent) per-shard
-        // status list, which plain demo data does not carry, so the UI can
-        // show exactly which personas were checked.
-        throw new SourceUnavailableError(
-          "No memory shard or legacy database found",
-          {
-            ...demoMemory(),
-            shards: shards.map((s) => readShard(s.persona, s.file).status),
-          }
-        );
-      }
-
+    if (!anyExists) {
+      // No shard and no legacy DB. Say so rather than serving demo data as if
+      // it were real.
+      memory = { ...demoMemory(), shards: shards.map((s) => readShard(s.persona, s.file).status) };
+      dataSource = "unavailable";
+    } else {
       const facts: FactRecord[] = [];
       const observations: ObservationRecord[] = [];
       const statuses: MemoryShardStatus[] = [];
@@ -198,28 +192,26 @@ export async function getMemoryData(
         return true;
       });
 
-      // Shards exist but may hold nothing readable — that is still a live,
-      // empty read, not a reason to show fabricated rows. (Same shape either
-      // way; kept as two branches to mirror the pre-Strategy code exactly.)
       if (dedupedFacts.length === 0 && dedupedObs.length === 0) {
-        return {
+        // Shards exist but hold nothing readable. That is a live, empty read —
+        // not a reason to show fabricated rows.
+        memory = {
           facts: [],
           observations: [],
           shards: statuses,
           cacheMetrics: serverMemoryCache.getMetrics(),
         };
+      } else {
+        memory = {
+          facts: dedupedFacts,
+          observations: dedupedObs,
+          shards: statuses,
+          cacheMetrics: serverMemoryCache.getMetrics(),
+        };
       }
-      return {
-        facts: dedupedFacts,
-        observations: dedupedObs,
-        shards: statuses,
-        cacheMetrics: serverMemoryCache.getMetrics(),
-      };
-    },
-  };
-
-  const { data, dataSource } = await resolveDataSource(strategy, !!demo);
-  let memory = data;
+      dataSource = "live";
+    }
+  }
 
   if (query && query.trim().length > 0) {
     // Sanitize search query input
