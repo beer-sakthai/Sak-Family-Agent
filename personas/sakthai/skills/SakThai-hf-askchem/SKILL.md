@@ -1,8 +1,12 @@
 ---
 name: SakThai-hf-askchem
-description: "Complete reference on AskChem (bing-yan/askchem) \u2014 claim-centered chemistry\
-  \ literature retrieval infrastructure: 2.44M atomic claims / 147K papers, 9 hierarchical\
-  \ views, AskChem-Bench, REST + SDK + MCP access, and the claim-level retrieval paradigm."
+author: SakThai
+license: MIT
+description: "Complete reference on AskChem (bing-yan/askchem) — claim-centered chemistry literature retrieval infrastructure: 2.44M atomic claims / 147K papers, 9 hierarchical views, AskChem-Bench, REST + SDK + MCP access, and the claim-level retrieval paradigm."
+version: 1.0.0
+category: mlops
+tags: [huggingface, chemistry, knowledge-graph, retrieval, claims, mcp, benchmark, dataset]
+platforms: [linux]
 ---
 
 # AskChem — Claim-Centered Chemistry Literature Infrastructure

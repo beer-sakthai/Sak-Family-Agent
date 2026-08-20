@@ -12,11 +12,11 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-# A regex for common API key prefixes (sk-, rk-, pk-, ck-, ghp-, hf-, github_pat-, xoxb-, xoxp-, xapp-, xoxr-), Google keys (AIza),
+# A regex for common API key prefixes (sk-, rk-, pk-, ck-, ghp-, hf-, github_pat-), Google keys (AIza),
 # Telegram bot tokens (123456789:ABC...), and AWS Access Key IDs (AKIA/ASIA).
 # Handles both underscore (sk_) and hyphen (sk-) used by Anthropic, OpenAI, and HF.
-# Updated to catch Stripe consumer keys (ck_ prefix) and Slack tokens (xoxb/xoxp/xapp/xoxr).
-SECRET_PATTERN = r"\b(?:(?:sk|rk|pk|ck|ghp|hf|github_pat|xoxb|xoxp|xapp|xoxr)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,}|[0-9]{8,12}:[a-zA-Z0-9_-]{35,}|(?:AKIA|ASIA)[A-Z0-9]{16})\b"  # nosec B105
+# Updated to catch Stripe consumer keys (ck_ prefix).
+SECRET_PATTERN = r"\b(?:(?:sk|rk|pk|ck|ghp|hf|github_pat)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,}|[0-9]{8,12}:[a-zA-Z0-9_-]{35,}|(?:AKIA|ASIA)[A-Z0-9]{16})\b"  # nosec B105
 _SECRET_RE = re.compile(SECRET_PATTERN)
 
 # Multiline regex pattern to detect PEM private key blocks.
@@ -523,11 +523,6 @@ def _get_exact_secrets() -> list[str]:
         "MS_GRAPH_CLIENT_SECRET",
         "MS_GRAPH_REFRESH_TOKEN",
         "MSGRAPH_CLIENT_SECRET",
-        "SLACK_BOT_TOKEN",
-        "SLACK_USER_TOKEN",
-        "SLACK_APP_TOKEN",
-        "SLACK_SIGNING_SECRET",
-        "SLACK_WEBHOOK_URL",
     ]
 
     env_changed = False

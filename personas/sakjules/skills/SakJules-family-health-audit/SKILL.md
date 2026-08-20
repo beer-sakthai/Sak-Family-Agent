@@ -1,8 +1,6 @@
 ---
 name: SakJules-SakKing-family-health-audit
-description: '>-   SakKings workflow for systematically checking all Sak Family sibling agents   deployment
-  status, diagnosing why they arent replying, and reporting the   family health state
-  to Beer. Covers the Care-cycle audit of the fleet.'
+description: ">-   SakKings workflow for systematically checking all Sak Family sibling agents   deployment status, diagnosing why they arent replying, and reporting the   family health state to Beer. Covers the Care-cycle audit of the fleet."
 ---
 
 # SakKing Family Health Audit

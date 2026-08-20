@@ -1,8 +1,6 @@
 ---
 name: SakThai-hf-datasets-server-rest-api
-description: "HF Datasets Server REST API \u2014 browse, query, search, filter, and download datasets\
-  \ on the Hub without downloading the full dataset. Covers all 11+ endpoints, pagination,\
-  \ auth, and integration patterns."
+description: "HF Datasets Server REST API — browse, query, search, filter, and download datasets on the Hub without downloading the full dataset. Covers all 11+ endpoints, pagination, auth, and integration patterns."
 ---
 
 # HF Datasets Server REST API

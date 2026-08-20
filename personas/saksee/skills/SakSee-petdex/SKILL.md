@@ -1,7 +1,6 @@
 ---
 name: SakSee-petdex
-description: Install and select animated petdex mascots for Hermes.
-...
+description: "Install and select animated petdex mascots for Hermes."
 ---
 
 # Petdex Skill

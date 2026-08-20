@@ -1,13 +1,15 @@
 ---
 name: SakThai-hf-datasets-from-parquet
-description: "Deep dive into the Hugging Face Datasets library's `Dataset.from_parquet()` and `Dataset.to_parquet()`\
-  \ methods. Covers the complete call chain \u2014 static method through `ParquetDatasetReader`,\
-  \ the `Parquet` ArrowBasedBuilder, and PyArrow's `ParquetFileFormat` fragment scanning.\
-  \ Includes full API surface, row group sharding architecture, filter pushdown via\
-  \ `pq.filters_to_expression()`, column projection, content-defined chunking (CDC),\
-  \ compression strategy per column type, bad file handling (v4.2.0+), `FragmentScanOptions`\
-  \ for remote Parquet caching, and integration with the Datasets Server `/parquet`\
-  \ endpoint for zero-cost analytics."
+version: 1.0.0
+author: SakThai
+license: MIT
+title: Hugging Face Datasets from_parquet — Source Code Deep Dive
+category: mlops
+tags: [datasets, parquet, pyarrow, arrow, io, performance, streaming, column-projection, filter-pushdown]
+related_skills:
+  - SakThai-hf-datasets-parquet-column-selection
+  - SakThai-hf-datasets-server-rest-api
+description: Deep dive into the Hugging Face Datasets library's `Dataset.from_parquet()` and `Dataset.to_parquet()` methods. Covers the complete call chain — static method through `ParquetDatasetReader`, the `Parquet` ArrowBasedBuilder, and PyArrow's `ParquetFileFormat` fragment scanning. Includes full API surface, row group sharding architecture, filter pushdown via `pq.filters_to_expression()`, column projection, content-defined chunking (CDC), compression strategy per column type, bad file handling (v4.2.0+), `FragmentScanOptions` for remote Parquet caching, and integration with the Datasets Server `/parquet` endpoint for zero-cost analytics.
 ---
 
 ## Key Areas

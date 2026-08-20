@@ -4,8 +4,6 @@ Uses LLM-as-judge with rubrics to score agent outputs.
 Supports length penalties and multi-dimensional scoring.
 """
 
-import contextlib
-import json
 from dataclasses import dataclass
 
 import dspy
@@ -179,6 +177,8 @@ def tool_selection_metric(example: dspy.Example, prediction: dspy.Prediction, tr
         tool_match_score = 1.0
 
     # 2. Score arguments match (0.4 weight)
+    import json
+
     parsed_args = {}
     if isinstance(predicted_args_raw, dict):
         parsed_args = predicted_args_raw
@@ -189,8 +189,10 @@ def tool_selection_metric(example: dspy.Example, prediction: dspy.Prediction, tr
             lines = json_clean.split("\n")
             if len(lines) > 2:
                 json_clean = "\n".join(lines[1:-1]).strip()
-        with contextlib.suppress(Exception):
+        try:
             parsed_args = json.loads(json_clean)
+        except Exception:
+            pass
 
     args_match_score = 0.0
     if expected_args:

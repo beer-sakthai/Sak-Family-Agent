@@ -16,12 +16,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  # See the note in ci.yml: cancel superseded pull-request runs, never a run on
-  # `main`.
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 # Standalone package (not a uv workspace member — see CLAUDE.md), so it gets its
 # own install + pytest run rather than joining ci.yml, which is scoped to the
 # sakthai core only. Each persona carries a copy; personas/sakthai's is the
@@ -29,21 +23,14 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
     defaults:
       run:
         working-directory: personas/sakthai/agent-self-evolution
     steps:
-      - name: Harden the runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
-        with:
-          use-policy-store: true
-          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
