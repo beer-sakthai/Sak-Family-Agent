@@ -628,6 +628,10 @@ def _validate_shell_command(cmd_str: str) -> None:
             "bun",
             "tsx",
             "ts-node",
+            "eval",
+            "exec",
+            "source",
+            ".",
         )
 
         wrappers = {
