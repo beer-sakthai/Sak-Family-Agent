@@ -21,10 +21,19 @@ export function WorkflowStageCard({
   const theme = getPersonaTheme(stage.personaSlug);
   const hasDependencies = stage.dependsOn && stage.dependsOn.length > 0;
 
+  const CardTag = onToggleExpand ? "button" : "div";
+
   return (
-    <div
-      onClick={onToggleExpand}
-      className={`p-5 rounded-2xl bg-slate-900/80 border transition-all flex flex-col justify-between space-y-3 relative group ${
+    <CardTag
+      {...(onToggleExpand
+        ? {
+            type: "button" as const,
+            onClick: onToggleExpand,
+            "aria-expanded": isExpanded,
+            "aria-label": `Toggle details for stage ${index + 1}: ${stage.name}`,
+          }
+        : {})}
+      className={`p-5 rounded-2xl bg-slate-900/80 border transition-all flex flex-col justify-between space-y-3 relative group w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
         onToggleExpand ? "cursor-pointer" : ""
       } ${
         isExpanded
@@ -106,6 +115,6 @@ export function WorkflowStageCard({
         <span className="text-cyan-400 font-semibold">{stage.provider.toUpperCase()}</span>
         <span>{stage.model}</span>
       </div>
-    </div>
+    </CardTag>
   );
 }
