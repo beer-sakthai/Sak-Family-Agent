@@ -83,7 +83,7 @@ jobs:
           cache-suffix: opencode
 
       - name: Run opencode
-        uses: anomalyco/opencode/github@e2505d434a6d78904ecfe546c4a1980d26bd8cd1  # v1.18.18
+        uses: anomalyco/opencode/github@ccccd753285a1da125a6d62a8de4e36d9322e37d  # v1.18.18
         env:
           # The OpenCode Go subscription key (https://opencode.ai/auth). The action
           # forwards only its own declared inputs to the CLI, but step-level `env:`
