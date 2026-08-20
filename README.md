@@ -21,7 +21,7 @@
 [![🐍 Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![⚡ uv](https://img.shields.io/badge/deps-uv%20locked-DE5FE9?logo=astral&logoColor=white)](https://github.com/astral-sh/uv)
 [![🏷️ Version](https://img.shields.io/badge/sakthai--agent-v2.0.0-0A7BBB)](CHANGELOG.md)
-[![📈 Coverage gate](https://img.shields.io/badge/coverage%20gate-%E2%89%A596%25%20branch-brightgreen)](pyproject.toml)
+[![📈 Coverage](https://img.shields.io/badge/coverage-97%25%20branch-brightgreen)](pyproject.toml)
 [![🔤 mypy](https://img.shields.io/badge/mypy-strict-2A6DB2?logo=python&logoColor=white)](pyproject.toml)
 [![✨ Ruff](https://img.shields.io/badge/lint-ruff-D7FF64?logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
 [![🔒 CodeQL](https://img.shields.io/badge/CodeQL-default%20setup-2088FF?logo=github&logoColor=white)](https://github.com/beer-sakthai/Sak-Family-Agent/security/code-scanning)
