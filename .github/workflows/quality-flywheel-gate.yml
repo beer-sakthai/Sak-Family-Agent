@@ -31,6 +31,7 @@ jobs:
     timeout-minutes: 20
     env:
       NEXT_TELEMETRY_DISABLED: 1
+      NODE_OPTIONS: "--max-old-space-size=4096"
     defaults:
       run:
         working-directory: apps/sak_agent_dashboard
