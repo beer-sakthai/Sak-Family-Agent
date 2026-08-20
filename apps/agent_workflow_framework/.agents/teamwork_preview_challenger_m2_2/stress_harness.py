@@ -131,17 +131,17 @@ class StressTestHarness:
                         }
                     )
                     store.save_run_history(history)
-                    
+
                     # Read back
                     loaded = store.load_run_history(run_id)
                     if loaded.run_id != run_id:
                         errors.append(f"Thread {thread_idx}: run_id mismatch")
-                    
+
                     # Update status
                     history.status = RunStatus.COMPLETED
                     history.step_results["s1"].status = StepStatus.COMPLETED
                     store.save_run_history(history)
-                    
+
                     loaded2 = store.load_run_history(run_id)
                     if loaded2.status != RunStatus.COMPLETED:
                         errors.append(f"Thread {thread_idx}: updated status mismatch")

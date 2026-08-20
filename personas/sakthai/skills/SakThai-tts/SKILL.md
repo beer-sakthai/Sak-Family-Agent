@@ -1,6 +1,7 @@
 ---
 name: SakThai-tts
-description: "Use when the user mentions TTS, text-to-speech, Kokoro, sakthai-tts-model, voice, or audio generation with the SakThai ecosystem. Phase: DEPLOY."
+description: 'Use when the user mentions TTS, text-to-speech, Kokoro, sakthai-tts-model, voice,
+  or audio generation with the SakThai ecosystem. Phase: DEPLOY.'
 ---
 
 # SakThai TTS — sakthai-tts-model

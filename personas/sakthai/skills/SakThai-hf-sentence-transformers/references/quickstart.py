@@ -1,5 +1,5 @@
 """Sentence Transformers Quickstart Examples (v5.x)."""
-from sentence_transformers import SentenceTransformer, CrossEncoder, SparseEncoder
+from sentence_transformers import CrossEncoder, SentenceTransformer, SparseEncoder
 from sentence_transformers.util import cos_sim
 
 # === Dense Embeddings ===

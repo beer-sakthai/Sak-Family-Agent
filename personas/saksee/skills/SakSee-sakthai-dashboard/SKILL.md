@@ -1,6 +1,7 @@
 ---
 name: SakSee-sakthai-dashboard
-description: "Set up and run the SakThai Agent dashboard."
+description: Set up and run the SakThai Agent dashboard.
+...
 ---
 
 # SakThai Dashboard

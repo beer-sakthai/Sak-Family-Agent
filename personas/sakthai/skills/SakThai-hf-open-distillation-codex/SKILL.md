@@ -1,12 +1,9 @@
 ---
 name: SakThai-hf-open-distillation-codex
-author: SakThai
-license: MIT
-description: "Complete reference on Manusagents' Open Distillation Codex — the 73-source / 18M+ sample multi-frontier distillation collection with cybersecurity SFT data and 7,090 GitHub repo archives. Covers schema, verified numbers vs README claims, per-source provenance, and safe load patterns."
-version: 1.0.0
-category: mlops
-tags: [huggingface, dataset, distillation, sft, cybersecurity, agent-traces, code, collection]
-platforms: [linux]
+description: "Complete reference on Manusagents' Open Distillation Codex \u2014 the 73-source /\
+  \ 18M+ sample multi-frontier distillation collection with cybersecurity SFT data\
+  \ and 7,090 GitHub repo archives. Covers schema, verified numbers vs README claims,\
+  \ per-source provenance, and safe load patterns."
 ---
 
 # The Open Distillation Codex (Manusagents)

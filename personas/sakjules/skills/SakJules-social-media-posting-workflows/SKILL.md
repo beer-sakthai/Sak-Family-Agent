@@ -1,6 +1,7 @@
 ---
 name: SakJules-SakSit-social-media-posting-workflows
-description: "Post to Instagram, LinkedIn, Facebook via Composio."
+description: Post to Instagram, LinkedIn, Facebook via Composio.
+...
 ---
 
 # Social-Media Posting Workflows 2026
