@@ -1,8 +1,6 @@
 ---
 name: SakSee-SakThai-playwright-web-font-loading-validation
-description: Use Playwright to detect and gate on web font loading behavior - font-display   strategies,
-  @font-face ready events, FOUT/FOIT, and font-load timing regressions.
-...
+description: "Use Playwright to detect and gate on web font loading behavior - font-display   strategies, @font-face ready events, FOUT/FOIT, and font-load timing regressions."
 ---
 
 # Playwright Web Font Loading Validation

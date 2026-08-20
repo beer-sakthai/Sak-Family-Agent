@@ -1,7 +1,14 @@
 ---
 name: SakThai-hf-cron-mistakes
-description: "Avoid recurring pitfalls when building HF cron jobs \u2014 check infra, verify connectivity,\
-  \ design zero-cost, use tracker files."
+author: Hermes
+description: >-
+  Avoid recurring pitfalls when building HF cron jobs — check infra,
+  verify connectivity, design zero-cost, use tracker files.
+version: 0.1.0
+metadata:
+  hermes:
+    tags: [Cron, HuggingFace, Debugging, ZeroCost]
+category: mlops
 ---
 
 # Avoid HF Cron Job Mistakes

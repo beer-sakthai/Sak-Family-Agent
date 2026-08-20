@@ -26,7 +26,6 @@ export async function GET(request: Request) {
       success: true,
       sessions: result.sessions,
       total: result.total,
-      dataSource: result.dataSource,
       ...(result.detail ? { detail: result.detail } : {}),
     });
   } catch (error: any) {

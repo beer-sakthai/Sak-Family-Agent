@@ -1,7 +1,6 @@
 ---
 name: SakJules-SakThai-hf-cron-mistakes
-description: ">-   Avoid recurring pitfalls when building HF cron jobs \u2014 check infra,   verify\
-  \ connectivity, design zero-cost, use tracker files."
+description: ">-   Avoid recurring pitfalls when building HF cron jobs — check infra,   verify connectivity, design zero-cost, use tracker files."
 ---
 
 # Avoid HF Cron Job Mistakes

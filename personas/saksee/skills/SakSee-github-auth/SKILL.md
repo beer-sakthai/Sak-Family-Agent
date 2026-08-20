@@ -1,6 +1,6 @@
 ---
 name: SakSee-github-auth
-description: 'GitHub auth setup: HTTPS tokens, SSH keys, gh CLI login.'
+description: "GitHub auth setup: HTTPS tokens, SSH keys, gh CLI login."
 ---
 
 # GitHub Authentication Setup

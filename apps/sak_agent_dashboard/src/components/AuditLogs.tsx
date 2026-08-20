@@ -110,7 +110,7 @@ export function AuditLogs({ logs, onSeverityChange }: AuditLogsProps) {
               {filteredLogs.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-5 py-8 text-center text-slate-500 italic">
-                    No security audit events recorded matching severity level &quot;{selectedSeverity}&quot;.
+                    No security audit events recorded matching severity level "{selectedSeverity}".
                   </td>
                 </tr>
               ) : (

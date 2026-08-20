@@ -1,9 +1,6 @@
 ---
 name: SakJules-SakThai-playwright-chromium-tracing
-description: Capture and export Playwright Chromium trace files (trace.zip) programmatically,   then
-  inspect them in Playwright Trace Viewer for debugging, audits, and deterministic   replay
-  of cron-driven browser sessions.
-...
+description: "Capture and export Playwright Chromium trace files (trace.zip) programmatically,   then inspect them in Playwright Trace Viewer for debugging, audits, and deterministic   replay of cron-driven browser sessions."
 ---
 
 # Playwright Chromium Tracing for Browser Automation

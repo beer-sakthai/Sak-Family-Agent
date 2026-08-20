@@ -1,7 +1,6 @@
 ---
 name: SakJules-SakThai-gradio-workflow
-description: A skill for Gradio Workflow.
-...
+description: "A skill for Gradio Workflow."
 ---
 
 # Gradio Workflow (`gr.Workflow`)

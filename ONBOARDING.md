@@ -1,44 +1,40 @@
-# Welcome to Sak Family
+# Welcome to [Team Name]
 
 ## How We Use Claude
 
 Based on beer-sakthai's usage over the last 30 days:
 
 Work Type Breakdown:
-  Build Feature       ████████████████░░░░  80%
-  Improve Quality     ████░░░░░░░░░░░░░░░░  20%
+  TODO — not enough session data to classify
 
 Top Skills & Commands:
-  /reload-plugins                          ████████████████████  8x/month
-  /plugin                                  ████████████████████  8x/month
-  /reload-skills                           ███████████████░░░░░  6x/month
-  /superpowers:using-superpowers           █████████████░░░░░░░  5x/month
-  /skills                                  ██████████░░░░░░░░░░  4x/month
-  /superpowers:finishing-a-development-branch  ████████░░░░░░░░░░░░  3x/month
-  /mcp                                     █████░░░░░░░░░░░░░░░  2x/month
-  /agents                                  █████░░░░░░░░░░░░░░░  2x/month
+  /init                █████████████████░░░  3x/month
+  /debug                ███░░░░░░░░░░░░░░░░░  1x/month
+  /code-review          ███░░░░░░░░░░░░░░░░░  1x/month
+  /security-review      ███░░░░░░░░░░░░░░░░░  1x/month
+  /agents               ███░░░░░░░░░░░░░░░░░  1x/month
+  /reload-skills        ███░░░░░░░░░░░░░░░░░  1x/month
+  /run-skill-generator  ███░░░░░░░░░░░░░░░░░  1x/month
 
 Top MCP Servers:
-  No MCP server tool calls recorded in the last 30 days.
-  (stepsecurity is configured for this workspace — see Setup Checklist.)
+  TODO — no MCP server usage recorded in the last 30 days
 
 ## Your Setup Checklist
 
 ### Codebases
-- [ ] Sak-Family-Agent — https://github.com/beer-sakthai/Sak-Family-Agent
+- [ ] Sak-Family-Agent — github.com/beer-sakthai/sak-family-agent
 
 ### MCP Servers to Activate
-- [ ] stepsecurity — CI/CD & supply-chain security posture and detections (anomalous outbound network calls, blocked egress, secrets in build logs, imposter-commit actions, run-level process/file events). Configured with `claude mcp add --transport http stepsecurity <endpoint>`; get the endpoint URL and tenant access from beer-sakthai.
+- TODO — no MCP servers detected in usage history yet
 
 ### Skills to Know About
-- /superpowers:using-superpowers — the entry point to the Superpowers skills; makes Claude invoke the relevant skill before it acts, instead of freewheeling.
-- /superpowers:finishing-a-development-branch — the standard "I'm done, now what?" flow: run tests, then choose merge-locally / push-and-PR / keep-branch, then clean up the worktree.
-- /superpowers:requesting-code-review — dispatch a read-only code-reviewer subagent over a diff before you merge; only the findings come back.
-- /superpowers:using-git-worktrees — isolate each piece of work in its own worktree off main before implementing.
-- /plugin + /reload-plugins + /reload-skills — install/enable plugins and hot-reload skills after editing them. This team ships its own plugins (sak-security, ci-cd-doctor), so you'll reload often while developing them.
-- /plugin-dev:plugin-structure — the directory layout and `plugin.json` manifest conventions for Claude Code plugins.
-- /update-config — edit `settings.json` (hooks, permissions, env vars) by merging with existing settings rather than overwriting.
-- /skills — list every available skill in the current session.
+- /init — (re)generates or refreshes the repo's CLAUDE.md guidance from the current codebase state
+- /debug — investigates and helps fix a bug
+- /code-review — reviews the current diff for correctness bugs and cleanup opportunities
+- /security-review — runs a security review of pending changes on the current branch
+- /agents — points you to creating/editing subagents under .claude/agents/
+- /reload-skills — reloads the skill catalog
+- /run-skill-generator — scaffolds a new skill
 
 ## Team Tips
 

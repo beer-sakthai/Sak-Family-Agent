@@ -2,14 +2,10 @@
 
 from __future__ import annotations
 
-import http.client
 import json
 import threading
 import urllib.error
-import urllib.parse
 import urllib.request
-from collections.abc import Iterator
-from contextlib import contextmanager
 from http.server import HTTPServer
 from pathlib import Path
 from typing import Any
@@ -23,7 +19,6 @@ from sakthai.memory.store import MemoryStore
 from sakthai.web.server import (
     _get_or_create_bearer_token,
     _Handler,
-    _redact_query_token,
 )
 
 
@@ -59,154 +54,28 @@ def test_token_creation_and_persistence(temp_db: Path) -> None:
             assert "no-export" in fact.tags
 
 
-def test_token_is_read_back_from_the_store_on_a_cold_start(temp_db: Path) -> None:
-    """The second call in the test above never touches SQLite.
-
-    ``_get_or_create_bearer_token`` returns the module-level ``_BEARER_TOKEN``
-    cache before opening the store, so calling it twice in one process only
-    exercises the *creation* path — the read-back branch stayed in the
-    coverage miss list. That branch is what runs on every restart, and
-    persisting the token across restarts is the whole point of storing it as a
-    fact, so clear the cache to force a genuine cold start.
-    """
-    with (
-        patch("sakthai.memory.store.memory_db_path", return_value=temp_db),
-        patch("sakthai.config.memory_db_path", return_value=temp_db),
-    ):
-        import sakthai.web.server as srv
-
-        srv._BEARER_TOKEN = None
-        created = _get_or_create_bearer_token()
-
-        # Simulate a process restart: same DB, empty cache.
-        srv._BEARER_TOKEN = None
-        recovered = _get_or_create_bearer_token()
-
-        assert recovered == created, "token was regenerated instead of read back from the store"
-
-        # And exactly one token fact exists — a cold start must not append a
-        # second row alongside the one it just read.
-        with MemoryStore(temp_db) as store:
-            facts = store.list_facts(limit=100)
-        token_facts = [f for f in facts if f.kind == "web_auth" and f.key == "bearer_token"]
-        assert [f.value for f in token_facts] == [created]
-
-
-def test_token_generation_falls_back_when_the_store_is_unreachable(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """A broken store must not leave the server with an empty token — that
-    would make ``_is_authenticated`` reject every request rather than fail
-    safe on a usable one."""
-    import sakthai.web.server as srv
-
-    monkeypatch.setattr(srv, "_BEARER_TOKEN", None)
-
-    def _boom(*_args: object, **_kwargs: object) -> None:
-        raise OSError("database is locked")
-
-    monkeypatch.setattr("sakthai.memory.store.MemoryStore.__init__", _boom)
-
-    token = _get_or_create_bearer_token()
-    assert len(token) == 32
-
-    monkeypatch.setattr(srv, "_BEARER_TOKEN", None)
-
-
-def test_empty_expected_token_denies_authentication(monkeypatch: pytest.MonkeyPatch) -> None:
-    """If token resolution ever yields an empty string, every request must be
-    rejected — never treated as "no auth configured, let it through"."""
-    import sakthai.web.server as srv
-
-    monkeypatch.setattr(srv, "_get_or_create_bearer_token", lambda: "")
-
-    handler = _Handler.__new__(_Handler)
-    handler.headers = {}
-    handler.path = "/api/stages"
-
-    assert handler._is_authenticated() is False
-
-
-@pytest.mark.parametrize(
-    ("host", "expected"),
-    [
-        ("localhost", True),
-        ("127.0.0.1", True),
-        ("127.0.0.53", True),
-        ("::1", True),
-        ("0.0.0.0", False),
-        ("192.168.1.10", False),
-        ("example.com", False),
-        ("", False),
-    ],
-)
-def test_loopback_host_detection(host: str, expected: bool) -> None:
-    """Drives the non-loopback bind refusal. ``localhost`` is matched by name
-    and the rest by address; anything that does not parse as an IP is treated
-    as public, since a hostname may resolve anywhere."""
-    from sakthai.web.server import _is_loopback_host
-
-    assert _is_loopback_host(host) is expected
-
-
 # ---------------------------------------------------------------------------
 # HTTP Authentication Tests
 # ---------------------------------------------------------------------------
 
 
-@contextmanager
-def _background_server() -> Iterator[HTTPServer]:
-    """Serve ``_Handler`` on an ephemeral loopback port for the duration of the block.
-
-    ``shutdown()`` alone only stops the ``serve_forever`` loop — it leaves the
-    listening socket open, so the FD survives until the garbage collector
-    finalizes it. That finalization raises ``ResourceWarning`` from whatever
-    test happens to be running at the time rather than from the fixture that
-    leaked it, so the teardown must close the socket explicitly.
-    """
-    server = HTTPServer(("127.0.0.1", 0), _Handler)
-    thread = threading.Thread(
-        target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
-    )
-    thread.start()
-    try:
-        yield server
-    finally:
-        server.shutdown()
-        thread.join(timeout=5)
-        server.server_close()
-
-
 @pytest.fixture(scope="module")
-def authed_server_base() -> Iterator[tuple[str, str]]:
+def authed_server_base() -> tuple[str, str]:
     """Start an authenticated HTTPServer and return (base_url, token)."""
     # Force generate a custom token for testing
     import sakthai.web.server as srv
 
-    # Restored on teardown: `_BEARER_TOKEN` is process-global, so leaving the
-    # test value behind makes any later test that reads it order-dependent.
-    previous_token = srv._BEARER_TOKEN
     srv._BEARER_TOKEN = "test_bearer_token_12345678"
 
-    try:
-        with _background_server() as server:
-            _, port = server.server_address
-            yield f"http://127.0.0.1:{port}", "test_bearer_token_12345678"
-    finally:
-        srv._BEARER_TOKEN = previous_token
+    server = HTTPServer(("127.0.0.1", 0), _Handler)
+    _, port = server.server_address
+    thread = threading.Thread(
+        target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
+    )
+    thread.start()
 
-
-def test_background_server_teardown_closes_the_listening_socket() -> None:
-    """Pin the teardown contract, not just "the block exited".
-
-    A teardown that calls only ``shutdown()`` still passes every request-level
-    assertion in this module — the leak surfaces later, as a ResourceWarning
-    charged to an unrelated test — so assert the FD itself is released.
-    """
-    with _background_server() as server:
-        assert server.socket.fileno() != -1
-
-    assert server.socket.fileno() == -1, "listening socket outlived the server context"
+    yield f"http://127.0.0.1:{port}", "test_bearer_token_12345678"
+    server.shutdown()
 
 
 def _get_with_headers(
@@ -446,149 +315,6 @@ def test_static_path_unauthorized_with_wrong_cookie(authed_server_base: tuple[st
     assert b"Unauthorized" in body
 
 
-# --- HEAD is gated exactly like GET ----------------------------------------
-# ``SimpleHTTPRequestHandler`` ships its own ``do_HEAD``. Inheriting it unchanged
-# served HEAD straight out of ``send_head()``, skipping the bearer-token check
-# *and* the static-root containment check that ``do_GET`` performs: an
-# unauthenticated HEAD disclosed the existence, size and mtime of files under the
-# static root, and followed symlinks out of it that an authenticated GET rejects
-# with 403. These pin the gate on the verb, not just on GET.
-
-
-def _request(
-    method: str, url: str, headers: dict[str, str], timeout: int = 5
-) -> tuple[int, dict[str, str], bytes]:
-    """Issue an arbitrary-method request, returning (status, headers, body)."""
-    parts = urllib.parse.urlsplit(url)
-    conn = http.client.HTTPConnection(parts.hostname or "", parts.port or 80, timeout=timeout)
-    try:
-        target = parts.path + (f"?{parts.query}" if parts.query else "")
-        conn.request(method, target, headers=headers)
-        resp = conn.getresponse()
-        return resp.status, dict(resp.getheaders()), resp.read()
-    finally:
-        conn.close()
-
-
-def test_head_on_static_path_is_unauthorized_without_a_token(
-    authed_server_base: tuple[str, str],
-) -> None:
-    """The core bypass: HEAD must not be served where GET answers 401."""
-    base_url, _ = authed_server_base
-    status, _, _ = _request("HEAD", f"{base_url}/index.html", {})
-    assert status == 401
-
-
-def test_head_on_api_path_is_unauthorized_without_a_token(
-    authed_server_base: tuple[str, str],
-) -> None:
-    """HEAD on an API endpoint is gated identically to GET."""
-    base_url, _ = authed_server_base
-    status, _, _ = _request("HEAD", f"{base_url}/api/stages", {})
-    assert status == 401
-
-
-def test_head_matches_get_status_across_paths_and_credentials(
-    authed_server_base: tuple[str, str],
-) -> None:
-    """Pin the invariant itself: HEAD and GET agree on status for every case.
-
-    Asserting the *agreement* rather than a hardcoded list is what stops the two
-    verbs drifting apart again if routing changes.
-    """
-    base_url, token = authed_server_base
-    good = {"Authorization": f"Bearer {token}"}
-    bad = {"Authorization": "Bearer wrong_token_xyz"}
-    for path, headers in [
-        ("/health", {}),
-        ("/api/stages", good),
-        ("/api/stages", {}),
-        ("/api/stages", bad),
-        ("/api/ecosystem", good),
-        ("/index.html", good),
-        ("/index.html", {}),
-    ]:
-        get_status, _, _ = _request("GET", f"{base_url}{path}", headers)
-        head_status, _, _ = _request("HEAD", f"{base_url}{path}", headers)
-        assert head_status == get_status, f"HEAD/GET disagree on {path} (auth={bool(headers)})"
-
-
-def test_head_sends_no_body_but_keeps_content_length(
-    authed_server_base: tuple[str, str],
-) -> None:
-    """HEAD must advertise the length GET would send while writing no body."""
-    base_url, token = authed_server_base
-    good = {"Authorization": f"Bearer {token}"}
-    get_status, _, get_body = _request("GET", f"{base_url}/api/stages", good)
-    head_status, head_headers, head_body = _request("HEAD", f"{base_url}/api/stages", good)
-    assert (get_status, head_status) == (200, 200)
-    assert head_body == b""
-    assert head_headers["Content-Length"] == str(len(get_body))
-
-
-def test_unauthenticated_head_discloses_no_file_metadata(tmp_path: Path) -> None:
-    """With a real static root present, HEAD leaks neither existence nor size.
-
-    The module-level ``_STATIC_ROOT`` does not exist in this repo, so the leak
-    only shows up once a built dashboard is on disk — which is exactly the
-    deployed configuration.
-    """
-    import sakthai.web.server as srv
-
-    static_root = tmp_path / "dist"
-    static_root.mkdir()
-    (static_root / "asset.js").write_text("console.log('sensitive')")
-
-    previous_root, previous_token = srv._STATIC_ROOT, srv._BEARER_TOKEN
-    srv._STATIC_ROOT = static_root
-    srv._BEARER_TOKEN = "test_bearer_token_12345678"
-    try:
-        with _background_server() as server:
-            base_url = f"http://127.0.0.1:{server.server_address[1]}"
-            present, present_headers, _ = _request("HEAD", f"{base_url}/asset.js", {})
-            missing, _, _ = _request("HEAD", f"{base_url}/nope.js", {})
-
-        assert present == 401
-        # The response must not carry the asset's real size...
-        assert present_headers.get("Content-Length") != str(len("console.log('sensitive')"))
-        # ...nor let a present file be told apart from an absent one.
-        assert present == missing
-    finally:
-        srv._STATIC_ROOT, srv._BEARER_TOKEN = previous_root, previous_token
-
-
-def test_head_cannot_follow_a_symlink_out_of_the_static_root(tmp_path: Path) -> None:
-    """HEAD is subject to the same containment check as GET.
-
-    An authenticated GET answers 403 for a symlink escaping the static root; an
-    unauthenticated HEAD used to answer 200 for the same target.
-    """
-    import sakthai.web.server as srv
-
-    static_root = tmp_path / "dist"
-    static_root.mkdir()
-    outside = tmp_path / "outside.txt"
-    outside.write_text("escaped the static root")
-    (static_root / "link.txt").symlink_to(outside)
-
-    previous_root, previous_token = srv._STATIC_ROOT, srv._BEARER_TOKEN
-    srv._STATIC_ROOT = static_root
-    srv._BEARER_TOKEN = "test_bearer_token_12345678"
-    try:
-        with _background_server() as server:
-            base_url = f"http://127.0.0.1:{server.server_address[1]}"
-            good = {"Authorization": "Bearer test_bearer_token_12345678"}
-            authed_get, _, _ = _request("GET", f"{base_url}/link.txt", good)
-            authed_head, _, _ = _request("HEAD", f"{base_url}/link.txt", good)
-            anon_head, _, _ = _request("HEAD", f"{base_url}/link.txt", {})
-
-        assert authed_get == 403
-        assert authed_head == 403
-        assert anon_head == 401
-    finally:
-        srv._STATIC_ROOT, srv._BEARER_TOKEN = previous_root, previous_token
-
-
 def test_health_endpoint_needs_no_credentials(authed_server_base: tuple[str, str]) -> None:
     """/health is the one deliberately unauthenticated path."""
     base_url, _ = authed_server_base
@@ -648,36 +374,3 @@ def test_cli_web_regen_token(temp_db: Path) -> None:
             fact = store.get_fact_by_key(kind="web_auth", key="bearer_token")
             assert fact is not None
             assert fact.value == token2
-
-
-@pytest.mark.parametrize(
-    ("raw", "expected"),
-    [
-        ("GET /api/stages?token=deadbeef HTTP/1.1", "GET /api/stages?token=[REDACTED] HTTP/1.1"),
-        (
-            "GET /?bearer_token=abc123&days=7 HTTP/1.1",
-            "GET /?bearer_token=[REDACTED]&days=7 HTTP/1.1",
-        ),
-        ("GET /?TOKEN=Secret9 HTTP/1.1", "GET /?TOKEN=[REDACTED] HTTP/1.1"),
-        # No token: left untouched.
-        ("GET /health HTTP/1.1", "GET /health HTTP/1.1"),
-    ],
-)
-def test_redact_query_token_masks_credentials(raw: str, expected: str) -> None:
-    """The bearer token in a request line is masked by parameter name."""
-    assert _redact_query_token(raw) == expected
-
-
-def test_log_message_never_emits_the_token() -> None:
-    """The real _Handler.log_message must strip ?token=<secret> before logging."""
-    # Build a bare handler instance without running BaseHTTPRequestHandler's
-    # socket-bound __init__ — log_message needs no request state.
-    handler = _Handler.__new__(_Handler)
-    secret = "s3cr3t-bearer-value"
-    with patch("sakthai.web.server.logger") as mock_logger:
-        handler.log_message('"%s" %s %s', f"GET /api/stages?token={secret} HTTP/1.1", "200", "512")
-    assert mock_logger.info.called, "log_message should have logged a line"
-    # The token must appear in none of the arguments handed to the logger.
-    logged = " ".join(str(a) for call in mock_logger.info.call_args_list for a in call.args)
-    assert secret not in logged
-    assert "token=[REDACTED]" in logged

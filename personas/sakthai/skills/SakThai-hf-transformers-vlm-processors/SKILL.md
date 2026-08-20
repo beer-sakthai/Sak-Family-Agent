@@ -1,8 +1,6 @@
 ---
 name: SakThai-hf-transformers-vlm-processors
-description: "Deep expertise in Transformers VLM processor classes \u2014 bridging image/video\
-  \ inputs with text tokenization for multimodal models like LLaVA, Idefics3, Florence-2,\
-  \ Qwen2-VL, Phi-4-multimodal."
+description: "Deep expertise in Transformers VLM processor classes — bridging image/video inputs with text tokenization for multimodal models like LLaVA, Idefics3, Florence-2, Qwen2-VL, Phi-4-multimodal."
 ---
 
 ## Purpose

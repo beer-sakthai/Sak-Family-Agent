@@ -5,8 +5,8 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const demo = url.searchParams.get("demo") === "true";
-    const { agents, dataSource, unattributedRuns } = await getAgentOverview(demo);
-    return NextResponse.json({ success: true, agents, dataSource, unattributedRuns });
+    const agents = await getAgentOverview(demo);
+    return NextResponse.json({ success: true, agents });
   } catch (error: any) {
     console.error("Secure Log [GET /api/agents]: Failed to fetch agents:", error);
     return NextResponse.json(

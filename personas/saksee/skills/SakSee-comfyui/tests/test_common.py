@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+
 import pytest
+
 from _common import (
     EMBEDDING_REGEX,
     cloud_endpoint,
@@ -21,6 +23,7 @@ from _common import (
     safe_path_join,
     unwrap_workflow,
 )
+
 
 # =============================================================================
 # Cloud detection / URL routing
@@ -376,7 +379,7 @@ class TestRedirectHeaderStripping:
     """
 
     def _build_session(self):
-        from _common import HAS_REQUESTS, _StripSensitiveOnRedirectSession
+        from _common import _StripSensitiveOnRedirectSession, HAS_REQUESTS
         if not HAS_REQUESTS:
             import pytest
             pytest.skip("requests not installed")
