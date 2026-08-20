@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 
-from ..config import redact_secrets, sakthai_home
+from ..config import sakthai_home
 from ..lead.capture import capture_lead as capture_lead_fact
 from ..learn.ingest import ingest_document as ingest_document_facts
 from ..memory.store import MemoryStore
@@ -133,16 +133,6 @@ _SENSITIVE_READ_BASENAMES: frozenset[str] = frozenset(
     }
 )
 _SENSITIVE_READ_SUFFIXES: tuple[str, ...] = (".pem", ".key", ".pfx", ".p12")
-_SENSITIVE_READ_PREFIXES: tuple[str, ...] = (".env.", ".env-", ".env_", "memory.db-")
-_SENSITIVE_READ_KEY_STEMS: tuple[str, ...] = (
-    "id_rsa",
-    "id_dsa",
-    "id_ecdsa",
-    "id_ed25519",
-    "id_ecdsa_sk",
-    "id_ed25519_sk",
-    "id_xmss",
-)
 # Path fragments (relative to a root) that indicate a secret store.
 _SENSITIVE_READ_FRAGMENTS: tuple[tuple[str, ...], ...] = (
     (".aws", "credentials"),
@@ -155,19 +145,15 @@ def _is_sensitive_read_target(resolved: Path) -> bool:
     """Return True if ``resolved`` names a well-known secret file."""
     name = resolved.name
     lower = name.lower()
-    if (
-        lower in _SENSITIVE_READ_BASENAMES
-        or lower.startswith(_SENSITIVE_READ_PREFIXES)
-        or any(lower.startswith(stem + ".") for stem in _SENSITIVE_READ_KEY_STEMS)
-    ):
+    if name in _SENSITIVE_READ_BASENAMES or lower.startswith(".env."):
         return True
     if lower.endswith(_SENSITIVE_READ_SUFFIXES):
         return True
-    lower_parts = tuple(p.lower() for p in resolved.parts)
+    parts = resolved.parts
     for fragment in _SENSITIVE_READ_FRAGMENTS:
         n = len(fragment)
-        if n <= len(lower_parts) and any(
-            lower_parts[i : i + n] == fragment for i in range(len(lower_parts) - n + 1)
+        if n <= len(parts) and any(
+            tuple(parts[i : i + n]) == fragment for i in range(len(parts) - n + 1)
         ):
             return True
     return False
@@ -175,8 +161,6 @@ def _is_sensitive_read_target(resolved: Path) -> bool:
 
 def _resolve_and_validate_path(path_str: str) -> Path:
     """Resolve a path and ensure it is a file within the allowed roots."""
-    if any(ord(c) < 32 or ord(c) == 127 for c in path_str):
-        raise ValueError("Control characters are not allowed in file paths")
     candidate = Path(path_str).expanduser()
     try:
         resolved = candidate.resolve(strict=True)
@@ -416,20 +400,19 @@ def _send_telegram_message(args: dict[str, Any], store: MemoryStore) -> str:
             body = json.loads(response.read().decode("utf-8"))
         if body.get("ok"):
             return "Telegram message sent successfully."
-        return redact_secrets(f"Telegram send failed: {body.get('description', 'Unknown error')}")
+        return f"Telegram send failed: {body.get('description', 'Unknown error')}"
     except HTTPError as exc:
         try:
             err = json.loads(exc.read().decode("utf-8"))
-            return redact_secrets(f"Telegram API Error: {err.get('description', exc.reason)}")
+            return f"Telegram API Error: {err.get('description', exc.reason)}"
         except Exception:
-            return redact_secrets(f"Telegram API HTTP Error {exc.code}: {exc.reason}")
+            return f"Telegram API HTTP Error {exc.code}: {exc.reason}"
     except URLError as exc:
-        return redact_secrets(f"Network Error: Could not connect to Telegram API: {exc.reason}")
+        return f"Network Error: Could not connect to Telegram API: {exc.reason}"
     except Exception as exc:  # noqa: BLE001
         from ..config import redact_secrets
 
         return f"Unexpected Error sending Telegram message: {redact_secrets(str(exc))}"
-        return redact_secrets(f"Unexpected Error sending Telegram message: {exc}")
 
 
 def _run_agent_loop(args: dict[str, Any], store: MemoryStore) -> str:

@@ -1,9 +1,6 @@
 ---
 name: SakSit-b2b-saas-youtube-content-strategy-2026
-description: ">-   A complete playbook for B2B SaaS companies to build, optimize, and grow a  \
-  \ YouTube channel that drives real pipeline \u2014 covering content strategy, SEO,\
-  \   production cadence, format selection, AI citation optimization, and   performance\
-  \ benchmark"
+description: ">-   A complete playbook for B2B SaaS companies to build, optimize, and grow a   YouTube channel that drives real pipeline — covering content strategy, SEO,   production cadence, format selection, AI citation optimization, and   performance benchmark"
 ---
 
 # B2B SaaS YouTube Content Strategy 2026

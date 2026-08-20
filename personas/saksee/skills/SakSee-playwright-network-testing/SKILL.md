@@ -1,8 +1,6 @@
 ---
 name: SakSee-playwright-network-testing
-description: Centralize Playwright network and request-level assertions into one skill for reliable
-  DOM and API behavior testing.
-...
+description: "Centralize Playwright network and request-level assertions into one skill for reliable DOM and API behavior testing."
 ---
 
 # Playwright Network Testing

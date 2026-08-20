@@ -1,7 +1,6 @@
 ---
 name: SakKing-spike
-description: Throwaway experiments to validate an idea before build.
-...
+description: "Throwaway experiments to validate an idea before build."
 ---
 
 # Spike

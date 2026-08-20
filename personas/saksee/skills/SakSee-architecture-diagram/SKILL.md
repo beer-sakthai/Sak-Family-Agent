@@ -1,7 +1,6 @@
 ---
 name: SakSee-architecture-diagram
-description: Dark-themed SVG architecture/cloud/infra diagrams as HTML.
-...
+description: "Dark-themed SVG architecture/cloud/infra diagrams as HTML."
 ---
 
 # Architecture Diagram Skill

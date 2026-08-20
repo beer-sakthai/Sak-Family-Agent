@@ -1,9 +1,6 @@
 ---
 name: SakJules-SakKing-customer-health-score-operational-framework
-description: Build, validate, and operationalize a customer health score that predicts churn and
-  expansion. Covers signal selection, weighted scoring, threshold playbooks, and CSM
-  action triggers.
-...
+description: "Build, validate, and operationalize a customer health score that predicts churn and expansion. Covers signal selection, weighted scoring, threshold playbooks, and CSM action triggers."
 ---
 
 # Customer Health Score Operational Framework

@@ -1,6 +1,6 @@
 ---
 name: SakSee-serving-llms-vllm
-description: 'vLLM: high-throughput LLM serving, OpenAI API, quantization.'
+description: "vLLM: high-throughput LLM serving, OpenAI API, quantization."
 ---
 
 # vLLM - High-Performance LLM Serving

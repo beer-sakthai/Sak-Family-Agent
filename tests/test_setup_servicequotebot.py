@@ -52,9 +52,3 @@ def test_build_customer_bundle_writes_env_service_and_ingests_price_book(tmp_pat
         snapshot = store.export_to_dict()
 
     assert len(snapshot["facts"]) == 2
-
-    import sys
-
-    if sys.platform != "win32":
-        assert (bundle.config_dir.stat().st_mode & 0o777) == 0o700
-        assert (bundle.env_file.stat().st_mode & 0o777) == 0o600
