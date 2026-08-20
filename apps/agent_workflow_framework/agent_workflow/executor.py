@@ -130,10 +130,6 @@ def _validate_url(url_str: str) -> None:
     if any(ord(c) < 32 or ord(c) == 127 for c in url_str):
         raise ValueError("Control characters are not allowed in URLs")
 
-    # Strip fragment before parsing to prevent fragment-based host confusion or SSRF bypasses
-    if "#" in url_str:
-        url_str = url_str.split("#", 1)[0]
-
     try:
         parsed = urllib.parse.urlparse(url_str)
     except Exception as e:
