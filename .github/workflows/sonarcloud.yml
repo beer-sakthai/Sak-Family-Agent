@@ -40,16 +40,9 @@ permissions:
   contents: read
   pull-requests: read # allows SonarCloud to decorate PRs with analysis results
 
-concurrency:
-  # See the note in ci.yml: cancel superseded pull-request runs, never a run on
-  # `main` — SonarCloud's project state is built from the `main` analyses.
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 jobs:
   Analysis:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
     if: >-
       github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch' ||
@@ -57,14 +50,8 @@ jobs:
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
-      - name: Harden the runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
-        with:
-          use-policy-store: true
-          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
-
       - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7
 
       - name: Analyze with SonarCloud
         if: env.SONAR_TOKEN != ''

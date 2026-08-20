@@ -1,9 +1,7 @@
 ---
 name: SakThai-hf-hub-configuration
-description: "Complete reference for huggingface_hub library configuration \u2014 all environment\
-  \ variables, cache paths, token management, and customization options"
+description: "Complete reference for huggingface_hub library configuration — all environment variables, cache paths, token management, and customization options"
 ---
-
 # HF Hub Configuration
 
 Trigger when: user asks about huggingface_hub configuration, environment variables, cache paths, token setup, offline mode, proxy settings, or HF_HOME/HF_HUB_CACHE paths.

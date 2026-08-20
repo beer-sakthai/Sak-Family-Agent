@@ -1,8 +1,6 @@
 ---
 name: SakThai-hf-datasets-concatenate-and-interleave
-description: "Complete reference on concatenating and interleaving Hugging Face Datasets \u2014\
-  \ covering concatenate_datasets (axis=0/1), interleave_datasets (with probabilities,\
-  \ stopping strategies), map-style vs iterable internals, and v5 multi-shard considerations."
+description: "Complete reference on concatenating and interleaving Hugging Face Datasets — covering concatenate_datasets (axis=0/1), interleave_datasets (with probabilities, stopping strategies), map-style vs iterable internals, and v5 multi-shard considerations."
 ---
 
 ## Description

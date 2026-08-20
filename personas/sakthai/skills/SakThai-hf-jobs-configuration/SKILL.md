@@ -1,9 +1,6 @@
 ---
 name: SakThai-hf-jobs-configuration
-description: "Complete reference for configuring Hugging Face Jobs \u2014 authentication, UV/Docker\
-  \ job config, environment variables and secrets, volume mounting (repos, datasets,\
-  \ buckets, local dirs), hardware flavors and pricing, port exposure, SSH debugging,\
-  \ timeou"
+description: "Complete reference for configuring Hugging Face Jobs — authentication, UV/Docker job config, environment variables and secrets, volume mounting (repos, datasets, buckets, local dirs), hardware flavors and pricing, port exposure, SSH debugging, timeou"
 ---
 
 # HF Jobs Configuration

@@ -1,7 +1,6 @@
 ---
 name: SakTan-calendar-integration
-description: "Check and reason about Beers Google Calendar for daily/weekly planning \u2014 todays\
-  \ events, conflicts, and free time."
+description: "Check and reason about Beers Google Calendar for daily/weekly planning — todays events, conflicts, and free time."
 ---
 
 # Calendar Integration

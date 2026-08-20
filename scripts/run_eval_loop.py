@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-"""Run evaluation loop comparing Old vs New Skills and generate a beautiful Review Viewer."""
+"""Run evaluation loop comparing Old vs New Skills and generate a beautiful Review Viewer.
+"""
 
+import json
 from pathlib import Path
 
 # Define the old skill (verbose, non-convention references)
@@ -63,7 +65,7 @@ TEST_CASES = [
         "new_output": "Inline object prop creates new reference every render. New reference triggers component re-render. Wrap object in `useMemo` to cache reference.",
         "old_score": 0.65,
         "new_score": 0.98,
-        "eval_feedback": "Old output is extremely verbose and repeats basic concepts, wasting tokens. New output is highly concise, drops all filler/articles, preserves key code terms (useMemo), and presents the solution in under 150 characters (64% token savings).",
+        "eval_feedback": "Old output is extremely verbose and repeats basic concepts, wasting tokens. New output is highly concise, drops all filler/articles, preserves key code terms (useMemo), and presents the solution in under 150 characters (64% token savings)."
     },
     {
         "id": 2,
@@ -73,7 +75,7 @@ TEST_CASES = [
         "new_output": "```\nfix(db): add null check for user database mapping\n```",
         "old_score": 0.50,
         "new_score": 0.95,
-        "eval_feedback": "Old output contains verbose filler intro/outro text. New output returns the clean conventional commit directly, saving tokens and aligning with git CLI automation patterns.",
+        "eval_feedback": "Old output contains verbose filler intro/outro text. New output returns the clean conventional commit directly, saving tokens and aligning with git CLI automation patterns."
     },
     {
         "id": 3,
@@ -83,7 +85,7 @@ TEST_CASES = [
         "new_output": "Type `/caveman` or 'talk like caveman'. Levels: `/caveman lite` (mild), `/caveman full` (classic, default), `/caveman ultra` (max). Chinese variants: `wenyan-lite/full/ultra`.",
         "old_score": 0.70,
         "new_score": 0.97,
-        "eval_feedback": "Old output is conversational and redundant. New output is structured, clear, uses parentheses for context, and reduces word count by 55%.",
+        "eval_feedback": "Old output is conversational and redundant. New output is structured, clear, uses parentheses for context, and reduces word count by 55%."
     },
     {
         "id": 4,
@@ -93,10 +95,9 @@ TEST_CASES = [
         "new_output": "L12: 🟢 nit: unused import.",
         "old_score": 0.45,
         "new_score": 0.99,
-        "eval_feedback": "Old output uses conversational style. New output matches the strict `/caveman-review` one-line finding format, perfect for automated PR annotations.",
-    },
+        "eval_feedback": "Old output uses conversational style. New output matches the strict `/caveman-review` one-line finding format, perfect for automated PR annotations."
+    }
 ]
-
 
 def run_evaluation():
     total_old_score = sum(tc["old_score"] for tc in TEST_CASES)
@@ -117,9 +118,9 @@ def run_evaluation():
             "old_total_chars": total_old_chars,
             "new_total_chars": total_new_chars,
             "token_savings_pct": round(token_savings * 100, 1),
-            "improvement_pct": round(((new_avg - old_avg) / old_avg) * 100, 1),
+            "improvement_pct": round(((new_avg - old_avg) / old_avg) * 100, 1)
         },
-        "cases": TEST_CASES,
+        "cases": TEST_CASES
     }
 
     return results
@@ -127,14 +128,49 @@ def run_evaluation():
 def _generate_css_styles():
     """Returns the CSS style sheet for the viewer."""
     return """
+def generate_html_viewer(results, output_path):
+    metrics = results["metrics"]
+    cases = results["cases"]
 
-def _to_html(text: str) -> str:
-    """Render one model output as an HTML fragment for the viewer."""
-    return text.replace("\\n", "<br>").replace("\n", "<br>").replace("```", "")
+    case_cards = ""
+    for c in cases:
+        savings = round((1.0 - len(c["new_output"]) / len(c["old_output"])) * 100, 1)
+        case_cards += f"""
+        <div class="case-card" data-category="{c["category"]}">
+            <div class="case-header">
+                <span class="category-badge">{c["category"]}</span>
+                <span class="case-id">Case #{c["id"]}</span>
+            </div>
+            <div class="case-query">
+                <strong>Query:</strong> "{c["query"]}"
+            </div>
+            <div class="comparator">
+                <div class="panel old-panel">
+                    <div class="panel-header">Old Skill Output <span class="score-badge bad">{int(c["old_score"]*100)}%</span></div>
+                    <div class="panel-content">{c["old_output"].replace('\\n', '<br>').replace('```', '')}</div>
+                    <div class="char-count">Length: {len(c["old_output"])} chars</div>
+                </div>
+                <div class="panel new-panel">
+                    <div class="panel-header">New Skill Output <span class="score-badge good">{int(c["new_score"]*100)}%</span></div>
+                    <div class="panel-content">{c["new_output"].replace('\\n', '<br>').replace('```', '')}</div>
+                    <div class="char-count">Length: {len(c["new_output"])} chars <span class="savings-tag">({savings}% fewer)</span></div>
+                </div>
+            </div>
+            <div class="eval-feedback">
+                <strong>Judge Feedback:</strong> {c["eval_feedback"]}
+            </div>
+        </div>
+        """
 
-
-_CSS_STYLES = """
-        :root {
+    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skill Evaluation Review Viewer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {{
             --bg-color: #0b0c10;
             --surface-color: #171923;
             --surface-card: #202433;
@@ -146,23 +182,23 @@ _CSS_STYLES = """
             --accent-green: #10b981;
             --accent-red: #ef4444;
             --border-color: #2d3748;
-        }
+        }}
 
-        * {
+        * {{
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-        }
+        }}
 
-        body {
+        body {{
             background-color: var(--bg-color);
             color: var(--text-color);
             font-family: 'Inter', sans-serif;
             line-height: 1.6;
             padding: 2rem;
-        }
+        }}
 
-        header {
+        header {{
             max-width: 1200px;
             margin: 0 auto 2rem auto;
             display: flex;
@@ -170,38 +206,38 @@ _CSS_STYLES = """
             align-items: center;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 1.5rem;
-        }
+        }}
 
-        .brand {
+        .brand {{
             display: flex;
             align-items: center;
             gap: 0.75rem;
-        }
+        }}
 
-        .logo-icon {
+        .logo-icon {{
             font-size: 2rem;
-        }
+        }}
 
-        .brand-title {
+        .brand-title {{
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--text-title);
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-        }
+        }}
 
-        .tagline {
+        .tagline {{
             font-size: 0.85rem;
             color: #718096;
-        }
+        }}
 
-        .tabs {
+        .tabs {{
             display: flex;
             gap: 1rem;
-        }
+        }}
 
-        .tab-btn {
+        .tab-btn {{
             background: transparent;
             border: 1px solid var(--border-color);
             color: var(--text-color);
@@ -210,28 +246,28 @@ _CSS_STYLES = """
             cursor: pointer;
             font-weight: 500;
             transition: all 0.2s ease;
-        }
+        }}
 
-        .tab-btn.active, .tab-btn:hover {
+        .tab-btn.active, .tab-btn:hover {{
             background: var(--primary);
             color: white;
             border-color: var(--primary);
             box-shadow: 0 0 10px var(--primary-glow);
-        }
+        }}
 
-        .container {
+        .container {{
             max-width: 1200px;
             margin: 0 auto;
-        }
+        }}
 
-        .metrics-grid {
+        .metrics-grid {{
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
-        }
+        }}
 
-        .metric-card {
+        .metric-card {{
             background-color: var(--surface-color);
             border: 1px solid var(--border-color);
             border-radius: 0.75rem;
@@ -240,13 +276,13 @@ _CSS_STYLES = """
             position: relative;
             overflow: hidden;
             transition: transform 0.2s ease;
-        }
+        }}
 
-        .metric-card:hover {
+        .metric-card:hover {{
             transform: translateY(-2px);
-        }
+        }}
 
-        .metric-card::before {
+        .metric-card::before {{
             content: '';
             position: absolute;
             top: 0;
@@ -254,33 +290,33 @@ _CSS_STYLES = """
             width: 4px;
             height: 100%;
             background: linear-gradient(to bottom, var(--primary), var(--secondary));
-        }
+        }}
 
-        .metric-title {
+        .metric-title {{
             font-size: 0.85rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: #718096;
             margin-bottom: 0.5rem;
-        }
+        }}
 
-        .metric-value {
+        .metric-value {{
             font-size: 2.25rem;
             font-weight: 700;
             color: var(--text-title);
-        }
+        }}
 
-        .metric-diff {
+        .metric-diff {{
             font-size: 0.85rem;
             margin-top: 0.25rem;
             color: var(--accent-green);
-        }
+        }}
 
-        .metric-diff.neutral {
+        .metric-diff.neutral {{
             color: #a0aec0;
-        }
+        }}
 
-        .section-title {
+        .section-title {{
             font-size: 1.25rem;
             font-weight: 600;
             color: var(--text-title);
@@ -288,25 +324,25 @@ _CSS_STYLES = """
             display: flex;
             align-items: center;
             gap: 0.5rem;
-        }
+        }}
 
-        .case-card {
+        .case-card {{
             background-color: var(--surface-color);
             border: 1px solid var(--border-color);
             border-radius: 0.75rem;
             padding: 1.5rem;
             margin-bottom: 1.5rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
+        }}
 
-        .case-header {
+        .case-header {{
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1rem;
-        }
+        }}
 
-        .category-badge {
+        .category-badge {{
             background-color: rgba(99, 102, 241, 0.1);
             color: var(--primary);
             border: 1px solid rgba(99, 102, 241, 0.2);
@@ -314,36 +350,36 @@ _CSS_STYLES = """
             border-radius: 9999px;
             font-size: 0.75rem;
             font-weight: 600;
-        }
+        }}
 
-        .case-id {
+        .case-id {{
             font-size: 0.85rem;
             color: #718096;
             font-weight: 500;
-        }
+        }}
 
-        .case-query {
+        .case-query {{
             font-size: 1.05rem;
             color: var(--text-title);
             margin-bottom: 1rem;
             padding-left: 0.5rem;
             border-left: 3px solid var(--primary);
-        }
+        }}
 
-        .comparator {
+        .comparator {{
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1.5rem;
             margin-bottom: 1rem;
-        }
+        }}
 
-        @media (max-width: 768px) {
-            .comparator {
+        @media (max-width: 768px) {{
+            .comparator {{
                 grid-template-columns: 1fr;
-            }
-        }
+            }}
+        }}
 
-        .panel {
+        .panel {{
             background-color: var(--surface-card);
             border: 1px solid var(--border-color);
             border-radius: 0.5rem;
@@ -351,9 +387,9 @@ _CSS_STYLES = """
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-        }
+        }}
 
-        .panel-header {
+        .panel-header {{
             font-size: 0.85rem;
             font-weight: 600;
             color: var(--text-title);
@@ -363,65 +399,65 @@ _CSS_STYLES = """
             display: flex;
             justify-content: space-between;
             align-items: center;
-        }
+        }}
 
-        .score-badge {
+        .score-badge {{
             font-size: 0.75rem;
             padding: 0.125rem 0.5rem;
             border-radius: 0.25rem;
             font-weight: 600;
-        }
+        }}
 
-        .score-badge.good {
+        .score-badge.good {{
             background-color: rgba(16, 185, 129, 0.1);
             color: var(--accent-green);
             border: 1px solid rgba(16, 185, 129, 0.2);
-        }
+        }}
 
-        .score-badge.bad {
+        .score-badge.bad {{
             background-color: rgba(239, 68, 68, 0.1);
             color: var(--accent-red);
             border: 1px solid rgba(239, 68, 68, 0.2);
-        }
+        }}
 
-        .panel-content {
+        .panel-content {{
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.9rem;
             white-space: pre-wrap;
             color: #e2e8f0;
             margin-bottom: 1rem;
             flex-grow: 1;
-        }
+        }}
 
-        .char-count {
+        .char-count {{
             font-size: 0.75rem;
             color: #718096;
             display: flex;
             justify-content: space-between;
-        }
+        }}
 
-        .savings-tag {
+        .savings-tag {{
             color: var(--accent-green);
             font-weight: 600;
-        }
+        }}
 
-        .eval-feedback {
+        .eval-feedback {{
             background-color: rgba(168, 85, 247, 0.05);
             border: 1px dashed rgba(168, 85, 247, 0.2);
             border-radius: 0.5rem;
             padding: 0.75rem 1rem;
             font-size: 0.85rem;
             color: #d6bcfa;
-        }
+        }}
 
-        .diff-container {
+        .diff-container {{
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1.5rem;
             margin-top: 1rem;
-        }
+        }}
 
-        .diff-box {
+        .diff-box {{
             background-color: var(--surface-color);
             border: 1px solid var(--border-color);
             border-radius: 0.75rem;
@@ -431,9 +467,9 @@ _CSS_STYLES = """
             white-space: pre-wrap;
             overflow-x: auto;
             max-height: 500px;
-        }
+        }}
 
-        .hidden {
+        .hidden {{
             display: none !important;
         }
     """
@@ -485,10 +521,12 @@ def _generate_dashboard_metrics_html(metrics):
         <div class="metrics-grid">
 """
 
+        }}
+    </style>
+</head>
+<body>
 
-def _render_header() -> str:
-    """Render the HTML header section with brand title and tab buttons."""
-    return """    <header>
+    <header>
         <div class="brand">
             <span class="logo-icon">🧬</span>
             <div>
@@ -500,13 +538,11 @@ def _render_header() -> str:
             <button class="tab-btn active" onclick="switchTab('evaluation')">Evaluation Cases</button>
             <button class="tab-btn" onclick="switchTab('diff')">Skill Diff</button>
         </div>
-    </header>"""
+    </header>
 
-
-def _render_metrics_grid(metrics: dict) -> str:
-    """Render the top dashboard metrics cards."""
-    score_diff = round(metrics["new_avg_score"] - metrics["old_avg_score"], 1)
-    return f"""        <div class="metrics-grid">
+    <div class="container">
+        <!-- Dashboard Metrics -->
+        <div class="metrics-grid">
             <div class="metric-card">
                 <div class="metric-title">Old Avg Score</div>
                 <div class="metric-value">{metrics["old_avg_score"]}%</div>
@@ -515,7 +551,7 @@ def _render_metrics_grid(metrics: dict) -> str:
             <div class="metric-card">
                 <div class="metric-title">New Avg Score</div>
                 <div class="metric-value">{metrics["new_avg_score"]}%</div>
-                <div class="metric-diff">+{score_diff}% Improvement</div>
+                <div class="metric-diff">+{metrics["new_avg_score"] - metrics["old_avg_score"]}% Improvement</div>
             </div>
             <div class="metric-card">
                 <div class="metric-title">Token Reduction</div>
@@ -572,19 +608,23 @@ def _render_case_card(c: dict) -> str:
             </div>
         </div>"""
 
+        <!-- Evaluation tab -->
+        <div id="evaluation-tab">
+            <h2 class="section-title">📊 Evaluated Test Cases</h2>
+            {case_cards}
+        </div>
 
-def _render_diff_tab(old_skill: str, new_skill: str) -> str:
-    """Render the Skill Comparison diff tab."""
-    return f"""        <div id="diff-tab" class="hidden">
+        <!-- Diff tab -->
+        <div id="diff-tab" class="hidden">
             <h2 class="section-title">📂 Skill Comparison (Old vs. New)</h2>
             <div class="diff-container">
                 <div>
                     <h3>Old Skill Body</h3>
-                    <div class="diff-box" style="border-top: 4px solid var(--accent-red);">{old_skill.strip()}</div>
+                    <div class="diff-box" style="border-top: 4px solid var(--accent-red);">{OLD_SKILL_BODY.strip()}</div>
                 </div>
                 <div>
                     <h3>New Skill Body</h3>
-                    <div class="diff-box" style="border-top: 4px solid var(--accent-green);">{new_skill.strip()}</div>
+                    <div class="diff-box" style="border-top: 4px solid var(--accent-green);">{NEW_SKILL_BODY.strip()}</div>
                 </div>
             </div>
         </div>
@@ -646,65 +686,24 @@ def generate_html_viewer(results, output_path):
     </div>
         </div>"""
 
-
-def _render_script() -> str:
-    """Render the tab-switching JavaScript function."""
-    return """    <script>
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-
-            if (tabId === 'evaluation') {
-                document.getElementById('evaluation-tab').classList.remove('hidden');
-                document.getElementById('diff-tab').classList.add('hidden');
-            } else {
-                document.getElementById('evaluation-tab').classList.add('hidden');
-                document.getElementById('diff-tab').classList.remove('hidden');
-            }
-        }
-    </script>"""
-
-
-def generate_html_viewer(results, output_path):
-    metrics = results["metrics"]
-    cases = results["cases"]
-
-    case_cards = "".join(_render_case_card(c) for c in cases)
-    header_html = _render_header()
-    metrics_html = _render_metrics_grid(metrics)
-    diff_html = _render_diff_tab(OLD_SKILL_BODY, NEW_SKILL_BODY)
-    script_html = _render_script()
-
-    html_content = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skill Evaluation Review Viewer</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-{_CSS_STYLES}
-    </style>
-</head>
-<body>
-
-{header_html}
-
-    <div class="container">
-{metrics_html}
-
-        <!-- Evaluation tab -->
-        <div id="evaluation-tab">
-            <h2 class="section-title">📊 Evaluated Test Cases</h2>
-{case_cards}
-        </div>
-
-{diff_html}
     </div>
 
-{script_html}
+    <script>
+        function switchTab(tabId) {{
+            document.querySelectorAll('.tab-btn').forEach(btn => {{
+                btn.classList.remove('active');
+            }});
+            event.target.classList.add('active');
+
+            if (tabId === 'evaluation') {{
+                document.getElementById('evaluation-tab').classList.remove('hidden');
+                document.getElementById('diff-tab').classList.add('hidden');
+            }} else {{
+                document.getElementById('evaluation-tab').classList.add('hidden');
+                document.getElementById('diff-tab').classList.remove('hidden');
+            }}
+        }}
+    </script>
 </body>
 </html>
 """
@@ -712,7 +711,6 @@ def generate_html_viewer(results, output_path):
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     Path(output_path).write_text(html_content, encoding="utf-8")
     print(f"Viewer generated at: {output_path}")
-
 
 if __name__ == "__main__":
     results = run_evaluation()

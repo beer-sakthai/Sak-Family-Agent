@@ -1,8 +1,7 @@
 ---
 name: SakThai-huggingface-hub
-description: 'HuggingFace hf CLI: search/download/upload models, datasets.'
+description: "HuggingFace hf CLI: search/download/upload models, datasets."
 ---
-
 # Hugging Face CLI (`hf`) Reference Guide
 
 The `hf` command is the modern command-line interface for interacting with the Hugging Face Hub, providing tools to manage repositories, models, datasets, and Spaces.

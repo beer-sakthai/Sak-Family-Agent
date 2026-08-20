@@ -1,9 +1,6 @@
 ---
 name: spec-kit
-description: Specification-Driven Development (SDD) using GitHub Spec-Kit. Use when asked to create
-  specifications, feature plans, task breakdowns, project constitutions, or execute
-  spec-driven development.
-...
+description: Specification-Driven Development (SDD) using GitHub Spec-Kit. Use when asked to create specifications, feature plans, task breakdowns, project constitutions, or execute spec-driven development.
 ---
 
 # Spec-Kit (Specification-Driven Development)

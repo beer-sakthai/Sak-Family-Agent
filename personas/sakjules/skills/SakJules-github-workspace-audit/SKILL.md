@@ -1,8 +1,6 @@
 ---
 name: SakJules-SakSee-github-workspace-audit
-description: Reconcile local workspace state, GitHub remote state, and agent memory/Supermemory
-  claims about repositories.
-...
+description: "Reconcile local workspace state, GitHub remote state, and agent memory/Supermemory claims about repositories."
 ---
 
 # GitHub Workspace Audit

@@ -1,8 +1,6 @@
 ---
 name: SakThai-hf-transformers-memory-estimation
-description: '>-   Comprehensive deep dive into GPU memory estimation for Transformers models,   covering
-  memory formulas, batch size optimization, quantization impact,   gradient checkpointing
-  trade-offs, mixed precision, and practical recipes   for fitting model'
+description: ">-   Comprehensive deep dive into GPU memory estimation for Transformers models,   covering memory formulas, batch size optimization, quantization impact,   gradient checkpointing trade-offs, mixed precision, and practical recipes   for fitting model"
 ---
 
 # Transformers Memory Estimation & Batch Size Optimization
