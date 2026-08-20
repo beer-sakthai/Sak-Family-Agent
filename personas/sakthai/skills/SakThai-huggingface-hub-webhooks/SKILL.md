@@ -1,12 +1,8 @@
 ---
 name: SakThai-huggingface-hub-webhooks
-author: SakThai
-license: MIT
-description: "Hugging Face Hub Webhooks — create, manage, and debug webhooks programmatically via the SDK, CLI, and UI. Covers event types, payload structure, watched items, secrets, rate limiting, and Job integration."
-version: 1.0.0
-platforms: [linux, macos]
-category: mlops
-tags: [huggingface, hub, webhooks, automation, ci-cd, events]
+description: "Hugging Face Hub Webhooks \u2014 create, manage, and debug webhooks programmatically\
+  \ via the SDK, CLI, and UI. Covers event types, payload structure, watched items,\
+  \ secrets, rate limiting, and Job integration."
 ---
 
 # Hugging Face Hub Webhooks

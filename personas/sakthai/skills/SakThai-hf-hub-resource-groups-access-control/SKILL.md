@@ -1,6 +1,8 @@
 ---
 name: SakThai-hf-hub-resource-groups-access-control
-description: "Hugging Face Hub Resource Groups — fine-grained access control for organizations, group management via UI and API, auto-join, SCIM integration, cost attribution, and programmatic member assignment."
+description: "Hugging Face Hub Resource Groups \u2014 fine-grained access control for organizations,\
+  \ group management via UI and API, auto-join, SCIM integration, cost attribution,\
+  \ and programmatic member assignment."
 ---
 
 # HF Hub Resource Groups (Access Control)

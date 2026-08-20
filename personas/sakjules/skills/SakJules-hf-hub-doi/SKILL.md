@@ -1,6 +1,9 @@
 ---
 name: SakJules-SakThai-hf-hub-doi
-description: ">   Complete reference for Digital Object Identifiers (DOIs) on the Hugging Face   Hub — generation process, DataCite kernel-4 metadata schema, DataCite REST API   for querying HF DOIs, versioning semantics, restrictions on DOI-locked repos,   citati"
+description: ">   Complete reference for Digital Object Identifiers (DOIs) on the Hugging Face\
+  \   Hub \u2014 generation process, DataCite kernel-4 metadata schema, DataCite REST\
+  \ API   for querying HF DOIs, versioning semantics, restrictions on DOI-locked repos,\
+  \   citati"
 ---
 
 # HF Hub DOI Deep Dive — DataCite Integration & Metadata Schema

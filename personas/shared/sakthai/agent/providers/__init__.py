@@ -16,6 +16,7 @@ from ...auth import (
     AuthError,
     anthropic_credential_source,
     gateway_credential_source,
+    huggingface_credential_source,
     local_credential_source,
     openai_credential_source,
     resolve_anthropic_client,
@@ -70,6 +71,8 @@ def _detect_from_model_name(model: str) -> str | None:
         return "gateway"
     if model_lower.startswith("local/"):
         return "local"
+    if model_lower.startswith(("hf/", "huggingface/")):
+        return "huggingface"
     if "ollama" in model_lower:
         return "ollama"
     if "gemini" in model_lower:
@@ -96,6 +99,8 @@ def _detect_from_credentials() -> str | None:
     """Detect provider by checking for available credentials."""
     if gateway_credential_source() is not None:
         return "gateway"
+    if huggingface_credential_source() is not None:
+        return "huggingface"
     if local_credential_source() is not None:
         return "local"
     if os.environ.get("OLLAMA_HOST"):
@@ -189,7 +194,7 @@ def _build_google_client() -> Any:
         )
 
     try:
-        credentials = Credentials(token=token)  # type: ignore[no-untyped-call]
+        credentials: Credentials = Credentials(token=token)  # type: ignore[no-untyped-call]
         return genai.Client(
             vertexai=True,
             project=project,
@@ -251,6 +256,18 @@ def _build_gateway_client() -> Any:
     return _openai_compat_client(api_base, api_key)
 
 
+def _build_huggingface_client() -> Any:
+    """Build a client for the Hugging Face Inference Providers router."""
+    from ...auth import resolve_huggingface_credentials
+
+    try:
+        api_base, api_key = resolve_huggingface_credentials()
+    except AuthError as exc:
+        raise AgentError(str(exc)) from exc
+
+    return _openai_compat_client(api_base, api_key)
+
+
 def build_client(provider: str, client: Any | None) -> Any:
     """Construct the SDK client for ``provider``, or return an injected one.
 
@@ -266,6 +283,8 @@ def build_client(provider: str, client: Any | None) -> Any:
         return _build_openai_compat_client(provider)
     if provider == "gateway":
         return _build_gateway_client()
+    if provider == "huggingface":
+        return _build_huggingface_client()
     if provider == "ollama":
         return _build_ollama_client()
     if provider == "local":

@@ -1,0 +1,57 @@
+[Unit]
+Description=GitHub Actions self-hosted runner (Sak-Family-Agent)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# The runner user. It must NOT be root and must NOT be in the `docker` or
+# `sudo` groups: a job on this runner executes the repository's code at
+# whatever commit it is handed, so the runner's privileges are the blast
+# radius of any commit that reaches it.
+User=gh-runner
+Group=gh-runner
+WorkingDirectory=/home/gh-runner/actions-runner
+
+# `run.sh`, not `runsvc.sh`. The latter is the wrapper GitHub's own
+# `svc.sh install` generates and it expects to own the unit file; running the
+# binary directly keeps this unit the single description of how the service
+# starts.
+ExecStart=/home/gh-runner/actions-runner/run.sh
+
+# The runner is registered `--ephemeral`: it takes exactly one job and exits.
+# `Restart=always` is what turns that into a service — each exit brings up a
+# fresh registration with none of the previous job's state. Without it the
+# host goes quiet after its first job.
+#
+# RestartSec is deliberately short: this is the gap between one job finishing
+# and the runner being available for the next.
+Restart=always
+RestartSec=5
+
+# Never let a runaway restart loop hammer the registration API. If the runner
+# fails to start 10 times in 5 minutes, stop and leave it failed so it shows
+# up in `systemctl --failed` rather than retrying silently forever.
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+# Hardening. None of this restricts a legitimate job: the runner needs its own
+# work directory and the network, and nothing else on the host.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=false
+ReadWritePaths=/home/gh-runner
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+# The runner writes progress continuously; journald is where to read it.
+#   journalctl -u github-actions-runner -f
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,6 +1,8 @@
 ---
 name: SakJules-SakThai-temp-scripts-discipline
-description: "All temporary/ad-hoc scripts must go in /tmp/, not the working directory. Prevents file pollution across concurrent cron sessions."
+description: All temporary/ad-hoc scripts must go in /tmp/, not the working directory. Prevents
+  file pollution across concurrent cron sessions.
+...
 ---
 
 # Temp Scripts Discipline

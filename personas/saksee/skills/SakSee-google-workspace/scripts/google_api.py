@@ -82,7 +82,14 @@ def _stored_token_scopes() -> list[str]:
 def _gws_binary() -> str | None:
     override = os.getenv("HERMES_GWS_BIN")
     if override:
-        return override
+        candidate = Path(override).expanduser().resolve()
+        allowed_names = {"gws", "gws.exe"}
+        if (
+            candidate.name in allowed_names
+            and candidate.is_file()
+            and os.access(candidate, os.X_OK)
+        ):
+            return str(candidate)
     return shutil.which("gws")
 
 
@@ -110,6 +117,7 @@ def _run_gws(parts: list[str], *, params: dict | None = None, body: dict | None 
         capture_output=True,
         text=True,
         env=_gws_env(),
+        shell=False,
     )
     if result.returncode != 0:
         err = result.stderr.strip() or result.stdout.strip() or "Unknown gws error"

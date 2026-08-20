@@ -1,6 +1,7 @@
 ---
 name: SakSee-songwriting-and-ai-music
-description: "Songwriting craft and Suno AI music prompts."
+description: Songwriting craft and Suno AI music prompts.
+...
 ---
 
 # Songwriting & AI Music Generation

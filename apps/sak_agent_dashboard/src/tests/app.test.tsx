@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import Home from "@/app/page";
 import { describe, it, expect } from "vitest";
+import { PERSONAS } from "@/lib/personas";
+import { DEMO_TOTAL_RUNS } from "@/lib/demoData";
 
 describe("Home Page & Root Layout Shell (Tier 1 & Tier 2)", () => {
   it("renders Sak-Agent-Family title and description banner", () => {
@@ -11,25 +13,40 @@ describe("Home Page & Root Layout Shell (Tier 1 & Tier 2)", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders all 5 personas with roles and status indicators", () => {
+  it("renders every persona in the roster, with its real role", () => {
     render(<Home />);
 
-    const personaNames = ["SakThai", "SakKing", "SakSee", "SakSit", "SakJules"];
-    personaNames.forEach((name) => {
-      expect(screen.getByText(name)).toBeInTheDocument();
-    });
+    // Asserted against lib/personas.ts rather than a literal list. The previous
+    // version named five personas and five invented roles ("Primary
+    // Orchestrator & Fine-Tuned Agent", "High-Capacity Reasoning Specialist",
+    // ...), none of which matched the SOUL.md roster — which is how SakTan's
+    // absence from the dashboard stayed invisible.
+    expect(PERSONAS).toHaveLength(6);
 
-    expect(screen.getByText("Primary Orchestrator & Fine-Tuned Agent")).toBeInTheDocument();
-    expect(screen.getByText("High-Capacity Reasoning Specialist")).toBeInTheDocument();
-    expect(screen.getByText("Multimodal & Vision Specialist")).toBeInTheDocument();
-    expect(screen.getByText("Code Review & Security Auditor")).toBeInTheDocument();
-    expect(screen.getByText("Background Task & Async Execution Specialist")).toBeInTheDocument();
+    for (const persona of PERSONAS) {
+      expect(
+        screen.getAllByText(persona.name).length,
+        `persona ${persona.name} not rendered`
+      ).toBeGreaterThan(0);
+      expect(
+        screen.getAllByText(persona.role).length,
+        `role for ${persona.name} not rendered`
+      ).toBeGreaterThan(0);
+    }
   });
 
-  it("renders overview stat counters with expected values", () => {
+  it("renders SakTan, which the dashboard previously omitted", () => {
+    render(<Home />);
+    expect(screen.getAllByText("SakTan").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Daily Ops · Deputy 2").length).toBeGreaterThan(0);
+  });
+
+  it("renders overview stat counters from the shared demo totals", () => {
     render(<Home />);
 
-    expect(screen.getByText("761")).toBeInTheDocument();
+    // Derived from the per-persona demo run counts, not a literal, so the
+    // counter cannot drift from the demo session list the way 761 had.
+    expect(screen.getByText(String(DEMO_TOTAL_RUNS))).toBeInTheDocument();
     expect(screen.getByText("Recorded in runtime")).toBeInTheDocument();
     expect(screen.getByText("~/.sakthai")).toBeInTheDocument();
     expect(screen.getByText("100% Pass")).toBeInTheDocument();

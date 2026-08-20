@@ -1,6 +1,9 @@
 ---
 name: SakJules-SakKing-b2b-saas-sales-enablement-content-2026
-description: "A complete playbook for B2B SaaS sales enablement content in 2026 — creating, organizing, and measuring high-impact assets (battle cards, case studies, ROI calculators, demo scripts) that sales reps actually use to close deals. Covers AI-powered gene"
+description: "A complete playbook for B2B SaaS sales enablement content in 2026 \u2014 creating,\
+  \ organizing, and measuring high-impact assets (battle cards, case studies, ROI\
+  \ calculators, demo scripts) that sales reps actually use to close deals. Covers\
+  \ AI-powered gene"
 ---
 
 # B2B SaaS Sales Enablement Content Playbook 2026

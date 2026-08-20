@@ -1,10 +1,7 @@
 ---
 name: asset-monitor
-description: "Monitors a list of public URLs from a file and sends a Telegram alert on failure."
-author: SakThai
-version: 1.0.0
-created: 2026-06-22
-updated: 2026-06-22
+description: Monitors a list of public URLs from a file and sends a Telegram alert on failure.
+...
 ---
 
 # Public Asset Monitor

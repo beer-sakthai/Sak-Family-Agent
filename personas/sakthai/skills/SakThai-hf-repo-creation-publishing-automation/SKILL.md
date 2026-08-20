@@ -1,11 +1,8 @@
 ---
 name: SakThai-hf-repo-creation-publishing-automation
-author: SakThai
-license: MIT
-description: Complete reference for programmatic repository lifecycle management on Hugging Face Hub — creation, configuration, file operations, metadata, CI/CD publishing automation
-category: mlops
-version: 1.0.0
-tags: [huggingface, hub, repository, publishing, automation, ci-cd, hf-api, hf-cli]
+description: "Complete reference for programmatic repository lifecycle management on Hugging Face\
+  \ Hub \u2014 creation, configuration, file operations, metadata, CI/CD publishing\
+  \ automation"
 ---
 
 # HF Repo Creation & Publishing Automation

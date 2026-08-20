@@ -1,0 +1,51 @@
+name: OSPS Security Assessment
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"  # Weekly on Mondays at 9 AM UTC
+  workflow_dispatch:  # Allow manual triggering
+
+# Restrict permissions at the workflow level
+permissions:
+  contents: read
+
+jobs:
+  osps-assessment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Restrict permissions at the job level
+    permissions:
+      contents: read
+      security-events: write  # Required for SARIF upload
+    
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Get Repository Name
+        id: repo-name
+        run: echo "repo_name=${GITHUB_REPOSITORY#*/}" >> $GITHUB_OUTPUT
+
+      - name: Open Source Project Security Baseline Scanner
+        uses: revanite-io/osps-baseline-action@b7d860b68755627c30ab692473511c90daee3ae8 # v1.3.4
+        with:
+          owner: ${{ github.repository_owner }}
+          repo: ${{ steps.repo-name.outputs.repo_name }}
+          token: ${{ secrets.PVTR_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          catalog: "osps-baseline-2026-02"
+          upload-sarif: "true"
+      
+      - name: Upload Assessment Results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: osps-assessment-results-${{ github.run_number }}
+          path: evaluation_results/
+          retention-days: 30

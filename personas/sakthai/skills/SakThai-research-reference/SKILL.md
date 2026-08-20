@@ -1,6 +1,9 @@
 ---
 name: SakThai-research-reference
-description: "Capture, organize, and document academic paper references in project directories. Search arXiv, download PDFs, write structured reference indexes with BibTeX, and link back to your projects README."
+description: Capture, organize, and document academic paper references in project directories.
+  Search arXiv, download PDFs, write structured reference indexes with BibTeX, and
+  link back to your projects README.
+...
 ---
 
 # Academic Reference Capture

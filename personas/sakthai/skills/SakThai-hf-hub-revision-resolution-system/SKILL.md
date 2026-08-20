@@ -1,6 +1,7 @@
 ---
 name: SakThai-hf-hub-revision-resolution-system
-description: "A skill for Hf Hub Revision Resolution System."
+description: A skill for Hf Hub Revision Resolution System.
+...
 ---
 
 # HF Hub Revision Resolution System
