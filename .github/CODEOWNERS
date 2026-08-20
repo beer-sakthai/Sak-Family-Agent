@@ -38,8 +38,31 @@
 /personas/sakthai/sakthai/auth.py       @beer-sakthai
 /personas/sakthai/sakthai/config.py     @beer-sakthai
 /personas/sakthai/sakthai/giturl.py     @beer-sakthai
+/personas/*/sakthai/giturl.py           @beer-sakthai
+/personas/shared/sakthai/giturl.py      @beer-sakthai
+/sakthai-chat-cli/sakthai/giturl.py     @beer-sakthai
 /personas/sakthai/sakthai/sandbox.py    @beer-sakthai
 /personas/sakthai/sakthai/web/server.py @beer-sakthai
+
+# Fuzz harnesses + attack corpora. #1032 deleted the entire fuzz/ tree
+# unattended — including the attack corpora (ext-sh-c-id, o-proxycommand,
+# cat-ssh-id-rsa, cat-aws-credentials) — under a "Redact Telegram tokens"
+# title. Requiring code-owner review on this path prevents that class of
+# silent removal.
+/fuzz/                                  @beer-sakthai
+
+# Tests that pin the security surface. If any of these disappears or is
+# emptied by a bot PR, the removal must go through code-owner review —
+# otherwise the guardrails are only enforced by tests that no longer exist.
+/tests/test_fuzz_harnesses.py           @beer-sakthai
+/tests/test_guardrails_*.py             @beer-sakthai
+/tests/test_giturl.py                   @beer-sakthai
+/tests/test_persona_guardrails_parity.py @beer-sakthai
+/tests/test_shared_package_divergence.py @beer-sakthai
+/tests/test_workflow_hygiene.py         @beer-sakthai
+/tests/test_soul_consistency.py         @beer-sakthai
+/tests/test_dependabot_config.py        @beer-sakthai
+/sakthai-chat-cli/tests/test_giturl.py  @beer-sakthai
 
 # --- Supply chain and CI ----------------------------------------------------
 # Workflows run with repository credentials, so a change here is a privilege
