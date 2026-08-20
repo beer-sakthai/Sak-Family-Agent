@@ -1,6 +1,7 @@
 ---
 name: SakSit-hermes-skill-evolution
-description: "Evolve skills using DSPy and GEPA optimization."
+description: Evolve skills using DSPy and GEPA optimization.
+...
 ---
 
 # Hermes Skill Evolution

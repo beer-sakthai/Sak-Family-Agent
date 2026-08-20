@@ -1,7 +1,9 @@
 ---
 name: SakSee-sakthai-cycle-joy
-description: "Saksee Sakthai Cycle Joy"
+description: Saksee Sakthai Cycle Joy
+...
 ---
+
 # SakThai Cycle — Joy
 
 Package and ship without breaking the loop.

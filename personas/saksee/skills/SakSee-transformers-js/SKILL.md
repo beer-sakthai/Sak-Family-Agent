@@ -1,6 +1,9 @@
 ---
 name: SakSee-transformers-js
-description: "Use Transformers.js to run state-of-the-art machine learning models directly in JavaScript/TypeScript. Supports NLP (text classification, translation, summarization), computer vision (image classification, object detection), audio (speech recognition"
+description: Use Transformers.js to run state-of-the-art machine learning models directly in JavaScript/TypeScript.
+  Supports NLP (text classification, translation, summarization), computer vision
+  (image classification, object detection), audio (speech recognition
+...
 ---
 
 # Transformers.js - Machine Learning for JavaScript

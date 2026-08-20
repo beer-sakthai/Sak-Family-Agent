@@ -15,6 +15,7 @@ import ipaddress
 import json
 import logging
 import os
+import re
 import secrets
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
@@ -25,6 +26,18 @@ WEB_DIR = (Path(__file__).resolve().parent.parent / "dashboard" / "dist").resolv
 _HOST = "127.0.0.1"
 _PORT = 3002
 _LOOPBACK_NAMES = frozenset({"localhost"})
+
+# The bearer token may be supplied as a ``?token=``/``?bearer_token=`` query
+# value (a convenience for loading static assets), which means it appears in the
+# request line. That line reaches the access log, so the live credential would
+# otherwise be written to logs in cleartext. Mask the value -- by parameter name,
+# so a *wrong* token guessed by an attacker is masked too -- before logging.
+_QUERY_TOKEN_RE = re.compile(r"((?:token|bearer_token)=)[^&\s\"']+", re.IGNORECASE)
+
+
+def _redact_query_token(text: str) -> str:
+    """Replace any ``token=``/``bearer_token=`` query value with a placeholder."""
+    return _QUERY_TOKEN_RE.sub(r"\1[REDACTED]", text)
 
 
 def _is_loopback_host(host: str) -> bool:
@@ -139,7 +152,13 @@ class _Handler(SimpleHTTPRequestHandler):
         return self.client_address[0]
 
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
-        logging.getLogger(__name__).info(format, *args)
+        # Expand the record ourselves so we can strip any bearer token from the
+        # request line before it is written -- never hand a token to the logger.
+        try:
+            message = format % args if args else format
+        except (TypeError, ValueError):  # pragma: no cover - defensive
+            message = format
+        logging.getLogger(__name__).info("%s", _redact_query_token(message))
 
     def _has_auth_attempt(self) -> bool:
         """True if the request contains any authentication credentials."""
@@ -218,8 +237,12 @@ class _Handler(SimpleHTTPRequestHandler):
                     if k in ("token", "bearer_token"):
                         val = unquote(v)
                         if secrets.compare_digest(val, expected_token):
+                            # Use the server-known token, not the attacker-influenced
+                            # query value, so the cookie is never built from tainted
+                            # input (CodeQL py/http-response-splitting, py/cookie-injection).
                             self.send_header(
-                                "Set-Cookie", f"token={val}; Path=/; HttpOnly; SameSite=Strict"
+                                "Set-Cookie",
+                                f"token={expected_token}; Path=/; HttpOnly; SameSite=Strict",
                             )
                             break
         super().end_headers()
@@ -238,10 +261,27 @@ class _Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self.wfile.write(body)
+        if self.command != "HEAD":
+            self.wfile.write(body)
+
+    def do_HEAD(self) -> None:  # noqa: N802
+        """Serve HEAD through the exact same gate as GET.
+
+        ``SimpleHTTPRequestHandler`` supplies its own ``do_HEAD``. Inheriting it
+        unchanged left HEAD served straight out of ``send_head()``, skipping both
+        the bearer-token check and the ``WEB_DIR`` containment check that
+        ``do_GET`` performs -- an unauthenticated HEAD disclosed the existence,
+        size and mtime of any file under the static root, and followed symlinks
+        out of it that an *authenticated* GET rejects with 403. Delegating keeps
+        the two verbs on one code path so they cannot drift apart again; the body
+        writes are suppressed by the ``self.command`` guards.
+        """
+        self.do_GET()
 
     def do_GET(self) -> None:  # noqa: N802
-        logging.getLogger(__name__).info("GET request for path: %s", self.path)
+        logging.getLogger(__name__).info(
+            "%s request for path: %s", self.command, _redact_query_token(self.path)
+        )
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
 
@@ -250,7 +290,8 @@ class _Handler(SimpleHTTPRequestHandler):
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", "16")
             self.end_headers()
-            self.wfile.write(b'{"status": "ok"}')
+            if self.command != "HEAD":
+                self.wfile.write(b'{"status": "ok"}')
             return
 
         if path.startswith("/api/"):
@@ -278,7 +319,8 @@ class _Handler(SimpleHTTPRequestHandler):
                 self.send_response(401)
                 self.send_header("Content-Type", "text/plain; charset=utf-8")
                 self.end_headers()
-                self.wfile.write(b"Unauthorized: Missing or invalid bearer token")
+                if self.command != "HEAD":
+                    self.wfile.write(b"Unauthorized: Missing or invalid bearer token")
                 return
 
         if path == "/api/stages":
@@ -320,6 +362,8 @@ class _Handler(SimpleHTTPRequestHandler):
             self.send_error(404, "File not found")
             return
 
+        if self.command == "HEAD":
+            return super().do_HEAD()
         return super().do_GET()
 
 

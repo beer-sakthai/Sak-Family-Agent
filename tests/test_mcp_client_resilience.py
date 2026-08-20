@@ -125,8 +125,8 @@ def test_notification_flood_before_response(tmp_path: Path) -> None:
 def test_hung_server_times_out(tmp_path: Path) -> None:
     # A server that never replies must trip the select timeout, not block forever.
     with (
-        _client(tmp_path, "hang", timeout=1.0) as client,
         pytest.raises(MCPClientError, match="timed out"),
+        _client(tmp_path, "hang", timeout=1.0) as client,
     ):
         client.call_tool("echo", {})
 

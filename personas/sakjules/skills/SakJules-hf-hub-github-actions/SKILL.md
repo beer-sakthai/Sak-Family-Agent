@@ -1,6 +1,8 @@
 ---
 name: SakJules-SakThai-hf-hub-github-actions
-description: "Hugging Face Hub GitHub Actions integration — sync repos, Trusted Publishers (OIDC keyless auth), hub-sync action parameters, Spaces CI/CD, and custom workflow patterns"
+description: "Hugging Face Hub GitHub Actions integration \u2014 sync repos, Trusted Publishers\
+  \ (OIDC keyless auth), hub-sync action parameters, Spaces CI/CD, and custom workflow\
+  \ patterns"
 ---
 
 # HF Hub GitHub Actions & Trusted Publishers

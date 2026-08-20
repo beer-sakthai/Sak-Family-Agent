@@ -1,6 +1,7 @@
 ---
 name: SakJules-ocr-and-documents
-description: "Extract text from PDFs/scans (pymupdf, marker-pdf)."
+description: Extract text from PDFs/scans (pymupdf, marker-pdf).
+...
 ---
 
 # PDF & Document Extraction

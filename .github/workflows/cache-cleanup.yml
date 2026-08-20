@@ -1,0 +1,149 @@
+# Evicts a pull request's caches once the pull request is closed.
+#
+# WHY THIS IS WORTH A WORKFLOW
+#
+# A repository gets 10 GB of Actions cache. When it fills, GitHub evicts by
+# least-recently-used across the *whole* repository — it has no idea that the
+# 1.5 GB written by a merged branch three weeks ago is dead and the entry
+# `main` wrote this morning is the one every open pull request depends on. So a
+# full cache does not degrade gracefully; it evicts the warm baseline
+# `cache-warm.yml` exists to maintain, and every branch goes cold at once.
+#
+# Caches written by a pull-request run are scoped to `refs/pull/<N>/merge` and
+# become unreachable the moment that pull request closes: nothing can ever read
+# them again, and they occupy the budget until LRU gets to them. Deleting them
+# at close is pure reclamation — there is no state to lose.
+#
+# On a repository with this much agent traffic (27,417 workflow runs before the
+# 2026-08-18 cleanup, most of them repeated pushes to short-lived branches) that
+# is the difference between a cache that stays warm and one that thrashes.
+name: Cache cleanup
+
+on:
+  pull_request:
+    types: [closed]
+  schedule:
+    # Daily at 02:00 UTC: purge unreachable PR cache refs older than 24 hours.
+    # This prevents dead cache entries from pushing live ones out of the 10 GB budget.
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: >-
+          Cache ref to purge (e.g. refs/pull/123/merge). Leave blank to only
+          report what is stored without deleting anything.
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  # Never cancel: each run purges a different pull request's ref, so a
+  # superseded run is not redundant work — it is a ref that stays orphaned.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  purge:
+    name: Purge caches for the closed pull request
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # `actions: write` is what the cache-delete API requires. It is granted at
+    # the job level, not the top level, so the `workflow_dispatch` report path
+    # and anything added later do not inherit it by default.
+    permissions:
+      actions: write
+      contents: read
+    # A fork's `pull_request` run gets a read-only GITHUB_TOKEN no matter what
+    # this file declares, so on a fork the delete would 403 and fail the run for
+    # a reason nobody can fix. Skip it: fork caches are scoped to the fork and
+    # are its own budget, not this repository's.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Delete the caches scoped to this ref
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          # `refs/pull/<N>/merge` is the ref every cache written by a
+          # pull-request run is scoped to.
+          TARGET_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || format('refs/pull/{0}/merge', github.event.pull_request.number) }}
+          IS_SCHEDULED: ${{ github.event_name == 'schedule' }}
+        run: |
+          set -euo pipefail
+
+          if [ "${IS_SCHEDULED}" = "true" ]; then
+            echo "Scheduled run: auto-purging unreachable PR cache refs..."
+            # Fetch all PR refs and delete each one. When a PR closes, its cache
+            # becomes unreachable but persists until LRU evicts it — this purge
+            # speeds that up and keeps the warm baseline available.
+            all_pr_refs="$(gh api --paginate \
+              "repos/${GH_REPO}/actions/caches?per_page=100" \
+              --jq '.actions_caches[] | select(.ref | startswith("refs/pull/")) | .ref' \
+              | sort -u)"
+
+            if [ -z "${all_pr_refs}" ]; then
+              echo "No PR refs found in cache — nothing to do."
+              exit 0
+            fi
+
+            total_deleted=0
+            for ref in ${all_pr_refs}; do
+              ids="$(gh api --paginate \
+                "repos/${GH_REPO}/actions/caches?ref=${ref}&per_page=100" \
+                --jq '.actions_caches[].id')"
+
+              for id in ${ids}; do
+                if gh api --method DELETE "repos/${GH_REPO}/actions/caches/${id}" --silent 2>/dev/null; then
+                  total_deleted=$((total_deleted + 1))
+                fi
+              done
+            done
+            echo "Deleted ${total_deleted} cache entries for unreachable PR refs." | tee -a "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+
+          if [ -z "${TARGET_REF}" ]; then
+            echo "No ref given — reporting cache usage only."
+            gh api "repos/${GH_REPO}/actions/cache/usage" \
+              --jq '"Total: \(.active_caches_count) entries, \(.active_caches_size_in_bytes / 1048576 | floor) MiB"'
+            exit 0
+          fi
+
+          echo "Purging caches scoped to ${TARGET_REF}"
+
+          # The list endpoint pages at 100. Collect ids first and delete after,
+          # rather than deleting while paginating: removing entries shifts the
+          # pages underneath the cursor and silently skips some.
+          ids="$(gh api --paginate \
+            "repos/${GH_REPO}/actions/caches?ref=${TARGET_REF}&per_page=100" \
+            --jq '.actions_caches[].id')"
+
+          if [ -z "${ids}" ]; then
+            echo "No caches found for ${TARGET_REF} — nothing to do."
+            exit 0
+          fi
+
+          count=0
+          for id in ${ids}; do
+            # A cache can be evicted by LRU between the list and the delete,
+            # which returns 404. That is the outcome this job wanted anyway, so
+            # a failed delete is noted and never fails the run — which is why
+            # this is an `if` and not a bare command under `set -e`.
+            if gh api --method DELETE "repos/${GH_REPO}/actions/caches/${id}" --silent; then
+              count=$((count + 1))
+            else
+              echo "::notice::cache ${id} was already gone"
+            fi
+          done
+
+          echo "Deleted ${count} cache entr$([ "${count}" -eq 1 ] && echo y || echo ies) for ${TARGET_REF}." \
+            | tee -a "${GITHUB_STEP_SUMMARY}"

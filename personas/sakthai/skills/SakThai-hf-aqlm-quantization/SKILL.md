@@ -1,6 +1,7 @@
 ---
 name: SakThai-hf-aqlm-quantization
-description: "Complete reference for AQLM (Additive Quantization of Language Models) — theory, configuration, inference, and practical deployment patterns"
+description: "Complete reference for AQLM (Additive Quantization of Language Models) \u2014 theory,\
+  \ configuration, inference, and practical deployment patterns"
 ---
 
 # AQLM Quantization — Complete Reference

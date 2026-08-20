@@ -899,7 +899,7 @@ def test_run_reports_agent_error(runner: CliRunner, monkeypatch: pytest.MonkeyPa
 
 
 def test_mcp_invokes_serve(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
-    import sakthai.mcp as mcp_pkg
+    import sakthai.mcp.server as mcp_pkg
 
     called = {"n": 0}
 
@@ -1039,6 +1039,31 @@ def test_run_dry_run_fails_on_unresolved_skill(
     )
     assert result.exit_code != 0
     assert "no-such-skill" in result.output
+
+
+def test_run_dry_run_reports_unresolved_skill_without_credentials(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, sakthai_home: Path
+) -> None:
+    """A bad --with-skills name must be reported even with no credentials.
+
+    Validating skill names is a normal reason to run --dry-run somewhere that
+    deliberately has no credentials, such as CI. The credentials check used to
+    run first and short-circuit, so the unresolved name was never printed —
+    which is how the since-retired `continuous-security.yml` went on passing
+    `--with-skills SakThai-coding-security`, a skill that does not exist, for
+    as long as it did. The sibling test above stubs credentials as present, so
+    it cannot catch this.
+    """
+    import sakthai.agent.loop as loop_mod
+
+    monkeypatch.setattr(loop_mod, "get_credential_source", lambda _p: None)
+    result = runner.invoke(
+        main,
+        ["run", "hi", "--dry-run", "--no-mcp", "-p", "anthropic", "--with-skills", "no-such-skill"],
+    )
+    assert result.exit_code != 0
+    assert "no-such-skill" in result.output, result.output
+    assert "Unresolved --with-skills" in result.output, result.output
 
 
 def test_run_dry_run_reports_resolved_skills(
@@ -1394,7 +1419,17 @@ def test_run_persona_uses_persona_store_and_soul(
         return types.SimpleNamespace(text="ok")
 
     monkeypatch.setattr(agent_mod, "run_agent", fake_run_agent)
-    result = runner.invoke(main, ["run", "hi", "--persona", "sakking"])
+    # --no-mcp because this test is about the store and the SOUL prefix, and it
+    # deliberately uses the real personas/ tree for SakKing's SOUL.md. Without
+    # it, `--persona sakking` auto-loads the committed
+    # personas/sakking/config/mcp.json and `_tool_context` spawns the three npx
+    # servers it names from the live npm registry — stubbing `run_agent` does
+    # not prevent that, because `_tool_context` is entered first. That made the
+    # suite non-hermetic (CLAUDE.md: tests assume no network) and hung outright
+    # where npm is unreachable. The neighbouring persona tests either pass
+    # --no-mcp or point PERSONAS_DIR at a tmp tree; this one cannot do the
+    # latter without giving up the real SOUL.md it asserts on.
+    result = runner.invoke(main, ["run", "hi", "--persona", "sakking", "--no-mcp"])
     assert result.exit_code == 0
 
     store = captured["store"]
@@ -1601,3 +1636,54 @@ def test_run_explicit_mcp_config_env_wins_over_persona(
     assert result.exit_code == 0, result.output
     names = {t.name for t in captured["tools"]}  # type: ignore[union-attr]
     assert not any(n.startswith("sk__") for n in names)
+
+
+def test_no_test_runs_a_persona_against_the_real_mcp_config() -> None:
+    """`run --persona X` in a test must not reach the committed persona mcp.json.
+
+    `_tool_context` is entered *before* `run_agent`, so stubbing `run_agent` does
+    not stop it: a persona whose `config/mcp.json` names npx servers gets those
+    servers spawned from the live npm registry. That is how
+    `test_run_persona_uses_persona_store_and_soul` came to contact npm on every
+    suite run — passing under CI only because runners reach the registry fast
+    enough, and hanging outright where they do not.
+
+    An invocation is considered safe when it passes `--no-mcp`, is rejected
+    before `_tool_context` (`--sandbox`, `--dry-run`), or runs against a
+    `PERSONAS_DIR` the test has redirected at a tmp tree.
+    """
+    import ast
+
+    tests_dir = Path(__file__).resolve().parent
+    offenders: list[str] = []
+
+    for path in sorted(tests_dir.glob("test_*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for func in ast.walk(tree):
+            if not isinstance(func, ast.FunctionDef):
+                continue
+            redirects_personas_dir = "PERSONAS_DIR" in ast.dump(func)
+            for call in ast.walk(func):
+                if not isinstance(call, ast.Call):
+                    continue
+                for lst in (a for a in call.args if isinstance(a, ast.List)):
+                    argv = [
+                        e.value
+                        for e in lst.elts
+                        if isinstance(e, ast.Constant) and isinstance(e.value, str)
+                    ]
+                    if "run" not in argv or "--persona" not in argv:
+                        continue
+                    safe = (
+                        "--no-mcp" in argv
+                        or "--sandbox" in argv
+                        or "--dry-run" in argv
+                        or redirects_personas_dir
+                    )
+                    if not safe:
+                        offenders.append(f"{path.name}::{func.name} -> {argv}")
+
+    assert not offenders, (
+        "these tests run a persona against the committed persona mcp.json and "
+        "will spawn real MCP servers:\n  " + "\n  ".join(offenders)
+    )

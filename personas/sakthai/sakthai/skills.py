@@ -72,7 +72,8 @@ def _load_skill_file(path: Path) -> tuple[dict[str, Any], str]:
     if len(parts) < 3:
         raise SkillParseError(f"{path}: no YAML frontmatter found")
     try:
-        front = yaml.safe_load(parts[1])
+        loader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+        front = yaml.load(parts[1], Loader=loader)  # nosec B506 - safe: Loader is constrained to CSafeLoader/SafeLoader
     except yaml.YAMLError as exc:
         raise SkillParseError(f"{path}: invalid YAML — {exc}") from exc
     if not isinstance(front, dict):

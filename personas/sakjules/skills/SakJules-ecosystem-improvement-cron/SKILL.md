@@ -1,6 +1,7 @@
 ---
 name: SakJules-SakThai-ecosystem-improvement-cron
-description: "One-shot cron task that improves one HF asset per run — model card, cross-links, dataset integrity, or promotion."
+description: "One-shot cron task that improves one HF asset per run \u2014 model card, cross-links,\
+  \ dataset integrity, or promotion."
 ---
 
 # HF Ecosystem Improvement (Cron)

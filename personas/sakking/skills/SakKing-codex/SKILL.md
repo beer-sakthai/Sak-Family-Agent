@@ -1,6 +1,7 @@
 ---
 name: SakKing-codex
-description: "Delegate coding to OpenAI Codex CLI (features, PRs)."
+description: Delegate coding to OpenAI Codex CLI (features, PRs).
+...
 ---
 
 # Codex CLI

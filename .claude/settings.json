@@ -1,12 +1,42 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"${CLAUDE_PROJECT_DIR:-$PWD}\" && uv sync --all-extras >/dev/null 2>&1 && echo '✓ Dependencies synced' || echo '⚠ uv sync --all-extras failed — run manually before running tests'"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
-            "command": "file_path=$(if command -v jq >/dev/null 2>&1; then jq -r '.tool_input.file_path // empty' 2>/dev/null; else python3 -c \"import json,sys;d=json.load(sys.stdin);print((d.get('tool_input') or {}).get('file_path') or '')\" 2>/dev/null; fi); case \"$file_path\" in personas/sakthai/sakthai/*.py|*/personas/sakthai/sakthai/*.py|tests/*.py|*/tests/*.py) cd \"${CLAUDE_PROJECT_DIR:-$PWD}\" && uv run ruff format \"$file_path\" 2>/dev/null || true ;; esac"
+            "command": "file_path=$(if command -v jq >/dev/null 2>&1; then jq -r '.tool_input.file_path // empty' 2>/dev/null; else python3 -c \"import json,sys;d=json.load(sys.stdin);print((d.get('tool_input') or {}).get('file_path') or '')\" 2>/dev/null; fi); case \"$file_path\" in personas/sakthai/sakthai/*.py|*/personas/sakthai/sakthai/*.py|tests/*.py|*/tests/*.py) cd \"${CLAUDE_PROJECT_DIR:-$PWD}\" && uv run ruff format \"$file_path\" || true ;; esac"
+          },
+          {
+            "type": "command",
+            "command": "file_path=$(if command -v jq >/dev/null 2>&1; then jq -r '.tool_input.file_path // empty' 2>/dev/null; else python3 -c \"import json,sys;d=json.load(sys.stdin);print((d.get('tool_input') or {}).get('file_path') or '')\" 2>/dev/null; fi); case \"$file_path\" in personas/sakthai/sakthai/*.py|*/personas/sakthai/sakthai/*.py|tests/*.py|*/tests/*.py) cd \"${CLAUDE_PROJECT_DIR:-$PWD}\" && uv run ruff check --fix --quiet \"$file_path\" || true ;; esac"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "file_path=$(if command -v jq >/dev/null 2>&1; then jq -r '.tool_input.file_path // empty' 2>/dev/null; else python3 -c \"import json,sys;d=json.load(sys.stdin);print((d.get('tool_input') or {}).get('file_path') or '')\" 2>/dev/null; fi); case \"$file_path\" in *personas/sakjules/sakthai/agent/guardrails.py|*personas/sakking/sakthai/agent/guardrails.py|*personas/saksee/sakthai/agent/guardrails.py|*personas/saksit/sakthai/agent/guardrails.py|*personas/saktan/sakthai/agent/guardrails.py|*personas/sakjules/sakthai/web/server.py|*personas/sakking/sakthai/web/server.py|*personas/saksee/sakthai/web/server.py|*personas/saksit/sakthai/web/server.py|*personas/saktan/sakthai/web/server.py) printf '%s' '{\"systemMessage\":\"Editing a byte-synced persona copy. Canonical source: personas/sakthai/sakthai/agent/guardrails.py (or web/server.py). tests/test_persona_guardrails_parity.py fails CI on drift — edit canonical and re-sync, then run: uv run pytest tests/test_persona_guardrails_parity.py -q\"}' ;; esac"
+          },
+          {
+            "type": "command",
+            "command": "file_path=$(if command -v jq >/dev/null 2>&1; then jq -r '.tool_input.file_path // empty' 2>/dev/null; else python3 -c \"import json,sys;d=json.load(sys.stdin);print((d.get('tool_input') or {}).get('file_path') or '')\" 2>/dev/null; fi); case \"$file_path\" in *personas/shared/sakthai/*|*personas/shared/sakthai/healing/*) printf '%s' '{\"systemMessage\":\"Editing the shared package tree (personas/shared/sakthai/). tests/test_shared_package_divergence.py enforces parity — changes here must be explicitly declared in KNOWN_DIVERGENCES with a reason, or synced to the canonical tree (personas/sakthai/sakthai/).\"}' ;; esac"
           }
         ]
       }
