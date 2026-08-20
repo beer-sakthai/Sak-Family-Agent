@@ -247,6 +247,14 @@ class TestWorkflowExecutor(unittest.TestCase):
             "id_rsa.bak",
             "id_ed25519.pub",
             "ID_ECDSA.old",
+            # Upload prefix '@' bypass variants.
+            "@/etc/hosts",
+            "@@.env",
+            "@@.git/config",
+            "@@.ssh/id_rsa",
+            "@/var/log/syslog",
+            "@@etc/passwd",
+            "@.env",
         ]
         for path in malicious_paths:
             for action in ("file_read", "file_write"):
