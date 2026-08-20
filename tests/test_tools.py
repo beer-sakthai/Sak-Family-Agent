@@ -150,7 +150,15 @@ def test_read_file_blocks_outside_roots(tmp_path: Path, store) -> None:
     [
         ".env",
         ".env.production",
+        ".env-prod",
+        ".env_local",
+        "memory.db-wal",
+        "memory.db-shm",
+        "memory.db-journal",
         "id_rsa",
+        "id_rsa.bak",
+        "id_ed25519.old",
+        "id_ecdsa.pub",
         "server.pem",
         "credentials.json",
         ".netrc",
@@ -172,7 +180,7 @@ def test_read_file_blocks_outside_roots(tmp_path: Path, store) -> None:
     ],
 )
 def test_read_file_blocks_sensitive_names_even_in_cwd(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store, name: str
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str
 ) -> None:
     # cwd is an auto-trusted root, but secret-bearing files must still be refused
     # regardless of location (defense-in-depth against exfiltration).
@@ -180,7 +188,7 @@ def test_read_file_blocks_sensitive_names_even_in_cwd(
     secret = tmp_path / name
     secret.write_text("TOKEN=abc", encoding="utf-8")
     with pytest.raises(PermissionError):
-        tool_by_name("read_file").handler({"path": name}, store)
+        tool_by_name("read_file").handler({"path": name}, None)
 
 
 def test_read_file_blocks_dot_ssh_directory(
