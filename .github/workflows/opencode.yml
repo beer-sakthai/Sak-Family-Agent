@@ -66,7 +66,7 @@ jobs:
           api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
 
       - name: Checkout repository
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
 
@@ -83,7 +83,7 @@ jobs:
           cache-suffix: opencode
 
       - name: Run opencode
-        uses: anomalyco/opencode/github@14b37df39168eaf6a6faf862ec4a7bbe9c825bbd  # v1.18.18
+        uses: anomalyco/opencode/github@e2505d434a6d78904ecfe546c4a1980d26bd8cd1  # v1.18.18
         env:
           # The OpenCode Go subscription key (https://opencode.ai/auth). The action
           # forwards only its own declared inputs to the CLI, but step-level `env:`
