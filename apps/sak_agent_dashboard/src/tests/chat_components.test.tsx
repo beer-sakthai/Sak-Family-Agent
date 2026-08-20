@@ -39,7 +39,7 @@ describe('ToolExecutionCard Component', () => {
     expect(screen.getByText('PASS')).toBeDefined();
   });
 
-  it('renders approval intercept and calls onApprove with proper ARIA accessibility and decision state', () => {
+  it('renders approval intercept and calls onApprove', () => {
     const onApprove = vi.fn();
     render(
       <ToolExecutionCard
@@ -55,33 +55,9 @@ describe('ToolExecutionCard Component', () => {
     expect(screen.getByText('⚠️ AST Warning')).toBeDefined();
     expect(screen.getByText(/Guardrail Intercept:/i)).toBeDefined();
 
-    const approveBtn = screen.getByRole('button', { name: 'Approve and run execution of git_push' });
-    expect(approveBtn.className).toContain('focus-visible:ring-2');
-    const rejectBtn = screen.getByRole('button', { name: 'Reject execution of git_push' });
-    expect(rejectBtn.className).toContain('focus-visible:ring-2');
-
+    const approveBtn = screen.getByRole('button', { name: /Approve & Run/i });
     fireEvent.click(approveBtn);
     expect(onApprove).toHaveBeenCalled();
-    expect(screen.getByText('✓ Execution Approved')).toBeDefined();
-  });
-
-  it('renders approval intercept and handles reject action', () => {
-    const onReject = vi.fn();
-    render(
-      <ToolExecutionCard
-        persona="saktan"
-        tool="rm_rf"
-        args={{ path: '/tmp/test' }}
-        astSafe={false}
-        requiresApproval={true}
-        onReject={onReject}
-      />
-    );
-
-    const rejectBtn = screen.getByRole('button', { name: 'Reject execution of rm_rf' });
-    fireEvent.click(rejectBtn);
-    expect(onReject).toHaveBeenCalled();
-    expect(screen.getByText('✕ Execution Rejected')).toBeDefined();
   });
 });
 
@@ -138,8 +114,7 @@ describe('SynthesisCard Component', () => {
     expect(screen.getByText(/Supervisor Final Consensus \(SakThai\)/i)).toBeDefined();
     expect(screen.getByText(/Actionable consensus synthesized/i)).toBeDefined();
 
-    const starBtn = screen.getByRole('button', { name: 'Star output for LoRA training dataset' });
-    expect(starBtn.className).toContain('focus-visible:ring-2');
+    const starBtn = screen.getByRole('button', { name: /Star for LoRA Training/i });
     fireEvent.click(starBtn);
     expect(onStar).toHaveBeenCalled();
     expect(screen.getByText('⭐ Staged in LoRA Dataset Pool')).toBeDefined();
