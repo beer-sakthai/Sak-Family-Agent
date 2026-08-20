@@ -1,4 +1,4 @@
-import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
+import { ApiError, createApiHandler, createMutationHandler } from "@/lib/api/handler";
 import { RedTeamEngine } from "@/lib/redteam/redTeamEngine";
 import { AttackVector, FuzzingPayload } from "@/lib/redteam/types";
 
@@ -31,10 +31,10 @@ export const POST = createMutationHandler("/api/redteam", async (body) => {
   if (action === "test_payload") {
     const { payload } = body as Record<string, unknown>;
     if (!payload || !(payload as Record<string, unknown>).rawPayload) {
-      throw new Error("Missing payload object or rawPayload string");
+      throw new ApiError(400, "Missing payload object or rawPayload string");
     }
     return { verdict: RedTeamEngine.evaluatePayloadDefense(payload as FuzzingPayload) };
   }
 
-  throw new Error(`Invalid action: ${action}`);
+  throw new ApiError(400, `Invalid action: ${action}`);
 });
