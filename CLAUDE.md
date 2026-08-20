@@ -26,7 +26,7 @@ personas, deployment config, training assets, or docs.
 
 ```
 personas/          the six agents + the shared package (see below)
-tests/             the one pytest suite (imports `sakthai`, 134 test files)
+tests/             the one pytest suite (imports `sakthai`, 149 test files)
 library/           31 curated skills across 11 categories (a live skill root)
 docs/              architecture, security, plans/specs under docs/superpowers/
 scripts/           dev + maintenance scripts (compose_persona, export_agent_repo, …)
@@ -449,9 +449,14 @@ Coverage floor is **96%** (`fail_under = 96`, branch coverage on) over the
 `sakthai` package. Nothing is omitted from measurement any more — `omit = []`;
 `telegram/bot.py` used to be excluded, which did not make it tested, only
 invisible (it sat at 38% while the reported total stayed above the floor). It is
-measured now and covered at 98%. The suite currently sits at **97.92%**. Run the
-lint→pytest sequence locally before
-pushing; green CI is the bar for `main`.
+measured now and covered at 98%. The suite currently sits at **96.22%** — about
+60 units of statements-plus-branches above the floor, not the two points the
+figure here claimed until 2026-08-20. The gap is concentrated in the newer
+subsystems (`evolution/` 80.6%, `governance/` 81.6%, `hub/` 91.7%), which are
+7.2% of the package by size and 28.7% of the uncovered total; see
+[`docs/test-coverage-analysis-2026-08-20.md`](docs/test-coverage-analysis-2026-08-20.md)
+for the per-module breakdown and what to close first. Run the lint→pytest
+sequence locally before pushing; green CI is the bar for `main`.
 
 ---
 
@@ -857,7 +862,7 @@ There is no `dashboard.py` here — see the dashboard note below.
 
 ## Tests
 
-Tests live in `tests/` (134 test files, ~32,358 lines) and are the suite for the
+Tests live in `tests/` (149 test files, ~35,466 lines) and are the suite for the
 `sakthai` package — there is no per-persona test tree. All tests are hermetic:
 no network, no GCP credentials. Integration tests that may hit real endpoints
 (Ollama, Anthropic) are marked `@pytest.mark.integration` and self-skip when
