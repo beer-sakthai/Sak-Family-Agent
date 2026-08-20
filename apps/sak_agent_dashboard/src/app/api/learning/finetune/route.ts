@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ApiError } from "@/lib/api/handler";
 import {
   generateDatasetCardSpec,
   listLoraJobs,
@@ -23,8 +22,9 @@ export async function GET() {
       jobs,
     });
   } catch (error) {
+    console.error("Secure Log [GET /api/learning/finetune]:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to load fine-tuning metadata" },
+      { error: "An unexpected error occurred" },
       { status: 500 },
     );
   }
@@ -56,8 +56,9 @@ export async function POST(req: NextRequest) {
     const job = spawnLoraTrainingJob(config);
     return NextResponse.json({ success: true, job }, { status: 201 });
   } catch (error) {
+    console.error("Secure Log [POST /api/learning/finetune]:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to spawn LoRA training job" },
+      { error: "An unexpected error occurred" },
       { status: 500 },
     );
   }

@@ -1,4 +1,4 @@
-import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
+import { ApiError, createApiHandler, createMutationHandler } from "@/lib/api/handler";
 import { ServiceRegistry } from "@/lib/a2a/serviceRegistry";
 import { A2AEngine } from "@/lib/a2a/a2aEngine";
 import { A2ACapabilityDescriptor, A2ADelegationRequest } from "@/lib/a2a/types";
@@ -40,6 +40,6 @@ export const POST = createMutationHandler(
       return { capabilities };
     }
 
-    throw new Error(`Invalid action: ${action}`);
+    throw new ApiError(400, `Invalid action: ${action}`);
   },
 );

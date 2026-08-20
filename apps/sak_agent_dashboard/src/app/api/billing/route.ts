@@ -1,4 +1,4 @@
-import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
+import { ApiError, createApiHandler, createMutationHandler } from "@/lib/api/handler";
 import { billingEngine, TenantTier } from "@/lib/billingEngine";
 
 export const GET = createApiHandler("/api/billing", async () => {
@@ -27,5 +27,5 @@ export const POST = createMutationHandler("/api/billing", async (body) => {
     return { data: quota };
   }
 
-  throw new Error(`Unsupported action: ${action}`);
+  throw new ApiError(400, `Unsupported action: ${action}`);
 });

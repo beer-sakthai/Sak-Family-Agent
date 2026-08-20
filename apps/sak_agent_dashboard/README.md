@@ -88,17 +88,19 @@ src/
 └── tests/                    vitest + jsdom + React Testing Library
 ```
 
-`src/lib/types.ts` is the shared contract between the parsers, the API routes, and the
-components. Add a type there rather than inlining shapes.
+`src/lib/types/` is the shared contract between the parsers, the API routes, and the
+components. Add a type to an appropriate domain module in `src/lib/types/` (runtime,
+integrations, m365, ui) and export from the barrel at `src/lib/types/index.ts`.
 
 ## Adding a panel
 
 1. Add the data function in `src/lib/<name>.ts`, returning `undefined` on any read failure.
-2. Add its types plus a `<Name>ApiResponse` to `src/lib/types.ts`.
+2. Add its types plus a `<Name>ApiResponse` to the appropriate domain module in
+   `src/lib/types/<domain>.ts` and export it from the barrel at `src/lib/types/index.ts`.
 3. Add `src/app/api/<name>/route.ts` following the existing `{ success, ... }` + generic-500
    convention (real errors go to `console.error`, never to the client).
 4. Add `src/components/<Name>Panel.tsx`.
-5. Register the tab in the `TABS` config in `src/app/page.tsx`.
+5. Register the tab in `TABS` in `src/lib/tabs/registry.tsx`.
 6. Add `src/tests/<name>.test.tsx`.
 
 ## Telemetry
