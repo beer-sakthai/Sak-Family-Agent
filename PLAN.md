@@ -58,13 +58,8 @@ never duplicate content across files.
 | **Sentinel relative-path hardening (PR #378/#381)** — `_is_sensitive_path` blocks relative paths to sensitive data (`.ssh/`, `.aws/`, shell histories, key basenames) via `_SENSITIVE_BASENAMES`/`_SENSITIVE_DIRS`/`_SENSITIVE_KEY_STEMS`, case-insensitively and across separator values, backup-suffixed keys, globs, and interpreter one-liners; superset of the concurrently-merged #379; synced across all six personas; prevention: `tests/test_persona_guardrails_parity.py` fails CI on persona guardrail drift + regression tests in `tests/test_sentinel_ssh_leak.py` | ✅ Done (2026-07-14) |
 | **Relative system-root blocking (re-land of PR #380)** — `_is_sensitive_path` now treats relative paths whose first component names a critical root (`etc/passwd`, `var/log/…`) as sensitive, with a single-component `tmp` exception; `.config`/`.npm` added to `_SENSITIVE_DIRS`, `credentials` to `_SENSITIVE_BASENAMES`; landed as a delta on top of the stronger #381 hardening instead of merging the conflicting/regressive #380 branch; synced across all six personas; regression tests in `tests/test_guardrails_relative_roots.py` | ✅ Done (2026-07-14) |
 | **Branch consolidation — all 8 open PRs merged to main** — dependabot #386 (mypy 2.3.0) + #387 (actions group); Sentinel #384 (shell-config basenames + critical roots in `_SENSITIVE_NAME_RE`), #385 (ssh/ssh-add/ssh-keygen/ssh-copy-id in scan lists + `tests/test_sentinel_ssh_tools.py`), #388 (`cp` check widened from kubectl-only to docker/podman/kubectl), #389 (docker/podman/kubectl/chroot/nsenter added to destructive + exfiltration scan lists), #391 (`,` added as `_is_sensitive_path` delimiter + `tests/test_guardrails_sentinel_bypasses.py` case), #392 (protections already subsumed by the consolidated version; merged for history, journal entry kept). Conflicting hunks resolved by keeping the stronger consolidated implementation (chroot NEWROOT check, conservative nsenter flag list, no internal-command censoring); guardrails synced across all six personas; closed branches #378/#380 skipped as previously superseded by #381/#382 | ✅ Done (2026-07-16) |
-| **Security Audit & High-Priority Fixes Plan** — comprehensive audit completed (audit report: 120+ pages, A+ grade); two high-priority fixes identified: (1) Rotate Stripe + Twilio credentials in git history (5 min, Beer), (2) Add web API bearer token auth (4-6 hrs, Claude Code); full plan at `security/SECURITY_FIXES_PLAN.md` with phases, tests, rollout, and rollback. Additional: Upgraded vulnerable pinned dependency `cryptography` from v49.0.0 to v50.0.0 (CVE-PYSEC-2026-3552). | ✅ Done (2026-08-09) |
+| **Security Audit & High-Priority Fixes Plan** — comprehensive audit completed (audit report: 120+ pages, A+ grade); two high-priority fixes identified: (1) Rotate Stripe + Twilio credentials in git history (5 min, Beer), (2) Add web API bearer token auth (4-6 hrs, Claude Code); full plan at `security/SECURITY_FIXES_PLAN.md` with phases, tests, rollout, and rollback | [/] In progress — awaiting Beer approval on credential rotation |
 | **Native per-persona capabilities (no Hermes dependency)** — persona-aware skill discovery (fixes `SKILLS_DIR` hardcoded to SakThai in `config.py`), auto-wired per-persona `mcp.json` + model/provider defaults for `run`/`chat --persona`, Telegram gateway `SAKTHAI_PERSONA` support, removal of the dead `sakthai-telegram-native@.service` template, `CLAUDE.md` canonical-package claim corrected; full test suite + mypy + ruff green | ✅ Done (2026-08-02) |
-| **HF Ecosystem Improvement** — 5-phase plan written: broken/skeleton repo fixes, card/metadata consistency (19/16/7 counts), functional upgrades, cleanup, automation + health monitoring (cron confirmed dead); plan at `docs/hf-cards-improvement-plan.md` | [/] In progress — awaiting approval to start Phase 1 |
-| **Hermes profile scaffold repair (×6 agents)** — merge `6992353b` had silently deleted `infra/hermes-agents/{default,profiles/*}` and reverted `diagnose_personas.py`/`export_agent_repo.py`'s default-profile check back to the pre-`debd90de` sakking-keyed logic; restored 11 files from `debd90de`, fixed both regressed checks back to sakthai-keyed. `scripts/diagnose_personas.py` now passes 6/6 hermes-profile-scaffold checks (run with `.venv/bin/python3`, not system `python3` — the MCP-load subcheck needs the venv's `sakthai` import) | [/] In progress — uncommitted, awaiting Beer's go-ahead to commit |
-| **Branch consolidation round 2 — repo reduced to `main` only** — 10 stale branches / 7 open PRs collapsed into one merge. Merged: #555 (MS Graph credentials added to the redaction sets across all persona `config.py`/`guardrails.py` + `sakthai-chat-cli`). Re-landed as a clean delta: #547's `make` guardrail (recipe scanning, `-C`/`-f` resolution, include-cycle guard) — its own branch had reverted `executor.py` hardening and deleted tracked `.workflow_runs/` fixtures during a bad merge, so only the guardrail hunks were taken. Consolidated: the unique protections from the five duplicate `_validate_filepath` rewrites (#552/#553/#554/#556/#557) folded onto main's #558 implementation — backslash-normalized traversal check, `opt` root, `.docker`/`.kube`/`.gnupg`/`.gcloud`/`.azure` dirs, `.env-`/`.env_`/`memory.db-` prefixes, private-key stem matching. Dropped without merging: two GraphClient branches that would have regressed #549's custom-scheme check back to a `startswith("http")` test, one SSRF branch already subsumed by #558, and a branch downgrading every GitHub Action from v7 to v4 | ✅ Done (2026-08-08) |
-| **CLAUDE.md refresh — reconciled with the repo on disk** — re-audited every claim against the tree: persona package layout (three personas now carry partial real `sakthai/` dirs shadowing a `sakthai~origin_main` symlink, not five clean symlinks), the undocumented `agent/` modules (`guardrails`, `guardrails_hardened`, `security_hardening`, `context_filter`, `context_manager`, `prompt_builder`, `chat`, `eval`) and top-level `giturl`/`hf`/`sakking_skills`/`lead/`/`learn/ingest`, the real CLI surface (`chat`, `web setup|regen-token`, `extensions install` not `add`, `sessions clean` not `export`, `eval summary`, full `memory` subcommand list), 15 GitHub workflows (was 9), the mypy `sakthai.telegram.*` strict exemption, the closed web-server static-auth gap, and the full env-var set. Figures re-verified locally: 1,978 tests over 95 files green, 96.56% branch coverage, mypy strict clean over 69 files, ruff clean | ✅ Done (2026-08-08) |
-| **README refresh — metrics reconciled with the repo** — replaced stale/unverifiable figures with locally verified ones (1,978 tests over 95 files, 96.56% branch coverage against the real `fail_under = 96`, mypy strict clean over 69 files, bandit 0 findings); corrected the package tree (14 tools not 10, added `security_hardening`/`guardrails_hardened`/`context_filter`/`context_manager`/`prompt_builder`/`chat` and the `cycle`/`web`/`dashboard`/`telegram`/`extensions`/`learn`/`lead` subpackages); persona skill counts recounted from `SKILL.md` files (823, was 843) with each persona's configured default model; provider table rewritten around how providers are actually selected (default model `claude-opus-4-8`); CI section rebuilt from the 15 real workflows, splitting per-push from scheduled; dropped the unverifiable security perf/benchmark tables in favour of the 8 named defense classes and measured hardening-test coverage; fixed `sakthai run` usage (takes a TASK argument) and the license section (all rights reserved) | ✅ Done (2026-08-08) |
 
 ## 📋 Sub-Plans
 
@@ -76,7 +71,6 @@ never duplicate content across files.
 | SakTan — daily story & diary | `personas/saktan/PLAN.md` | ⚪ Archived — persona deleted per Beer directive |
 | Agent Self-Evolution (×6 agents) | `personas/*/agent-self-evolution/PLAN.md` | 🟡 Active — personalised per agent |
 | **Repo Hygiene Round 2** | [SCRATCH_ORGANISATION_PLAN](#scratch-organisation-plan) | 🟡 Active — root cleanup |
-| **HF Ecosystem Improvement (19 models · 16 datasets · 7 Spaces)** | [`docs/hf-cards-improvement-plan.md`](./docs/hf-cards-improvement-plan.md) | 🟡 Active — Phase 1 (broken repos) next |
 
 ## 🔧 Runtime Notes
 
@@ -103,9 +97,7 @@ workspace runtime config under `infra/`.
 ## 🧹 SCRATCH_ORGANISATION_PLAN.MD
 
 **Owner:** SakKing (spotter) → SakJules (executor)
-**Status:** [x] 2026-08-08 — executed. Superseded in scope by
-[`docs/repo-audit-2026-08-08.md`](./docs/repo-audit-2026-08-08.md), which covered
-these root files plus generated-state bloat and the `.gitignore` shadowing bug.
+**Status:** Planning
 **Priority:** Medium
 
 ### Problem
@@ -132,9 +124,7 @@ Root directory of `Sak-Family-Agent/` has accumulated scratch files that belong 
 4. Update any references in scripts that import these files
 
 ### Verification
-1. `ls *.py *.json` at root → nothing ✅
-2. `ls scripts/hf/_*.py` → 5 files ✅ (landed in `scripts/hf/`, not `scripts/`)
-3. `ls data/*.json` → `hf-topics-covered.json` ✅ (`ci_runs.json` was deleted, not
-   moved: it is a regenerable API-response cache the consuming skill reads from
-   `/opt/data/`, never the repo copy)
-4. Empty placeholders removed ✅
+1. `ls *.py *.json` at root → nothing
+2. `ls scripts/_*.py` → 5 files
+3. `ls data/*.json` → 2 files (non-empty)
+4. Empty placeholders removed

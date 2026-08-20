@@ -1,0 +1,30 @@
+{
+  "run_id": "run_287989aa",
+  "workflow_name": "pw_retry_state",
+  "status": "FAILED",
+  "start_time": "2026-08-02T13:52:55.759240",
+  "end_time": "2026-08-02T13:52:55.768176",
+  "step_results": {
+    "retry_step": {
+      "step_id": "retry_step",
+      "status": "COMPLETED",
+      "output": {
+        "fail_attempts": 1,
+        "success_output": "val_100"
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:52:55.767954",
+      "end_time": "2026-08-02T13:52:55.768018"
+    },
+    "downstream": {
+      "step_id": "downstream",
+      "status": "FAILED",
+      "output": {},
+      "error": "Key 'result' (path 'result') not found in step 'retry_step' output.",
+      "attempts": 1,
+      "start_time": "2026-08-02T13:52:55.768116",
+      "end_time": "2026-08-02T13:52:55.768154"
+    }
+  }
+}

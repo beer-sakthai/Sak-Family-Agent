@@ -1,0 +1,81 @@
+{
+  "run_id": "run_b7293e1e",
+  "workflow_name": "mutation_workflow",
+  "status": "COMPLETED",
+  "start_time": "2026-08-02T13:53:23.494780",
+  "end_time": "2026-08-02T13:53:23.505615",
+  "step_results": {
+    "step_init_data": {
+      "step_id": "step_init_data",
+      "status": "COMPLETED",
+      "output": {
+        "user": {
+          "name": "alice",
+          "role": "admin",
+          "score": 50
+        },
+        "tags": [
+          "alpha",
+          "beta"
+        ]
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:53:23.504860",
+      "end_time": "2026-08-02T13:53:23.504967"
+    },
+    "step_mutate_user": {
+      "step_id": "step_mutate_user",
+      "status": "COMPLETED",
+      "output": {
+        "updated_user": {
+          "name": "alice",
+          "role": "super_admin",
+          "score": 100
+        }
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:53:23.505128",
+      "end_time": "2026-08-02T13:53:23.505214"
+    },
+    "step_mutate_tags": {
+      "step_id": "step_mutate_tags",
+      "status": "COMPLETED",
+      "output": {
+        "updated_tags": [
+          "alpha",
+          "beta",
+          "gamma"
+        ]
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:53:23.505251",
+      "end_time": "2026-08-02T13:53:23.505294"
+    },
+    "step_aggregate_mutation": {
+      "step_id": "step_aggregate_mutation",
+      "status": "COMPLETED",
+      "output": {
+        "summary": {
+          "user": {
+            "name": "alice",
+            "role": "super_admin",
+            "score": 100
+          },
+          "tags": [
+            "alpha",
+            "beta",
+            "gamma"
+          ],
+          "count": 3
+        }
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:53:23.505465",
+      "end_time": "2026-08-02T13:53:23.505544"
+    }
+  }
+}

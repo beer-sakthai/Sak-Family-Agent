@@ -1,0 +1,20 @@
+{
+  "run_id": "run_046a82a4",
+  "workflow_name": "transient_retry",
+  "status": "COMPLETED",
+  "start_time": "2026-08-01T17:38:07Z",
+  "end_time": "2026-08-01T17:38:07Z",
+  "step_results": {
+    "flaky": {
+      "step_id": "flaky",
+      "status": "COMPLETED",
+      "output": {
+        "result": "ok"
+      },
+      "error": null,
+      "attempts": 2,
+      "start_time": "2026-08-01T17:38:07Z",
+      "end_time": "2026-08-01T17:38:07Z"
+    }
+  }
+}

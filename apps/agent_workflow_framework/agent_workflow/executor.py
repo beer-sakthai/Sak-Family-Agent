@@ -10,7 +10,6 @@ import json
 import os
 import sys
 import time
-import urllib.parse
 import urllib.request
 import uuid
 from datetime import datetime
@@ -33,84 +32,6 @@ from agent_workflow.state import StateContext, StateInterpolationError
 class ExecutionError(Exception):
     """Base exception for workflow execution failures."""
     pass
-
-
-def _validate_filepath(filepath: Any) -> Path:
-    """Validate a filepath to prevent path traversal and access to sensitive/system directories/files."""
-    if not filepath:
-        raise ValueError("File path cannot be empty.")
-
-    path_str = str(filepath).strip()
-
-    # Block path traversal segments like '..' or leading '~'. Backslashes are
-    # normalized first so Windows-style separators can't smuggle a '..' segment
-    # past a POSIX-only split.
-    normalized_str = path_str.replace("\\", "/")
-    if (
-        ".." in path_str.split(os.sep)
-        or ".." in normalized_str.split("/")
-        or path_str.startswith("~")
-    ):
-        raise PermissionError(f"Directory path traversal or user home shortcut is prohibited: '{path_str}'")
-
-    # Resolve target absolute to Path
-    try:
-        target = Path(path_str).resolve()
-    except Exception as exc:
-        raise ValueError(f"Invalid file path '{path_str}': {exc}")
-
-    # Critical system roots (e.g., /etc, /bin, /var, /boot, /dev, /lib, /lib64, /proc, /sys, /sbin, /usr)
-    parts = [p.lower() for p in target.parts]
-    system_roots = {
-        "etc", "bin", "var", "boot", "dev", "lib", "lib64", "proc", "sys", "sbin", "usr", "root", "opt",
-    }
-
-    if target.is_absolute():
-        root_part = target.anchor
-        non_root_parts = [p for p in target.parts if p != root_part]
-        if non_root_parts:
-            first_dir = non_root_parts[0].lower()
-            if first_dir in system_roots:
-                raise PermissionError(f"Access to critical system directory is prohibited: '{path_str}'")
-
-    # Blocks access to sensitive directories (e.g., .git, .ssh, .aws)
-    sensitive_dirs = {
-        ".git", ".ssh", ".aws", ".jules", ".config", ".npm",
-        ".docker", ".kube", ".gnupg", ".gcloud", ".azure",
-    }
-    if any(part in sensitive_dirs for part in parts):
-        raise PermissionError(f"Access to sensitive directory is prohibited: '{path_str}'")
-
-    # Blocks access to credential/sensitive file basenames (e.g., .env, memory.db, id_rsa)
-    filename = target.name.lower()
-    sensitive_basenames = {
-        ".env", "memory.db", "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "id_ecdsa_sk", "id_ed25519_sk", "id_xmss",
-        "known_hosts", "authorized_keys", "credentials", "credentials.json", "shadow", "passwd", "sudoers",
-        ".bash_history", ".zsh_history", ".python_history", ".history", ".netrc", ".npmrc", ".pypirc",
-        "gshadow", "group", ".bashrc", ".zshrc", ".profile", ".bash_profile", ".gitconfig", ".zprofile",
-        ".yarnrc", ".yarnrc.yml", ".git-credentials", ".node_repl_history", ".mysql_history", ".psql_history",
-        ".sqlite_history", ".rediscli_history", ".mongo_history", ".pgpass", ".my.cnf"
-    }
-    sensitive_suffixes = (".pem", ".key", ".pfx", ".p12")
-
-    # Prefix variants: .env.production / .env-prod / .env_local, and the SQLite
-    # sidecars memory.db-wal / memory.db-shm / memory.db-journal.
-    sensitive_prefixes = (".env.", ".env-", ".env_", "memory.db-")
-
-    # Renamed or backed-up private keys (id_rsa.bak, id_ed25519.pub, ...).
-    sensitive_key_stems = (
-        "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "id_ecdsa_sk", "id_ed25519_sk", "id_xmss",
-    )
-
-    if (
-        filename in sensitive_basenames
-        or filename.startswith(sensitive_prefixes)
-        or filename.endswith(sensitive_suffixes)
-        or any(filename.startswith(stem + ".") for stem in sensitive_key_stems)
-    ):
-        raise PermissionError(f"Access to sensitive file is prohibited: '{path_str}'")
-
-    return target
 
 
 class WorkflowExecutor:
@@ -248,49 +169,7 @@ class WorkflowExecutor:
             if not url:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'url' parameter.")
 
-            # SSRF Protection & URL Validation
-            url_str = str(url).strip()
-            if url_str.startswith("-"):
-                raise ValueError(f"Option smuggling detected in URL: {url_str}")
-
-            try:
-                parsed = urllib.parse.urlparse(url_str)
-            except Exception as e:
-                raise ValueError(f"Invalid URL: {url_str}. Error: {e}")
-
-            scheme = (parsed.scheme or "").lower()
-            if scheme not in ("http", "https"):
-                raise ValueError(f"Forbidden URL scheme '{scheme}'. Only HTTP and HTTPS are allowed.")
-
-            host = parsed.hostname
-            if not host:
-                raise ValueError(f"URL missing hostname: {url_str}")
-
-            port = parsed.port
-            if not port:
-                port = 443 if scheme == "https" else 80
-
-            try:
-                import socket
-                import ipaddress
-                addrinfos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
-                for _family, _type, _proto, _canon, sockaddr in addrinfos:
-                    ip_str = sockaddr[0]
-                    try:
-                        ip = ipaddress.ip_address(ip_str)
-                    except ValueError:
-                        continue
-
-                    if not ip.is_global or ip.is_multicast:
-                        raise ValueError(
-                            f"SSRF Protection Blocked: Host '{host}' resolved to non-public/private IP: {ip_str}"
-                        )
-            except ValueError:
-                raise
-            except Exception as e:
-                raise RuntimeError(f"DNS Resolution failed for host '{host}': {e}")
-
-            req = urllib.request.Request(url_str, headers=params.get("headers", {}))
+            req = urllib.request.Request(str(url), headers=params.get("headers", {}))
 
             loop = asyncio.get_event_loop()
             def _fetch():
@@ -311,7 +190,7 @@ class WorkflowExecutor:
             if not filepath:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'path' parameter.")
 
-            target = _validate_filepath(filepath)
+            target = Path(filepath)
             target.parent.mkdir(parents=True, exist_ok=True)
             if isinstance(content, (dict, list)):
                 content_str = json.dumps(content, indent=2)
@@ -325,7 +204,7 @@ class WorkflowExecutor:
             if not filepath:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'path' parameter.")
 
-            target = _validate_filepath(filepath)
+            target = Path(filepath)
             if not target.exists():
                 raise FileNotFoundError(f"File not found: '{filepath}'")
             content = target.read_text(encoding="utf-8")

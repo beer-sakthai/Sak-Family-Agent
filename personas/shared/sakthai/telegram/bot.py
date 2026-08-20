@@ -32,16 +32,6 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_PERSONAS = ("sakthai", "sakking", "saktan", "saksee", "saksit", "sakjules")
-RECOMMENDED_MODELS = (
-    "huggingface/Kimi-K2-Instruct",
-    "gemini-2.5-pro",
-    "gemini-2.5-flash",
-    "ollama/qwen2.5-coder",
-    "ollama/sakthai",
-    "gpt-4o",
-)
-
 
 @dataclass
 class TelegramSession:
@@ -49,8 +39,6 @@ class TelegramSession:
 
     db_path: Path
     store: MemoryStore
-    model: str | None = None
-    persona: str | None = None
 
 
 def _env_bool(name: str, default: bool = False) -> bool:
@@ -107,13 +95,8 @@ async def _reply_with_agent_result(
 
     session = _get_chat_session(context, session_id)
     provider = sakthai_default_provider()
-    model = session.model or sakthai_default_model() or "huggingface/Kimi-K2-Instruct"
+    model = sakthai_default_model() or "gpt-4o"
     system_prompt_prefix = sakthai_system_prompt_prefix() or ""
-
-
-    if session.persona:
-        system_prompt_prefix = f"Active Persona: {session.persona.capitalize()}\n" + system_prompt_prefix
-
     combined_skills = tuple(skills) + tuple(sakthai_with_skills())
     # run_agent is a long, synchronous LLM round-trip; run it in a worker
     # thread so the polling loop keeps serving other chats meanwhile.
@@ -138,97 +121,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("Sorry, you are not authorized to use this bot.")
         return
     await update.message.reply_text(
-        "Welcome to the Sak-Family-Agent bot.\n"
-        "• Send any message to chat with the agent.\n"
-        "• Use /model <name> to pick a model dynamically.\n"
-        "• Use /persona <name> to switch agent persona.\n"
-        "• Use /models to list available models.\n"
-        "• Use /status to check current session settings.\n"
-        "• Use /workflow <name> to run a specific skill."
+        "Welcome to the Sak-Family-Agent bot. Send a message to chat with the agent "
+        "or use /workflow <name> to run a specific skill."
     )
-
-
-async def set_model(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Dynamically set the active LLM model for this chat session."""
-    user = update.effective_user
-    if not _is_authorized(user.id if user else None):
-        await update.message.reply_text("Sorry, you are not authorized to use this bot.")
-        return
-    if not context.args:
-        await update.message.reply_text(
-            "Please specify a model name. Example: /model gemini-2.5-pro or /model qwen2.5-coder\n"
-            "Use /models to see recommendations."
-        )
-        return
-
-    chosen_model = context.args[0].strip()
-    session_id = _session_key(update.effective_chat.id if update.effective_chat else None, user.id)
-    session = _get_chat_session(context, session_id)
-    session.model = chosen_model
-
-    await update.message.reply_text(f"🤖 Model set to '{chosen_model}' for this chat session.")
-
-
-async def set_persona(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Dynamically set the active agent persona for this chat session."""
-    user = update.effective_user
-    if not _is_authorized(user.id if user else None):
-        await update.message.reply_text("Sorry, you are not authorized to use this bot.")
-        return
-    if not context.args:
-        await update.message.reply_text(
-            f"Please specify a persona name. Choose from: {', '.join(SUPPORTED_PERSONAS)}\n"
-            "Example: /persona sakking"
-        )
-        return
-
-    chosen_persona = context.args[0].strip().lower()
-    if chosen_persona not in SUPPORTED_PERSONAS:
-        await update.message.reply_text(
-            f"Unknown persona '{chosen_persona}'. Available options: {', '.join(SUPPORTED_PERSONAS)}"
-        )
-        return
-
-    session_id = _session_key(update.effective_chat.id if update.effective_chat else None, user.id)
-    session = _get_chat_session(context, session_id)
-    session.persona = chosen_persona
-
-    await update.message.reply_text(f"👑 Persona set to '{chosen_persona.capitalize()}' for this chat session.")
-
-
-async def list_models(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """List recommended model choices."""
-    user = update.effective_user
-    if not _is_authorized(user.id if user else None):
-        await update.message.reply_text("Sorry, you are not authorized to use this bot.")
-        return
-
-    msg = "Available & Recommended Models:\n" + "\n".join(f"• `{m}`" for m in RECOMMENDED_MODELS)
-    msg += "\n\nTo pick any model: `/model <model-name>`"
-    await update.message.reply_text(msg, parse_mode="Markdown")
-
-
-async def session_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Show current session settings (active model and persona)."""
-    user = update.effective_user
-    if not _is_authorized(user.id if user else None):
-        await update.message.reply_text("Sorry, you are not authorized to use this bot.")
-        return
-
-    session_id = _session_key(update.effective_chat.id if update.effective_chat else None, user.id)
-    session = _get_chat_session(context, session_id)
-
-
-    current_model = session.model or sakthai_default_model() or "huggingface/Kimi-K2-Instruct (default)"
-    current_persona = session.persona.capitalize() if session.persona else "SakThai (default)"
-
-    msg = (
-        f"⚙️ **Chat Session Settings**\n"
-        f"• **Active Model**: `{current_model}`\n"
-        f"• **Active Persona**: `{current_persona}`\n\n"
-        f"Use `/model <name>` or `/persona <name>` to change at any time."
-    )
-    await update.message.reply_text(msg, parse_mode="Markdown")
 
 
 async def workflow(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -247,6 +142,8 @@ async def workflow(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     workflow_name = context.args[0]
     available_workflows = workflow_executor.get_available_workflows()
     if workflow_name not in available_workflows:
+        # An empty list must reject too: otherwise any name would pass the
+        # allowlist and flow straight into the agent prompt.
         if available_workflows:
             await update.message.reply_text(
                 "Workflow not found. Available workflows are: " + ", ".join(available_workflows)
@@ -292,12 +189,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await update.message.reply_text(
         "You can use the following commands:\n"
         "/start - Start interacting with the bot\n"
-        "/model <name> - Dynamically switch the LLM model for this chat\n"
-        "/persona <name> - Switch active agent persona (sakthai, sakking, saktan, saksee, saksit, sakjules)\n"
-        "/models - List recommended models\n"
-        "/status - Check current active model & persona\n"
         "/workflows - List available workflows\n"
-        "/workflow <name> - Execute a specific workflow\n"
+        "/workflow <workflow_name> - Execute a workflow\n"
+        "Or send a plain message to chat with the agent.\n"
         "/help - Display this help message"
     )
 
@@ -308,16 +202,12 @@ def main() -> None:
     if not token:
         raise ValueError("TELEGRAM_BOT_TOKEN environment variable not set!")
 
+    # Python 3.14 no longer guarantees a current loop in the main thread.
+    # python-telegram-bot still expects one when run_polling() starts.
     _ensure_main_thread_event_loop()
     application = ApplicationBuilder().token(token).build()
 
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("model", set_model))
-    application.add_handler(CommandHandler("m", set_model))
-    application.add_handler(CommandHandler("persona", set_persona))
-    application.add_handler(CommandHandler("agent", set_persona))
-    application.add_handler(CommandHandler("models", list_models))
-    application.add_handler(CommandHandler("status", session_status))
     application.add_handler(CommandHandler("workflow", workflow))
     application.add_handler(CommandHandler("workflows", workflows))
     application.add_handler(CommandHandler("help", help_command))

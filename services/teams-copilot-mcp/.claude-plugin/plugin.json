@@ -1,5 +1,0 @@
-{
-  "name": "teams-copilot-mcp",
-  "version": "0.1.0",
-  "description": "Microsoft Teams and Graph tools (channels, calendar, meetings) via an app-only Graph MCP server"
-}

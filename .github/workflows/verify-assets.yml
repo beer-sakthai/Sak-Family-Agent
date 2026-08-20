@@ -29,7 +29,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
 
@@ -39,7 +39,7 @@ jobs:
           python-version: '3.11'
 
       - name: Cache uv
-        uses: actions/cache@v6
+        uses: actions/cache@v4
         with:
           path: ~/.cache/uv
           key: ${{ runner.os }}-uv-verify-assets-${{ hashFiles('**/uv.lock') }}

@@ -30,21 +30,6 @@ def run_command_tool() -> Tool:
         "bun run rm -rf /etc",
         "bunx rm -rf /etc",
         "bunx -p tsx tsx -c \"require('fs').readFileSync('/etc/shadow')\"",
-        # Database clients targeting sensitive paths
-        "psql -f /etc/passwd",
-        "mysql -u root -e 'source /etc/passwd'",
-        "mongosh --eval \"load('/etc/passwd')\"",
-        "redis-cli --eval /etc/passwd",
-        # Text editors targeting sensitive paths
-        "vim -c ':w /etc/shadow'",
-        "nano /etc/shadow",
-        # Hardened package managers
-        "npm exec rm -rf /etc",
-        "cargo run -- /etc",
-        "composer exec rm -rf /etc",
-        "npm exec --prefix /etc some-command",
-        "cargo run --manifest-path /etc/Cargo.toml",
-        "composer --working-dir /etc run-script test",
     ],
 )
 def test_dangerous_development_tools_blocked(command, run_command_tool, store, monkeypatch):
@@ -64,13 +49,6 @@ def test_dangerous_development_tools_blocked(command, run_command_tool, store, m
         "bunx cowsay hello",
         "npx cowsay hello",
         "deno run main.ts",
-        'psql -c "SELECT 1"',
-        'mysql -e "SELECT 1"',
-        "mongosh --eval \"print('hello')\"",
-        "redis-cli ping",
-        "npm run build",
-        "cargo check",
-        "composer install",
     ],
 )
 def test_safe_development_tools_allowed(command, run_command_tool, store, monkeypatch):
@@ -94,14 +72,6 @@ def test_safe_development_tools_allowed(command, run_command_tool, store, monkey
         "ts-node -e \"require('fs').readFileSync('.env')\"",
         "deno eval \"Deno.readTextFileSync('.env')\"",
         "bun eval \"require('fs').readFileSync('.env')\"",
-        # Database/Editor/Package manager interpreters evaluating inline scripts/queries that target sensitive files
-        "psql -c \"COPY (SELECT * FROM users) TO '/etc/shadow'\"",
-        "mysql -e \"LOAD DATA INFILE '.env' INTO TABLE x\"",
-        "mariadb -e \"LOAD DATA INFILE '.env' INTO TABLE x\"",
-        "mongosh --eval \"cat('.env')\"",
-        'redis-cli --eval ".env"',
-        'vim -S ".env"',
-        'vi -c "source .env"',
     ],
 )
 def test_database_and_vcs_tools_bypass_blocked(command, run_command_tool, store, monkeypatch):

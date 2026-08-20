@@ -1,29 +1,5 @@
 # Sentinel Security Journal
 
-## 2026-08-16 - Double/Multi-Layered URL Encoded relative path traversal in GraphClient
-**Vulnerability:** The GraphClient request path validation only unquoted the path once, allowing attackers or LLMs to bypass the path traversal check (`..`) by using double or multi-layered URL encoding (such as `%252e%252e%252f`).
-**Learning:** Downstream servers or HTTP clients may resolve paths by iteratively decoding them. Validating path containment with a single-level unquoting pass is insecure against multi-layered encoding bypasses.
-**Prevention:** Always recursively unquote/URL-decode user-supplied paths (e.g., up to 5 levels with early exit if no changes occur) before checking for relative traversal segments (`..`) or sensitive keywords.
-
-## 2026-08-15 - Unvalidated File IO in Agent Workflow Framework Executor
-**Vulnerability:** The Agent Workflow Framework executor's file actions (`file_read`, `file_write`) were entirely unvalidated, allowing complete local path traversal and arbitrary reading or writing of sensitive files (like `.env`, SSH keys, or system-critical `/etc/passwd`) without restriction.
-**Learning:** Adding complex system tools or workflow executors that support filesystem interactions creates a high-risk security gap if not accompanied by a centralized path-validation layer that strictly validates target paths before any filesystem IO is attempted.
-**Prevention:** Implement a centralized helper function `_validate_filepath` to resolve paths, check for path-traversal segments, block access to critical system directories, and reject attempts to access sensitive files/directories (credential basenames, `.git`, `.ssh`, etc.).
-
-## 2026-08-10 - SSRF and Token Exfiltration via HTTP Client Base URL Override
-**Vulnerability:** Under `httpx`, passing an absolute URL to a client configured with `base_url` overrides the base URL. If the client automatically appends authorization headers (like MS Graph Bearer tokens), calling raw/arbitrary endpoints with an untrusted absolute URL leaks the token to third-party domains.
-**Learning:** Never assume an HTTP client with a hardcoded `base_url` restricts requests strictly to that domain. Absolute URLs passed to request methods bypass the base prefix, creating Server-Side Request Forgery (SSRF) and credential exfiltration vectors.
-**Prevention:** Explicitly validate all absolute and protocol-relative URLs at the request entry boundary, ensuring they strictly use HTTPS and match the allowed target domains, while rejecting obfuscations like backslashes in absolute URLs.
-
-## 2026-08-04 - Tracking and Redacting Stripe and Twilio Credentials Symmetrically
-**Vulnerability:** Missing integration and redaction for Stripe and Twilio environment variables and consumer key format. Without explicit tracking and regex coverage, Stripe and Twilio secrets could leak in logs, database tables, and model interactions.
-**Learning:** Hardening of secret redaction mechanisms must explicitly map out domain-specific API tokens (such as Stripe consumer keys with the `ck_` prefix and Twilio API/auth variables) across all package layouts and persona-specific configurations to maintain comprehensive coverage.
-**Prevention:** Regularly audit and expand both `SECRET_PATTERN` (e.g., adding `ck_` patterns) and global configuration `secret_keys` to cover all active environment configurations, and symmetrically synchronize these updates across all physical persona directories and standalone CLIs.
-## 2026-08-09 - Vulnerable Cryptography Package Dependency
-**Vulnerability:** The pinned dependency `cryptography` was pinned to version `49.0.0` in `uv.lock`, which contained a known vulnerability (CVE-PYSEC-2026-3552) allowing potential cryptographic bypasses or security issues.
-**Learning:** Pinned locked dependencies can silently age and acquire published CVEs over time. Standard linting and code-checks won't flag these, which is why a weekly automated `dependency-audit` workflow in CI is essential to bridge the gap and enforce version upgrades.
-**Prevention:** Integrate and regularly run automated dependency audits (e.g., `uvx pip-audit` or `pip-audit`) against locked requirements files in CI, and upgrade pinned dependencies via package manager lock updates (`uv lock --upgrade-package <pkg>`) immediately when security advisories are released.
-
 ## 2025-07-26 - Empty Host Loopback Binding Bypass
 **Vulnerability:** Python's socket and HTTP/HTTPS servers treat an empty string `""` as `INADDR_ANY` (binding to all interfaces, equivalent to `0.0.0.0`). Classifying `""` as loopback-only allows unauthenticated servers to be exposed publicly to the network.
 **Learning:** Checking host values against `_LOOPBACK_NAMES = frozenset({"localhost", ""})` created a security loophole where passing `""` allowed the unauthenticated server to bypass the loopback restriction check and listen publicly on all interfaces.
@@ -448,11 +424,6 @@
 
 **Prevention:** Implement recursive scanners (like `_contains_sensitive_path`) that inspect all iterable containers and dictionaries (both keys and values) to ensure no sensitive path lies embedded in any part of the tool payload.
 
-## 2026-08-06 - Hardening against Database and Shell History Exposure
-**Vulnerability:** Interactive shell and database history files (`.rediscli_history`, `.mongo_history`), database client password files (`.pgpass`), and database configurations (`.my.cnf`) were not blocked by guardrails. These contain highly sensitive database credentials, connection strings, or query histories which could be read or exfiltrated by an LLM agent.
-**Learning:** Hardening filesystem checks for generic credential paths must explicitly cover database and interactive client artifacts, as these files are frequently created in the user's home/current directory in developer environments and often store credentials in plain text.
-**Prevention:** Exhaustively register `.rediscli_history`, `.mongo_history`, `.pgpass`, and `.my.cnf` in `_SENSITIVE_BASENAMES` (for shell command guardrails) and `_SENSITIVE_READ_BASENAMES` (for direct file tool handlers) across all packages, verified by regression test coverage.
-
 ## 2026-08-02 - [Hardening Parameter Guardrails against Quoted and Serialized JSON Bypasses]
 
 **Vulnerability:** Filesystem-access and argument-based guardrails (like `_block_sensitive_path_args`) could be bypassed if a sensitive path was wrapped in quotes (e.g., `"/etc/shadow"`) inside malformed JSON-like strings, or if sensitive paths were nested inside serialized JSON string arguments that the tool-checking system treated as a single flat string.
@@ -475,33 +446,3 @@
 **Learning:** Standard security checks focusing on traditional shells (`bash`, `sh`, `python`, `node`) fail to capture modern developer runtimes and databases that have equal potential for destructive operations or raw file exfiltration.
 
 **Prevention:** Maintain exhaustive sets of monitored command-line runners, package managers, and database clients. Ensure they are systematically registered in the command scanner's exfiltration and interpreter blocks to enable recursive script and argument path validation.
-
-## 2026-08-08 - Hardening Guardrails against Database Clients, Editors, and Package Manager Bypasses
-**Vulnerability:** Shell execution guardrails could be bypassed by using standard system database clients (`psql`, `mysql`, `mariadb`, `mongo`, `mongosh`, `redis-cli`), text editors (`vim`, `vi`, `nano`, `emacs`, `ed`), and alternative package managers (`npm`, `cargo`, `composer`) to read/write/overwrite sensitive host files or run unmonitored inline command scripts.
-**Learning:** Hardening command-line validation requires expanding the list of monitored binaries beyond standard shells and common runners to encompass any pre-installed system administration, database client, or editing tools that support inline script execution or direct file interactions. Furthermore, package managers must be registered as transparent wrappers to recursively resolve nested command structures and option values (e.g. `--prefix`, `--manifest-path`, `--working-dir`).
-**Prevention:** Ensure that all database utilities, interactive text editors, and package managers are registered in exfiltration, destructive, and interpreter collections in `guardrails.py`, and implement robust option-skipping parser logic for their respective configuration flags.
-
-## 2026-08-09 - [Symmetry of Security Controls Between File-Read Blockers and Guardrails]
-**Vulnerability:** A symmetry gap existed where advanced shell/execution guardrails protected highly sensitive credentials (like post-quantum SSH XMSS keys, shell histories, git configurations, and database credentials) from shell exfiltration, but the file-reading tool's defense-in-depth blocker (`_SENSITIVE_READ_BASENAMES`) did not contain these keys. This left them vulnerable to raw reads if directories were allowlisted.
-**Learning:** Security controls must be symmetrically enforced across different execution layers (such as shell execution guardrails vs direct tool file-read handlers). A vulnerability in one layer can easily bypass protections in another if their definitions of "sensitive assets" diverge.
-**Prevention:** Always maintain unified or perfectly synchronized lists of sensitive basenames, private key stems, and credential files across all guardrail layers and file-reading tools. Write automated checks or comprehensive regression tests that cover identical files across both toolsets to prevent drift.
-
-## 2026-08-11 - Relative Path Traversal and API Version/Namespace Escape
-**Vulnerability:** A base-url configured HTTP client (e.g. MS Graph v1.0) can be coerced into accessing different API namespaces or versions (e.g. /beta/) if path arguments contain relative directory traversal segments like `..` or `/../`. Since absolute hostname controls only trigger on strings starting with `http`, relative traversal escapes bypass host checks while breaking out of the designated base-url subpath.
-**Learning:** Never assume base-url prefixes are structurally guaranteed boundaries. RFC relative-path merging naturally resolves dot-dot segments upward. To strictly enforce subpath confinement, paths must be explicitly segmented and scanned for any relative traversal segments before execution.
-**Prevention:** Segment the URL path part (both raw and URL-decoded, normalizing backslashes) and validate that no exact segment equals `..` or contains path-traversal sequences, rejecting requests that attempt to traverse outside the base path.
-
-## 2026-08-13 - Tracking and Redacting MS Graph/Teams Credentials Symmetrically
-**Vulnerability:** Lack of automatic configuration tracking and redaction for MS Graph and Microsoft Teams credentials. Without explicitly listing Azure and Office 365 environment variables like `MS_GRAPH_CLIENT_SECRET`, `MS_GRAPH_REFRESH_TOKEN`, and `MSGRAPH_CLIENT_SECRET`, active Graph/Teams credentials could be accidentally printed or leaked via console outputs, logs, or API endpoints.
-**Learning:** Security defense-in-depth tracking must comprehensively map out all credentials used by integrated external third-party services (such as MS Graph mail and calendar integrations) across all config environments and command-line execution guardrails.
-**Prevention:** Add all critical external API and refresh tokens/secrets to `secret_keys` lists in both `config.py` and `guardrails.py`, and symmetrically synchronize changes across all physical packages in the repository.
-
-## 2026-08-12 - Scheme-independent Absolute and Protocol-relative URL Detection to Prevent SSRF Bypass
-**Vulnerability:** Naive absolute URL detection that only checks if a string begins with `http` is vulnerable to Server-Side Request Forgery (SSRF) and credential exfiltration. An attacker can supply URLs with alternative or custom schemes (like `ftp://`, `ws://`, `gopher://`) or protocol-relative references (like `//attacker.com`) that bypass prefix matching but are still resolved as absolute by underlying HTTP clients.
-**Learning:** Any URI containing either a parsed `scheme` or a `netloc` (network location) is structurally absolute or protocol-relative. Security wrappers must use standard URL parsers to inspect both fields to intercept absolute targets, regardless of the scheme used.
-**Prevention:** Rather than string prefix matching, parse the URL using `urllib.parse.urlparse` and verify if `parsed.scheme` or `parsed.netloc` is populated. If so, enforce strict HTTPS schemes and whitelist host domains (e.g., `graph.microsoft.com`).
-
-## 2026-08-16 - Symmetrical Integration of credentials.json Across Tools and Guardrails
-**Vulnerability:** A symmetry gap existed where `credentials.json` (a common filename for service accounts and GCP API keys) was protected by the direct file-reading tool's defense-in-depth blocker (`_SENSITIVE_READ_BASENAMES` in `tools.py`), but was completely missing from `_SENSITIVE_BASENAMES` in `guardrails.py`. This permitted exfiltrating `credentials.json` via general shell commands (e.g. `cat credentials.json`, `curl -F data=@credentials.json`).
-**Learning:** File security protections must be symmetric across both direct reading tools and command execution guardrails. Discrepancies between the two allow attackers to bypass direct-read blocks by routing file access through shell commands or vice versa.
-**Prevention:** Symmetrically align sensitive file basenames across all tool types and guardrail specifications, verifying the protections through regression tests targeting both direct-read blocklists and command execution constraints.

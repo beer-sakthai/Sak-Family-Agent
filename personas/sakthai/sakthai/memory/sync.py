@@ -33,20 +33,23 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 def _assert_safe_sync_endpoint(endpoint_url: str, *, has_secret: bool) -> None:
-    """Validate an HTTPS sync endpoint against SSRF and cleartext exposure.
+    """Validate an HTTP(S) sync endpoint against SSRF and cleartext exposure.
 
-    Rejects non-https schemes, and any host that resolves to a private, loopback,
+    Rejects non-http(s) schemes, plaintext ``http://`` when a bearer token
+    would be sent, and any host that resolves to a private, loopback,
     link-local, or otherwise non-global address.
     """
     parsed = urllib.parse.urlparse(endpoint_url)
-    if parsed.scheme != "https":
-        raise ValueError(
-            "Refusing to sync memory over plaintext http://; "
-            "use https:// for the sync endpoint to protect sensitive memory data."
-        )
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError("endpoint_url must start with http:// or https://")
     host = parsed.hostname
     if not host:
         raise ValueError("endpoint_url has no host.")
+    if has_secret and parsed.scheme != "https":
+        raise ValueError(
+            "Refusing to send an Authorization token over plaintext http://; "
+            "use https:// for the sync endpoint."
+        )
     try:
         addrinfos = socket.getaddrinfo(host, parsed.port, proto=socket.IPPROTO_TCP)
     except OSError as exc:

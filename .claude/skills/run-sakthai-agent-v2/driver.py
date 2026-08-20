@@ -160,16 +160,7 @@ def main() -> int:
 
         print("\nWeb API server (headless):")
         # The `dashboard` CLI command was removed (5de2c25); the JSON surface
-        # now lives in `python -m sakthai.web.server` on 127.0.0.1:3001. All
-        # /api/* endpoints require a Bearer token (web_auth fact in the same
-        # MemoryStore the server reads), so fetch it via `sakthai web setup`.
-        rc, setup_out = run(["web", "setup"], env)
-        token = ""
-        if rc == 0:
-            for line in setup_out.splitlines():
-                if line.strip().startswith("Token:"):
-                    token = line.split(":", 1)[1].strip()
-                    break
+        # now lives in `python -m sakthai.web.server` on 127.0.0.1:3001.
         srv = subprocess.Popen(
             [sys.executable, "-m", "sakthai.web.server"],
             env=env,
@@ -177,15 +168,11 @@ def main() -> int:
             stderr=subprocess.DEVNULL,
         )
         try:
-            headers = {"Authorization": f"Bearer {token}"} if token else {}
             stages: dict = {}
             deadline = time.monotonic() + 10
             while time.monotonic() < deadline:
                 try:
-                    req = urllib.request.Request(
-                        "http://127.0.0.1:3001/api/stages", headers=headers
-                    )
-                    with urllib.request.urlopen(req, timeout=2) as r:
+                    with urllib.request.urlopen("http://127.0.0.1:3001/api/stages", timeout=2) as r:
                         stages = json.loads(r.read())
                     break
                 except OSError:
@@ -193,10 +180,7 @@ def main() -> int:
             check("web server serves /api/stages JSON", "kpis" in stages)
             eco: dict = {}
             try:
-                req = urllib.request.Request(
-                    "http://127.0.0.1:3001/api/ecosystem", headers=headers
-                )
-                with urllib.request.urlopen(req, timeout=2) as r:
+                with urllib.request.urlopen("http://127.0.0.1:3001/api/ecosystem", timeout=2) as r:
                     eco = json.loads(r.read())
             except OSError:
                 pass

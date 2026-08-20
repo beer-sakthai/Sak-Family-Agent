@@ -1,0 +1,28 @@
+def _get_request_executor(
+    client: Any,
+    payload: dict[str, Any],
+    on_token: Callable[[str], None] | None = None,
+) -> Callable[[], dict[str, Any]]:
+    """Determine and return the appropriate request execution function."""
+    if on_token is not None and hasattr(client, "stream"):
+        cb = on_token
+        return lambda: _stream_chat(client, payload, cb)
+
+    if hasattr(client, "post"):
+
+        def _do_post() -> dict[str, Any]:
+            resp = client.post("/chat/completions", json=payload)
+            resp.raise_for_status()
+            return resp.json()  # type: ignore[no-any-return]
+
+        return _do_post
+
+    if hasattr(client, "chat") and hasattr(client.chat, "completions"):
+
+        def _do_openai() -> dict[str, Any]:
+            raw = client.chat.completions.create(**payload)
+            return raw.model_dump()  # type: ignore[no-any-return]
+
+        return _do_openai
+
+    raise AgentError(f"Unsupported client type: {type(client)}")

@@ -8,9 +8,8 @@ export async function GET(request: Request) {
     const metrics = await getMetricsSummary(demo);
     return NextResponse.json({ success: true, metrics });
   } catch (error: any) {
-    console.error("Secure Log [GET /api/metrics]: Failed to fetch metrics:", error);
     return NextResponse.json(
-      { success: false, error: "An unexpected error occurred while fetching metrics data." },
+      { success: false, error: error?.message || "Failed to fetch metrics data" },
       { status: 500 }
     );
   }

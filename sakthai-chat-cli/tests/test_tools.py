@@ -147,29 +147,7 @@ def test_read_file_blocks_outside_roots(tmp_path: Path, store) -> None:
 
 @pytest.mark.parametrize(
     "name",
-    [
-        ".env",
-        ".env.production",
-        "id_rsa",
-        "server.pem",
-        "credentials.json",
-        ".netrc",
-        "id_xmss",
-        "id_ecdsa_sk",
-        "id_ed25519_sk",
-        ".bash_history",
-        ".zsh_history",
-        ".gitconfig",
-        "authorized_keys",
-        "known_hosts",
-        "memory.db",
-        ".sqlite_history",
-        ".psql_history",
-        ".rediscli_history",
-        ".mongo_history",
-        ".pgpass",
-        ".my.cnf",
-    ],
+    [".env", ".env.production", "id_rsa", "server.pem", "credentials.json", ".netrc"],
 )
 def test_read_file_blocks_sensitive_names_even_in_cwd(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store, name: str

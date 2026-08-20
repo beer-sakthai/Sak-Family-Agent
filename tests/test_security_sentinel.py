@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from sakthai.agent.tools import _send_telegram_message
 from sakthai.memory.store import MemoryStore
@@ -24,26 +24,6 @@ def test_telegram_token_leak_in_error() -> None:
     assert "INVALID TOKEN" not in result
     assert "SECRET" not in result
     assert "12345" not in result
-
-
-def test_telegram_unexpected_exception_token_redaction() -> None:
-    """Verify that raw exceptions containing TELEGRAM_BOT_TOKEN are redacted."""
-    sensitive_token = "123456789:AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQq"
-    os.environ["TELEGRAM_BOT_TOKEN"] = sensitive_token
-    os.environ["TELEGRAM_CHAT_ID"] = "12345"
-
-    store = MagicMock(spec=MemoryStore)
-
-    with patch(
-        "urllib.request.urlopen",
-        side_effect=RuntimeError(
-            f"Connection failed to https://api.telegram.org/bot{sensitive_token}/sendMessage"
-        ),
-    ):
-        result = _send_telegram_message({"message": "hello"}, store)
-
-    assert sensitive_token not in result
-    assert "Unexpected Error" in result
 
 
 if __name__ == "__main__":

@@ -87,10 +87,6 @@ CREATE INDEX IF NOT EXISTS idx_facts_updated ON facts(updated_at);
 CREATE INDEX IF NOT EXISTS idx_obs_weight ON observations(weight);
 """
 
-# Pre-split and strip SCHEMA statements into a static module-level list to avoid
-# dynamic split/strip operations inside database migration loops at runtime.
-SCHEMA_STATEMENTS = [s.strip() for s in SCHEMA.split(";") if s.strip()]
-
 # Flat column set for snapshot_to_csv(): facts and observations in one file,
 # distinguished by the leading "type" column.
 CSV_COLUMNS = [
@@ -281,17 +277,14 @@ class MemoryStore:
                     )
                     current = 1
 
-            migrated_versions = []
             for version in sorted(migrations):
                 if version > current:
                     logger.info("Migrating memory schema to v%d", version)
                     migrations[version]()
-                    migrated_versions.append((version, _now()))
-            if migrated_versions:
-                self._conn.executemany(
-                    "INSERT OR IGNORE INTO schema_version (version, migrated_at) VALUES (?, ?)",
-                    migrated_versions,
-                )
+                    self._conn.execute(
+                        "INSERT OR IGNORE INTO schema_version (version, migrated_at) VALUES (?, ?)",
+                        (version, _now()),
+                    )
             self._conn.commit()
         except Exception:
             with contextlib.suppress(sqlite3.OperationalError):
@@ -301,8 +294,10 @@ class MemoryStore:
 
     def _migration_v1(self) -> None:
         # Run statements one at a time; executescript() would force a commit.
-        for statement in SCHEMA_STATEMENTS:
-            self._conn.execute(statement)
+        for statement in SCHEMA.split(";"):
+            stripped = statement.strip()
+            if stripped:
+                self._conn.execute(stripped)
 
     def _migration_v2(self) -> None:
         cols = {r["name"] for r in self._conn.execute("PRAGMA table_info(facts)")}

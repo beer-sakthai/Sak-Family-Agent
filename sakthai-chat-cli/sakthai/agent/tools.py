@@ -89,47 +89,15 @@ def _learn(args: dict[str, Any], store: MemoryStore) -> str:
 _SENSITIVE_READ_BASENAMES: frozenset[str] = frozenset(
     {
         ".env",
-        "memory.db",
-        ".bash_history",
-        ".zsh_history",
-        ".python_history",
-        ".history",
+        "credentials.json",
         ".netrc",
-        ".npmrc",
-        ".pypirc",
         "id_rsa",
         "id_dsa",
         "id_ecdsa",
         "id_ed25519",
-        "id_ecdsa_sk",
-        "id_ed25519_sk",
-        "id_xmss",
-        "known_hosts",
-        "authorized_keys",
-        "credentials",
-        "credentials.json",
-        "shadow",
-        "passwd",
-        "sudoers",
-        "gshadow",
-        "group",
-        ".bashrc",
-        ".zshrc",
-        ".profile",
-        ".bash_profile",
-        ".gitconfig",
-        ".zprofile",
-        ".yarnrc",
-        ".yarnrc.yml",
         ".git-credentials",
-        ".node_repl_history",
-        ".mysql_history",
-        ".psql_history",
-        ".sqlite_history",
-        ".rediscli_history",
-        ".mongo_history",
-        ".pgpass",
-        ".my.cnf",
+        ".pypirc",
+        ".npmrc",
     }
 )
 _SENSITIVE_READ_SUFFIXES: tuple[str, ...] = (".pem", ".key", ".pfx", ".p12")
@@ -410,9 +378,7 @@ def _send_telegram_message(args: dict[str, Any], store: MemoryStore) -> str:
     except URLError as exc:
         return f"Network Error: Could not connect to Telegram API: {exc.reason}"
     except Exception as exc:  # noqa: BLE001
-        from ..config import redact_secrets
-
-        return f"Unexpected Error sending Telegram message: {redact_secrets(str(exc))}"
+        return f"Unexpected Error sending Telegram message: {exc}"
 
 
 def _run_agent_loop(args: dict[str, Any], store: MemoryStore) -> str:

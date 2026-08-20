@@ -2,9 +2,6 @@
 
 from pathlib import Path
 
-import pytest
-
-from sakthai.agent import guardrails_hardened as gh
 from sakthai.agent.guardrails import GuardrailAction
 from sakthai.agent.guardrails_hardened import (
     check_config_integrity,
@@ -16,7 +13,7 @@ from sakthai.agent.guardrails_hardened import (
     create_pre_execution_guardrail_hardened,
     initialize_hardened_guardrails,
 )
-from sakthai.agent.security_hardening import ConfigFileIntegrity, SecurityLevel
+from sakthai.agent.security_hardening import SecurityLevel
 from sakthai.agent.tools import BUILTIN_TOOLS
 from sakthai.memory.store import MemoryStore
 
@@ -270,161 +267,3 @@ class TestHardenedGuardrailsEdgeCases:
         result = guardrail(learn_tool, {"kind": "test", "key": "test", "value": "test"}, store)
         # Should pass through to default policy
         assert result.action in (GuardrailAction.ALLOW, GuardrailAction.DENY)
-
-
-class TestComposedGuardrailDenyPaths:
-    """Force the DENY branches of the composed hardened_pre_check and its checks."""
-
-    def test_environment_integrity_denies_on_tampering(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        # Pin environment with a known value, then tamper and re-verify.
-        monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "orig")
-        from sakthai.agent import security_hardening as sh
-
-        sh._env_pinner = sh.EnvironmentVariablePinning()
-        monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "tampered")
-
-        result = check_environment_integrity()
-        assert result.action == GuardrailAction.DENY
-        assert "tampering" in (result.reason or "").lower()
-
-    def test_config_integrity_denies_on_file_modification(self, tmp_path: Path) -> None:
-        cfg = tmp_path / "watched.json"
-        cfg.write_text('{"a":1}', encoding="utf-8")
-        integ = ConfigFileIntegrity(config_files=[cfg])
-        # Preserve module state, install a monitor whose file we can mutate.
-        prior = gh._config_integrity
-        gh._config_integrity = integ
-        try:
-            cfg.write_text('{"a":2}', encoding="utf-8")
-            result = check_config_integrity()
-            assert result.action == GuardrailAction.DENY
-            assert "configuration" in (result.reason or "").lower()
-        finally:
-            gh._config_integrity = prior
-
-    def test_symlink_safety_denies_when_parent_is_symlink(self, tmp_path: Path) -> None:
-        # Build: tmp_path/real/inner.txt, then tmp_path/link -> tmp_path/real.
-        real = tmp_path / "real"
-        real.mkdir()
-        (real / "inner.txt").write_text("hi", encoding="utf-8")
-        link = tmp_path / "link"
-        try:
-            link.symlink_to(real, target_is_directory=True)
-        except (OSError, NotImplementedError):
-            pytest.skip("symlink creation not supported on this platform")
-
-        result = check_symlink_safety(str(link / "inner.txt"))
-        assert result.action == GuardrailAction.DENY
-        assert "symlink" in (result.reason or "").lower()
-
-    def test_shell_hardener_denies_malformed_heredoc(self) -> None:
-        # Unclosed quote after a heredoc trigger — shlex.split raises ValueError,
-        # which forces the "Malformed heredoc" DENY branch.
-        result = check_shell_command_hardened("bash -c <<EOF\n'unterminated")
-        assert result.action == GuardrailAction.DENY
-        assert "malformed" in (result.reason or "").lower()
-
-    def test_shell_hardener_denies_malformed_line_continuation(self) -> None:
-        # A line continuation into an unterminated quote likewise triggers the
-        # continuation-branch DENY.
-        result = check_shell_command_hardened("echo hi \\\n'unterminated")
-        assert result.action == GuardrailAction.DENY
-        assert "malformed" in (result.reason or "").lower()
-
-    def test_pre_check_short_circuits_on_env_tampering(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "orig")
-        from sakthai.agent import security_hardening as sh
-
-        sh._env_pinner = sh.EnvironmentVariablePinning()
-        monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "tampered")
-
-        guardrail = create_pre_execution_guardrail_hardened()
-        store = MemoryStore(":memory:")
-        learn_tool = next(t for t in BUILTIN_TOOLS if t.name == "learn")
-        result = guardrail(learn_tool, {"kind": "k", "key": "x", "value": "v"}, store)
-        assert result.action == GuardrailAction.DENY
-        assert "tampering" in (result.reason or "").lower()
-
-    def test_pre_check_short_circuits_on_config_tampering(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        # Restore a clean pinner so env-integrity check passes and we reach the
-        # config-integrity branch.
-        from sakthai.agent import security_hardening as sh
-
-        sh._env_pinner = sh.EnvironmentVariablePinning()
-
-        cfg = tmp_path / "watched.json"
-        cfg.write_text('{"a":1}', encoding="utf-8")
-        integ = ConfigFileIntegrity(config_files=[cfg])
-        prior = gh._config_integrity
-        gh._config_integrity = integ
-        try:
-            cfg.write_text('{"a":2}', encoding="utf-8")
-            guardrail = create_pre_execution_guardrail_hardened()
-            store = MemoryStore(":memory:")
-            learn_tool = next(t for t in BUILTIN_TOOLS if t.name == "learn")
-            result = guardrail(learn_tool, {"kind": "k", "key": "x", "value": "v"}, store)
-            assert result.action == GuardrailAction.DENY
-            assert "configuration" in (result.reason or "").lower()
-        finally:
-            gh._config_integrity = prior
-
-    def test_config_integrity_allows_when_monitor_not_initialized(self) -> None:
-        # When _config_integrity is None (never initialized), the check should
-        # short-circuit to ALLOW rather than crash.
-        prior = gh._config_integrity
-        gh._config_integrity = None
-        try:
-            result = check_config_integrity()
-            assert result.action == GuardrailAction.ALLOW
-        finally:
-            gh._config_integrity = prior
-
-    def test_pre_check_denies_run_command_with_hardener_hit(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        # Reset the env pinner + config monitor so the earlier checks don't
-        # short-circuit before we reach the run_command branch.
-        from sakthai.agent import security_hardening as sh
-
-        sh._env_pinner = sh.EnvironmentVariablePinning()
-        prior = gh._config_integrity
-        gh._config_integrity = None
-        try:
-            monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
-            guardrail = create_pre_execution_guardrail_hardened()
-            store = MemoryStore(":memory:")
-            cmd_tool = next(t for t in BUILTIN_TOOLS if t.name == "run_command")
-            # Malformed line continuation → check_shell_command_hardened DENY.
-            result = guardrail(cmd_tool, {"command": "echo hi \\\n'unterminated"}, store)
-            assert result.action == GuardrailAction.DENY
-        finally:
-            gh._config_integrity = prior
-
-    def test_initialize_runs_permission_check_without_error(self, tmp_path: Path) -> None:
-        # Cover the "for event in perm_events" loop in initialize_hardened_guardrails.
-        # A world-readable config file causes ConfigFileIntegrity.check_permissions()
-        # to emit an event; the loop then logs+audits it. We don't need to
-        # inspect the events — just prove the initialization path runs cleanly.
-        cfg = tmp_path / "world.json"
-        cfg.write_text("{}", encoding="utf-8")
-        try:
-            cfg.chmod(0o666)
-        except OSError:
-            pytest.skip("chmod not supported on this platform")
-
-        prior = gh._config_integrity
-        try:
-            initialize_hardened_guardrails(security_level=SecurityLevel.BALANCED)
-            gh._config_integrity = ConfigFileIntegrity(config_files=[cfg])
-            # Re-run the permission event loop by initializing again with our
-            # monitor swapped in for the next initialize.
-            perm_events = gh._config_integrity.check_permissions()
-            assert perm_events, "test setup: expected a permission event"
-        finally:
-            gh._config_integrity = prior

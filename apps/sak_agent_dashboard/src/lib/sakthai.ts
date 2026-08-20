@@ -416,7 +416,7 @@ export async function getSessionTranscripts(options?: {
   offset?: number;
   id?: string;
 }): Promise<{ sessions: SessionMeta[]; total: number; detail?: SessionTranscript }> {
-  let limit = Math.min(100, Math.max(1, Math.floor(options?.limit ?? 20)));
+  let limit = Math.max(1, Math.floor(options?.limit ?? 20));
   let offset = Math.max(0, Math.floor(options?.offset ?? 0));
   const search = options?.search ? options.search.trim().toLowerCase() : "";
   const targetId = options?.id ? options.id.trim() : null;

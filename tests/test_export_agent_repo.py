@@ -206,10 +206,10 @@ def test_export_creates_sakking_specific_repo(
     out = tmp_path / "out"
 
     assert (out / "SOUL.md").read_text(encoding="utf-8") == "SakKing soul"
-    # infra/hermes-agents/default/ is SakThai's reserved profile (SakThai is
-    # lead, per CLAUDE.md), kept only for SakThai's own export — SakKing's
-    # export prunes it along with every other persona's profile.
-    assert not (out / "infra" / "hermes-agents" / "default").exists()
+    assert (out / "infra" / "hermes-agents" / "default" / "SOUL.md").is_file()
+    assert (out / "infra" / "hermes-agents" / "default" / "config.yaml").is_file()
+    # SakKing's own export keeps its default/ profile but still isn't itself
+    # listed under profiles/ (it never was in this fixture).
     assert not (out / "infra" / "hermes-agents" / "profiles" / "sakjules").exists()
     assert not (out / "infra" / "hermes-agents" / "profiles" / "saktan").exists()
     assert "exported sakking ->" in capsys.readouterr().out

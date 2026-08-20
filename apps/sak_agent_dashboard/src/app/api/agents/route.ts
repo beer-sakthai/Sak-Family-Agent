@@ -8,9 +8,8 @@ export async function GET(request: Request) {
     const agents = await getAgentOverview(demo);
     return NextResponse.json({ success: true, agents });
   } catch (error: any) {
-    console.error("Secure Log [GET /api/agents]: Failed to fetch agents:", error);
     return NextResponse.json(
-      { success: false, error: "An unexpected error occurred while fetching agents data." },
+      { success: false, error: error?.message || "Failed to fetch agents data" },
       { status: 500 }
     );
   }

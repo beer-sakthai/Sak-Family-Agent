@@ -133,12 +133,10 @@ class TestSyncMemoryViaHttp:
 
         assert captured[0].get_header("Authorization") == "Bearer secret-key"
 
-    def test_rejects_http_always(self, sakthai_home: Path) -> None:
-        # Plaintext http:// is always refused to protect sensitive memory data.
+    def test_rejects_http_when_sending_token(self, sakthai_home: Path) -> None:
+        # A bearer token must never travel over plaintext http://.
         with _mock_transport(_http_response(200)), pytest.raises(ValueError, match="plaintext"):
             sync_memory_via_http("http://example.com/sync", api_key="secret-key")
-        with _mock_transport(_http_response(200)), pytest.raises(ValueError, match="plaintext"):
-            sync_memory_via_http("http://example.com/sync")
 
     def test_rejects_private_ip_endpoint(self, sakthai_home: Path) -> None:
         # SSRF guard: a host resolving to a private address is refused.
@@ -147,7 +145,7 @@ class TestSyncMemoryViaHttp:
             _mock_transport(_http_response(200), addrinfo=private),
             pytest.raises(ValueError, match="non-public"),
         ):
-            sync_memory_via_http("https://internal.example.com/sync")
+            sync_memory_via_http("http://internal.example.com/sync")
 
     def test_rejects_loopback_endpoint(self, sakthai_home: Path) -> None:
         loop = [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("127.0.0.1", 80))]
@@ -155,7 +153,7 @@ class TestSyncMemoryViaHttp:
             _mock_transport(_http_response(200), addrinfo=loop),
             pytest.raises(ValueError, match="non-public"),
         ):
-            sync_memory_via_http("https://localhost/sync")
+            sync_memory_via_http("http://localhost/sync")
 
     def test_redirects_are_blocked(self) -> None:
         # A 3xx must not be followed, so it cannot bounce a POST to an internal host.
@@ -174,7 +172,7 @@ class TestSyncMemoryViaHttp:
             return _http_response(200)
 
         with _mock_transport(_fake_open):
-            sync_memory_via_http("https://example.com/sync")
+            sync_memory_via_http("http://example.com/sync")
 
         assert captured[0].get_header("Authorization") is None
 

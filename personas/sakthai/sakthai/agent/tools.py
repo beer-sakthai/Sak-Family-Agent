@@ -15,7 +15,6 @@ import re
 import shlex
 import subprocess
 import sys
-import urllib.parse
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -23,7 +22,7 @@ from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 
-from ..config import register_secret, sakthai_home
+from ..config import sakthai_home
 from ..lead.capture import capture_lead as capture_lead_fact
 from ..learn.ingest import ingest_document as ingest_document_facts
 from ..memory.store import MemoryStore
@@ -35,11 +34,6 @@ MAX_CMD_OUTPUT_CHARS = 20_000  # run_command output cap
 _RECALL_LIMIT_MAX = 200  # cap on recall/search limit
 _CMD_TIMEOUT_DEFAULT = 30.0
 _CMD_TIMEOUT_MAX = 120.0
-
-_GRAPH_API_BASE = "https://graph.microsoft.com/v1.0"
-_GRAPH_TOKEN_URL_TMPL = "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token"  # nosec B105 - URL template, not a password
-_GRAPH_SCOPES = "Mail.Send Mail.Read Calendars.ReadWrite offline_access"
-_GRAPH_TOKEN_CACHE_NAME = "graph_token.json"  # nosec B105 - filename, not a password
 
 
 @dataclass(frozen=True)
@@ -98,47 +92,15 @@ def _learn(args: dict[str, Any], store: MemoryStore) -> str:
 _SENSITIVE_READ_BASENAMES: frozenset[str] = frozenset(
     {
         ".env",
-        "memory.db",
-        ".bash_history",
-        ".zsh_history",
-        ".python_history",
-        ".history",
+        "credentials.json",
         ".netrc",
-        ".npmrc",
-        ".pypirc",
         "id_rsa",
         "id_dsa",
         "id_ecdsa",
         "id_ed25519",
-        "id_ecdsa_sk",
-        "id_ed25519_sk",
-        "id_xmss",
-        "known_hosts",
-        "authorized_keys",
-        "credentials",
-        "credentials.json",
-        "shadow",
-        "passwd",
-        "sudoers",
-        "gshadow",
-        "group",
-        ".bashrc",
-        ".zshrc",
-        ".profile",
-        ".bash_profile",
-        ".gitconfig",
-        ".zprofile",
-        ".yarnrc",
-        ".yarnrc.yml",
         ".git-credentials",
-        ".node_repl_history",
-        ".mysql_history",
-        ".psql_history",
-        ".sqlite_history",
-        ".rediscli_history",
-        ".mongo_history",
-        ".pgpass",
-        ".my.cnf",
+        ".pypirc",
+        ".npmrc",
     }
 )
 _SENSITIVE_READ_SUFFIXES: tuple[str, ...] = (".pem", ".key", ".pfx", ".p12")
@@ -419,214 +381,7 @@ def _send_telegram_message(args: dict[str, Any], store: MemoryStore) -> str:
     except URLError as exc:
         return f"Network Error: Could not connect to Telegram API: {exc.reason}"
     except Exception as exc:  # noqa: BLE001
-        from ..config import redact_secrets
-
-        return f"Unexpected Error sending Telegram message: {redact_secrets(str(exc))}"
-
-
-def _graph_token_cache_path() -> Path:
-    return sakthai_home() / _GRAPH_TOKEN_CACHE_NAME
-
-
-def _graph_cached_refresh_token() -> str | None:
-    path = _graph_token_cache_path()
-    if not path.is_file():
-        return None
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-    token = data.get("refresh_token") if isinstance(data, dict) else None
-    return str(token) if token else None
-
-
-def _graph_write_token_cache(refresh_token: str) -> None:
-    """Persist the (possibly rotated) refresh token, matching MemoryStore's 0700/0600 perms."""
-    path = _graph_token_cache_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    import contextlib
-
-    with contextlib.suppress(OSError):
-        os.chmod(str(path.parent), 0o700)
-    payload = json.dumps({"refresh_token": refresh_token}).encode("utf-8")
-    fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    try:
-        os.write(fd, payload)
-    finally:
-        os.close(fd)
-    with contextlib.suppress(OSError):
-        os.chmod(str(path), 0o600)
-
-
-def _graph_access_token() -> str:
-    """Return a Graph API access token, refreshing via the cached/env refresh token.
-
-    Raises RuntimeError with a user-facing message on any setup or refresh failure.
-    """
-    client_id = os.environ.get("MS_GRAPH_CLIENT_ID")
-    tenant = os.environ.get("MS_GRAPH_TENANT_ID", "consumers")
-    refresh_token = _graph_cached_refresh_token() or os.environ.get("MS_GRAPH_REFRESH_TOKEN")
-    if not client_id or not refresh_token:
-        raise RuntimeError(
-            "Graph configuration missing. Set MS_GRAPH_CLIENT_ID and MS_GRAPH_REFRESH_TOKEN "
-            "(see scripts/graph_device_login.py for the one-time sign-in)."
-        )
-
-    url = _GRAPH_TOKEN_URL_TMPL.format(tenant=tenant)
-    data = urllib.parse.urlencode(
-        {
-            "client_id": client_id,
-            "grant_type": "refresh_token",
-            "refresh_token": refresh_token,
-            "scope": _GRAPH_SCOPES,
-        }
-    ).encode("utf-8")
-    request = urllib.request.Request(url, data=data, method="POST")
-    with urllib.request.urlopen(request, timeout=10) as response:  # nosec B310
-        body = json.loads(response.read().decode("utf-8"))
-
-    access_token = body.get("access_token")
-    if not access_token:
-        raise RuntimeError(
-            f"Graph token refresh failed: {body.get('error_description', 'unknown error')}"
-        )
-    new_refresh_token = body.get("refresh_token", refresh_token)
-    _graph_write_token_cache(str(new_refresh_token))
-    register_secret(str(access_token))
-    register_secret(str(new_refresh_token))
-    return str(access_token)
-
-
-def _graph_request(method: str, path: str, *, json_body: dict[str, Any] | None = None) -> Any:
-    token = _graph_access_token()
-    url = f"{_GRAPH_API_BASE}{path}"
-    data = json.dumps(json_body).encode("utf-8") if json_body is not None else None
-    headers = {"Authorization": f"Bearer {token}"}
-    if data is not None:
-        headers["Content-Type"] = "application/json"
-    request = urllib.request.Request(url, data=data, headers=headers, method=method)
-    with urllib.request.urlopen(request, timeout=10) as response:  # nosec B310
-        raw = response.read()
-    return json.loads(raw) if raw else None
-
-
-def _graph_safe(action_desc: str, fn: Callable[[], str]) -> str:
-    """Run a Graph handler body, turning network/API/config errors into a result string."""
-    try:
-        return fn()
-    except RuntimeError as exc:
-        return f"Error: {exc}"
-    except HTTPError as exc:
-        try:
-            err = json.loads(exc.read().decode("utf-8"))
-            message = err.get("error", {}).get("message", exc.reason)
-        except Exception:
-            message = exc.reason
-        return f"Microsoft Graph API Error ({exc.code}): {message}"
-    except URLError as exc:
-        return f"Network Error: Could not connect to Microsoft Graph: {exc.reason}"
-    except Exception as exc:  # noqa: BLE001
-        return f"Unexpected Error {action_desc}: {exc}"
-
-
-def _send_outlook_mail(args: dict[str, Any], store: MemoryStore) -> str:
-    to = args.get("to")
-    subject = args.get("subject")
-    body = args.get("body")
-    if not isinstance(to, str) or not to.strip():
-        raise ValueError("`to` is required and must be a non-empty string.")
-    if not isinstance(subject, str) or not subject.strip():
-        raise ValueError("`subject` is required and must be a non-empty string.")
-    if not isinstance(body, str) or not body.strip():
-        raise ValueError("`body` is required and must be a non-empty string.")
-
-    def _do() -> str:
-        payload = {
-            "message": {
-                "subject": subject,
-                "body": {"contentType": "Text", "content": body},
-                "toRecipients": [{"emailAddress": {"address": to}}],
-            },
-            "saveToSentItems": "true",
-        }
-        _graph_request("POST", "/me/sendMail", json_body=payload)
-        return f"Email sent to {to}."
-
-    return _graph_safe("sending email", _do)
-
-
-def _read_outlook_mail(args: dict[str, Any], store: MemoryStore) -> str:
-    limit = _coerce_limit(args.get("limit"), 10)
-
-    def _do() -> str:
-        result = _graph_request(
-            "GET",
-            f"/me/mailFolders/inbox/messages?$top={limit}&$select="
-            "subject,from,receivedDateTime,bodyPreview",
-        )
-        messages = (result or {}).get("value", [])
-        if not messages:
-            return "No messages found."
-        lines = ["Recent inbox messages:"]
-        for m in messages:
-            sender = (m.get("from") or {}).get("emailAddress", {}).get("address", "unknown")
-            lines.append(
-                f"  [{m.get('receivedDateTime', '')}] {sender} — "
-                f"{m.get('subject', '(no subject)')}: {m.get('bodyPreview', '')}"
-            )
-        return "\n".join(lines)
-
-    return _graph_safe("reading inbox", _do)
-
-
-def _list_calendar_events(args: dict[str, Any], store: MemoryStore) -> str:
-    limit = _coerce_limit(args.get("limit"), 10)
-
-    def _do() -> str:
-        result = _graph_request(
-            "GET",
-            f"/me/events?$top={limit}&$orderby=start%2FdateTime&$select=subject,start,end,location",
-        )
-        events = (result or {}).get("value", [])
-        if not events:
-            return "No upcoming events found."
-        lines = ["Upcoming calendar events:"]
-        for e in events:
-            start = (e.get("start") or {}).get("dateTime", "")
-            location = (e.get("location") or {}).get("displayName", "")
-            suffix = f" @ {location}" if location else ""
-            lines.append(f"  [{start}] {e.get('subject', '(no subject)')}{suffix}")
-        return "\n".join(lines)
-
-    return _graph_safe("listing calendar events", _do)
-
-
-def _create_calendar_event(args: dict[str, Any], store: MemoryStore) -> str:
-    subject = args.get("subject")
-    start = args.get("start")
-    end = args.get("end")
-    if not isinstance(subject, str) or not subject.strip():
-        raise ValueError("`subject` is required and must be a non-empty string.")
-    if not isinstance(start, str) or not start.strip():
-        raise ValueError("`start` is required and must be an ISO 8601 datetime string.")
-    if not isinstance(end, str) or not end.strip():
-        raise ValueError("`end` is required and must be an ISO 8601 datetime string.")
-    timezone = args.get("timezone") or "UTC"
-    location = args.get("location")
-
-    def _do() -> str:
-        payload: dict[str, Any] = {
-            "subject": subject,
-            "start": {"dateTime": start, "timeZone": timezone},
-            "end": {"dateTime": end, "timeZone": timezone},
-        }
-        if isinstance(location, str) and location.strip():
-            payload["location"] = {"displayName": location}
-        result = _graph_request("POST", "/me/events", json_body=payload)
-        link = (result or {}).get("webLink", "")
-        return f"Event created: {subject}" + (f" ({link})" if link else "")
-
-    return _graph_safe("creating calendar event", _do)
+        return f"Unexpected Error sending Telegram message: {exc}"
 
 
 def _run_agent_loop(args: dict[str, Any], store: MemoryStore) -> str:
@@ -851,88 +606,6 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["message"],
         },
         handler=_send_telegram_message,
-    ),
-    Tool(
-        name="send_outlook_mail",
-        description=(
-            "Send an email through Microsoft Outlook / Microsoft 365. Requires "
-            "MS_GRAPH_CLIENT_ID and MS_GRAPH_REFRESH_TOKEN in the environment."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "to": {"type": "string", "description": "Recipient email address."},
-                "subject": {"type": "string", "description": "Email subject line."},
-                "body": {"type": "string", "description": "Plain-text email body."},
-            },
-            "required": ["to", "subject", "body"],
-        },
-        handler=_send_outlook_mail,
-    ),
-    Tool(
-        name="read_outlook_mail",
-        description=(
-            "List recent messages from the Outlook inbox (subject, sender, preview). "
-            "Requires MS_GRAPH_CLIENT_ID and MS_GRAPH_REFRESH_TOKEN in the environment."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "limit": {
-                    "type": "integer",
-                    "description": "Maximum messages to return.",
-                    "default": 10,
-                },
-            },
-        },
-        handler=_read_outlook_mail,
-    ),
-    Tool(
-        name="list_calendar_events",
-        description=(
-            "List upcoming Outlook/Microsoft 365 calendar events. Requires "
-            "MS_GRAPH_CLIENT_ID and MS_GRAPH_REFRESH_TOKEN in the environment."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "limit": {
-                    "type": "integer",
-                    "description": "Maximum events to return.",
-                    "default": 10,
-                },
-            },
-        },
-        handler=_list_calendar_events,
-    ),
-    Tool(
-        name="create_calendar_event",
-        description=(
-            "Create an Outlook/Microsoft 365 calendar event. Requires MS_GRAPH_CLIENT_ID "
-            "and MS_GRAPH_REFRESH_TOKEN in the environment."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "subject": {"type": "string", "description": "Event title."},
-                "start": {
-                    "type": "string",
-                    "description": "Start datetime, ISO 8601 (e.g. '2026-08-05T14:00:00').",
-                },
-                "end": {
-                    "type": "string",
-                    "description": "End datetime, ISO 8601 (e.g. '2026-08-05T15:00:00').",
-                },
-                "timezone": {
-                    "type": "string",
-                    "description": "IANA/Windows timezone name. Default: UTC.",
-                    "default": "UTC",
-                },
-                "location": {"type": "string", "description": "Optional event location."},
-            },
-            "required": ["subject", "start", "end"],
-        },
-        handler=_create_calendar_event,
     ),
     Tool(
         name="run_agent_loop",

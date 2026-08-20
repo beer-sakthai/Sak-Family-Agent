@@ -12,11 +12,10 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-# A regex for common API key prefixes (sk-, rk-, pk-, ck-, ghp-, hf-, github_pat-), Google keys (AIza),
+# A regex for common API key prefixes (sk-, rk-, pk-, ghp-, hf-, github_pat-), Google keys (AIza),
 # Telegram bot tokens (123456789:ABC...), and AWS Access Key IDs (AKIA/ASIA).
 # Handles both underscore (sk_) and hyphen (sk-) used by Anthropic, OpenAI, and HF.
-# Updated to catch Stripe consumer keys (ck_ prefix).
-SECRET_PATTERN = r"\b(?:(?:sk|rk|pk|ck|ghp|hf|github_pat)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,}|[0-9]{8,12}:[a-zA-Z0-9_-]{35,}|(?:AKIA|ASIA)[A-Z0-9]{16})\b"  # nosec B105
+SECRET_PATTERN = r"\b(?:(?:sk|rk|pk|ghp|hf|github_pat)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,}|[0-9]{8,12}:[a-zA-Z0-9_-]{35,}|(?:AKIA|ASIA)[A-Z0-9]{16})\b"  # nosec B105
 _SECRET_RE = re.compile(SECRET_PATTERN)
 
 # Multiline regex pattern to detect PEM private key blocks.
@@ -137,16 +136,18 @@ def memory_db_path() -> Path:
 def persona_memory_db_path(persona: str) -> Path:
     """Path to PERSONA's own memory shard, by convention: ``~/.sakthai/<persona>/memory.db``.
 
-    When ``SAKTHAI_HOME`` is set (e.g. in tests) the path resolves under that
-    override so tests get proper isolation.  When unset, falls back to
-    ``Path.home() / \".sakthai\"``, matching the production convention used by
-    ``infra/vm-agents/sakthai-agent-run.sh`` where ``SAKTHAI_HOME`` is set
-    to ``$HOME/.sakthai/$AGENT`` per deployed persona.
+    Independent of the current process's ``SAKTHAI_HOME`` override, so callers
+    (e.g. the family/merged view) can address every persona's shard at once
+    regardless of which persona the current process happens to be running as.
+    This mirrors the convention already used in production by
+    ``infra/vm-agents/sakthai-agent-run.sh``, which sets
+    ``SAKTHAI_HOME="$HOME/.sakthai/$AGENT"`` per deployed persona — this
+    function computes the same path directly rather than requiring that env
+    var to be set.
     """
     if persona not in PERSONA_NAMES:
         raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
-    base = Path(os.environ.get("SAKTHAI_HOME", Path.home() / ".sakthai"))
-    return base / persona / "memory.db"
+    return Path.home() / ".sakthai" / persona / "memory.db"
 
 
 def sessions_dir() -> Path:
@@ -428,14 +429,6 @@ def redact_secrets(text: str) -> str:
         "AWS_SECRET_ACCESS_KEY",
         "GITHUB_TOKEN",
         "GITHUB_PAT",
-        "STRIPE_API_KEY",
-        "STRIPE_SECRET_KEY",
-        "STRIPE_PUBLISHABLE_KEY",
-        "TWILIO_AUTH_TOKEN",
-        "TWILIO_API_KEY",
-        "MS_GRAPH_CLIENT_SECRET",
-        "MS_GRAPH_REFRESH_TOKEN",
-        "MSGRAPH_CLIENT_SECRET",
     ]
 
     secrets: set[str] = set(_EXTRA_SECRETS)

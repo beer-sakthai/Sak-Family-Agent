@@ -439,11 +439,11 @@ def _prune_hermes_profiles(out: Path, persona: str) -> None:
                 else:
                     entry.unlink()
 
-    # SakThai's reserved default profile lives at infra/hermes-agents/default/,
-    # not under profiles/ (SakThai is lead, per CLAUDE.md) — keep it only for
-    # SakThai's own export.
+    # SakKing's reserved default profile lives at infra/hermes-agents/default/,
+    # not under profiles/ (see agent-self-evolution/AGENTS.md) — keep it only
+    # for SakKing's own export.
     default = out / "infra" / "hermes-agents" / "default"
-    if default.is_dir() and persona != "sakthai":
+    if default.is_dir() and persona != "sakking":
         shutil.rmtree(default)
 
 

@@ -26,10 +26,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -91,7 +91,7 @@ jobs:
           echo "sanitized_task_name=$SANITIZED_TASK_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Upload evaluation results
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: evaluation-results-${{ steps.run_eval.outputs.sanitized_model_name }}-${{ steps.run_eval.outputs.sanitized_task_name }}
           path: eval-results/
@@ -106,7 +106,7 @@ jobs:
     if: always() # Run even if some evals fail
     steps:
       - name: Download all evaluation result artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           pattern: evaluation-results-*
           path: eval-results
@@ -135,7 +135,7 @@ jobs:
           cat current-results.json
 
       - name: Upload consolidated results
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: current-results
           path: current-results.json
@@ -148,7 +148,7 @@ jobs:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     steps:
       - name: Download consolidated results
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: current-results
         continue-on-error: true
@@ -189,7 +189,7 @@ jobs:
 
       - name: Upload baseline results artifact (on main branch)
         if: github.ref == 'refs/heads/main' && steps.build_payload.outputs.skip == 'false'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: baseline-results-main
           path: current-results.json
@@ -204,7 +204,7 @@ jobs:
       actions: read # Permission to download artifacts from other runs
     steps:
       - name: Download consolidated current results
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: current-results
         continue-on-error: true
@@ -268,7 +268,7 @@ jobs:
 
       - name: Create issue on regression
         if: steps.check.outputs.has_regressions == 'true'
-        uses: actions/github-script@v9
+        uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');

@@ -18,9 +18,8 @@ export async function GET(request: Request) {
       auditLogs,
     });
   } catch (error: any) {
-    console.error("Secure Log [GET /api/memory]: Failed to fetch memory data:", error);
     return NextResponse.json(
-      { success: false, error: "An unexpected error occurred while fetching memory data." },
+      { success: false, error: error?.message || "Failed to fetch memory data" },
       { status: 500 }
     );
   }

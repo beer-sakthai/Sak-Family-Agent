@@ -1,0 +1,54 @@
+{
+  "run_id": "run_0c4702e8",
+  "workflow_name": "parallel_workflow",
+  "status": "FAILED",
+  "start_time": "2026-08-02T13:52:55.838552",
+  "end_time": "2026-08-02T13:52:55.848051",
+  "step_results": {
+    "step_root": {
+      "step_id": "step_root",
+      "status": "COMPLETED",
+      "output": {
+        "seed": 100,
+        "status": "initialized"
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:52:55.846874",
+      "end_time": "2026-08-02T13:52:55.847367"
+    },
+    "step_branch_a": {
+      "step_id": "step_branch_a",
+      "status": "COMPLETED",
+      "output": {
+        "base": 100,
+        "multiplier": 2
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:52:55.847740",
+      "end_time": "2026-08-02T13:52:55.847803"
+    },
+    "step_branch_b": {
+      "step_id": "step_branch_b",
+      "status": "COMPLETED",
+      "output": {
+        "base": 100,
+        "adder": 50
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:52:55.847837",
+      "end_time": "2026-08-02T13:52:55.847864"
+    },
+    "step_join": {
+      "step_id": "step_join",
+      "status": "FAILED",
+      "output": {},
+      "error": "Key 'result' (path 'result') not found in step 'step_branch_a' output.",
+      "attempts": 1,
+      "start_time": "2026-08-02T13:52:55.847965",
+      "end_time": "2026-08-02T13:52:55.848017"
+    }
+  }
+}

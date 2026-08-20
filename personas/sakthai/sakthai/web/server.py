@@ -151,64 +151,6 @@ class _Handler(SimpleHTTPRequestHandler):
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
         logger.info(format, *args)
 
-    def _has_auth_attempt(self) -> bool:
-        """True if the request contains any authentication credentials."""
-        if self.headers.get("Authorization"):
-            return True
-        parsed = urlparse(self.path)
-        query = parsed.query
-        if query:
-            for item in query.split("&"):
-                if "=" in item:
-                    k, _ = item.split("=", 1)
-                    if k in ("token", "bearer_token"):
-                        return True
-        cookie_header = self.headers.get("Cookie", "")
-        if cookie_header:
-            for item in cookie_header.split(";"):
-                if "=" in item:
-                    k, _ = item.strip().split("=", 1)
-                    if k in ("token", "bearer_token"):
-                        return True
-        return False
-
-    def _is_authenticated(self) -> bool:
-        expected_token = _get_or_create_bearer_token()
-        if not expected_token:
-            return False
-
-        # 1. Check Authorization header
-        auth_header = self.headers.get("Authorization", "")
-        if auth_header and auth_header.startswith("Bearer "):
-            token = auth_header[7:]
-            if secrets.compare_digest(token, expected_token):
-                return True
-
-        # 2. Check query parameter 'token' or 'bearer_token'
-        parsed = urlparse(self.path)
-        query = parsed.query
-        if query:
-            for item in query.split("&"):
-                if "=" in item:
-                    k, v = item.split("=", 1)
-                    if k in ("token", "bearer_token"):
-                        val = unquote(v)
-                        if secrets.compare_digest(val, expected_token):
-                            return True
-
-        # 3. Check Cookie header
-        cookie_header = self.headers.get("Cookie", "")
-        if cookie_header:
-            for item in cookie_header.split(";"):
-                if "=" in item:
-                    k, v = item.strip().split("=", 1)
-                    if k in ("token", "bearer_token"):
-                        val = unquote(v)
-                        if secrets.compare_digest(val, expected_token):
-                            return True
-
-        return False
-
     def end_headers(self) -> None:
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("X-Content-Type-Options", "nosniff")
@@ -217,21 +159,6 @@ class _Handler(SimpleHTTPRequestHandler):
             "Content-Security-Policy",
             "default-src 'self'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';",
         )
-        # If authenticated via query param, set cookie so subsequent static asset requests load seamlessly
-        parsed = urlparse(self.path)
-        query = parsed.query
-        if query:
-            expected_token = _get_or_create_bearer_token()
-            for item in query.split("&"):
-                if "=" in item:
-                    k, v = item.split("=", 1)
-                    if k in ("token", "bearer_token"):
-                        val = unquote(v)
-                        if secrets.compare_digest(val, expected_token):
-                            self.send_header(
-                                "Set-Cookie", f"token={val}; Path=/; HttpOnly; SameSite=Strict"
-                            )
-                            break
         super().end_headers()
 
     def _send_json(self, code: int, payload: dict[str, Any]) -> None:
@@ -250,40 +177,26 @@ class _Handler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
 
-        if path == "/health":
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Content-Length", "16")
-            self.end_headers()
-            self.wfile.write(b'{"status": "ok"}')
-            return
-
         if path.startswith("/api/"):
-            if not self._is_authenticated():
-                auth_header = self.headers.get("Authorization", "")
-                if auth_header and not auth_header.startswith("Bearer "):
-                    self._send_json(
-                        401,
-                        {
-                            "error": "Unauthorized",
-                            "message": "Authorization header must be in 'Bearer <token>' format",
-                        },
-                    )
-                    return
-
-                if not self._has_auth_attempt():
-                    self._send_json(
-                        401, {"error": "Unauthorized", "message": "Missing Authorization header"}
-                    )
-                else:
-                    self._send_json(403, {"error": "Forbidden", "message": "Invalid Bearer token"})
+            auth_header = self.headers.get("Authorization", "")
+            if not auth_header:
+                self._send_json(
+                    401, {"error": "Unauthorized", "message": "Missing Authorization header"}
+                )
                 return
-        else:
-            if not self._is_authenticated():
-                self.send_response(401)
-                self.send_header("Content-Type", "text/plain; charset=utf-8")
-                self.end_headers()
-                self.wfile.write(b"Unauthorized: Missing or invalid bearer token")
+            if not auth_header.startswith("Bearer "):
+                self._send_json(
+                    401,
+                    {
+                        "error": "Unauthorized",
+                        "message": "Authorization header must be in 'Bearer <token>' format",
+                    },
+                )
+                return
+            token = auth_header[7:]
+            expected_token = _get_or_create_bearer_token()
+            if not secrets.compare_digest(token, expected_token):
+                self._send_json(403, {"error": "Forbidden", "message": "Invalid Bearer token"})
                 return
 
         if path == "/api/stages":

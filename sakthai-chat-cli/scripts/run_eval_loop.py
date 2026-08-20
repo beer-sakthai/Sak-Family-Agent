@@ -128,49 +128,7 @@ def run_evaluation():
 def _generate_css_styles():
     """Returns the CSS style sheet for the viewer."""
     return """
-def generate_html_viewer(results, output_path):
-    metrics = results["metrics"]
-    cases = results["cases"]
-
-    case_cards = ""
-    for c in cases:
-        savings = round((1.0 - len(c["new_output"]) / len(c["old_output"])) * 100, 1)
-        case_cards += f"""
-        <div class="case-card" data-category="{c["category"]}">
-            <div class="case-header">
-                <span class="category-badge">{c["category"]}</span>
-                <span class="case-id">Case #{c["id"]}</span>
-            </div>
-            <div class="case-query">
-                <strong>Query:</strong> "{c["query"]}"
-            </div>
-            <div class="comparator">
-                <div class="panel old-panel">
-                    <div class="panel-header">Old Skill Output <span class="score-badge bad">{int(c["old_score"]*100)}%</span></div>
-                    <div class="panel-content">{c["old_output"].replace('\\n', '<br>').replace('```', '')}</div>
-                    <div class="char-count">Length: {len(c["old_output"])} chars</div>
-                </div>
-                <div class="panel new-panel">
-                    <div class="panel-header">New Skill Output <span class="score-badge good">{int(c["new_score"]*100)}%</span></div>
-                    <div class="panel-content">{c["new_output"].replace('\\n', '<br>').replace('```', '')}</div>
-                    <div class="char-count">Length: {len(c["new_output"])} chars <span class="savings-tag">({savings}% fewer)</span></div>
-                </div>
-            </div>
-            <div class="eval-feedback">
-                <strong>Judge Feedback:</strong> {c["eval_feedback"]}
-            </div>
-        </div>
-        """
-
-    html_content = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skill Evaluation Review Viewer</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        :root {{
+        :root {
             --bg-color: #0b0c10;
             --surface-color: #171923;
             --surface-card: #202433;
@@ -182,23 +140,23 @@ def generate_html_viewer(results, output_path):
             --accent-green: #10b981;
             --accent-red: #ef4444;
             --border-color: #2d3748;
-        }}
+        }
 
-        * {{
+        * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-        }}
+        }
 
-        body {{
+        body {
             background-color: var(--bg-color);
             color: var(--text-color);
             font-family: 'Inter', sans-serif;
             line-height: 1.6;
             padding: 2rem;
-        }}
+        }
 
-        header {{
+        header {
             max-width: 1200px;
             margin: 0 auto 2rem auto;
             display: flex;
@@ -206,38 +164,38 @@ def generate_html_viewer(results, output_path):
             align-items: center;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 1.5rem;
-        }}
+        }
 
-        .brand {{
+        .brand {
             display: flex;
             align-items: center;
             gap: 0.75rem;
-        }}
+        }
 
-        .logo-icon {{
+        .logo-icon {
             font-size: 2rem;
-        }}
+        }
 
-        .brand-title {{
+        .brand-title {
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--text-title);
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-        }}
+        }
 
-        .tagline {{
+        .tagline {
             font-size: 0.85rem;
             color: #718096;
-        }}
+        }
 
-        .tabs {{
+        .tabs {
             display: flex;
             gap: 1rem;
-        }}
+        }
 
-        .tab-btn {{
+        .tab-btn {
             background: transparent;
             border: 1px solid var(--border-color);
             color: var(--text-color);
@@ -246,28 +204,28 @@ def generate_html_viewer(results, output_path):
             cursor: pointer;
             font-weight: 500;
             transition: all 0.2s ease;
-        }}
+        }
 
-        .tab-btn.active, .tab-btn:hover {{
+        .tab-btn.active, .tab-btn:hover {
             background: var(--primary);
             color: white;
             border-color: var(--primary);
             box-shadow: 0 0 10px var(--primary-glow);
-        }}
+        }
 
-        .container {{
+        .container {
             max-width: 1200px;
             margin: 0 auto;
-        }}
+        }
 
-        .metrics-grid {{
+        .metrics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
-        }}
+        }
 
-        .metric-card {{
+        .metric-card {
             background-color: var(--surface-color);
             border: 1px solid var(--border-color);
             border-radius: 0.75rem;
@@ -276,13 +234,13 @@ def generate_html_viewer(results, output_path):
             position: relative;
             overflow: hidden;
             transition: transform 0.2s ease;
-        }}
+        }
 
-        .metric-card:hover {{
+        .metric-card:hover {
             transform: translateY(-2px);
-        }}
+        }
 
-        .metric-card::before {{
+        .metric-card::before {
             content: '';
             position: absolute;
             top: 0;
@@ -290,33 +248,33 @@ def generate_html_viewer(results, output_path):
             width: 4px;
             height: 100%;
             background: linear-gradient(to bottom, var(--primary), var(--secondary));
-        }}
+        }
 
-        .metric-title {{
+        .metric-title {
             font-size: 0.85rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: #718096;
             margin-bottom: 0.5rem;
-        }}
+        }
 
-        .metric-value {{
+        .metric-value {
             font-size: 2.25rem;
             font-weight: 700;
             color: var(--text-title);
-        }}
+        }
 
-        .metric-diff {{
+        .metric-diff {
             font-size: 0.85rem;
             margin-top: 0.25rem;
             color: var(--accent-green);
-        }}
+        }
 
-        .metric-diff.neutral {{
+        .metric-diff.neutral {
             color: #a0aec0;
-        }}
+        }
 
-        .section-title {{
+        .section-title {
             font-size: 1.25rem;
             font-weight: 600;
             color: var(--text-title);
@@ -324,25 +282,25 @@ def generate_html_viewer(results, output_path):
             display: flex;
             align-items: center;
             gap: 0.5rem;
-        }}
+        }
 
-        .case-card {{
+        .case-card {
             background-color: var(--surface-color);
             border: 1px solid var(--border-color);
             border-radius: 0.75rem;
             padding: 1.5rem;
             margin-bottom: 1.5rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }}
+        }
 
-        .case-header {{
+        .case-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1rem;
-        }}
+        }
 
-        .category-badge {{
+        .category-badge {
             background-color: rgba(99, 102, 241, 0.1);
             color: var(--primary);
             border: 1px solid rgba(99, 102, 241, 0.2);
@@ -350,36 +308,36 @@ def generate_html_viewer(results, output_path):
             border-radius: 9999px;
             font-size: 0.75rem;
             font-weight: 600;
-        }}
+        }
 
-        .case-id {{
+        .case-id {
             font-size: 0.85rem;
             color: #718096;
             font-weight: 500;
-        }}
+        }
 
-        .case-query {{
+        .case-query {
             font-size: 1.05rem;
             color: var(--text-title);
             margin-bottom: 1rem;
             padding-left: 0.5rem;
             border-left: 3px solid var(--primary);
-        }}
+        }
 
-        .comparator {{
+        .comparator {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1.5rem;
             margin-bottom: 1rem;
-        }}
+        }
 
-        @media (max-width: 768px) {{
-            .comparator {{
+        @media (max-width: 768px) {
+            .comparator {
                 grid-template-columns: 1fr;
-            }}
-        }}
+            }
+        }
 
-        .panel {{
+        .panel {
             background-color: var(--surface-card);
             border: 1px solid var(--border-color);
             border-radius: 0.5rem;
@@ -387,9 +345,9 @@ def generate_html_viewer(results, output_path):
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-        }}
+        }
 
-        .panel-header {{
+        .panel-header {
             font-size: 0.85rem;
             font-weight: 600;
             color: var(--text-title);
@@ -399,65 +357,65 @@ def generate_html_viewer(results, output_path):
             display: flex;
             justify-content: space-between;
             align-items: center;
-        }}
+        }
 
-        .score-badge {{
+        .score-badge {
             font-size: 0.75rem;
             padding: 0.125rem 0.5rem;
             border-radius: 0.25rem;
             font-weight: 600;
-        }}
+        }
 
-        .score-badge.good {{
+        .score-badge.good {
             background-color: rgba(16, 185, 129, 0.1);
             color: var(--accent-green);
             border: 1px solid rgba(16, 185, 129, 0.2);
-        }}
+        }
 
-        .score-badge.bad {{
+        .score-badge.bad {
             background-color: rgba(239, 68, 68, 0.1);
             color: var(--accent-red);
             border: 1px solid rgba(239, 68, 68, 0.2);
-        }}
+        }
 
-        .panel-content {{
+        .panel-content {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.9rem;
             white-space: pre-wrap;
             color: #e2e8f0;
             margin-bottom: 1rem;
             flex-grow: 1;
-        }}
+        }
 
-        .char-count {{
+        .char-count {
             font-size: 0.75rem;
             color: #718096;
             display: flex;
             justify-content: space-between;
-        }}
+        }
 
-        .savings-tag {{
+        .savings-tag {
             color: var(--accent-green);
             font-weight: 600;
-        }}
+        }
 
-        .eval-feedback {{
+        .eval-feedback {
             background-color: rgba(168, 85, 247, 0.05);
             border: 1px dashed rgba(168, 85, 247, 0.2);
             border-radius: 0.5rem;
             padding: 0.75rem 1rem;
             font-size: 0.85rem;
             color: #d6bcfa;
-        }}
+        }
 
-        .diff-container {{
+        .diff-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1.5rem;
             margin-top: 1rem;
-        }}
+        }
 
-        .diff-box {{
+        .diff-box {
             background-color: var(--surface-color);
             border: 1px solid var(--border-color);
             border-radius: 0.75rem;
@@ -467,9 +425,9 @@ def generate_html_viewer(results, output_path):
             white-space: pre-wrap;
             overflow-x: auto;
             max-height: 500px;
-        }}
+        }
 
-        .hidden {{
+        .hidden {
             display: none !important;
         }
     """
@@ -519,30 +477,6 @@ def _generate_dashboard_metrics_html(metrics):
     """Generates the HTML block representing the main dashboard metrics."""
     return f"""
         <div class="metrics-grid">
-"""
-
-        }}
-    </style>
-</head>
-<body>
-
-    <header>
-        <div class="brand">
-            <span class="logo-icon">🧬</span>
-            <div>
-                <h1 class="brand-title">Skill Optimization Loop</h1>
-                <div class="tagline">GEPA Prompt Evolution Performance Audits</div>
-            </div>
-        </div>
-        <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('evaluation')">Evaluation Cases</button>
-            <button class="tab-btn" onclick="switchTab('diff')">Skill Diff</button>
-        </div>
-    </header>
-
-    <div class="container">
-        <!-- Dashboard Metrics -->
-        <div class="metrics-grid">
             <div class="metric-card">
                 <div class="metric-title">Old Avg Score</div>
                 <div class="metric-value">{metrics["old_avg_score"]}%</div>
@@ -570,51 +504,6 @@ def _generate_dashboard_metrics_html(metrics):
 def _generate_diff_tab_html():
     """Generates the HTML markup for comparing old versus new skill bodies."""
     return f"""
-        <div id="diff-tab" class="hidden">
-        </div>"""
-
-
-def _render_case_card(c: dict) -> str:
-    """Render HTML for a single evaluation test case card."""
-    savings = round((1.0 - len(c["new_output"]) / len(c["old_output"])) * 100, 1)
-    # Rendered outside the f-string on purpose: a backslash escape inside an
-    # f-string *expression* is a syntax error before Python 3.12 (PEP 701
-    # lifted that), and this project supports 3.11.
-    old_html = _to_html(c["old_output"])
-    new_html = _to_html(c["new_output"])
-    return f"""
-        <div class="case-card" data-category="{c["category"]}">
-            <div class="case-header">
-                <span class="category-badge">{c["category"]}</span>
-                <span class="case-id">Case #{c["id"]}</span>
-            </div>
-            <div class="case-query">
-                <strong>Query:</strong> "{c["query"]}"
-            </div>
-            <div class="comparator">
-                <div class="panel old-panel">
-                    <div class="panel-header">Old Skill Output <span class="score-badge bad">{int(c["old_score"] * 100)}%</span></div>
-                    <div class="panel-content">{old_html}</div>
-                    <div class="char-count">Length: {len(c["old_output"])} chars</div>
-                </div>
-                <div class="panel new-panel">
-                    <div class="panel-header">New Skill Output <span class="score-badge good">{int(c["new_score"] * 100)}%</span></div>
-                    <div class="panel-content">{new_html}</div>
-                    <div class="char-count">Length: {len(c["new_output"])} chars <span class="savings-tag">({savings}% fewer)</span></div>
-                </div>
-            </div>
-            <div class="eval-feedback">
-                <strong>Judge Feedback:</strong> {c["eval_feedback"]}
-            </div>
-        </div>"""
-
-        <!-- Evaluation tab -->
-        <div id="evaluation-tab">
-            <h2 class="section-title">📊 Evaluated Test Cases</h2>
-            {case_cards}
-        </div>
-
-        <!-- Diff tab -->
         <div id="diff-tab" class="hidden">
             <h2 class="section-title">📂 Skill Comparison (Old vs. New)</h2>
             <div class="diff-container">
@@ -683,9 +572,6 @@ def generate_html_viewer(results, output_path):
 
         <!-- Diff tab -->
         {diff_html}
-    </div>
-        </div>"""
-
     </div>
 
     <script>

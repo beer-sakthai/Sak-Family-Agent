@@ -1,0 +1,52 @@
+{
+  "run_id": "run_48be2f9e",
+  "workflow_name": "pw_par_retry",
+  "status": "FAILED",
+  "start_time": "2026-08-02T13:52:55.707792",
+  "end_time": "2026-08-02T13:52:55.717047",
+  "step_results": {
+    "root": {
+      "step_id": "root",
+      "status": "COMPLETED",
+      "output": {
+        "seed": 10
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:52:55.716681",
+      "end_time": "2026-08-02T13:52:55.716737"
+    },
+    "b_ok": {
+      "step_id": "b_ok",
+      "status": "COMPLETED",
+      "output": {
+        "v": 1
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:52:55.716845",
+      "end_time": "2026-08-02T13:52:55.716862"
+    },
+    "b_retry": {
+      "step_id": "b_retry",
+      "status": "COMPLETED",
+      "output": {
+        "fail_attempts": 1,
+        "success_output": 2
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:52:55.716881",
+      "end_time": "2026-08-02T13:52:55.716900"
+    },
+    "join": {
+      "step_id": "join",
+      "status": "FAILED",
+      "output": {},
+      "error": "Key 'result' (path 'result') not found in step 'b_retry' output.",
+      "attempts": 1,
+      "start_time": "2026-08-02T13:52:55.716966",
+      "end_time": "2026-08-02T13:52:55.717018"
+    }
+  }
+}

@@ -25,8 +25,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from ..config import sakthai_home
-
 logger = logging.getLogger(__name__)
 
 
@@ -404,8 +402,8 @@ class ConfigFileIntegrity:
             config_files: List of config file paths to monitor
         """
         self.config_files = config_files or [
-            sakthai_home() / "mcp.json",
-            sakthai_home() / ".env",
+            Path.home() / ".sakthai" / "mcp.json",
+            Path.home() / ".sakthai" / ".env",
         ]
         self.hashes: dict[Path, str] = {}
         self._capture_hashes()
@@ -601,7 +599,7 @@ class AuditLogger:
         Args:
             log_file: Path to audit log file (default: ~/.sakthai/audit.log)
         """
-        self.log_file = log_file or (sakthai_home() / "audit.log")
+        self.log_file = log_file or (Path.home() / ".sakthai" / "audit.log")
         self.events: list[SecurityEvent] = []
 
     def log_event(self, event: SecurityEvent) -> None:
