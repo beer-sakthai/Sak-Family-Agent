@@ -130,6 +130,11 @@ def _validate_url(url_str: str) -> None:
     if any(ord(c) < 32 or ord(c) == 127 for c in url_str):
         raise ValueError("Control characters are not allowed in URLs")
 
+    # Strip URL fragment identifiers (#...) prior to URL parsing and DNS resolution
+    # to prevent fragment-based host/path parser confusion or SSRF bypasses.
+    if "#" in url_str:
+        url_str = url_str.split("#", 1)[0]
+
     try:
         parsed = urllib.parse.urlparse(url_str)
     except Exception as e:
@@ -628,6 +633,10 @@ def _validate_shell_command(cmd_str: str) -> None:
             "bun",
             "tsx",
             "ts-node",
+            "eval",
+            "exec",
+            "source",
+            ".",
         )
 
         wrappers = {
