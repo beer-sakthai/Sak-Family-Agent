@@ -44,8 +44,7 @@ export const SynthesisCard: React.FC<SynthesisCardProps> = ({
             <button
               type="button"
               onClick={handleStar}
-              aria-label="Star output for LoRA training dataset"
-              className="flex items-center gap-1 rounded-md bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-200 transition-all hover:bg-amber-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-950"
+              className="flex items-center gap-1 rounded-md bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-200 transition-all hover:bg-amber-600 hover:text-white"
             >
               <span>⭐</span>
               <span>Star for LoRA Training</span>

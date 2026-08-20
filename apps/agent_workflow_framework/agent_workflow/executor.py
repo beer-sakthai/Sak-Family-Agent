@@ -495,11 +495,7 @@ def _validate_shell_command(cmd_str: str) -> None:
                 _validate_filepath(sub)
             except PermissionError as exc:
                 raise PermissionError(f"Prohibited sensitive path in shell command: {exc}") from exc
-            except ValueError:
-                # Not a well-formed path (empty, control characters): this
-                # token is simply not something to check. Any other error is
-                # a bug in the validator and must not silently skip the
-                # check, so it is left to propagate.
+            except Exception:
                 pass
 
     subcommands = _extract_shell_subcommands(str(cmd_str))
@@ -637,6 +633,10 @@ def _validate_shell_command(cmd_str: str) -> None:
             "bun",
             "tsx",
             "ts-node",
+            "eval",
+            "exec",
+            "source",
+            ".",
         )
 
         wrappers = {

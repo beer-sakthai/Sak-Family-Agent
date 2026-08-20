@@ -5,14 +5,9 @@ import json
 import os
 import subprocess
 import sys
-import tempfile
 
 # ── Config ────────────────────────────────────────────────────────
 BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
-# Pinned: an unpinned fetch takes whatever the Hub serves at that moment, so a
-# mutated upstream repo would silently change what this trains on. Commit
-# resolved from the Hub on 2026-08-20 — override it together with BASE_MODEL.
-BASE_MODEL_REVISION = "a09a35458c702b33eeacc393d103063234e8bc28"
 DATASET_ID = "Nanthasit/sakthai-combined-v5"
 ADAPTER_REPO = "Nanthasit/sakthai-context-7b-tools"
 
@@ -104,15 +99,12 @@ bnb = BitsAndBytesConfig(
 print("Loading model...", flush=True)
 model = AutoModelForCausalLM.from_pretrained(
     BASE_MODEL,
-    revision=BASE_MODEL_REVISION,
     quantization_config=bnb,
     device_map="auto",
     torch_dtype="auto",
     trust_remote_code=True,
 )
-tok = AutoTokenizer.from_pretrained(
-    BASE_MODEL, revision=BASE_MODEL_REVISION, trust_remote_code=True
-)
+tok = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
 tok.pad_token = tok.eos_token
 tok.padding_side = "right"
 print(f"Loaded. Params: {model.num_parameters():,}", flush=True)
@@ -177,15 +169,12 @@ trainer.train()
 print("Done training!", flush=True)
 
 # ── Save & push ───────────────────────────────────────────────────
-# A private 0700 directory rather than a predictable path in a
-# world-writable /tmp, which any other user on the box could pre-create.
-ADAPTER_DIR = tempfile.mkdtemp(prefix="sakthai-7b-adapter-")
-trainer.save_model(ADAPTER_DIR)
-tok.save_pretrained(ADAPTER_DIR)
+trainer.save_model("/tmp/7b-adapter")
+tok.save_pretrained("/tmp/7b-adapter")
 print(f"Pushing to {ADAPTER_REPO}...", flush=True)
 api.create_repo(ADAPTER_REPO, exist_ok=True)
 api.upload_folder(
-    folder_path=ADAPTER_DIR,
+    folder_path="/tmp/7b-adapter",
     repo_id=ADAPTER_REPO,
     repo_type="model",
     commit_message="SakThai 7B LoRA adapter",
@@ -194,15 +183,10 @@ print(f"Pushed! https://huggingface.co/{ADAPTER_REPO}", flush=True)
 
 # ── Metrics ───────────────────────────────────────────────────────
 log = trainer.state.log_history
-# Its own directory, not ADAPTER_DIR: that one is uploaded as the adapter
-# folder above and must not pick up an extra file if the order ever changes.
-METRICS_PATH = os.path.join(
-    tempfile.mkdtemp(prefix="sakthai-7b-metrics-"), "training_metrics.json"
-)
-with open(METRICS_PATH, "w") as f:
+with open("/tmp/metrics.json", "w") as f:
     json.dump({"base": BASE_MODEL, "dataset": DATASET_ID, "log": log}, f, indent=2)
 api.upload_file(
-    path_or_fileobj=METRICS_PATH,
+    path_or_fileobj="/tmp/metrics.json",
     path_in_repo="training_metrics.json",
     repo_id=ADAPTER_REPO,
     repo_type="model",

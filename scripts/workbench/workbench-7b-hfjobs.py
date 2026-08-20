@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 """HF Jobs workbench test: SakThai Context 7B merged model, 4-bit, T4 GPU."""
 
-import json, time, os, sys, tempfile
+import json, time, os, sys
 import torch
 
 MODEL = "Nanthasit/sakthai-context-7b-merged"
-# Pinned: an unpinned fetch takes whatever the Hub serves at that moment, so a
-# mutated upstream repo would silently change what this script loads. Commit
-# resolved from the Hub on 2026-08-20.
-MODEL_REVISION = "27c44feb575ae7112156940b438decb394449552"
 HF_TOKEN = os.environ.get("HF_TOKEN", "")
 os.environ["HF_TOKEN"] = HF_TOKEN
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
@@ -34,10 +30,9 @@ bnb_config = BitsAndBytesConfig(
     bnb_4bit_quant_type="nf4",
 )
 
-tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=MODEL_REVISION, token=HF_TOKEN)
+tokenizer = AutoTokenizer.from_pretrained(MODEL, token=HF_TOKEN)
 model = AutoModelForCausalLM.from_pretrained(
     MODEL,
-    revision=MODEL_REVISION,
     quantization_config=bnb_config,
     device_map="auto",
     torch_dtype=torch.bfloat16,
@@ -135,7 +130,7 @@ for i, test in enumerate(tests):
             try:
                 json.loads(response)
                 checks.append("valid_json")
-            except json.JSONDecodeError:
+            except:
                 pass
         if test["name"] == "multi_step_reasoning":
             if any(c in response for c in ["7", "seven"]) and ("apple" in response.lower()):
@@ -186,11 +181,7 @@ record = {
     "summary": f"{passed}/{total} passed",
 }
 
-# A private 0700 directory rather than a predictable path in a
-# world-writable /tmp, which any other user on the box could pre-create.
-record_path = os.path.join(
-    tempfile.mkdtemp(prefix="sakthai-workbench-"), "sakthai-7b-workbench-record.json"
-)
+record_path = "/tmp/sakthai-7b-workbench-record.json"
 with open(record_path, "w") as f:
     json.dump(record, f, indent=2)
 print(f"\n💾 Saved: {record_path}", flush=True)

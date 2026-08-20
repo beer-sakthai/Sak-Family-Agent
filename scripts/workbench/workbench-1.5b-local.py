@@ -5,19 +5,14 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 MODEL = "Nanthasit/sakthai-context-1.5b-merged"
-# Pinned: an unpinned fetch takes whatever the Hub serves at that moment, so a
-# mutated upstream repo would silently change what this script loads. Commit
-# resolved from the Hub on 2026-08-20.
-MODEL_REVISION = "9629d26843a1190a82c9d55e02a583e99e6bd203"
 OUTPUT = "/opt/data/sakthai-workbench-record.json"
 
 # Load model + tokenizer
 print(f"Loading {MODEL}...", flush=True)
 start = time.time()
-tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=MODEL_REVISION, trust_remote_code=True)
+tokenizer = AutoTokenizer.from_pretrained(MODEL, trust_remote_code=True)
 model = AutoModelForCausalLM.from_pretrained(
     MODEL,
-    revision=MODEL_REVISION,
     trust_remote_code=True,
     torch_dtype=torch.float16,
     device_map="auto",
@@ -123,7 +118,7 @@ for i, test in enumerate(tests):
             try:
                 json.loads(response)
                 checks.append("valid_json")
-            except json.JSONDecodeError:
+            except:
                 pass
         
         result = {
