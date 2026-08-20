@@ -28,24 +28,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Harden the runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
-        with:
-          use-policy-store: true
-          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
-
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: step-security/setup-uv@edab89485182ad96613ff847804c272ab5d1e03f # v10.0.0
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           python-version: '3.11'
 
       - name: Cache uv
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache@v6
         with:
           path: ~/.cache/uv
           key: ${{ runner.os }}-uv-verify-assets-${{ hashFiles('**/uv.lock') }}

@@ -1,10 +1,13 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-hf-fineweb-dataset-processing
-description: "Hugging Face's FineWeb, FineWeb-Edu, and FineWeb-2 datasets \u2014 web-scale data\
-  \ processing pipeline using datatrove for LLM pretraining data curation, including\
-  \ URL filtering, text extraction, language filtering, quality heuristics, MinHash\
-  \ deduplication, PII anonymization, and educational quality classification via LLM-generated\
-  \ synthetic annotations."
+version: 1.0.0
+description: Hugging Face's FineWeb, FineWeb-Edu, and FineWeb-2 datasets — web-scale data processing pipeline using datatrove for LLM pretraining data curation, including URL filtering, text extraction, language filtering, quality heuristics, MinHash deduplication, PII anonymization, and educational quality classification via LLM-generated synthetic annotations.
+model: deepseek-v4-flash
+provider: opencode-go
+type: reference
+category: mlops
 ---
 
 # FineWeb Dataset Processing Pipeline

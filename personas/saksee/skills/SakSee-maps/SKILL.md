@@ -1,7 +1,6 @@
 ---
 name: SakSee-maps
-description: Geocode, POIs, routes, timezones via OpenStreetMap/OSRM.
-...
+description: "Geocode, POIs, routes, timezones via OpenStreetMap/OSRM."
 ---
 
 # Maps Skill

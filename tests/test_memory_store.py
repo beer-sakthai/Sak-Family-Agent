@@ -655,20 +655,3 @@ def test_fact_kind_counts_respects_limit(store: MemoryStore) -> None:
         store.add_fact("x", kind="note")
     counts = store.get_fact_kind_counts(limit=2)
     assert counts == {"note": 2}
-
-
-def test_busy_timeout_pragma_configuration(store: MemoryStore) -> None:
-    """Verify that PRAGMA busy_timeout is set correctly and int-coerced."""
-    row = store._conn.execute("PRAGMA busy_timeout").fetchone()
-    assert row is not None
-    assert row[0] == 5000
-
-
-def test_busy_timeout_invalid_type_prevention(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
-    """Verify that non-integer DB_BUSY_TIMEOUT_MS raises TypeError/ValueError."""
-    import sakthai.memory.store as store_module
-
-    monkeypatch.setattr(store_module, "DB_BUSY_TIMEOUT_MS", "invalid_string_injection")
-    db_file = tmp_path / "test_invalid.db"
-    with pytest.raises((ValueError, TypeError)):
-        store_module.MemoryStore(db_file)

@@ -1,9 +1,6 @@
 ---
 name: SakJules-SakKing-saas-churn-root-cause-diagnosis
-description: Systematically investigate WHY customers churn in a specific cohort or segment, moving
-  from symptoms to actionable root-cause mechanisms. Use when cohort analysis has
-  identified a churn pattern but you cannot name the underlying cause to fix it, when
-...
+description: "Systematically investigate WHY customers churn in a specific cohort or segment, moving from symptoms to actionable root-cause mechanisms. Use when cohort analysis has identified a churn pattern but you cannot name the underlying cause to fix it, when"
 ---
 
 # SaaS Churn Root Cause Diagnosis

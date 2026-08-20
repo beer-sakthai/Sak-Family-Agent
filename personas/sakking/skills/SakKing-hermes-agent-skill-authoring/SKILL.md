@@ -1,6 +1,6 @@
 ---
 name: SakKing-hermes-agent-skill-authoring
-description: 'Author in-repo SKILL.md: frontmatter, validator, structure, and writing-quality principles.'
+description: "Author in-repo SKILL.md: frontmatter, validator, structure, and writing-quality principles."
 ---
 
 # Authoring Hermes-Agent Skills (in-repo)
