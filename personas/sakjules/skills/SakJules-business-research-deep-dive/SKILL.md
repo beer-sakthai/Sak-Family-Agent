@@ -1,9 +1,6 @@
 ---
 name: SakJules-SakKing-business-research-deep-dive
-description: Multi-angle deep-dive research workflow for House of Sak scouting. Scout markets,
-  profile leads, discover digital gaps, and produce structured reports with ranked
-  picks, pricing intel, and actionable opportunity maps.
-...
+description: "Multi-angle deep-dive research workflow for House of Sak scouting. Scout markets, profile leads, discover digital gaps, and produce structured reports with ranked picks, pricing intel, and actionable opportunity maps."
 ---
 
 # Business Research — Deep Dive Scout

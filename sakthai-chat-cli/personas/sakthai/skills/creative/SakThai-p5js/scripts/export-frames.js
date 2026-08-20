@@ -43,7 +43,6 @@
 const puppeteer = require('puppeteer');
 const path = require('path');
 const fs = require('fs');
-const { pathToFileURL } = require('url');
 
 // Parse CLI arguments
 function parseArgs() {
@@ -83,18 +82,6 @@ function parseArgs() {
 async function main() {
   const opts = parseArgs();
   const inputPath = path.resolve(opts.input);
-  const baseDir = path.resolve(process.cwd());
-  const relativeInputPath = path.relative(baseDir, inputPath);
-
-  if (path.extname(inputPath).toLowerCase() !== '.html') {
-    console.error('Input must be an .html file.');
-    process.exit(1);
-  }
-
-  if (relativeInputPath.startsWith('..') || path.isAbsolute(relativeInputPath)) {
-    console.error('Input file must be within the current working directory.');
-    process.exit(1);
-  }
 
   if (!fs.existsSync(inputPath)) {
     console.error(`File not found: ${inputPath}`);
@@ -129,7 +116,7 @@ async function main() {
   });
 
   // Navigate to sketch
-  const fileUrl = pathToFileURL(inputPath).href;
+  const fileUrl = `file://${inputPath}`;
   await page.goto(fileUrl, { waitUntil: 'networkidle0', timeout: 30000 });
 
   // Wait for canvas to appear

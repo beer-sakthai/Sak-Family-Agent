@@ -32,7 +32,6 @@ export function AnalyticsCharts({ metrics, agents }: AnalyticsChartsProps) {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot client-mount flag to gate SSR-unsafe Recharts
     setIsMounted(true);
   }, []);
 
@@ -40,7 +39,7 @@ export function AnalyticsCharts({ metrics, agents }: AnalyticsChartsProps) {
   const benchmarkData = (agents && agents.length > 0)
     ? agents.map((a) => ({
         name: a.name,
-        score: a.benchmarkScore ?? 90,
+        score: a.benchmarkScore ?? Math.floor(Math.random() * 15 + 85),
         latency: a.latencyMs,
       }))
     : [

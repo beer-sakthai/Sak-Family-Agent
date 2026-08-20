@@ -1,7 +1,6 @@
 ---
 name: SakSit-b2b-saas-content-distribution-2026
-description: Saksit B2B Saas Content Distribution 2026
-...
+description: "Saksit B2B Saas Content Distribution 2026"
 ---
 
 # B2B SaaS Content Distribution & Amplification (2026)

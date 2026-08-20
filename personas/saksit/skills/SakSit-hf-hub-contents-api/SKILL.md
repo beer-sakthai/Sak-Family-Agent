@@ -1,7 +1,6 @@
 ---
 name: SakSit-SakThai-hf-hub-contents-api
-description: HuggingFace Hub Contents API endpoint details and usage patterns
-...
+description: "HuggingFace Hub Contents API endpoint details and usage patterns"
 ---
 
 # HF Hub Contents API

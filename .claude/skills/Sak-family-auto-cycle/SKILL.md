@@ -1,8 +1,6 @@
 ---
 name: Sak-family-auto-cycle
-description: Use when asked to run the Sak Family auto-cycle, get all six Sak Family personas working
-  together, or dispatch SakKing/SakThai/SakSee/SakSit/SakTan/SakJules as a team.
-...
+description: Use when asked to run the Sak Family auto-cycle, get all six Sak Family personas working together, or dispatch SakKing/SakThai/SakSee/SakSit/SakTan/SakJules as a team.
 ---
 
 # Sak-family-auto-cycle

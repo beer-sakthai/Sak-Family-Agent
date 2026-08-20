@@ -1,9 +1,6 @@
 ---
 name: SakJules-SakThai-hf-oauth-and-tokens
-description: ">   Complete reference on Hugging Face Hub authentication \u2014 User Access Tokens\
-  \   (fine-grained, read, write), OAuth 2.0 / OpenID Connect flows (authorization\
-  \   code, device code, PKCE), Spaces OAuth integration, Token Exchange for   Organizations\
-  \ (RF"
+description: ">   Complete reference on Hugging Face Hub authentication — User Access Tokens   (fine-grained, read, write), OAuth 2.0 / OpenID Connect flows (authorization   code, device code, PKCE), Spaces OAuth integration, Token Exchange for   Organizations (RF"
 ---
 
 # HF Hub OAuth & Token Management

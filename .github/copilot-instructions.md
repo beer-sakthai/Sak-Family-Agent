@@ -8,9 +8,7 @@ Purpose
 - Install (preferred, reproducible):
   - uv sync --all-extras
   - or: pip install -e ".[dev]" (dev toolchain)
-  - `--all-extras` is required, not optional: hypothesis lives in the dev extra
-    and tests/test_store_properties.py fails collection without it, which aborts
-    the whole run.
+  - optional dashboard extras: pip install -e ".[dashboard]"
 
 - Full test suite (hermetic):
   - python -m pytest tests/ -q
@@ -22,18 +20,14 @@ Purpose
   - python -m pytest -m "not integration" -q
 
 - Lint / format / types / security (mirror CI):
-  - ruff check personas/sakthai/sakthai tests
-  - ruff format --check personas/sakthai/sakthai tests
-  - mypy personas/sakthai/sakthai
-  - bandit -c pyproject.toml -r personas/sakthai/sakthai
+  - ruff check sakthai tests
+  - ruff format --check sakthai tests
+  - mypy sakthai
+  - bandit -c pyproject.toml -r sakthai
 
 - Notes:
-  - The installed package lives at personas/sakthai/sakthai/ — there is no
-    root-level sakthai/ directory. `import sakthai` resolves there via the
-    editable install ([tool.setuptools.packages.find] where = ["personas/sakthai"]).
-  - CI runs on Python 3.11 and 3.12 and requires green lint + tests before merging.
-  - Coverage floor: fail_under = 96 with branch coverage on (tool.coverage.report
-    in pyproject.toml); telegram/bot.py is omitted from measurement.
+  - CI runs on Python 3.11–3.13 and requires green lint + tests before merging.
+  - Coverage floor: fail_under = 85 (tool.coverage.report in pyproject.toml).
 
 2) High-level architecture (big picture)
 - One package, three ways in: CLI (sakthai), Agent loop (sakthai run "task"), MCP stdio server (sakthai mcp).

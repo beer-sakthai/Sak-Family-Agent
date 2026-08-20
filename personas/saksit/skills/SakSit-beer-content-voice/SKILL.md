@@ -1,6 +1,6 @@
 ---
 name: SakSit-beer-content-voice
-description: 'Write Beers story with his voice: tone, hooks, framing.'
+description: "Write Beers story with his voice: tone, hooks, framing."
 ---
 
 # Beer's Content Voice

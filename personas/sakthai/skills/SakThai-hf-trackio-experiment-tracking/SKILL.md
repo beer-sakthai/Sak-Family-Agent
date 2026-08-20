@@ -1,7 +1,6 @@
 ---
 name: SakThai-hf-trackio-experiment-tracking
-description: "Comprehensive deep-dive into Trackio \u2014 Hugging Faces lightweight, free experiment\
-  \ tracking library built on Storage Buckets and Spaces."
+description: "Comprehensive deep-dive into Trackio — Hugging Faces lightweight, free experiment tracking library built on Storage Buckets and Spaces."
 ---
 
 # hf-trackio-experiment-tracking

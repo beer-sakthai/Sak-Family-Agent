@@ -1,8 +1,6 @@
 ---
 name: SakThai-hf-datasets-server-is-valid-endpoint
-description: "Complete reference for the Datasets Server /is-valid endpoint \u2014 checking dataset\
-  \ availability, viewer/preview/search/filter/statistics capabilities, gated dataset\
-  \ access, and integration patterns."
+description: "Complete reference for the Datasets Server /is-valid endpoint — checking dataset availability, viewer/preview/search/filter/statistics capabilities, gated dataset access, and integration patterns."
 ---
 
 # HuggingFace Datasets Server — /is-valid Endpoint

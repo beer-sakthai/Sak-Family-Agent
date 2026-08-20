@@ -1,8 +1,6 @@
 ---
 name: SakSee-SakThai-playwright-permission-and-sensor-enforcement
-description: Enforce browser permission boundaries and sensor/device API availability   during
-  automated tests
-...
+description: "Enforce browser permission boundaries and sensor/device API availability   during automated tests"
 ---
 
 # Skill: Playwright Permission and Sensor Enforcement

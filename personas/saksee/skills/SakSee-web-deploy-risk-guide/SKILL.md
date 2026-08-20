@@ -1,7 +1,6 @@
 ---
 name: SakSee-web-deploy-risk-guide
-description: Safely deploy, verify, and recover static websites.
-...
+description: "Safely deploy, verify, and recover static websites."
 ---
 
 # Web Deploy Risk Guide

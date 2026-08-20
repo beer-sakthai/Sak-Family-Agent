@@ -101,7 +101,7 @@ def test_parse_skill_yaml_error_mocked(tmp_path: Path, monkeypatch: pytest.Monke
     def mock_safe_load(*args, **kwargs):
         raise yaml.YAMLError("Mocked YAML load error")
 
-    monkeypatch.setattr(yaml, "load", mock_safe_load)
+    monkeypatch.setattr(yaml, "safe_load", mock_safe_load)
 
     with pytest.raises(SkillParseError, match="invalid YAML — Mocked YAML load error"):
         parse_skill(skill_md)

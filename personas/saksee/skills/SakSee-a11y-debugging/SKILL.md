@@ -1,9 +1,6 @@
 ---
 name: SakSee-a11y-debugging
-description: Uses Chrome DevTools MCP for accessibility (a11y) debugging and auditing based on
-  web.dev guidelines. Use when testing semantic HTML, ARIA labels, focus states, keyboard
-  navigation, tap targets, and color contrast.
-...
+description: "Uses Chrome DevTools MCP for accessibility (a11y) debugging and auditing based on web.dev guidelines. Use when testing semantic HTML, ARIA labels, focus states, keyboard navigation, tap targets, and color contrast."
 ---
 
 ## Core Concepts

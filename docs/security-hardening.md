@@ -114,10 +114,8 @@ was ever pushed, it is compromised.
 - **Fix:** the gate now doubles as an allow-list. `SAKTHAI_SHELL_ALLOW=1`
   (or `true`/`all`/`*`) keeps the legacy "any program" behavior; any other
   value is an `os.pathsep`-separated list of permitted program names, and only
-  those may run. The workflow that used it (`continuous-security.yml`,
-  `SAKTHAI_SHELL_ALLOW="ruff:bandit:mypy:pytest:uv:git:python:python3"`) was
-  retired on 2026-08-18; the allow-list behaviour is unchanged and applies to any
-  future caller.
+  those may run. Used by `continuous-security.yml`
+  (`SAKTHAI_SHELL_ALLOW="ruff:bandit:mypy:pytest:uv:git:python:python3"`).
 - **Prevention pattern:** prefer an explicit allow-list over an on/off switch
   for powerful capabilities.
 - **Regression tests:** `tests/test_tools.py::test_run_command_allowlist_permits_named_program`,
@@ -167,11 +165,10 @@ was ever pushed, it is compromised.
 | Finding | Fix | Prevention |
 |---|---|---|
 | Third-party Actions pinned to mutable tags | Pinned to commit SHAs with `# vX` comments (gitleaks, setup-uv, codecov, sonarcloud, security-devops, slack, download-artifact, create-pull-request) | Dependabot's `github-actions` ecosystem bumps SHAs; keep third-party `uses:` SHA-pinned. First-party `actions/*` may stay on tags. |
-| Dependency auto-merge via PAT | `auto-dependency-update.yml` was changed to open a **draft** PR labeled `needs-human-review`, then removed entirely on 2026-08-18 — its 22 runs had all failed at *Create Pull Request* (`Input 'token' not supplied`: no `GH_PAT_FOR_ACTIONS` secret exists here), and Dependabot already covers the same ecosystems | A passing test suite is not sufficient to merge a dependency bump — a person reviews the diff/changelog. And read a workflow's run history before trusting the control it appears to implement. |
+| Dependency auto-merge via PAT | `auto-dependency-update.yml` now opens a **draft** PR labeled `needs-human-review`; auto-merge language removed | A passing test suite is not sufficient to merge a dependency bump — a person reviews the diff/changelog. |
 | `trust_remote_code=True` in evals | Set to `False` in `run-evals.yml` (the evaluated models use standard architectures) | Never execute remote Hub model code in CI where secrets (`HF_TOKEN`) are present; pin `revision=<sha>` if remote code is ever truly required. |
 | Over-broad gitleaks allowlist | `tests` rule anchored to `(^|/)tests/`; real-credential value entries removed | Allowlist by narrow path/regex, never by hiding real secret values. Rotate, don't allowlist. |
-| `continuous-security.yml` with `SAKTHAI_SHELL_ALLOW=1` | Scoped to a program allow-list; setup-uv SHA-pinned; `--with-skills` corrected after it was found to name a skill that never resolved. **Final state:** the workflow was removed on 2026-08-18. Reading its runs rather than its file showed the agent step `skipped` on every one — the repository has no `ANTHROPIC_API_KEY` — so the nightly job installed a Python environment to print a notice and reported success. `security-audit.md` replaces it on the Gemini engine the other agentic workflows already run on | Least-privilege tokens and shell scope for autonomous CI agents — and confirm a workflow's *actual* runtime behavior from the Actions tab (does it fire, does the step run, does `--with-skills` resolve) rather than trusting the file or a comment about its status. Three successive corrections to this one row were all made by reading the file; the fourth came from reading a run. |
-| Push/PR workflows with no `concurrency:` | All eleven now declare one, cancelling superseded pull-request runs and never a run on `main`; every job also declares `timeout-minutes`. Both enforced by `tests/test_workflow_hygiene.py` | A workflow that cannot be cancelled and cannot time out is an availability problem, not only a cost one: a wedged job holds a runner for GitHub's six-hour default. Encode CI conventions as tests — every stock starter template omits both fields. |
+| `continuous-security.yml` with `SAKTHAI_SHELL_ALLOW=1` | Scoped to a program allow-list; setup-uv SHA-pinned. **Correction:** an earlier version of this table described a root-level copy of this file as dormant because it wasn't under `.github/workflows/` — that was true of the root copy in isolation, but an identical copy was *also* present under `.github/workflows/continuous-security.yml` the whole time, so the workflow was actually live. The misleading root-level duplicate has been removed; the real one (under `.github/workflows/`) also had its `--with-skills` argument fixed (it referenced a skill name that never resolved, so the scan ran nightly without any security-skill guidance loaded — see the workflow file's own comments) | Least-privilege tokens and shell scope for autonomous CI agents; confirm a workflow's *actual* runtime behavior (does it fire, does `--with-skills` resolve) rather than trusting a comment about its status. |
 | Fail-open security defaults in persona `config.yaml` | `tirith_fail_open: false`, `allow_lazy_installs: false` across the four personas that had them | Security guards fail **closed**; do not install packages at runtime. |
 
 ---

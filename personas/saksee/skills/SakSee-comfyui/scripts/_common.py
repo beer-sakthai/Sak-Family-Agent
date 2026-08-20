@@ -21,7 +21,7 @@ import re
 import sys
 import time
 import uuid
-from dataclasses import asdict, dataclass, is_dataclass
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterator
 from urllib.parse import urlparse
@@ -825,89 +825,11 @@ def fmt_kv(d: dict) -> str:
     return " ".join(f"{k}={v!r}" for k, v in d.items())
 
 
-_REDACTED = "***REDACTED***"
-# Assembled at runtime (not a contiguous literal in source) purely to dodge a
-# static-analysis heuristic that free-associates the credential-keyword sets
-# below with whatever they're near, rather than tracing real data flow; the
-# compiled patterns and set membership are unaffected either way.
-_PW_KEYWORD = "pass" + "word"
-_SENSITIVE_KEY_PARTS = {
-    "apikey",
-    "authorization",
-    "bearer",
-    _PW_KEYWORD,
-    "passwd",
-    "privatekey",
-    "secret",
-    "token",
-}
-_SECRET_KV_RE = re.compile(
-    (
-        r"(?i)\b(api[_-]?key|authorization|__PW__|passwd|private[_-]?key|secret|token|"
-        r"(?:access|auth|client|refresh)[_-]?(?:key|secret|token))\b['\"]?"
-        r"\s*[:=]\s*(bearer\s+)?(['\"]?)[^\s,;'\"()\[\]{}]+(['\"]?)"
-    ).replace("__PW__", _PW_KEYWORD)
-)
-_BEARER_RE = re.compile(r"(?i)\bbearer\s+[^\s,;'\"()\[\]{}]+")
-_COMFY_TOKEN_RE = re.compile(r"(?i)\bcomfyui-[A-Za-z0-9._-]+\b")
-_SENSITIVE_QUERY_PARAM_RE = re.compile(
-    (
-        r"(?i)([?&](?:api[_-]?key|authorization|__PW__|passwd|private[_-]?key|secret|token|"
-        r"(?:access|auth|client|refresh)[_-]?(?:key|secret|token))=)([^&#\s]+)"
-    ).replace("__PW__", _PW_KEYWORD)
-)
-
-
-def _is_sensitive_key(key: Any) -> bool:
-    if not isinstance(key, str):
-        return False
-    normalized = re.sub(r"[^a-z0-9]", "", key.lower())
-    return any(normalized == part or normalized.endswith(part) for part in _SENSITIVE_KEY_PARTS)
-
-
-def _redact_sensitive_text(value: str) -> str:
-    """Remove common credential forms from free-form output and log messages."""
-    value = _SECRET_KV_RE.sub(lambda match: f"{match.group(1)}={_REDACTED}", value)
-    value = _SENSITIVE_QUERY_PARAM_RE.sub(rf"\1{_REDACTED}", value)
-    value = _BEARER_RE.sub(f"Bearer {_REDACTED}", value)
-    return _COMFY_TOKEN_RE.sub(_REDACTED, value)
-
-
-def _redact_sensitive(value: Any) -> Any:
-    """Return a recursively redacted representation safe for terminal output."""
-    if is_dataclass(value) and not isinstance(value, type):
-        return _redact_sensitive(asdict(value))
-    if isinstance(value, dict):
-        return {
-            key: _REDACTED if _is_sensitive_key(key) else _redact_sensitive(item)
-            for key, item in value.items()
-        }
-    if isinstance(value, list):
-        return [_redact_sensitive(item) for item in value]
-    if isinstance(value, tuple):
-        return tuple(_redact_sensitive(item) for item in value)
-    if isinstance(value, (str, BaseException)):
-        return _redact_sensitive_text(str(value))
-    if value is None or isinstance(value, (bool, int, float)):
-        return value
-    # ``json.dumps(default=str)`` would otherwise stringify an unsupported object
-    # after this sanitizer returns, bypassing free-form credential redaction.
-    return _redact_sensitive_text(str(value))
-
-
-def emit_json(obj: Any, *, indent: int = 2, redact: bool = True) -> None:
-    """Print JSON to stdout with sensitive content redacted.
-
-    Security hardening: output is always redacted to avoid clear-text leakage
-    in logs/terminal output. The `redact` parameter is retained for backward
-    compatibility (some callers pass `redact=False` for `--raw` output) but
-    does not disable redaction.
-    """
-    _ = redact
-    print(json.dumps(_redact_sensitive(obj), indent=indent, default=str))
+def emit_json(obj: Any, *, indent: int = 2) -> None:
+    """Print JSON to stdout. Centralised so behavior can be tweaked (e.g., --raw)."""
+    print(json.dumps(obj, indent=indent, default=str))
 
 
 def log(msg: str) -> None:
     """stderr log with consistent prefix (so JSON stdout stays clean)."""
-    # codeql[py/clear-text-logging-sensitive-data]
-    print(f"[comfyui-skill] {_redact_sensitive_text(msg)}", file=sys.stderr)  # lgtm[py/clear-text-logging-sensitive-data]
+    print(f"[comfyui-skill] {msg}", file=sys.stderr)
