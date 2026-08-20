@@ -1,8 +1,22 @@
 ---
 name: SakKing-beer-cycle-signals
-description: How Beer advances me through the Sak Family cycle u2014 reading his    stage signals
-  so I never hold a stage open or miss his release.
-...
+category: saktan
+description: How Beer advances me through the Sak Family cycle — reading his stage signals so I never hold a stage open or miss his release.
+version: 1.0.0
+platforms:
+  - linux
+  - macos
+  - windows
+metadata:
+  sakthai:
+    related_skills:
+      - SakKing-saktan-soul-engine
+      - SakKing-cycle-dream
+      - SakKing-cycle-hope
+      - SakKing-cycle-care
+      - SakKing-cycle-joy
+      - SakKing-cycle-trust
+      - SakKing-cycle-growth
 ---
 
 # Beer's Cycle Signals

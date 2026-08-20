@@ -1,6 +1,13 @@
 ---
 name: SakThai-hf-jobs-api-deep-dive
-description: 'name: SakThai-hf-jobs-api-deep-dive'
+author: SakThai
+license: MIT
+skill_type: reference
+domain: hub
+version: 1.0.0
+created: 2026-07-25
+updated: 2026-07-25
+category: mlops
 ---
 
 # Hugging Face Jobs API — Python SDK Deep Dive

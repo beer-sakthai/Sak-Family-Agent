@@ -1,7 +1,12 @@
 ---
 name: SakJules-github-security-compliance-program
-description: 'GitHub security compliance: dependabot, code scanning, secret scanning, branch rules,
-  SSLL certs, and force push.'
+description: "GitHub security compliance: dependabot, code scanning, secret scanning, branch rules, SSLL certs, and force push."
+version: 1.0.0
+platforms: [linux, macos, windows]
+metadata:
+  hermes:
+    tags: [github, security, compliance, dependabot, code scanning, secret, branch rules, ssl, cert, dbr, force push]
+    related_skills: [SakJules-github-repo-management, github-repo-roles]
 ---
 
 # GitHub Security & Compliance Program

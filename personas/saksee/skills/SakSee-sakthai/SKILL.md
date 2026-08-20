@@ -1,7 +1,14 @@
 ---
 name: SakSee-sakthai
-description: "Drive sakthai-agent-v2 \u2014 the `sakthai` CLI with persistent SQLite memory, an\
-  \ agent loop, and an MCP stdio server."
+description: "Drive sakthai-agent-v2 — the `sakthai` CLI with persistent SQLite memory, an agent loop, and an MCP stdio server."
+version: "2.0.0"
+author: Beer (beer-sakthai) + Hermes Agent
+license: MIT
+platforms: [linux, macos]
+metadata:
+  hermes:
+    tags: [Memory-Agent, SakThai, Persistent-Memory, MCP, CLI, SQLite, Learning-Agent]
+    related_skills: [claude-code, codex, hermes-agent, opencode]
 ---
 
 # SakThai — Hermes Orchestration Guide

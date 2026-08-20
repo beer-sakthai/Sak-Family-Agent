@@ -1,9 +1,17 @@
 ---
 name: SakSit-b2b-saas-brand-differentiation-2026
-description: Complete playbook for B2B SaaS brand differentiation, positioning, and category creation
-  in 2026. Covers the five-part positioning framework, strategic paths (niche, challenger,
-  category, disruptor), AI-era brand building, and loyalty-driven NRR rete
-...
+version: 1.0.0
+category: marketing
+description: Complete playbook for B2B SaaS brand differentiation, positioning, and category creation in 2026. Covers the five-part positioning framework, strategic paths (niche, challenger, category, disruptor), AI-era brand building, and loyalty-driven NRR retention.
+tags:
+  - b2b-saas
+  - branding
+  - positioning
+  - differentiation
+  - category-creation
+  - loyalty
+  - 2026
+
 ---
 
 # B2B SaaS Brand Differentiation & Positioning 2026

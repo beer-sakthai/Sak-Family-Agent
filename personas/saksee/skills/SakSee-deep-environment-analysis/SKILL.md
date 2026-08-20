@@ -1,8 +1,11 @@
 ---
 name: SakSee-deep-environment-analysis
-description: Perform deep research and analysis of environment files with systematic investigation
-  and diagnostic capabilities.
-...
+description: "Perform deep research and analysis of environment files with systematic investigation and diagnostic capabilities."
+version: 0.1.0
+author: Hermes
+metadata:
+  hermes:
+    tags: [Analysis, Research, Diagnostics, Environment, System]
 ---
 
 # Deep Environment Analysis

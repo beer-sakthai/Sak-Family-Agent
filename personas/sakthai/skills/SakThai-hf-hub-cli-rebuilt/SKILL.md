@@ -1,8 +1,12 @@
 ---
 name: SakThai-hf-hub-cli-rebuilt
-description: 'This skill covers the rebuilt hf CLI introduced in huggingface_hub v1.22.0+ and the
-  new features shipped in v1.22, v1.23, and v1.24: Sandboxes, faster tree-cached downloads,
-  Space templates, Job naming, CLI extensions, and the Click-based CLI framewo'
+author: SakThai
+license: MIT
+description: "This skill covers the rebuilt hf CLI introduced in huggingface_hub v1.22.0+ and the new features shipped in v1.22, v1.23, and v1.24: Sandboxes, faster tree-cached downloads, Space templates, Job naming, CLI extensions, and the Click-based CLI framework."
+version: 1.0.0
+category: mlops
+tags: [huggingface-hub, cli, sandbox, jobs, spaces-templates]
+requires: huggingface_hub >= 1.22.0
 ---
 
 # hf-hub-cli-rebuilt

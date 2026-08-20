@@ -21,13 +21,12 @@ from .chat import chat as chat_cmd
 from .cycle import cycle as cycle_cmd
 from .eval import eval_cmd
 from .extensions import extensions as extensions_cmd
-from .heal import heal as heal_cmd
 from .hf import hf_cmd
 from .memory import learn, recall
 from .memory import memory as memory_cmd
 from .sessions import sessions as sessions_cmd
 from .skills import skills as skills_cmd
-from .system import doctor, setup, status, tools, web
+from .system import doctor, setup, status, tools
 
 # Group commands are imported under ``*_cmd`` aliases on purpose: binding the
 # group object under its own name here would shadow the same-named submodule as
@@ -53,7 +52,6 @@ main.add_command(doctor)
 main.add_command(setup)
 main.add_command(status)
 main.add_command(tools)
-main.add_command(web)
 
 # Agent
 main.add_command(run)
@@ -67,6 +65,5 @@ main.add_command(extensions_cmd)
 main.add_command(sessions_cmd)
 main.add_command(hf_cmd)
 main.add_command(eval_cmd, name="eval")
-main.add_command(heal_cmd, name="heal")
 
 __all__ = ["main"]

@@ -1,8 +1,17 @@
 ---
 name: SakThai-hf-bitsandbytes-quantization
-description: Guide to using bitsandbytes with Hugging Face Transformers for 4-bit and 8-bit quantization,
-  enabling large model inference and QLoRA training on consumer GPUs.
-...
+author: SakThai
+license: MIT
+description: Guide to using bitsandbytes with Hugging Face Transformers for 4-bit and 8-bit quantization, enabling large model inference and QLoRA training on consumer GPUs.
+version: 2.0.0
+category: mlops
+tags:
+  - huggingface
+  - quantization
+  - bitsandbytes
+  - qlora
+  - memory-optimization
+trigger: when the user asks about memory-efficient inference, quantization, 4-bit, 8-bit, QLoRA, or loading large models on limited GPUs
 ---
 
 # HF Bitsandbytes Quantization

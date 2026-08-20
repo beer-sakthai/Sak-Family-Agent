@@ -1,7 +1,14 @@
 ---
 name: SakTan-superpowers
-description: 'Superpowers development methodology: plan execution, subagent-driven-development,
-  and programmatic verification (TDD).'
+description: "Superpowers development methodology: plan execution, subagent-driven-development, and programmatic verification (TDD)."
+version: 1.0.0
+author: SakTan
+license: MIT
+platforms: [linux, macos, windows]
+metadata:
+  hermes:
+    tags: [planning, execution, subagents, teamwork, verification, tdd]
+    related_skills: [SakTan-plan, SakTan-test-driven-development, SakTan-requesting-code-review]
 ---
 
 # Superpowers Workflow

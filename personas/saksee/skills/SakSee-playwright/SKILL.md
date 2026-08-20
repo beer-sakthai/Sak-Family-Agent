@@ -1,6 +1,11 @@
 ---
 name: SakSee-playwright
-description: 'Playwright browser automation: installation, script execution, common pitfalls.'
+description: "Playwright browser automation: installation, script execution, common pitfalls."
+version: 1.0.0
+author: SakThai
+license: MIT
+tags: [playwright, automation, testing, browser]
+category: software-development
 ---
 
 # Playwright Automation

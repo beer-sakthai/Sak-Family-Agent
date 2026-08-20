@@ -1,9 +1,19 @@
 ---
 name: SakThai-hf-datasets-server-filter-endpoint
-description: ">   Complete reference for the Hugging Face Datasets Server /filter endpoint \u2014\
-  \   covering DuckDB SQL WHERE syntax, supported operators, column type handling,\
-  \   partial indexing for large datasets, ORDER BY, pagination, related endpoints\
-  \   (statistics"
+author: SakThai
+license: MIT
+description: >
+  Complete reference for the Hugging Face Datasets Server /filter endpoint —
+  covering DuckDB SQL WHERE syntax, supported operators, column type handling,
+  partial indexing for large datasets, ORDER BY, pagination, related endpoints
+  (statistics, size, info, parquet), and practical patterns for server-side
+  dataset filtering without downloading the full dataset.
+version: 1.0.0
+metadata:
+  hermes:
+    tags: [huggingface, datasets, server, filter, duckdb, sql, query, parquet]
+    category: mlops
+category: mlops
 ---
 
 # HF Datasets Server `/filter` Endpoint: DuckDB SQL Filtering Reference

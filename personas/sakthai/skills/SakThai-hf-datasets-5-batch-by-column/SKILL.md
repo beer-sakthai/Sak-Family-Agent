@@ -1,9 +1,20 @@
 ---
 name: SakThai-hf-datasets-5-batch-by-column
-description: ">   Complete guide to datasets 5.0.0s IterableDataset.batch(by_column=...) \u2014\
-  \   groups streaming samples by column value into variable-size batches.   Essential\
-  \ for robotics (batch by episode), multi-turn conversations   (batch by conversation_id),\
-  \ an"
+author: SakThai
+license: MIT
+description: >
+  Complete guide to datasets 5.0.0's IterableDataset.batch(by_column=...) —
+  groups streaming samples by column value into variable-size batches.
+  Essential for robotics (batch by episode), multi-turn conversations
+  (batch by conversation_id), and any grouped-sequential data. Covers the
+  full API, the Arrow-accumulation strategy, memory behaviour, and
+  practical recipes.
+version: 1.0.0
+metadata:
+  hermes:
+    tags: [huggingface, datasets, iterable-dataset, batch, streaming, arrow, robotics]
+    category: mlops
+category: mlops
 ---
 
 # HF Datasets 5: IterableDataset.batch(by_column=...)

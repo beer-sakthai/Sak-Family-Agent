@@ -1,8 +1,14 @@
 ---
 name: SakSee-github-workspace-audit
-description: Reconcile local workspace state, GitHub remote state, and agent memory/Supermemory   claims
-  about repositories.
-...
+description: "Reconcile local workspace state, GitHub remote state, and agent memory/Supermemory claims about repositories."
+version: 1.0.0
+author: SakSee
+license: MIT
+platforms: [linux, macos, windows]
+metadata:
+  hermes:
+    tags: [github, audit, workspace, memory, verification, repos]
+    related_skills: [github-repo-management, github-auth, sakthai-cycle-trust]
 ---
 
 # GitHub Workspace Audit

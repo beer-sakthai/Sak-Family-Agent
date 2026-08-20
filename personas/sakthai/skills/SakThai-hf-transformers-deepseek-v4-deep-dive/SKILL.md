@@ -1,8 +1,17 @@
 ---
 name: SakThai-hf-transformers-deepseek-v4-deep-dive
-description: "Complete reference on DeepSeek V4 architecture in Transformers 5.14+ \u2014 three\
-  \ novel attention mechanisms, Lightning Indexer, Manifold-Constrained Hyper-Connections,\
-  \ Hash-MoE, and full source code layout."
+author: SakThai
+license: MIT
+description: Complete reference on DeepSeek V4 architecture in Transformers 5.14+ — three novel attention mechanisms, Lightning Indexer, Manifold-Constrained Hyper-Connections, Hash-MoE, and full source code layout.
+version: 1.0.0
+created: 2026-07-25
+category: mlops
+tags:
+  - deepseek
+  - transformers
+  - moe
+  - attention
+  - architecture
 ---
 
 # DeepSeek V4 Architecture in Transformers 5.14 — Complete Reference  

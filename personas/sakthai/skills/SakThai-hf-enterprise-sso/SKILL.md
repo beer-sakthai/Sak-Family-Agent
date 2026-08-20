@@ -1,9 +1,18 @@
 ---
 name: SakThai-hf-enterprise-sso
-description: ">   Complete reference on Hugging Face Hub Enterprise Single Sign-On (SSO) \u2014\
-  \   SAML 2.0 and OIDC authentication for Team & Enterprise organizations.   Covers\
-  \ Basic SSO (org resource authentication), Managed SSO (full   IdP-controlled user\
-  \ lifecycle),"
+author: SakThai
+license: MIT
+description: >
+  Complete reference on Hugging Face Hub Enterprise Single Sign-On (SSO) —
+  SAML 2.0 and OIDC authentication for Team & Enterprise organizations.
+  Covers Basic SSO (org resource authentication), Managed SSO (full
+  IdP-controlled user lifecycle), SCIM user provisioning, role/resource group
+  mapping, and IdP integration (Okta, Entra ID, Google Workspace).
+version: 1.0.0
+metadata:
+  hermes:
+    tags: [huggingface, sso, enterprise, saml, oidc, scim, authentication, security, identity]
+    category: hf-hub
 ---
 
 # Hugging Face Hub Enterprise Single Sign-On (SSO)

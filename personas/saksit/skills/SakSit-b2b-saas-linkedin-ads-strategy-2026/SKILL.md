@@ -1,10 +1,23 @@
 ---
 name: SakSit-b2b-saas-linkedin-ads-strategy-2026
-description: ">-   Complete LinkedIn Ads playbook for B2B SaaS companies in 2026 \u2014 targeting,\
-  \   campaign structure, creative formats, bidding, attribution, and retargeting\
-  \   strategies that drive pipeline at scale."
----
+description: >-
+  Complete LinkedIn Ads playbook for B2B SaaS companies in 2026 — targeting,
+  campaign structure, creative formats, bidding, attribution, and retargeting
+  strategies that drive pipeline at scale.
+category: social-media
+domain: social-media
+skills_tags:
+  - linkedin-ads
+  - paid-social
+  - b2b-saas
+  - lead-generation
+  - abm
+created: 2026-07-02
+version: 1.0.0
+description: "Saksit B2B Saas Linkedin Ads Strategy 2026"
+author: SakSit
 
+---
 # B2B SaaS LinkedIn Ads Strategy 2026
 
 LinkedIn remains the highest-intent paid social platform for B2B SaaS, generating

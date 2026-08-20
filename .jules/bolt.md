@@ -1,6 +1,5 @@
-## 2026-08-19 - Pre-extracting revenue clients in dashboard conversion rate matching
-**Learning:** In `dashboard/data.py`, during lead-to-revenue conversion matching, repeating `.get("client", "").strip().lower()` for every revenue item inside a nested loop over all leads causes unnecessary string allocations and dictionary lookups ($O(N \times M)$ operations). Pre-extracting normalized client strings into a list reduces matching overhead by ~38% (1.63x speedup).
-**Action:** When matching elements across two collections in a nested loop where one collection requiring string normalization is invariant, pre-extract and normalize that collection prior to entering the loop.
-## 2026-08-18 - C-Accelerated PyYAML CSafeLoader for Skill Metadata Parsing
-**Learning:** Parsing hundreds of `SKILL.md` frontmatter blocks with PyYAML's default pure-Python `yaml.safe_load` took ~280ms during skill discovery. Switching to C-accelerated `yaml.CSafeLoader` (`getattr(yaml, "CSafeLoader", yaml.SafeLoader)`) cut parsing time down to ~55ms (>50% overall latency reduction across `collect_skills`).
-**Action:** Always check if `yaml.CSafeLoader` is available when parsing repetitive or large-volume YAML files in Python.
+# Bolt's Journal
+
+## 2026-07-27 - [Literal str.replace vs Regex for Exact Secret Redaction]
+**Learning:** In Python, when redacting a list of exact secrets from large text payloads (e.g., file contents or database dumps), compiling the secrets into a single regex pattern (like `re.compile("val1|val2|val3")`) and doing a single `sub()` call can be significantly slower than doing a simple loop of literal `str.replace()` calls. This happens because `str.replace()` is implemented in pure C and executes fast linear-scan replacement, avoiding the regex engine's matching/backtracking overhead on massive strings. However, querying `os.environ` repeatedly on every invocation is a costly overhead that can be completely eliminated by keeping a tracked cache of those specific keys.
+**Action:** Always prefer literal substring checks (`if val in text: text = text.replace(val, "[REDACTED]")`) in a loop over exact values rather than combining them into a massive regex for multi-line strings, and cache environment/registered values to avoid redundant OS-level dict queries.

@@ -24,25 +24,20 @@ jobs:
           - 'yaml_validity'
       fail-fast: false # Allow all jobs to run even if some fail
     runs-on: ubuntu-latest
-    # Each cell downloads a model from the Hub and runs lm-eval on CPU.
-    timeout-minutes: 60
     steps:
-      - name: Harden the runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
-        with:
-          use-policy-store: true
-          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
-
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install uv
-        run: pipx install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
 
       - name: Install dependencies
         # The evals group (lm-eval + CPU-only torch/transformers) is kept out of
@@ -99,7 +94,7 @@ jobs:
           echo "sanitized_task_name=$SANITIZED_TASK_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Upload evaluation results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v4
         with:
           name: evaluation-results-${{ steps.run_eval.outputs.sanitized_model_name }}-${{ steps.run_eval.outputs.sanitized_task_name }}
           path: eval-results/
@@ -110,18 +105,11 @@ jobs:
   # Aggregate by downloading every per-cell artifact instead.
   aggregate-results:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     needs: [run-evaluations]
     if: always() # Run even if some evals fail
     steps:
-      - name: Harden the runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
-        with:
-          use-policy-store: true
-          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
-
       - name: Download all evaluation result artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@v4
         with:
           pattern: evaluation-results-*
           path: eval-results
@@ -150,27 +138,20 @@ jobs:
           cat current-results.json
 
       - name: Upload consolidated results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v4
         with:
           name: current-results
           path: current-results.json
 
   post-summary:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     needs: [aggregate-results]
     if: always() # Run even if some evals fail
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     steps:
-      - name: Harden the runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
-        with:
-          use-policy-store: true
-          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
-
       - name: Download consolidated results
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@v4
         with:
           name: current-results
         continue-on-error: true
@@ -211,7 +192,7 @@ jobs:
 
       - name: Upload baseline results artifact (on main branch)
         if: github.ref == 'refs/heads/main' && steps.build_payload.outputs.skip == 'false'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v4
         with:
           name: baseline-results-main
           path: current-results.json
@@ -219,30 +200,26 @@ jobs:
 
   check-regressions:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     needs: [aggregate-results]
     if: always() # Run even if some evals fail
     permissions:
       issues: write # Permission to create issues
       actions: read # Permission to download artifacts from other runs
     steps:
-      - name: Harden the runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
-        with:
-          use-policy-store: true
-          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
-
       - name: Download consolidated current results
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@v4
         with:
           name: current-results
         continue-on-error: true
 
       - name: Download baseline results artifact
-        uses: dawidd6/action-download-artifact@57aa996fc1713cc1579039614f4645a7f4841fd4 # v23
+        uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21
         with:
-          # Download from the last successful workflow run on the main branch
-          workflow: ${{ github.workflow_id }}
+          # Download from the last successful workflow run on the main branch.
+          # The workflow filename is the correct input for dawidd6/action-download-artifact;
+          # `github.workflow_id` is not a real context variable (it silently
+          # evaluated to empty and skipped baseline fetching entirely).
+          workflow: run-evals.yml
           branch: main
           name: baseline-results-main
           path: baseline
@@ -297,7 +274,7 @@ jobs:
 
       - name: Create issue on regression
         if: steps.check.outputs.has_regressions == 'true'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');

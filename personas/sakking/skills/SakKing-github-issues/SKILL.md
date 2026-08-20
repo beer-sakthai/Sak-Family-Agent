@@ -1,7 +1,14 @@
 ---
 name: SakKing-github-issues
-description: Create, triage, label, assign GitHub issues via gh or REST.
-...
+description: "Create, triage, label, assign GitHub issues via gh or REST."
+version: 1.1.0
+author: Hermes Agent
+license: MIT
+platforms: [linux, macos, windows]
+metadata:
+  hermes:
+    tags: [GitHub, Issues, Project-Management, Bug-Tracking, Triage]
+    related_skills: [github-auth, github-pr-workflow]
 ---
 
 # GitHub Issues Management

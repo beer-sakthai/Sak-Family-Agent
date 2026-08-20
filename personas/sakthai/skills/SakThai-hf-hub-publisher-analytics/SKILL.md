@@ -1,8 +1,12 @@
 ---
 name: SakThai-hf-hub-publisher-analytics
-description: Publisher Analytics dashboard, CSV export API, unique downloader logs for Team & Enterprise
-  plans
-...
+version: 1.0.0
+author: SakThai
+license: MIT
+title: HF Hub Publisher Analytics
+description: Publisher Analytics dashboard, CSV export API, unique downloader logs for Team & Enterprise plans
+topic: hf-hub-publisher-analytics
+category: mlops
 ---
 
 # HF Hub Publisher Analytics

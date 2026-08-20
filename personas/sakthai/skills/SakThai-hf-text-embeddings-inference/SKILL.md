@@ -1,10 +1,12 @@
 ---
 name: SakThai-hf-text-embeddings-inference
-description: "Hugging Face Text Embeddings Inference (TEI) \u2014 high-performance Rust-based inference\
-  \ server for deploying, serving, and consuming embedding models via Docker, gRPC,\
-  \ and the Hugging Face Hub."
+author: SakThai
+license: MIT
+description: "Hugging Face Text Embeddings Inference (TEI) — high-performance Rust-based inference server for deploying, serving, and consuming embedding models via Docker, gRPC, and the Hugging Face Hub."
+version: 1.0.0
+tags: [huggingface, embeddings, inference, tei, serving, mlops]
+platforms: [linux, macos]
 ---
-
 # HF Text Embeddings Inference (TEI)
 
 ## Purpose

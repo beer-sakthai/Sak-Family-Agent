@@ -1,8 +1,9 @@
 ---
 name: SakKing-hf-smolagents
-description: Lightweight HF agent framework u2014 CodeAgent, ToolCallingAgent, model/tool    integrations,
-  secure execution, and CLI patterns.
-...
+version: 1.0.0
+title: "Hugging Face smolagents"
+description: "Lightweight HF agent framework — CodeAgent, ToolCallingAgent, model/tool integrations, secure execution, and CLI patterns."
+category: "mlops"
 ---
 
 # Hugging Face smolagents

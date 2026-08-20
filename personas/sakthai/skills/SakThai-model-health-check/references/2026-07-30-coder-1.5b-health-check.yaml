@@ -1,0 +1,101 @@
+# Reference: coder-1.5b health check (2026-07-30)
+# Demonstrates: non-hidden counting, delta comparison, scored breakdown
+# Full results at: https://huggingface.co/Nanthasit/sakthai-coder-1.5b/.eval_results/health-check-2026-07-30.yaml
+
+target_model:
+  id: Nanthasit/sakthai-coder-1.5b
+  scanned_at: "2026-07-30T21:02:00Z"
+
+metadata:
+  pipeline_tag: text-generation
+  library_name: transformers
+  base_model: Qwen/Qwen2.5-Coder-1.5B-Instruct
+  license: apache-2.0
+  tags: [transformers, gguf, code, coder, qwen2.5-coder, code-generation, tool-calling]
+  datasets: [Nanthasit/sakthai-combined-v6, Nanthasit/sakthai-combined-v7, Nanthasit/sakthai-irrelevance-supplement]
+  architecture: qwen2
+  context_length: 32768
+
+popularity:
+  downloads: 93
+  likes: 0
+  downloads_rank_among_author_models: 11  # of 18
+  velocity_rank_among_author_models: 8
+  total_author_model_downloads: 5875
+  download_share_percent: 1.6
+  age_days: 6
+  download_velocity_per_day: 15.5
+
+storage:
+  used_storage_bytes: 1218622744
+  used_storage_human: "1.14 GB"
+  gguf_file: qwen2.5-coder-1.5b-instruct-q4_k_m.gguf
+  gguf_file_size_bytes: 1117320768
+  gguf_file_size_human: "1.04 GB"
+  gguf_quantization: Q4_K_M
+
+sibling_analysis:
+  total_siblings: 1559
+  non_hidden_files: 6        # README.md + 4 eval JSONs + 1 GGUF
+  dev_artifact_count: 170    # .hypothesis + .pytest_cache + .ruff_cache + .venv
+  has_venv: true
+  inflated_by_dev_artifacts: true
+  tree_root_entries: 24      # tree endpoint collapses dirs; 1559 is 3 levels deep
+
+benchmarks:
+  - dataset: HumanEval
+    metric: pass@1
+    value: 74.4
+    verified: false
+    source: "base model reference"
+  - dataset: MBPP
+    metric: pass@1
+    value: 71.2
+    verified: false
+    source: "base model reference"
+  - dataset: MultiPL-E (Python)
+    metric: pass@1
+    value: 65.3
+    verified: false
+    source: "base model reference"
+  - dataset: SakThai Coding Suite (internal)
+    metric: pass@1
+    value: 100.0
+    verified: true
+    source: internal-local-llama-cpp-2026-07-25
+
+health:
+  status: fair
+  score: 55
+  breakdown:
+    popularity: 5
+    download_momentum: 35
+    benchmark_coverage: 80
+    card_quality: 85
+    repo_hygiene: 70
+  strengths:
+    - Comprehensive benchmark suite in card (4 benchmarks)
+    - Internal eval shows 100% pass@1 on custom coding suite
+    - GGUF Q4_K_M at 1.04 GB is CPU-friendly and widely compatible
+    - Good card metadata: license, datasets, tags, base model all documented
+  concerns:
+    - 93 downloads in 6 days — modest adoption, well below author's top models
+    - 0 likes — no community engagement yet
+    - Sibling count inflated to 1559 by dev artifacts
+    - Benchmarks are primarily base-model references, not fine-tuned results
+    - Download share is only 1.6% of total author model downloads
+  recommendations:
+    - Clean up dev artifacts (.venv, .hypothesis, .ruff_cache, .pytest_cache)
+    - Run verified benchmarks on the fine-tuned GGUF
+    - Cross-link from sibling models to increase discoverability
+    - Add usage examples and demo Space
+
+eval_metadata:
+  generated_at: "2026-07-30T21:02:00Z"
+  generated_by: sakthai-model-health-check (Hermes cron)
+  hf_api_endpoint: https://huggingface.co/api/models/Nanthasit/sakthai-coder-1.5b
+  model_card: https://huggingface.co/Nanthasit/sakthai-coder-1.5b
+  changes_since_previous:
+    downloads: "no change (93)"
+    likes: "no change (0)"
+    last_modified: "2026-07-30T20:45:26Z → 2026-07-30T20:54:38Z"

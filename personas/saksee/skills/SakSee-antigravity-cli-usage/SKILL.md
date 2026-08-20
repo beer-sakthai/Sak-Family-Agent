@@ -1,8 +1,13 @@
 ---
 name: SakSee-antigravity-cli-usage
-description: Use the Google Antigravity CLI (agy) for AI-powered coding assistance, including installation,
-  authentication, and common usage patterns.
-...
+description: "Use the Google Antigravity CLI (agy) for AI-powered coding assistance, including installation, authentication, and common usage patterns."
+version: 1.0.0
+author: SakSee
+license: MIT
+platforms: [linux, macos, windows]
+metadata:
+  hermes:
+    tags: [google, antigravity, ai-coding, cli, agent, agy]
 ---
 
 # Google Antigravity CLI Usage

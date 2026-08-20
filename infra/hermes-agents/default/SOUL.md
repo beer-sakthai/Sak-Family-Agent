@@ -1,1 +1,1 @@
-../../../personas/sakthai/SOUL.md
+../../../personas/sakking/SOUL.md

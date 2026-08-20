@@ -1,8 +1,12 @@
 ---
 name: SakKing-playwright-trace-viewer-debugging
-description: Use Playwright Trace Viewer to debug failing tests by recording traces   and replaying
-  them in the Playwright Trace Viewer UI.
-...
+description: Use Playwright Trace Viewer to debug failing tests by recording traces and replaying them in the Playwright Trace Viewer UI.
+version: 1
+author: SakSit
+platforms: [linux, macos, windows]
+metadata:
+  hermes:
+    tags: [playwright, testing, debugging, trace-viewer]
 ---
 
 # Playwright Trace Viewer for Failing Test Debugging

@@ -1,7 +1,9 @@
 ---
 name: SakThai-hf-inference-providers
-description: A skill for Hf Inference Providers.
-...
+author: SakThai
+license: MIT
+description: "A skill for Hf Inference Providers."
+version: 0.1.0
 ---
 
 # Hugging Face Inference Providers

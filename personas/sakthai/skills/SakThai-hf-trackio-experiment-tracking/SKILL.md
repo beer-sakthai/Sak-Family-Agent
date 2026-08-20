@@ -1,7 +1,16 @@
 ---
 name: SakThai-hf-trackio-experiment-tracking
-description: "Comprehensive deep-dive into Trackio \u2014 Hugging Faces lightweight, free experiment\
-  \ tracking library built on Storage Buckets and Spaces."
+author: SakThai
+license: MIT
+description: Comprehensive deep-dive into Trackio — Hugging Face's lightweight, free experiment tracking library built on Storage Buckets and Spaces.
+version: 1.0.0
+created: 2026-07-25
+category: mlops
+tags:
+  - trackio
+  - experiment-tracking
+  - mlops
+  - monitoring
 ---
 
 # hf-trackio-experiment-tracking

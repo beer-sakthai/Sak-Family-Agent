@@ -1,6 +1,9 @@
 ---
 name: SakThai-hf-hub-search-discovery-api
-description: 'name: SakThai-hf-hub-search-discovery-api'
+version: 1.0.0
+author: SakThai
+license: MIT
+category: mlops
 ---
 
 # Hugging Face Hub Search & Discovery API

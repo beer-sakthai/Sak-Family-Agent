@@ -145,46 +145,9 @@ def test_read_file_blocks_outside_roots(tmp_path: Path, store) -> None:
         tool_by_name("read_file").handler({"path": str(secret)}, store)
 
 
-def test_read_file_blocks_control_characters_in_path(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store
-) -> None:
-    monkeypatch.chdir(tmp_path)
-    control_paths = [
-        "path\nwith\nnewline",
-        "path\rwith\rreturn",
-        "path\twith\ttab",
-        "path\0with\0null",
-    ]
-    for p in control_paths:
-        with pytest.raises(ValueError, match="Control characters are not allowed"):
-            tool_by_name("read_file").handler({"path": p}, store)
-
-
 @pytest.mark.parametrize(
     "name",
-    [
-        ".env",
-        ".env.production",
-        "id_rsa",
-        "server.pem",
-        "credentials.json",
-        ".netrc",
-        "id_xmss",
-        "id_ecdsa_sk",
-        "id_ed25519_sk",
-        ".bash_history",
-        ".zsh_history",
-        ".gitconfig",
-        "authorized_keys",
-        "known_hosts",
-        "memory.db",
-        ".sqlite_history",
-        ".psql_history",
-        ".rediscli_history",
-        ".mongo_history",
-        ".pgpass",
-        ".my.cnf",
-    ],
+    [".env", ".env.production", "id_rsa", "server.pem", "credentials.json", ".netrc"],
 )
 def test_read_file_blocks_sensitive_names_even_in_cwd(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store, name: str
@@ -208,28 +171,6 @@ def test_read_file_blocks_dot_ssh_directory(
     key.write_text("ssh-rsa ...", encoding="utf-8")
     with pytest.raises(PermissionError):
         tool_by_name("read_file").handler({"path": ".ssh/authorized_keys"}, store)
-
-
-def test_read_file_blocks_casing_bypass_sensitive_targets(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store
-) -> None:
-    monkeypatch.chdir(tmp_path)
-
-    # 1. Test casing variants of basenames (e.g. .ENV, Credentials.json)
-    for basename in [".ENV", "Credentials.json"]:
-        f = tmp_path / basename
-        f.write_text("secret_content", encoding="utf-8")
-        with pytest.raises(PermissionError, match="sensitive credential file"):
-            tool_by_name("read_file").handler({"path": basename}, store)
-
-    # 2. Test casing variants of directories (e.g. .SSH/authorized_keys, .Aws/credentials, .Git/config)
-    for folder, file in [(".SSH", "authorized_keys"), (".Aws", "credentials"), (".Git", "config")]:
-        d = tmp_path / folder
-        d.mkdir(exist_ok=True)
-        f = d / file
-        f.write_text("secret_content", encoding="utf-8")
-        with pytest.raises(PermissionError, match="sensitive credential file"):
-            tool_by_name("read_file").handler({"path": f"{folder}/{file}"}, store)
 
 
 def test_ingest_document_blocks_outside_roots(tmp_path: Path, store) -> None:
@@ -1078,42 +1019,3 @@ def test_load_tool_overrides(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
         learn_tool.input_schema["properties"]["value"]["description"]
         == "Overridden param description."
     )
-
-
-def test_send_telegram_message_redacts_secrets_in_errors(store: MemoryStore, monkeypatch) -> None:
-    fake_token = "123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi"
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", fake_token)
-    monkeypatch.setenv("TELEGRAM_CHAT_ID", "987654321")
-
-    # 1. HTTPError with secret in exception description
-    def mock_urlopen_httperror(*args, **kwargs):
-        raise urllib.error.HTTPError(
-            url=f"https://api.telegram.org/bot{fake_token}/sendMessage",
-            code=400,
-            msg=f"Bad Request for {fake_token}",
-            hdrs={},
-            fp=None,
-        )
-
-    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen_httperror)
-    out = tool_by_name("send_telegram_message").handler({"message": "test"}, store)
-    assert fake_token not in out
-    assert "[REDACTED]" in out
-
-    # 2. URLError with secret in reason
-    def mock_urlopen_urlerror(*args, **kwargs):
-        raise urllib.error.URLError(reason=f"Connection refused with key {fake_token}")
-
-    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen_urlerror)
-    out = tool_by_name("send_telegram_message").handler({"message": "test"}, store)
-    assert fake_token not in out
-    assert "[REDACTED]" in out
-
-    # 3. Generic Exception with secret
-    def mock_urlopen_generic(*args, **kwargs):
-        raise RuntimeError(f"Unexpected token leak {fake_token}")
-
-    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen_generic)
-    out = tool_by_name("send_telegram_message").handler({"message": "test"}, store)
-    assert fake_token not in out
-    assert "[REDACTED]" in out

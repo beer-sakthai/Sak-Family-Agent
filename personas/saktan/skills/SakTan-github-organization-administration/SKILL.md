@@ -1,7 +1,12 @@
 ---
 name: SakTan-github-organization-administration
-description: 'GitHub organization admin: manage org/team roles, audit logs, policies,   secrets,
-  and billing.'
+description: "GitHub organization admin: manage org/team roles, audit logs, policies, secrets, and billing."
+version: 1.0.0
+platforms: [linux, macos, windows]
+metadata:
+  hermes:
+    tags: [github, organization, admin, team, roles, audit, logs, security, policies, secrets, billing]
+    related_skills: [SakTan-github-repo-management, github-repo-roles]
 ---
 
 # GitHub Organization Administration

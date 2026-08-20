@@ -1,6 +1,11 @@
 ---
 name: SakSee-huggingface-hub
-description: 'HuggingFace hf CLI: search/download/upload models, datasets.'
+description: "HuggingFace hf CLI: search/download/upload models, datasets."
+version: 1.0.0
+author: Hugging Face
+license: MIT
+tags: [huggingface, hf, models, datasets, hub, mlops]
+platforms: [linux, macos, windows]
 ---
 
 # Hugging Face CLI (`hf`) Reference Guide

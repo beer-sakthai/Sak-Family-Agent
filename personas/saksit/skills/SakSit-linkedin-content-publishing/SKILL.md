@@ -1,7 +1,27 @@
 ---
 name: SakSit-linkedin-content-publishing
 description: Publish to LinkedIn and Instagram via REST API.
-...
+version: 1.1.0
+author: SakSit
+license: MIT
+platforms:
+- linux
+- macos
+metadata:
+  hermes:
+    tags:
+    - linkedin
+    - instagram
+    - social-media
+    - posting
+    - api
+    - content-publishing
+    - cross-platform
+    related_skills:
+
+    - SakSit-sak-instagram-content-kit
+    - SakSit-social-media-posting-workflows
+category: social-media
 ---
 
 # LinkedIn Content Publishing

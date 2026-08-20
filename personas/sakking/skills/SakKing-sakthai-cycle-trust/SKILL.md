@@ -1,9 +1,10 @@
 ---
 name: SakKing-sakthai-cycle-trust
-description: Sakking Sakthai Cycle Trust
-...
----
+version: 1.0.0
+description: "Sakking Sakthai Cycle Trust"
+category: sakthai-cycle-trust
 
+---
 # SakThai Cycle — Trust
 
 Verify the shipped work is safe to rely on.

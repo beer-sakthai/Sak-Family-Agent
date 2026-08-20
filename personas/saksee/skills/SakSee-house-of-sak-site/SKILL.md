@@ -1,8 +1,9 @@
 ---
 name: SakSee-house-of-sak-site
-description: Manage the House of Sak landing page and repo u2014 update sections,    services,
-  pricing, and push to GitHub u2192 Vercel auto-deploy.
-...
+version: 0.1.0
+description: Manage the House of Sak landing page and repo — update sections, services, pricing, and push to GitHub → Vercel auto-deploy.
+category: software-development
+tags: [house-of-sak, vercel, landing-page, website, github, beer]
 ---
 
 # House of Sak Site Management

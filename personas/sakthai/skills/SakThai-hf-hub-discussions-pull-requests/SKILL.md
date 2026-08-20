@@ -1,8 +1,15 @@
 ---
 name: SakThai-hf-hub-discussions-pull-requests
-description: "Complete reference for the Hugging Face Hub Discussions & Pull Requests API \u2014\
-  \ creating, managing, merging, and interacting with discussions and pull requests\
-  \ on the Hub programmatically via huggingface_hub Python SDK."
+author: SakThai
+license: MIT
+description: Complete reference for the Hugging Face Hub Discussions & Pull Requests API — creating, managing, merging, and interacting with discussions and pull requests on the Hub programmatically via huggingface_hub Python SDK.
+version: 1.0.0
+tags: [huggingface, hub, discussions, pull-requests, pr, collaboration, api, community]
+category: hf-hub
+trigger: >
+  When programmatically managing repository discussions or pull requests,
+  when automating PR merges or change tracking across HF repos,
+  when building collaborative workflows on the Hub.
 ---
 
 # HF Hub Discussions & Pull Requests API

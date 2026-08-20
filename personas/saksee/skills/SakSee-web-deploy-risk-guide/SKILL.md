@@ -1,7 +1,12 @@
 ---
 name: SakSee-web-deploy-risk-guide
+version: 0.1.0
+author: Hermes
 description: Safely deploy, verify, and recover static websites.
-...
+platforms: [linux, macos]
+metadata:
+  hermes:
+    tags: [Web, Deployment, QA, Risk, Composio]
 ---
 
 # Web Deploy Risk Guide

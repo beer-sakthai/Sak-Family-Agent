@@ -1,9 +1,9 @@
 ---
 name: SakThai-hf-datasets-streaming-deep-dive
-description: "Complete deep-dive into Hugging Face Datasets streaming \u2014 load, process, and\
-  \ train with IterableDataset for large-scale data without downloading the full dataset.\
-  \ Covers streaming from Hub, local files, Parquet column projection/filter pushdown,\
-  \ Iter"
+description: Complete deep-dive into Hugging Face Datasets streaming — load, process, and train with IterableDataset for large-scale data without downloading the full dataset. Covers streaming from Hub, local files, Parquet column projection/filter pushdown, IterableDataset API (shuffle, shard, take, skip, map, filter, batch, concatenate, interleave), training loop integration, HfFileSystem HTTP streaming, and Parquet row-group-level access via PyArrow and Rust.
+category: mlops
+trigger: User needs to work with a dataset too large for local disk, wants low-memory/no-download data access, asks about streaming, IterableDataset, or on-the-fly data processing; or when processing >1GB datasets on a resource-constrained environment.
+tags: [huggingface, datasets, streaming, iterabledataset, parquet, hffilesystem, data-loading, zero-cost]
 ---
 
 # Hugging Face Datasets Streaming — Deep Dive

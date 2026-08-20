@@ -1,7 +1,10 @@
 ---
 name: SakThai-hf-aqlm-quantization
-description: "Complete reference for AQLM (Additive Quantization of Language Models) \u2014 theory,\
-  \ configuration, inference, and practical deployment patterns"
+author: SakThai
+license: MIT
+version: 1.0.0
+description: Complete reference for AQLM (Additive Quantization of Language Models) — theory, configuration, inference, and practical deployment patterns
+category: mlops
 ---
 
 # AQLM Quantization — Complete Reference

@@ -1,8 +1,12 @@
 ---
 name: SakThai-hf-hub-daily-papers
-description: "Deep reference on the Hugging Face Hubs daily papers system \u2014 the API, data\
-  \ model, linking models/datasets/Spaces to papers, submission & curation, and the\
-  \ Paper Pages feature"
+author: SakThai
+license: MIT
+title: HF Hub Daily Papers & Paper Pages
+description: Deep reference on the Hugging Face Hub's daily papers system — the API, data model, linking models/datasets/Spaces to papers, submission & curation, and the Paper Pages feature
+version: 1.0.0
+updated: 2026-07-25
+tags: [hf-hub, papers, daily-papers, paper-pages, api, research]
 ---
 
 # HF Hub Daily Papers & Paper Pages

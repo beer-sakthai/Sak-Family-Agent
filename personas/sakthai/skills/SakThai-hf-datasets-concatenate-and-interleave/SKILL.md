@@ -1,8 +1,16 @@
 ---
 name: SakThai-hf-datasets-concatenate-and-interleave
-description: "Complete reference on concatenating and interleaving Hugging Face Datasets \u2014\
-  \ covering concatenate_datasets (axis=0/1), interleave_datasets (with probabilities,\
-  \ stopping strategies), map-style vs iterable internals, and v5 multi-shard considerations."
+author: SakThai
+license: MIT
+title: HF Datasets Concatenation & Interleaving Deep Dive
+category: mlops
+tags: [datasets, concatenate, interleave, combine, streaming, iterable, arrow]
+related_skills:
+  - hf-datasets-library
+  - hf-datasets-streaming-iterable-dataset
+  - hf-datasets-parquet-column-selection
+description: Complete reference on concatenating and interleaving Hugging Face Datasets — covering concatenate_datasets (axis=0/1), interleave_datasets (with probabilities, stopping strategies), map-style vs iterable internals, and v5 multi-shard considerations.
+version: 1.0.0
 ---
 
 ## Description

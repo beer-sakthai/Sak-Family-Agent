@@ -1,9 +1,12 @@
 ---
 name: SakThai-hf-hub-cache-system-deep-dive
-description: "Complete deep-dive on the Hugging Face Hub local cache system \u2014 file-based cache\
-  \ architecture (blobs, refs, snapshots, trees, .no_exist), Xet chunk-based deduplication,\
-  \ asset caching for downstream libraries, cache inspection/verification/cleanup\
-  \ via"
+author: SakThai
+license: MIT
+description: "Complete deep-dive on the Hugging Face Hub local cache system — file-based cache architecture (blobs, refs, snapshots, trees, .no_exist), Xet chunk-based deduplication, asset caching for downstream libraries, cache inspection/verification/cleanup via CLI and Python API, environment variables, symlink handling, and limitations."
+version: 1.0.0
+category: mlops
+tags: [huggingface, cache, storage, symlinks, xet, disk-management, cli, hf-cache]
+platforms: [linux, macos, windows]
 ---
 
 # HF Hub Cache System — Deep Dive

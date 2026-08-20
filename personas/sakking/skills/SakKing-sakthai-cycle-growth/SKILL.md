@@ -1,8 +1,21 @@
 ---
 name: SakKing-sakthai-cycle-growth
-description: Fold the cycles lessons back into memory and skills. Run the audit triad,   improve
-  one thing, commit, and re-enter Dream smarter.
-...
+category: cycle
+description: Fold the cycle's lessons back into memory and skills. Run the audit triad, improve one thing, commit, and re-enter Dream smarter.
+version: 1.3.0
+platforms:
+  - linux
+  - macos
+  - windows
+metadata:
+  sakthai:
+    tags:
+      - cycle
+      - growth
+    related_skills:
+      - sakthai-cycle-dream
+      - SakKing-family-health-audit
+      - SakKing-infrastructure-drift-protocol
 ---
 
 # sakthai-cycle-growth

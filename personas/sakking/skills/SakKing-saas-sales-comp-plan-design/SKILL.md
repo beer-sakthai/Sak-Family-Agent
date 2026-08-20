@@ -1,11 +1,32 @@
 ---
 name: SakKing-saas-sales-comp-plan-design
-description: Design, audit, or optimize sales compensation plans for SaaS roles (SDR,   AE, AM,
-  CSM). Covers OTE setting, pay-mix benchmarks, back-calculated quota design,   ramp
-  schedules, accelerators/caps, and quota attainment realism checks. Use when   hiring
-  quota-carrying roles, designing a new comp plan, diagnosing over/under-spend   on
-  sales headcount, or aligning incentives with GTM motion.
-...
+version: 1.0.0
+description: "Sakking Saas Sales Comp Plan Design"
+title: SaaS Sales Compensation Plan Design
+description: >
+  Design, audit, or optimize sales compensation plans for SaaS roles (SDR, AE, AM, CSM).
+  Covers OTE setting, pay-mix benchmarks, back-calculated quota design, ramp schedules,
+  accelerators/caps, and quota attainment realism checks. Use when hiring quota-carrying
+  roles, designing a new comp plan, diagnosing over/under-spend on sales headcount,
+  or aligning incentives with GTM motion.
+triggers:
+  - "design sales comp plan"
+  - "SDR quota"
+  - "AE OTE"
+  - "sales compensation"
+  - "on-target earnings"
+  - "ramp plan"
+  - "commission accelerator"
+  - "quota setting formula"
+  - "pay mix"
+tags:
+  - business
+  - sales
+  - compensation
+  - GTM
+  - SaaS
+  - operations
+
 ---
 
 # SaaS Sales Compensation Plan Design

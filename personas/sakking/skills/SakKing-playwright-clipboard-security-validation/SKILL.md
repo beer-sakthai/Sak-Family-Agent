@@ -1,10 +1,21 @@
 ---
 name: SakKing-playwright-clipboard-security-validation
-description: Validate clipboard access, sensitive-text protection, and copy/paste   behavior in
-  web apps with Playwright. Use this skill to probe clipboard-read permissions,   detect
-  unexpected clipboard writes via the Async Clipboard API or copy-paste interactions,   and
-  verify consent-gated flows without relying on external services.
-...
+category: playwright-growth
+description: Validate clipboard access, sensitive-text protection, and copy/paste
+  behavior in web apps with Playwright. Use this skill to probe clipboard-read permissions,
+  detect unexpected clipboard writes via the Async Clipboard API or copy-paste interactions,
+  and verify consent-gated flows without relying on external services.
+version: 1.0.0
+platforms:
+- linux
+- macos
+metadata:
+  sakthai:
+    tags:
+    - hermes
+    - playwright-growth
+    related_skills: []
+    source: hermes:playwright-clipboard-security-validation
 ---
 
 # Playwright Clipboard Security Validation

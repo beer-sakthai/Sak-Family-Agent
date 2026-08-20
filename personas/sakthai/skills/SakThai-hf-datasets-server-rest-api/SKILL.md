@@ -1,8 +1,27 @@
 ---
 name: SakThai-hf-datasets-server-rest-api
-description: "HF Datasets Server REST API \u2014 browse, query, search, filter, and download datasets\
-  \ on the Hub without downloading the full dataset. Covers all 11+ endpoints, pagination,\
-  \ auth, and integration patterns."
+author: SakThai
+license: MIT
+description: HF Datasets Server REST API — browse, query, search, filter, and download datasets on the Hub without downloading the full dataset. Covers all 11+ endpoints, pagination, auth, and integration patterns.
+version: 1.0.0
+category: mlops
+tags:
+  - huggingface
+  - datasets
+  - api
+  - rest
+  - parquet
+  - search
+  - filter
+related_skills:
+  - huggingface-hub
+  - hf-datasets-library
+trigger:
+  - "dataset viewer"
+  - "datasets server API"
+  - "browse dataset on hub"
+  - "query dataset REST"
+  - "datasets-server.huggingface.co"
 ---
 
 # HF Datasets Server REST API

@@ -1,9 +1,20 @@
 ---
 name: SakThai-hf-gradio-6-theme-customization
-description: ">   Complete guide to Gradio 6s theming system \u2014 the theming class hierarchy\
-  \   (ThemeClass \u2192 Base \u2192 Default/Soft/Hard), 200+ CSS variables organized\
-  \ by   category (body, blocks, inputs, buttons, checkboxes, shadows, text),   color\
-  \ palette system (10 "
+author: SakThai
+license: MIT
+description: >
+  Complete guide to Gradio 6's theming system — the theming class hierarchy
+  (ThemeClass → Base → Default/Soft/Hard), 200+ CSS variables organized by
+  category (body, blocks, inputs, buttons, checkboxes, shadows, text),
+  color palette system (10 hues × 11 shades), font management with Google Fonts
+  and local fonts, size presets for spacing/radius/text, dark mode auto-inheritance,
+  the `set()` API for per-variable overrides, theme loading from Hub, and
+  pushing custom themes as Spaces.
+version: 1.0.0
+metadata:
+  hermes:
+    tags: [huggingface, gradio, theming, ui, css, customization, gradio-6]
+    category: mlops
 ---
 
 # HF Gradio 6 Theme Customization

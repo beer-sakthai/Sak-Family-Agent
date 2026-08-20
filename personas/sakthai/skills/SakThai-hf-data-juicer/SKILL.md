@@ -1,9 +1,13 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-hf-data-juicer
-description: "Data-Juicer \u2014 the open-source data processing framework for foundation model\
-  \ data (text, image, audio, video, multimodal). 200+ operators (filters, mappers,\
-  \ deduplicators, selectors), cloud-native Ray execution, Hugging Face Datasets integration,\
-  \ and"
+description: Data-Juicer — the open-source data processing framework for foundation model data (text, image, audio, video, multimodal). 200+ operators (filters, mappers, deduplicators, selectors), cloud-native Ray execution, Hugging Face Datasets integration, and recipe-first YAML pipelines for pre-training, fine-tuning, RL, RAG, and agent data curation.
+model: deepseek-v4-flash
+provider: opencode-go
+type: reference
+category: mlops
+version: 1.0.0
 ---
 
 # Data-Juicer: Data Operating System for Foundation Models

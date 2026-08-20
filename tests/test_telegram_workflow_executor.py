@@ -27,37 +27,6 @@ def test_get_available_workflows_missing_dir_returns_empty(tmp_path: Path, monke
     assert workflow_executor.get_available_workflows() == []
 
 
-def test_get_available_workflows_uses_persona_skills_dir_when_set(
-    tmp_path: Path, monkeypatch
-) -> None:
-    """SAKTHAI_PERSONA, when set, browses that persona's own skill overlay
-    instead of the SakThai-only SKILLS_DIR fallback."""
-    monkeypatch.setattr(workflow_executor, "SKILLS_DIR", tmp_path / "sakthai-skills-unused")
-    persona_skills = tmp_path / "personas" / "saksee" / "skills"
-    persona_skills.mkdir(parents=True)
-    (persona_skills / "SakSee-only-skill").mkdir()
-
-    import sakthai.config as config_mod
-
-    monkeypatch.setattr(config_mod, "PERSONAS_DIR", tmp_path / "personas")
-    monkeypatch.setenv("SAKTHAI_PERSONA", "saksee")
-
-    assert workflow_executor.get_available_workflows() == ["SakSee-only-skill"]
-
-
-def test_get_available_workflows_falls_back_without_sakthai_persona(
-    tmp_path: Path, monkeypatch
-) -> None:
-    """Unset SAKTHAI_PERSONA keeps today's SKILLS_DIR fallback unchanged."""
-    skills_dir = tmp_path / "skills"
-    skills_dir.mkdir()
-    (skills_dir / "alpha").mkdir()
-    monkeypatch.setattr(workflow_executor, "SKILLS_DIR", skills_dir)
-    monkeypatch.delenv("SAKTHAI_PERSONA", raising=False)
-
-    assert workflow_executor.get_available_workflows() == ["alpha"]
-
-
 def test_workflow_command_uses_current_interpreter() -> None:
     command = workflow_executor._workflow_command("alpha")
     assert command[0] == sys.executable

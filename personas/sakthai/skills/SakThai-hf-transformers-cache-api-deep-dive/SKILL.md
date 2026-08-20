@@ -1,9 +1,22 @@
 ---
 name: SakThai-hf-transformers-cache-api-deep-dive
-description: ">-   Complete deep-dive into the Transformers modern cache system \u2014 DynamicCache,\
-  \   StaticCache, QuantizedCache, EncoderDecoderCache, prefix/prefill caching,  \
-  \ iterative generation, CPU offloading, and the cache_implementation API.   Covers\
-  \ v4.47+ wi"
+author: SakThai
+license: MIT
+description: >-
+  Complete deep-dive into the Transformers modern cache system — DynamicCache,
+  StaticCache, QuantizedCache, EncoderDecoderCache, prefix/prefill caching,
+  iterative generation, CPU offloading, and the cache_implementation API.
+  Covers v4.47+ with updates for v5.14.0.
+category: transformers
+version: 2.0.0
+tags:
+  - kv-cache
+  - inference
+  - optimization
+  - transformers
+  - torch-compile
+  - quantization
+  - memory
 ---
 
 # Transformers Cache API: DynamicCache, StaticCache, QuantizedCache & More

@@ -1,8 +1,13 @@
 ---
 name: SakSee-process-investigation
-description: Investigate and manage system processes for debugging, monitoring, and verification
-  purposes.
-...
+description: "Investigate and manage system processes for debugging, monitoring, and verification purposes."
+version: 1.0.0
+author: SakSee
+license: MIT
+platforms: [linux, macos]
+metadata:
+  hermes:
+    tags: [process, debugging, monitoring, system, ps, lsof]
 ---
 
 # Process Investigation

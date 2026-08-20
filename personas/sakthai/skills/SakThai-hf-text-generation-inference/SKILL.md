@@ -1,7 +1,15 @@
 ---
 name: SakThai-hf-text-generation-inference
-description: "Hugging Face Text Generation Inference (TGI) \u2014 deploy and serve LLMs with continuous\
-  \ batching, Flash Attention, quantization, and OpenAI-compatible API."
+author: SakThai
+license: MIT
+description: "Hugging Face Text Generation Inference (TGI) — deploy and serve LLMs with continuous batching, Flash Attention, quantization, and OpenAI-compatible API."
+version: 1.0.0
+dependencies: [docker, curl]
+platforms: [linux]
+metadata:
+  hermes:
+    tags: [TGI, Hugging Face, LLM Serving, Inference, Continuous Batching, Flash Attention, Quantization, Tensor Parallelism, OpenAI API]
+
 ---
 
 # HF Text Generation Inference (TGI)

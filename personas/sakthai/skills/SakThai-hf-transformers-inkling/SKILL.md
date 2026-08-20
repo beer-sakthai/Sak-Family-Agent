@@ -1,9 +1,34 @@
 ---
 name: SakThai-hf-transformers-inkling
-description: ">-   Comprehensive deep-dive into Inkling (Thinking Machines Lab) \u2014 a 975B \
-  \  sparse MoE multimodal model (41B active) supporting text, image, audio,   and\
-  \ video inputs with a 1M-token context window. Added in Transformers   5.14.0. Covers\
-  \ architectur"
+author: SakThai
+license: MIT
+description: >-
+  Comprehensive deep-dive into Inkling (Thinking Machines Lab) — a 975B
+  sparse MoE multimodal model (41B active) supporting text, image, audio,
+  and video inputs with a 1M-token context window. Added in Transformers
+  5.14.0. Covers architecture, hybrid attention (global+sliding window),
+  relative position encoding, MoE with shared expert sink, MTP speculative
+  decoding, vision/audio encoders, zero-cost inference strategies, and
+  deployment patterns.
+category: hf-transformers
+version: 2.0.0
+created: 2026-07-25
+tags:
+  - transformers
+  - inkling
+  - multimodal
+  - moe
+  - mip
+  - mtp
+  - speculative-decoding
+  - thinking-machines
+  - vision
+  - audio
+  - image-text-to-text
+  - hybrid-attention
+  - relative-position
+  - sconv
+  - evaluation
 ---
 
 # Inkling (Transformers 5.14.0+) — Comprehensive Deep-Dive

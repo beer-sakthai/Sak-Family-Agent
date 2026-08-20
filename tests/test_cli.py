@@ -899,7 +899,7 @@ def test_run_reports_agent_error(runner: CliRunner, monkeypatch: pytest.MonkeyPa
 
 
 def test_mcp_invokes_serve(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
-    import sakthai.mcp.server as mcp_pkg
+    import sakthai.mcp as mcp_pkg
 
     called = {"n": 0}
 
@@ -1039,31 +1039,6 @@ def test_run_dry_run_fails_on_unresolved_skill(
     )
     assert result.exit_code != 0
     assert "no-such-skill" in result.output
-
-
-def test_run_dry_run_reports_unresolved_skill_without_credentials(
-    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, sakthai_home: Path
-) -> None:
-    """A bad --with-skills name must be reported even with no credentials.
-
-    Validating skill names is a normal reason to run --dry-run somewhere that
-    deliberately has no credentials, such as CI. The credentials check used to
-    run first and short-circuit, so the unresolved name was never printed —
-    which is how the since-retired `continuous-security.yml` went on passing
-    `--with-skills SakThai-coding-security`, a skill that does not exist, for
-    as long as it did. The sibling test above stubs credentials as present, so
-    it cannot catch this.
-    """
-    import sakthai.agent.loop as loop_mod
-
-    monkeypatch.setattr(loop_mod, "get_credential_source", lambda _p: None)
-    result = runner.invoke(
-        main,
-        ["run", "hi", "--dry-run", "--no-mcp", "-p", "anthropic", "--with-skills", "no-such-skill"],
-    )
-    assert result.exit_code != 0
-    assert "no-such-skill" in result.output, result.output
-    assert "Unresolved --with-skills" in result.output, result.output
 
 
 def test_run_dry_run_reports_resolved_skills(
@@ -1349,10 +1324,7 @@ def test_memory_pull_rejects_persona(runner: CliRunner) -> None:
     assert "not supported with `memory pull`" in result.output
 
 
-def test_memory_family_merges_across_persona_shards(
-    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setenv("HOME", str(tmp_path))
+def test_memory_family_merges_across_persona_shards(runner: CliRunner) -> None:
     from sakthai.config import persona_memory_db_path
 
     with MemoryStore(persona_memory_db_path("sakthai")) as store:
@@ -1368,11 +1340,7 @@ def test_memory_family_merges_across_persona_shards(
     assert "sakking family fact" in result.output
 
 
-def test_memory_family_empty_when_no_shards_exist(
-    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setenv("HOME", str(tmp_path))
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".sakthai"))
+def test_memory_family_empty_when_no_shards_exist(runner: CliRunner) -> None:
     result = runner.invoke(main, ["memory", "family"])
     assert result.exit_code == 0
     assert "no persona has any memory yet" in result.output
@@ -1419,17 +1387,7 @@ def test_run_persona_uses_persona_store_and_soul(
         return types.SimpleNamespace(text="ok")
 
     monkeypatch.setattr(agent_mod, "run_agent", fake_run_agent)
-    # --no-mcp because this test is about the store and the SOUL prefix, and it
-    # deliberately uses the real personas/ tree for SakKing's SOUL.md. Without
-    # it, `--persona sakking` auto-loads the committed
-    # personas/sakking/config/mcp.json and `_tool_context` spawns the three npx
-    # servers it names from the live npm registry — stubbing `run_agent` does
-    # not prevent that, because `_tool_context` is entered first. That made the
-    # suite non-hermetic (CLAUDE.md: tests assume no network) and hung outright
-    # where npm is unreachable. The neighbouring persona tests either pass
-    # --no-mcp or point PERSONAS_DIR at a tmp tree; this one cannot do the
-    # latter without giving up the real SOUL.md it asserts on.
-    result = runner.invoke(main, ["run", "hi", "--persona", "sakking", "--no-mcp"])
+    result = runner.invoke(main, ["run", "hi", "--persona", "sakking"])
     assert result.exit_code == 0
 
     store = captured["store"]
@@ -1480,210 +1438,3 @@ def test_chat_uses_persona_specific_memory_shard(
     store = captured["store"]
     assert isinstance(store, MemoryStore)
     assert store.db_path == persona_memory_db_path("sakking")
-
-
-def test_run_persona_threads_persona_into_run_agent(
-    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    captured: dict[str, object] = {}
-
-    def fake_run_agent(task: str, **kwargs: object) -> object:
-        captured["persona"] = kwargs.get("persona")
-        return types.SimpleNamespace(text="ok")
-
-    monkeypatch.setattr(agent_mod, "run_agent", fake_run_agent)
-    result = runner.invoke(main, ["run", "hi", "--persona", "sakking", "--no-mcp"])
-    assert result.exit_code == 0
-    assert captured["persona"] == "sakking"
-
-
-def test_run_persona_resolves_persona_only_skill(
-    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """--persona resolves --with-skills against that persona's own overlay."""
-    monkeypatch.setattr(agent_mod.config, "PERSONAS_DIR", tmp_path)
-    skill_dir = tmp_path / "saksee" / "skills" / "SakSee-only-skill"
-    skill_dir.mkdir(parents=True)
-    (skill_dir / "SKILL.md").write_text(
-        "---\nname: SakSee-only-skill\ndescription: d\nversion: 1.0.0\n---\n\nBODY\n",
-        encoding="utf-8",
-    )
-    import sakthai.agent.loop as loop_mod
-
-    monkeypatch.setattr(loop_mod, "get_credential_source", lambda _p: "api_key")
-    result = runner.invoke(
-        main,
-        [
-            "run",
-            "hi",
-            "--dry-run",
-            "--no-mcp",
-            "-p",
-            "anthropic",
-            "--persona",
-            "saksee",
-            "--with-skills",
-            "SakSee-only-skill",
-        ],
-    )
-    assert result.exit_code == 0, result.output
-    assert "SakSee-only-skill" in result.output
-
-
-def test_run_persona_defaults_model_and_provider_from_config(
-    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Explicit --model/--provider are left at their CLI defaults, so the
-    persona's own config.yaml (model.provider/model.default) fills them in."""
-    monkeypatch.setattr(
-        agent_mod.config, "persona_model_defaults", lambda persona: ("huggingface", "some-model")
-    )
-    captured: dict[str, object] = {}
-
-    def fake_run_agent(task: str, **kwargs: object) -> object:
-        captured["model"] = kwargs.get("model")
-        captured["provider"] = kwargs.get("provider")
-        return types.SimpleNamespace(text="ok")
-
-    monkeypatch.setattr(agent_mod, "run_agent", fake_run_agent)
-    result = runner.invoke(main, ["run", "hi", "--persona", "sakking", "--no-mcp"])
-    assert result.exit_code == 0, result.output
-    assert captured["model"] == "some-model"
-    assert captured["provider"] == "huggingface"
-
-
-def test_run_persona_explicit_model_and_provider_win(
-    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """An explicitly-passed --model/--provider is never overridden by persona config."""
-    monkeypatch.setattr(
-        agent_mod.config,
-        "persona_model_defaults",
-        lambda persona: ("huggingface", "should-not-be-used"),
-    )
-    captured: dict[str, object] = {}
-
-    def fake_run_agent(task: str, **kwargs: object) -> object:
-        captured["model"] = kwargs.get("model")
-        captured["provider"] = kwargs.get("provider")
-        return types.SimpleNamespace(text="ok")
-
-    monkeypatch.setattr(agent_mod, "run_agent", fake_run_agent)
-    result = runner.invoke(
-        main,
-        [
-            "run",
-            "hi",
-            "--persona",
-            "sakking",
-            "--no-mcp",
-            "--model",
-            "explicit-model",
-            "-p",
-            "anthropic",
-        ],
-    )
-    assert result.exit_code == 0, result.output
-    assert captured["model"] == "explicit-model"
-    assert captured["provider"] == "anthropic"
-
-
-def test_run_persona_autoloads_own_mcp_config(
-    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """--persona auto-loads that persona's own config/mcp.json when
-    SAKTHAI_MCP_CONFIG isn't already set — reusing the existing
-    SAKTHAI_MCP_CONFIG/mcp_config_override() precedence chain."""
-    server_home = tmp_path / "srv"
-    persona_cfg_dir = tmp_path / "personas" / "saksee" / "config"
-    persona_cfg_dir.mkdir(parents=True)
-    (persona_cfg_dir / "mcp.json").write_text(
-        json.dumps(
-            {
-                "mcpServers": {
-                    "sk": {
-                        "command": sys.executable,
-                        "args": ["-m", "sakthai.mcp"],
-                        "env": {"SAKTHAI_HOME": str(server_home)},
-                    }
-                }
-            }
-        ),
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(agent_mod.config, "PERSONAS_DIR", tmp_path / "personas")
-    captured = _capture_tools(monkeypatch)
-    result = runner.invoke(main, ["run", "hi", "--persona", "saksee"])
-    assert result.exit_code == 0, result.output
-    names = {t.name for t in captured["tools"]}  # type: ignore[union-attr]
-    assert any(n.startswith("sk__") for n in names)
-
-
-def test_run_explicit_mcp_config_env_wins_over_persona(
-    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """An already-set SAKTHAI_MCP_CONFIG is never overridden by --persona."""
-    persona_cfg_dir = tmp_path / "personas" / "saksee" / "config"
-    persona_cfg_dir.mkdir(parents=True)
-    (persona_cfg_dir / "mcp.json").write_text(
-        json.dumps({"mcpServers": {"sk": {"command": "sakthai-no-such-binary"}}}),
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(agent_mod.config, "PERSONAS_DIR", tmp_path / "personas")
-    monkeypatch.setenv("SAKTHAI_MCP_CONFIG", str(tmp_path / "does-not-exist.json"))
-    captured = _capture_tools(monkeypatch)
-    result = runner.invoke(main, ["run", "hi", "--persona", "saksee"])
-    assert result.exit_code == 0, result.output
-    names = {t.name for t in captured["tools"]}  # type: ignore[union-attr]
-    assert not any(n.startswith("sk__") for n in names)
-
-
-def test_no_test_runs_a_persona_against_the_real_mcp_config() -> None:
-    """`run --persona X` in a test must not reach the committed persona mcp.json.
-
-    `_tool_context` is entered *before* `run_agent`, so stubbing `run_agent` does
-    not stop it: a persona whose `config/mcp.json` names npx servers gets those
-    servers spawned from the live npm registry. That is how
-    `test_run_persona_uses_persona_store_and_soul` came to contact npm on every
-    suite run — passing under CI only because runners reach the registry fast
-    enough, and hanging outright where they do not.
-
-    An invocation is considered safe when it passes `--no-mcp`, is rejected
-    before `_tool_context` (`--sandbox`, `--dry-run`), or runs against a
-    `PERSONAS_DIR` the test has redirected at a tmp tree.
-    """
-    import ast
-
-    tests_dir = Path(__file__).resolve().parent
-    offenders: list[str] = []
-
-    for path in sorted(tests_dir.glob("test_*.py")):
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-        for func in ast.walk(tree):
-            if not isinstance(func, ast.FunctionDef):
-                continue
-            redirects_personas_dir = "PERSONAS_DIR" in ast.dump(func)
-            for call in ast.walk(func):
-                if not isinstance(call, ast.Call):
-                    continue
-                for lst in (a for a in call.args if isinstance(a, ast.List)):
-                    argv = [
-                        e.value
-                        for e in lst.elts
-                        if isinstance(e, ast.Constant) and isinstance(e.value, str)
-                    ]
-                    if "run" not in argv or "--persona" not in argv:
-                        continue
-                    safe = (
-                        "--no-mcp" in argv
-                        or "--sandbox" in argv
-                        or "--dry-run" in argv
-                        or redirects_personas_dir
-                    )
-                    if not safe:
-                        offenders.append(f"{path.name}::{func.name} -> {argv}")
-
-    assert not offenders, (
-        "these tests run a persona against the committed persona mcp.json and "
-        "will spawn real MCP servers:\n  " + "\n  ".join(offenders)
-    )

@@ -1,8 +1,10 @@
 ---
 name: SakThai-hf-spaces-as-api-endpoints
-description: "Complete reference for using Hugging Face Spaces as REST API endpoints \u2014 the\
-  \ Gradio client library (Python/JS), REST API via curl, ZeroGPU quotas, error handling,\
-  \ streaming, file handling, and integration patterns"
+author: SakThai
+license: MIT
+description: Complete reference for using Hugging Face Spaces as REST API endpoints — the Gradio client library (Python/JS), REST API via curl, ZeroGPU quotas, error handling, streaming, file handling, and integration patterns
+category: mlops
+version: 1.0.0
 ---
 
 # HF Spaces as API Endpoints

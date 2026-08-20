@@ -1,7 +1,9 @@
 ---
 name: SakThai-hf-hub-revision-resolution-system
-description: A skill for Hf Hub Revision Resolution System.
-...
+author: SakThai
+license: MIT
+description: "A skill for Hf Hub Revision Resolution System."
+version: 0.1.0
 ---
 
 # HF Hub Revision Resolution System

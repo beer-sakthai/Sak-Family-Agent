@@ -1,8 +1,11 @@
 ---
 name: SakThai-hf-transformers-vlm-processors
-description: "Deep expertise in Transformers VLM processor classes \u2014 bridging image/video\
-  \ inputs with text tokenization for multimodal models like LLaVA, Idefics3, Florence-2,\
-  \ Qwen2-VL, Phi-4-multimodal."
+version: 1.0.0
+author: SakThai
+license: MIT
+description: "Deep expertise in Transformers VLM processor classes — bridging image/video inputs with text tokenization for multimodal models like LLaVA, Idefics3, Florence-2, Qwen2-VL, Phi-4-multimodal."
+category: mlops
+domain: Hugging Face Transformers — Multimodal / Vision-Language Models
 ---
 
 ## Purpose

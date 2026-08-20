@@ -1,6 +1,9 @@
 ---
 name: SakThai-hf-inference-providers-responses-api-deep-dive
-description: 'name: SakThai-hf-inference-providers-responses-api-deep-dive'
+version: 1.0.0
+author: SakThai
+license: MIT
+category: mlops
 ---
 
 # HF Inference Providers — Responses API & Remote MCP (Deep Dive)

@@ -1,7 +1,25 @@
 ---
 name: SakSit-b2b-saas-content-distribution-2026
-description: Saksit B2B Saas Content Distribution 2026
-...
+version: 1.0.0
+description: "Saksit B2B Saas Content Distribution 2026"
+category: social-media
+domain: B2B SaaS Marketing
+agent: saksit
+tags:
+  - content-distribution
+  - content-amplification
+  - paid-distribution
+  - organic-reach
+  - syndication
+  - 2026
+created: 2026-07-02
+description: >
+  A strategic framework for B2B SaaS content distribution and
+  amplification in 2026 — moving beyond "publish and pray"
+  to a systematic multi-channel, multi-format distribution
+  engine that optimizes for AI search visibility, platform-native
+  formats, and pipeline-attributed results.
+
 ---
 
 # B2B SaaS Content Distribution & Amplification (2026)

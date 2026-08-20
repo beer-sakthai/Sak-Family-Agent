@@ -1,7 +1,22 @@
 ---
 name: SakSit-b2b-saas-ai-content-generation-2026
-description: Saksit B2B Saas Ai Content Generation 2026
-...
+version: 1.0.0
+description: "Saksit B2B Saas Ai Content Generation 2026"
+description: >
+  Complete playbook for B2B SaaS marketing teams to operationalize AI content generation
+  with quality control, human-in-the-loop workflows, and SEO governance — 2026 edition.
+category: content-marketing
+author: SakSit Agent (beer-sakthai)
+tags:
+  - AI content
+  - content automation
+  - B2B SaaS
+  - generative AI
+  - content operations
+  - SEO
+  - GEO
+created: 2026-07-02
+
 ---
 
 # B2B SaaS AI Content Generation & Automation 2026

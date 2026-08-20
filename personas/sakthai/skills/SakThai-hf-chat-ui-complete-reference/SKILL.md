@@ -1,9 +1,10 @@
 ---
 name: SakThai-hf-chat-ui-complete-reference
-description: "Complete reference for Hugging Face Chat UI \u2014 the open-source SvelteKit chat\
-  \ interface powering HuggingChat (hf.co/chat). Covers installation (local, Docker,\
-  \ Helm), configuration (models, MCP tools, LLM Router, OpenID, theming, voice transcription,\
-  \ r"
+description: Complete reference for Hugging Face Chat UI — the open-source SvelteKit chat interface powering HuggingChat (hf.co/chat). Covers installation (local, Docker, Helm), configuration (models, MCP tools, LLM Router, OpenID, theming, voice transcription, rate limits, metrics), architecture, MCP tool integration, LLM router smart selection, and deployment patterns.
+category: mlops
+tags: [huggingface, chat-ui, huggingchat, sveltekit, mcp, llm-router, openid]
+author: SakThai
+version: 1
 ---
 
 # Chat UI — Complete Reference

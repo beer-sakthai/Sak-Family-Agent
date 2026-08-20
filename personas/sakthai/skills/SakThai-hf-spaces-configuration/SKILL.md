@@ -1,9 +1,17 @@
 ---
 name: SakThai-hf-spaces-configuration
-description: ">   Complete reference for Hugging Face Spaces YAML configuration system \u2014 \
-  \  SDK options, hardware tiers, metadata fields, environment variables,   OAuth,\
-  \ preloading, custom headers, and advanced configuration for   Gradio, Streamlit,\
-  \ Docker, and Sta"
+author: SakThai
+license: MIT
+description: >
+  Complete reference for Hugging Face Spaces YAML configuration system —
+  SDK options, hardware tiers, metadata fields, environment variables,
+  OAuth, preloading, custom headers, and advanced configuration for
+  Gradio, Streamlit, Docker, and Static Spaces.
+version: 1.0.0
+metadata:
+  hermes:
+    tags: [huggingface, spaces, configuration, yaml, deployment, sdk, gradio, docker]
+    category: mlops
 ---
 
 # HF Spaces Configuration Reference

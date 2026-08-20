@@ -1,6 +1,9 @@
 ---
 name: SakThai-hf-inference-client-embeddings-patterns
-description: 'name: SakThai-hf-inference-client-embeddings-patterns'
+version: 1.0.0
+author: SakThai
+license: MIT
+category: mlops
 ---
 
 # HF Inference Client — Embeddings Patterns (Serverless)

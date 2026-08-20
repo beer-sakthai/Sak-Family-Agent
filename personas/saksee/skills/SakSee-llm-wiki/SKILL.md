@@ -1,6 +1,15 @@
 ---
 name: SakSee-llm-wiki
-description: 'Karpathys LLM Wiki: build/query interlinked markdown KB.'
+description: "Karpathy's LLM Wiki: build/query interlinked markdown KB."
+version: 2.1.0
+author: Hermes Agent
+license: MIT
+platforms: [linux, macos, windows]
+metadata:
+  hermes:
+    tags: [wiki, knowledge-base, research, notes, markdown, rag-alternative]
+    category: research
+    related_skills: [obsidian, arxiv]
 ---
 
 # Karpathy's LLM Wiki

@@ -1,8 +1,13 @@
 ---
 name: SakSee-handling-missing-system-tools
-description: Handle situations where common system tools like lsof, netstat, or gh are not available,
-  and use alternative methods to accomplish the same tasks.
-...
+description: "Handle situations where common system tools like lsof, netstat, or gh are not available, and use alternative methods to accomplish the same tasks."
+version: 1.0.0
+author: SakSee
+license: MIT
+platforms: [linux, macos]
+metadata:
+  hermes:
+    tags: [system, tools, troubleshooting, lsof, netstat, gh]
 ---
 
 # Handling Missing System Tools

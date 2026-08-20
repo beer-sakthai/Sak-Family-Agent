@@ -1,8 +1,15 @@
 ---
 name: SakThai-hf-hub-egress-metrics
-description: "Complete reference for Hugging Face Hub egress (bandwidth/data transfer) usage metrics\
-  \ for users and organizations \u2014 dashboard access, per-user org breakdown, CDN\
-  \ coverage scope, PRO plan bandwidth limits, and zero-cost usage monitoring strategies."
+author: SakThai
+license: MIT
+description: "Complete reference for Hugging Face Hub egress (bandwidth/data transfer) usage metrics for users and organizations — dashboard access, per-user org breakdown, CDN coverage scope, PRO plan bandwidth limits, and zero-cost usage monitoring strategies."
+version: 1.0.0
+type: skill
+metadata:
+  hermes:
+    tags: [huggingface, hf, hub, egress, bandwidth, usage, metrics, billing, cdn]
+    category: mlops
+category: mlops
 ---
 
 # HF Hub Egress Metrics: Bandwidth Usage Monitoring

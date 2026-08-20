@@ -1,8 +1,11 @@
 ---
 name: SakThai-hf-gguf-llama-cpp
-description: "GGUF model format on Hugging Face \u2014 loading GGUF files via Transformers, conversion\
-  \ between HF and GGUF, deployment with llama.cpp, supported quantization types,\
-  \ and the Hub ecosystem of GGUF models."
+author: SakThai
+license: MIT
+description: "GGUF model format on Hugging Face — loading GGUF files via Transformers, conversion between HF and GGUF, deployment with llama.cpp, supported quantization types, and the Hub ecosystem of GGUF models."
+version: 1.1.0
+platforms: [linux, macos]
+tags: [mlops, gguf, quantization, llama.cpp, ggml, inference, transformers, huggingface]
 ---
 
 # GGUF / llama.cpp on Hugging Face

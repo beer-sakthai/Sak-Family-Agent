@@ -1,0 +1,64 @@
+# Marks issues and pull requests that have gone quiet, then closes the ones
+# still ignored after the grace period. Configured per actions/stale docs:
+# https://github.com/actions/stale
+name: Mark stale issues and pull requests
+
+on:
+  schedule:
+    - cron: '44 15 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+          # Days of inactivity before marking; days after marking before close.
+          days-before-issue-stale: 60
+          days-before-issue-close: 14
+          days-before-pr-stale: 45
+          days-before-pr-close: 14
+
+          stale-issue-label: 'no-issue-activity'
+          stale-pr-label: 'no-pr-activity'
+
+          stale-issue-message: >
+            This issue has been automatically marked as stale because it has had
+            no activity in the last 60 days. It will be closed in 14 days if no
+            further activity occurs. If it is still relevant, add a comment, remove
+            the `no-issue-activity` label, or link to related work to keep it open.
+          close-issue-message: >
+            Closing this issue after 74 days of inactivity. If the problem still
+            reproduces, please open a new issue with the current details. Thanks!
+          stale-pr-message: >
+            This pull request has been automatically marked as stale because it
+            has had no activity in the last 45 days. It will be closed in 14 days
+            if no further activity occurs. A comment, push, or removing the
+            `no-pr-activity` label will keep it open.
+          close-pr-message: >
+            Closing this pull request after 59 days of inactivity. Feel free to
+            reopen it (or open a fresh PR from an updated branch) when you are
+            ready to continue.
+
+          # Never mark security-labelled or explicitly pinned items as stale.
+          exempt-issue-labels: 'pinned,security'
+          exempt-pr-labels: 'pinned,security'
+
+          # Cap API usage per run so a large backlog can't burn the rate limit
+          # in a single day; leftovers roll to tomorrow's run.
+          operations-per-run: 100

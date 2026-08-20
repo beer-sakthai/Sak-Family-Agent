@@ -1,7 +1,23 @@
 ---
 name: SakSit-b2b-saas-community-building-2026
-description: Saksit B2B Saas Community Building 2026
-...
+version: 1.0.0
+description: "Saksit B2B Saas Community Building 2026"
+description: >
+  A complete playbook for B2B SaaS companies to build, launch, and scale a
+  community-led growth (CLG) engine in 2026. Covers platform selection, seeding
+  strategy, monetization models, metric frameworks, and activation playbooks for
+  both owned communities (Slack, Discord, Circle) and partner communities.
+tags:
+  - community-led-growth
+  - B2B-SaaS
+  - clg
+  - slack-community
+  - discord-community
+  - community-monetization
+  - peer-marketing
+category: social-media
+type: playbook
+
 ---
 
 # B2B SaaS Community-Led Growth Strategy 2026

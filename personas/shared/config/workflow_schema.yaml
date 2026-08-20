@@ -1,9 +1,0 @@
-schema_name: SakFamilyWorkspaceSchema
-version: "1.0"
-required_keys:
-  - agent_name
-  - role
-  - domain
-  - workspace_root
-  - primary_skills
-  - allowed_tools

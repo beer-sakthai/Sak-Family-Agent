@@ -1,6 +1,12 @@
 ---
 name: SakSit-beer-content-voice
-description: 'Write Beers story with his voice: tone, hooks, framing.'
+version: 0.1.0
+author: Hermes
+description: "Write Beer's story with his voice: tone, hooks, framing."
+metadata:
+  hermes:
+    tags: [Beer, Content, Voice, Storytelling, Origin]
+category: social-media
 ---
 
 # Beer's Content Voice

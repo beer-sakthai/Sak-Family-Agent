@@ -1,7 +1,13 @@
 ---
 name: SakThai-hf-papers
+author: SakThai
+license: MIT
+title: HF Papers of the Day
 description: Daily snapshot of featured papers on Hugging Face
-...
+version: 1.0.0
+updated: 2026-07-23T15:10 UTC
+source: https://huggingface.co/papers
+tags: [papers, research, daily-snapshot, 23-jul-2026]
 ---
 
 # HF Papers of the Day — 23 Jul 2026 (Snap #4)

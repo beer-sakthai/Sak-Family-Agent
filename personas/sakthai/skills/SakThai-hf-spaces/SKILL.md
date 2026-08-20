@@ -1,8 +1,19 @@
 ---
 name: SakThai-hf-spaces
-description: Tracked snapshots of trending Hugging Face Spaces with methodology for search, analysis,
-  and reporting
-...
+author: SakThai
+license: MIT
+title: HF Trending Spaces Reference
+description: Tracked snapshots of trending Hugging Face Spaces with methodology for search, analysis, and reporting
+version: 1.0.0
+updated: 2026-07-24T01:15UTC
+source: https://huggingface.co/spaces?sort=trending
+provides:
+  - references/aura-sr-v2-case-study.md (example: GAN super-resolution Space discovery)
+  - references/multi-model-docker-spaces.md (Docker multi-model orchestration analysis pattern, with AI Comic Factory case study)
+  - references/session-reports.md (consolidated archive of all deep-dive and trending reports)
+  - references/aoti-zerogpu-pattern.md (AOTI compilation + dynamic GPU duration for ZeroGPU Spaces — detected 2026-07-23)
+  - references/anycoder-case-study.md (Docker Space with multi-model orchestration + HF OAuth deployment — detected 2026-07-24)
+  - references/fastapi-voice-proxy-case-study.md (FastAPI proxy-gateway + WebSocket real-time audio + usage metering — detected 2026-07-23)
 ---
 
 # HF Spaces — Trend Monitoring

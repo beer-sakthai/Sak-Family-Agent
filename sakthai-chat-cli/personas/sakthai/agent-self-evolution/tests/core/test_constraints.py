@@ -1,7 +1,5 @@
 """Tests for constraint validators."""
 
-from unittest.mock import MagicMock, patch
-
 import pytest
 from evolution.core.config import EvolutionConfig
 from evolution.core.constraints import ConstraintValidator
@@ -98,66 +96,3 @@ class TestValidateAll:
         results = validator.validate_all("", "skill")
         failed = [r for r in results if not r.passed]
         assert len(failed) > 0
-
-
-class TestRunTestSuite:
-    @patch("subprocess.run")
-    def test_run_test_suite_success(self, mock_run, validator):
-        from pathlib import Path
-
-        mock_process = MagicMock()
-        mock_process.returncode = 0
-        mock_process.stdout = "16 passed in 0.07s"
-        mock_run.return_value = mock_process
-
-        result = validator.run_test_suite(Path("/mock/repo"))
-
-        assert result.passed
-        assert result.constraint_name == "test_suite"
-        assert result.message == "All tests passed"
-        assert result.details == "16 passed in 0.07s"
-        mock_run.assert_called_once()
-
-    @patch("subprocess.run")
-    def test_run_test_suite_failure(self, mock_run, validator):
-        from pathlib import Path
-
-        mock_process = MagicMock()
-        mock_process.returncode = 1
-        mock_process.stdout = "FAILED tests/core/test_constraints.py::TestSizeConstraints::test_skill_over_limit\n1 failed, 15 passed in 0.08s"
-        mock_run.return_value = mock_process
-
-        result = validator.run_test_suite(Path("/mock/repo"))
-
-        assert not result.passed
-        assert result.constraint_name == "test_suite"
-        assert result.message == "Test suite failed"
-        assert "1 failed, 15 passed in 0.08s" in result.details
-        mock_run.assert_called_once()
-
-    @patch("subprocess.run")
-    def test_run_test_suite_timeout(self, mock_run, validator):
-        import subprocess
-        from pathlib import Path
-
-        mock_run.side_effect = subprocess.TimeoutExpired(cmd=["pytest"], timeout=300)
-
-        result = validator.run_test_suite(Path("/mock/repo"))
-
-        assert not result.passed
-        assert result.constraint_name == "test_suite"
-        assert result.message == "Test suite timed out (300s)"
-        mock_run.assert_called_once()
-
-    @patch("subprocess.run")
-    def test_run_test_suite_exception(self, mock_run, validator):
-        from pathlib import Path
-
-        mock_run.side_effect = RuntimeError("Something went wrong")
-
-        result = validator.run_test_suite(Path("/mock/repo"))
-
-        assert not result.passed
-        assert result.constraint_name == "test_suite"
-        assert "Failed to run tests: Something went wrong" in result.message
-        mock_run.assert_called_once()

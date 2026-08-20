@@ -7,26 +7,20 @@ permissions:
   contents: read
 
 concurrency:
-  # Keyed on the pull request rather than `github.ref`: `pull_request_target`
-  # runs against the base branch, so every open PR would otherwise share one
-  # `refs/heads/main` group and cancel each other's labelling.
+  # pull_request_target: github.ref resolves to the base branch (e.g. refs/heads/main),
+  # so every PR would share one group. Key on the PR number instead so a re-run
+  # cancels only stale runs for the same PR — not other PRs' labeler jobs.
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
   labeler:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     permissions:
       contents: read
       pull-requests: write
     steps:
-      - name: Harden the runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
-        with:
-          use-policy-store: true
-          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
-
-      - uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7.0.0
+      - uses: actions/labeler@v5
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}

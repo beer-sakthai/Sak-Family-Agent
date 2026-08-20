@@ -1,7 +1,9 @@
 ---
 name: SakSee-skill-benchmark
+version: 0.1.0
 description: Two-pass cold/hot file read benchmark for SKILL.md files.
-...
+category: software-development
+tags: [benchmark, performance, page-cache]
 ---
 
 # Skill Benchmark

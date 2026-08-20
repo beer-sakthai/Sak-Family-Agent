@@ -1,8 +1,11 @@
 ---
 name: SakThai-hf-hub-dduf-format
-description: "Comprehensive knowledge of the DDUF (Diffusion Data Unified Format) \u2014 a single-file\
-  \ archive format for diffusion models that unifies model distribution by packaging\
-  \ all components into a single .dduf file."
+author: SakThai
+license: MIT
+description: Comprehensive knowledge of the DDUF (Diffusion Data Unified Format) — a single-file archive format for diffusion models that unifies model distribution by packaging all components into a single .dduf file.
+version: 1.0.0
+category: mlops
+tags: [huggingface, dduf, diffusion, models, safetensors]
 ---
 
 # hf-hub-dduf-format

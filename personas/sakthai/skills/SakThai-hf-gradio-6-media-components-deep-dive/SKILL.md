@@ -1,8 +1,11 @@
 ---
 name: SakThai-hf-gradio-6-media-components-deep-dive
-description: "Complete reference for Gradio 6 media components \u2014 Audio, Video, Image, File,\
-  \ Gallery, and ImageEditor. Covers API surface, streaming, preprocessing, events,\
-  \ theming, and advanced usage patterns."
+version: 1.0.0
+title: Gradio 6 Media Components Deep Dive
+description: Complete reference for Gradio 6 media components — Audio, Video, Image, File, Gallery, and ImageEditor. Covers API surface, streaming, preprocessing, events, theming, and advanced usage patterns.
+category: mlops
+domain: gradio
+tags: [gradio-6, media, audio, video, image, file, gallery, image-editor, streaming]
 ---
 
 # Gradio 6 Media Components — Complete Reference

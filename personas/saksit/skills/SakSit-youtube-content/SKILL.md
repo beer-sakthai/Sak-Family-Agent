@@ -1,7 +1,8 @@
 ---
 name: SakSit-youtube-content
-description: YouTube transcripts to summaries, threads, blogs.
-...
+version: 0.1.0
+description: "YouTube transcripts to summaries, threads, blogs."
+platforms: [linux, macos, windows]
 ---
 
 # YouTube Content Tool

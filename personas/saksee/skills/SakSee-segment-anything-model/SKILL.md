@@ -1,6 +1,15 @@
 ---
 name: SakSee-segment-anything-model
-description: 'SAM: zero-shot image segmentation via points, boxes, masks.'
+description: "SAM: zero-shot image segmentation via points, boxes, masks."
+version: 1.0.0
+author: Orchestra Research
+license: MIT
+dependencies: [segment-anything, transformers>=4.30.0, torch>=1.7.0]
+platforms: [linux, macos, windows]
+metadata:
+  hermes:
+    tags: [Multimodal, Image Segmentation, Computer Vision, SAM, Zero-Shot]
+
 ---
 
 # Segment Anything Model (SAM)

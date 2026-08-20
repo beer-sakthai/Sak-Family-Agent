@@ -1,7 +1,12 @@
 ---
 name: SakThai-hf-reasoning-corpus-4k-5m
-description: "Qyrou/reasoning-corpus-4K-5M-v1 \u2014 curated 5M-row / ~9B-token reasoning corpus\
-  \ for SLM SFT & distillation. Source map, schema, streaming recipes, and pitfalls."
+author: SakThai
+license: MIT
+description: "Qyrou/reasoning-corpus-4K-5M-v1 — curated 5M-row / ~9B-token reasoning corpus for SLM SFT & distillation. Source map, schema, streaming recipes, and pitfalls."
+version: 1.0.0
+category: mlops
+tags: [huggingface, dataset, reasoning, cot, sft, distillation, slm]
+platforms: [linux]
 ---
 
 # Reasoning Corpus 4K-5M (Qyrou)

@@ -23,10 +23,10 @@ PERSONAS_DIR = REPO_ROOT / "personas"
 PERSONAS: dict[str, str] = {
     "sakthai": "SakThai",
     "sakking": "SakKing",
-    "saktan": "SakTan",
     "saksee": "SakSee",
     "saksit": "SakSit",
     "sakjules": "SakJules",
+    "saktan": "SakTan",
 }
 
 # Tool names from runtimes the family no longer uses; SOULs must reference
@@ -41,7 +41,7 @@ def soul_text(slug: str) -> str:
 
 @pytest.mark.parametrize("slug", sorted(PERSONAS))
 def test_soul_names_all_five_siblings(slug: str) -> None:
-    """Every SOUL must mention each of its five siblings by display name."""
+    """Every SOUL must mention each of its siblings by display name."""
     text = soul_text(slug)
     missing = [name for other, name in PERSONAS.items() if other != slug and name not in text]
     assert not missing, f"{slug}/SOUL.md never mentions sibling(s): {missing}"
@@ -59,7 +59,7 @@ def test_soul_follows_local_model_policy(slug: str) -> None:
 
 
 def test_financial_analysis_has_no_owner() -> None:
-    """No active persona claims financial analysis (SakTan was deleted)."""
+    """No active persona claims financial analysis (not part of any current SOUL's lane)."""
     owners = [slug for slug in PERSONAS if "Master of Financial Analysis" in soul_text(slug)]
     assert owners == [], f"finance role still claimed by: {owners}"
 

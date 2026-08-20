@@ -1,1 +1,0 @@
-../../../../personas/sakking/SOUL.md

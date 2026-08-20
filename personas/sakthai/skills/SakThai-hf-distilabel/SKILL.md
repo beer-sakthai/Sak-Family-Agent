@@ -1,7 +1,10 @@
 ---
 name: SakThai-hf-distilabel
+version: 1.0.0
 description: HuggingFace Distilabel for synthetic data generation and labeling
-...
+author: SakThai
+license: MIT
+source: https://github.com/argilla-io/distilabel
 ---
 
 # SakThai Distilabel Skill

@@ -1,7 +1,15 @@
 ---
 name: SakSit-content-source-check
 description: Check Drive and history for content before creating.
-...
+version: 0.2.0
+author: Hermes
+platforms: [linux]
+category: productivity
+tags:
+  - Content
+  - Google-Drive
+  - Research
+  - Brainstorming
 ---
 
 # Content Source Check Protocol

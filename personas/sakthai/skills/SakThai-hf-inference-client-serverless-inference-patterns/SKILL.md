@@ -1,9 +1,15 @@
 ---
 name: SakThai-hf-inference-client-serverless-inference-patterns
-description: "Complete reference on Hugging Face Inference Providers serverless inference patterns\
-  \ \u2014 the Routes API, OpenAI-compatible endpoint, provider selection policies,\
-  \ structured outputs, function calling, streaming, pricing tiers, and zero-cost\
-  \ strategies. "
+author: SakThai
+license: MIT
+description: "Complete reference on Hugging Face Inference Providers serverless inference patterns — the Routes API, OpenAI-compatible endpoint, provider selection policies, structured outputs, function calling, streaming, pricing tiers, and zero-cost strategies. Researched July 2026 from official HF docs."
+version: 1.0.0
+type: skill
+metadata:
+  hermes:
+    tags: [huggingface, inference, serverless, providers, openai-compatible, responses-api, structured-outputs, function-calling, streaming, pricing]
+    category: mlops
+category: mlops
 ---
 
 # HF Inference Providers — Serverless Inference Patterns

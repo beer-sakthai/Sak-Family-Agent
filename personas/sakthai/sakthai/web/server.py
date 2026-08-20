@@ -14,8 +14,6 @@ import ipaddress
 import json
 import logging
 import os
-import re
-import secrets
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from typing import Any
@@ -24,63 +22,14 @@ from urllib.parse import unquote, urlparse
 logger = logging.getLogger(__name__)
 
 _DEFAULT_HOST = "127.0.0.1"
-_BEARER_TOKEN: str | None = None
-
-
-def _get_or_create_bearer_token() -> str:
-    """Retrieve or create an opaque 32-character hex bearer token in MemoryStore."""
-    global _BEARER_TOKEN
-    if _BEARER_TOKEN is not None:
-        return _BEARER_TOKEN
-
-    try:
-        from ..config import register_secret
-        from ..memory.store import MemoryStore
-
-        with MemoryStore() as store:
-            fact = store.get_fact_by_key(kind="web_auth", key="bearer_token")
-            if fact:
-                _BEARER_TOKEN = fact.value
-                register_secret(_BEARER_TOKEN)
-                return _BEARER_TOKEN
-
-            # Generate new token
-            token = secrets.token_hex(16)
-            store.delete_facts_by_key(kind="web_auth", key="bearer_token")
-            store.add_fact(
-                value=token,
-                kind="web_auth",
-                key="bearer_token",
-                tags=["system", "no-export"],
-            )
-            register_secret(token)
-            _BEARER_TOKEN = token
-            return token
-    except Exception as exc:
-        logger.warning("Failed to get or create bearer token from MemoryStore: %s", exc)
-        if _BEARER_TOKEN is None:
-            _BEARER_TOKEN = secrets.token_hex(16)
-        return _BEARER_TOKEN
-
-
 _DEFAULT_PORT = 3001
 _LOOPBACK_NAMES = frozenset({"localhost"})
-
-# The bearer token may be supplied as a ``?token=``/``?bearer_token=`` query
-# value (a convenience for loading static assets), which means it appears in the
-# request line. That line reaches the access log, so the live credential would
-# otherwise be written to logs in cleartext. Mask the value — by parameter name,
-# so a *wrong* token guessed by an attacker is masked too — before logging.
-_QUERY_TOKEN_RE = re.compile(r"((?:token|bearer_token)=)[^&\s\"']+", re.IGNORECASE)
-
-
-def _redact_query_token(text: str) -> str:
-    """Replace any ``token=``/``bearer_token=`` query value with a placeholder."""
-    return _QUERY_TOKEN_RE.sub(r"\1[REDACTED]", text)
 
 
 def _is_loopback_host(host: str) -> bool:
     """True if ``host`` is loopback-only (safe to bind without authentication)."""
+    if not host:
+        return False
     if host in _LOOPBACK_NAMES:
         return True
     try:
@@ -152,48 +101,6 @@ def _ecosystem_status() -> dict[str, Any]:
     return status
 
 
-def _find_repo_root(start: Path | None = None) -> Path:
-    curr = (start or Path(__file__)).resolve().parent
-    for parent in [curr] + list(curr.parents):
-        candidate = parent / "docs"
-        if candidate.is_dir() and (parent / "pyproject.toml").is_file():
-            return parent.resolve()
-    return (Path(__file__).resolve().parents[4]).resolve()
-
-
-def _list_doc_slugs() -> list[str]:
-    repo_root = _find_repo_root()
-    docs_dir = (repo_root / "docs").resolve()
-    if not docs_dir.is_dir():
-        return []
-    return sorted(p.stem for p in docs_dir.glob("*.md") if p.is_file())
-
-
-def _get_doc_data(slug: str) -> dict[str, Any] | None:
-    if not slug or not re.match(r"^[a-zA-Z0-9_\-]+$", slug):
-        return None
-    repo_root = _find_repo_root()
-    docs_dir = (repo_root / "docs").resolve()
-    target_file = (docs_dir / f"{slug}.md").resolve()
-    if not str(target_file).startswith(str(docs_dir) + os.sep) or not target_file.is_file():
-        return None
-    try:
-        content = target_file.read_text(encoding="utf-8")
-        first_line = next(
-            (line.strip() for line in content.splitlines() if line.startswith("# ")), slug
-        )
-        title = first_line.lstrip("# ").strip()
-        return {
-            "slug": slug,
-            "title": title,
-            "content": content,
-            "relativePath": f"docs/{slug}.md",
-        }
-    except Exception as exc:
-        logger.warning("Failed to read doc %s: %s", slug, exc)
-        return None
-
-
 class _Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         # Secure fallback: explicitly bind the static files directory to _STATIC_ROOT
@@ -204,71 +111,7 @@ class _Handler(SimpleHTTPRequestHandler):
         return self.client_address[0]
 
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
-        # Expand the record ourselves so we can strip any bearer token from the
-        # request line before it is written — never hand a token to the logger.
-        try:
-            message = format % args if args else format
-        except (TypeError, ValueError):  # pragma: no cover - defensive
-            message = format
-        logger.info("%s", _redact_query_token(message))
-
-    def _has_auth_attempt(self) -> bool:
-        """True if the request contains any authentication credentials."""
-        if self.headers.get("Authorization"):
-            return True
-        parsed = urlparse(self.path)
-        query = parsed.query
-        if query:
-            for item in query.split("&"):
-                if "=" in item:
-                    k, _ = item.split("=", 1)
-                    if k in ("token", "bearer_token"):
-                        return True
-        cookie_header = self.headers.get("Cookie", "")
-        if cookie_header:
-            for item in cookie_header.split(";"):
-                if "=" in item:
-                    k, _ = item.strip().split("=", 1)
-                    if k in ("token", "bearer_token"):
-                        return True
-        return False
-
-    def _is_authenticated(self) -> bool:
-        expected_token = _get_or_create_bearer_token()
-        if not expected_token:
-            return False
-
-        # 1. Check Authorization header
-        auth_header = self.headers.get("Authorization", "")
-        if auth_header and auth_header.startswith("Bearer "):
-            token = auth_header[7:]
-            if secrets.compare_digest(token, expected_token):
-                return True
-
-        # 2. Check query parameter 'token' or 'bearer_token'
-        parsed = urlparse(self.path)
-        query = parsed.query
-        if query:
-            for item in query.split("&"):
-                if "=" in item:
-                    k, v = item.split("=", 1)
-                    if k in ("token", "bearer_token"):
-                        val = unquote(v)
-                        if secrets.compare_digest(val, expected_token):
-                            return True
-
-        # 3. Check Cookie header
-        cookie_header = self.headers.get("Cookie", "")
-        if cookie_header:
-            for item in cookie_header.split(";"):
-                if "=" in item:
-                    k, v = item.strip().split("=", 1)
-                    if k in ("token", "bearer_token"):
-                        val = unquote(v)
-                        if secrets.compare_digest(val, expected_token):
-                            return True
-
-        return False
+        logger.info(format, *args)
 
     def end_headers(self) -> None:
         self.send_header("X-Frame-Options", "DENY")
@@ -278,25 +121,6 @@ class _Handler(SimpleHTTPRequestHandler):
             "Content-Security-Policy",
             "default-src 'self'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';",
         )
-        # If authenticated via query param, set cookie so subsequent static asset requests load seamlessly
-        parsed = urlparse(self.path)
-        query = parsed.query
-        if query:
-            expected_token = _get_or_create_bearer_token()
-            for item in query.split("&"):
-                if "=" in item:
-                    k, v = item.split("=", 1)
-                    if k in ("token", "bearer_token"):
-                        val = unquote(v)
-                        if secrets.compare_digest(val, expected_token):
-                            # Use the server-known token, not the attacker-influenced
-                            # query value, so the cookie is never built from tainted
-                            # input (CodeQL py/http-response-splitting, py/cookie-injection).
-                            self.send_header(
-                                "Set-Cookie",
-                                f"token={expected_token}; Path=/; HttpOnly; SameSite=Strict",
-                            )
-                            break
         super().end_headers()
 
     def _send_json(self, code: int, payload: dict[str, Any]) -> None:
@@ -309,64 +133,11 @@ class _Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        if self.command != "HEAD":
-            self.wfile.write(body)
-
-    def do_HEAD(self) -> None:  # noqa: N802
-        """Serve HEAD through the exact same gate as GET.
-
-        ``SimpleHTTPRequestHandler`` supplies its own ``do_HEAD``. Inheriting it
-        unchanged left HEAD served straight out of ``send_head()``, skipping both
-        the bearer-token check and the static-root containment check that
-        ``do_GET`` performs -- an unauthenticated HEAD disclosed the existence,
-        size and mtime of any file under the static root, and followed symlinks
-        out of it that an *authenticated* GET rejects with 403. Delegating keeps
-        the two verbs on one code path so they cannot drift apart again; the body
-        writes are suppressed by the ``self.command`` guards.
-        """
-        self.do_GET()
+        self.wfile.write(body)
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
-
-        if path == "/health":
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Content-Length", "16")
-            self.end_headers()
-            if self.command != "HEAD":
-                self.wfile.write(b'{"status": "ok"}')
-            return
-
-        if path.startswith("/api/"):
-            if not self._is_authenticated():
-                auth_header = self.headers.get("Authorization", "")
-                if auth_header and not auth_header.startswith("Bearer "):
-                    self._send_json(
-                        401,
-                        {
-                            "error": "Unauthorized",
-                            "message": "Authorization header must be in 'Bearer <token>' format",
-                        },
-                    )
-                    return
-
-                if not self._has_auth_attempt():
-                    self._send_json(
-                        401, {"error": "Unauthorized", "message": "Missing Authorization header"}
-                    )
-                else:
-                    self._send_json(403, {"error": "Forbidden", "message": "Invalid Bearer token"})
-                return
-        else:
-            if not self._is_authenticated():
-                self.send_response(401)
-                self.send_header("Content-Type", "text/plain; charset=utf-8")
-                self.end_headers()
-                if self.command != "HEAD":
-                    self.wfile.write(b"Unauthorized: Missing or invalid bearer token")
-                return
 
         if path == "/api/stages":
             try:
@@ -379,19 +150,6 @@ class _Handler(SimpleHTTPRequestHandler):
 
         if path == "/api/ecosystem":
             self._send_json(200, _ecosystem_status())
-            return
-
-        if path in ("/api/docs", "/api/docs/"):
-            self._send_json(200, {"success": True, "docs": _list_doc_slugs()})
-            return
-
-        if path.startswith("/api/docs/"):
-            slug = path[len("/api/docs/") :].strip("/")
-            doc = _get_doc_data(slug)
-            if doc is None:
-                self._send_json(404, {"success": False, "error": f"Doc '{slug}' not found"})
-            else:
-                self._send_json(200, {"success": True, "doc": doc})
             return
 
         if path.startswith("/api/"):
@@ -418,22 +176,20 @@ class _Handler(SimpleHTTPRequestHandler):
             self.send_error(404, "File not found")
             return
 
-        if self.command == "HEAD":
-            return super().do_HEAD()
         return super().do_GET()
 
 
 def serve(host: str = _DEFAULT_HOST, port: int = _DEFAULT_PORT) -> HTTPServer:
-    # API endpoints require a Bearer token, but the loopback default is
-    # defense-in-depth: personal memory should not be reachable off-host by
-    # default. Require an explicit opt-in for any non-loopback bind.
+    # The API endpoints have no authentication and expose personal memory
+    # (recent facts, observations). Refuse a non-loopback bind unless the
+    # operator explicitly acknowledges the exposure, so a stray 0.0.0.0 does not
+    # silently publish memory to the network.
     if not _is_loopback_host(host) and not os.environ.get("SAKTHAI_WEB_ALLOW_PUBLIC"):
         raise PermissionError(
-            f"Refusing to bind the API to non-loopback host {host!r}. "
-            "It serves personal memory; set SAKTHAI_WEB_ALLOW_PUBLIC=1 to "
+            f"Refusing to bind the unauthenticated API to non-loopback host {host!r}. "
+            "It serves personal memory with no auth. Set SAKTHAI_WEB_ALLOW_PUBLIC=1 to "
             "override once you have placed authentication in front of it."
         )
-    _get_or_create_bearer_token()  # Warm cache & register secret
     # The built dashboard (dashboard/dist) is optional: without it the API
     # endpoints still serve, and static requests fall through to 403/404.
     if _STATIC_ROOT.is_dir():

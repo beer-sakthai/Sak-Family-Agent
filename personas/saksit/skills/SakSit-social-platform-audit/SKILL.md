@@ -1,7 +1,15 @@
 ---
 name: SakSit-social-platform-audit
 description: Audit all connected social platforms before posting.
-...
+category: social-media
+author: SakSit Agent (beer-sakthai)
+tags:
+- platform-audit
+- composio
+- pro-con
+- strategy
+- planning
+created: 2026-07-06
 ---
 
 # Social Platform Audit — Pre-Posting

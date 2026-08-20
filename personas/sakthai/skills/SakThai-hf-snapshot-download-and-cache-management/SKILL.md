@@ -1,7 +1,11 @@
 ---
 name: SakThai-hf-snapshot-download-and-cache-management
-description: 'Hugging Face Hub: snapshot_download, cache locations, revision locking, and disk-space
-  management.'
+description: "Hugging Face Hub: snapshot_download, cache locations, revision locking, and disk-space management."
+version: 1.0.0
+author: SakThai
+license: MIT
+tags: [huggingface, hf, hub, snapshot_download, cache, data-management]
+platforms: [linux, macos, windows]
 ---
 
 # Hugging Face Hub: snapshot_download and Cache Management

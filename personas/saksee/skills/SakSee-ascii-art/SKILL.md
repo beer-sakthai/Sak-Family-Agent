@@ -1,6 +1,16 @@
 ---
 name: SakSee-ascii-art
-description: 'ASCII art: pyfiglet, cowsay, boxes, image-to-ascii.'
+description: "ASCII art: pyfiglet, cowsay, boxes, image-to-ascii."
+version: 4.0.0
+author: 0xbyt4, Hermes Agent
+license: MIT
+dependencies: []
+platforms: [linux, macos, windows]
+metadata:
+  hermes:
+    tags: [ASCII, Art, Banners, Creative, Unicode, Text-Art, pyfiglet, figlet, cowsay, boxes]
+    related_skills: [excalidraw]
+
 ---
 
 # ASCII Art Skill

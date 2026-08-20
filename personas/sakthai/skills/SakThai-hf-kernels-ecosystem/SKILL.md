@@ -1,9 +1,15 @@
 ---
 name: SakThai-hf-kernels-ecosystem
-description: "Deep dive into the Hugging Face Kernel Hub \u2014 a first-class repository type for\
-  \ distributing pre-built compute kernels. Covers `kernels` Python package, CLI tools,\
-  \ kernel-builder, Nix-based build system, versioning, locking, security (trusted\
-  \ publishe"
+author: SakThai
+license: MIT
+title: Hugging Face Kernel Hub — Comprehensive Guide
+category: mlops
+tags: [kernels, cuda, rocm, metal, xpu, compute, hub, nix, builder, inference, performance]
+related_skills:
+  - hf-hub-repositories-licenses-complete-reference
+description: Deep dive into the Hugging Face Kernel Hub — a first-class repository type for distributing pre-built compute kernels. Covers the `kernels` Python package, CLI tools, kernel-builder, Nix-based build system, versioning, locking, benchmarks, and the kernel ecosystem.
+version: 1.0.0
+platforms: [linux, macos, windows]
 ---
 
 # Hugging Face Kernel Hub — Comprehensive Guide

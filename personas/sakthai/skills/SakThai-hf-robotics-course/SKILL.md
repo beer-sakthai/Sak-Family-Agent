@@ -1,7 +1,10 @@
 ---
 name: SakThai-hf-robotics-course
-description: "Robot learning with LeRobot \u2014 imitation, RL, VLA models, and real-world robotics\
-  \ using Hugging Face ecosystem."
+author: SakThai
+license: MIT
+description: "Robot learning with LeRobot — imitation, RL, VLA models, and real-world robotics using Hugging Face ecosystem."
+version: 1.0.0
+tags: [Robotics, LeRobot, ImitationLearning, RL, VLA, HuggingFace, Pi0, GR00T, Act, Diffusion]
 ---
 
 # Robotics with LeRobot

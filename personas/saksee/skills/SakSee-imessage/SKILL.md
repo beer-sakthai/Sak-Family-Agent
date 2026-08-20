@@ -1,7 +1,15 @@
 ---
 name: SakSee-imessage
-description: Send and read iMessages via terminal using messages-cli.
-...
+description: "Send and read iMessages via terminal using messages-cli."
+version: 1.0.0
+author: Hermes Agent
+license: MIT
+platforms: [macos]
+metadata:
+  hermes:
+    tags: [iMessage, Apple, messaging, macOS]
+prerequisites:
+  commands: [messages-cli]
 ---
 
 # iMessage

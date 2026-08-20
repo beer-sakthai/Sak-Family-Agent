@@ -1,7 +1,15 @@
 ---
 name: SakThai-hf-trending-models
+author: SakThai
+license: MIT
+title: HF Trending Models Reference
 description: Tracked snapshot of trending models from Hugging Face Hub
-...
+version: 1.0.0
+updated: 2026-07-23T23:30 UTC
+source: https://huggingface.co/models?sort=trending
+tags: [huggingface, trends, models, api, research]
+platforms: [linux, macos]
+required_commands: [curl, python3]
 ---
 
 # Trending Models — 23 Jul 2026 (Tick 14:52 UTC)

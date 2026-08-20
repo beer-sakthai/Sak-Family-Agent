@@ -1,8 +1,11 @@
 ---
 name: SakThai-hf-trl-deep-dive
-description: "Comprehensive reference for Hugging Face TRL v1.9.0 \u2014 all 14 trainers (4 categories:\
-  \ online, offline, reward, distillation), multi-environment GRPO, KTO stability,\
-  \ vLLM/DeepSpeed/PEFT interop, Liger Kernel, OpenEnv/Harbor, VLM alignment."
+author: SakThai
+license: MIT
+description: "Comprehensive reference for Hugging Face TRL v1.9.0 — all 14 trainers (4 categories: online, offline, reward, distillation), multi-environment GRPO, KTO stability, vLLM/DeepSpeed/PEFT interop, Liger Kernel, OpenEnv/Harbor, VLM alignment."
+version: 2.0.0
+tags: [TRL, RLHF, DPO, GRPO, PPO, SFT, KTO, RLOO, PRM, Alignment, FineTuning, HuggingFace, RL, vLLM, LigerKernel]
+related_skills: [hf-smol-course, hf-smolagents, hf-cookbook]
 ---
 
 # TRL v1.9.0 — Complete Post-Training Toolkit

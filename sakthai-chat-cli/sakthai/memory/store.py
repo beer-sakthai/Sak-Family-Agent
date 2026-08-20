@@ -88,10 +88,6 @@ CREATE INDEX IF NOT EXISTS idx_facts_updated ON facts(updated_at);
 CREATE INDEX IF NOT EXISTS idx_obs_weight ON observations(weight);
 """
 
-# Pre-split and strip SCHEMA statements into a static module-level list to avoid
-# dynamic split/strip operations inside database migration loops at runtime.
-SCHEMA_STATEMENTS = [s.strip() for s in SCHEMA.split(";") if s.strip()]
-
 # Flat column set for snapshot_to_csv(): facts and observations in one file,
 # distinguished by the leading "type" column.
 CSV_COLUMNS = [
@@ -231,7 +227,7 @@ class MemoryStore:
             self.db_path, timeout=DB_CONNECT_TIMEOUT, check_same_thread=False
         )
         self._conn.row_factory = sqlite3.Row
-        self._conn.execute(f"PRAGMA busy_timeout={int(DB_BUSY_TIMEOUT_MS)}")
+        self._conn.execute(f"PRAGMA busy_timeout={DB_BUSY_TIMEOUT_MS}")
         # WAL is recorded in the file header and inherited by later opens. The
         # one-time flip briefly needs an exclusive lock that busy_timeout may not
         # cover, so a racing failure is tolerated — the default journal is safe.
@@ -298,17 +294,15 @@ class MemoryStore:
                         )
                         current = 1
 
-                migrated_versions = []
                 for version in sorted(migrations):
                     if version > current:
                         logger.info("Migrating memory schema to v%d", version)
                         migrations[version]()
-                        migrated_versions.append((version, _now()))
-                if migrated_versions:
-                    self._conn.executemany(
-                        "INSERT OR IGNORE INTO schema_version (version, migrated_at) VALUES (?, ?)",
-                        migrated_versions,
-                    )
+                        self._conn.execute(
+                            "INSERT OR IGNORE INTO schema_version (version, migrated_at) "
+                            "VALUES (?, ?)",
+                            (version, _now()),
+                        )
                 self._conn.commit()
             except Exception:
                 with contextlib.suppress(sqlite3.OperationalError):
@@ -318,8 +312,10 @@ class MemoryStore:
 
     def _migration_v1(self) -> None:
         # Run statements one at a time; executescript() would force a commit.
-        for statement in SCHEMA_STATEMENTS:
-            self._conn.execute(statement)
+        for statement in SCHEMA.split(";"):
+            stripped = statement.strip()
+            if stripped:
+                self._conn.execute(stripped)
 
     def _migration_v2(self) -> None:
         cols = {r["name"] for r in self._conn.execute("PRAGMA table_info(facts)")}
@@ -388,24 +384,21 @@ class MemoryStore:
         Optional ``after_ts`` / ``before_ts`` are inclusive Unix timestamps
         that filter on ``created_at``.
         """
-        if after_ts is not None and before_ts is not None:
-            sql = (
-                "SELECT * FROM facts WHERE created_at >= ? AND created_at <= ? "
-                "ORDER BY updated_at DESC LIMIT ?"
-            )
-            params = [after_ts, before_ts, limit]
-        elif after_ts is not None:
-            sql = "SELECT * FROM facts WHERE created_at >= ? ORDER BY updated_at DESC LIMIT ?"
-            params = [after_ts, limit]
-        elif before_ts is not None:
-            sql = "SELECT * FROM facts WHERE created_at <= ? ORDER BY updated_at DESC LIMIT ?"
-            params = [before_ts, limit]
-        else:
-            sql = "SELECT * FROM facts ORDER BY updated_at DESC LIMIT ?"
-            params = [limit]
-
+        clauses: list[str] = []
+        params: list[int] = []
+        if after_ts is not None:
+            clauses.append("created_at >= ?")
+            params.append(after_ts)
+        if before_ts is not None:
+            clauses.append("created_at <= ?")
+            params.append(before_ts)
+        where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+        params.append(limit)
         with self._lock:
-            rows = self._conn.execute(sql, params).fetchall()
+            rows = self._conn.execute(
+                f"SELECT * FROM facts {where} ORDER BY updated_at DESC LIMIT ?",  # nosec B608
+                params,
+            ).fetchall()
         return [_fact_from_row(r) for r in rows]
 
     def get_fact_by_key(self, kind: str, key: str) -> Fact | None:
@@ -629,10 +622,9 @@ class MemoryStore:
                 deleted = [_fact_from_row(r) for r in keyed + keyless]
                 if deleted and not dry_run:
                     ids = [f.id for f in deleted]
-                    placeholders = ",".join("?" for _ in ids)
                     self._conn.execute(
-                        f"DELETE FROM facts WHERE id IN ({placeholders})",  # nosec B608 — placeholders are '?'
-                        ids,
+                        "DELETE FROM facts WHERE id IN (SELECT value FROM json_each(?))",
+                        (json.dumps(ids),),
                     )
                 self._conn.commit()
                 return deleted if detailed else len(deleted)
@@ -660,10 +652,9 @@ class MemoryStore:
                 deleted = [Observation(**dict(r)) for r in rows]
                 if deleted and not dry_run:
                     ids = [o.id for o in deleted]
-                    placeholders = ",".join("?" for _ in ids)
                     self._conn.execute(
-                        f"DELETE FROM observations WHERE id IN ({placeholders})",  # nosec B608
-                        ids,
+                        "DELETE FROM observations WHERE id IN (SELECT value FROM json_each(?))",
+                        (json.dumps(ids),),
                     )
                 self._conn.commit()
                 return deleted if detailed else len(deleted)
@@ -685,21 +676,53 @@ class MemoryStore:
         Aggregation happens in SQL to avoid fetching and parsing thousands of
         rows in Python. Capped by ``limit`` to match legacy behavior.
         """
-        if table not in ("facts", "observations"):
+        if table == "facts":
+            query = """
+                WITH subset AS (
+                    SELECT created_at FROM facts LIMIT ?
+                )
+                SELECT
+                    COUNT(*) as total,
+                    SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as this_week,
+                    SUM(CASE WHEN created_at <= ? THEN 1 ELSE 0 END) as before_start
+                FROM subset
+            """
+            bin_query = """
+                WITH subset AS (
+                    SELECT created_at FROM facts LIMIT ?
+                )
+                SELECT
+                    CAST((created_at - ? - 1) / 86400 AS INTEGER) as bin,
+                    COUNT(*) as n
+                FROM subset
+                WHERE created_at > ? AND created_at <= ?
+                GROUP BY bin
+            """
+        elif table == "observations":
+            query = """
+                WITH subset AS (
+                    SELECT created_at FROM observations LIMIT ?
+                )
+                SELECT
+                    COUNT(*) as total,
+                    SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as this_week,
+                    SUM(CASE WHEN created_at <= ? THEN 1 ELSE 0 END) as before_start
+                FROM subset
+            """
+            bin_query = """
+                WITH subset AS (
+                    SELECT created_at FROM observations LIMIT ?
+                )
+                SELECT
+                    CAST((created_at - ? - 1) / 86400 AS INTEGER) as bin,
+                    COUNT(*) as n
+                FROM subset
+                WHERE created_at > ? AND created_at <= ?
+                GROUP BY bin
+            """
+        else:
             raise ValueError(f"Invalid table: {table}")
 
-        # We use a CTE to apply the limit once, then aggregate over that subset.
-        # ``table`` is allowlist-validated above, so the interpolation is safe.
-        query = f"""
-            WITH subset AS (
-                SELECT created_at FROM {table} LIMIT ?
-            )
-            SELECT
-                COUNT(*) as total,
-                SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as this_week,
-                SUM(CASE WHEN created_at <= ? THEN 1 ELSE 0 END) as before_start
-            FROM subset
-        """  # nosec B608
         with self._lock:
             row = self._conn.execute(query, (limit, week_ago_ts, start_ts)).fetchone()
             res: dict[str, Any] = {
@@ -712,17 +735,6 @@ class MemoryStore:
             # Growth bins: one per day for 30 days.
             days = 30
             bins = [0] * days
-            bin_query = f"""
-                WITH subset AS (
-                    SELECT created_at FROM {table} LIMIT ?
-                )
-                SELECT
-                    CAST((created_at - ? - 1) / 86400 AS INTEGER) as bin,
-                    COUNT(*) as n
-                FROM subset
-                WHERE created_at > ? AND created_at <= ?
-                GROUP BY bin
-            """  # nosec B608
             rows = self._conn.execute(
                 bin_query, (limit, start_ts, start_ts, start_ts + days * 86400)
             ).fetchall()

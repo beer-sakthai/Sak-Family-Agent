@@ -1,9 +1,14 @@
 ---
 name: SakThai-hf-hub-billing-and-subscription-plans
-description: "Complete reference for Hugging Face Hub subscription plans (PRO, Team, Enterprise)\
-  \ \u2014 feature breakdown, pricing structure, private storage overage, inference\
-  \ credits, ZeroGPU tiers, compute services billing, and plan comparison for informed\
-  \ decision-"
+author: SakThai
+license: MIT
+description: "Complete reference for Hugging Face Hub subscription plans (PRO, Team, Enterprise) — feature breakdown, pricing structure, private storage overage, inference credits, ZeroGPU tiers, compute services billing, and plan comparison for informed decision-making."
+version: 1.0.0
+type: skill
+metadata:
+  hermes:
+    tags: [huggingface, hf, hub, billing, subscription, plans, pro, team, enterprise, pricing, storage, inference]
+category: mlops
 ---
 
 # HF Hub Billing and Subscription Plans

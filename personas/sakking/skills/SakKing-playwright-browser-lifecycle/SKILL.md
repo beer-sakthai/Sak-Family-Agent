@@ -1,9 +1,25 @@
 ---
 name: SakKing-playwright-browser-lifecycle
-description: Manage Playwright browser process lifecycles for long-lived cron/CI    flows u2014
-  waitForEvent(close), controlled abort patterns, detached browser    reuse, child-process
-  cleanup on timeout, and safe teardown for Chromium launched    on ephemeral environments.
-...
+category: dogfood
+description: Manage Playwright browser process lifecycles for long-lived cron/CI flows
+  — waitForEvent('close'), controlled abort patterns, detached browser reuse, child-process
+  cleanup on timeout, and safe teardown for Chromium launched on ephemeral environments.
+version: 1.0.0
+platforms:
+- linux
+- macos
+metadata:
+  sakthai:
+    tags:
+    - playwright
+    - browser
+    - lifecycle
+    - cron
+    - cleanup
+    - hermes
+    - dogfood
+    related_skills: []
+    source: hermes:playwright-browser-lifecycle
 ---
 
 # Playwright Browser Lifecycle

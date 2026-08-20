@@ -1,7 +1,31 @@
 ---
 name: SakSit-sak-instagram-content-kit
+tags: [instagram, content, social-media, reels]
+category: social-media
 description: Produce Instagram Reels, carousels, and captions.
-...
+version: 1.0.0
+author: Hermes Agent / SakSit
+license: MIT
+platforms:
+- linux
+- macos
+- windows
+metadata:
+  sakthai:
+    tags:
+    - social-media
+    - instagram
+    - content-creation
+    - reels
+    - carousels
+    - huggingface-spaces
+    - caption
+    - hashtag
+    related_skills:
+
+    - SakSit-huggingface-hub
+    - SakSit-baoyu-infographic
+    - SakSit-gif-search
 ---
 
 # SakSit Instagram Content Kit

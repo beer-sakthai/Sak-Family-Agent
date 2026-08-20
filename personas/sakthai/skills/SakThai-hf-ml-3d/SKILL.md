@@ -1,7 +1,10 @@
 ---
 name: SakThai-hf-ml-3d
-description: "3D machine learning on Hugging Face \u2014 multi-view diffusion, Gaussian splatting,\
-  \ mesh generation, and the HF ML for 3D Course ecosystem."
+author: SakThai
+license: MIT
+description: "3D machine learning on Hugging Face — multi-view diffusion, Gaussian splatting, mesh generation, and the HF ML for 3D Course ecosystem."
+version: 1.0.0
+tags: [3D, GaussianSplatting, NeRF, MultiviewDiffusion, Meshes, LGM, Diffusers3D, HuggingFace]
 ---
 
 # 🤗 Machine Learning for 3D — Full Ecosystem Guide

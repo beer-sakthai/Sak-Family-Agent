@@ -1,8 +1,17 @@
 ---
 name: SakThai-hf-datasets-arrow-memory-architecture
-description: "Deep reference on how HuggingFace Datasets manages memory through Apache Arrow \u2014\
-  \ InMemoryTable vs MemoryMappedTable, ConcatenationTable, replay-based lazy transforms,\
-  \ Arrow memory pools, and streaming memory patterns."
+author: SakThai
+license: MIT
+description: Deep reference on how HuggingFace Datasets manages memory through Apache Arrow — InMemoryTable vs MemoryMappedTable, ConcatenationTable, replay-based lazy transforms, Arrow memory pools, and streaming memory patterns.
+version: 1.0.0
+created: 2026-07-25
+category: mlops
+tags:
+  - datasets
+  - arrow
+  - memory
+  - streaming
+  - performance
 ---
 
 # HuggingFace Datasets Arrow Memory Architecture

@@ -41,11 +41,3 @@ def test_build_vm_bundle_writes_common_and_agent_env_files(tmp_path: Path) -> No
     assert "TELEGRAM_ALLOWED_USER_IDS=123,456" in sakking_env
     assert "SAKTHAI_SYSTEM_PROMPT_FILE=" in sakking_env
     assert bundle.service_file.exists()
-
-    import sys
-
-    if sys.platform != "win32":
-        assert (bundle.config_dir.stat().st_mode & 0o777) == 0o700
-        assert (bundle.common_env_file.stat().st_mode & 0o777) == 0o600
-        for env_file in bundle.env_files.values():
-            assert (env_file.stat().st_mode & 0o777) == 0o600

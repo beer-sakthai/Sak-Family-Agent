@@ -464,6 +464,71 @@ class RelevanceFilter:
         self.scorer = dspy.ChainOfThought(self.ScoreRelevance)
         self.model = model
 
+    def _select_candidates(
+        self,
+        messages: list[dict],
+        skill_name: str,
+        skill_text: str,
+        max_examples: int,
+    ) -> list[dict]:
+        """Pre-filter and select candidate messages for LLM scoring."""
+        # Stage 0: drop messages missing required fields
+        valid_messages = [m for m in messages if m.get("task_input") and m.get("source")]
+
+        # Stage 1: cheap heuristic pre-filter
+        candidates = [
+            m for m in valid_messages if _is_relevant_to_skill(m["task_input"], skill_name, skill_text)
+        ]
+
+        # If heuristics found too few, sample remaining messages
+        if len(candidates) < max_examples:
+            candidate_ids = {id(m) for m in candidates}
+            remaining = [m for m in valid_messages if id(m) not in candidate_ids]
+            random.shuffle(remaining)
+            candidates.extend(remaining[: max_examples * 2])
+
+        # Cap candidates to control LLM costs
+        return candidates[: max_examples * 3]
+
+    def _score_candidate(
+        self,
+        msg: dict,
+        skill_name: str,
+        skill_desc: str,
+        lm: dspy.LM,
+    ) -> EvalExample | None:
+        """Score a single candidate message and validate it.
+
+        Returns:
+            An EvalExample if the message is relevant and valid, None otherwise.
+            Raises ValueError if scoring JSON could not be parsed.
+        """
+        with dspy.context(lm=lm):
+            result = self.scorer(
+                skill_name=skill_name,
+                skill_description=skill_desc,
+                user_message=msg["task_input"][:1000],
+                assistant_response=msg.get("assistant_response", "")[:1000],
+            )
+
+        scoring = _parse_scoring_json(result.scoring)
+        if scoring is None:
+            raise ValueError("JSON parsing failed")
+
+        if scoring.get("relevant", False):
+            validated = _validate_eval_example(
+                task_input=msg["task_input"],
+                expected_behavior=scoring.get("expected_behavior", ""),
+                difficulty=scoring.get("difficulty", "medium"),
+                category=scoring.get("category", "general"),
+            )
+            if validated:
+                return EvalExample(
+                    source=msg["source"],
+                    **validated,
+                )
+        return None
+
     def filter_and_score(
         self,
         messages: list[dict],
@@ -484,23 +549,12 @@ class RelevanceFilter:
         """
         skill_desc = skill_text[:800]
 
-        # Stage 0: drop messages missing required fields
-        messages = [m for m in messages if m.get("task_input") and m.get("source")]
-
-        # Stage 1: cheap heuristic pre-filter
-        candidates = [
-            m for m in messages if _is_relevant_to_skill(m["task_input"], skill_name, skill_text)
-        ]
-
-        # If heuristics found too few, sample remaining messages
-        if len(candidates) < max_examples:
-            candidate_ids = {id(m) for m in candidates}
-            remaining = [m for m in messages if id(m) not in candidate_ids]
-            random.shuffle(remaining)
-            candidates.extend(remaining[: max_examples * 2])
-
-        # Cap candidates to control LLM costs
-        candidates = candidates[: max_examples * 3]
+        candidates = self._select_candidates(
+            messages=messages,
+            skill_name=skill_name,
+            skill_text=skill_text,
+            max_examples=max_examples,
+        )
 
         console.print(
             f"  Pre-filtered to {len(candidates)} candidates (from {len(messages)} total)"
@@ -516,38 +570,12 @@ class RelevanceFilter:
 
             for msg in candidates:
                 try:
-                    with dspy.context(lm=lm):
-                        result = self.scorer(
-                            skill_name=skill_name,
-                            skill_description=skill_desc,
-                            user_message=msg["task_input"][:1000],
-                            assistant_response=msg.get("assistant_response", "")[:1000],
-                        )
-
-                    scoring = _parse_scoring_json(result.scoring)
-                    if scoring is None:
-                        errors += 1
-                        progress.update(task, advance=1)
-                        continue
-
-                    if scoring.get("relevant", False):
-                        validated = _validate_eval_example(
-                            task_input=msg["task_input"],
-                            expected_behavior=scoring.get("expected_behavior", ""),
-                            difficulty=scoring.get("difficulty", "medium"),
-                            category=scoring.get("category", "general"),
-                        )
-                        if validated:
-                            examples.append(
-                                EvalExample(
-                                    source=msg["source"],
-                                    **validated,
-                                )
-                            )
-
+                    example = self._score_candidate(msg, skill_name, skill_desc, lm)
+                    if example:
+                        examples.append(example)
                 except Exception as e:
                     errors += 1
-                    if not isinstance(e, (json.JSONDecodeError, KeyError)):
+                    if not isinstance(e, (json.JSONDecodeError, KeyError, ValueError)):
                         console.print(f"  [red]Unexpected error scoring example: {e}[/red]")
 
                 progress.update(task, advance=1)

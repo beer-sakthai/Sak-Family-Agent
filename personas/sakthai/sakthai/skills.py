@@ -17,7 +17,6 @@ from .config import (
     SHARED_SKILLS_DIR,
     SKILLS_DIR,
     gemini_extensions_dir,
-    persona_skills_dir,
     sakthai_home,
 )
 
@@ -72,8 +71,7 @@ def _load_skill_file(path: Path) -> tuple[dict[str, Any], str]:
     if len(parts) < 3:
         raise SkillParseError(f"{path}: no YAML frontmatter found")
     try:
-        loader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
-        front = yaml.load(parts[1], Loader=loader)  # nosec B506 - safe: Loader is constrained to CSafeLoader/SafeLoader
+        front = yaml.safe_load(parts[1])
     except yaml.YAMLError as exc:
         raise SkillParseError(f"{path}: invalid YAML — {exc}") from exc
     if not isinstance(front, dict):
@@ -216,16 +214,11 @@ def find_skill(name: str, *roots: Path) -> SkillInfo | None:
     return None
 
 
-def default_skill_roots(persona: str | None = None) -> tuple[Path, ...]:
-    """Roots searched for injectable skills: bundled + shared + library + curated + extensions.
-
-    ``persona``, when given, substitutes that persona's own skill overlay
-    (``personas/<persona>/skills``) for the bundled root instead of always
-    using SakThai's — otherwise identical to omitting it.
-    """
+def default_skill_roots() -> tuple[Path, ...]:
+    """Roots searched for injectable skills: bundled + shared + library + curated + extensions."""
     gemini_ext = gemini_extensions_dir()
     roots = [
-        persona_skills_dir(persona) if persona else SKILLS_DIR,
+        SKILLS_DIR,
         SHARED_SKILLS_DIR,
         LIBRARY_DIR,
         CURATED_LIBRARY_DIR,
@@ -237,12 +230,10 @@ def default_skill_roots(persona: str | None = None) -> tuple[Path, ...]:
 
 
 def resolve_skill_names(
-    names: Sequence[str],
-    roots: Sequence[Path] | None = None,
-    persona: str | None = None,
+    names: Sequence[str], roots: Sequence[Path] | None = None
 ) -> tuple[list[str], list[str]]:
     """Partition skill names into ``(resolved, missing)`` across the given roots."""
-    search = tuple(roots) if roots is not None else default_skill_roots(persona)
+    search = tuple(roots) if roots is not None else default_skill_roots()
     known = {skill.name for skill in collect_skills(*search)}
     resolved = [name for name in names if name in known]
     missing = [name for name in names if name not in known]

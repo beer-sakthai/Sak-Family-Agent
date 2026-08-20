@@ -1,6 +1,10 @@
 ---
 name: SakThai-hf-cli-agent-mode
-description: 'HF hf CLI agent-optimized mode: auto-detection, dual-rendering, skill system, benchmarking.'
+author: SakThai
+license: MIT
+description: "HF hf CLI agent-optimized mode: auto-detection, dual-rendering, skill system, benchmarking."
+version: 1.0.0
+tags: [huggingface, hf, CLI, agents, agent-optimized, tool-use, benchmarking]
 ---
 
 # HF hf CLI Agent-Optimized Mode
