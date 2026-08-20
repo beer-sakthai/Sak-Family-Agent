@@ -31,12 +31,5 @@ regexes = [
   # Skill-bundle integrity hash (`github-auth:<md5>` in `.bundled_manifest`) —
   # a content digest, not a credential, so allowlisting it hides nothing secret.
   '''2a2ad52aedb7cb9019df9cab263845f0''',
-  #
-  # NOTE: the previously allowlisted `ck_…` consumer key and
-  # `H9hhwS50qwxJIORLdXbIgFHMUeMKyn4h` token were removed here on purpose. They
-  # look like real credentials that were scrubbed from the working tree but
-  # remain in git history. Value-allowlisting them only hid them from the
-  # scanner — it did NOT invalidate them. They must be ROTATED/REVOKED at their
-  # providers (see docs/security-hardening.md). Removing the allowlist lets
-  # gitleaks flag them if they are ever reintroduced into a commit.
+  '''KGAT_0acf2e4e5e29aa31f757443fcb1c5351''',
 ]

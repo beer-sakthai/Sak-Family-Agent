@@ -1,13 +1,23 @@
 import argparse
 import os
 import sys
+from pathlib import Path
 
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import yfinance as yf
+# Canonical sys.path resolution per AGENTS.md
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))
+sys.path.insert(0, str(REPO_ROOT))
 
-from sakthai.finance import get_risk_free_rate
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
+import yfinance as yf  # noqa: E402
+
+try:
+    from sakthai.finance import get_risk_free_rate
+except ImportError:
+    def get_risk_free_rate() -> float:
+        return 0.02
 
 
 def load_portfolio_data(portfolio_csv: str) -> pd.DataFrame:
