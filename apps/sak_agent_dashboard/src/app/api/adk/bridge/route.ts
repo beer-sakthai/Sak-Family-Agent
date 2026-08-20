@@ -1,4 +1,4 @@
-import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
+import { ApiError, createApiHandler, createMutationHandler } from "@/lib/api/handler";
 import {
   generateAdkPythonCode,
   generateCloudDeploymentManifest,
@@ -39,5 +39,5 @@ export const POST = createMutationHandler("/api/adk/bridge", async (body) => {
     return { evalResult: runQualityFlywheelEvaluation() };
   }
 
-  throw new Error(`Unknown action: ${action}`);
+  throw new ApiError(400, `Unknown action: ${action}`);
 });
