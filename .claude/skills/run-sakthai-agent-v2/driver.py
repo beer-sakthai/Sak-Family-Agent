@@ -206,7 +206,7 @@ def main() -> int:
         # /api/* endpoints require a Bearer token (web_auth fact in the same
         # MemoryStore the server reads), so fetch it via `sakthai web setup`.
         rc, setup_out = run(["web", "setup"], env)
-        token = ""
+        token = ""  # nosec B105 — empty initialiser; the real token is parsed below
         if rc == 0:
             for line in setup_out.splitlines():
                 if line.strip().startswith("Token:"):

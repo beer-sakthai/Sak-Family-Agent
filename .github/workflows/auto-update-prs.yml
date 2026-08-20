@@ -6,9 +6,13 @@ on:
     branches:
       - main
 
+# Read-only at the top level so the default grant every job inherits is the
+# narrow one; the single job below re-declares the writes it actually needs.
+# Scorecard scores a top-level `contents: write` as 0 (TokenPermissionsID)
+# because it hands every future job in the file a push-capable token by
+# default — including one added later that has no reason to write.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 # `cancel-in-progress: false`, not the usual pull-request expression: this
 # workflow walks every open PR in a loop, so cancelling a run mid-loop leaves
@@ -21,6 +25,12 @@ concurrency:
 jobs:
   update-prs:
     runs-on: ubuntu-latest
+    # `contents: write` because the update-branch API pushes a merge commit onto
+    # each contributor branch; `pull-requests: write` to call it. Job-scoped, so
+    # the grant ends with this job rather than covering the whole file.
+    permissions:
+      contents: write
+      pull-requests: write
     # The loop makes one API call per open PR. Bounded so a hung `gh api` call
     # cannot hold the runner for GitHub's six-hour default.
     timeout-minutes: 15

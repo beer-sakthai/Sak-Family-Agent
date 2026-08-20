@@ -14,9 +14,11 @@ on:
     # Runs nightly at 2 AM UTC
     - cron: '0 2 * * *'
 
+# Read-only at the top level; the one job below re-declares the writes it needs.
+# Scorecard scores a top-level `contents: write` as 0 (TokenPermissionsID)
+# because every job in the file inherits a push-capable token by default.
 permissions:
-  contents: write # To create branches and commits for patches
-  pull-requests: write # To create pull requests with fixes
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}
@@ -25,6 +27,11 @@ concurrency:
 jobs:
   devsecops-scan:
     runs-on: ubuntu-latest
+    # `contents: write` to create branches and commits for patches;
+    # `pull-requests: write` to open the fix PR. Job-scoped, not file-scoped.
+    permissions:
+      contents: write
+      pull-requests: write
     timeout-minutes: 45
     steps:
       - name: Harden the runner

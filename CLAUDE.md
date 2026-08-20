@@ -174,8 +174,8 @@ Other `make` targets: `compose-personas` (rebuild full skill trees into
 
 ### CI
 
-Twenty-nine hand-written workflows live in `.github/workflows/`, plus **eight**
-gh-aw Markdown sources compiled to `.lock.yml` beside them — 37 `.yml` files in
+Thirty hand-written workflows live in `.github/workflows/`, plus **eight**
+gh-aw Markdown sources compiled to `.lock.yml` beside them — 38 `.yml` files in
 all, plus `shared/opencode.md`, which is an import rather than a workflow of its
 own. Seven of the eight run on `engine: gemini` and one on a vendored OpenCode
 engine driving a Gemini model — see
@@ -392,6 +392,27 @@ re-retired; see the callout above**), `stale.yml` (still
 carrying the starter template's literal `'Stale issue message'` placeholder), and
 `manual.yml` (a greeting echo). Before adding a workflow back, check the Actions
 tab for what it actually did.
+
+**Two of those five came back, and neither came back fixed.** A
+`[StepSecurity] Apply security best practices` commit restored
+`auto-dependency-update.yml` and `continuous-security.yml` — SHA-pinned and
+tidied, but otherwise the same files, still missing the same secrets. Both were
+on `main` failing or hollow while `SECURITY.md`, `PLAN.md` and this file all
+said they were gone. The 2026-08-20 sweep removed
+`auto-dependency-update.yml` again (still 22/22 failures on the missing PAT) and
+`tests/test_workflow_hygiene.py` now fails if it returns a third time.
+
+`continuous-security.yml` is **still present and still hollow**: every run
+reports green with its `Run DevSecOps Skill` step *skipped* and an "Explain why
+the scan was skipped" step in its place, because there is no
+`ANTHROPIC_API_KEY`. It was left on disk rather than deleted a second time —
+adding the secret revives it — but treat a green tick from it as evidence of
+nothing. `security-audit.md` is what actually audits on a schedule.
+
+The general lesson is the one round two of the code-scanning sweep already
+recorded: **a workflow's presence on `main` is not evidence anyone decided it
+should be there**, and a bot commit that improves a file's *form* will happily
+resurrect a file whose *substance* was the reason it was deleted.
 
 CodeQL used to run via GitHub's *default setup*, and the rule was "never add
 `codeql.yml`" — an advanced analysis cannot upload while default setup is

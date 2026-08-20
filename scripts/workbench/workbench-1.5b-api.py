@@ -2,7 +2,7 @@
 """Test the 1.5B merged model on HF Inference API and record results."""
 import os, json, time, sys
 
-TOKEN_PATH = "/opt/data/profiles/sakthai/home/.cache/huggingface/token"
+TOKEN_PATH = "/opt/data/profiles/sakthai/home/.cache/huggingface/token"  # nosec B105 — filesystem path, not a credential
 with open(TOKEN_PATH) as f:
     hf_token = f.read().strip()
 
