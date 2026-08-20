@@ -92,7 +92,7 @@ describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
       expect(screen.getByText("Primary model initialized")).toBeInTheDocument();
     });
 
-    it("renders security audit log entries with severity badges", () => {
+    it("renders security audit log entries with severity badges and accessible filter controls", () => {
       const mockLogs = [
         { id: 1, timestamp: "2026-08-02T12:00:00Z", persona: "SakSit", severity: "critical" as const, event: "Unauthorized access blocked", details: "Blocked IP 10.0.0.1" },
         { id: 2, timestamp: "2026-08-02T12:05:00Z", persona: "SakThai", severity: "info" as const, event: "Session initialized", details: "OK" },
@@ -101,6 +101,14 @@ describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
       render(<AuditLogs logs={mockLogs} />);
       expect(screen.getByText("Unauthorized access blocked")).toBeInTheDocument();
       expect(screen.getByText("critical")).toBeInTheDocument();
+
+      const criticalBtn = screen.getByRole("button", { name: "Filter audit logs by CRITICAL severity" });
+      expect(criticalBtn).toHaveAttribute("aria-pressed", "false");
+
+      fireEvent.click(criticalBtn);
+      expect(criticalBtn).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByText("Unauthorized access blocked")).toBeInTheDocument();
+      expect(screen.queryByText("Session initialized")).not.toBeInTheDocument();
     });
   });
 
