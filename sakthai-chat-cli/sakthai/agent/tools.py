@@ -426,9 +426,6 @@ def _send_telegram_message(args: dict[str, Any], store: MemoryStore) -> str:
     except URLError as exc:
         return redact_secrets(f"Network Error: Could not connect to Telegram API: {exc.reason}")
     except Exception as exc:  # noqa: BLE001
-        from ..config import redact_secrets
-
-        return f"Unexpected Error sending Telegram message: {redact_secrets(str(exc))}"
         return redact_secrets(f"Unexpected Error sending Telegram message: {exc}")
 
 
