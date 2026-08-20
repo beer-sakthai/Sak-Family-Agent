@@ -437,3 +437,43 @@ doing nothing. This round's is adjacent: **a scanner can be running, green, and
 structurally incapable of seeing the thing it is named for.** Both were found the
 same way — by reading what the job actually did rather than what its name or its
 header comment said.
+
+## Postscript — the sweep was dispatched, and the *other* job failed
+
+Round two shipped with the branch sweep verified locally and explicitly flagged
+as never having run on Actions. It was dispatched manually rather than left for
+Friday — run
+[32380879026](https://github.com/beer-sakthai/Sak-Family-Agent/actions/runs/32380879026):
+
+```
+Branch sweep   success     (all steps, including the artifact upload)
+gitleaks       failure     at "Run gitleaks"
+```
+
+The new job worked. The **pre-existing** incremental job failed, and the log
+gives the reason without ambiguity:
+
+```
+gitleaks cmd: gitleaks detect --redact -v --exit-code=2 --report-format=sarif ... --log-level=debug
+```
+
+No `--log-opts`. On an event that carries no commit range, `gitleaks-action`
+does not skip — it scans the **entire history**, which still holds credentials
+in files long deleted from `main`, and reports ~93 findings. Those need
+rotating, not patching, so the run can only ever be red.
+
+This was latent in the file before round two: `workflow_dispatch` was already a
+trigger, and run 32380879026 is the **first manual dispatch this workflow has
+ever had**, so nothing had exercised it. Round two made it matter, because the
+sweep is dispatch-only and a manual run is now the normal way to use this
+workflow. The `gitleaks` job is therefore restricted to `push` and
+`pull_request` — the two events that carry a range — and the two jobs now cover
+disjoint events, pinned by a test.
+
+Push-to-`main` runs stayed green throughout, including on the merge commit, so
+the gate that stops a *new* secret landing was never affected.
+
+Worth naming, because it is the third instance of the same shape in this
+document: **the job that had never run was the one that was broken.** Dispatching
+it on the day it merged, instead of waiting for its first scheduled run, is the
+only reason that was found in minutes rather than on Friday.

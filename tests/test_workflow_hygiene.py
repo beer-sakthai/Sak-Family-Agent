@@ -616,3 +616,21 @@ def test_secret_scan_sweeps_every_branch_tip() -> None:
     assert "sha256sum -c -" in sweep, (
         "branch-sweep declares a gitleaks digest but no longer checks it."
     )
+
+    # The two jobs must cover disjoint events. gitleaks-action does not skip
+    # when an event carries no commit range — it drops `--log-opts` and scans
+    # the whole history, which reports ~93 findings in files long deleted from
+    # `main` and fails every time. Run 32380879026, the first manual dispatch
+    # this workflow ever had, failed exactly that way.
+    incremental = str(jobs["gitleaks"].get("if", ""))
+    for event in ("schedule", "workflow_dispatch"):
+        assert event not in incremental, (
+            f"the incremental `gitleaks` job must not run on `{event}`: with no "
+            "commit range gitleaks-action scans all history and fails on "
+            "already-known, unrotated findings. Those events belong to "
+            "`branch-sweep`."
+        )
+    assert "push" in incremental and "pull_request" in incremental, (
+        "the incremental `gitleaks` job must still gate pushes and pull "
+        "requests — that is the check that stops a new secret landing."
+    )
