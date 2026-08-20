@@ -58,9 +58,6 @@ jobs:
           use-policy-store: true
           api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
 
-      # A draft cannot have auto-merge enabled. Skipping is deliberate rather
-      # than a failure: the `ready_for_review` trigger above re-runs this job
-      # the moment the draft is marked ready, with the label already in place.
       - name: Enable auto-merge
         if: github.event.action != 'unlabeled' && github.event.pull_request.draft == false
         env:

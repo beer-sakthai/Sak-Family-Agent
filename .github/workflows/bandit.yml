@@ -38,9 +38,18 @@ on:
 permissions:
   contents: read
 
+# `cancel-in-progress` only on a pull request, never on `main`: a cancelled
+# analysis uploads no SARIF, and a code-scanning alert is only ever closed by a
+# newer analysis from the same tool — so cancelling a `main` run would leave
+# stale alerts open with nothing scheduled to retire them.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   bandit:
     name: Bandit
+    timeout-minutes: 15
     permissions:
       contents: read          # actions/checkout
       security-events: write  # upload-sarif writes to the code-scanning API

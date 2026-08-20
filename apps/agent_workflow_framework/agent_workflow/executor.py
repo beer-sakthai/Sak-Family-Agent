@@ -192,7 +192,9 @@ def _validate_filepath(filepath: Any) -> Path:
     if not filepath:
         raise ValueError("File path cannot be empty.")
 
-    path_str = str(filepath).strip()
+    path_str = str(filepath).strip().lstrip("@")
+    if not path_str:
+        raise ValueError("File path cannot be empty.")
 
     if any(ord(c) < 32 or ord(c) == 127 for c in path_str):
         raise ValueError("Control characters are not allowed in file paths")

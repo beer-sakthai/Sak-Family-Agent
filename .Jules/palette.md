@@ -13,3 +13,10 @@
 ## 2026-08-20 - Accessible Data Table Filter Tabs with Live Region Updates
 **Learning:** Table filter buttons (such as severity level filter tabs) often lack explicit `aria-pressed` states and fail to announce filter changes to screen readers when focus remains on the active filter button.
 **Action:** Complement table filter tabs with `type="button"`, `aria-pressed`, descriptive `aria-label` attributes, focus ring styles, and an `aria-live="polite"` element that announces updated matching row counts to screen readers on filter selection.
+## 2026-08-18 - Accordion & Collapsible Button Accessibility
+**Learning:** Collapsible sections and accordions (like reasoning process blocks in agent cards) require explicit `aria-expanded` attributes and accessible names so screen reader users understand whether the section is open or collapsed. Visible focus outlines (`focus-visible:ring-2`) are also required for keyboard navigation.
+**Action:** Always include `aria-expanded={isOpen}`, an descriptive `aria-label`, and `focus-visible:ring-2` styles on toggle buttons for collapsible UI elements.
+
+## 2026-08-20 - Action Name Consistency in Control ARIA Labels
+**Learning:** Replacing an interactive control's `aria-label` with a status string when disabled (e.g., changing `"Clear stream events"` to `"Stream is empty"`) degrades screen reader accessibility because it obscures the action of the control. Assistive technologies already announce the button role and disabled state (e.g. *"Clear stream events, button, disabled"*).
+**Action:** Keep `aria-label` consistent and action-oriented regardless of disabled state; convey conditional state information via `title` attributes or status live regions instead.

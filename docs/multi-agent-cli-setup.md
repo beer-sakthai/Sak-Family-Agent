@@ -114,6 +114,85 @@ OpenCode cannot read this repo's YAML. `tests/test_agent_cli_configs.py` asserts
 the two stay in sync, so a persona model rotation fails CI until `opencode.json`
 is updated too.
 
+### OpenCode in CI — the `/oc` workflow
+
+`.github/workflows/opencode.yml` runs the same OpenCode agent inside GitHub
+Actions, on the **OpenCode Go** subscription rather than a per-token API key.
+
+Comment `/oc <task>` (or `/opencode <task>`) on any issue or pull-request review
+thread and the workflow picks it up. Two gates decide whether it runs at all, and
+both are deliberate: the comment must contain the trigger, and the commenter's
+`author_association` must be `OWNER`, `MEMBER` or `COLLABORATOR`. A drive-by
+comment from a stranger on this public repo does nothing.
+
+**Setup is one secret.** Copy your key from <https://opencode.ai/auth> and add it
+under Settings → Secrets and variables → Actions as `OPENCODE_API_KEY`. The same
+variable name is in `.env.example` for local `opencode` runs. Nothing else is
+needed — Go is a first-class provider in the OpenCode model catalog
+(`opencode-go`, base `https://opencode.ai/zen/go/v1`), so the CLI resolves it from
+that one key.
+
+**Model:** `opencode-go/deepseek-v4-flash` — $0.22/$0.66 per Mtok, 1M context,
+tool calling, and the model `docs/SOUL.md` already names as SakThai's policy. Any
+other Go ID works in the same `opencode-go/<model>` form; `mimo-v2.5` is cheaper,
+`glm-5.3` and `kimi-k3` are stronger and correspondingly more expensive.
+
+Four things about it are worth knowing before you change it:
+
+- **It answers by commenting, and `contents: read` is the ceiling.**
+  The agent is *not* read-only — an earlier version of this page said it was,
+  and the workflow simply did not work. The action posts a reaction on the
+  triggering comment and then a reply, so it needs `issues: write` and
+  `pull-requests: write`; with read-only scopes both calls return
+  `403 Resource not accessible by integration` and the step exits 1 having done
+  nothing. Those two scopes are the whole write surface: `contents: read` means
+  the agent cannot push, create a branch, or open a pull request.
+
+  `use_github_token: true` is what makes the `permissions:` block bind at all.
+  By default the action exchanges an OIDC token with `api.opencode.ai` for an
+  **OpenCode GitHub App installation token** — whose permissions come from the
+  app installation and therefore ignore this workflow's block entirely. Setting
+  it runs the CLI on the job's own `GITHUB_TOKEN`, which Actions scopes to
+  exactly what is declared. The default also requires
+  <https://github.com/apps/opencode-agent> to be installed on the repository, so
+  this setting removes an install prerequisite as well. `id-token: write` is
+  deliberately absent — nothing performs an OIDC exchange any more. Widening
+  beyond these two turns a comment on a public repo into a path to a write
+  credential; treat it as a security decision, not a convenience one.
+
+- **It has the repo's own tools, which took two changes.** The job runs
+  `./.github/actions/setup-uv-python` before the agent, because `opencode.json`
+  registers the sakthai MCP server as `uv run --project . sakthai mcp` and
+  nothing in CI had installed uv or the project — the server failed to start and
+  the agent silently lost all 14 builtin tools. Shell needed the second change:
+  the root config sets `permission.bash: "ask"`, an approval prompt with nobody
+  to answer it, and `tests/test_agent_cli_configs.py::test_opencode_gates_bash`
+  pins that value deliberately. So CI does not loosen the root config — it
+  points `OPENCODE_CONFIG` at `.github/opencode-ci.json`, which allows `bash`
+  and denies `edit` (an edit could never be pushed under `contents: read`, so a
+  proposed patch in the reply is worth more than a discarded working tree).
+  That file deliberately omits the persona `agent:` table: duplicating it is
+  exactly the drift `tests/test_agent_cli_configs.py` exists to catch.
+
+  Shell plus comment-write means a prompt injection arriving through a comment
+  or a diff has somewhere to go. The trusted-commenter gate is what contains
+  that, which is why it should not be relaxed.
+- **`share: false` is load-bearing.** The action's `share` input *defaults to
+  true for public repositories*, which publishes an `opencode.ai` session link for
+  every run. The source here is public anyway, but the session also carries the
+  agent's reasoning trace, so the workflow opts out explicitly.
+- **Go's limits are shared with your terminal.** $12 per 5 hours, $30 per week,
+  $60 per month, counted in dollars rather than requests — an unattended run
+  spends the same pool you code against. The brakes are the trusted-commenter
+  gate, `timeout-minutes: 15`, and a per-thread `concurrency:` group that queues a
+  second `/oc` instead of running it alongside the first.
+
+This is the only place the Go subscription is wired in. The eight gh-aw agentic
+workflows are unaffected: seven run on `engine: gemini`, and `opencode-smoke.md`
+drives a Gemini model through the AWF proxy on a vendored engine definition — see
+[`gh-aw-engines.md`](./gh-aw-engines.md), which is a separate OpenCode integration
+that shares nothing with this one but the name.
+
 ## The shared MCP server
 
 Both tools register the same stdio server:

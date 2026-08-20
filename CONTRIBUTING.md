@@ -76,11 +76,29 @@ cd ../..
 
 ---
 
+## ✅ Code Review Checklist
+
+Before opening a PR or marking as ready for review, verify all these locally:
+
+- [ ] **Green CI locally**: Run all commands under "Quality Bar & Local Verification" above
+- [ ] **No new linting errors**: `uv run ruff check` passes
+- [ ] **Code is formatted**: `uv run ruff format --check` passes (or run without `--check` to auto-fix)
+- [ ] **Types are strict**: `uv run mypy personas/sakthai/sakthai` returns 0 issues
+- [ ] **No security issues**: `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` is clean
+- [ ] **Tests pass**: `uv run pytest tests/ -m "not integration" -q` passes with ≥96% coverage
+- [ ] **Branch is up-to-date**: Merge the latest `main` into your branch to catch CI conflicts early
+- [ ] **Commit messages are clear**: Follow conventional commit style: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, etc.
+- [ ] **Documentation updated**: If you changed behavior, update relevant `.md` files
+- [ ] **No breaking changes** (or clearly documented): Backwards compatibility matters
+- [ ] **Related issues linked**: Reference any GitHub issues your PR closes or relates to
+
+---
+
 ## 📬 Submitting Feedback & PRs
 
 - **Bug Reports & Ideas**: Open a [GitHub Issue](https://github.com/beer-sakthai/Sak-Family-Agent/issues).
 - **Security Disclosures**: Please see [`SECURITY.md`](SECURITY.md) and email **beer-sakthai@users.noreply.github.com** directly.
-- **Code Reviews**: Every pull request requires green CI across all 12 workflows and review approval before merge.
+- **Code Reviews**: Every pull request requires **green CI across all workflows** AND a **non-author approval** before merge. (Auto-approving bots are explicitly out of bounds — a human review is required for `main`.)
 
 ---
 

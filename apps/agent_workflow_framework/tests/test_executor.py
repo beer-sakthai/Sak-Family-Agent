@@ -247,6 +247,23 @@ class TestWorkflowExecutor(unittest.TestCase):
             "id_rsa.bak",
             "id_ed25519.pub",
             "ID_ECDSA.old",
+            # Leading '@' prefix targets (curl-style upload prefixes or accidental leading '@').
+            "@.env",
+            "@id_rsa",
+            "@memory.db",
+            "@.git/config",
+            "@@.env",
+            "@/etc/passwd",
+            "@@/etc/passwd",
+            "@/etc/hosts",
+            # Upload prefix '@' bypass variants.
+            "@/etc/hosts",
+            "@@.env",
+            "@@.git/config",
+            "@@.ssh/id_rsa",
+            "@/var/log/syslog",
+            "@@etc/passwd",
+            "@.env",
         ]
         for path in malicious_paths:
             for action in ("file_read", "file_write"):

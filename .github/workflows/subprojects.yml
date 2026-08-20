@@ -111,6 +111,10 @@ jobs:
     # The longest of the three: pnpm install -> lint -> typecheck -> 172 vitest
     # tests -> next build.
     timeout-minutes: 30
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      NEXT_TELEMETRY_DISABLED: "1"
     defaults:
       run:
         working-directory: apps/sak_agent_dashboard

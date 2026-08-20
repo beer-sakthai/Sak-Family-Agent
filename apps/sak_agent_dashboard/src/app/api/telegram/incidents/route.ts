@@ -1,57 +1,40 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
 import {
   createIncidentAlert,
   getIncidentAlerts,
   PERSONA_VOICES,
   resolveIncidentAlert,
   synthesizePersonaAudio,
-} from '../../../../lib/telegram/voice_bridge';
+} from "@/lib/telegram/voice_bridge";
+import { MobileIncidentAlert } from "@/lib/types";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-export async function GET() {
-  try {
-    const incidents = getIncidentAlerts();
-    return NextResponse.json({
-      incidents,
-      voices: Object.values(PERSONA_VOICES),
-    });
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to retrieve incidents' },
-      { status: 500 }
+export const GET = createApiHandler("/api/telegram/incidents", async () => ({
+  incidents: getIncidentAlerts(),
+  voices: Object.values(PERSONA_VOICES),
+}));
+
+export const POST = createMutationHandler("/api/telegram/incidents", async (body) => {
+  const action = String(body.action ?? "preview_tts");
+
+  if (action === "preview_tts") {
+    return synthesizePersonaAudio(
+      String(body.personaSlug ?? "sakthai"),
+      String(body.text ?? "ทดสอบระบบเสียงสังเคราะห์ของ Sak-Family"),
     );
   }
-}
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const action = body.action || 'preview_tts';
-
-    if (action === 'preview_tts') {
-      const result = synthesizePersonaAudio(
-        body.personaSlug || 'sakthai',
-        body.text || 'ทดสอบระบบเสียงสังเคราะห์ของ Sak-Family'
-      );
-      return NextResponse.json({ success: true, ...result });
-    }
-
-    if (action === 'create_incident') {
-      const alert = createIncidentAlert(body.alert || {});
-      return NextResponse.json({ success: true, alert }, { status: 201 });
-    }
-
-    if (action === 'resolve_incident') {
-      const updated = resolveIncidentAlert(body.alertId, body.status || 'resolved');
-      return NextResponse.json({ success: true, alert: updated });
-    }
-
-    return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Incident API error' },
-      { status: 500 }
-    );
+  if (action === "create_incident") {
+    const alert = createIncidentAlert((body.alert as Partial<MobileIncidentAlert>) ?? {});
+    return { alert };
   }
-}
+
+  if (action === "resolve_incident") {
+    const status = body.status === "acknowledged" ? "acknowledged" : "resolved";
+    const updated = resolveIncidentAlert(String(body.alertId ?? ""), status);
+    return { alert: updated };
+  }
+
+  throw new Error(`Unknown action: ${action}`);
+});

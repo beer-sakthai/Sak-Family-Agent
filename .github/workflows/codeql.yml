@@ -32,10 +32,22 @@ on:
 permissions:
   contents: read
 
+# `cancel-in-progress` only on a pull request, never on `main`: a cancelled
+# analysis uploads no SARIF, and a code-scanning alert is only ever closed by a
+# newer analysis from the same tool — so cancelling a `main` run would leave
+# stale alerts open with nothing scheduled to retire them.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
+    # Three languages run as a matrix and the vendored trees are large even
+    # after `codeql-config.yml` excludes them. Generous, but bounded — the
+    # point is to cap the six-hour default, not to race the analysis.
+    timeout-minutes: 90
     permissions:
       security-events: write  # upload the analysis to the code-scanning API
       packages: read          # fetch CodeQL query packs

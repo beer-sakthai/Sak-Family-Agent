@@ -1,70 +1,40 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { RedTeamEngine } from '@/lib/redteam/redTeamEngine';
+import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
+import { RedTeamEngine } from "@/lib/redteam/redTeamEngine";
+import { AttackVector, FuzzingPayload } from "@/lib/redteam/types";
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const action = searchParams.get('action') || 'all';
+export const GET = createApiHandler("/api/redteam", async (ctx) => {
+  const action = ctx.params["action"] ?? "all";
 
-    if (action === 'sweeps') {
-      const sweeps = RedTeamEngine.getRecentSweeps();
-      return NextResponse.json({ success: true, sweeps });
-    }
+  if (action === "sweeps") return { sweeps: RedTeamEngine.getRecentSweeps() };
+  if (action === "verdicts") return { verdicts: RedTeamEngine.getVerdicts() };
 
-    if (action === 'verdicts') {
-      const verdicts = RedTeamEngine.getVerdicts();
-      return NextResponse.json({ success: true, verdicts });
-    }
+  return {
+    data: {
+      sweeps: RedTeamEngine.getRecentSweeps(),
+      payloads: RedTeamEngine.getPayloads(),
+      verdicts: RedTeamEngine.getVerdicts(),
+    },
+  };
+});
 
-    const sweeps = RedTeamEngine.getRecentSweeps();
-    const payloads = RedTeamEngine.getPayloads();
-    const verdicts = RedTeamEngine.getVerdicts();
+export const POST = createMutationHandler("/api/redteam", async (body) => {
+  const { action } = body as Record<string, unknown>;
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        sweeps,
-        payloads,
-        verdicts,
-      },
+  if (action === "fuzz_sweep") {
+    const summary = await RedTeamEngine.runFuzzSweep({
+      targetPersonas: (body.targetPersonas as string[]) ?? ["saksee"],
+      vectors: body.vectors as AttackVector[] | undefined,
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown red-team error';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return { summary, verdicts: RedTeamEngine.getVerdicts() };
   }
-}
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { action } = body;
-
-    if (action === 'fuzz_sweep') {
-      const summary = await RedTeamEngine.runFuzzSweep({
-        targetPersonas: body.targetPersonas || ['saksee'],
-        vectors: body.vectors,
-      });
-
-      const verdicts = RedTeamEngine.getVerdicts();
-      return NextResponse.json({ success: true, summary, verdicts });
+  if (action === "test_payload") {
+    const { payload } = body as Record<string, unknown>;
+    if (!payload || !(payload as Record<string, unknown>).rawPayload) {
+      throw new Error("Missing payload object or rawPayload string");
     }
-
-    if (action === 'test_payload') {
-      const { payload } = body;
-      if (!payload || !payload.rawPayload) {
-        return NextResponse.json(
-          { success: false, error: 'Missing payload object or rawPayload string' },
-          { status: 400 }
-        );
-      }
-
-      const verdict = RedTeamEngine.evaluatePayloadDefense(payload);
-      return NextResponse.json({ success: true, verdict });
-    }
-
-    return NextResponse.json({ success: false, error: `Invalid action: ${action}` }, { status: 400 });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown red-team error';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return { verdict: RedTeamEngine.evaluatePayloadDefense(payload as FuzzingPayload) };
   }
-}
+
+  throw new Error(`Invalid action: ${action}`);
+});
