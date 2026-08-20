@@ -155,7 +155,7 @@ for i, test in enumerate(tests):
             try:
                 json.loads(content)
                 checks.append("valid_json")
-            except json.JSONDecodeError:
+            except:
                 pass
 
         result = {

