@@ -2,6 +2,39 @@
 
 This document outlines the security posture of the Sak-Family-Agent project, including our automated security measures and how to report vulnerabilities.
 
+## 🚨 Report a Vulnerability
+
+**Do not report security vulnerabilities through public GitHub issues.**
+
+⚡ **Send an email directly to:** **[beer-sakthai@users.noreply.github.com](mailto:beer-sakthai@users.noreply.github.com)**
+
+Include:
+- Description of the vulnerability and its potential impact
+- Steps to reproduce (with code snippets if relevant)
+- Any mitigations you've considered
+
+**Response time:** We will acknowledge your report within **48 hours** and work with you to resolve it as quickly as possible.
+
+---
+
+## 🔒 Quick Reference: Security Checks
+
+Before submitting code or opening a PR, run these local verification commands:
+
+```bash
+# Full quality bar (runs in CI)
+uv sync --all-extras                                          # Install all deps
+uv run ruff check personas/sakthai/sakthai tests               # ✨ Lint
+uv run ruff format --check personas/sakthai/sakthai tests      # 🎨 Format
+uv run mypy personas/sakthai/sakthai                           # 🔤 Type safety (strict)
+uv run bandit -c pyproject.toml -r personas/sakthai/sakthai    # 🛡️ Security scan
+uv run pytest tests/ -m "not integration" -q                   # 🧪 Tests (coverage ≥96%)
+```
+
+**Red run in CI?** See [docs/self-healing-ci.md](docs/self-healing-ci.md) for how the automated healing workflow diagnoses and patches failures.
+
+---
+
 ## Enforced security gates (GitHub Actions)
 
 These run automatically and are the controls actually enforced on this repository:

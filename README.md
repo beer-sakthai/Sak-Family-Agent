@@ -34,6 +34,44 @@ This repository is the living workspace of the Sak Family — autonomous AI agen
 
 ---
 
+## 📋 Table of Contents
+
+- [Quick Start](#-quick-start)
+- [Status Bar & Workflows](#-status-bar--every-workflow-in-this-repo)
+- [System Status](#-system-status)
+- [Getting Started](#-getting-started)
+- [The Six Personas](#-the-six-personas--applications)
+- [Contributing](#-contributing)
+- [Security](#-security)
+- [License](#-license)
+
+---
+
+## 🚀 Quick Start
+
+**New here?** Get up and running in 5 minutes:
+
+```bash
+# 1. Clone and set up
+git clone https://github.com/beer-sakthai/Sak-Family-Agent.git
+cd Sak-Family-Agent
+cp .env.example .env          # Add your API key (ANTHROPIC_API_KEY, GEMINI_API_KEY, etc.)
+
+# 2. Install dependencies
+uv sync --all-extras
+
+# 3. Run your first agent task
+sakthai run "What files exist in this repository?" --stream
+
+# 4. Explore the memory
+sakthai memory stats
+sakthai chat                   # Start an interactive multi-turn session
+```
+
+**For more detailed setup**, see [CONTRIBUTING.md](CONTRIBUTING.md) and [ONBOARDING.md](ONBOARDING.md).
+
+---
+
 ## 🚦 Status Bar — Every Workflow in This Repo
 
 **27 GitHub Actions workflows** live in [`.github/workflows/`](.github/workflows/).
