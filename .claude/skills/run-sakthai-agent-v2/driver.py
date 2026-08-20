@@ -227,7 +227,9 @@ def main() -> int:
                     req = urllib.request.Request(
                         "http://127.0.0.1:3001/api/stages", headers=headers
                     )
-                    with urllib.request.urlopen(req, timeout=2) as r:
+                    # nosec B310 — the Request above carries a literal
+                    # http://127.0.0.1 URL; no caller-supplied scheme.
+                    with urllib.request.urlopen(req, timeout=2) as r:  # nosec B310
                         stages = json.loads(r.read())
                     break
                 except OSError:
@@ -238,7 +240,8 @@ def main() -> int:
                 req = urllib.request.Request(
                     "http://127.0.0.1:3001/api/ecosystem", headers=headers
                 )
-                with urllib.request.urlopen(req, timeout=2) as r:
+                # nosec B310 — literal http://127.0.0.1 URL, as above.
+                with urllib.request.urlopen(req, timeout=2) as r:  # nosec B310
                     eco = json.loads(r.read())
             except OSError:
                 pass

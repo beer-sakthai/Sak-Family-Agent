@@ -46,7 +46,19 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from trl import SFTConfig, SFTTrainer
 
 BASE_MODEL = os.environ.get("BASE_MODEL", "Qwen/Qwen2.5-Coder-1.5B-Instruct")
+# Pinned: an unpinned fetch takes whatever the Hub serves at that moment, so a
+# mutated upstream repo would silently change what this trains on. Commit
+# resolved from the Hub on 2026-08-20 — override it together with BASE_MODEL.
+BASE_MODEL_REVISION = os.environ.get(
+    "BASE_MODEL_REVISION", "2e1fd397ee46e1388853d2af2c993145b0f1098a"
+)
 DATASET_ID = os.environ.get("DATASET_ID", "Nanthasit/sakthai-combined-v6")
+# Pinned: an unpinned fetch takes whatever the Hub serves at that moment, so a
+# mutated upstream repo would silently change what this trains on. Commit
+# resolved from the Hub on 2026-08-20 — override it together with DATASET_ID.
+DATASET_REVISION = os.environ.get(
+    "DATASET_REVISION", "615147b97bc4409bed211f1132e84cfff422712d"
+)
 OUTPUT_REPO = os.environ.get("OUTPUT_REPO", "Nanthasit/sakthai-coder-1.5b-v2-lora")
 EPOCHS = float(os.environ.get("EPOCHS", "3"))
 RESULTS_FILE = "eval-results.json"
@@ -166,12 +178,15 @@ def _run_code_probes(model: Any, tokenizer: Any) -> list[dict[str, Any]]:
 
 
 def main() -> None:
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=False)
+    tokenizer = AutoTokenizer.from_pretrained(
+        BASE_MODEL, revision=BASE_MODEL_REVISION, trust_remote_code=False
+    )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
     model = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
+        revision=BASE_MODEL_REVISION,
         quantization_config=BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
@@ -183,7 +198,7 @@ def main() -> None:
     )
     model.config.use_cache = False
 
-    train_dataset, eval_dataset = _prepare_splits(load_dataset(DATASET_ID), tokenizer)
+    train_dataset, eval_dataset = _prepare_splits(load_dataset(DATASET_ID, revision=DATASET_REVISION), tokenizer)
     print(f"train rows={len(train_dataset)} eval rows={len(eval_dataset)}")
 
     trainer = SFTTrainer(

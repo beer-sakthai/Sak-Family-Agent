@@ -36,6 +36,10 @@ from transformers import (
 from trl import SFTConfig, SFTTrainer
 
 BASE_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
+# Pinned: an unpinned fetch takes whatever the Hub serves at that moment, so a
+# mutated upstream repo would silently change what this trains on. Commit
+# resolved from the Hub on 2026-08-20 — override it together with BASE_MODEL.
+BASE_MODEL_REVISION = "7ae557604adf67be50417f59c2c2f167def9a775"
 DATASET_ID = "Nanthasit/hermes-dataset"
 OUTPUT_REPO = "Nanthasit/sakthai-persona-0.5b-lora"
 
@@ -49,7 +53,7 @@ SYSTEM_PROMPT = (
 
 def main() -> None:
     print(f"== Loading tokenizer + base model: {BASE_MODEL}")
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, revision=BASE_MODEL_REVISION)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -61,6 +65,7 @@ def main() -> None:
     )
     model = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
+        revision=BASE_MODEL_REVISION,
         quantization_config=bnb_config,
         device_map="auto",
     )

@@ -33,7 +33,8 @@ def fetch_page(offset):
     delay = 3
     for _attempt in range(6):
         try:
-            return json.load(urllib.request.urlopen(req))["rows"]
+            # nosec B310 — the Request above carries a literal https URL.
+            return json.load(urllib.request.urlopen(req))["rows"]  # nosec B310
         except urllib.error.HTTPError as e:
             if e.code == 429:
                 print(f"  429 rate-limited, backing off {delay}s")
