@@ -48,6 +48,23 @@ that disappeared inside a commit whose message described something else.
 * **Every job declares a timeout.** A job with no ``timeout-minutes`` holds a
   runner for GitHub's six-hour default. Four workflows set one; the other
   sixteen did not.
+
+* **Composite actions are held to the same pinning rule.** Moving the shared
+  Python bootstrap into ``.github/actions/setup-uv-python`` moved four
+  workflows' ``uses:`` lines out of the directory this file used to scan. An
+  unpinned action inside a composite is exactly as unpinned as one in a
+  workflow, and it is now referenced by every gating Python job at once —
+  ``ci.yml``, ``pylint.yml``, ``dependency-audit.yml`` and both of
+  ``subprojects.yml``'s Python jobs — so the blast radius went up, not down,
+  while the coverage would have gone to zero.
+
+* **The self-hosted runner stays opt-in.** ``ci.yml`` selects its runner with
+  ``vars.CI_RUNNER_LABEL || 'ubuntu-latest'``. A hard-coded ``[self-hosted]``
+  does not *fail* when the host is unreachable — the job queues for up to 24
+  hours and then expires, so the whole repository stops reporting with nothing
+  red to point at. The fallback is what makes turning the runner off a
+  settings-page action instead of a pull request, and it is one careless edit
+  away from being lost.
 """
 
 from __future__ import annotations
@@ -61,6 +78,7 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
+ACTIONS_DIR = REPO_ROOT / ".github" / "actions"
 CODEQL_CONFIG = REPO_ROOT / ".github" / "codeql" / "codeql-config.yml"
 BANDIT_INI = REPO_ROOT / ".bandit"
 
@@ -95,6 +113,20 @@ def _authored_workflows() -> list[Path]:
     hand-written workflows and say so.
     """
     return [p for p in _yaml_workflows() if not p.name.endswith(".lock.yml")]
+
+
+def _composite_actions() -> list[Path]:
+    """The repository's own composite actions, if it has any.
+
+    ``.github/actions/<name>/action.yml`` is where a local action lives; a
+    workflow reaches it as ``uses: ./.github/actions/<name>``, which the
+    pinning check skips (correctly — a local action is versioned with the
+    repository, so there is no third-party commit to pin). What it must not
+    skip is what the action itself pulls in.
+    """
+    if not ACTIONS_DIR.is_dir():
+        return []
+    return sorted(p for p in ACTIONS_DIR.glob("*/action.y*ml") if p.suffix in {".yml", ".yaml"})
 
 
 def _triggers(data: dict) -> set[str]:
@@ -165,6 +197,57 @@ def test_workflow_declares_top_level_permissions(path: Path) -> None:
     )
 
 
+@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
+def test_every_job_declares_a_timeout(path: Path) -> None:
+    """A job with no ``timeout-minutes`` holds a runner for six hours.
+
+    That is GitHub's default, and it is not a theoretical cost: an agentic job
+    that hangs on a model call burns the whole window before anyone notices,
+    and a queued self-hosted job behind it waits the same six hours. This rule
+    was described in this module's docstring from the day the docstring was
+    written, and in ``CLAUDE.md`` as *enforced by this file* — but no test
+    implemented it, so ``auto-update-prs.yml`` was merged with no timeout at
+    all and nothing went red.
+
+    Scoped to :func:`_authored_workflows` for the reason given there: gh-aw
+    sets ``timeout-minutes`` on only one of each lock file's generated jobs.
+    """
+    jobs = _load(path).get("jobs") or {}
+    missing = [
+        name for name, job in jobs.items() if isinstance(job, dict) and "timeout-minutes" not in job
+    ]
+    assert not missing, (
+        f"{path.name}: job(s) {', '.join(sorted(missing))} declare no "
+        "`timeout-minutes`. Without it the job may hold a runner for GitHub's "
+        "six-hour default."
+    )
+
+
+@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
+def test_pull_request_workflows_serialise_per_ref(path: Path) -> None:
+    """A workflow a pull request can trigger must declare ``concurrency:``.
+
+    Without it every force-push leaves the previous run to finish against a
+    commit nobody will look at again. The repository had accumulated 27,417
+    workflow runs before the convention was adopted.
+
+    The rule deliberately checks only for the block's presence, not for a
+    particular ``cancel-in-progress`` value. The usual expression is
+    ``${{ github.event_name == 'pull_request' }}`` — cancel a superseded PR
+    run, never one on ``main``, because a cancelled analysis uploads no SARIF
+    and an alert is only ever closed by a newer analysis from the same tool.
+    But ``opencode.yml`` sets it to ``false`` on purpose (two ``/oc`` comments
+    are two different tasks), so pinning the value would be wrong.
+    """
+    triggers = _triggers(_load(path))
+    if not triggers & {"pull_request", "pull_request_target"}:
+        pytest.skip("not triggerable by a pull request")
+    assert "concurrency" in _load(path), (
+        f"{path.name}: triggerable by a pull request but declares no top-level "
+        "`concurrency:` group, so superseded runs are never cancelled."
+    )
+
+
 @pytest.mark.parametrize("path", _yaml_workflows(), ids=lambda p: p.name)
 def test_actions_are_pinned_to_a_commit_sha(path: Path) -> None:
     """Scorecard ``PinnedDependenciesID``: no floating tags or branches."""
@@ -180,52 +263,6 @@ def test_actions_are_pinned_to_a_commit_sha(path: Path) -> None:
             unpinned.append(f"{path.name}:{lineno}: {ref}")
     assert not unpinned, "Actions must be pinned to a 40-character commit SHA:\n" + "\n".join(
         unpinned
-    )
-
-
-@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
-def test_pull_request_workflows_serialise_per_ref(path: Path) -> None:
-    """A pull-request workflow must group its runs, or force-pushes pile up.
-
-    Without a ``concurrency:`` block every push to a branch starts a fresh run
-    and leaves the previous one running to completion against a commit that has
-    already been replaced. On a repository where agents push repeatedly to the
-    same branch that is most of the minutes spent.
-
-    This only requires the block to exist; each workflow decides its own
-    ``cancel-in-progress``. The convention here is to cancel pull-request runs
-    and never a run on ``main`` — a cancelled analysis uploads no SARIF, and an
-    alert is only ever closed by a newer analysis from the same tool.
-    """
-    data = _load(path)
-    if not _triggers(data) & {"pull_request", "pull_request_target"}:
-        pytest.skip("not triggered by a pull request")
-    assert "concurrency" in data, (
-        f"{path.name}: no top-level `concurrency:` block. Add\n"
-        "  concurrency:\n"
-        "    group: ${{ github.workflow }}-${{ github.ref }}\n"
-        "    cancel-in-progress: ${{ github.event_name == 'pull_request' }}\n"
-        "so a force-push cancels the run it supersedes."
-    )
-
-
-@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
-def test_every_job_declares_a_timeout(path: Path) -> None:
-    """A job without ``timeout-minutes`` holds a runner for six hours.
-
-    That is GitHub's default, and it is never the right answer: the longest job
-    in this repository (the dashboard's install → lint → typecheck → 172 vitest
-    tests → build chain) is budgeted at thirty minutes. A hung install or a
-    wedged test process should fail the run, not occupy a runner for the rest of
-    the working day.
-    """
-    jobs = _load(path).get("jobs", {})
-    missing = [
-        name for name, job in jobs.items() if isinstance(job, dict) and "timeout-minutes" not in job
-    ]
-    assert not missing, (
-        f"{path.name}: job(s) {missing} declare no `timeout-minutes`. Give each "
-        "one a budget it should never legitimately reach."
     )
 
 
@@ -321,4 +358,104 @@ def test_bandit_ini_exclusions_are_anchored() -> None:
     assert not unanchored, (
         "Every .bandit exclusion must start with './' so it can only match at "
         f"the repository root. Unanchored: {unanchored}"
+    )
+
+
+@pytest.mark.parametrize("path", _composite_actions(), ids=lambda p: p.parent.name)
+def test_composite_actions_pin_what_they_use(path: Path) -> None:
+    """Scorecard ``PinnedDependenciesID``, one directory along.
+
+    Extracting the shared Python bootstrap into ``.github/actions/`` moved four
+    workflows' ``uses:`` lines out of ``.github/workflows/``, which is the only
+    place :func:`test_actions_are_pinned_to_a_commit_sha` looks. The action is
+    referenced by every gating Python job in the repository, so an unpinned
+    ``uses:`` inside it reaches further than an unpinned one in any single
+    workflow — and nothing would have said so.
+    """
+    unpinned: list[str] = []
+    for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        match = _USES.match(line)
+        if not match:
+            continue
+        ref = match.group(1)
+        if ref.startswith("./") or ref.startswith("docker://"):
+            continue
+        if "@" not in ref or not _SHA_REF.match(ref.rsplit("@", 1)[1]):
+            unpinned.append(f"{path.parent.name}/{path.name}:{lineno}: {ref}")
+    assert not unpinned, (
+        "A composite action must pin its own dependencies to a commit SHA:\n" + "\n".join(unpinned)
+    )
+
+
+@pytest.mark.parametrize("path", _composite_actions(), ids=lambda p: p.parent.name)
+def test_composite_actions_are_well_formed(path: Path) -> None:
+    """A composite action needs ``runs:`` to be an action at all.
+
+    A file that parses as YAML but declares no ``runs:`` block is not ignored
+    the way a misnamed workflow is — every workflow referencing it fails at
+    once, with ``Can't find 'action.yml'``-shaped errors that point at the
+    caller rather than at the file that is actually wrong.
+    """
+    data = _load(path)
+    assert data.get("runs", {}).get("using") == "composite", (
+        f"{path.parent.name}/{path.name}: not a composite action "
+        "(`runs.using` must be `composite`)."
+    )
+    assert data.get("name"), f"{path.parent.name}/{path.name}: no `name:`"
+    assert data.get("description"), (
+        f"{path.parent.name}/{path.name}: no `description:` — required by "
+        "GitHub, and the action fails to load without it."
+    )
+
+
+def test_ci_keeps_its_hosted_runner_fallback() -> None:
+    """The self-hosted runner must stay opt-in, and reversible from a settings page.
+
+    ``runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}`` means: use the
+    self-hosted host when the repository variable names one, otherwise use a
+    GitHub-hosted runner. Deleting the variable reverts CI to hosted runners on
+    the very next run.
+
+    Hard-coding ``runs-on: [self-hosted]`` instead is not a symmetric choice,
+    because an unavailable runner does not produce a failure. A job dispatched
+    to a label with nothing online **queues** — for up to 24 hours, then
+    expires. Every pull request in the repository would stop reporting, with
+    nothing red anywhere to explain why. Restoring service would then need a
+    pull request, which needs CI, which is queued.
+
+    See ``infra/self-hosted-runner/README.md``.
+    """
+    runs_on = str(_load(WORKFLOWS_DIR / "ci.yml")["jobs"]["test"]["runs-on"])
+    normalised = " ".join(runs_on.split())
+    assert "vars.CI_RUNNER_LABEL" in normalised, (
+        "ci.yml's `test` job no longer selects its runner from the "
+        "`CI_RUNNER_LABEL` repository variable."
+    )
+    assert "ubuntu-latest" in normalised, (
+        "ci.yml's `test` job lost its GitHub-hosted fallback. Without it, an "
+        "unreachable self-hosted runner does not fail CI — it queues every job "
+        "for 24 hours and then expires them, silently."
+    )
+
+
+def test_cache_cleanup_never_runs_a_fork_pull_request() -> None:
+    """``cache-cleanup.yml`` holds ``actions: write`` on a ``pull_request`` event.
+
+    That combination is only safe because the job checks out nothing and the
+    fork guard keeps it from running at all on a fork's pull request — where
+    the token is read-only regardless of the declared permissions, so the
+    delete would 403 and fail a run nobody can fix.
+    """
+    job = _load(WORKFLOWS_DIR / "cache-cleanup.yml")["jobs"]["purge"]
+
+    condition = " ".join(str(job["if"]).split())
+    assert "github.event.pull_request.head.repo.full_name == github.repository" in condition, (
+        "cache-cleanup.yml's `purge` job lost its fork guard."
+    )
+
+    uses = [str(step.get("uses", "")) for step in job["steps"]]
+    assert not any("actions/checkout" in u for u in uses), (
+        "cache-cleanup.yml must not check out the repository. It runs on "
+        "`pull_request` with `actions: write`; fetching the pull request's code "
+        "into that job is Scorecard's `DangerousWorkflowID`."
     )

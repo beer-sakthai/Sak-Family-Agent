@@ -1,8 +1,6 @@
 ---
 name: ci-cd-doctor
-description: Use when GitHub Actions checks fail, CI workflows report errors, CodeQL alerts trigger,
-  or ESLint and Vitest gates block pull request merging
-...
+description: This skill should be used when the user asks to "fix failing CI checks", "diagnose a GitHub Actions failure", "fix a CodeQL alert", or "fix an ESLint or Vitest gate" — when GitHub Actions checks fail (`gh pr checks` red), CI workflows error, CodeQL alerts fire (e.g. CWE-22 path traversal), or monorepo gates block a PR (ESLint `react-hooks/set-state-in-effect`, Vitest, `pnpm build`, `pytest`, `ruff`, `mypy`, `bandit`).
 ---
 
 # CI/CD Doctor
@@ -140,3 +138,14 @@ uv run mypy personas/sakthai/sakthai
 uv run bandit -c pyproject.toml -r personas/sakthai/sakthai
 uv run pytest tests/ -m "not integration" -q
 ```
+
+---
+
+## Maintenance
+
+This skill is published on two surfaces that must stay byte-identical:
+
+- `.claude-plugins/ci-cd-doctor/skills/ci-cd-doctor/SKILL.md` — Claude Code plugin runtime
+- `.agents/skills/ci-cd-doctor/SKILL.md` — acli / agents-CLI runtime
+
+Editing one requires editing the other with the identical change. Both read the same `.claude/ci-cd-doctor.local.md` settings file; the sync invariant is also documented in `.claude-plugins/ci-cd-doctor/README.md`.

@@ -18,11 +18,13 @@ import {
   Wrench,
 } from "lucide-react";
 import { GithubIcon as Github } from "./GithubIcon";
-import { M365_ACCOUNT_BLOCKER } from "@/lib/m365Copilot";
+import { DEFAULT_M365_ADAPTER, M365CopilotAdapter } from "@/lib/m365/adapter";
 import { M365CopilotData, M365CopilotPrimitive } from "@/lib/types";
 
 interface M365CopilotPanelProps {
   data: M365CopilotData | null;
+  /** Injectable adapter; defaults to the static-docs adapter. */
+  adapter?: M365CopilotAdapter;
 }
 
 function CopyButton({ payload }: { payload: string }) {
@@ -77,7 +79,10 @@ function PrimitiveCard({ primitive }: { primitive: M365CopilotPrimitive }) {
   );
 }
 
-export function M365CopilotPanel({ data }: M365CopilotPanelProps) {
+export function M365CopilotPanel({ data, adapter = DEFAULT_M365_ADAPTER }: M365CopilotPanelProps) {
+  const authStrategy = adapter.getAuthStrategy();
+  const gate = authStrategy.accountTypeGate;
+
   if (!data) {
     return (
       <div className="space-y-6">
@@ -138,10 +143,10 @@ export function M365CopilotPanel({ data }: M365CopilotPanelProps) {
       <div className="glass-panel rounded-2xl border-2 border-amber-500/50 bg-amber-500/[0.06] backdrop-blur-xl p-5">
         <h4 className="text-base font-bold font-display text-white tracking-tight flex items-center gap-2 mb-2">
           <AlertTriangle className="h-5 w-5 text-amber-400" />
-          {M365_ACCOUNT_BLOCKER.headline}
+          {gate.headline}
         </h4>
         <p className="text-[11.5px] text-slate-200 leading-relaxed max-w-3xl">
-          {M365_ACCOUNT_BLOCKER.body}
+          {gate.body}
         </p>
 
         <div className="mt-4">
@@ -150,7 +155,7 @@ export function M365CopilotPanel({ data }: M365CopilotPanelProps) {
             Also ruled out
           </h5>
           <ul className="space-y-1.5 text-[11px] text-slate-300 leading-relaxed">
-            {M365_ACCOUNT_BLOCKER.ruledOutAlternatives.map((a, idx) => (
+            {gate.ruledOutAlternatives.map((a, idx) => (
               <li key={idx} className="flex items-start gap-2">
                 <span className="text-rose-400 mt-0.5">✕</span>
                 <span>{a}</span>
@@ -165,12 +170,12 @@ export function M365CopilotPanel({ data }: M365CopilotPanelProps) {
             The path that does work
           </h5>
           <p className="text-[11px] text-slate-200 leading-relaxed">
-            {M365_ACCOUNT_BLOCKER.viablePath}
+            {gate.viablePath}
           </p>
         </div>
 
         <p className="text-[10.5px] font-mono text-slate-500 mt-3">
-          source: <code className="text-cyan-300">{M365_ACCOUNT_BLOCKER.specPath}</code>
+          source: <code className="text-cyan-300">{gate.specPath}</code>
         </p>
       </div>
 
@@ -211,7 +216,7 @@ export function M365CopilotPanel({ data }: M365CopilotPanelProps) {
       <div className="glass-panel rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl p-5">
         <h4 className="text-sm font-bold font-display text-white tracking-tight flex items-center gap-2 mb-3">
           <KeyRound className="h-4 w-4 text-amber-400" />
-          Delegated-auth flow
+          {authStrategy.name}
         </h4>
         <ol className="space-y-2">
           {data.authSteps.map((s, idx) => (

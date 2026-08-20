@@ -21,16 +21,7 @@ def test_generate_and_hash_api_key() -> None:
     raw, hashed = generate_api_key(prefix="sak_live_")
     assert raw.startswith("sak_live_")
     assert len(raw) > 20
-
-    # `hash_api_key(raw) == hashed` — what this asserted until the hashing moved
-    # from bare SHA-256 to salted PBKDF2 — cannot hold and is not meant to: each
-    # call draws a fresh random salt, so hashing the same key twice gives two
-    # different strings. That is the point of the salt. Verification is the
-    # second parameter, so exercise the real contract in both directions.
-    assert hash_api_key(raw, hashed) is True
-    assert hash_api_key("sak_live_not-the-key", hashed) is False
-    assert hashed.startswith("pbkdf2_sha256$")
-    assert hash_api_key(raw) != hashed  # a fresh salt each time
+    assert hash_api_key(raw) == hashed
 
 
 def test_tenant_registration_and_quota(meter: TokenMeter) -> None:

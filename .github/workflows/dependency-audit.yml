@@ -37,8 +37,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install uv
-        uses: step-security/setup-uv@edab89485182ad96613ff847804c272ab5d1e03f # v10.0.0
+      # `sync: false` — this job never builds the project environment. It
+      # exports the lock to a requirements file and runs pip-audit through
+      # `uvx`, so all it needs is the uv binary and its warm tool/HTTP cache.
+      # Syncing here would install ~160 packages nothing in the job imports.
+      - name: Set up uv
+        uses: ./.github/actions/setup-uv-python
+        with:
+          sync: "false"
+          cache-suffix: "pip-audit"
 
       - name: Export locked requirements
         # --no-emit-project: audit third-party deps only, not the local package.

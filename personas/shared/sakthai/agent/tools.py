@@ -142,6 +142,16 @@ _SENSITIVE_READ_BASENAMES: frozenset[str] = frozenset(
     }
 )
 _SENSITIVE_READ_SUFFIXES: tuple[str, ...] = (".pem", ".key", ".pfx", ".p12")
+_SENSITIVE_READ_PREFIXES: tuple[str, ...] = (".env.", ".env-", ".env_", "memory.db-")
+_SENSITIVE_READ_KEY_STEMS: tuple[str, ...] = (
+    "id_rsa",
+    "id_dsa",
+    "id_ecdsa",
+    "id_ed25519",
+    "id_ecdsa_sk",
+    "id_ed25519_sk",
+    "id_xmss",
+)
 # Path fragments (relative to a root) that indicate a secret store.
 _SENSITIVE_READ_FRAGMENTS: tuple[tuple[str, ...], ...] = (
     (".aws", "credentials"),
@@ -154,7 +164,11 @@ def _is_sensitive_read_target(resolved: Path) -> bool:
     """Return True if ``resolved`` names a well-known secret file."""
     name = resolved.name
     lower = name.lower()
-    if lower in _SENSITIVE_READ_BASENAMES or lower.startswith(".env."):
+    if (
+        lower in _SENSITIVE_READ_BASENAMES
+        or lower.startswith(_SENSITIVE_READ_PREFIXES)
+        or any(lower.startswith(stem + ".") for stem in _SENSITIVE_READ_KEY_STEMS)
+    ):
         return True
     if lower.endswith(_SENSITIVE_READ_SUFFIXES):
         return True
@@ -413,14 +427,17 @@ def _send_telegram_message(args: dict[str, Any], store: MemoryStore) -> str:
             return "Telegram message sent successfully."
         return redact_secrets(f"Telegram send failed: {body.get('description', 'Unknown error')}")
     except HTTPError as exc:
+        logger.warning("Telegram API HTTP error (%s): %s", exc.code, exc)
         try:
             err = json.loads(exc.read().decode("utf-8"))
             return redact_secrets(f"Telegram API Error: {err.get('description', exc.reason)}")
         except Exception:
             return redact_secrets(f"Telegram API HTTP Error {exc.code}: {exc.reason}")
     except URLError as exc:
+        logger.warning("Telegram API connection error: %s", exc)
         return redact_secrets(f"Network Error: Could not connect to Telegram API: {exc.reason}")
     except Exception as exc:  # noqa: BLE001
+        logger.error("Unexpected error sending Telegram message: %s", exc, exc_info=True)
         return redact_secrets(f"Unexpected Error sending Telegram message: {exc}")
 
 
@@ -434,7 +451,8 @@ def _graph_cached_refresh_token() -> str | None:
         return None
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
+    except Exception as exc:
+        logger.debug("Failed to read Graph token cache %s: %s", path, exc)
         return None
     token = data.get("refresh_token") if isinstance(data, dict) else None
     return str(token) if token else None
@@ -515,8 +533,10 @@ def _graph_safe(action_desc: str, fn: Callable[[], str]) -> str:
     try:
         return fn()
     except RuntimeError as exc:
+        logger.warning("Microsoft Graph config/runtime error %s: %s", action_desc, exc)
         return redact_secrets(f"Error: {exc}")
     except HTTPError as exc:
+        logger.warning("Microsoft Graph API HTTP error %s (%s): %s", action_desc, exc.code, exc)
         try:
             err = json.loads(exc.read().decode("utf-8"))
             message = err.get("error", {}).get("message", exc.reason)
@@ -524,8 +544,10 @@ def _graph_safe(action_desc: str, fn: Callable[[], str]) -> str:
             message = exc.reason
         return redact_secrets(f"Microsoft Graph API Error ({exc.code}): {message}")
     except URLError as exc:
+        logger.warning("Microsoft Graph connection error %s: %s", action_desc, exc)
         return redact_secrets(f"Network Error: Could not connect to Microsoft Graph: {exc.reason}")
     except Exception as exc:  # noqa: BLE001
+        logger.error("Unexpected error %s: %s", action_desc, exc, exc_info=True)
         return redact_secrets(f"Unexpected Error {action_desc}: {exc}")
 
 

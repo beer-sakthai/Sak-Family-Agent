@@ -6,13 +6,10 @@ description: |
 
 on:
   workflow_run:
-    # These are `name:` values, matched exactly. The list used to carry
-    # "Continuous Security", which was never any workflow's name — the file it
-    # meant was named "Continuous Security Scan" — so that entry matched nothing
-    # for as long as it was here, and the workflow it pointed at has since been
-    # replaced by the Gemini-engine `security-audit.md` (which reports by issue
-    # rather than by failing, so there is nothing here to investigate). Verify a
-    # new entry against `grep -h '^name:' .github/workflows/*.yml` before adding it.
+    # Matched against each workflow's `name:` value, exactly. "Continuous
+    # Security" was removed on 2026-08-18 and matched nothing for as long as it
+    # stayed here; "Subproject tests" is the third gating suite and was missing.
+    # Verify any new entry against `grep -h '^name:' .github/workflows/*.yml`.
     workflows: ["CI", "Pylint", "Subproject tests"]
     types:
       - completed
@@ -21,13 +18,13 @@ on:
 
 if: ${{ github.event.workflow_run.conclusion == 'failure' }}
 
+engine: gemini
+
 permissions:
   contents: read
   pull-requests: read
   issues: read
   actions: read
-
-engine: gemini
 
 network: defaults
 
@@ -68,7 +65,7 @@ You are the CI Failure Doctor, an expert investigative agent that analyzes faile
 1. **Verify Failure**: Check that `${{ github.event.workflow_run.conclusion }}` is `failure` or `cancelled`.
 2. **Deduplication Check**: Read `/tmp/gh-aw/agent/investigations/analyzed-runs.json` from the cache. If the current run ID (`${{ github.event.workflow_run.id }}`) is already listed, **stop immediately** — this run has already been investigated. After completing a new investigation, append the run ID to this index to prevent re-analysis.
 3. **Get Workflow Details**: Use `get_workflow_run` to get full details of the failed run.
-4. **List Jobs**: Use `list_workflow_jobs` to identify which specific jobs and matrix targets failed (e.g. CI's Python 3.11/3.12 matrix, ruff lint, mypy static analysis, bandit security scan, pytest test suite; Pylint's two-version matrix; Subproject tests' `agent_workflow_framework`, `teams-copilot-mcp` and `sak_agent_dashboard` jobs).
+4. **List Jobs**: Use `list_workflow_jobs` to identify which specific jobs and matrix targets failed (e.g. Python 3.11/3.12 matrix, ruff lint, mypy static analysis, bandit security scan, pytest test suite).
 5. **Quick Assessment**: Determine if this is a new failure, an environmental flake, or a recurring regression.
 
 ### Phase 2: Deep Log Analysis
@@ -79,13 +76,8 @@ You are the CI Failure Doctor, an expert investigative agent that analyzes faile
    - Ruff linting or formatting rule violations.
    - Mypy typecheck errors and missing type stubs.
    - Bandit security audit findings or policy violations.
-   - Pylint score regressions below the `--fail-under` thresholds.
-   - Dependency resolution/installation failures via `uv`, `pip` or `pnpm`.
-   - Dashboard failures from `Subproject tests`: note that its steps run in
-     sequence without `needs:`, so a `pnpm lint` error reports the three steps
-     behind it as *skipped* rather than failed — read the first red step, not
-     the last.
-   - Runner or network timeouts, and jobs stopped by their `timeout-minutes` budget.
+   - Dependency resolution/installation failures via `uv` or `pip`.
+   - Runner or network timeouts.
 3. **Extract Key Information**:
    - Primary error message and exception trace.
    - Exact file paths and line numbers.

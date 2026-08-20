@@ -1,64 +1,31 @@
-import { NextResponse } from "next/server";
+import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
 import { billingEngine, TenantTier } from "@/lib/billingEngine";
 
-export async function GET() {
+export const GET = createApiHandler("/api/billing", async () => {
   const quota = billingEngine.getQuota();
   const keys = billingEngine.getKeys();
   const usage = billingEngine.getUsage();
   const invoices = billingEngine.getInvoices();
+  return { data: { quota, keys, usage, invoices } };
+});
 
-  return NextResponse.json({
-    success: true,
-    data: {
-      quota,
-      keys,
-      usage,
-      invoices,
-    },
-  });
-}
+export const POST = createMutationHandler("/api/billing", async (body) => {
+  const { action } = body as Record<string, string>;
 
-export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    const { action } = body;
-
-    if (action === "create_key") {
-      const { name } = body;
-      const result = billingEngine.createKey(name || "New API Key");
-      return NextResponse.json({
-        success: true,
-        data: result,
-      });
-    }
-
-    if (action === "revoke_key") {
-      const { keyId } = body;
-      const success = billingEngine.revokeKey(keyId);
-      return NextResponse.json({
-        success,
-        message: success ? "API key revoked" : "API key not found",
-      });
-    }
-
-    if (action === "update_tier") {
-      const { tier } = body as { tier: TenantTier };
-      const quota = billingEngine.updateTier(tier);
-      return NextResponse.json({
-        success: true,
-        data: quota,
-      });
-    }
-
-    return NextResponse.json(
-      { success: false, error: `Unsupported action: ${action}` },
-      { status: 400 }
-    );
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : "Internal Server Error";
-    return NextResponse.json(
-      { success: false, error: errorMsg },
-      { status: 500 }
-    );
+  if (action === "create_key") {
+    const result = billingEngine.createKey(String(body.name ?? "New API Key"));
+    return { data: result };
   }
-}
+
+  if (action === "revoke_key") {
+    const success = billingEngine.revokeKey(String(body.keyId ?? ""));
+    return { success, message: success ? "API key revoked" : "API key not found" };
+  }
+
+  if (action === "update_tier") {
+    const quota = billingEngine.updateTier(body.tier as TenantTier);
+    return { data: quota };
+  }
+
+  throw new Error(`Unsupported action: ${action}`);
+});
