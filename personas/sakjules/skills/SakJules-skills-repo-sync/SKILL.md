@@ -1,6 +1,7 @@
 ---
 name: SakJules-SakSit-skills-repo-sync
-description: "Sync SakSit skills to saksit-skills GitHub repo."
+description: Sync SakSit skills to saksit-skills GitHub repo.
+...
 ---
 
 # SakSit Skills → GitHub Sync

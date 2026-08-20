@@ -1,6 +1,7 @@
 ---
 name: SakThai-hf-hub-exceptions-retry
-description: "HuggingFace Hub exception handling and retry strategies"
+description: HuggingFace Hub exception handling and retry strategies
+...
 ---
 
 # HuggingFace Hub Exceptions & Retry Mechanisms

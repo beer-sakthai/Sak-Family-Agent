@@ -1,0 +1,34 @@
+{
+  "context": {
+    "fileName": ["GEMINI.md"],
+    "importFormat": "tree",
+    "fileFiltering": {
+      "respectGitIgnore": true,
+      "respectGeminiIgnore": true
+    }
+  },
+  "general": {
+    "defaultApprovalMode": "default"
+  },
+  "tools": {
+    "useRipgrep": true
+  },
+  "privacy": {
+    "usageStatisticsEnabled": false
+  },
+  "mcpServers": {
+    "sakthai": {
+      "command": "uv",
+      "args": ["run", "--project", ".", "sakthai", "mcp"],
+      "cwd": ".",
+      "timeout": 30000,
+      "trust": false
+    },
+    "huggingface": {
+      "command": "npx",
+      "args": ["-y", "@huggingface/mcp-server"],
+      "timeout": 30000,
+      "trust": false
+    }
+  }
+}

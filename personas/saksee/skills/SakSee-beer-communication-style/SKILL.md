@@ -1,6 +1,7 @@
 ---
 name: SakSee-beer-communication-style
-description: "Use when responding to Beer (beer-sakthai): deliver results first, keep replies terse, minimize preambles, and sign created work with agent name, date, and commission."
+description: 'Use when responding to Beer (beer-sakthai): deliver results first, keep replies terse,
+  minimize preambles, and sign created work with agent name, date, and commission.'
 ---
 
 # Beer Communication Style

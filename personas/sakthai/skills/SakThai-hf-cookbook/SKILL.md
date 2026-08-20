@@ -1,6 +1,7 @@
 ---
 name: SakThai-hf-cookbook
-description: "Practical AI notebooks from the Open-Source AI Cookbook."
+description: Practical AI notebooks from the Open-Source AI Cookbook.
+...
 ---
 
 # Open-Source AI Cookbook

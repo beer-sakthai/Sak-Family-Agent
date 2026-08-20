@@ -1,6 +1,6 @@
 ---
 name: SakSit-ascii-video
-description: "ASCII video: convert video/audio to colored ASCII MP4/GIF."
+description: 'ASCII video: convert video/audio to colored ASCII MP4/GIF.'
 ---
 
 # ASCII Video Production Pipeline

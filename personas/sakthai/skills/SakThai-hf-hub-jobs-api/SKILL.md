@@ -1,30 +1,11 @@
 ---
 name: SakThai-hf-hub-jobs-api
-author: SakThai
-license: MIT
-title: Hugging Face Hub Jobs API — Managed Compute on HF Infrastructure
-category: mlops
-tags: [jobs, compute, managed, huggingface-hub, cli, python-api, batch-processing]
-related_skills:
-  - hf-hub-sandboxes
-  - hf-hub-spaces-build-runtime-api
-  - hf-inference-endpoints
-  - hf-hub-configuration
-description: >-
-  Complete reference for the Hugging Face Hub Jobs API — HF's managed compute
-  service for running arbitrary code on cloud infrastructure. Covers CLI
-  commands (`hf jobs`), Python API (`HfApi.create_job`, `get_job_status`,
-  `list_jobs`, `cancel_job`), job lifecycle (queued → running → completed),
-  hardware flavors (CPU to H100), log streaming, webhook integration,
-  and zero-cost patterns for free-tier compute.
-version: 1.0.0
-metadata:
-  hermes:
-    agent: sakthai
-    created: 2026-07-25
-    updated: 2026-07-25
-    type: mlops
-    tags: [hf, jobs, compute, batch, automation]
+description: "Complete reference for the Hugging Face Hub Jobs API \u2014 HF's managed compute\
+  \ service for running arbitrary code on cloud infrastructure. Covers CLI commands\
+  \ (`hf jobs`), Python API (`HfApi.create_job`, `get_job_status`, `list_jobs`, `cancel_job`),\
+  \ job lifecycle (queued \u2192 running \u2192 completed), hardware flavors (CPU\
+  \ to H100), log streaming, webhook integration, and zero-cost patterns for free-tier\
+  \ compute."
 ---
 
 # HF Hub Jobs API — Managed Compute Reference

@@ -1,7 +1,9 @@
 ---
 name: SakThai-hf-deep-rl-course
-description: "Train RL agents with Stable Baselines3 and Hugging Face."
+description: Train RL agents with Stable Baselines3 and Hugging Face.
+...
 ---
+
 # Deep Reinforcement Learning with Hugging Face
 
 Based on the [HF Deep RL Course](https://huggingface.co/learn/deep-rl-course). Covers Q-learning, policy gradients, PPO, A2C, multi-agent RL, and training agents in game environments.

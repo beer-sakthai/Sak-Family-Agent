@@ -988,4 +988,5 @@ def emit_json(obj: Any, *, indent: int = 2, redact: bool = True) -> None:
 
 def log(msg: str) -> None:
     """stderr log with consistent prefix (so JSON stdout stays clean)."""
+    # codeql[py/clear-text-logging-sensitive-data]
     print(f"[comfyui-skill] {_redact_sensitive_text(msg)}", file=sys.stderr)

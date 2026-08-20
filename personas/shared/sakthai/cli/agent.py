@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import os
 import sys
 from collections.abc import Callable, Iterator
 from typing import Any
@@ -25,19 +26,50 @@ from ..skills import resolve_skill_names
 
 
 @contextlib.contextmanager
-def _tool_context(*, no_mcp: bool, verbose: bool) -> Iterator[tuple[Tool, ...]]:
+def _temp_env(key: str, value: str) -> Iterator[None]:
+    """Temporarily set an environment variable, restoring its prior value on exit."""
+    previous = os.environ.get(key)
+    os.environ[key] = value
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = previous
+
+
+@contextlib.contextmanager
+def _tool_context(
+    *, no_mcp: bool, verbose: bool, persona: str | None = None
+) -> Iterator[tuple[Tool, ...]]:
     """Yield the tools for a run: built-ins plus any configured MCP servers.
 
     With no servers configured (or ``--no-mcp``) this is just the built-ins and
     spawns nothing. External servers come from ``~/.sakthai/mcp.json`` and
     installed extensions; one that fails to start is skipped, not fatal.
+    ``persona``, when given and ``SAKTHAI_MCP_CONFIG`` isn't already set in the
+    environment, temporarily points that env var at the persona's own
+    ``mcp.json`` (if it exists) for the duration of this run — reuses the
+    existing ``SAKTHAI_MCP_CONFIG``/``mcp_config_override()`` precedence chain
+    in ``mcp/servers.py`` unchanged; an explicitly-set ``SAKTHAI_MCP_CONFIG``
+    always wins.
     """
     if no_mcp:
         yield BUILTIN_TOOLS
         return
     from ..mcp.manager import connect_servers
 
-    with connect_servers() as mcp_tools:
+    mcp_path = config.persona_mcp_config_path(persona) if persona else None
+    override = (
+        mcp_path
+        if mcp_path is not None and mcp_path.is_file() and not os.environ.get("SAKTHAI_MCP_CONFIG")
+        else None
+    )
+    with contextlib.ExitStack() as stack:
+        if override is not None:
+            stack.enter_context(_temp_env("SAKTHAI_MCP_CONFIG", str(override)))
+        mcp_tools = stack.enter_context(connect_servers())
         if mcp_tools and verbose:
             click.echo(f"[mcp] loaded {len(mcp_tools)} external tool(s)", err=True)
         yield (*BUILTIN_TOOLS, *mcp_tools)
@@ -130,7 +162,7 @@ def _run_in_sandbox(
 @click.option(
     "--provider",
     "-p",
-    type=click.Choice(["anthropic", "google", "openai", "ollama", "gateway"]),
+    type=click.Choice(["anthropic", "google", "openai", "ollama", "gateway", "huggingface"]),
     help="LLM provider backend.",
 )
 @click.option("-v", "--verbose", is_flag=True, help="Stream tool calls as they happen.")
@@ -186,6 +218,16 @@ def _run_in_sandbox(
         "unscoped memory.db (unchanged pre-existing behavior)."
     ),
 )
+@click.option(
+    "--heal",
+    is_flag=True,
+    help=(
+        "Enable the self-healing supervisor: intercept provider/tool failures, "
+        "buffer them to the DLQ (~/.sakthai/recovery.db), isolate degraded "
+        "providers via a per-persona circuit breaker, and roll back memory on "
+        "state-corrupting errors. Also enabled by SAKTHAI_SELF_HEAL=1."
+    ),
+)
 def run(
     task: str,
     model: str,
@@ -203,6 +245,7 @@ def run(
     caveman: str | None,
     sandbox: bool,
     persona: str | None,
+    heal: bool,
 ) -> None:
     """Run TASK through the standalone SakThai agent.
 
@@ -217,6 +260,15 @@ def run(
             "--persona is not supported with --sandbox yet "
             "(the sandbox only bind-mounts the default, unscoped memory.db)."
         )
+    if persona:
+        # Explicit --model/--provider always win; a persona's own config.yaml
+        # (model.provider/model.default) only fills in when the caller left
+        # them at their CLI defaults.
+        default_provider, default_model = config.persona_model_defaults(persona)
+        if provider is None and default_provider:
+            provider = default_provider
+        if model == DEFAULT_MODEL and default_model:
+            model = default_model
     if sandbox:
         _run_in_sandbox(
             task=task,
@@ -236,21 +288,28 @@ def run(
         )
 
     if dry_run:
-        with _tool_context(no_mcp=no_mcp, verbose=verbose) as tools:
+        with _tool_context(no_mcp=no_mcp, verbose=verbose, persona=persona) as tools:
             report = preflight(model=model, provider=provider, tools=tools)
         _print_preflight(report)
-        resolved, missing = resolve_skill_names(list(with_skills))
+        resolved, missing = resolve_skill_names(list(with_skills), persona=persona)
         if resolved:
             click.echo(f"[dry-run] skills:      {len(resolved)} resolved ({', '.join(resolved)})")
+        # Reported before the credentials check on purpose. An unresolved skill
+        # name is a static error in the command itself, knowable without any
+        # credentials — and validating skill names is a common reason to run
+        # --dry-run somewhere that deliberately has none, such as CI. With the
+        # order reversed, the credentials failure short-circuited first and the
+        # unresolved name was never printed, which is how
+        # continuous-security.yml kept passing a skill that does not exist.
+        if missing:
+            raise click.ClickException(f"Unresolved --with-skills name(s): {', '.join(missing)}")
         if not report["runnable"]:
             raise click.ClickException(
                 f"Not runnable: no credentials found for provider {report['provider']!r}."
             )
-        if missing:
-            raise click.ClickException(f"Unresolved --with-skills name(s): {', '.join(missing)}")
         return
     if with_skills:
-        _, missing = resolve_skill_names(list(with_skills))
+        _, missing = resolve_skill_names(list(with_skills), persona=persona)
         if missing:
             click.echo(
                 f"warning: skill(s) not found and will be skipped: {', '.join(missing)}",
@@ -268,8 +327,14 @@ def run(
     # passed, run_agent() opens/closes its own default MemoryStore()).
     persona_store = MemoryStore(config.persona_memory_db_path(persona)) if persona else None
     system_prompt_prefix = load_persona_soul(persona) if persona else ""
+    heal_enabled = heal or bool(os.environ.get("SAKTHAI_SELF_HEAL"))
+    supervisor = None
+    if heal_enabled:
+        from ..healing.supervisor import SelfHealingSupervisor
+
+        supervisor = SelfHealingSupervisor()
     try:
-        with _tool_context(no_mcp=no_mcp, verbose=verbose) as tools:
+        with _tool_context(no_mcp=no_mcp, verbose=verbose, persona=persona) as tools:
             result = run_agent(
                 task,
                 model=model,
@@ -286,6 +351,8 @@ def run(
                 caveman=caveman,
                 store=persona_store,
                 system_prompt_prefix=system_prompt_prefix,
+                persona=persona,
+                supervisor=supervisor,
             )
     except AgentError as exc:
         raise click.ClickException(str(exc)) from exc
@@ -309,6 +376,6 @@ def mcp() -> None:
     requests on stdin and writes responses on stdout, exposing the same tools as
     ``sakthai run`` backed by the shared memory store.
     """
-    from ..mcp import serve
+    from ..mcp.server import serve
 
     serve()

@@ -145,6 +145,21 @@ def test_read_file_blocks_outside_roots(tmp_path: Path, store) -> None:
         tool_by_name("read_file").handler({"path": str(secret)}, store)
 
 
+def test_read_file_blocks_control_characters_in_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    control_paths = [
+        "path\nwith\nnewline",
+        "path\rwith\rreturn",
+        "path\twith\ttab",
+        "path\0with\0null",
+    ]
+    for p in control_paths:
+        with pytest.raises(ValueError, match="Control characters are not allowed"):
+            tool_by_name("read_file").handler({"path": p}, store)
+
+
 @pytest.mark.parametrize(
     "name",
     [
@@ -152,13 +167,10 @@ def test_read_file_blocks_outside_roots(tmp_path: Path, store) -> None:
         ".env.production",
         ".env-prod",
         ".env_local",
-        "memory.db-wal",
-        "memory.db-shm",
-        "memory.db-journal",
-        "id_rsa",
         "id_rsa.bak",
         "id_ed25519.old",
         "id_ecdsa.pub",
+        "id_rsa",
         "server.pem",
         "credentials.json",
         ".netrc",
@@ -174,13 +186,12 @@ def test_read_file_blocks_outside_roots(tmp_path: Path, store) -> None:
         ".gitconfig",
         "authorized_keys",
         "known_hosts",
-        "memory.db",
         ".sqlite_history",
         ".psql_history",
     ],
 )
 def test_read_file_blocks_sensitive_names_even_in_cwd(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store, name: str
 ) -> None:
     # cwd is an auto-trusted root, but secret-bearing files must still be refused
     # regardless of location (defense-in-depth against exfiltration).
@@ -188,7 +199,27 @@ def test_read_file_blocks_sensitive_names_even_in_cwd(
     secret = tmp_path / name
     secret.write_text("TOKEN=abc", encoding="utf-8")
     with pytest.raises(PermissionError):
-        tool_by_name("read_file").handler({"path": name}, None)
+        tool_by_name("read_file").handler({"path": name}, store)
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "memory.db",
+        "memory.db-wal",
+        "memory.db-shm",
+    ],
+)
+def test_read_file_blocks_memory_db_files_without_touching_db(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store, name: str
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    sub = tmp_path / "subdir"
+    sub.mkdir()
+    secret = sub / name
+    secret.write_text("TOKEN=abc", encoding="utf-8")
+    with pytest.raises(PermissionError):
+        tool_by_name("read_file").handler({"path": f"subdir/{name}"}, store)
 
 
 def test_read_file_blocks_dot_ssh_directory(
@@ -201,6 +232,28 @@ def test_read_file_blocks_dot_ssh_directory(
     key.write_text("ssh-rsa ...", encoding="utf-8")
     with pytest.raises(PermissionError):
         tool_by_name("read_file").handler({"path": ".ssh/authorized_keys"}, store)
+
+
+def test_read_file_blocks_casing_bypass_sensitive_targets(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    # 1. Test casing variants of basenames (e.g. .ENV, Credentials.json)
+    for basename in [".ENV", "Credentials.json"]:
+        f = tmp_path / basename
+        f.write_text("secret_content", encoding="utf-8")
+        with pytest.raises(PermissionError, match="sensitive credential file"):
+            tool_by_name("read_file").handler({"path": basename}, store)
+
+    # 2. Test casing variants of directories (e.g. .SSH/authorized_keys, .Aws/credentials, .Git/config)
+    for folder, file in [(".SSH", "authorized_keys"), (".Aws", "credentials"), (".Git", "config")]:
+        d = tmp_path / folder
+        d.mkdir(exist_ok=True)
+        f = d / file
+        f.write_text("secret_content", encoding="utf-8")
+        with pytest.raises(PermissionError, match="sensitive credential file"):
+            tool_by_name("read_file").handler({"path": f"{folder}/{file}"}, store)
 
 
 def test_ingest_document_blocks_outside_roots(tmp_path: Path, store) -> None:
@@ -739,6 +792,69 @@ def test_graph_http_error_reports_api_message(
     )
     assert "Microsoft Graph API Error (403)" in out
     assert "Insufficient privileges" in out
+
+
+def test_graph_safe_redacts_secrets_in_errors(
+    monkeypatch: pytest.MonkeyPatch, sakthai_home: Path, store
+) -> None:
+    secret = "super-secret-token-12345"
+    monkeypatch.setenv("MS_GRAPH_CLIENT_ID", "client-id")
+    monkeypatch.setenv("MS_GRAPH_REFRESH_TOKEN", secret)
+
+    # 1. RuntimeError with secret
+    def _stub_runtime(request, timeout=None):
+        raise RuntimeError(f"Failed with secret {secret}")
+
+    monkeypatch.setattr(urllib.request, "urlopen", _stub_runtime)
+    out = tool_by_name("send_outlook_mail").handler(
+        {"to": "a@b.com", "subject": "hi", "body": "hello"}, store
+    )
+    assert secret not in out
+    assert "[REDACTED]" in out
+
+    # 2. HTTPError with secret
+    exc = urllib.error.HTTPError(
+        "https://graph.microsoft.com", 400, f"Error with {secret}", None, None
+    )
+    exc.read = lambda: json.dumps({"error": {"message": f"Denied with {secret}"}}).encode()  # type: ignore[method-assign]
+
+    def _stub_http(request, timeout=None):
+        if "/oauth2/v2.0/token" in request.full_url:
+            return _FakeResponse(b'{"access_token": "fake-access"}')
+        raise exc
+
+    monkeypatch.setattr(urllib.request, "urlopen", _stub_http)
+    out = tool_by_name("send_outlook_mail").handler(
+        {"to": "a@b.com", "subject": "hi", "body": "hello"}, store
+    )
+    assert secret not in out
+    assert "[REDACTED]" in out
+
+    # 3. URLError with secret
+    def _stub_url(request, timeout=None):
+        if "/oauth2/v2.0/token" in request.full_url:
+            return _FakeResponse(b'{"access_token": "fake-access"}')
+        raise urllib.error.URLError(f"no route with {secret}")
+
+    monkeypatch.setattr(urllib.request, "urlopen", _stub_url)
+    out = tool_by_name("send_outlook_mail").handler(
+        {"to": "a@b.com", "subject": "hi", "body": "hello"}, store
+    )
+    assert secret not in out
+    assert "[REDACTED]" in out
+
+    # 4. Unexpected Exception with secret
+    def _stub_generic(request, timeout=None):
+        if "/oauth2/v2.0/token" in request.full_url:
+            return _FakeResponse(b'{"access_token": "fake-access"}')
+        raise ValueError(f"unexpected issue {secret}")
+
+    monkeypatch.setattr(urllib.request, "urlopen", _stub_generic)
+    out = tool_by_name("send_outlook_mail").handler(
+        {"to": "a@b.com", "subject": "hi", "body": "hello"}, store
+    )
+    assert secret not in out
+    assert "[REDACTED]" in out
 
 
 def test_graph_url_error_reports_network_error(
@@ -1304,4 +1420,87 @@ def test_load_tool_overrides(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     assert (
         learn_tool.input_schema["properties"]["value"]["description"]
         == "Overridden param description."
+    )
+
+
+def test_send_telegram_message_redacts_secrets_in_errors(store: MemoryStore, monkeypatch) -> None:
+    fake_token = "123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi"
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", fake_token)
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "987654321")
+
+    # 1. HTTPError with secret in exception description
+    def mock_urlopen_httperror(*args, **kwargs):
+        raise urllib.error.HTTPError(
+            url=f"https://api.telegram.org/bot{fake_token}/sendMessage",
+            code=400,
+            msg=f"Bad Request for {fake_token}",
+            hdrs={},
+            fp=None,
+        )
+
+    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen_httperror)
+    out = tool_by_name("send_telegram_message").handler({"message": "test"}, store)
+    assert fake_token not in out
+    assert "[REDACTED]" in out
+
+    # 2. URLError with secret in reason
+    def mock_urlopen_urlerror(*args, **kwargs):
+        raise urllib.error.URLError(reason=f"Connection refused with key {fake_token}")
+
+    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen_urlerror)
+    out = tool_by_name("send_telegram_message").handler({"message": "test"}, store)
+    assert fake_token not in out
+    assert "[REDACTED]" in out
+
+    # 3. Generic Exception with secret
+    def mock_urlopen_generic(*args, **kwargs):
+        raise RuntimeError(f"Unexpected token leak {fake_token}")
+
+    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen_generic)
+    out = tool_by_name("send_telegram_message").handler({"message": "test"}, store)
+    assert fake_token not in out
+    assert "[REDACTED]" in out
+
+
+def test_telegram_message_logging_on_errors(monkeypatch, tmp_path, caplog) -> None:
+    """_send_telegram_message emits warning/error log messages on failures."""
+    import logging
+    import urllib.error
+
+    from sakthai.agent.tools import tool_by_name
+    from sakthai.memory.store import MemoryStore
+
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "987654321")
+
+    # HTTPError
+    def mock_httperror(*args, **kwargs):
+        raise urllib.error.HTTPError(
+            url="https://api.telegram.org",
+            code=400,
+            msg="Bad Request",
+            hdrs={},
+            fp=None,
+        )
+
+    monkeypatch.setattr("urllib.request.urlopen", mock_httperror)
+    with MemoryStore(tmp_path / "test.db") as store, caplog.at_level(logging.WARNING):
+        tool_by_name("send_telegram_message").handler({"message": "test"}, store)
+
+    assert any("Telegram API HTTP error (400)" in record.message for record in caplog.records)
+
+
+def test_graph_safe_logging_on_errors(monkeypatch, tmp_path, caplog) -> None:
+    """_graph_safe emits warning/error log messages on failures."""
+    import logging
+
+    from sakthai.agent.tools import _graph_safe
+
+    # RuntimeError
+    with caplog.at_level(logging.WARNING):
+        _graph_safe("test_action", lambda: (_ for _ in ()).throw(RuntimeError("Config error")))
+
+    assert any(
+        "Microsoft Graph config/runtime error test_action: Config error" in record.message
+        for record in caplog.records
     )

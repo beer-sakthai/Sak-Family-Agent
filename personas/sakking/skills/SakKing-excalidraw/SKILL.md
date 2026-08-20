@@ -1,6 +1,7 @@
 ---
 name: SakKing-excalidraw
-description: "Hand-drawn Excalidraw JSON diagrams (arch, flow, seq)."
+description: Hand-drawn Excalidraw JSON diagrams (arch, flow, seq).
+...
 ---
 
 # Excalidraw Diagram Skill

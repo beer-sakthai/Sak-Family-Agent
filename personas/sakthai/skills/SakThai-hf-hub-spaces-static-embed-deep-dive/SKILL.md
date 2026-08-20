@@ -1,20 +1,11 @@
 ---
 name: SakThai-hf-hub-spaces-static-embed-deep-dive
-author: SakThai
-license: MIT
-title: Hugging Face Hub — Static HTML Spaces & Embedding Deep Dive
-category: hf-hub
-tags: [hf, hub, spaces, static, html, embed, iframe, webcomponents, sdk, config, frontend, oauth]
-related_skills:
-  - SakThai-hf-hub-spaces-configuration-reference
-  - SakThai-hf-gradio-6-media-components-deep-dive
-  - SakThai-hf-hub-spaces-build-configuration-reference
-description: >-
-  Complete deep-dive on Hugging Face Hub Static HTML Spaces and embedding
-  Spaces in external websites. Covers creation, configuration (YAML frontmatter),
-  build step integration (React, Svelte, Vue), accessing env vars and OAuth from
-  JavaScript, embedding via iframe and Gradio WebComponents, protected Space visibility,
-  and best practices for serving static apps on HF Spaces.
+description: Complete deep-dive on Hugging Face Hub Static HTML Spaces and embedding Spaces in
+  external websites. Covers creation, configuration (YAML frontmatter), build step
+  integration (React, Svelte, Vue), accessing env vars and OAuth from JavaScript,
+  embedding via iframe and Gradio WebComponents, protected Space visibility, and best
+  practices for serving static apps on HF Spaces.
+...
 ---
 
 # Hugging Face Hub — Static HTML Spaces & Embedding Deep Dive

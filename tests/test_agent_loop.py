@@ -2294,3 +2294,31 @@ class TestUntrustedDataWrapping:
         assert "⚠️ BEGIN UNTRUSTED DATA" in block
         assert "⚠️ END UNTRUSTED DATA" in block
         assert "test fact from untrusted source" in block
+
+
+def test_execute_tool_logs_warning_on_exception(caplog, tmp_path) -> None:
+    """_execute_tool logs a warning with exc_info when tool execution raises an exception."""
+    import logging
+
+    from sakthai.agent.loop import Tool, _execute_tool
+    from sakthai.memory.store import MemoryStore
+
+    def failing_handler(args, store):
+        raise ValueError("Simulated tool crash")
+
+    tool = Tool(
+        name="failing_tool",
+        description="A tool that fails",
+        input_schema={"type": "object", "properties": {}},
+        handler=failing_handler,
+    )
+
+    with MemoryStore(tmp_path / "test.db") as store, caplog.at_level(logging.WARNING):
+        out, is_error = _execute_tool(tool, {}, store)
+
+    assert is_error is True
+    assert "ValueError: Simulated tool crash" in out
+    assert any(
+        "Tool 'failing_tool' execution failed with ValueError" in record.message
+        for record in caplog.records
+    )
