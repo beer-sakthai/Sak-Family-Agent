@@ -33,16 +33,28 @@
 /personas/*/sakthai/agent/guardrails.py                  @beer-sakthai
 /personas/shared/sakthai/agent/guardrails.py             @beer-sakthai
 
-# Credential resolution, secret redaction, git-URL validation, and the
-# sandbox boundary.
+# Credential resolution, secret redaction, git-URL validation, tool
+# handlers (send_telegram_message / read_file / run_command),
+# and the sandbox boundary. All persona copies (`personas/*/`, which
+# includes `personas/shared/`) plus the `sakthai-chat-cli/` subtree.
 /personas/sakthai/sakthai/auth.py       @beer-sakthai
 /personas/sakthai/sakthai/config.py     @beer-sakthai
 /personas/sakthai/sakthai/giturl.py     @beer-sakthai
-/personas/*/sakthai/giturl.py           @beer-sakthai
-/personas/shared/sakthai/giturl.py      @beer-sakthai
-/sakthai-chat-cli/sakthai/giturl.py     @beer-sakthai
 /personas/sakthai/sakthai/sandbox.py    @beer-sakthai
 /personas/sakthai/sakthai/web/server.py @beer-sakthai
+/personas/sakthai/sakthai/agent/tools.py @beer-sakthai
+/personas/*/sakthai/auth.py             @beer-sakthai
+/personas/*/sakthai/config.py           @beer-sakthai
+/personas/*/sakthai/giturl.py           @beer-sakthai
+/personas/*/sakthai/sandbox.py          @beer-sakthai
+/personas/*/sakthai/web/server.py       @beer-sakthai
+/personas/*/sakthai/agent/tools.py      @beer-sakthai
+/sakthai-chat-cli/sakthai/auth.py       @beer-sakthai
+/sakthai-chat-cli/sakthai/config.py     @beer-sakthai
+/sakthai-chat-cli/sakthai/giturl.py     @beer-sakthai
+/sakthai-chat-cli/sakthai/sandbox.py    @beer-sakthai
+/sakthai-chat-cli/sakthai/agent/guardrails.py @beer-sakthai
+/sakthai-chat-cli/sakthai/agent/tools.py @beer-sakthai
 
 # Fuzz harnesses + attack corpora. #1032 deleted the entire fuzz/ tree
 # unattended — including the attack corpora (ext-sh-c-id, o-proxycommand,
@@ -54,15 +66,27 @@
 # Tests that pin the security surface. If any of these disappears or is
 # emptied by a bot PR, the removal must go through code-owner review —
 # otherwise the guardrails are only enforced by tests that no longer exist.
+# Note: `test_guardrails*.py` matches BOTH `test_guardrails.py` (the
+# flagship suite — no underscore) and every `test_guardrails_*.py`. The
+# broader `test_security_*.py` and `test_sentinel_*.py` patterns cover
+# the sentinel/security-hardening batteries listed in the repo's CLAUDE.md
+# "Key test areas → Security" section.
 /tests/test_fuzz_harnesses.py           @beer-sakthai
-/tests/test_guardrails_*.py             @beer-sakthai
+/tests/test_guardrails*.py              @beer-sakthai
+/tests/test_sentinel_*.py               @beer-sakthai
+/tests/test_security_*.py               @beer-sakthai
+/tests/test_web_auth.py                 @beer-sakthai
+/tests/test_sakking_skill_security.py   @beer-sakthai
 /tests/test_giturl.py                   @beer-sakthai
 /tests/test_persona_guardrails_parity.py @beer-sakthai
 /tests/test_shared_package_divergence.py @beer-sakthai
 /tests/test_workflow_hygiene.py         @beer-sakthai
 /tests/test_soul_consistency.py         @beer-sakthai
 /tests/test_dependabot_config.py        @beer-sakthai
+/tests/test_dependabot_advisories.py    @beer-sakthai
 /sakthai-chat-cli/tests/test_giturl.py  @beer-sakthai
+/sakthai-chat-cli/tests/test_guardrails*.py @beer-sakthai
+/sakthai-chat-cli/tests/test_security_*.py @beer-sakthai
 
 # --- Supply chain and CI ----------------------------------------------------
 # Workflows run with repository credentials, so a change here is a privilege

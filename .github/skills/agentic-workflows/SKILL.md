@@ -5,6 +5,15 @@ description: Route gh-aw workflow design/create/debug/upgrade requests to the ri
 
 # Agentic Workflows Router
 
+<!--
+NOTE: This skill primitive intentionally coexists with the agent primitive at
+`.github/agents/agentic-workflows.md`. The two are triggered from different
+code paths in Claude Code (skills vs agents) and both dispatch to the same
+gh-aw workflow content. Do not remove either one as "orphan cruft" — they
+were added together in commit `586b75448` (2026-08-18). This file was
+silently deleted by bot commit `8ced7bfa` and restored by PR #1043.
+-->
+
 Use this skill when a user asks to design, create, update, debug, or upgrade GitHub Agentic Workflows in this repository.
 
 This skill is a dispatcher: identify the task type, load the matching workflow prompt/skill file, and follow it directly. Keep responses concise and ask a clarifying question if the correct prompt is unclear.

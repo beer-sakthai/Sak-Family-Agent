@@ -5,6 +5,8 @@ Security review agents for the Sak-Family-Agent workspace.
 ## Agents
 
 - **security-reviewer** — Adversarial pre-merge reviewer for auth, secrets, network egress, sandboxing, tool/MCP guardrails, and prompt-injection exposure. Run when a change crosses a trust boundary. Verdict-first output (`BLOCK` / `CONCERNS` / `CLEAN`) with `file:line` data-flow traces and idiom-matching fixes.
+- **test-writer** — Guides test authoring for this codebase's security surfaces. Contains critical context about known guardrail-testing pitfalls — e.g. the `test_guardrails_containers.py` / rule-6 shadowing hazard (see the file for details).
+- **workflow-reviewer** — Reviews `.github/workflows/*.yml` changes for the invariants pinned by `tests/test_workflow_hygiene.py` (SHA-pinned actions, top-level `permissions:`, per-PR `concurrency:` group, job-level `timeout-minutes`, CodeQL default-setup coexistence, fork-safe `pull_request_target` patterns).
 
 ## Install (local, from this repo)
 
