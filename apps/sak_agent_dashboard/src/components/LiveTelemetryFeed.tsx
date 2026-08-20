@@ -183,9 +183,9 @@ export function LiveTelemetryFeed() {
           <button
             onClick={clearEvents}
             disabled={events.length === 0}
-            aria-label="Clear Stream"
+            aria-label="Clear stream events"
             className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-400 hover:text-rose-400 border border-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none"
-            title={events.length === 0 ? "Stream is empty" : "Clear Stream"}
+            title={events.length === 0 ? "Stream is empty" : "Clear stream events"}
           >
             <Trash2 className="h-4 w-4" />
           </button>

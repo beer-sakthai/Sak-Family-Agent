@@ -129,7 +129,7 @@ describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
   describe("LiveTelemetryFeed Component Accessibility", () => {
     it("renders control buttons and select input with appropriate ARIA labels", () => {
       render(<LiveTelemetryFeed />);
-      const clearBtn = screen.getByRole("button", { name: "Clear Stream" });
+      const clearBtn = screen.getByRole("button", { name: "Clear stream events" });
       expect(clearBtn).toBeInTheDocument();
       expect(clearBtn).toBeDisabled();
       expect(clearBtn).toHaveAttribute("title", "Stream is empty");
