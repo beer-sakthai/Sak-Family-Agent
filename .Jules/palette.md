@@ -9,6 +9,10 @@
 ## 2026-08-19 - Semantic Buttons and ARIA States for Interactive Persona Cards & Toggles
 **Learning:** Interactive cards built using `<div>` with `onClick` handlers are completely unreachable via keyboard Tab navigation and fail to communicate toggle state to assistive technologies.
 **Action:** Always construct interactive toggle cards with native `<button type="button">` elements equipped with `aria-pressed`, descriptive `aria-label`, and Tailwind `focus-visible:ring-2` ring indicators.
+
+## 2026-08-20 - Accessible Data Table Filter Tabs with Live Region Updates
+**Learning:** Table filter buttons (such as severity level filter tabs) often lack explicit `aria-pressed` states and fail to announce filter changes to screen readers when focus remains on the active filter button.
+**Action:** Complement table filter tabs with `type="button"`, `aria-pressed`, descriptive `aria-label` attributes, focus ring styles, and an `aria-live="polite"` element that announces updated matching row counts to screen readers on filter selection.
 ## 2026-08-18 - Accordion & Collapsible Button Accessibility
 **Learning:** Collapsible sections and accordions (like reasoning process blocks in agent cards) require explicit `aria-expanded` attributes and accessible names so screen reader users understand whether the section is open or collapsed. Visible focus outlines (`focus-visible:ring-2`) are also required for keyboard navigation.
 **Action:** Always include `aria-expanded={isOpen}`, an descriptive `aria-label`, and `focus-visible:ring-2` styles on toggle buttons for collapsible UI elements.
