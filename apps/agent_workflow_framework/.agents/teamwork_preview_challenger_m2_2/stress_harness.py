@@ -343,16 +343,19 @@ class StressTestHarness:
         ]
 
         rejected = 0
+        unexpected: list[str] = []
         for bad_id in malicious_ids:
             try:
                 store.get_run_path(bad_id)
             except ValueError:
                 rejected += 1
-            except Exception as e:
-                pass
+            except Exception as exc:  # noqa: BLE001 — reported, not swallowed
+                unexpected.append(f"{bad_id!r}: {type(exc).__name__}: {exc}")
 
         passed = rejected == len(malicious_ids)
         details = f"Rejected {rejected}/{len(malicious_ids)} path traversal / malformed run_id inputs with ValueError."
+        if unexpected:
+            details += " Unexpected errors: " + "; ".join(unexpected)
         self.log(test_name, passed, details)
 
     def test_nonexistent_directory_handling(self):
