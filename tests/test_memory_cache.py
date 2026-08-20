@@ -71,7 +71,12 @@ class TestCircuitBreakerAndDistributedCache(unittest.TestCase):
     """Test distributed cache fallback and resilience."""
 
     def test_circuit_breaker_tripping_and_recovery(self):
-        cb = CircuitBreaker(failure_threshold=2, recovery_time_sec=0.1)
+        # Use a long recovery window and rewind the clock deterministically
+        # rather than time.sleep()ing past a short one — a >100ms pause between
+        # the .record_failure() and .allow_request() lines (routine on a busy
+        # runner) would flip the breaker back to HALF-OPEN and make the
+        # assertion racy.
+        cb = CircuitBreaker(failure_threshold=2, recovery_time_sec=30.0)
         self.assertTrue(cb.allow_request())
         cb.record_failure()
         self.assertTrue(cb.allow_request())
@@ -79,8 +84,8 @@ class TestCircuitBreakerAndDistributedCache(unittest.TestCase):
         self.assertEqual(cb.state, "OPEN")
         self.assertFalse(cb.allow_request())
 
-        # Wait for recovery
-        time.sleep(0.15)
+        # Simulate the recovery window elapsing.
+        cb.last_failure_time = time.time() - (cb.recovery_time_sec + 1)
         self.assertTrue(cb.allow_request())
         self.assertEqual(cb.state, "HALF-OPEN")
         cb.record_success()
