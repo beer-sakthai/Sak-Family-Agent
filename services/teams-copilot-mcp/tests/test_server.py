@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from teams_copilot_mcp import server
 
 
@@ -13,6 +12,14 @@ def test_resolve_path_fills_placeholders():
 def test_resolve_path_raises_on_missing_param():
     with pytest.raises(ValueError, match="channel_id"):
         server._resolve_path("/teams/{team_id}/channels/{channel_id}", {"team_id": "T1"})
+
+
+def test_resolve_path_raises_on_control_characters():
+    with pytest.raises(ValueError, match="Control characters are not allowed"):
+        server._resolve_path("/teams/{team_id}/channels/{channel_id}", {"team_id": "T1\n", "channel_id": "C1"})
+
+    with pytest.raises(ValueError, match="Control characters are not allowed"):
+        server._resolve_path("/teams/{team_id}/channels/{channel_id}", {"team_id": "T1", "channel_id": "C1\r\n"})
 
 
 def test_execute_action_raises_on_unknown_id():
@@ -123,3 +130,21 @@ def test_get_meeting_transcript_calls_graph_client():
         "GET", "/users/u1/onlineMeetings/m1/transcripts/t1/content"
     )
     assert result == "WEBVTT\n..."
+
+
+def test_main_runs_mcp_server():
+    with patch.object(server.mcp, "run") as mock_run:
+        server.main()
+        mock_run.assert_called_once()
+def test_convenience_tools_reject_control_characters():
+    with pytest.raises(ValueError, match="Control characters are not allowed"):
+        server.list_channels(team_id="T1\r\n")
+
+    with pytest.raises(ValueError, match="Control characters are not allowed"):
+        server.send_channel_message(team_id="T1", channel_id="C1\n", content="hi")
+
+    with pytest.raises(ValueError, match="Control characters are not allowed"):
+        server.list_calendar_events(user_id="u1\x00")
+
+    with pytest.raises(ValueError, match="Control characters are not allowed"):
+        server.get_meeting_transcript(user_id="u1", meeting_id="m1\t", transcript_id="t1")

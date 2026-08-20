@@ -1,6 +1,7 @@
 ---
 name: SakSee-vercel-deploy
-description: "Deploy static sites and manage projects on Vercel."
+description: Deploy static sites and manage projects on Vercel.
+...
 ---
 
 # Vercel Deploy

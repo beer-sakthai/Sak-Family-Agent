@@ -1,6 +1,9 @@
 ---
 name: SakJules-SakKing-saas-arr-waterfall-analysis
-description: "Build monthly or quarterly ARR waterfalls showing exactly how ARR moved from period-open to period-close, decomposed into New, Reactivation, Expansion, Contraction, and Churn. Use when the board asks why ARR grew/lagged, when NRR looks wrong, or when"
+description: Build monthly or quarterly ARR waterfalls showing exactly how ARR moved from period-open
+  to period-close, decomposed into New, Reactivation, Expansion, Contraction, and
+  Churn. Use when the board asks why ARR grew/lagged, when NRR looks wrong, or when
+...
 ---
 
 ## ARR Waterfall Definition

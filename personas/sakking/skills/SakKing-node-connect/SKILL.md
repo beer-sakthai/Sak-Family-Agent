@@ -1,6 +1,8 @@
 ---
 name: SakKing-node-connect
-description: "Diagnose OpenClaw Android, iOS, or macOS node pairing, QR/setup code, route, auth, and connection failures."
+description: Diagnose OpenClaw Android, iOS, or macOS node pairing, QR/setup code, route, auth,
+  and connection failures.
+...
 ---
 
 # Node Connect

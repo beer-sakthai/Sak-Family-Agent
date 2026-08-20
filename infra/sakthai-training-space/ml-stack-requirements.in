@@ -1,0 +1,14 @@
+torch==2.6.0+cu124
+torchvision==0.21.0+cu124
+torchaudio==2.6.0+cu124
+transformers==4.53.0
+datasets==3.2.0
+accelerate==1.2.1
+peft==0.14.0
+bitsandbytes==0.45.0
+evaluate==0.4.3
+wandb==0.19.1
+tensorboard==2.19.0
+scipy==1.15.1
+scikit-learn==1.6.1
+ninja==1.11.1.3

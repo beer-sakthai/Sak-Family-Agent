@@ -1,0 +1,128 @@
+# CodeQL — GitHub's semantic static analysis — over the three languages this
+# repository actually contains.
+#
+# This file is an *advanced* setup, and that is a deliberate, load-bearing
+# choice rather than the stock template it started as.
+#
+# CodeQL used to run here through default setup (a repository setting), and for
+# months the rule was "never add this file": an advanced analysis cannot upload
+# while default setup is enabled, so every job failed with "CodeQL analyses from
+# advanced configurations cannot be processed when the default setup is
+# enabled", and remediation bots reintroduced the file twice. Default setup is
+# now off — measured, not assumed: the three `Analyze` jobs on `main` at
+# 3671a71 uploaded successfully, and a successful upload is only possible with
+# default setup disabled.
+#
+# What advanced setup buys, and the reason not to go back: default setup cannot
+# be given a config file by path, so it analysed the whole tree — including ~900
+# vendored skill directories, the folded-in `sakthai-chat-cli` copy of a
+# separate repository, and the test suite. That is where 545 of the 788 open
+# CodeQL alerts on 2026-08-18 came from. `config-file:` below is read directly
+# by this workflow, so `.github/codeql/codeql-config.yml` finally applies.
+name: "CodeQL Advanced"
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: '22 15 * * 0'
+
+permissions:
+  contents: read
+
+# `cancel-in-progress` only on a pull request, never on `main`: a cancelled
+# analysis uploads no SARIF, and a code-scanning alert is only ever closed by a
+# newer analysis from the same tool — so cancelling a `main` run would leave
+# stale alerts open with nothing scheduled to retire them.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    # Three languages run as a matrix and the vendored trees are large even
+    # after `codeql-config.yml` excludes them. Generous, but bounded — the
+    # point is to cap the six-hour default, not to race the analysis.
+    timeout-minutes: 90
+    permissions:
+      security-events: write  # upload the analysis to the code-scanning API
+      packages: read          # fetch CodeQL query packs
+      actions: read           # read run status (required on a private repo)
+      contents: read          # actions/checkout
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # `build-mode: none` is correct for all three: every language here is
+          # interpreted or declarative, so there is nothing to compile. The
+          # stock template's "Run manual build steps" placeholder — which ended
+          # in `exit 1` — was dead for the same reason and has been removed.
+          #
+          # `queries:` is set per leg rather than in the config file, because a
+          # config file's `queries:` applies to every language at once and the
+          # three legs do not want the same suite. See the note on the init
+          # step for why only `actions` is widened.
+          - language: actions             # the workflow files in this directory
+            build-mode: none
+            queries: security-extended
+          - language: javascript-typescript  # apps/sak_agent_dashboard
+            build-mode: none
+            queries: ""
+          - language: python              # the sakthai package and everything around it
+            build-mode: none
+            queries: ""
+
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          # The scope decision, with the measurement behind each exclusion.
+          config-file: ./.github/codeql/codeql-config.yml
+          # Python and JavaScript stay on the default query suite on purpose.
+          # `security-extended` there would widen the net against a dashboard
+          # that still has ~243 first-party alerts to triage; widening before
+          # that backlog is read buys noise, not coverage.
+          #
+          # `actions` is the exception, and it is not a change of mind about
+          # the above — it is a different backlog. The extended suite for the
+          # `actions` language is the workflow-security rule set: untrusted
+          # checkout on `pull_request_target`, expression injection into `run:`
+          # blocks, secrets reaching a step that executes contributor code,
+          # over-broad `permissions:`. Those are precisely the failures this
+          # repository has already been bitten by — commit 93e306a silently
+          # reverted the `self-healing-ci.yml` fork guard, and nothing caught
+          # it until `tests/test_workflow_hygiene.py` was written to assert
+          # that one condition by hand. A hand-written assertion covers the one
+          # bypass someone thought to write down; this suite covers the shape.
+          # It also starts from a small surface: 40-odd workflow files against
+          # ~40 rules, not a whole repository.
+          queries: ${{ matrix.queries }}
+          # Cache the dependencies CodeQL resolves for the python extractor.
+          # Without it every analysis re-resolves the locked closure from PyPI
+          # before it can start extracting, on push, on every pull request and
+          # weekly. The input is a no-op for the other two legs, which have no
+          # dependency install step to cache.
+          dependency-caching: true
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4
+        with:
+          category: "/language:${{ matrix.language }}"

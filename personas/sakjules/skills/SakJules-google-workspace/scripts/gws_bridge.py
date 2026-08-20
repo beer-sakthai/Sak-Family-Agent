@@ -37,9 +37,8 @@ def main():
 
     access_token = get_valid_token()
     env = os.environ.copy()
-    env["GOOGLE_WORKSPACE_CLI_TOKEN"] = access_token
-
-    result = subprocess.run(["gws"] + sys.argv[1:], env=env)
+    binary = shutil.which("gws") or "gws"
+    result = subprocess.run([binary, *sys.argv[1:]], env=env, shell=False)
     sys.exit(result.returncode)
 
 

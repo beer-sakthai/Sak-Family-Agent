@@ -1,10 +1,8 @@
 ---
 name: SakThai-hf-hub-model-card-seo-social-meta-tags
-created: 2026-07-30
-author: SakThai
-description: "How Hugging Face model/dataset/space cards appear in search engines and social media, and how to optimize metadata for maximum discoverability."
-version: 1.0.0
-tags: [HF-Hub, SEO, Social-Media, Model-Cards, Discoverability, Open-Graph]
+description: How Hugging Face model/dataset/space cards appear in search engines and social media,
+  and how to optimize metadata for maximum discoverability.
+...
 ---
 
 # HF Hub Model Card SEO & Social Meta Tags

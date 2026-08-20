@@ -15,7 +15,7 @@ WEAK_WEIGHT = 1
 # Each persona: (domain_label, strong_keywords, weak_keywords). A strong
 # keyword is unambiguous enough to match alone (worth STRONG_WEIGHT, which
 # equals MATCH_THRESHOLD); weak keywords need two combined hits. This split
-# exists so an unambiguous phrase like "fix our CI/CD" matches on its own,
+# exists so an unambiguous phrase like "manage our CI/CD" matches on its own,
 # while single common words (e.g. "task", "story") still require
 # corroboration before labeling a reply.
 PERSONA_DOMAINS: dict[str, tuple[str, tuple[str, ...], tuple[str, ...]]] = {

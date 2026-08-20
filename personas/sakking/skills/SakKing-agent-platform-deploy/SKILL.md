@@ -1,6 +1,8 @@
 ---
 name: SakSit-agent-platform-deploy
-description: ">-   Deploy open models or custom weights from Model Garden to Agent Platform   endpoints, check the status of an in-progress deployment operation, or clean   up resources by undeploying models and deleting endpoints. Use when asked to   actively dep"
+description: '>-   Deploy open models or custom weights from Model Garden to Agent Platform   endpoints,
+  check the status of an in-progress deployment operation, or clean   up resources
+  by undeploying models and deleting endpoints. Use when asked to   actively dep'
 ---
 
 # Agent Platform Model Garden Deploy Skill

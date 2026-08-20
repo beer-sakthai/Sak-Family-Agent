@@ -1,0 +1,617 @@
+{
+  "total_skills": 120,
+  "pillars": {
+    "Pillar 1: AST Security & Vulnerability Containment": [
+      {
+        "name": "saksee-security-scan",
+        "description": "Zero-tolerance AST guardrail scanner",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/saksee-security-scan"
+      },
+      {
+        "name": "saksee-path-traversal-guard",
+        "description": "Path normalization & sensitive dotfile sanitizer",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/saksee-path-traversal-guard"
+      },
+      {
+        "name": "saksee-command-injection-blocker",
+        "description": "Shell metacharacter & subshell interceptor",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/saksee-command-injection-blocker"
+      },
+      {
+        "name": "sakjules-redteam-fuzzer",
+        "description": "Recursive prompt injection & jailbreak tester",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-redteam-fuzzer"
+      },
+      {
+        "name": "sakjules-cipher-decoder",
+        "description": "Base64 / hex obfuscated payload analyzer",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-cipher-decoder"
+      },
+      {
+        "name": "saksee-doctor",
+        "description": "Local runtime boundary & permission sanity verification",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/saksee-doctor"
+      },
+      {
+        "name": "saksee-secret-scanner",
+        "description": "Gitleaks credential & private key interceptor",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/saksee-secret-scanner"
+      },
+      {
+        "name": "saksee-codeql-remediation",
+        "description": "Automated CodeQL alert patcher",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/saksee-codeql-remediation"
+      },
+      {
+        "name": "saksee-bandit-security",
+        "description": "AST-based Python vulnerability evaluator",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/saksee-bandit-security"
+      },
+      {
+        "name": "saksee-ast-guardrail-parity",
+        "description": "Byte-synced persona guardrails validator",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/saksee-ast-guardrail-parity"
+      },
+      {
+        "name": "sakjules-devsecops",
+        "description": "Continuous automated security patch pipeline",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakjules/skills/SakJules-devsecops"
+      },
+      {
+        "name": "security-patcher",
+        "description": "Automated CVE patch synthesis",
+        "path": "/home/beern/.gemini/config/plugins/gemini-cli-security/skills/security-patcher"
+      },
+      {
+        "name": "analyze-full",
+        "description": "Repository-wide static security audit",
+        "path": "/home/beern/.gemini/config/plugins/gemini-cli-security/skills/analyze-full"
+      },
+      {
+        "name": "analyze-github-pr",
+        "description": "Pre-merge PR security & privacy analyzer",
+        "path": "/home/beern/.gemini/config/plugins/gemini-cli-security/skills/analyze-github-pr"
+      },
+      {
+        "name": "dependency-manager",
+        "description": "Isolated sandbox dependency verification",
+        "path": "/home/beern/.gemini/config/plugins/gemini-cli-security/skills/dependency-manager"
+      },
+      {
+        "name": "poc",
+        "description": "Proof-of-concept vulnerability validator",
+        "path": "/home/beern/.gemini/config/plugins/gemini-cli-security/skills/poc"
+      },
+      {
+        "name": "sakking-github-security-compliance",
+        "description": "Branch protection & supply-chain auditor",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakking/skills/SakKing-github-security-compliance-program"
+      },
+      {
+        "name": "saksee-cloudflare-turnstile",
+        "description": "Web bot & automated scraping defense",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/saksee-cloudflare-turnstile"
+      },
+      {
+        "name": "saksee-webauthn-storage",
+        "description": "Secure session credential store",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/saksee-webauthn-storage"
+      },
+      {
+        "name": "sakjules-asset-monitor",
+        "description": "Public endpoint & certificate watchdog",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakjules/skills/SakJules-asset-monitor"
+      }
+    ],
+    "Pillar 2: CI/CD, Mutation Testing & Self-Healing": [
+      {
+        "name": "sakjules-ci-fixer",
+        "description": "Automated GitHub Actions CI diagnostics & auto-repair",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakjules/skills/SakJules-ci-fixer-master-debug"
+      },
+      {
+        "name": "sakjules-mutation-testing",
+        "description": "AST fault injection & mutant kill scorer",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-mutation-testing"
+      },
+      {
+        "name": "sakjules-self-healing-test-generator",
+        "description": "Heuristic Vitest/Pytest generator for survivors",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-self-healing-test-generator"
+      },
+      {
+        "name": "sakjules-pylint-ruff-matrix",
+        "description": "Python 3.11/3.12 dual-engine linter & formatter",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-pylint-ruff-matrix"
+      },
+      {
+        "name": "sakjules-mypy-strict",
+        "description": "Strict static type checking gate",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-mypy-strict"
+      },
+      {
+        "name": "sakjules-playwright-headless",
+        "description": "End-to-end browser regression harness",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-playwright-headless"
+      },
+      {
+        "name": "sakjules-playwright-html-report",
+        "description": "Automated visual HTML test reporting",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakjules/skills/SakJules-playwright-html-report"
+      },
+      {
+        "name": "sakjules-github-actions-concurrency",
+        "description": "Workflow lock & cancel-in-progress governor",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-github-actions-concurrency"
+      },
+      {
+        "name": "sakjules-pnpm-turbopack-build",
+        "description": "Next.js build cache & fast bundling",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-pnpm-turbopack-build"
+      },
+      {
+        "name": "sakjules-git-commit",
+        "description": "Semantic conventional commit generator",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-git-commit"
+      },
+      {
+        "name": "sakjules-claude-settings-hooks",
+        "description": "PostToolUse / PreToolUse lifecycle engine",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-claude-settings-hooks"
+      },
+      {
+        "name": "sakjules-test-driven-development",
+        "description": "Strict RED-GREEN-REFACTOR workflow",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakjules/skills/SakJules-test-driven-development"
+      },
+      {
+        "name": "sakjules-coverage-governor",
+        "description": "96% branch test coverage enforcement",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-coverage-governor"
+      },
+      {
+        "name": "sakjules-dependabot-audit",
+        "description": "Automated CVE bump verification",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-dependabot-audit"
+      },
+      {
+        "name": "sakjules-release-drafter",
+        "description": "Automated changelog & release bundler",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-release-drafter"
+      },
+      {
+        "name": "sakjules-scorecard-supply-chain",
+        "description": "OpenSSF Scorecard auditor",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-scorecard-supply-chain"
+      },
+      {
+        "name": "sakjules-subproject-test-runner",
+        "description": "Monorepo matrix runner for subpackages",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-subproject-test-runner"
+      },
+      {
+        "name": "sakjules-cron-fleet-watchdog",
+        "description": "Cron job health & self-healing monitor",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-cron-fleet-watchdog"
+      },
+      {
+        "name": "sakjules-benchmark-latency",
+        "description": "Cold/hot execution throughput benchmarker",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-benchmark-latency"
+      },
+      {
+        "name": "sakjules-quick-fix",
+        "description": "Minimal targeted bug repair loop",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-quick-fix"
+      }
+    ],
+    "Pillar 3: Google ADK & Cloud Native Operations": [
+      {
+        "name": "google-agents-cli-adk-code",
+        "description": "Fast API & Python ADK agent construction",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/google-agents-cli-adk-code"
+      },
+      {
+        "name": "google-agents-cli-observability",
+        "description": "Cloud Trace OpenTelemetry & BigQuery telemetry",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/google-agents-cli-observability"
+      },
+      {
+        "name": "google-agents-cli-deploy",
+        "description": "Cloud Run & GKE deployment orchestrator",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/google-agents-cli-deploy"
+      },
+      {
+        "name": "google-agents-cli-eval",
+        "description": "Quality Flywheel trajectory & G-Eval runner",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/google-agents-cli-eval"
+      },
+      {
+        "name": "google-agents-cli-scaffold",
+        "description": "Project context & skeleton bootstrapper",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/google-agents-cli-scaffold"
+      },
+      {
+        "name": "google-agents-cli-workflow",
+        "description": "8-phase agent development lifecycle guide",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/google-agents-cli-workflow"
+      },
+      {
+        "name": "google-agents-cli-publish",
+        "description": "Artifact & model container publishing",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/google-agents-cli-publish"
+      },
+      {
+        "name": "sakthai-gemini-live-api",
+        "description": "Duplex multimodal audio & WebRTC streaming",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakthai-gemini-live-api"
+      },
+      {
+        "name": "sakthai-gemini-2-flash-routing",
+        "description": "Sub-200ms latency reasoning dispatcher",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakthai-gemini-2-flash-routing"
+      },
+      {
+        "name": "sakthai-cloud-run-terraform",
+        "description": "Infrastructure-as-code Terraform HCL generator",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakthai-cloud-run-terraform"
+      },
+      {
+        "name": "sakthai-bigquery-telemetry-stream",
+        "description": "Agent telemetry logging & SQL analyzer",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakthai-bigquery-telemetry-stream"
+      },
+      {
+        "name": "sakthai-gcp-secret-manager",
+        "description": "Cloud KMS & runtime secret injector",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakthai-gcp-secret-manager"
+      },
+      {
+        "name": "sakthai-gke-helm-orchestrator",
+        "description": "Kubernetes cluster deployment manager",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakthai-gke-helm-orchestrator"
+      },
+      {
+        "name": "sakthai-cloud-monitoring-alerts",
+        "description": "Latency & token budget threshold alerting",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakthai-cloud-monitoring-alerts"
+      },
+      {
+        "name": "sakthai-gemini-sdk-python",
+        "description": "Native Google GenAI SDK patterns",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakthai-gemini-sdk-python"
+      },
+      {
+        "name": "sakthai-genkit-bridge",
+        "description": "Firebase Genkit flow orchestrator",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakthai-genkit-bridge"
+      },
+      {
+        "name": "sakthai-vertex-ai-endpoint",
+        "description": "Managed model endpoint manager",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakthai-vertex-ai-endpoint"
+      },
+      {
+        "name": "sakthai-cloud-sql-pgvector",
+        "description": "Vector embedding database connectors",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakthai-cloud-sql-pgvector"
+      },
+      {
+        "name": "sakthai-google-workspace-gws",
+        "description": "Drive, Docs, and Gmail agent automation",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakthai-google-workspace-gws"
+      },
+      {
+        "name": "sakthai-adk-a2a-bridge",
+        "description": "Google ADK to JSON-RPC A2A adapter",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakthai-adk-a2a-bridge"
+      }
+    ],
+    "Pillar 4: Hugging Face MLOps, Models & Spaces": [
+      {
+        "name": "hf-cli",
+        "description": "Official Hugging Face Hub CLI agent-mode tool",
+        "path": "/home/beern/.agents/skills/hf-cli"
+      },
+      {
+        "name": "sakthai-hf-peft-lora",
+        "description": "Low-Rank Adaptation fine-tuning & weight adapter builder",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-hf-peft-lora"
+      },
+      {
+        "name": "sakthai-hf-datasets",
+        "description": "Dataset streaming, validation & Arrow cache manager",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-hf-datasets-data-validation-quality"
+      },
+      {
+        "name": "sakthai-hf-hub-contents-api",
+        "description": "Programmatic Hub file reading & commits",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-hf-hub-contents-api"
+      },
+      {
+        "name": "sakthai-hf-inference-endpoints",
+        "description": "Serverless & dedicated model serving",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-hf-inference-endpoints"
+      },
+      {
+        "name": "sakthai-hf-safetensors",
+        "description": "Fast weight loading & format validator",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-hf-safetensors"
+      },
+      {
+        "name": "sakthai-hf-smolagents",
+        "description": "CodeAgent & ToolCalling agent frameworks",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-hf-smolagents"
+      },
+      {
+        "name": "sakthai-hf-repocard-system",
+        "description": "YAML metadata card generator & validator",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakthai-hf-repocard-system"
+      },
+      {
+        "name": "sakthai-hf-spaces-docker",
+        "description": "Gradio & Docker Spaces deployment",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-hf-spaces-docker"
+      },
+      {
+        "name": "sakthai-hf-spaces-zerogpu",
+        "description": "ZeroGPU accelerator allocator",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-hf-spaces-zerogpu"
+      },
+      {
+        "name": "sakthai-hf-sentence-transformers",
+        "description": "Dense semantic embeddings generator",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-hf-sentence-transformers"
+      },
+      {
+        "name": "sakthai-hf-mergekit",
+        "description": "Model weight merging & distillation",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-hf-mergekit"
+      },
+      {
+        "name": "sakthai-hf-trl",
+        "description": "Supervised fine-tuning (SFT) & DPO alignment",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-hf-trl"
+      },
+      {
+        "name": "sakthai-hf-transformers-cache",
+        "description": "Local model weights & revision manager",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-hf-transformers-cache-api-deep-dive"
+      },
+      {
+        "name": "sakthai-hf-jobs-api",
+        "description": "Remote compute cluster training dispatch",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-hf-jobs-api-deep-dive"
+      },
+      {
+        "name": "sakthai-hf-data-studio-sql",
+        "description": "DuckDB / SQL query console on datasets",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-hf-data-studio-sql-console"
+      },
+      {
+        "name": "sakthai-hf-distilabel",
+        "description": "Synthetic dataset generation & LLM labeling",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-hf-distilabel-deep-dive"
+      },
+      {
+        "name": "sakthai-hf-open-llm-leaderboard",
+        "description": "MMLU & benchmark performance scoring",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-hf-open-llm-leaderboard"
+      },
+      {
+        "name": "sakthai-hf-tts",
+        "description": "Text-to-Speech Kokoro & voice delivery",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakthai-hf-tts"
+      },
+      {
+        "name": "sakthai-hf-security-scanning",
+        "description": "Model weights pickle & malware scanner",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakthai-hf-security-scanning"
+      }
+    ],
+    "Pillar 5: Multi-Agent Orchestration & A2A Protocols": [
+      {
+        "name": "a2a-service-registry",
+        "description": "JSON-RPC 2.0 multi-agent discovery & routing",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/a2a-service-registry"
+      },
+      {
+        "name": "superpowers-subagent-driven-development",
+        "description": "Isolated worker dispatch & task review",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/superpowers-subagent-driven-development"
+      },
+      {
+        "name": "superpowers-dispatching-parallel-agents",
+        "description": "Concurrent multi-agent execution",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/superpowers-dispatching-parallel-agents"
+      },
+      {
+        "name": "superpowers-executing-plans",
+        "description": "Plan execution with review checkpoints",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/superpowers-executing-plans"
+      },
+      {
+        "name": "superpowers-writing-plans",
+        "description": "Multi-phase technical implementation planning",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/superpowers-writing-plans"
+      },
+      {
+        "name": "sakking-supervisor",
+        "description": "High-level task decomposition & consensus voting",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakking-supervisor"
+      },
+      {
+        "name": "sakking-war-room-mesh",
+        "description": "SVG topology visualizer & node telemetry dials",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakking-war-room-mesh"
+      },
+      {
+        "name": "sakking-model-routing",
+        "description": "Dynamic LLM routing (Gemini, Claude, GPT, Ollama)",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakking/skills/SakKing-model-routing-agent-systems-deep-dive"
+      },
+      {
+        "name": "sakking-agent-platform-skill-registry",
+        "description": "Dynamic tool & skill registry",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakking/skills/SakKing-agent-platform-skill-registry"
+      },
+      {
+        "name": "sakking-agent-platform-rag-engine",
+        "description": "Hybrid RAG retrieval orchestrator",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakking/skills/SakKing-agent-platform-rag-engine-management"
+      },
+      {
+        "name": "sakking-agent-health-diagnostics",
+        "description": "Fleet vitality & heartbeat monitor",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakking/skills/SakKing-agent-health-diagnostics"
+      },
+      {
+        "name": "sakking-using-git-worktrees",
+        "description": "Isolated branch worktree manager",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakking/skills/SakKing-using-git-worktrees"
+      },
+      {
+        "name": "saknoi-prompt-studio",
+        "description": "High-dynamic-range prompt calibration",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/saknoi-prompt-studio"
+      },
+      {
+        "name": "saktan-token-analytics",
+        "description": "Token burn velocity & multi-cloud spend tracker",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/saktan-token-analytics"
+      },
+      {
+        "name": "saksit-continuous-learning-loop",
+        "description": "Automated research feeding back into memory",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/saksit-continuous-learning-loop"
+      },
+      {
+        "name": "saksit-diary-writer",
+        "description": "Multi-agent shift journal & outcome logger",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/saksit-diary-writer"
+      },
+      {
+        "name": "sakthai-a2a-json-rpc-guard",
+        "description": "Schema validator for inter-agent messages",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakthai-a2a-json-rpc-guard"
+      },
+      {
+        "name": "sakking-consensus-voting",
+        "description": "Multi-persona quorum approval engine",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakking-consensus-voting"
+      },
+      {
+        "name": "pm",
+        "description": "Project milestone tracking & task dependencies",
+        "path": "/home/beern/.gemini/config/plugins/gemini-kit/skills/pm"
+      },
+      {
+        "name": "team",
+        "description": "Team orchestration & workflow session coordinator",
+        "path": "/home/beern/.gemini/config/plugins/gemini-kit/skills/team"
+      }
+    ],
+    "Pillar 6: Code Quality, Semantic Caching & OODA Cycle": [
+      {
+        "name": "sakjules-semantic-cache-optimizer",
+        "description": "64-D L2 cosine similarity response cache",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-semantic-cache-optimizer"
+      },
+      {
+        "name": "sakthai-cycle-dream",
+        "description": "Vision definition & episodic memory recall",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-cycle-dream"
+      },
+      {
+        "name": "sakthai-cycle-hope",
+        "description": "Architecture Decision Record (ADR) synthesis",
+        "path": "/home/beern/Sak-Family-Agent/personas/saktan/skills/SakTan-sakthai-cycle-hope"
+      },
+      {
+        "name": "sakthai-cycle-care",
+        "description": "Quality, race-condition & concurrency auditor",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakking/skills/SakKing-sakthai-cycle-care"
+      },
+      {
+        "name": "sakthai-cycle-joy",
+        "description": "Release packaging, changelog & deploy gate",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-cycle-joy"
+      },
+      {
+        "name": "sakthai-cycle-trust",
+        "description": "Security doctor & invariant verification",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-cycle-trust"
+      },
+      {
+        "name": "sakthai-cycle-growth",
+        "description": "Long-term memory consolidation & round advancement",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakthai/skills/SakThai-cycle-growth"
+      },
+      {
+        "name": "sakjules-simplify-code",
+        "description": "3-agent parallel code cleaner & refactorer",
+        "path": "/home/beern/Sak-Family-Agent/personas/sakjules/skills/SakJules-simplify-code"
+      },
+      {
+        "name": "saksee-systematic-debugging",
+        "description": "4-phase root cause debugging engine",
+        "path": "/home/beern/Sak-Family-Agent/personas/saksee/skills/SakSee-systematic-debugging"
+      },
+      {
+        "name": "sakjules-command-palette",
+        "description": "Global Ctrl+K quick action launcher",
+        "path": "/home/beern/Sak-Family-Agent/personas/shared/skills/sakjules-command-palette"
+      },
+      {
+        "name": "stitch",
+        "description": "Visual design token & component generator",
+        "path": "/home/beern/.gemini/config/plugins/Stitch/skills/stitch"
+      },
+      {
+        "name": "design",
+        "description": "UI/UX layout specs & responsive styling",
+        "path": "/home/beern/.gemini/config/plugins/gemini-kit/skills/design"
+      },
+      {
+        "name": "api-design",
+        "description": "RESTful & OpenAPI specification architect",
+        "path": "/home/beern/.gemini/config/plugins/gemini-kit/skills/api-design"
+      },
+      {
+        "name": "code-review",
+        "description": "Multi-tier code review with severity rankings",
+        "path": "/home/beern/.gemini/config/plugins/oh-my-gemini/skills/code-review"
+      },
+      {
+        "name": "compound-docs",
+        "description": "Institutional knowledge persistence manager",
+        "path": "/home/beern/.gemini/config/plugins/gemini-kit/skills/compound-docs"
+      },
+      {
+        "name": "persistence",
+        "description": "Ralph mode persistent execution handler",
+        "path": "/home/beern/.gemini/config/plugins/oh-my-gemini/skills/persistence"
+      },
+      {
+        "name": "db",
+        "description": "SQLite-VSS & schema optimization administrator",
+        "path": "/home/beern/.gemini/config/plugins/gemini-kit/skills/db"
+      },
+      {
+        "name": "brainstorm",
+        "description": "Trade-off analysis & architecture design",
+        "path": "/home/beern/.gemini/config/plugins/gemini-kit/skills/brainstorm"
+      },
+      {
+        "name": "refactor",
+        "description": "Safe structural code transformation",
+        "path": "/home/beern/.gemini/config/plugins/oh-my-gemini/skills/refactor"
+      },
+      {
+        "name": "watzup",
+        "description": "Real-time activity & recent commit summarizer",
+        "path": "/home/beern/.gemini/config/plugins/gemini-kit/skills/watzup"
+      }
+    ]
+  }
+}

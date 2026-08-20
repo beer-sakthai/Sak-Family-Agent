@@ -1,6 +1,7 @@
 ---
 name: SakSit-sak-agent-ecosystem-persistence
-description: "Backup agent state to Drive and Supermemory."
+description: Backup agent state to Drive and Supermemory.
+...
 ---
 
 # Sak Agent Ecosystem Persistence

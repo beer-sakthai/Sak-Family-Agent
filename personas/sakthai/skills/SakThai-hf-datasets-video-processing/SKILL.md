@@ -1,6 +1,7 @@
 ---
 name: SakThai-hf-datasets-video-processing
-description: "Covers the datasets.Video feature — loading, decoding, transforming, encoding, and streaming video data through the Hugging Face datasets library."
+description: "Covers the datasets.Video feature \u2014 loading, decoding, transforming, encoding,\
+  \ and streaming video data through the Hugging Face datasets library."
 ---
 
 ## Description

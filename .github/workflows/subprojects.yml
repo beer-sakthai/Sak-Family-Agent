@@ -16,36 +16,55 @@ on:
     branches: [ "main" ]
     paths:
       - "apps/agent_workflow_framework/**"
+      - "apps/sak_agent_dashboard/**"
       - "services/teams-copilot-mcp/**"
       - ".github/workflows/subprojects.yml"
   pull_request:
     branches: [ "main" ]
     paths:
       - "apps/agent_workflow_framework/**"
+      - "apps/sak_agent_dashboard/**"
       - "services/teams-copilot-mcp/**"
       - ".github/workflows/subprojects.yml"
 
 permissions:
   contents: read
 
+concurrency:
+  # See the note in ci.yml: cancel superseded pull-request runs, never a run on
+  # `main`.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   agent-workflow-framework:
     name: agent_workflow_framework
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: apps/agent_workflow_framework
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
+      - name: Harden the runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v7
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # `sync: false`: this subproject has no pyproject.toml of its own — see
+      # the note on the run step — so there is no environment to sync. The
+      # action is still worth using for the pinned uv (this was `pipx install
+      # uv`, i.e. whatever released that morning) and for the warm tool cache
+      # that `uv run --with pyyaml` resolves against.
+      - name: Set up Python and uv
+        uses: ./.github/actions/setup-uv-python
         with:
           python-version: "3.11"
-
-      - name: Install uv
-        run: pipx install uv
+          sync: "false"
+          cache-suffix: "agent-workflow-framework"
 
       # The subproject has no pyproject.toml — `agent_workflow/` is a plain
       # package directory imported from the repo. Run it in place with its one
@@ -56,22 +75,124 @@ jobs:
   teams-copilot-mcp:
     name: teams-copilot-mcp
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: services/teams-copilot-mcp
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
+      - name: Harden the runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v7
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # `sync: false`: the run step below drives its own environment with
+      # `uv run --project .`, which resolves this subproject's own lock rather
+      # than the root one. The cache is keyed on `**/uv.lock`, so that lock is
+      # part of the key and its wheels are what gets restored here.
+      - name: Set up Python and uv
+        uses: ./.github/actions/setup-uv-python
         with:
           python-version: "3.11"
-
-      - name: Install uv
-        run: pipx install uv
+          sync: "false"
+          cache-suffix: "teams-copilot-mcp"
 
       # This subproject has its own pyproject.toml and uv.lock (fastmcp / msal /
       # httpx), deliberately kept out of the root lock.
       - name: Run tests
         run: uv run --project . --extra dev python -m pytest tests/ -q
+
+  sak-agent-dashboard:
+    name: sak_agent_dashboard
+    runs-on: ubuntu-latest
+    # The longest of the three: pnpm install -> lint -> typecheck -> 172 vitest
+    # tests -> next build.
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/sak_agent_dashboard
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The only Node subproject in the repo. The pnpm version is pinned by
+      # `packageManager: pnpm@9.15.9` in the app's package.json, so CI resolves
+      # the same tree the committed pnpm-lock.yaml was generated with.
+      #
+      # `package_json_file` is required, not cosmetic: `defaults.run.working-directory`
+      # applies only to `run:` steps, so this action looks in the *repository
+      # root* by default — and this repo has no root package.json at all, being
+      # a Python monorepo. Without the path the action finds no version source
+      # and the job dies before installing anything.
+      #
+      # Deliberately no `version:` input alongside it: supplying both makes
+      # action-setup fail with "Multiple versions of pnpm specified".
+      - name: Install pnpm
+        uses: step-security/action-setup@7734f5522f614a4cf2820ad19aa26717c7abfd96 # v6.0.9
+        with:
+          package_json_file: apps/sak_agent_dashboard/package.json
+
+      # Node 22, not 20: the locked tree needs it. jsdom@30 declares
+      # `engines.node: ^22.22.2 || ^24.15.0 || >=26.0.0` and pulls undici@8,
+      # which declares `>=22.19.0`. On Node 20 every vitest worker dies at
+      # startup with `TypeError: webidl.util.markAsUncloneable is not a
+      # function` (undici's CacheStorage, reached from jsdom's api.js) before a
+      # single test runs. Keep this at or above jsdom's floor when either dep
+      # is upgraded — `engines.node` in the app's package.json tracks the same
+      # floor.
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: apps/sak_agent_dashboard/pnpm-lock.yaml
+
+      # `--frozen-lockfile` is pnpm's `npm ci`: it installs the locked tree and
+      # fails rather than re-resolving, which is what keeps this off the
+      # unpinned-dependency findings. Do not add `--no-optional` — better-sqlite3
+      # is an optionalDependency precisely so a runner without a native build
+      # still passes, and the lockfile expects it to be considered.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # `setup-node`'s `cache: pnpm` above caches the pnpm *store* — the
+      # downloaded packages. It does not cache anything Next.js produces. The
+      # `build` step at the end of this job re-does the full compile from cold
+      # every run; `.next/cache` is where Next keeps its incremental compiler
+      # and minifier output, and restoring it is the difference between a cold
+      # and a warm build.
+      #
+      # Keyed on the lockfile (a dependency change invalidates the compiler
+      # cache) plus the commit SHA, so every run writes a fresh entry rather
+      # than sharing one immutable key that can never be updated. `restore-keys`
+      # is what makes that work: the exact key never hits, the prefix does, and
+      # the run starts from the most recent entry for the same dependency tree.
+      - name: Restore the Next.js build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: apps/sak_agent_dashboard/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('apps/sak_agent_dashboard/pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('apps/sak_agent_dashboard/pnpm-lock.yaml') }}-
+            nextjs-${{ runner.os }}-
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type-check
+        run: pnpm typecheck
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build

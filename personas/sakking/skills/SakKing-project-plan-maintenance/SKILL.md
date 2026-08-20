@@ -1,6 +1,7 @@
 ---
 name: SakSit-project-plan-maintenance
-description: "Audit and standardize PLAN.md files across projects."
+description: Audit and standardize PLAN.md files across projects.
+...
 ---
 
 # Project-Plan Maintenance

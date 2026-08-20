@@ -1,6 +1,8 @@
 ---
 name: SakTan-habit-tracking
-description: "Track recurring habits and routines over time in memory, and report consistency rather than just todays status."
+description: Track recurring habits and routines over time in memory, and report consistency rather
+  than just todays status.
+...
 ---
 
 # Habit Tracking

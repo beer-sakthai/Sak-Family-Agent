@@ -1,7 +1,9 @@
 ---
 name: SakJules-SakThai-cron-watchdog-self-heal
-description: "Auto-resume paused/disabled cron jobs across profiles."
+description: Auto-resume paused/disabled cron jobs across profiles.
+...
 ---
+
 # Cron Watchdog Self-Heal
 
 Automatically detects and resumes cron jobs that have stopped, become disabled,

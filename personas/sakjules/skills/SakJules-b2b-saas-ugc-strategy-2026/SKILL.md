@@ -1,6 +1,9 @@
 ---
 name: SakJules-SakKing-b2b-saas-ugc-strategy-2026
-description: ">-   A complete playbook for B2B SaaS companies to build, deploy, and measure   a User-Generated Content (UGC) strategy — covering collection workflows,   format selection, AI-friendly structuring, distribution channels, and   conversion benchmarks f"
+description: ">-   A complete playbook for B2B SaaS companies to build, deploy, and measure   a\
+  \ User-Generated Content (UGC) strategy \u2014 covering collection workflows,  \
+  \ format selection, AI-friendly structuring, distribution channels, and   conversion\
+  \ benchmarks f"
 ---
 
 # B2B SaaS User-Generated Content (UGC) Strategy 2026
