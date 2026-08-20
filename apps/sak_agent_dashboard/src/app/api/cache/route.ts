@@ -1,4 +1,4 @@
-import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
+import { ApiError, createApiHandler, createMutationHandler } from "@/lib/api/handler";
 import { SemanticCacheEngine } from "@/lib/cache/semanticCacheEngine";
 import { CacheLookupQuery } from "@/lib/cache/types";
 
@@ -31,13 +31,13 @@ export const POST = createMutationHandler("/api/cache", async (body) => {
       model: body.model as string | undefined,
       minSimilarity: body.minSimilarity ? parseFloat(String(body.minSimilarity)) : undefined,
     };
-    if (!query.prompt.trim()) throw new Error("prompt is required");
+    if (!query.prompt.trim()) throw new ApiError(400, "prompt is required");
     return { result: SemanticCacheEngine.lookup(query) };
   }
 
   if (action === "store") {
     const { prompt, response, personaSlug, model, ttlSeconds, similarityThreshold } = body as Record<string, unknown>;
-    if (!prompt || !response) throw new Error("prompt and response are required");
+    if (!prompt || !response) throw new ApiError(400, "prompt and response are required");
     const entry = SemanticCacheEngine.store(
       String(prompt),
       String(response),
@@ -58,5 +58,5 @@ export const POST = createMutationHandler("/api/cache", async (body) => {
     return { deletedCount: SemanticCacheEngine.invalidate() };
   }
 
-  throw new Error(`Invalid action: ${action}`);
+  throw new ApiError(400, `Invalid action: ${action}`);
 });

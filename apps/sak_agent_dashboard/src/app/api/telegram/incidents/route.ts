@@ -1,4 +1,4 @@
-import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
+import { ApiError, createApiHandler, createMutationHandler } from "@/lib/api/handler";
 import {
   createIncidentAlert,
   getIncidentAlerts,
@@ -36,5 +36,5 @@ export const POST = createMutationHandler("/api/telegram/incidents", async (body
     return { alert: updated };
   }
 
-  throw new Error(`Unknown action: ${action}`);
+  throw new ApiError(400, `Unknown action: ${action}`);
 });
