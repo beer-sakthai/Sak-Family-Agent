@@ -193,7 +193,7 @@ def persona_memory_db_path(persona: str) -> Path:
     When ``SAKTHAI_HOME`` is set (e.g. in tests) the path resolves under that
     override so tests get proper isolation.  When unset, falls back to
     ``Path.home() / \".sakthai\"``, matching the production convention used by
-    ``infra/vm-agents/sakthai-agent-run.sh`` where ``SAKTHAI_HOME`` is set
+    ``infra/vm-agents/systemd/sakthai-telegram@.service`` where ``SAKTHAI_HOME`` is set
     to ``$HOME/.sakthai/$AGENT`` per deployed persona.
     """
     if persona not in PERSONA_NAMES:
@@ -312,7 +312,7 @@ def sakthai_persona() -> str | None:
 
     Set per-deployment via ``SAKTHAI_PERSONA`` (see
     ``infra/vm-agents/env-templates/*.env.example`` and
-    ``infra/vm-agents/sakthai-agent-run.sh``) — lets a single-token,
+    ``infra/vm-agents/systemd/sakthai-telegram@.service``) — lets a single-token,
     single-process gateway (e.g. the Telegram bot) resolve that persona's own
     skill overlay via ``persona_skills_dir()`` instead of always falling back
     to ``SKILLS_DIR``.

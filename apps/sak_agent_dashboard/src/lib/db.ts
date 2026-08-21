@@ -20,7 +20,7 @@ const LEGACY_DB_FILE = path.join(SAKTHAI_DIR, "memory.db");
  * Every memory database this dashboard should read, in display order.
  *
  * Deployed personas each run with `SAKTHAI_HOME=$HOME/.sakthai/$AGENT`
- * (`infra/vm-agents/sakthai-agent-run.sh`), so each writes to its own shard at
+ * (`infra/vm-agents/systemd/sakthai-telegram@.service`), so each writes to its own shard at
  * `~/.sakthai/<persona>/memory.db`. Reading only the unscoped `memory.db` — as
  * this module used to — means reading a database nobody writes to on the real
  * deployment, then falling back to demo data, which is why it never looked
@@ -42,6 +42,56 @@ function shardPaths(): Array<{ persona: string; file: string }> {
 
 /** Re-exported from the shared, client-safe demo module. */
 export { getDemoMemoryData } from "./demoData";
+
+/**
+ * Whether the native SQLite driver actually loaded, resolved once.
+ *
+ * `better-sqlite3` is an `optionalDependency` compiled against a specific Node
+ * ABI, so a deployment can install cleanly and still not be able to read a
+ * single byte of memory — the module is simply absent, or was built for a
+ * different Node major than the runtime image. The app keeps serving in that
+ * state, which is the dangerous part: every shard reports zero rows and the
+ * dashboard looks merely idle rather than broken.
+ *
+ * Resolving it once, explicitly, lets callers tell "the driver is missing"
+ * apart from "there is genuinely nothing stored yet".
+ */
+let _driverError: string | null | undefined;
+
+/**
+ * Run the probe once against an injectable loader.
+ *
+ * The loader is a parameter because `db.ts` reaches the driver through CJS
+ * `require()`, which module-level mocking does not intercept — and a failure
+ * path that cannot be tested is a failure path nobody has seen work.
+ */
+export function probeMemoryDriver(
+  load: () => unknown = () => require("better-sqlite3")
+): string | null {
+  try {
+    load();
+    return null;
+  } catch (err) {
+    return (
+      "better-sqlite3 (optionalDependency) failed to load, so no memory shard " +
+      "can be read. It is a native module: check it was built during install " +
+      "and that the runtime Node major matches the one it was built against. " +
+      `Underlying error: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+}
+
+export function memoryDriverError(): string | null {
+  if (_driverError === undefined) {
+    _driverError = probeMemoryDriver();
+  }
+  return _driverError;
+}
+
+/** Test seam: forget the cached driver probe. */
+export function _resetMemoryDriverProbe(): void {
+  _driverError = undefined;
+}
 
 function toIso(raw: unknown): string {
   if (typeof raw === "number") return new Date(raw * 1000).toISOString();
@@ -86,6 +136,15 @@ function readShard(
   base.exists = true;
 
   const label = persona === "legacy" ? "legacy" : personaName(persona);
+
+  const driverError = memoryDriverError();
+  if (driverError !== null) {
+    // Distinguish "cannot read anything, ever" from "this shard is empty".
+    base.error = driverError;
+    const result = { facts: [], observations: [], status: base };
+    serverMemoryCache.setShard(persona, result);
+    return result;
+  }
 
   try {
     // better-sqlite3 is an optionalDependency: a machine without a native build

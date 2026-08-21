@@ -1,0 +1,51 @@
+# Build context for the agent image (Dockerfile at repo root).
+# The context is the whole monorepo, but the image only needs the installed
+# package, the personas' identity/skills, and the curated library.
+
+.git
+.github
+.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Test + tooling trees the runtime never imports.
+tests
+fuzz
+benchmarks
+evaluation_tasks
+training
+docs
+scripts
+security
+profiles
+dataset-cards
+conductor
+.specify
+
+# Other subprojects — each builds its own image.
+apps
+services
+sakthai-chat-cli
+infra
+
+# Persona symlinks pointing at personas/shared/sakthai. Docker dereferences
+# symlinks on COPY, so leaving these in would duplicate the whole shared
+# package into four persona directories. Only personas/sakthai/sakthai is the
+# installed package ([tool.setuptools.packages.find] where = ["personas/sakthai"]).
+personas/sakjules/sakthai
+personas/saktan/sakthai
+personas/*/sakthai~origin_main
+personas/*/agent-self-evolution
+personas/shared/sakthai
+
+# Partial directories that shadow the shared copy for security syncs. They are
+# not on sys.path in this image, so they are dead weight here.
+personas/sakking/sakthai
+personas/saksee/sakthai
+personas/saksit/sakthai
+
+# Retired skills, kept in git for history but excluded from discovery.
+personas/sakthai/skills/.archive
