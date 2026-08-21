@@ -67,17 +67,42 @@ describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
     });
   });
 
-  describe("SessionExplorer Component", () => {
-    it("allows interactive search query input and renders session rows", () => {
+  describe("SessionExplorer Component Accessibility & Interactions", () => {
+    it("allows interactive search query input, filters persona/status, and exposes ARIA attributes and modal dialog", () => {
       const mockSessions = [
         { sessionId: "sess-1", persona: "SakThai", timestamp: "2026-08-02", messageCount: 5, tokenUsage: 1200, status: "completed" as const },
         { sessionId: "sess-2", persona: "SakKing", timestamp: "2026-08-02", messageCount: 10, tokenUsage: 3400, status: "completed" as const },
       ];
 
       render(<SessionExplorer sessions={mockSessions} />);
-      const searchInput = screen.getByPlaceholderText(/search/i);
+      const searchInput = screen.getByRole("textbox", { name: "Search sessions or personas" });
+      expect(searchInput).toBeInTheDocument();
+
       fireEvent.change(searchInput, { target: { value: "SakThai" } });
       expect(searchInput).toHaveValue("SakThai");
+
+      const clearBtn = screen.getByRole("button", { name: "Clear search" });
+      expect(clearBtn).toBeInTheDocument();
+      fireEvent.click(clearBtn);
+      expect(searchInput).toHaveValue("");
+
+      const personaSelect = screen.getByRole("combobox", { name: "Filter sessions by persona" });
+      const statusSelect = screen.getByRole("combobox", { name: "Filter sessions by status" });
+      expect(personaSelect).toBeInTheDocument();
+      expect(statusSelect).toBeInTheDocument();
+
+      const inspectBtn = screen.getByRole("button", { name: "Inspect details for session sess-1" });
+      expect(inspectBtn).toBeInTheDocument();
+      fireEvent.click(inspectBtn);
+
+      const dialog = screen.getByRole("dialog");
+      expect(dialog).toBeInTheDocument();
+      expect(dialog).toHaveAttribute("aria-modal", "true");
+
+      const closeDialogBtn = screen.getByRole("button", { name: "Close transcript inspector" });
+      expect(closeDialogBtn).toBeInTheDocument();
+      fireEvent.click(closeDialogBtn);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
   });
 
