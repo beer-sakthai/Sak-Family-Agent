@@ -53,7 +53,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget=1.21.2-2ubuntu1.4 \
     && rm -rf /var/lib/apt/lists/* \
     && ln -sf /usr/bin/python3.11 /usr/bin/python \
-    && python -m pip install --upgrade pip setuptools wheel
+    && python -m pip install --upgrade \
+        "pip==26.2.1" --hash=sha256:71138adf1f4ca900cdb7d289c21b7494329f2332b6d85f0e1c42108c0384ed3e \
+        "setuptools==84.0.0" --hash=sha256:51a52592b3b99e102b609654876bd65f19f999935166d1352678931132b0c670 \
+        "wheel==0.48.0" --hash=sha256:3217dcc807155e45db462d7ef2431f5ddda0d7273b700d05a67b271ceb1287ab
 
 # -----------------------------------------------------------------------------
 # 2. Core ML stack (pinned for CUDA 12.4)

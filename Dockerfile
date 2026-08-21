@@ -39,11 +39,19 @@ WORKDIR /app
 # SAKTHAI_SYSTEM_PROMPT_FILE points at personas/<agent>/SOUL.md, so a persona
 # started from an image without them would run with no identity.
 # .dockerignore drops the symlinked/shadowing copies of the package.
-COPY pyproject.toml README.md ./
+#
+# The uv binary comes from a digest-pinned image (0.12.5, multi-arch index), so
+# no mutable tag can change what installs the project. The install itself is
+# `uv sync --frozen`, which resolves exactly what uv.lock records and refuses
+# to run if the lockfile drifts from pyproject.toml — this is what keeps
+# Scorecard's PinnedDependenciesID quiet on the install step.
+COPY --from=ghcr.io/astral-sh/uv:0.12.5@sha256:e85be844203885286c60ffad8a858d48afb6c5a5c237ca0e67f12e74b8f174b1 /uv /usr/local/bin/uv
+
+COPY pyproject.toml uv.lock README.md ./
 COPY personas/ ./personas/
 COPY library/ ./library/
 
-RUN pip install --no-cache-dir -e "."
+RUN uv sync --frozen
 
 # Non-root. The sandbox image runs as root on purpose (CKV_DOCKER_3) so the
 # bind-mounted memory.db keeps host-writable ownership; here the same goal is
@@ -58,6 +66,7 @@ USER sakthai
 # point. Setting it here would hand `run_command` to anyone who can message the
 # bot on Telegram.
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/app/.venv/bin:${PATH}"
 
 ENTRYPOINT ["python", "-m", "sakthai.telegram.bot"]
