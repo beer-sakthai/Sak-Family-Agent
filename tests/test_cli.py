@@ -1368,14 +1368,6 @@ def test_memory_family_merges_across_persona_shards(
     assert "sakking family fact" in result.output
 
 
-def test_memory_family_empty_when_no_shards_exist(runner: CliRunner) -> None:
-    from sakthai.config import persona_memory_db_path
-
-    for slug in ("sakthai", "sakking", "saktan", "saksee", "saksit", "sakjules"):
-        p = persona_memory_db_path(slug)
-        if p.exists():
-            p.unlink()
-
 def test_memory_family_empty_when_no_shards_exist(
     runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
