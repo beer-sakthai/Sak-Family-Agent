@@ -25,8 +25,25 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
+
+def _urlopen_http(req, timeout):
+    """``urlopen`` restricted to http(s).
+
+    B310 asks for the permitted schemes to be audited, because ``urlopen``
+    will just as happily open ``file:``, ``ftp:`` or a custom handler. Every
+    URL reaching this helper is a literal, so the check cannot fail today —
+    it is here so that making the host configurable later cannot silently
+    become a local-file read.
+    """
+    url = req.full_url if isinstance(req, urllib.request.Request) else req
+    scheme = urllib.parse.urlparse(url).scheme
+    if scheme not in ("http", "https"):
+        raise ValueError(f"refusing non-HTTP(S) URL scheme {scheme!r}: {url!r}")
+    return urllib.request.urlopen(req, timeout=timeout)  # nosec B310 - scheme checked above
+
 
 
 def resolve_bin() -> str:
@@ -250,7 +267,7 @@ def main() -> int:
                     req = urllib.request.Request(
                         "http://127.0.0.1:3001/api/stages", headers=headers
                     )
-                    with urllib.request.urlopen(req, timeout=2) as r:
+                    with _urlopen_http(req, timeout=2) as r:
                         stages = json.loads(r.read())
                     break
                 except OSError:
@@ -261,7 +278,7 @@ def main() -> int:
                 req = urllib.request.Request(
                     "http://127.0.0.1:3001/api/ecosystem", headers=headers
                 )
-                with urllib.request.urlopen(req, timeout=2) as r:
+                with _urlopen_http(req, timeout=2) as r:
                     eco = json.loads(r.read())
             except OSError:
                 pass
