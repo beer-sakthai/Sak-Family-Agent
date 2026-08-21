@@ -39,6 +39,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from sakthai.skills import (  # noqa: E402  (path bootstrap above)
     PERSONA_SKILL_PREFIXES,
     SHARED_SKILL_PREFIX,
+    SkillParseError,
     parse_skill,
     target_skill_name,
 )
@@ -60,7 +61,8 @@ def _planned_renames(root: Path, prefix: str) -> list[tuple[Path, str, str]]:
     for skill_md in sorted(root.rglob("SKILL.md")):
         try:
             skill = parse_skill(skill_md)
-        except Exception:  # noqa: BLE001 — malformed skills are validate's job
+        except SkillParseError:
+            # Malformed skills are `skills validate`'s job, not the renamer's.
             continue
         new_name = target_skill_name(skill.name, prefix)
         folder = skill_md.parent.name
