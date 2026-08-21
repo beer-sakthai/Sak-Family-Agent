@@ -236,6 +236,11 @@ read its first section before setting the variable, since a self-hosted runner
 must not be reachable by a fork's pull request. Only `ci.yml` is wired this way —
 the security scanners stay on GitHub-hosted runners on purpose.
 
+**Complete scanning ecosystem guide:** See [`.github/SCANNING.md`](.github/SCANNING.md)
+for comprehensive documentation of all eight code scanning tools (CodeQL, SonarCloud,
+Scorecard, Bandit, ESLint, Pylint, OSSAR, Continuous Security), their configurations,
+scopes, and how each fits into the CI/CD pipeline.
+
 The ones that gate a change:
 
 | Workflow | Trigger | What it does |
