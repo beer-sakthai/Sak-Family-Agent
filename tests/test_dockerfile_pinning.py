@@ -53,9 +53,7 @@ DOCKERFILES = [
 # A full-length SHA-256 — the only digest this repository accepts.
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
-_UV_IMAGE_REF = re.compile(
-    r"ghcr\.io/astral-sh/uv:[^@\s]+@sha256:([0-9a-f]{64})"
-)
+_UV_IMAGE_REF = re.compile(r"ghcr\.io/astral-sh/uv:[^@\s]+@sha256:([0-9a-f]{64})")
 
 _PIP_INSTALL = re.compile(r"(?<!uv )(?:python\s+-m\s+)?pip\s+install")
 
@@ -184,14 +182,12 @@ def test_runner_installer_verifies_the_tarball_or_fails() -> None:
     assert "sha256sum -c -" in text, (
         "install-runner.sh must verify the tarball with `sha256sum -c -`."
     )
-    assert "RUNNER_SHA256:-af5c33fa94f3cc33b8e97937939136a6b04197e6dadfcfb3b6e33ae1bf41e79a" in text, (
-        "install-runner.sh lost the pinned x64 digest for the default runner "
-        "version."
-    )
-    assert "RUNNER_SHA256:-9cb43527912086c7c8fb4119cb06409fcbcbd6f93a2d8507f30b07c495620f5c" in text, (
-        "install-runner.sh lost the pinned arm64 digest for the default runner "
-        "version."
-    )
+    assert (
+        "RUNNER_SHA256:-af5c33fa94f3cc33b8e97937939136a6b04197e6dadfcfb3b6e33ae1bf41e79a" in text
+    ), "install-runner.sh lost the pinned x64 digest for the default runner version."
+    assert (
+        "RUNNER_SHA256:-9cb43527912086c7c8fb4119cb06409fcbcbd6f93a2d8507f30b07c495620f5c" in text
+    ), "install-runner.sh lost the pinned arm64 digest for the default runner version."
     assert "was NOT verified" not in text and "::warning::" not in text.split("config.sh")[0], (
         "install-runner.sh must not degrade digest verification to a warning "
         "— an unverified tarball must abort the install."
