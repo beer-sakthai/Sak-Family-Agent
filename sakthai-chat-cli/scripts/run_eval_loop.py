@@ -124,9 +124,6 @@ def run_evaluation():
 
     return results
 
-def _generate_css_styles():
-    """Returns the CSS style sheet for the viewer."""
-    return """
 
 def _to_html(text: str) -> str:
     """Render one model output as an HTML fragment for the viewer."""
@@ -436,53 +433,6 @@ _CSS_STYLES = """
         .hidden {
             display: none !important;
         }
-    """
-
-
-def _generate_case_card_html(c):
-    """Generates the HTML card representation of a single evaluation case.
-
-    Cleans up string content formatting in a way that remains safe and compatible
-    on older Python versions (e.g. 3.11).
-    """
-    savings = round((1.0 - len(c["new_output"]) / len(c["old_output"])) * 100, 1)
-
-    # Avoid complex expressions with backslashes in f-strings for Python 3.11 compatibility
-    old_content = c["old_output"].replace("\n", "<br>").replace("```", "")
-    new_content = c["new_output"].replace("\n", "<br>").replace("```", "")
-
-    return f"""
-        <div class="case-card" data-category="{c["category"]}">
-            <div class="case-header">
-                <span class="category-badge">{c["category"]}</span>
-                <span class="case-id">Case #{c["id"]}</span>
-            </div>
-            <div class="case-query">
-                <strong>Query:</strong> "{c["query"]}"
-            </div>
-            <div class="comparator">
-                <div class="panel old-panel">
-                    <div class="panel-header">Old Skill Output <span class="score-badge bad">{int(c["old_score"]*100)}%</span></div>
-                    <div class="panel-content">{old_content}</div>
-                    <div class="char-count">Length: {len(c["old_output"])} chars</div>
-                </div>
-                <div class="panel new-panel">
-                    <div class="panel-header">New Skill Output <span class="score-badge good">{int(c["new_score"]*100)}%</span></div>
-                    <div class="panel-content">{new_content}</div>
-                    <div class="char-count">Length: {len(c["new_output"])} chars <span class="savings-tag">({savings}% fewer)</span></div>
-                </div>
-            </div>
-            <div class="eval-feedback">
-                <strong>Judge Feedback:</strong> {c["eval_feedback"]}
-            </div>
-        </div>
-        """
-
-
-def _generate_dashboard_metrics_html(metrics):
-    """Generates the HTML block representing the main dashboard metrics."""
-    return f"""
-        <div class="metrics-grid">
 """
 
 
@@ -527,14 +477,6 @@ def _render_metrics_grid(metrics: dict) -> str:
                 <div class="metric-value">+{metrics["improvement_pct"]}%</div>
                 <div class="metric-diff">Style Alignment</div>
             </div>
-        </div>
-    """
-
-
-def _generate_diff_tab_html():
-    """Generates the HTML markup for comparing old versus new skill bodies."""
-    return f"""
-        <div id="diff-tab" class="hidden">
         </div>"""
 
 
@@ -587,63 +529,6 @@ def _render_diff_tab(old_skill: str, new_skill: str) -> str:
                     <div class="diff-box" style="border-top: 4px solid var(--accent-green);">{new_skill.strip()}</div>
                 </div>
             </div>
-        </div>
-    """
-
-
-def generate_html_viewer(results, output_path):
-    """Generates a beautiful self-contained HTML review dashboard.
-
-    Organizes metrics, evaluation cases, and side-by-side skill comparison diff.
-    """
-    metrics = results["metrics"]
-    cases = results["cases"]
-
-    case_cards = "".join(_generate_case_card_html(c) for c in cases)
-    css_styles = _generate_css_styles()
-    metrics_html = _generate_dashboard_metrics_html(metrics)
-    diff_html = _generate_diff_tab_html()
-
-    html_content = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skill Evaluation Review Viewer</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        {css_styles}
-    </style>
-</head>
-<body>
-
-    <header>
-        <div class="brand">
-            <span class="logo-icon">🧬</span>
-            <div>
-                <h1 class="brand-title">Skill Optimization Loop</h1>
-                <div class="tagline">GEPA Prompt Evolution Performance Audits</div>
-            </div>
-        </div>
-        <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('evaluation')">Evaluation Cases</button>
-            <button class="tab-btn" onclick="switchTab('diff')">Skill Diff</button>
-        </div>
-    </header>
-
-    <div class="container">
-        <!-- Dashboard Metrics -->
-        {metrics_html}
-
-        <!-- Evaluation tab -->
-        <div id="evaluation-tab">
-            <h2 class="section-title">📊 Evaluated Test Cases</h2>
-            {case_cards}
-        </div>
-
-        <!-- Diff tab -->
-        {diff_html}
-    </div>
         </div>"""
 
 
