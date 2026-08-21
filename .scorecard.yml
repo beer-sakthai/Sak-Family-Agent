@@ -1,0 +1,63 @@
+# OSSF Scorecard configuration for Sak-Family-Agent
+#
+# This file provides explicit configuration for OSSF Scorecard, which assesses
+# supply-chain security posture. Scorecard runs weekly and on push to main.
+# See .github/SCANNING.md for the complete scanning ecosystem documentation.
+
+# Repository information
+repo:
+  name: Sak-Family-Agent
+  owner: beer-sakthai
+
+# Checks configuration
+checks:
+  # Security Policy Check
+  security-policy:
+    enabled: true
+
+  # Branch Protection Check
+  branch-protection:
+    enabled: true
+    allowAdminBypass: false
+
+  # Binary Artifacts Check
+  binary-artifacts:
+    enabled: true
+
+  # Dangerous Workflow Check
+  dangerous-workflow:
+    enabled: true
+
+  # Dependency Check
+  dependency:
+    enabled: true
+
+  # License Check
+  license:
+    enabled: true
+
+  # Pinned Dependencies Check
+  pinned-dependencies:
+    enabled: true
+
+  # SAST Check
+  sast:
+    enabled: true
+
+  # Signed Releases Check
+  signed-releases:
+    enabled: true
+
+  # Token Permissions Check
+  token-permissions:
+    enabled: true
+
+# Results publishing
+results:
+  publish: true
+  badgeURL: true
+
+# Documentation
+# Scorecard measures repository security best practices.
+# This configuration aligns with the comprehensive security model documented
+# in docs/SECURITY.md and docs/security-hardening.md
