@@ -32,6 +32,13 @@ As of 2026-08-18 they no longer run on Copilot. Seven run on Google **Gemini**, 
 
 Compiled with gh-aw **v0.87.0**; the Gemini CLI pins to `0.55.1` and OpenCode to `1.2.14`.
 
+> **Known upstream limitation (Scorecard `PinnedDependenciesID`):** the compiler emits
+> `npm install --ignore-scripts -g @google/gemini-cli@<version>` in every Gemini-engine
+> lock file, and there is no author-side knob in the `.md` sources to hash-pin it — the
+> line does not exist in the sources at all. npm global installs also do not accept
+> `pkg@sha256:` for registry packages. Scorecard flags these as unpinned; they are not
+> source-fixable and are tracked as accepted risk (16 open alerts as of 2026-08-21).
+
 ## Checking for a stale lock
 
 The `.lock.yml` header carries the engine and compiler that produced it. This is the only

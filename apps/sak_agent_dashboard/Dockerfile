@@ -12,13 +12,11 @@
 # prefers it over the repository root `.dockerignore`, which excludes `apps/`
 # and `docs/` because the agent image does not want them.
 #
-# Pinned to an exact patch version rather than the floating `22-slim`. It is
-# NOT pinned by digest, unlike Dockerfile.sandbox and the agent Dockerfile:
-# Docker Hub rate-limited the digest lookup at authoring time and inventing one
-# is worse than admitting it. To pin properly:
+# Pinned to an exact patch version and by digest, matching Dockerfile.sandbox
+# and the agent Dockerfile. The digest below is the manifest list digest of
+# node:22.22.2-slim, verified against the Docker Hub registry API:
 #     docker buildx imagetools inspect node:22.22.2-slim --format '{{.Manifest.Digest}}'
-# then append `@sha256:<digest>` to both FROM lines below.
-FROM node:22.22.2-slim AS builder
+FROM node:22.22.2-slim@sha256:9f6d5975c7dca860947d3915877f85607946403fc55349f39b4bc3688448bb6e AS builder
 
 # better-sqlite3 is a native module. It ships prebuilt binaries, but keep the
 # toolchain here so a platform without a matching prebuild still builds rather
@@ -87,7 +85,7 @@ RUN set -eu; \
     echo "better-sqlite3 present with a linux-x64 prebuild"
 
 
-FROM node:22.22.2-slim AS runner
+FROM node:22.22.2-slim@sha256:9f6d5975c7dca860947d3915877f85607946403fc55349f39b4bc3688448bb6e AS runner
 
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
