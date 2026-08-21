@@ -293,6 +293,33 @@ def test_self_healing_ci_refuses_untrusted_forks() -> None:
     )
 
 
+def test_self_healing_ci_never_checks_out_untrusted_head_sha() -> None:
+    """Scorecard ``DangerousWorkflowID`` — the untrusted checkout must stay gone.
+
+    ``workflow_run`` runs in the base repository's context with write
+    credentials, so checking out ``workflow_run.head_sha`` would execute a
+    contributor-controlled commit (``uv sync`` runs build hooks from the
+    checked-out tree). The heal job must check out the base repository's own
+    default-branch commit (``github.sha``) instead, and never reference
+    ``workflow_run.head_sha`` as a checkout ref.
+    """
+    workflow = WORKFLOWS_DIR / "self-healing-ci.yml"
+    data = _load(workflow)
+    steps = data["jobs"]["heal"]["steps"]
+    checkout = next(s for s in steps if s.get("uses", "").startswith("actions/checkout"))
+    ref = checkout["with"]["ref"]
+    assert "workflow_run.head_sha" not in ref, (
+        "self-healing-ci.yml must not check out `workflow_run.head_sha`. "
+        "A workflow_run event carries write credentials; checking out the "
+        "triggering run's head would execute a contributor-controlled commit. "
+        "Use the base repository's own commit (`github.sha`) instead."
+    )
+    assert ref == "${{ github.sha }}", (
+        "self-healing-ci.yml must check out the base repository's default "
+        f"branch (`github.sha`), not {ref!r}."
+    )
+
+
 def test_codeql_workflow_uses_the_scope_config() -> None:
     """The scope config only applies while a workflow points at it."""
     assert CODEQL_CONFIG.exists(), f"{CODEQL_CONFIG} is missing"

@@ -47,20 +47,23 @@ jobs:
     #
     # `workflow_run` runs in the context of the *base* repository: it gets this
     # job's `contents: write` / `pull-requests: write` token and the
-    # `ANTHROPIC_API_KEY` secret, and it then checks out
-    # `workflow_run.head_sha` and executes it (`uv sync --all-extras` alone runs
-    # arbitrary build hooks from the checked-out tree). The `branches: [main]`
-    # filter on the trigger does *not* make that safe — it matches the head
-    # branch *name*, so a pull request opened from a fork's own `main` branch
-    # produces a CI run whose `head_branch` is `main` and whose `head_sha` is the
-    # contributor's commit. Without the repository check below, that commit would
-    # be checked out and run with write credentials. This is Scorecard's
-    # `DangerousWorkflowID` (untrusted code checkout), and it is the reason this
-    # workflow may only ever heal commits that are already in this repository.
+    # `ANTHROPIC_API_KEY` secret. The `branches: [main]` filter on the trigger
+    # does *not* make the run safe — it matches the head branch *name*, so a
+    # pull request opened from a fork's own `main` branch produces a CI run
+    # whose `head_branch` is `main` and whose `head_sha` is the contributor's
+    # commit. For that reason the checkout below deliberately uses
+    # `github.sha` (the base repository's own default-branch commit) rather
+    # than `workflow_run.head_sha` — this job never checks out or executes a
+    # commit it did not already trust. That is what keeps Scorecard's
+    # `DangerousWorkflowID` (untrusted code checkout) quiet even though this
+    # workflow holds write credentials.
     #
-    # The other two are the original behaviour: act only on a genuine failure,
-    # and never on a run that was itself started from a fix branch — that is how
-    # an agent ends up healing its own output.
+    # The first condition is the fork guard, kept as defence in depth: it
+    # refuses to run at all when the triggering run came from a fork, so a
+    # fork's commit is never even fetched. The other two are the original
+    # behaviour: act only on a genuine failure, and never on a run that was
+    # itself started from a fix branch — that is how an agent ends up healing
+    # its own output.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.head_repository.full_name == github.repository &&
@@ -80,10 +83,10 @@ jobs:
           use-policy-store: true
           api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
 
-      - name: Checkout the commit that failed
+      - name: Checkout the base repository's default branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
       - name: Set up Python
