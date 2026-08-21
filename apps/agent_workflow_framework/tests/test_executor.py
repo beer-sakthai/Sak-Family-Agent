@@ -121,6 +121,10 @@ class TestWorkflowExecutor(unittest.TestCase):
             "http://user@example.com",
             "http://example.com@127.0.0.1",
             "http://admin:secret@10.0.0.1",
+            "http://127.0.0.1\\example.com",
+            "http://127.0.0.1\\@example.com",
+            "http://[::ffff:127.0.0.1]",
+            "http://[::ffff:10.0.0.1]",
         ]
         for url in dangerous_urls:
             with self.subTest(url=url):
@@ -149,6 +153,7 @@ class TestWorkflowExecutor(unittest.TestCase):
                             "control",
                             "userinfo",
                             "credentials",
+                            "backslash",
                         ]
                     ),
                     f"Unexpected error message for URL '{url}': {step_res.error}",
