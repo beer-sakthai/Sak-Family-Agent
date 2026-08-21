@@ -174,18 +174,21 @@ jobs:
       # and minifier output, and restoring it is the difference between a cold
       # and a warm build.
       #
-      # Keyed on the lockfile (a dependency change invalidates the compiler
-      # cache) plus the commit SHA, so every run writes a fresh entry rather
-      # than sharing one immutable key that can never be updated. `restore-keys`
-      # is what makes that work: the exact key never hits, the prefix does, and
-      # the run starts from the most recent entry for the same dependency tree.
+      # Keyed on the lockfile hash only — NOT the commit SHA. A per-commit key
+      # writes one ~150 MB entry per push, which filled the 10 GB Actions cache
+      # budget and evicted the warm baseline (2026-08-21: 315 entries, 10.4 GB,
+      # 5.3 GB of it setup-uv). With a lockfile-only key, the same key restores
+      # and the composite action skips the save (its default `save-always:
+      # false` only writes on a cache miss), so the entry count stays bounded:
+      # one per dependency tree, replaced when pnpm-lock.yaml changes.
+      # `restore-keys` is the fallback for the (rare) exact-key miss, e.g. after
+      # an LRU eviction.
       - name: Restore the Next.js build cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: apps/sak_agent_dashboard/.next/cache
-          key: nextjs-v3-${{ runner.os }}-${{ hashFiles('apps/sak_agent_dashboard/pnpm-lock.yaml') }}-${{ github.sha }}
+          key: nextjs-v3-${{ runner.os }}-${{ hashFiles('apps/sak_agent_dashboard/pnpm-lock.yaml') }}
           restore-keys: |
-            nextjs-v3-${{ runner.os }}-${{ hashFiles('apps/sak_agent_dashboard/pnpm-lock.yaml') }}-
             nextjs-v3-${{ runner.os }}-
 
       - name: Lint

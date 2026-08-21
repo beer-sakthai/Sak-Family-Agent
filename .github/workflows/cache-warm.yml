@@ -148,7 +148,11 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: apps/sak_agent_dashboard/.next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('apps/sak_agent_dashboard/pnpm-lock.yaml') }}-${{ github.sha }}
+          # Same key family as subprojects.yml's restore (`nextjs-v3-`), keyed
+          # on the lockfile hash only. A per-commit SHA here would both fail to
+          # match what the gating workflow restores and write one ~150 MB entry
+          # per push; with this key the warm entry is restorable by every
+          # branch and is replaced only when the lockfile changes.
+          key: nextjs-v3-${{ runner.os }}-${{ hashFiles('apps/sak_agent_dashboard/pnpm-lock.yaml') }}
           restore-keys: |
-            nextjs-${{ runner.os }}-${{ hashFiles('apps/sak_agent_dashboard/pnpm-lock.yaml') }}-
-            nextjs-${{ runner.os }}-
+            nextjs-v3-${{ runner.os }}-
