@@ -495,7 +495,10 @@ def _validate_shell_command(cmd_str: str) -> None:
                 _validate_filepath(sub)
             except PermissionError as exc:
                 raise PermissionError(f"Prohibited sensitive path in shell command: {exc}") from exc
-            except Exception:
+            except (ValueError, OSError):
+                # Not path-shaped (empty, control chars, unreadable) — nothing to
+                # validate. PermissionError, the actual finding, is re-raised above;
+                # any other exception is unexpected and deliberately propagates.
                 pass
 
     subcommands = _extract_shell_subcommands(str(cmd_str))
