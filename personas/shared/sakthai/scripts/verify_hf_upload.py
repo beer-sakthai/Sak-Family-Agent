@@ -17,6 +17,11 @@ import urllib.parse
 
 def verify_url(url: str, resource_name: str) -> bool:
     """Return True if `url` responds with an HTTP 200 status code."""
+    # Prevent control character / CRLF / log injection
+    if any(ord(c) < 32 or ord(c) == 127 for c in url):
+        print("ERROR: Control characters are not allowed in URLs.")
+        return False
+
     print(f"Verifying {resource_name} at {url}...")
 
     # Prevent option smuggling
