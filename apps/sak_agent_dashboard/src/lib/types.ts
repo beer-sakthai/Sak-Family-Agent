@@ -86,7 +86,7 @@ export interface MemoryData {
  * One memory database the dashboard tried to read.
  *
  * Deployed personas run with `SAKTHAI_HOME=$HOME/.sakthai/$AGENT`
- * (`infra/vm-agents/sakthai-agent-run.sh`), so each writes to its own shard at
+ * (`infra/vm-agents/systemd/sakthai-telegram@.service`), so each writes to its own shard at
  * `~/.sakthai/<persona>/memory.db` rather than the legacy unscoped `memory.db`.
  * Mirrors `config.persona_memory_db_path()` and `FamilyMemoryView`.
  */
