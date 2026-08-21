@@ -82,7 +82,7 @@ describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
   });
 
   describe("MemoryExplorer & AuditLogs Components", () => {
-    it("renders MemoryExplorer with facts and observations", () => {
+    it("renders MemoryExplorer with facts and observations, verifying tab accessibility attributes and live region updates", () => {
       const mockMemory = {
         facts: [{ id: 1, entity: "SakThai", fact: "Primary model initialized", persona: "SakThai" }],
         observations: [{ id: 1, category: "eval", observation: "Benchmark 95% passed" }],
@@ -90,6 +90,18 @@ describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
 
       render(<MemoryExplorer memory={mockMemory} />);
       expect(screen.getByText("Primary model initialized")).toBeInTheDocument();
+
+      const factsTab = screen.getByRole("button", { name: "Filter memory by facts" });
+      const obsTab = screen.getByRole("button", { name: "Filter memory by observations" });
+
+      expect(factsTab).toHaveAttribute("aria-pressed", "true");
+      expect(obsTab).toHaveAttribute("aria-pressed", "false");
+
+      fireEvent.click(obsTab);
+
+      expect(factsTab).toHaveAttribute("aria-pressed", "false");
+      expect(obsTab).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByText("Benchmark 95% passed")).toBeInTheDocument();
     });
 
     it("renders security audit log entries with severity badges and accessible filter controls", () => {

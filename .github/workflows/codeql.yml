@@ -4,6 +4,10 @@
 # This file is an *advanced* setup, and that is a deliberate, load-bearing
 # choice rather than the stock template it started as.
 #
+# See .github/SCANNING.md for the complete code scanning ecosystem overview,
+# which documents CodeQL alongside SonarCloud, Scorecard, Bandit, ESLint, Pylint,
+# and OSSAR — eight independent scanners with aligned scope and configuration.
+#
 # CodeQL used to run here through default setup (a repository setting), and for
 # months the rule was "never add this file": an advanced analysis cannot upload
 # while default setup is enabled, so every job failed with "CodeQL analyses from

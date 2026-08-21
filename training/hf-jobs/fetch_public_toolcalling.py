@@ -11,8 +11,25 @@ import os
 import re
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
+
+def _urlopen_http(req, timeout):
+    """``urlopen`` restricted to http(s).
+
+    B310 asks for the permitted schemes to be audited, because ``urlopen``
+    will just as happily open ``file:``, ``ftp:`` or a custom handler. Every
+    URL reaching this helper is a literal, so the check cannot fail today —
+    it is here so that making the host configurable later cannot silently
+    become a local-file read.
+    """
+    url = req.full_url if isinstance(req, urllib.request.Request) else req
+    scheme = urllib.parse.urlparse(url).scheme
+    if scheme not in ("http", "https"):
+        raise ValueError(f"refusing non-HTTP(S) URL scheme {scheme!r}: {url!r}")
+    return urllib.request.urlopen(req, timeout=timeout)  # nosec B310 - scheme checked above
+
 
 TOK = Path(os.path.expanduser("~/.cache/huggingface/token")).read_text().strip()
 DATASET = "glaiveai/glaive-function-calling-v2"
@@ -33,7 +50,7 @@ def fetch_page(offset):
     delay = 3
     for _attempt in range(6):
         try:
-            return json.load(urllib.request.urlopen(req))["rows"]
+            return json.load(_urlopen_http(req, timeout=60))["rows"]
         except urllib.error.HTTPError as e:
             if e.code == 429:
                 print(f"  429 rate-limited, backing off {delay}s")
