@@ -254,7 +254,8 @@ export function AgentCard({ agent }: AgentCardProps) {
           <button
             type="button"
             onClick={() => setIsDispatchOpen(true)}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-cyan-600/20 to-teal-600/20 hover:from-cyan-600/30 hover:to-teal-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-semibold font-mono transition-all duration-200 shadow-sm"
+            aria-label={`Dispatch ${agent.name}`}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-cyan-600/20 to-teal-600/20 hover:from-cyan-600/30 hover:to-teal-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-semibold font-mono transition-all duration-200 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             <Play className="h-3.5 w-3.5 fill-cyan-400 text-cyan-400" />
             Dispatch {agent.name}
@@ -272,7 +273,7 @@ export function AgentCard({ agent }: AgentCardProps) {
                   setIsDispatchOpen(false);
                   setDispatchResult(null);
                 }}
-                className="text-slate-400 hover:text-slate-200 p-0.5 rounded"
+                className="text-slate-400 hover:text-slate-200 p-0.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
                 aria-label="Close dispatch console"
               >
                 <X className="h-3.5 w-3.5" />
@@ -286,7 +287,7 @@ export function AgentCard({ agent }: AgentCardProps) {
                   key={preset}
                   type="button"
                   onClick={() => setTaskInput(preset)}
-                  className="text-[10px] font-mono text-left px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-cyan-300 hover:border-cyan-800/60 transition-colors"
+                  className="text-[10px] font-mono text-left px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-cyan-300 hover:border-cyan-800/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
                 >
                   {preset}
                 </button>
@@ -299,9 +300,10 @@ export function AgentCard({ agent }: AgentCardProps) {
                 value={taskInput}
                 onChange={(e) => setTaskInput(e.target.value)}
                 placeholder={`Instruct ${agent.name}...`}
+                aria-label={`Instruct ${agent.name}`}
                 rows={2}
                 disabled={isSubmitting}
-                className="w-full text-xs bg-slate-900 border border-slate-700/80 rounded-lg p-2 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 font-mono resize-none"
+                className="w-full text-xs bg-slate-900 border border-slate-700/80 rounded-lg p-2 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 focus-visible:ring-2 focus-visible:ring-cyan-500 font-mono resize-none"
               />
 
               <div className="flex items-center justify-between gap-2">
@@ -312,7 +314,7 @@ export function AgentCard({ agent }: AgentCardProps) {
                   type="submit"
                   aria-label="Submit task dispatch"
                   disabled={!taskInput.trim() || isSubmitting}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 text-white text-xs font-mono font-medium transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 text-white text-xs font-mono font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
                 >
                   {isSubmitting ? (
                     <>
