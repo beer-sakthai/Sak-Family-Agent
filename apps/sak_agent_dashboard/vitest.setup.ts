@@ -29,10 +29,11 @@ class MockEventSource {
   onerror: (() => void) | null = null;
   onmessage: ((ev: MessageEvent) => void) | null = null;
   private listeners: Record<string, ((ev: unknown) => void)[]> = {};
+  private timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(url: string) {
     this.url = url;
-    setTimeout(() => {
+    this.timer = setTimeout(() => {
       if (this.onopen) this.onopen();
     }, 10);
   }
@@ -47,7 +48,15 @@ class MockEventSource {
     this.listeners[type] = this.listeners[type].filter((l) => l !== listener);
   }
 
-  close() {}
+  close() {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+    this.onopen = null;
+    this.onerror = null;
+    this.onmessage = null;
+  }
 }
 
 if (typeof global !== "undefined") {

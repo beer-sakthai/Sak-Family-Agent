@@ -1,5 +1,10 @@
-import json
-with open('/tmp/spaces.json') as f:
+import json, os, sys, tempfile
+
+# The dump path is caller-supplied; a hardcoded /tmp path is predictable on a
+# shared machine and wrong whenever the dump lives elsewhere. TMPDIR is honoured.
+SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(tempfile.gettempdir(), "spaces.json")
+
+with open(SRC) as f:
     data = json.load(f)
 print(f'Total spaces: {len(data)}')
 total_dl = 0

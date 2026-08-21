@@ -38,6 +38,9 @@ class ScriptArguments:
     report_to: str = field(default="none")
     push_to_hub: bool = field(default=False)
     hub_model_id: Optional[str] = field(default=None)
+    # Hugging Face repos are mutable — a branch can be force-updated under a
+    # run. Pin downloads to one revision; pass a commit SHA for reproducibility.
+    revision: str = field(default_factory=lambda: os.environ.get("HF_REVISION", "main"))
 
 
 def main():
@@ -75,18 +78,21 @@ def main():
     print(f"Loading model: {args.model_name}")
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name,
+        revision=args.revision,
         trust_remote_code=True,
         torch_dtype="auto",
         device_map=None,  # let DeepSpeed / Accelerate handle placement
     )
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        args.model_name, trust_remote_code=True, revision=args.revision
+    )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
     print(f"Loading dataset: {args.dataset_name}")
-    dataset = load_dataset(args.dataset_name, split="train")
+    dataset = load_dataset(args.dataset_name, split="train", revision=args.revision)
 
     peft_config = None
     if args.use_lora:

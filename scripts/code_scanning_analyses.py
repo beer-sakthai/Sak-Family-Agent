@@ -64,6 +64,22 @@ import urllib.request
 from collections import defaultdict
 from typing import Any
 
+def _urlopen_http(req, timeout):
+    """``urlopen`` restricted to http(s).
+
+    B310 asks for the permitted schemes to be audited, because ``urlopen``
+    will just as happily open ``file:``, ``ftp:`` or a custom handler. Every
+    URL reaching this helper is a literal, so the check cannot fail today —
+    it is here so that making the host configurable later cannot silently
+    become a local-file read.
+    """
+    url = req.full_url if isinstance(req, urllib.request.Request) else req
+    scheme = urllib.parse.urlparse(url).scheme
+    if scheme not in ("http", "https"):
+        raise ValueError(f"refusing non-HTTP(S) URL scheme {scheme!r}: {url!r}")
+    return urllib.request.urlopen(req, timeout=timeout)  # nosec B310 - scheme checked above
+
+
 API_ROOT = "https://api.github.com"
 DEFAULT_REPO = "beer-sakthai/Sak-Family-Agent"
 PER_PAGE = 100
@@ -91,7 +107,7 @@ def _request(
     req.add_header("Accept", "application/vnd.github+json")
     req.add_header("X-GitHub-Api-Version", "2022-11-28")
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:  # noqa: S310 - fixed https host
+        with _urlopen_http(req, timeout=60) as resp:
             raw = resp.read().decode("utf-8")
             return resp.status, (json.loads(raw) if raw.strip() else None)
     except urllib.error.HTTPError as exc:

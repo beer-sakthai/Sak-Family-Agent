@@ -26,6 +26,7 @@ Run with:
 """
 
 import torch
+import os
 from datasets import load_dataset
 from peft import LoraConfig
 from transformers import (
@@ -38,6 +39,12 @@ from trl import SFTConfig, SFTTrainer
 BASE_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
 DATASET_ID = "Nanthasit/hermes-dataset"
 OUTPUT_REPO = "Nanthasit/sakthai-persona-0.5b-lora"
+# Hugging Face repositories are mutable: a tag or branch can be force-updated
+# under you, so an unpinned download is not reproducible and trusts whatever the
+# remote serves at run time. Pin every download to one revision, overridable so
+# an operator can pin a commit SHA for a byte-reproducible run.
+HF_REVISION = os.environ.get("HF_REVISION", "main")
+
 
 SYSTEM_PROMPT = (
     "You are SakThai-Agent, Beer's Growth Partner. You are sharp, calm, and "
@@ -49,7 +56,7 @@ SYSTEM_PROMPT = (
 
 def main() -> None:
     print(f"== Loading tokenizer + base model: {BASE_MODEL}")
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, revision=HF_REVISION)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -61,13 +68,14 @@ def main() -> None:
     )
     model = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
+        revision=HF_REVISION,
         quantization_config=bnb_config,
         device_map="auto",
     )
     model.config.use_cache = False
 
     print(f"== Loading dataset: {DATASET_ID}")
-    ds = load_dataset(DATASET_ID, split="train")
+    ds = load_dataset(DATASET_ID, split="train", revision=HF_REVISION)
     print(f"   rows={len(ds)} columns={ds.column_names}")
 
     def to_text(example):
