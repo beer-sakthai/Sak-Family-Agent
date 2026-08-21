@@ -57,6 +57,15 @@ case "$(uname -m)" in
   *) echo "unsupported architecture: $(uname -m)" >&2; exit 1 ;;
 esac
 
+# Digests for the default RUNNER_VERSION (2.330.0), taken from the release
+# page. If you bump RUNNER_VERSION, update the matching digest here (or pass
+# RUNNER_SHA256=<new digest> explicitly) — the tarball is verified against it
+# before anything is extracted.
+case "${ARCH}" in
+  x64)   RUNNER_SHA256="${RUNNER_SHA256:-af5c33fa94f3cc33b8e97937939136a6b04197e6dadfcfb3b6e33ae1bf41e79a}" ;;
+  arm64) RUNNER_SHA256="${RUNNER_SHA256:-9cb43527912086c7c8fb4119cb06409fcbcbd6f93a2d8507f30b07c495620f5c}" ;;
+esac
+
 TARBALL="actions-runner-linux-${ARCH}-${RUNNER_VERSION}.tar.gz"
 URL="https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/${TARBALL}"
 
@@ -67,17 +76,18 @@ if [[ ! -x ./config.sh ]]; then
   echo "==> downloading runner ${RUNNER_VERSION} (${ARCH})"
   curl -fsSL -o "${TARBALL}" "${URL}"
 
-  # Verify before extracting. GitHub publishes the digest on the release page;
-  # set RUNNER_SHA256 to it and this script checks. Unset, it says so loudly
-  # rather than pretending the download was verified.
-  if [[ -n "${RUNNER_SHA256:-}" ]]; then
-    echo "${RUNNER_SHA256}  ${TARBALL}" | sha256sum -c -
-  else
-    echo "::warning:: RUNNER_SHA256 is unset — the tarball was NOT verified."
-    echo "            Digest of what was downloaded:"
-    sha256sum "${TARBALL}"
-    echo "            Compare it against the release page before trusting this host."
-  fi
+  # Verify before extracting. The digest is pinned above (or overridden via
+  # RUNNER_SHA256); a mismatch aborts rather than extracting an untrusted
+  # tarball. Scorecard's PinnedDependenciesID requires the verification, not
+  # just a warning about its absence.
+  echo "${RUNNER_SHA256}  ${TARBALL}" | sha256sum -c - || {
+    echo "ERROR: runner ${RUNNER_VERSION} (${ARCH}) failed checksum verification." >&2
+    echo "  expected ${RUNNER_SHA256}" >&2
+    echo "  got      $(sha256sum "${TARBALL}" | cut -d' ' -f1)" >&2
+    echo "  If you bumped RUNNER_VERSION, update the pinned digest above." >&2
+    rm -f "${TARBALL}"
+    exit 1
+  }
 
   tar xzf "${TARBALL}"
   rm -f "${TARBALL}"
