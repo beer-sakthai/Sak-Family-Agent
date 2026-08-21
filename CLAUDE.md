@@ -236,6 +236,11 @@ read its first section before setting the variable, since a self-hosted runner
 must not be reachable by a fork's pull request. Only `ci.yml` is wired this way —
 the security scanners stay on GitHub-hosted runners on purpose.
 
+**Complete scanning ecosystem guide:** See [`.github/SCANNING.md`](.github/SCANNING.md)
+for comprehensive documentation of all eight code scanning tools (CodeQL, SonarCloud,
+Scorecard, Bandit, ESLint, Pylint, OSSAR, Continuous Security), their configurations,
+scopes, and how each fits into the CI/CD pipeline.
+
 The ones that gate a change:
 
 | Workflow | Trigger | What it does |
@@ -460,6 +465,59 @@ sequence locally before pushing; green CI is the bar for `main`.
 
 ---
 
+## Deployment
+
+The six personas deploy to a Linux VM as `systemd` **user** services, one
+templated unit per persona, each running the same container image. Full
+procedure in [`infra/vm-agents/README.md`](infra/vm-agents/README.md).
+
+| Piece | File |
+|---|---|
+| Image (all six personas; `python -m sakthai.telegram.bot`) | `Dockerfile` |
+| Publish to GHCR (tag push / dispatch) | `.github/workflows/publish-image.yml` |
+| Templated user unit | `infra/vm-agents/systemd/sakthai-telegram@.service` |
+| Config-bundle generator | `scripts/setup_vm_telegram_agents.py` |
+| Status check | `scripts/verify_vm_telegram_agents.py` |
+
+Four things about this are load-bearing and easy to undo by accident:
+
+- **The unit owns `SAKTHAI_PERSONA`, `SAKTHAI_HOME` and
+  `SAKTHAI_SYSTEM_PROMPT_FILE`**, deriving all three from the instance name
+  (`%i`). Do not set them in an `<agent>.env`: systemd applies
+  `EnvironmentFile=` *after* `Environment=`, so the env file wins. The generator
+  used to write one shared `SAKTHAI_HOME` into all six files, merging every
+  persona's memory into one database;
+  `tests/test_setup_vm_telegram_agents.py::test_generated_env_never_sets_what_the_systemd_unit_owns`
+  now fails if that returns.
+- **It is a *user* unit and cannot order against system units.** The original
+  `After=docker.service network-online.target` was inert — a user manager cannot
+  see those. `Restart=always` + `RestartSec=10` is what actually handles Docker
+  not being up yet. Deployment needs `loginctl enable-linger` and the VM user in
+  the `docker` group; neither is expressible in the unit.
+- **`Dockerfile` must not grow `SAKTHAI_SHELL_ALLOW`.** `Dockerfile.sandbox`
+  sets it deliberately (shell execution inside that throwaway container is the
+  point); this image is a long-lived bot reachable from Telegram, and setting it
+  there hands `run_command` to anyone who can message the bot. The publish
+  workflow asserts it is unset before pushing.
+- **Pin `IMAGE_NAME` to a digest**, not `:latest`. `ExecStartPre=docker pull`
+  runs on every restart, so a moving tag changes what runs with no change on
+  your side. The publish workflow prints the digest to pin.
+
+The dashboard (`apps/sak_agent_dashboard/`) deploys to the *same* host, reading
+the same `~/.sakthai` volume read-only — see the dashboard note under "Other
+subsystems". It cannot be hosted anywhere else: `src/lib/db.ts` opens the
+persona shards off the local filesystem with `better-sqlite3`.
+
+`infra/vm-agents/sakthai-agent-run.sh` was **retired**. It fetched secrets from
+Azure Key Vault via the VM's managed identity and ran the bot straight from a
+host `.venv` — a genuinely better secrets story, but nothing invoked it: the
+unit's `ExecStart` ran Docker instead, so the script described a deployment that
+was not happening while its own docstring claimed to be the entry point. Git
+history has it; restoring Key Vault as an `ExecStartPre` is the intended
+follow-up.
+
+---
+
 ## Runtime entry points
 
 One package, four ways in — all sharing `~/.sakthai/memory.db` by default
@@ -589,8 +647,9 @@ CLI/MCP → agent loop → guardrails → tool registry → MemoryStore → SQLi
 Each of the six personas gets its own memory shard, `~/.sakthai/<persona>/memory.db`,
 distinct from the legacy unscoped `~/.sakthai/memory.db`. This isn't a new
 mechanism: it's the same convention already used in production by
-`infra/vm-agents/sakthai-agent-run.sh`, which runs each deployed persona with
-`SAKTHAI_HOME=$HOME/.sakthai/$AGENT` — `memory_db_path()` (which does honor
+`infra/vm-agents/systemd/sakthai-telegram@.service`, which runs each deployed
+persona with `SAKTHAI_HOME=/data/.sakthai/%i` over a bind-mounted
+`~/.sakthai` — `memory_db_path()` (which does honor
 `SAKTHAI_HOME`) already resolved to that persona's shard for any process running
 that way. What's new is `config.persona_memory_db_path(persona)`, which computes
 the same `~/.sakthai/<persona>/memory.db` path directly from `Path.home()`,

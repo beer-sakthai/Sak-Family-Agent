@@ -155,7 +155,9 @@ for i, test in enumerate(tests):
             try:
                 json.loads(content)
                 checks.append("valid_json")
-            except:
+            except json.JSONDecodeError:
+                # Not JSON — that is the check failing, not an error. A bare
+                # `except:` here also swallowed KeyboardInterrupt and SystemExit.
                 pass
 
         result = {

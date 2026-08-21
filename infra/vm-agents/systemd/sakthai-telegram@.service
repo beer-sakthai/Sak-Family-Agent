@@ -1,36 +1,65 @@
 [Unit]
 Description=Sak Family Telegram Agent (%i)
 
-# This service depends on the Docker daemon and network connectivity.
-After=docker.service network-online.target
-Wants=docker.service network-online.target
+# This is a *user* unit — it is installed to ~/.config/systemd/user, enabled
+# with `systemctl --user`, and uses %h/%i specifiers. It therefore cannot order
+# itself against docker.service or network-online.target, which are *system*
+# units: a user manager has no visibility of them, and the previous
+# `After=docker.service network-online.target` here was silently inert.
+#
+# What actually makes this robust is Restart=always below: if Docker is not up
+# yet at login, the first start fails and systemd retries every 10s until it is.
+#
+# Two prerequisites the unit cannot express, both in the README:
+#   1. `loginctl enable-linger $USER` — otherwise the agents stop at logout.
+#   2. The user must be in the `docker` group to run `docker` without sudo.
 
 [Service]
 Type=simple
 
-# Define the container and image names.
-# Assumes the image is hosted on GitHub Container Registry.
+# IMAGE_NAME comes from common.env so the deployment can be pinned to a digest
+# without editing this unit — see the README. Pin it: the publish workflow
+# prints the digest to pin at the end of every run.
 Environment="CONTAINER_NAME=sakthai-telegram-%i"
-Environment="IMAGE_NAME=ghcr.io/beer-sakthai/sak-family-agent:latest"
 
-# Before starting, pull the latest image and clean up any old container.
-# The `|| true` ensures that the commands don't fail if the container doesn't exist.
+# The image is one build serving all six personas; %i selects which.
+# SAKTHAI_HOME points at this persona's own shard. Do NOT point two personas at
+# one path: it silently merges their memory and cycle-stage state.
+Environment="SAKTHAI_PERSONA=%i"
+Environment="SAKTHAI_HOME=/data/.sakthai/%i"
+Environment="SAKTHAI_SYSTEM_PROMPT_FILE=/app/personas/%i/SOUL.md"
+
+EnvironmentFile=%h/.config/sak-family-agents/common.env
+EnvironmentFile=%h/.config/sak-family-agents/%i.env
+
+# `-` prefix: these are cleanup, and must not fail the start when there is
+# nothing to clean up or the registry is briefly unreachable.
 ExecStartPre=-/usr/bin/docker pull ${IMAGE_NAME}
 ExecStartPre=-/usr/bin/docker stop ${CONTAINER_NAME}
 ExecStartPre=-/usr/bin/docker rm ${CONTAINER_NAME}
 
-# Run the agent inside a Docker container.
+# The host's ~/.sakthai is mounted at a fixed container path rather than at its
+# own host path, so nothing in the deployment depends on the VM account's name.
+# The image runs as UID 1000; if the VM account is not 1000, rebuild with
+# `--build-arg UID=$(id -u)` so the bind-mounted shard stays writable.
+#
+# `--read-only --tmpfs /tmp` is a worthwhile further hardening step but is NOT
+# enabled here: it was not verifiable at authoring time, and a container that
+# cannot write somewhere the runtime expects fails in exactly the silent,
+# restart-looping way this deployment was rewritten to eliminate. Try it on one
+# persona, confirm the bot still answers, then roll it out.
 ExecStart=/usr/bin/docker run --rm --name ${CONTAINER_NAME} \
   --env-file %h/.config/sak-family-agents/common.env \
   --env-file %h/.config/sak-family-agents/%i.env \
-  -v %h/Sak-Family-Agent:%h/Sak-Family-Agent:ro \
-  -v %h/.sakthai:%h/.sakthai \
+  --env SAKTHAI_PERSONA \
+  --env SAKTHAI_HOME \
+  --env SAKTHAI_SYSTEM_PROMPT_FILE \
+  --security-opt no-new-privileges \
+  -v %h/.sakthai:/data/.sakthai \
   ${IMAGE_NAME}
 
-# When stopping the service, also stop the container.
 ExecStop=/usr/bin/docker stop ${CONTAINER_NAME}
 
-# Let systemd handle restarts if the container exits unexpectedly.
 Restart=always
 RestartSec=10
 

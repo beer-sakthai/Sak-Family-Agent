@@ -343,16 +343,22 @@ class StressTestHarness:
         ]
 
         rejected = 0
+        unexpected: list[str] = []
         for bad_id in malicious_ids:
             try:
                 store.get_run_path(bad_id)
             except ValueError:
                 rejected += 1
-            except Exception as e:
-                pass
+            except Exception as e:  # noqa: BLE001 — the harness reports, never crashes
+                # Rejected, but not the way the contract says. Record it instead of
+                # discarding it: an unexpected type here is a finding, and counting
+                # it as a pass is how a harness reports green on a real break.
+                unexpected.append(f"{bad_id!r}: {type(e).__name__}: {e}")
 
-        passed = rejected == len(malicious_ids)
+        passed = rejected == len(malicious_ids) and not unexpected
         details = f"Rejected {rejected}/{len(malicious_ids)} path traversal / malformed run_id inputs with ValueError."
+        if unexpected:
+            details += " Unexpected exception types: " + "; ".join(unexpected)
         self.log(test_name, passed, details)
 
     def test_nonexistent_directory_handling(self):

@@ -147,6 +147,9 @@ def _validate_url(url_str: str) -> None:
     if parsed.username or parsed.password or "@" in (parsed.netloc or ""):
         raise ValueError("Userinfo (username/password) credentials in URLs are prohibited")
 
+    if "\\" in (parsed.netloc or ""):
+        raise ValueError("Backslash characters are not allowed in URL authority component")
+
     host = parsed.hostname
     if not host:
         raise ValueError(f"URL missing hostname: {url_str}")
@@ -166,7 +169,17 @@ def _validate_url(url_str: str) -> None:
             except ValueError:
                 continue
 
-            if not ip.is_global or ip.is_multicast:
+            if getattr(ip, "ipv4_mapped", None):
+                ip = ip.ipv4_mapped
+
+            if (
+                not ip.is_global
+                or ip.is_multicast
+                or ip.is_private
+                or ip.is_loopback
+                or ip.is_link_local
+                or ip.is_reserved
+            ):
                 raise ValueError(
                     f"SSRF Protection Blocked: Host '{host}' resolved to non-public/private IP: {ip_str}"
                 )
@@ -495,7 +508,10 @@ def _validate_shell_command(cmd_str: str) -> None:
                 _validate_filepath(sub)
             except PermissionError as exc:
                 raise PermissionError(f"Prohibited sensitive path in shell command: {exc}") from exc
-            except Exception:
+            except (ValueError, OSError):
+                # Not path-shaped (empty, control chars, unreadable) — nothing to
+                # validate. PermissionError, the actual finding, is re-raised above;
+                # any other exception is unexpected and deliberately propagates.
                 pass
 
     subcommands = _extract_shell_subcommands(str(cmd_str))
