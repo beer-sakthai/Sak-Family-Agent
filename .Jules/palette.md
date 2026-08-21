@@ -25,3 +25,7 @@
 ## 2026-08-21 - Semantic Expandable Stage Cards in Multi-Agent Pipelines
 **Learning:** Expandable workflow stage cards implemented as `<div>` tags with `onClick` handlers fail keyboard accessibility standards (unreachable via Tab, missing `aria-expanded` and focus rings).
 **Action:** Render interactive expandable cards using semantic `<button type="button">` elements with explicit `aria-expanded`, descriptive `aria-label`, full block width styling (`w-full text-left`), and focus rings (`focus-visible:ring-2`).
+
+## 2026-08-21 - Accessible Session Transcript Explorer Controls and Dialog Semantics
+**Learning:** Data table explorer controls (search input, filter dropdowns, pagination buttons, modal inspectors) often omit explicit `aria-label` names, `aria-live="polite"` result count announcements, and `role="dialog"` modal attributes.
+**Action:** Always complement search inputs and select controls with explicit `aria-label`s, visible focus rings (`focus-visible:ring-2`), polite live regions for result counts, and `role="dialog"` modal containers.
