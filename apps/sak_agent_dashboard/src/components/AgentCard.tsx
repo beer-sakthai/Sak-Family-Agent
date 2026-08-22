@@ -255,6 +255,8 @@ export function AgentCard({ agent }: AgentCardProps) {
             type="button"
             onClick={() => setIsDispatchOpen(true)}
             aria-label={`Dispatch ${agent.name}`}
+            aria-expanded={isDispatchOpen}
+            title={`Open live task dispatch console for ${agent.name}`}
             className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-cyan-600/20 to-teal-600/20 hover:from-cyan-600/30 hover:to-teal-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-semibold font-mono transition-all duration-200 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             <Play className="h-3.5 w-3.5 fill-cyan-400 text-cyan-400" />
