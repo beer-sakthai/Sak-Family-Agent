@@ -129,9 +129,10 @@ function CopyButton({ payload }: { payload: string }) {
   };
   return (
     <button
+      type="button"
       onClick={handleCopy}
-      className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700/60 text-slate-300 hover:text-white hover:border-cyan-500/40 transition-colors"
-      aria-label="Copy configuration"
+      className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700/60 text-slate-300 hover:text-white hover:border-cyan-500/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+      aria-label="Copy server registration snippet"
     >
       {copied ? (
         <>
@@ -434,8 +435,10 @@ function ServerCard({ server }: { server: McpServerSpec }) {
               />
             </div>
             <button
+              type="button"
               onClick={() => setShowDelegatedOnly((v) => !v)}
-              className={`text-[11px] font-mono px-2.5 py-1.5 rounded-lg border transition-colors ${
+              aria-pressed={showDelegatedOnly}
+              className={`text-[11px] font-mono px-2.5 py-1.5 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
                 showDelegatedOnly
                   ? "bg-amber-500/20 text-amber-200 border-amber-500/40"
                   : "bg-slate-800/70 text-slate-400 border-slate-700/60 hover:text-slate-200"
@@ -455,8 +458,10 @@ function ServerCard({ server }: { server: McpServerSpec }) {
           {(Object.keys(CATEGORY_LABELS) as Array<McpActionCategory | "all">).map((k) => (
             <button
               key={k}
+              type="button"
               onClick={() => setCategory(k)}
-              className={`px-2.5 py-1 rounded-lg border transition-colors ${
+              aria-pressed={category === k}
+              className={`px-2.5 py-1 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
                 category === k
                   ? "bg-cyan-500/15 text-cyan-200 border-cyan-500/40"
                   : "bg-slate-800/60 text-slate-400 border-slate-700/60 hover:text-slate-200"
@@ -566,8 +571,10 @@ function ServerCard({ server }: { server: McpServerSpec }) {
           {server.registrationTargets.map((t, i) => (
             <button
               key={t.label}
+              type="button"
               onClick={() => setSelectedTarget(i)}
-              className={`px-2.5 py-1 rounded-lg border transition-colors ${
+              aria-pressed={selectedTarget === i}
+              className={`px-2.5 py-1 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
                 selectedTarget === i
                   ? "bg-emerald-500/15 text-emerald-200 border-emerald-500/40"
                   : "bg-slate-800/60 text-slate-400 border-slate-700/60 hover:text-slate-200"
