@@ -32,6 +32,7 @@ from agent_workflow.state import StateContext, StateInterpolationError
 
 class ExecutionError(Exception):
     """Base exception for workflow execution failures."""
+
     pass
 
 
@@ -51,7 +52,9 @@ def _validate_filepath(filepath: Any) -> Path:
         or ".." in normalized_str.split("/")
         or path_str.startswith("~")
     ):
-        raise PermissionError(f"Directory path traversal or user home shortcut is prohibited: '{path_str}'")
+        raise PermissionError(
+            f"Directory path traversal or user home shortcut is prohibited: '{path_str}'"
+        )
 
     # Resolve target absolute to Path
     try:
@@ -62,7 +65,19 @@ def _validate_filepath(filepath: Any) -> Path:
     # Critical system roots (e.g., /etc, /bin, /var, /boot, /dev, /lib, /lib64, /proc, /sys, /sbin, /usr)
     parts = [p.lower() for p in target.parts]
     system_roots = {
-        "etc", "bin", "var", "boot", "dev", "lib", "lib64", "proc", "sys", "sbin", "usr", "root", "opt",
+        "etc",
+        "bin",
+        "var",
+        "boot",
+        "dev",
+        "lib",
+        "lib64",
+        "proc",
+        "sys",
+        "sbin",
+        "usr",
+        "root",
+        "opt",
     }
 
     if target.is_absolute():
@@ -71,12 +86,23 @@ def _validate_filepath(filepath: Any) -> Path:
         if non_root_parts:
             first_dir = non_root_parts[0].lower()
             if first_dir in system_roots:
-                raise PermissionError(f"Access to critical system directory is prohibited: '{path_str}'")
+                raise PermissionError(
+                    f"Access to critical system directory is prohibited: '{path_str}'"
+                )
 
     # Blocks access to sensitive directories (e.g., .git, .ssh, .aws)
     sensitive_dirs = {
-        ".git", ".ssh", ".aws", ".jules", ".config", ".npm",
-        ".docker", ".kube", ".gnupg", ".gcloud", ".azure",
+        ".git",
+        ".ssh",
+        ".aws",
+        ".jules",
+        ".config",
+        ".npm",
+        ".docker",
+        ".kube",
+        ".gnupg",
+        ".gcloud",
+        ".azure",
     }
     if any(part in sensitive_dirs for part in parts):
         raise PermissionError(f"Access to sensitive directory is prohibited: '{path_str}'")
@@ -84,12 +110,48 @@ def _validate_filepath(filepath: Any) -> Path:
     # Blocks access to credential/sensitive file basenames (e.g., .env, memory.db, id_rsa)
     filename = target.name.lower()
     sensitive_basenames = {
-        ".env", "memory.db", "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "id_ecdsa_sk", "id_ed25519_sk", "id_xmss",
-        "known_hosts", "authorized_keys", "credentials", "credentials.json", "shadow", "passwd", "sudoers",
-        ".bash_history", ".zsh_history", ".python_history", ".history", ".netrc", ".npmrc", ".pypirc",
-        "gshadow", "group", ".bashrc", ".zshrc", ".profile", ".bash_profile", ".gitconfig", ".zprofile",
-        ".yarnrc", ".yarnrc.yml", ".git-credentials", ".node_repl_history", ".mysql_history", ".psql_history",
-        ".sqlite_history", ".rediscli_history", ".mongo_history", ".pgpass", ".my.cnf"
+        ".env",
+        "memory.db",
+        "id_rsa",
+        "id_dsa",
+        "id_ecdsa",
+        "id_ed25519",
+        "id_ecdsa_sk",
+        "id_ed25519_sk",
+        "id_xmss",
+        "known_hosts",
+        "authorized_keys",
+        "credentials",
+        "credentials.json",
+        "shadow",
+        "passwd",
+        "sudoers",
+        ".bash_history",
+        ".zsh_history",
+        ".python_history",
+        ".history",
+        ".netrc",
+        ".npmrc",
+        ".pypirc",
+        "gshadow",
+        "group",
+        ".bashrc",
+        ".zshrc",
+        ".profile",
+        ".bash_profile",
+        ".gitconfig",
+        ".zprofile",
+        ".yarnrc",
+        ".yarnrc.yml",
+        ".git-credentials",
+        ".node_repl_history",
+        ".mysql_history",
+        ".psql_history",
+        ".sqlite_history",
+        ".rediscli_history",
+        ".mongo_history",
+        ".pgpass",
+        ".my.cnf",
     }
     sensitive_suffixes = (".pem", ".key", ".pfx", ".p12")
 
@@ -99,7 +161,13 @@ def _validate_filepath(filepath: Any) -> Path:
 
     # Renamed or backed-up private keys (id_rsa.bak, id_ed25519.pub, ...).
     sensitive_key_stems = (
-        "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "id_ecdsa_sk", "id_ed25519_sk", "id_xmss",
+        "id_rsa",
+        "id_dsa",
+        "id_ecdsa",
+        "id_ed25519",
+        "id_ecdsa_sk",
+        "id_ed25519_sk",
+        "id_xmss",
     )
 
     if (
@@ -121,7 +189,9 @@ class WorkflowExecutor:
         self.store = RunHistoryStore(storage_dir)
         self.max_workers = max_workers
 
-    async def _execute_action(self, action: str, params: Dict[str, Any], step_id: str) -> Dict[str, Any]:
+    async def _execute_action(
+        self, action: str, params: Dict[str, Any], step_id: str
+    ) -> Dict[str, Any]:
         """Dispatch step action to built-in action handlers."""
         act = (action or "").lower().strip()
 
@@ -131,7 +201,9 @@ class WorkflowExecutor:
         elif act in ("shell", "command", "bash", "sh"):
             cmd = params.get("cmd") or params.get("command") or params.get("script") or ""
             if not cmd:
-                raise ValueError(f"Step '{step_id}' action '{action}' missing 'cmd' or 'command' parameter.")
+                raise ValueError(
+                    f"Step '{step_id}' action '{action}' missing 'cmd' or 'command' parameter."
+                )
 
             proc = await asyncio.create_subprocess_shell(
                 str(cmd),
@@ -142,7 +214,9 @@ class WorkflowExecutor:
             exit_code = proc.returncode or 0
 
             if exit_code != 0 and params.get("check", False):
-                raise RuntimeError(f"Command '{cmd}' failed with exit code {exit_code}: {stderr_b.decode().strip()}")
+                raise RuntimeError(
+                    f"Command '{cmd}' failed with exit code {exit_code}: {stderr_b.decode().strip()}"
+                )
 
             return {
                 "stdout": stdout_b.decode(errors="replace").strip(),
@@ -186,11 +260,7 @@ class WorkflowExecutor:
                 u = params.get("user_result")
                 t = params.get("tag_result")
                 return {
-                    "summary": {
-                        "user": u,
-                        "tags": t,
-                        "count": len(t) if isinstance(t, list) else 0
-                    }
+                    "summary": {"user": u, "tags": t, "count": len(t) if isinstance(t, list) else 0}
                 }
             return dict(params)
 
@@ -217,19 +287,13 @@ class WorkflowExecutor:
             if not code:
                 return dict(params)
 
-            # Safe execution context
-            eval_globals = {"__builtins__": __builtins__, "json": json, "os": os, "sys": sys}
-            eval_locals = dict(params)
+            import ast
 
             try:
-                # Try evaluating as expression first
-                res = eval(code, eval_globals, eval_locals)
+                res = ast.literal_eval(str(code))
                 return {"result": res, "output": res}
-            except SyntaxError:
-                # Execute as statement block
-                exec(code, eval_globals, eval_locals)
-                out_locals = {k: v for k, v in eval_locals.items() if k not in params and not k.startswith("_")}
-                return out_locals if out_locals else {"status": "success"}
+            except (ValueError, SyntaxError) as exc:
+                raise ValueError(f"Invalid or unsafe expression in python action: {exc}")
 
         elif act == "fail_then_succeed":
             if not hasattr(self, "_transient_attempts"):
@@ -260,7 +324,9 @@ class WorkflowExecutor:
 
             scheme = (parsed.scheme or "").lower()
             if scheme not in ("http", "https"):
-                raise ValueError(f"Forbidden URL scheme '{scheme}'. Only HTTP and HTTPS are allowed.")
+                raise ValueError(
+                    f"Forbidden URL scheme '{scheme}'. Only HTTP and HTTPS are allowed."
+                )
 
             host = parsed.hostname
             if not host:
@@ -273,6 +339,7 @@ class WorkflowExecutor:
             try:
                 import socket
                 import ipaddress
+
                 addrinfos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
                 for _family, _type, _proto, _canon, sockaddr in addrinfos:
                     ip_str = sockaddr[0]
@@ -293,6 +360,7 @@ class WorkflowExecutor:
             req = urllib.request.Request(url_str, headers=params.get("headers", {}))
 
             loop = asyncio.get_event_loop()
+
             def _fetch():
                 with urllib.request.urlopen(req, timeout=params.get("timeout", 10)) as resp:
                     body = resp.read().decode("utf-8", errors="replace")
@@ -377,7 +445,9 @@ class WorkflowExecutor:
             runnable_steps: List[StepDefinition] = []
             for step in batch:
                 # Check if any dependency failed or was skipped
-                has_failed_dep = any(dep in failed_step_ids or dep in skipped_step_ids for dep in step.depends_on)
+                has_failed_dep = any(
+                    dep in failed_step_ids or dep in skipped_step_ids for dep in step.depends_on
+                )
                 if has_failed_dep:
                     skipped_step_ids.add(step.id)
                     res = StepResult(
