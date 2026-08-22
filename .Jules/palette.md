@@ -29,3 +29,7 @@
 ## 2026-08-21 - Accessible Session Transcript Explorer Controls and Dialog Semantics
 **Learning:** Data table explorer controls (search input, filter dropdowns, pagination buttons, modal inspectors) often omit explicit `aria-label` names, `aria-live="polite"` result count announcements, and `role="dialog"` modal attributes.
 **Action:** Always complement search inputs and select controls with explicit `aria-label`s, visible focus rings (`focus-visible:ring-2`), polite live regions for result counts, and `role="dialog"` modal containers.
+
+## 2026-08-22 - Labeled Buttons and ARIA Pressed Selection States
+**Learning:** Adding an `aria-label` attribute to a button with visible text overrides its accessible name, violating WCAG Label in Name standards and breaking text-based queries.
+**Action:** Preserve visible text as the accessible name for buttons with text content, and use `type="button"`, `aria-pressed={isActive}`, and visible focus indicators (`focus-visible:ring-2`) for keyboard accessibility.
