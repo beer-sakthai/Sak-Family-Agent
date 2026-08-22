@@ -1,0 +1,1 @@
+{"pattern": "To test Next.js API route handlers using NextRequest/NextResponse, construct a Request object, pass it to the handler module, and await response.json()"}
