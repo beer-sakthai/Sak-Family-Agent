@@ -5,8 +5,8 @@ Fixes YAML frontmatter, descriptions, and enriches short skill body content.
 """
 
 import os
-import glob
 import re
+
 import yaml
 
 AUDIT_ROOTS = [
@@ -22,13 +22,13 @@ def heal_skill_file(filepath):
         return False
 
     try:
-        with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+        with open(filepath, encoding="utf-8", errors="replace") as f:
             content = f.read()
     except Exception:
         return False
 
     folder_name = os.path.basename(os.path.dirname(filepath))
-    modified = False
+
 
     frontmatter_match = re.match(r"^---\s*\n(.*?)\n---\s*\n(.*)$", content, re.DOTALL)
 
@@ -54,7 +54,7 @@ def heal_skill_file(filepath):
 
     if len(body) < 30:
         body = f"# {name}\n\n## Overview\nThis skill provides automated runbooks, tools, and operational workflows for `{name}` within the Sak-Family agent ecosystem.\n\n## Execution Workflow\n1. Initialize project and environmental context.\n2. Execute procedures according to task specifications.\n3. Validate outputs with automated quality gates."
-        modified = True
+
 
     clean_yaml = f"---\nname: {name}\ndescription: {yaml.safe_dump(str(desc)).strip()}\n---\n\n"
     new_content = clean_yaml + body + "\n"
