@@ -89,7 +89,8 @@ export function SelfHealingConsole() {
         <button
           onClick={() => refresh()}
           disabled={fetchLoading || actionLoading}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono text-slate-300 border border-slate-700 transition-colors disabled:opacity-50 self-start sm:self-auto"
+          aria-label="Refresh recovery telemetry state"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono text-slate-300 border border-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-rose-400 focus:outline-none disabled:opacity-50 self-start sm:self-auto"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${fetchLoading ? "animate-spin text-rose-400" : ""}`} />
           Refresh State
@@ -149,7 +150,8 @@ export function SelfHealingConsole() {
                       <button
                         onClick={() => handleResetCircuit(item.persona)}
                         disabled={actionLoading}
-                        className="text-[11px] font-mono flex items-center gap-1 text-rose-300 hover:text-white bg-rose-900/40 hover:bg-rose-800/60 px-2 py-1 rounded border border-rose-700/60 transition-colors"
+                        aria-label={`Reset circuit breaker for ${item.persona}`}
+                        className="text-[11px] font-mono flex items-center gap-1 text-rose-300 hover:text-white bg-rose-900/40 hover:bg-rose-800/60 px-2 py-1 rounded border border-rose-700/60 transition-colors focus-visible:ring-2 focus-visible:ring-rose-400 focus:outline-none disabled:opacity-50"
                       >
                         <Power className="h-3 w-3" />
                         Reset
@@ -240,7 +242,8 @@ export function SelfHealingConsole() {
                       <button
                         onClick={() => handleReplay(inc.id)}
                         disabled={replayingId === inc.id}
-                        className="text-[11px] font-mono flex items-center gap-1 text-cyan-300 hover:text-white bg-cyan-950 hover:bg-cyan-900 px-2 py-0.5 rounded border border-cyan-800/60 transition-colors disabled:opacity-50"
+                        aria-label={`Replay DLQ incident ${inc.id} for ${inc.persona}`}
+                        className="text-[11px] font-mono flex items-center gap-1 text-cyan-300 hover:text-white bg-cyan-950 hover:bg-cyan-900 px-2 py-0.5 rounded border border-cyan-800/60 transition-colors focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none disabled:opacity-50"
                       >
                         <RotateCcw
                           className={`h-3 w-3 ${

@@ -82,10 +82,13 @@ export function SkillsToolsPanel() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {catalog.skills.map((skill) => (
-              <div
+              <button
                 key={skill.slug}
+                type="button"
                 onClick={() => setSelectedSkill(skill)}
-                className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                aria-pressed={selectedSkill.slug === skill.slug}
+                aria-label={`Select skill ${skill.name} by ${skill.authorPersona}`}
+                className={`w-full text-left p-4 rounded-xl border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                   selectedSkill.slug === skill.slug
                     ? "bg-blue-950/30 border-blue-500 shadow-md shadow-blue-500/10"
                     : "bg-zinc-900/70 border-zinc-800 hover:border-zinc-700"
@@ -107,7 +110,7 @@ export function SkillsToolsPanel() {
                     {skill.guardrailCount} Gates
                   </span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -154,16 +157,22 @@ export function SkillsToolsPanel() {
             </div>
 
             <button
+              type="button"
               onClick={handleDispatch}
               disabled={executing}
-              className="w-full py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              aria-label={`Execute skill ${selectedSkill.name} via ${selectedSkill.authorPersona}`}
+              className="w-full py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
             >
               <Play className="w-3.5 h-3.5" />
               {executing ? "Auditing AST & Dispatching..." : `Execute via ${selectedSkill.authorPersona}`}
             </button>
 
             {dispatchResult && (
-              <div className="p-2.5 rounded bg-zinc-950 border border-zinc-800 text-[11px] font-mono text-zinc-300">
+              <div
+                role="status"
+                aria-live="polite"
+                className="p-2.5 rounded bg-zinc-950 border border-zinc-800 text-[11px] font-mono text-zinc-300"
+              >
                 {dispatchResult}
               </div>
             )}
