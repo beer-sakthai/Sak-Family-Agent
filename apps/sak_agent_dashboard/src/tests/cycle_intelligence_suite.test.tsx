@@ -137,10 +137,14 @@ describe("Cycle UI Components Render", () => {
     expect(screen.getAllByText(/Hugging Face Hub/i).length).toBeGreaterThan(0);
   });
 
-  it("renders SkillsToolsPanel with AST firewall", () => {
+  it("renders SkillsToolsPanel with AST firewall and accessible skill buttons", () => {
     render(<SkillsToolsPanel />);
     expect(screen.getByTestId("skills-tools-panel")).toBeDefined();
     expect(screen.getAllByText(/Skills & AST Tool-Guardrails/i).length).toBeGreaterThan(0);
+
+    const skillButtons = screen.getAllByRole("button", { name: /Select skill/i });
+    expect(skillButtons.length).toBeGreaterThan(0);
+    expect(skillButtons[0].getAttribute("aria-pressed")).toBe("true");
   });
 
   it("renders BenchmarkArena with rankings and supports keyboard accessible selection", () => {
