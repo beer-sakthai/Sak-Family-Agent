@@ -11,6 +11,9 @@ errors = []
 warnings = []
 ok_count = 0
 stale_pats = ["placeholder", "TODO", "FIXME", "NEEDS UPDATE", "stub", "not yet written"]
+compiled_stale_pats = [
+    (pat, re.compile(re.escape(pat), re.IGNORECASE)) for pat in stale_pats
+]
 
 all_files = sorted(
     os.path.join(root, f)
@@ -37,8 +40,8 @@ for path in all_files:
     elif fm_end <= 3:
         errors.append(f"BAD_FM {rel}")
 
-    for pat in stale_pats:
-        if re.search(pat, content, re.IGNORECASE):
+    for pat, pat_re in compiled_stale_pats:
+        if pat_re.search(content):
             txt = content[content.upper().find(pat.upper()):content.upper().find(pat.upper())+40]
             if "todo" in pat.lower():
                 # heuristic: if "todo" is near tags/status/kanban it's legit
