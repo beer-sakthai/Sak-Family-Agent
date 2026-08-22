@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
 import { getHubEcosystemData } from "../lib/hub";
 import { getSkillsCatalogData } from "../lib/skillsCatalog";
@@ -143,10 +143,22 @@ describe("Cycle UI Components Render", () => {
     expect(screen.getAllByText(/Skills & AST Tool-Guardrails/i).length).toBeGreaterThan(0);
   });
 
-  it("renders BenchmarkArena with rankings", () => {
+  it("renders BenchmarkArena with rankings and supports keyboard accessible selection", () => {
     render(<BenchmarkArena />);
     expect(screen.getByTestId("benchmark-arena-panel")).toBeDefined();
     expect(screen.getAllByText(/Benchmark Arena/i).length).toBeGreaterThan(0);
+
+    const rowButtons = screen.getAllByRole("button", { name: /Select .* benchmark scores/i });
+    expect(rowButtons.length).toBeGreaterThan(0);
+    expect(rowButtons[0].getAttribute("aria-pressed")).toBe("true");
+
+    // Select second row using Enter key
+    fireEvent.keyDown(rowButtons[1], { key: "Enter", code: "Enter" });
+    expect(rowButtons[1].getAttribute("aria-pressed")).toBe("true");
+
+    // Select first row using Space key
+    fireEvent.keyDown(rowButtons[0], { key: " ", code: "Space" });
+    expect(rowButtons[0].getAttribute("aria-pressed")).toBe("true");
   });
 
   it("renders MemoryRagTelegramPanel with SQLite graph", () => {
