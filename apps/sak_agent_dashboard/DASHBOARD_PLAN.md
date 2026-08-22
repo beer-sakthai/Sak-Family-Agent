@@ -120,6 +120,11 @@ back so the dashboard stays self-contained and license-clean.
 
 ## Vercel deployment
 
+Project `houseofsak/sak-family-agent`, Root Directory `apps/sak_agent_dashboard`. It was
+deploying `Error` with an empty preview URL — the vercel[bot] comment on #1091 records
+`nextCommitStatus: FAILED` roughly 40 seconds after the push, i.e. it failed before the
+build got far. First green deployment: PR #1092.
+
 - [x] 2026-08-22 `vercel.json` — framework, install and build commands, so the only
   setting left in the Vercel UI is **Root Directory = `apps/sak_agent_dashboard`**
   (unavoidable: the repository root has no `package.json`).

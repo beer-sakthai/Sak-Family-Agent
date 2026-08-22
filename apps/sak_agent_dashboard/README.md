@@ -112,11 +112,11 @@ a waterfall.
 
 ## Deploying to Vercel
 
-The Vercel project must set **Root Directory** to `apps/sak_agent_dashboard`. That is the
-one setting `vercel.json` cannot carry, and it is not optional: the repository root has no
-`package.json`, so a project left at the default root fails detection before it installs
-anything. Everything else — framework, install and build commands — comes from the
-`vercel.json` beside this file.
+The project is `houseofsak/sak-family-agent`, and its **Root Directory** is
+`apps/sak_agent_dashboard`. Keep it there. That is the one setting `vercel.json` cannot
+carry, and it is not optional: the repository root has no `package.json`, so a project
+left at the default root fails detection before it installs anything. Everything else —
+framework, install and build commands — comes from the `vercel.json` beside this file.
 
 Leave *Include source files outside of the Root Directory* enabled. The dashboard is not
 self-contained: `src/lib/docs.ts`, `designSpecs.ts`, `mcpSdk.ts` and `mcpServers.ts` read
