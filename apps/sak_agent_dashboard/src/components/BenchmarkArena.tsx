@@ -51,6 +51,10 @@ export function BenchmarkArena() {
           <span className="text-xs text-zinc-400">Tested across 17,800+ total eval samples</span>
         </div>
 
+        <div className="sr-only" aria-live="polite" aria-atomic="true">
+          Selected {selectedPersona.personaName} benchmark results. Overall score: {selectedPersona.overallScore}%.
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-zinc-950/60 text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-800">
@@ -67,14 +71,26 @@ export function BenchmarkArena() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/60">
-              {data.leaderboard.map((item, idx) => (
-                <tr
-                  key={item.personaSlug}
-                  onClick={() => setSelectedPersona(item)}
-                  className={`hover:bg-zinc-800/40 cursor-pointer transition-colors ${
-                    selectedPersona.personaSlug === item.personaSlug ? "bg-emerald-950/20" : ""
-                  }`}
-                >
+              {data.leaderboard.map((item, idx) => {
+                const isSelected = selectedPersona.personaSlug === item.personaSlug;
+                return (
+                  <tr
+                    key={item.personaSlug}
+                    tabIndex={0}
+                    role="button"
+                    aria-pressed={isSelected}
+                    aria-label={`Select ${item.personaName} benchmark scores`}
+                    onClick={() => setSelectedPersona(item)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedPersona(item);
+                      }
+                    }}
+                    className={`hover:bg-zinc-800/40 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                      isSelected ? "bg-emerald-950/20" : ""
+                    }`}
+                  >
                   <td className="py-3 px-4 font-medium text-zinc-200 flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-zinc-800 text-zinc-300 flex items-center justify-center text-[10px] font-bold">
                       #{idx + 1}
@@ -100,7 +116,8 @@ export function BenchmarkArena() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
