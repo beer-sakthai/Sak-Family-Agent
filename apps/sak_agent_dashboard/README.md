@@ -110,6 +110,43 @@ spans come from the Python package's `sakthai.telemetry` module, written to
 `~/.sakthai/traces.jsonl` when `SAKTHAI_OTEL_ENABLED` is set; the Traces tab renders them as
 a waterfall.
 
+## Deploying to Vercel
+
+The project is `houseofsak/sak-family-agent`, and its **Root Directory** is
+`apps/sak_agent_dashboard`. Keep it there. That is the one setting `vercel.json` cannot
+carry, and it is not optional: the repository root has no `package.json`, so a project
+left at the default root fails detection before it installs anything. Everything else —
+framework, install and build commands — comes from the `vercel.json` beside this file.
+
+Leave *Include source files outside of the Root Directory* enabled. The dashboard is not
+self-contained: `src/lib/docs.ts`, `designSpecs.ts`, `mcpSdk.ts` and `mcpServers.ts` read
+`docs/`, `personas/` and `services/` from the monorepo root, so the build needs the whole
+checkout even though the deployed function only carries the narrow set of files named by
+`outputFileTracingIncludes` in `next.config.mjs`.
+
+Three things about this deployment are load-bearing:
+
+- **`engines.node` must be a `MAJOR.x` range.** Vercel matches it against its own runtimes
+  and rejects anything else with `Found invalid Node.js Version` before the build starts.
+  It reads `22.x` here; the Dockerfile is what pins the exact `22.22.2` patch.
+- **`output: "standalone"` is switched off on Vercel** (`process.env.VERCEL` in
+  `next.config.mjs`). Vercel builds its own serverless output from the same trace and never
+  runs `.next/standalone/server.js`, so emitting it there just duplicates the trace.
+  Docker and local builds still get it.
+- **The repo-root readers are traced explicitly.** Their `process.cwd()/..` traversals carry
+  `turbopackIgnore` comments, without which Turbopack gives up and traces the entire
+  monorepo — `personas/` and the vendored M365 SDK included — taking the trace from 77 MB to
+  121 MB against Vercel's 250 MB uncompressed function limit. If you add a route that reads
+  a new path under the repo root, add its glob to `outputFileTracingIncludes` or it will read
+  an empty directory in production. Note the keys there are matched as globs: a literal
+  `"/docs/[page]"` key traces nothing, because `[page]` is a character class — use
+  `"/docs/**"`.
+
+There is no memory data on Vercel. `src/lib/db.ts` reads `~/.sakthai/<persona>/memory.db`
+off the local filesystem with `better-sqlite3`, which no serverless deployment has, so the
+memory-backed panels report `demo` there. A deployment that needs live memory is the Docker
+one in `infra/vm-agents/`, which runs on the same host as the agents.
+
 ## Related
 
 - `personas/sakthai/sakthai/dashboard/data.py` — the Python KPI collector behind `sakthai web`

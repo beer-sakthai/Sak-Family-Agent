@@ -115,3 +115,37 @@ back so the dashboard stays self-contained and license-clean.
 - **Not copying source files** from upstream repos into this repo. Each addition is a *dashboard view* of the upstream (concepts, commands, install lines, links). This keeps license and update-tracking clean and avoids duplicating docs that live upstream.
 - **Not scraping training-data-analyst notebook contents** — 8.6k-star repo, 8k+ commits, way too large. The Learning tab links to specific top-level dirs and calls out the ones actually relevant to agent development.
 - **Not adding another SpecKit tab** — enhancing the existing one is the right move; the upstream and the local install describe the same tool at two layers.
+
+---
+
+## Vercel deployment
+
+Project `houseofsak/sak-family-agent`, Root Directory `apps/sak_agent_dashboard`. It was
+deploying `Error` with an empty preview URL — the vercel[bot] comment on #1091 records
+`nextCommitStatus: FAILED` roughly 40 seconds after the push, i.e. it failed before the
+build got far. First green deployment: PR #1092.
+
+- [x] 2026-08-22 `vercel.json` — framework, install and build commands, so the only
+  setting left in the Vercel UI is **Root Directory = `apps/sak_agent_dashboard`**
+  (unavoidable: the repository root has no `package.json`).
+- [x] 2026-08-22 `engines.node` `>=22.22.2` → `22.x` — Vercel matches `engines.node`
+  against its own runtimes and rejects a patch-level range with
+  `Found invalid Node.js Version` before the build starts.
+- [x] 2026-08-22 `output: "standalone"` switched off when `process.env.VERCEL` is set —
+  Vercel builds its own serverless output from the same trace and never runs
+  `.next/standalone/server.js`. Docker and local builds still emit it.
+- [x] 2026-08-22 `turbopackIgnore` on the `process.cwd()/..` traversals in `docs.ts`,
+  `designSpecs.ts` and `mcpSdk.ts`, plus explicit `outputFileTracingIncludes` for the
+  files they read. The build was warning `Dynamic filesystem access causes tracing of
+  the whole project` on all three: the trace carried 121 MB — all of `personas/` and the
+  vendored M365 SDK — into every function, against a 250 MB uncompressed limit. Now 77 MB
+  and only the 51 `docs/*.md`, 9 spec files and 9 `mcp/*.py` the routes actually read.
+
+### Known limitation, not a defect
+
+The memory-backed panels report `demo` on Vercel. `src/lib/db.ts` reads
+`~/.sakthai/<persona>/memory.db` with `better-sqlite3`, and no serverless deployment has
+that filesystem — the root `PLAN.md` already records this as the reason the *live* dashboard
+deploys onto the agent VM. Vercel is a viable host for everything else the dashboard
+renders (docs, design specs, MCP catalogs, curated reference panels); it is not a way to
+get live memory data.

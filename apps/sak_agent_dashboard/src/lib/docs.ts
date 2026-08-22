@@ -11,9 +11,14 @@ export interface DocArticle {
 export function resolveRepoRoot(): string {
   const override = process.env.SAK_REPO_ROOT;
   if (override && override.trim().length > 0) return override;
+  // `turbopackIgnore` on the traversals: without it Turbopack's static analysis
+  // sees an unbounded `process.cwd()/..` and traces the *entire monorepo* into
+  // every serverless function (121 MB locally — `personas/` and the vendored
+  // M365 SDK included). The files these readers actually need are declared
+  // explicitly by `outputFileTracingIncludes` in `next.config.mjs`.
   const candidates = [
-    path.resolve(process.cwd(), "..", ".."),
-    path.resolve(process.cwd(), ".."),
+    path.resolve(/* turbopackIgnore: true */ process.cwd(), "..", ".."),
+    path.resolve(/* turbopackIgnore: true */ process.cwd(), ".."),
     process.cwd(),
   ];
   for (const c of candidates) {
@@ -23,7 +28,7 @@ export function resolveRepoRoot(): string {
       // ignore
     }
   }
-  return path.resolve(process.cwd(), "..", "..");
+  return path.resolve(/* turbopackIgnore: true */ process.cwd(), "..", "..");
 }
 
 export function getAllDocSlugs(): string[] {
