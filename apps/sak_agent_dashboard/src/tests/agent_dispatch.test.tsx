@@ -70,6 +70,41 @@ describe("Agent Dispatch System", () => {
       expect(json.error).toContain("Invalid persona");
     });
 
+
+
+    it("rejects request with non-string persona", async () => {
+      const req = new NextRequest("http://localhost:3000/api/dispatch", {
+        method: "POST",
+        body: JSON.stringify({
+          persona: 12345,
+          task: "Some task",
+        }),
+      });
+
+      const res = await dispatchHandler(req);
+      expect(res.status).toBe(400);
+
+      const json = await res.json();
+      expect(json.success).toBe(false);
+      expect(json.error).toContain("Missing or invalid 'persona' field");
+    });
+
+    it("rejects request with missing persona", async () => {
+      const req = new NextRequest("http://localhost:3000/api/dispatch", {
+        method: "POST",
+        body: JSON.stringify({
+          task: "Some task",
+        }),
+      });
+
+      const res = await dispatchHandler(req);
+      expect(res.status).toBe(400);
+
+      const json = await res.json();
+      expect(json.success).toBe(false);
+      expect(json.error).toContain("Missing or invalid 'persona' field");
+    });
+
     it("rejects request with empty task", async () => {
       const req = new NextRequest("http://localhost:3000/api/dispatch", {
         method: "POST",
