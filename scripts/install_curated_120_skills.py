@@ -4,11 +4,9 @@ Install and register the Curated Top 120 Skills to Gemini CLI and Antigravity (A
 Generates docs/curated-skills-120.json and docs/curated-skills-120.md.
 """
 
-import os
 import glob
-import re
 import json
-import yaml
+import os
 import shutil
 
 TARGETS = [
