@@ -20,6 +20,39 @@ class DummyFact:
     tags: list[str]
 
 
+def baseline_parse(facts: list[DummyFact]) -> list[dict[str, Any]]:
+    """Parse facts individually using json.loads."""
+    results: list[dict[str, Any]] = []
+    for rf in facts:
+        try:
+            payload = json.loads(rf.value)
+        except (TypeError, ValueError):
+            payload = {
+                "client": rf.key or "Unknown",
+                "amount": 0.0,
+                "type": "setup",
+                "date": "",
+            }
+        results.append(payload)
+    return results
+
+
+def batch_parse(facts: list[DummyFact]) -> list[dict[str, Any]]:
+    """Parse facts using the batch json parser."""
+    results: list[dict[str, Any]] = []
+    parsed_payloads = _parse_fact_json_batch(facts)
+    for rf, payload in zip(facts, parsed_payloads, strict=False):
+        if not isinstance(payload, dict):
+            payload = {
+                "client": rf.key or "Unknown",
+                "amount": 0.0,
+                "type": "setup",
+                "date": "",
+            }
+        results.append(payload)
+    return results
+
+
 def benchmark() -> None:
     # Build 1000 lead facts and 1000 revenue facts
     facts = [
@@ -46,35 +79,14 @@ def benchmark() -> None:
     # Baseline parsing loop (individual json.loads inside loop)
     t0 = time.perf_counter()
     for _ in range(iterations):
-        revenue_list_baseline: list[dict[str, Any]] = []
-        for rf in facts:
-            try:
-                payload = json.loads(rf.value)
-            except (TypeError, ValueError):
-                payload = {
-                    "client": rf.key or "Unknown",
-                    "amount": 0.0,
-                    "type": "setup",
-                    "date": "",
-                }
-            revenue_list_baseline.append(payload)
+        baseline_parse(facts)
     t1 = time.perf_counter()
     baseline_time = (t1 - t0) * 1000.0
 
     # Batch parsing loop
     t0 = time.perf_counter()
     for _ in range(iterations):
-        revenue_list_batch: list[dict[str, Any]] = []
-        parsed_payloads = _parse_fact_json_batch(facts)
-        for rf, payload in zip(facts, parsed_payloads, strict=False):
-            if not isinstance(payload, dict):
-                payload = {
-                    "client": rf.key or "Unknown",
-                    "amount": 0.0,
-                    "type": "setup",
-                    "date": "",
-                }
-            revenue_list_batch.append(payload)
+        batch_parse(facts)
     t1 = time.perf_counter()
     batch_time = (t1 - t0) * 1000.0
 
