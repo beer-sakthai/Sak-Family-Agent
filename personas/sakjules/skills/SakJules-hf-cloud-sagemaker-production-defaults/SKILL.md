@@ -1,9 +1,6 @@
 ---
 name: SakJules-hf-cloud-sagemaker-production-defaults
-description: Create a SageMaker endpoint (real-time or async) with autoscaling, CloudWatch alarms,
-  and tagging enabled by default. Use this skill whenever about to create a SageMaker
-  endpoint, write deployment code that calls `create_endpoint`, or finalize a depl
-...
+description: "Create a SageMaker endpoint (real-time or async) with autoscaling, CloudWatch alarms, and tagging enabled by default. Use this skill whenever about to create a SageMaker endpoint, write deployment code that calls `create_endpoint`, or finalize a depl"
 ---
 
 # SageMaker Production Defaults

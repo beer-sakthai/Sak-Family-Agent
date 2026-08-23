@@ -1,9 +1,6 @@
 ---
 name: SakThai-hf-hub-models-api
-description: "Hugging Face Hub Models REST API \u2014 search, filter, paginate, and inspect models\
-  \ programmatically. Covers list/search endpoints, cursor pagination, model metadata,\
-  \ siblings, safetensors info, gated access, inference config, and practical zero-cost\
-  \ pat"
+description: "Hugging Face Hub Models REST API — search, filter, paginate, and inspect models programmatically. Covers list/search endpoints, cursor pagination, model metadata, siblings, safetensors info, gated access, inference config, and practical zero-cost pat"
 ---
 
 # Hugging Face Hub Models API

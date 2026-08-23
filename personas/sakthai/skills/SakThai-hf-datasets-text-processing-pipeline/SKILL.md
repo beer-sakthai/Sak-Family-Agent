@@ -1,6 +1,6 @@
 ---
 name: SakThai-hf-datasets-text-processing-pipeline
-description: 'name: SakThai-hf-datasets-text-processing-pipeline'
+description: "name: SakThai-hf-datasets-text-processing-pipeline"
 ---
 
 # HF Datasets Text Processing and Deduplication Pipeline

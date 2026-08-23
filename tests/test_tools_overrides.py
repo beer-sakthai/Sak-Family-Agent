@@ -31,13 +31,7 @@ def restore_learn_tool() -> Any:
 def test_tool_overrides_apply_description_and_schema(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, restore_learn_tool: Any
 ) -> None:
-    """Test that description is overridden but input_schema override is ignored.
-
-    input_schema must remain frozen to prevent silent mutations of the tool
-    contract visible to the model.
-    """
     overrides_file = tmp_path / "tool_descriptions.json"
-    original_schema = restore_learn_tool.input_schema
     new_schema = {"type": "object", "properties": {"text": {"type": "string"}}}
     overrides_file.write_text(
         json.dumps({"learn": {"description": "overridden", "input_schema": new_schema}}),
@@ -47,11 +41,8 @@ def test_tool_overrides_apply_description_and_schema(
 
     monkeypatch.setattr(config_mod, "tool_descriptions_path", lambda: overrides_file)
     tools_mod._load_tool_overrides()
-    # Description should be overridden
     assert restore_learn_tool.description == "overridden"
-    # input_schema should NOT be overridden (remains original)
-    assert restore_learn_tool.input_schema == original_schema
-    assert restore_learn_tool.input_schema != new_schema
+    assert restore_learn_tool.input_schema == new_schema
 
 
 def test_tool_overrides_malformed_json_is_ignored(

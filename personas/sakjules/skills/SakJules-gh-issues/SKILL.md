@@ -1,7 +1,6 @@
 ---
 name: SakJules-gh-issues
-description: 'Fetch GitHub issues, select candidates, spawn background fix agents, open PRs, and
-  optionally process PR review comments. user-invocable: true'
+description: "Fetch GitHub issues, select candidates, spawn background fix agents, open PRs, and optionally process PR review comments. user-invocable: true"
 ---
 
 # gh-issues

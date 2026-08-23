@@ -26,7 +26,7 @@ def _make_read_input() -> Callable[[], str | None]:
 
     def _read() -> str | None:
         try:
-            return str(session.prompt("> "))
+            return session.prompt("> ")
         except EOFError:
             return None
 
@@ -45,7 +45,7 @@ def _make_read_input() -> Callable[[], str | None]:
 @click.option(
     "--provider",
     "-p",
-    type=click.Choice(["anthropic", "google", "openai", "ollama", "gateway", "huggingface"]),
+    type=click.Choice(["anthropic", "google", "openai", "ollama", "gateway"]),
     default=DEFAULT_CHAT_PROVIDER,
     show_default=True,
     help="LLM provider backend.",
@@ -86,7 +86,7 @@ def chat(
     # matching the SAKTHAI_HOME-per-persona convention used in production.
     store = MemoryStore(config.persona_memory_db_path(persona))
     try:
-        with _tool_context(no_mcp=no_mcp, verbose=False, persona=persona) as tools:
+        with _tool_context(no_mcp=no_mcp, verbose=False) as tools:
             run_chat(
                 persona=persona,
                 soul_text=soul_text,

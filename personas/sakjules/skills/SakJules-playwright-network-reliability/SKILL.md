@@ -1,8 +1,6 @@
 ---
 name: SakJules-SakKing-playwright-network-reliability
-description: "Use Playwright\u2019s request interception, network idle, response timing,   and\
-  \ selective mock/abort patterns to harden browser workflows against flaky third-party\
-  \   dependencies."
+description: "Use Playwright’s request interception, network idle, response timing,   and selective mock/abort patterns to harden browser workflows against flaky third-party   dependencies."
 ---
 
 # Playwright Network Reliability for Browser Automation

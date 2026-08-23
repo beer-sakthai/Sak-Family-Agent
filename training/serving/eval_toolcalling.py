@@ -44,12 +44,6 @@ from build_toolcalling_dataset import SYSTEM_PROMPT, TOOLS  # noqa: E402
 
 BASE_MODEL = os.environ.get("BASE_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
 ADAPTER_REPO = os.environ.get("ADAPTER_REPO", "Nanthasit/sakthai-toolcalling-1.5b-lora")
-# Hugging Face repositories are mutable: a tag or branch can be force-updated
-# under you, so an unpinned download is not reproducible and trusts whatever the
-# remote serves at run time. Pin every download to one revision, overridable so
-# an operator can pin a commit SHA for a byte-reproducible run.
-HF_REVISION = os.environ.get("HF_REVISION", "main")
-
 
 # (prompt, expectation) — expectation is just a human hint printed alongside output.
 PROBES = [
@@ -65,10 +59,9 @@ PROBES = [
 
 def main() -> None:
     print(f"== Loading base {BASE_MODEL} + adapter {ADAPTER_REPO}")
-    tokenizer = AutoTokenizer.from_pretrained(ADAPTER_REPO, revision=HF_REVISION)
+    tokenizer = AutoTokenizer.from_pretrained(ADAPTER_REPO)
     base = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
-        revision=HF_REVISION,
         torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
         device_map="auto" if torch.cuda.is_available() else None,
     )

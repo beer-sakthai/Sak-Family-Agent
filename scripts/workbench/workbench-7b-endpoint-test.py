@@ -16,7 +16,7 @@ else:
     print("Or set ENDPOINT_URL env var")
     sys.exit(1)
 
-TOKEN_PATH = "/opt/data/profiles/sakthai/home/.cache/huggingface/token"  # nosec B105 — filesystem path, not a credential
+TOKEN_PATH = "/opt/data/profiles/sakthai/home/.cache/huggingface/token"
 with open(TOKEN_PATH) as f:
     HF_TOKEN = f.read().strip()
 
@@ -155,9 +155,7 @@ for i, test in enumerate(tests):
             try:
                 json.loads(content)
                 checks.append("valid_json")
-            except json.JSONDecodeError:
-                # Not JSON — that is the check failing, not an error. A bare
-                # `except:` here also swallowed KeyboardInterrupt and SystemExit.
+            except:
                 pass
 
         result = {

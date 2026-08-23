@@ -1,7 +1,6 @@
 ---
 name: SakSit-content-source-check
-description: Check Drive and history for content before creating.
-...
+description: "Check Drive and history for content before creating."
 ---
 
 # Content Source Check Protocol

@@ -1,9 +1,7 @@
 ---
 name: SakSee-sakthai-cycle-dream
-description: Saksee Sakthai Cycle Dream
-...
+description: "Saksee Sakthai Cycle Dream"
 ---
-
 # SakThai Cycle — Dream
 
 Define the vision.
