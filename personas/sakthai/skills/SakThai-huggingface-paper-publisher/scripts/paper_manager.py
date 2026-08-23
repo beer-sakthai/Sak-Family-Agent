@@ -3,7 +3,6 @@
 # requires-python = ">=3.10"
 # dependencies = [
 #     "huggingface_hub",
-#     "pyyaml",
 #     "requests",
 #     "python-dotenv",
 # ]
@@ -14,19 +13,18 @@ Manages paper indexing, linking, authorship, and article creation.
 """
 
 import argparse
-import os
-import sys
-import re
 import json
-from pathlib import Path
-from typing import Optional, List, Dict, Any
+import os
+import re
+import sys
 from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 try:
-    from huggingface_hub import HfApi, hf_hub_download, get_token
-    import yaml
     import requests
     from dotenv import load_dotenv
+    from huggingface_hub import HfApi, get_token, hf_hub_download
 except ImportError as e:
     print(f"Error: Missing required dependency: {e}")
     print("Tip: run this script with `uv run scripts/paper_manager.py ...`.")
@@ -39,14 +37,14 @@ load_dotenv()
 class PaperManager:
     """Manages paper publishing operations on Hugging Face Hub."""
 
-    def __init__(self, hf_token: Optional[str] = None):
+    def __init__(self, hf_token: str | None = None):
         """Initialize Paper Manager with HF token."""
         self.token = hf_token or os.getenv("HF_TOKEN") or get_token()
         if not self.token:
             print("Warning: No HF_TOKEN found. Some operations will fail.")
         self.api = HfApi(token=self.token)
 
-    def index_paper(self, arxiv_id: str) -> Dict[str, Any]:
+    def index_paper(self, arxiv_id: str) -> dict[str, Any]:
         """
         Index a paper on Hugging Face from arXiv.
 
@@ -81,7 +79,7 @@ class PaperManager:
             print(f"Error checking paper status: {e}")
             return {"status": "error", "message": str(e)}
 
-    def check_paper(self, arxiv_id: str) -> Dict[str, Any]:
+    def check_paper(self, arxiv_id: str) -> dict[str, Any]:
         """
         Check if a paper exists on Hugging Face.
 
@@ -121,9 +119,9 @@ class PaperManager:
         repo_id: str,
         arxiv_id: str,
         repo_type: str = "model",
-        citation: Optional[str] = None,
+        citation: str | None = None,
         create_pr: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Link a paper to a model/dataset/space repository.
 
@@ -154,7 +152,7 @@ class PaperManager:
                 token=self.token
             )
 
-            with open(readme_path, 'r', encoding='utf-8') as f:
+            with open(readme_path, encoding='utf-8') as f:
                 content = f.read()
 
             # Parse or create YAML frontmatter
@@ -179,7 +177,7 @@ class PaperManager:
             paper_url = f"https://huggingface.co/papers/{arxiv_id}"
             repo_url = f"https://huggingface.co/{repo_id}"
 
-            print(f"✓ Successfully linked paper to repository")
+            print("✓ Successfully linked paper to repository")
             print(f"  Paper: {paper_url}")
             print(f"  Repo: {repo_url}")
 
@@ -198,7 +196,7 @@ class PaperManager:
         self,
         content: str,
         arxiv_id: str,
-        citation: Optional[str] = None
+        citation: str | None = None
     ) -> str:
         """
         Add paper reference to README content.
@@ -236,7 +234,7 @@ class PaperManager:
 
         # Add paper reference section with boundary markers
         paper_section = "\n<!-- paper-manager:start -->\n"
-        paper_section += f"## Paper\n\n"
+        paper_section += "## Paper\n\n"
         paper_section += f"This {'model' if 'model' in content.lower() else 'work'} is based on research presented in:\n\n"
         paper_section += f"**[View on arXiv]({arxiv_url})** | "
         paper_section += f"**[View on Hugging Face]({hf_paper_url})**\n\n"
@@ -257,9 +255,9 @@ class PaperManager:
         template: str,
         title: str,
         output: str,
-        authors: Optional[str] = None,
-        abstract: Optional[str] = None
-    ) -> Dict[str, Any]:
+        authors: str | None = None,
+        abstract: str | None = None
+    ) -> dict[str, Any]:
         """
         Create a research article from template.
 
@@ -285,7 +283,7 @@ class PaperManager:
                 "message": f"Template '{template}' not found at {template_file}"
             }
 
-        with open(template_file, 'r', encoding='utf-8') as f:
+        with open(template_file, encoding='utf-8') as f:
             template_content = f.read()
 
         # Prepare safe values for different contexts
@@ -335,7 +333,7 @@ class PaperManager:
             "template": template
         }
 
-    def get_arxiv_info(self, arxiv_id: str) -> Dict[str, Any]:
+    def get_arxiv_info(self, arxiv_id: str) -> dict[str, Any]:
         """
         Fetch paper information from arXiv API.
 
