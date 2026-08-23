@@ -25,11 +25,17 @@ jobs:
       fail-fast: false # Allow all jobs to run even if some fail
     runs-on: ubuntu-latest
     steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.11'
 
@@ -91,7 +97,7 @@ jobs:
           echo "sanitized_task_name=$SANITIZED_TASK_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Upload evaluation results
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: evaluation-results-${{ steps.run_eval.outputs.sanitized_model_name }}-${{ steps.run_eval.outputs.sanitized_task_name }}
           path: eval-results/
@@ -105,8 +111,14 @@ jobs:
     needs: [run-evaluations]
     if: always() # Run even if some evals fail
     steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
       - name: Download all evaluation result artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: evaluation-results-*
           path: eval-results
@@ -135,7 +147,7 @@ jobs:
           cat current-results.json
 
       - name: Upload consolidated results
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: current-results
           path: current-results.json
@@ -147,8 +159,14 @@ jobs:
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
       - name: Download consolidated results
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: current-results
         continue-on-error: true
@@ -189,7 +207,7 @@ jobs:
 
       - name: Upload baseline results artifact (on main branch)
         if: github.ref == 'refs/heads/main' && steps.build_payload.outputs.skip == 'false'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: baseline-results-main
           path: current-results.json
@@ -203,8 +221,14 @@ jobs:
       issues: write # Permission to create issues
       actions: read # Permission to download artifacts from other runs
     steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
       - name: Download consolidated current results
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: current-results
         continue-on-error: true
@@ -268,7 +292,7 @@ jobs:
 
       - name: Create issue on regression
         if: steps.check.outputs.has_regressions == 'true'
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const fs = require('fs');

@@ -18,7 +18,7 @@ updates:
   - package-ecosystem: "npm"
     directory: "/infra/pw-poc"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     open-pull-requests-limit: 5
     groups:
       npm-minor-patch:
@@ -28,8 +28,23 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     open-pull-requests-limit: 5
     groups:
       actions:
         patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /apps/sak_agent_dashboard
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /personas/saksee/skills/SakSee-stitch::react-components
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /personas/saksee/skills/SakSee-stitch::react-native
+    schedule:
+      interval: daily
