@@ -1,9 +1,6 @@
 ---
 name: SakThai-huggingface-best
-description: '>   Use when the user asks about finding the best, top, or recommended model for
-  a task,   wants to know what AI model to use, or wants to compare models by benchmark
-  scores.   Triggers on: best model for X, what model should I use for, top models
-  fo'
+description: ">   Use when the user asks about finding the best, top, or recommended model for a task,   wants to know what AI model to use, or wants to compare models by benchmark scores.   Triggers on: best model for X, what model should I use for, top models fo"
 ---
 
 # HuggingFace Best Model Finder

@@ -25,12 +25,6 @@ regexes = [
   # Skill-bundle integrity hash (`github-auth:<md5>` in `.bundled_manifest`) —
   # a content digest, not a credential, so allowlisting it hides nothing secret.
   '''2a2ad52aedb7cb9019df9cab263845f0''',
-  # `generic-api-key` fires on the prose "…Python API, S3-compatible API (AWS
-  # CLI, boto3, s5cmd)" in the HF learnings notes: the keyword `API` followed by
-  # a hyphenated token, which the rule reads as `key, <secret>`. The "secret" it
-  # reports is the literal string `S3-compatible`. Allowlisted by value rather
-  # than by path so a real credential in the same file is still caught.
-  '''S3-compatible''',
   #
   # NOTE: the previously allowlisted `ck_…` consumer key and
   # `H9hhwS50qwxJIORLdXbIgFHMUeMKyn4h` token were removed here on purpose. They

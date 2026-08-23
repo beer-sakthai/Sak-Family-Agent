@@ -1,10 +1,13 @@
 """Unit tests for tool selection optimization components (module, metric, overrides)."""
 
+import json
+import pytest
+import dspy
+from pathlib import Path
 from dataclasses import dataclass
 
-import dspy
 from evolution.core.config import EvolutionConfig
-from evolution.core.dataset_builder import ToolSelectionExample
+from evolution.core.dataset_builder import ToolSelectionExample, EvalDataset
 from evolution.core.fitness import tool_selection_metric
 from evolution.tools.tool_module import (
     ToolSelectionModule,

@@ -1,7 +1,6 @@
 ---
 name: SakJules-SakSit-diary-writer
-description: Write project diaries and commit them to GitHub.
-...
+description: "Write project diaries and commit them to GitHub."
 ---
 
 # Diary Writer — Session Documentation & GitHub Backup

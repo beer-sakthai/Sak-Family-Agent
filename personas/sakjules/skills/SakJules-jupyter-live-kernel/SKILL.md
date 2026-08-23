@@ -1,9 +1,7 @@
 ---
 name: SakJules-jupyter-live-kernel
-description: Iterative Python via live Jupyter kernel (hamelnb).
-...
+description: "Iterative Python via live Jupyter kernel (hamelnb)."
 ---
-
 # Jupyter Live Kernel (hamelnb)
 
 Gives you a **stateful Python REPL** via a live Jupyter kernel. Variables persist

@@ -14,11 +14,9 @@ on:
     # Runs nightly at 2 AM UTC
     - cron: '0 2 * * *'
 
-# Read-only at the top level; the one job below re-declares the writes it needs.
-# Scorecard scores a top-level `contents: write` as 0 (TokenPermissionsID)
-# because every job in the file inherits a push-capable token by default.
 permissions:
-  contents: read
+  contents: write # To create branches and commits for patches
+  pull-requests: write # To create pull requests with fixes
 
 concurrency:
   group: ${{ github.workflow }}
@@ -27,26 +25,15 @@ concurrency:
 jobs:
   devsecops-scan:
     runs-on: ubuntu-latest
-    # `contents: write` to create branches and commits for patches;
-    # `pull-requests: write` to open the fix PR. Job-scoped, not file-scoped.
-    permissions:
-      contents: write
-      pull-requests: write
     timeout-minutes: 45
     steps:
-      - name: Harden the runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
-        with:
-          use-policy-store: true
-          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
-
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
@@ -54,7 +41,7 @@ jobs:
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
 
       - name: Cache uv dependencies
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache@v6
         with:
           path: ~/.cache/uv
           key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}

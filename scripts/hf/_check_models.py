@@ -1,10 +1,5 @@
-import json, sys, tempfile
-
-# The dump path is caller-supplied; a hardcoded /tmp path is predictable on a
-# shared machine and wrong whenever the dump lives elsewhere. TMPDIR is honoured.
-SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(tempfile.gettempdir(), "models.json")
-
-d = json.load(open(SRC))
+import json, os
+d = json.load(open('/tmp/models.json'))
 print(f"Total from API: {len(d)}")
 # Check combined-v6 and profile
 for m in d:

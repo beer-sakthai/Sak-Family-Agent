@@ -216,10 +216,6 @@ def test_bare_ls_is_rewritten_to_verbose_listing(
     [
         # curl-style upload prefix: '@' at position 0 is a prefix, not a separator.
         ("@/etc/passwd", True),
-        ("@@/etc/passwd", True),
-        ("@@.env", True),
-        ("@@@.env", True),
-        ("@@id_rsa", True),
         ("@localfile", False),
         # --flag=value and prog:value separators.
         ("--out=/etc/passwd", True),

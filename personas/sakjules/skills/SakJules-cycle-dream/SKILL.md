@@ -1,7 +1,6 @@
 ---
 name: SakJules-cycle-dream
-description: Define the vision and recall prior context before building.
-...
+description: "Define the vision and recall prior context before building."
 ---
 
 # Sak-cycle-dream

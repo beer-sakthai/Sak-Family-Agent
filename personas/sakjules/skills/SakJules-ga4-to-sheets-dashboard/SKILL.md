@@ -1,8 +1,6 @@
 ---
 name: SakJules-SakSit-ga4-to-sheets-dashboard
-description: Pull Google Analytics 4 metrics into Google Sheets for live business reporting. One-shot
-  or cron-ready.
-...
+description: "Pull Google Analytics 4 metrics into Google Sheets for live business reporting. One-shot or cron-ready."
 ---
 
 # GA4 → Sheets Analytics Pipeline

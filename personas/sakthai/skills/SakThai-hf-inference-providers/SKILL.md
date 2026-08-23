@@ -1,7 +1,6 @@
 ---
 name: SakThai-hf-inference-providers
-description: A skill for Hf Inference Providers.
-...
+description: "A skill for Hf Inference Providers."
 ---
 
 # Hugging Face Inference Providers

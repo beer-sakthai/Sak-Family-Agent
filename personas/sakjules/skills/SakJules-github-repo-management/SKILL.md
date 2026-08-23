@@ -1,9 +1,7 @@
 ---
 name: SakJules-github-repo-management
-description: 'GitHub repo management: invite, protect, archive, restrict push, rename, delete,
-  transfer ownership, and settings.'
+description: "GitHub repo management: invite, protect, archive, restrict push, rename, delete, transfer ownership, and settings."
 ---
-
 # GitHub Repository Management
 
 Create, clone, fork, configure, and manage GitHub repositories. Each section shows `gh` first, then the `git` + `curl` fallback.

@@ -1,8 +1,6 @@
 ---
 name: SakJules-SakThai-hf-frontis-ma1-openmle
-description: "Complete reference on Frontis-MA1 + OpenMLE \u2014 the AI4AI / recursive-self-improvement\
-  \ (RSI) release for machine learning engineering (MLE). Meta-evolution agent trained\
-  \ on four atomic program-evolution operators (Draft/Improve/Debug/Crossover), execut"
+description: "Complete reference on Frontis-MA1 + OpenMLE — the AI4AI / recursive-self-improvement (RSI) release for machine learning engineering (MLE). Meta-evolution agent trained on four atomic program-evolution operators (Draft/Improve/Debug/Crossover), execut"
 ---
 
 # Frontis-MA1 + OpenMLE — AI4AI / Recursive Self-Improvement for MLE
