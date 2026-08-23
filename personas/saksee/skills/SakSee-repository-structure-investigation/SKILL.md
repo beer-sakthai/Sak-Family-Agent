@@ -1,8 +1,6 @@
 ---
 name: SakSee-repository-structure-investigation
-description: Investigate complex repository structures, especially when processes may be running
-  from integrated components rather than standalone repositories.
-...
+description: "Investigate complex repository structures, especially when processes may be running from integrated components rather than standalone repositories."
 ---
 
 # Repository Structure Investigation

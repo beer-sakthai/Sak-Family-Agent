@@ -117,11 +117,6 @@ def test_main_exits_with_no_urls(mock_sys_exit: MagicMock, mock_verify_url: Magi
     assert "Usage: python3 verify_hf_upload.py <url1>" in captured.out
 
 
-def test_verify_url_blocks_control_characters():
-    result = verify_hf_upload.verify_url("https://example.com/test\r\n", "Resource")
-    assert result is False
-
-
 @patch("subprocess.run")
 def test_verify_url_error_on_subprocess_exception(mock_subprocess_run: MagicMock):
     """

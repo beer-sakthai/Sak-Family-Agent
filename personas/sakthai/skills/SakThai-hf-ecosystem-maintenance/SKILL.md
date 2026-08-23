@@ -1,7 +1,7 @@
 ---
 name: SakThai-hf-ecosystem-maintenance
-description: "HF ecosystem upkeep \u2014 download counts, cross-links, low-dl promotion, deprecation,\
-  \ Spaces. Complements health-check (finds issues \u2192 this fixes them)."
+description: HF ecosystem upkeep — download counts, cross-links, low-dl promotion, deprecation, Spaces. Complements health-check (finds issues → this fixes them).
+category: mlops
 ---
 
 # HF Ecosystem Maintenance

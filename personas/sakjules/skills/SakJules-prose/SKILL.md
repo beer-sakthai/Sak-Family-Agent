@@ -1,8 +1,6 @@
 ---
 name: SakJules-prose
-description: OpenProse VM skill pack. Activate on any `prose` command, .prose files, or OpenProse
-  mentions; orchestrates multi-agent workflows.
-...
+description: "OpenProse VM skill pack. Activate on any `prose` command, .prose files, or OpenProse mentions; orchestrates multi-agent workflows."
 ---
 
 # OpenProse Skill

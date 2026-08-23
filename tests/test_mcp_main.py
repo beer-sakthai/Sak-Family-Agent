@@ -20,7 +20,10 @@ from unittest.mock import patch
 def test_mcp_main_guard_calls_serve() -> None:
     """Running the module as __main__ invokes serve() exactly once."""
     with patch("sakthai.mcp.server.serve") as mock_serve:
-        runpy.run_module("sakthai.mcp", run_name="__main__", alter_sys=False)
+        import sakthai.mcp.__main__  # noqa: F401 — side-effectful import
+
+        with patch("sakthai.mcp.__main__.serve", mock_serve):
+            runpy.run_module("sakthai.mcp.__main__", run_name="__main__", alter_sys=False)
     mock_serve.assert_called_once()
 
 

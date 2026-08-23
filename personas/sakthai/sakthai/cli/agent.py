@@ -218,16 +218,6 @@ def _run_in_sandbox(
         "unscoped memory.db (unchanged pre-existing behavior)."
     ),
 )
-@click.option(
-    "--heal",
-    is_flag=True,
-    help=(
-        "Enable the self-healing supervisor: intercept provider/tool failures, "
-        "buffer them to the DLQ (~/.sakthai/recovery.db), isolate degraded "
-        "providers via a per-persona circuit breaker, and roll back memory on "
-        "state-corrupting errors. Also enabled by SAKTHAI_SELF_HEAL=1."
-    ),
-)
 def run(
     task: str,
     model: str,
@@ -245,7 +235,6 @@ def run(
     caveman: str | None,
     sandbox: bool,
     persona: str | None,
-    heal: bool,
 ) -> None:
     """Run TASK through the standalone SakThai agent.
 
@@ -294,19 +283,12 @@ def run(
         resolved, missing = resolve_skill_names(list(with_skills), persona=persona)
         if resolved:
             click.echo(f"[dry-run] skills:      {len(resolved)} resolved ({', '.join(resolved)})")
-        # Reported before the credentials check on purpose. An unresolved skill
-        # name is a static error in the command itself, knowable without any
-        # credentials — and validating skill names is a common reason to run
-        # --dry-run somewhere that deliberately has none, such as CI. With the
-        # order reversed, the credentials failure short-circuited first and the
-        # unresolved name was never printed, which is how
-        # continuous-security.yml kept passing a skill that does not exist.
-        if missing:
-            raise click.ClickException(f"Unresolved --with-skills name(s): {', '.join(missing)}")
         if not report["runnable"]:
             raise click.ClickException(
                 f"Not runnable: no credentials found for provider {report['provider']!r}."
             )
+        if missing:
+            raise click.ClickException(f"Unresolved --with-skills name(s): {', '.join(missing)}")
         return
     if with_skills:
         _, missing = resolve_skill_names(list(with_skills), persona=persona)
@@ -327,12 +309,6 @@ def run(
     # passed, run_agent() opens/closes its own default MemoryStore()).
     persona_store = MemoryStore(config.persona_memory_db_path(persona)) if persona else None
     system_prompt_prefix = load_persona_soul(persona) if persona else ""
-    heal_enabled = heal or bool(os.environ.get("SAKTHAI_SELF_HEAL"))
-    supervisor = None
-    if heal_enabled:
-        from ..healing.supervisor import SelfHealingSupervisor
-
-        supervisor = SelfHealingSupervisor()
     try:
         with _tool_context(no_mcp=no_mcp, verbose=verbose, persona=persona) as tools:
             result = run_agent(
@@ -352,7 +328,6 @@ def run(
                 store=persona_store,
                 system_prompt_prefix=system_prompt_prefix,
                 persona=persona,
-                supervisor=supervisor,
             )
     except AgentError as exc:
         raise click.ClickException(str(exc)) from exc
@@ -376,6 +351,6 @@ def mcp() -> None:
     requests on stdin and writes responses on stdout, exposing the same tools as
     ``sakthai run`` backed by the shared memory store.
     """
-    from ..mcp.server import serve
+    from ..mcp import serve
 
     serve()

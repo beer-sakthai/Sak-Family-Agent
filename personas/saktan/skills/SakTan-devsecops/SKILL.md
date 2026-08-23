@@ -1,8 +1,6 @@
 ---
 name: SakTan-devsecops
-description: Orchestrates static analysis, vulnerability scanning, and automated patching   into
-  a continuous security workflow.
-...
+description: "Orchestrates static analysis, vulnerability scanning, and automated patching   into a continuous security workflow."
 ---
 
 # DevSecOps: Continuous Security Workflow

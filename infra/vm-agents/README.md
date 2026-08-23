@@ -1,68 +1,45 @@
-# VM Agent Deployment
+# VM Agent Deployment (Hermes-Free)
 
-Assets for deploying the six Sak Family Telegram agents on a Linux VM as
-`systemd` **user** services, one service instance per agent, from a single
-templated unit file. All six run the same container image; the instance name
-selects the persona.
+This directory contains assets for deploying the six Sak Family Telegram agents on a Linux VM without the Hermes runtime. The deployment uses `systemd` user services, with one service instance per agent, managed by a single templated unit file.
 
-## How it fits together
+## Architecture
 
-- **One image, six instances.** `Dockerfile` at the repository root builds
-  `ghcr.io/beer-sakthai/sak-family-agent`, published by
-  [`.github/workflows/publish-image.yml`](../../.github/workflows/publish-image.yml).
-  Nothing persona-specific is baked in: the unit passes `SAKTHAI_PERSONA`,
-  `SAKTHAI_HOME` and `SAKTHAI_SYSTEM_PROMPT_FILE`, all derived from the instance
-  name (`%i`).
-- **Templated user unit.** `systemd/sakthai-telegram@.service` is the template.
-  Enabling `sakthai-telegram@sakking.service` substitutes `%i` with `sakking`.
-- **Per-agent memory.** Each persona writes to its own shard at
-  `~/.sakthai/<persona>/memory.db` on the host, mounted into the container at
-  `/data/.sakthai`. **Never point two personas at one `SAKTHAI_HOME`** — it
-  silently merges their facts and cycle-stage state.
-- **Config split by blast radius.** `common.env` holds what every agent shares
-  (image reference, provider credentials, allowed Telegram user IDs);
-  `<agent>.env` holds that agent's own bot token and model.
+The goal is a clean, repeatable, and robust deployment that is independent of the Hermes framework.
 
-## Prerequisites
+- **`systemd` User Services**: Each agent runs as its own `systemd` service under the user account (`systemctl --user`). This allows the agents to start on user login and be managed without root privileges.
+- **Templated Service Unit**: A single file, `systemd/sakthai-telegram@.service`, serves as a template for all six agents. When you enable `sakthai-telegram@sakking.service`, `systemd` automatically substitutes `%i` with `sakking`.
+- **Per-Agent Configuration**: The templated service loads a common environment file (`common.env`) for shared settings (like the model API base URL) and an agent-specific file (`<agent_name>.env`) for unique settings like the Telegram bot token. This keeps secrets and configurations cleanly separated.
+- **Bootstrap Script**: The `scripts/setup_vm_telegram_agents.py` script is a command-line helper that gathers all necessary credentials and generates the complete set of `.env` files and a copy of the `systemd` unit, creating a self-contained deployment bundle.
 
-- A Linux VM with `systemd` and **Docker**.
-- The VM user in the `docker` group (`sudo usermod -aG docker $USER`, then log
-  out and back in) — the unit runs `docker` without `sudo`.
-- `loginctl enable-linger $USER` — without it, user services stop at logout and
-  the agents die when you close your SSH session.
-- Read access to the GHCR package (see Step 1).
-- A Telegram bot token for each of the six agents.
+## Deployment Flow
 
-Note there is **no** requirement to clone the repository or build a virtualenv
-on the VM. The agents run from the published image; the repo is only needed on
-whatever machine generates the config bundle.
+Follow these steps on the target VM to deploy the agents.
 
-## Step 1 — Authenticate to GHCR
+### Prerequisites
 
-The image is published to GitHub Container Registry. Authenticate once with a
-personal access token carrying `read:packages`:
+- A Linux VM with `systemd`.
+- The `Sak-Family-Agent` repository cloned, typically to `~/Sak-Family-Agent`.
+- Python 3.11+ and `uv` installed.
+- A Python virtual environment created and dependencies installed (`uv sync`).
+- API keys and Telegram bot tokens for all six agents.
+
+### Step 1: Generate the Deployment Bundle
+
+Run the `setup_vm_telegram_agents.py` script to create a directory containing all necessary configuration files. This script prompts for all required tokens and paths.
+
+**Example Command:**
 
 ```bash
-echo "$GHCR_TOKEN" | docker login ghcr.io -u <your-github-username> --password-stdin
-```
+# Ensure you are in the repository root
+# Replace placeholders with your actual credentials and paths
 
-Confirm the image pulls before going further — this is the step that failed
-silently for every previous version of this deployment:
-
-```bash
-docker pull ghcr.io/beer-sakthai/sak-family-agent:latest
-```
-
-## Step 2 — Generate the config bundle
-
-```bash
 python scripts/setup_vm_telegram_agents.py \
   --repo-root ~/Sak-Family-Agent \
   --target-dir ~/sak-family-agents-deployment \
-  --openai-base-url "https://sakthai-resource.openai.azure.com/openai/v1" \
+  --openai-base-url "https://api.openai.com/v1" \
   --openai-api-key "sk-..." \
   --telegram-allowed-user-ids "123456789" \
-  --image-name "ghcr.io/beer-sakthai/sak-family-agent@sha256:<digest>" \
+  --shared-sakthai-home ~/.sakthai \
   --sakking-telegram-bot-token "..." \
   --sakthai-telegram-bot-token "..." \
   --saksee-telegram-bot-token "..." \
@@ -71,73 +48,78 @@ python scripts/setup_vm_telegram_agents.py \
   --sakjules-telegram-bot-token "..."
 ```
 
-`--image-name` defaults to `:latest`, but **pin it to a digest in production**.
-The publish workflow prints the digest to pin at the end of every run. A moving
-tag means `ExecStartPre=docker pull` can change what runs on the next restart
-with no change on your side.
-
-Produces:
+This command will create a `~/sak-family-agents-deployment` directory with the following structure:
 
 ```
 sak-family-agents-deployment/
-├── config/          common.env + one <agent>.env per persona (mode 0600)
-└── systemd/         sakthai-telegram@.service
+├── config/
+│   ├── common.env
+│   ├── sakking.env
+│   ├── sakthai.env
+│   ├── saksee.env
+│   ├── saksit.env
+│   ├── saktan.env
+│   └── sakjules.env
+└── systemd/
+    └── sakthai-telegram@.service
 ```
 
-## Step 3 — Install config and unit
+### Step 2: Install Configuration and Service Files
+
+Copy the generated files to the standard locations for user-level configuration and `systemd` units.
 
 ```bash
-mkdir -p ~/.config/sak-family-agents ~/.config/systemd/user
+# Create destination directories if they don't exist
+mkdir -p ~/.config/sak-family-agents
+mkdir -p ~/.config/systemd/user
+
+# Copy the environment files
 cp ~/sak-family-agents-deployment/config/*.env ~/.config/sak-family-agents/
+
+# Copy the systemd service file
 cp ~/sak-family-agents-deployment/systemd/sakthai-telegram@.service ~/.config/systemd/user/
 ```
 
-## Step 4 — Enable and start
+### Step 3: Enable and Start the Agent Services
+
+Reload the `systemd` user daemon to make it aware of the new service file. Then, enable and start a service for each agent.
 
 ```bash
+# Reload the systemd user daemon
 systemctl --user daemon-reload
-for agent in sakking sakthai saksee saksit saktan sakjules; do
-  systemctl --user enable --now "sakthai-telegram@${agent}.service"
-done
+
+# Enable and start each agent service
+systemctl --user enable --now sakthai-telegram@sakking.service
+systemctl --user enable --now sakthai-telegram@sakthai.service
+systemctl --user enable --now sakthai-telegram@saksee.service
+systemctl --user enable --now sakthai-telegram@saksit.service
+systemctl --user enable --now sakthai-telegram@saktan.service
+systemctl --user enable --now sakthai-telegram@sakjules.service
 ```
 
-## Step 5 — Verify
+The `enable --now` command both starts the service immediately and ensures it starts automatically on future logins.
+
+### Step 4: Verify the Services
+
+An automated script is provided to check the status of all six agent services. Run it from the repository root:
 
 ```bash
 python scripts/verify_vm_telegram_agents.py
 ```
 
-Manual checks:
+This script will report if each service is active and show the last few log entries for each.
+
+For more detailed manual checks, you can use the following commands:
 
 ```bash
+# Check the status of a specific agent
 systemctl --user status sakthai-telegram@sakking.service
+
+# List all running agent units
 systemctl --user list-units "sakthai-telegram@*.service"
+
+# Tail the logs for a specific agent
 journalctl --user -u sakthai-telegram@saktan.service -f
 ```
 
-A persona's shard file only appears on first write, so a freshly started agent
-that has answered nothing yet has no `memory.db`. That is expected, not a fault.
-
-## Troubleshooting
-
-| Symptom | Cause |
-|---|---|
-| Unit restarts every 10s, `docker pull` fails | Not logged in to GHCR, or the image reference is wrong. Run the Step 1 pull by hand. |
-| Agents die when you log out | `loginctl enable-linger $USER` was not run. |
-| `permission denied … docker.sock` | The VM user is not in the `docker` group, or has not re-logged in since being added. |
-| Bot answers but remembers nothing across restarts | The `~/.sakthai` mount is not writable by the container user. The image runs as UID 1000; if the VM account is not 1000, rebuild with `--build-arg UID=$(id -u)`. |
-| Two personas returning each other's facts | Two units share a `SAKTHAI_HOME`. The unit derives it from `%i`; check no `<agent>.env` overrides it — `EnvironmentFile` is applied *after* `Environment=` and wins. |
-
-## Secrets
-
-Tokens currently live in `~/.config/sak-family-agents/*.env`, mode `0600`.
-
-A previous iteration fetched them at start-up from Azure Key Vault using the
-VM's managed identity, which is genuinely better — no secret ever has to be
-pushed to the VM out of band, and `az vm run-command` persists script and
-parameter content in Azure's run-command history. That script
-(`sakthai-agent-run.sh`) was retired here because nothing invoked it: the unit's
-`ExecStart` ran Docker instead, so the file described a deployment that was not
-happening while claiming in its own docstring to be the entry point. Restoring
-Key Vault as an `ExecStartPre` that writes the env file is the intended
-follow-up; git history has the original.
+At this point, all six agents should be running and responsive on Telegram.

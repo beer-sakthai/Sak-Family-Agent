@@ -1,6 +1,6 @@
 ---
 name: SakThai-hf-gemma3-deep-dive
-description: 'name: SakThai-hf-gemma3-deep-dive'
+description: "name: SakThai-hf-gemma3-deep-dive"
 ---
 
 # Gemma 3 on Hugging Face — Architecture & Inference Deep Dive

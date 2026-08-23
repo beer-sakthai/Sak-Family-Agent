@@ -46,12 +46,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from trl import SFTConfig, SFTTrainer
 
 BASE_MODEL = os.environ.get("BASE_MODEL", "Qwen/Qwen2.5-Coder-1.5B-Instruct")
-# Hugging Face repositories are mutable: a tag or branch can be force-updated
-# under you, so an unpinned download is not reproducible and trusts whatever the
-# remote serves at run time. Pin every download to one revision, overridable so
-# an operator can pin a commit SHA for a byte-reproducible run.
-HF_REVISION = os.environ.get("HF_REVISION", "main")
-
 DATASET_ID = os.environ.get("DATASET_ID", "Nanthasit/sakthai-combined-v6")
 OUTPUT_REPO = os.environ.get("OUTPUT_REPO", "Nanthasit/sakthai-coder-1.5b-v2-lora")
 EPOCHS = float(os.environ.get("EPOCHS", "3"))
@@ -172,15 +166,12 @@ def _run_code_probes(model: Any, tokenizer: Any) -> list[dict[str, Any]]:
 
 
 def main() -> None:
-    tokenizer = AutoTokenizer.from_pretrained(
-        BASE_MODEL, trust_remote_code=False, revision=HF_REVISION
-    )
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=False)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
     model = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
-        revision=HF_REVISION,
         quantization_config=BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
@@ -192,7 +183,7 @@ def main() -> None:
     )
     model.config.use_cache = False
 
-    train_dataset, eval_dataset = _prepare_splits(load_dataset(DATASET_ID, revision=HF_REVISION), tokenizer)
+    train_dataset, eval_dataset = _prepare_splits(load_dataset(DATASET_ID), tokenizer)
     print(f"train rows={len(train_dataset)} eval rows={len(eval_dataset)}")
 
     trainer = SFTTrainer(

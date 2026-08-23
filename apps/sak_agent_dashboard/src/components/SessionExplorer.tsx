@@ -91,11 +91,10 @@ export function SessionExplorer({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            aria-label="Search sessions or personas"
             placeholder="Search sessions or personas..."
             value={searchQuery}
             onChange={handleSearchInputChange}
-            className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg pl-9 pr-8 py-2 text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 font-mono transition-all"
+            className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 font-mono transition-all"
           />
           {searchQuery && (
             <button
@@ -103,8 +102,7 @@ export function SessionExplorer({
                 setSearchQuery("");
                 if (onSearchChange) onSearchChange("");
               }}
-              aria-label="Clear search"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -120,12 +118,11 @@ export function SessionExplorer({
 
           <select
             value={personaFilter}
-            aria-label="Filter sessions by persona"
             onChange={(e) => {
               setPersonaFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500 focus-visible:ring-2 focus-visible:ring-cyan-500"
+            className="bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500"
           >
             <option value="ALL">All Personas</option>
             <option value="SakThai">SakThai</option>
@@ -137,22 +134,17 @@ export function SessionExplorer({
 
           <select
             value={statusFilter}
-            aria-label="Filter sessions by status"
             onChange={(e) => {
               setStatusFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500 focus-visible:ring-2 focus-visible:ring-cyan-500"
+            className="bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500"
           >
             <option value="ALL">All Statuses</option>
             <option value="completed">Completed</option>
             <option value="failed">Failed</option>
           </select>
         </div>
-      </div>
-
-      <div className="sr-only" aria-live="polite" aria-atomic="true">
-        Showing {filteredSessions.length} session records.
       </div>
 
       {/* Session Table */}
@@ -219,8 +211,7 @@ export function SessionExplorer({
                     <td className="px-5 py-3.5 text-right">
                       <button
                         onClick={() => handleOpenDetail(session)}
-                        aria-label={`Inspect details for session ${session.sessionId}`}
-                        className="px-3 py-1 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 hover:bg-cyan-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 transition-all font-sans font-semibold text-xs inline-flex items-center gap-1"
+                        className="px-3 py-1 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 hover:bg-cyan-900 transition-all font-sans font-semibold text-xs inline-flex items-center gap-1"
                       >
                         <FileText className="h-3.5 w-3.5" />
                         Inspect
@@ -242,16 +233,14 @@ export function SessionExplorer({
             <button
               disabled={currentPage <= 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              aria-label="Previous page"
-              className="p-1.5 rounded bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+              className="p-1.5 rounded bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
               disabled={currentPage >= totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              aria-label="Next page"
-              className="p-1.5 rounded bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+              className="p-1.5 rounded bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -261,7 +250,7 @@ export function SessionExplorer({
 
       {/* Interactive Modal Detail Viewer */}
       {activeModalSession && (
-        <div role="dialog" aria-modal="true" aria-labelledby="session-modal-title" className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-4xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
             {/* Modal Header */}
             <div className="p-5 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between">
@@ -270,14 +259,13 @@ export function SessionExplorer({
                   <Terminal className="h-4 w-4" />
                   Session Transcript Detail
                 </div>
-                <h4 id="session-modal-title" className="text-lg font-bold font-display text-white mt-0.5">
+                <h4 className="text-lg font-bold font-display text-white mt-0.5">
                   {activeModalSession.sessionId}
                 </h4>
               </div>
               <button
                 onClick={() => setActiveModalSession(null)}
-                aria-label="Close transcript inspector"
-                className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 transition-colors"
+                className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>

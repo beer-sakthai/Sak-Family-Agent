@@ -31,11 +31,8 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
         {/* Tab Selector */}
         <div className="flex items-center p-1 rounded-xl bg-slate-950/80 border border-slate-800/80 font-mono text-xs w-fit">
           <button
-            type="button"
             onClick={() => setActiveTab("facts")}
-            aria-pressed={activeTab === "facts"}
-            aria-label="Filter memory by facts"
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg font-semibold transition-all ${
               activeTab === "facts"
                 ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-950/50"
                 : "text-slate-400 hover:text-slate-200"
@@ -45,11 +42,8 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
             Facts ({facts.length})
           </button>
           <button
-            type="button"
             onClick={() => setActiveTab("observations")}
-            aria-pressed={activeTab === "observations"}
-            aria-label="Filter memory by observations"
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg font-semibold transition-all ${
               activeTab === "observations"
                 ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-950/50"
                 : "text-slate-400 hover:text-slate-200"
@@ -59,10 +53,6 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
             Observations ({observations.length})
           </button>
         </div>
-      </div>
-
-      <div className="sr-only" aria-live="polite" aria-atomic="true">
-        Showing {activeTab === "facts" ? `${facts.length} memory facts` : `${observations.length} synthesis observations`}.
       </div>
 
       {/* Facts View */}

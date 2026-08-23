@@ -1,8 +1,16 @@
 ---
 name: SakThai-hf-open-llm-leaderboard
-description: "Complete reference for the Hugging Face Open LLM Leaderboard v2 \u2014 the 6 benchmark\
-  \ tasks (IFEval, BBH, MATH Lvl 5, GPQA, MuSR, MMLU-PRO), evaluation parameters,\
-  \ model categories, reproducibility commands, and submission workflow."
+author: SakThai
+license: MIT
+title: Open LLM Leaderboard v2 — Evaluation Methodology
+category: mlops
+tags: [leaderboard, evaluation, benchmarks, llm, open-llm-leaderboard, lm-eval]
+related_skills:
+  - hf-trending-crawl
+  - hf-text-generation-inference
+  - hf-peft-lora
+description: Complete reference for the Hugging Face Open LLM Leaderboard v2 — the 6 benchmark tasks (IFEval, BBH, MATH Lvl 5, GPQA, MuSR, MMLU-PRO), evaluation parameters, model categories, reproducibility commands, and submission workflow.
+version: 1.0.0
 ---
 
 # Open LLM Leaderboard v2 — Evaluation Methodology

@@ -1,7 +1,10 @@
 ---
 name: SakThai-hf-mergekit
-description: 'Merge pre-trained language models in weight space using mergekit: algorithms, configuration,
-  LoRA extraction, MoE merging, evolutionary optimization, and tokenizer transplantation.'
+version: 0.1.0
+title: mergekit — Model Merging Toolkit
+description: "Merge pre-trained language models in weight space using mergekit: algorithms, configuration, LoRA extraction, MoE merging, evolutionary optimization, and tokenizer transplantation."
+author: SakThai
+license: MIT
 ---
 
 # Hugging Face mergekit
