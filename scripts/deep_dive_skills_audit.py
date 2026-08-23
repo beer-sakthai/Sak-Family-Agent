@@ -5,10 +5,10 @@ Audits every SKILL.md for valid frontmatter, description quality, symlink health
 """
 
 import os
-import glob
 import re
-import yaml
 from collections import defaultdict
+
+import yaml
 
 AUDIT_ROOTS = [
     "/home/beern/.agents/skills",
@@ -17,6 +17,7 @@ AUDIT_ROOTS = [
     "/home/beern/Sak-Family-Agent/.claude/skills",
     "/home/beern/.gemini/config/plugins",
 ]
+
 
 def audit_skill_file(filepath):
     issues = []
@@ -58,7 +59,7 @@ def audit_skill_file(filepath):
         }
 
     try:
-        with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+        with open(filepath, encoding="utf-8", errors="replace") as f:
             content = f.read()
     except Exception as e:
         return {
@@ -73,7 +74,7 @@ def audit_skill_file(filepath):
 
     # Check YAML Frontmatter
     frontmatter_match = re.match(r"^---\s*\n(.*?)\n---\s*\n(.*)$", content, re.DOTALL)
-    
+
     name = ""
     description = ""
     body = content
@@ -119,6 +120,7 @@ def audit_skill_file(filepath):
         "body_len": len(body),
     }
 
+
 def main():
     discovered_files = set()
 
@@ -155,21 +157,26 @@ def main():
     valid_count = sum(1 for r in results if r["valid"])
     defect_count = total_files - valid_count
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print(f"🚀 ENVIRONMENT-WIDE SKILL AUDIT REPORT (Total: {total_files})")
-    print("="*70)
-    print(f"✅ Perfectly Formatted Skills: {valid_count} ({valid_count/total_files*100:.1f}%)")
-    print(f"⚠️ Skills with Warnings/Issues: {defect_count} ({defect_count/total_files*100:.1f}%)")
+    print("=" * 70)
+    print(f"✅ Perfectly Formatted Skills: {valid_count} ({valid_count / total_files * 100:.1f}%)")
+    print(
+        f"⚠️ Skills with Warnings/Issues: {defect_count} ({defect_count / total_files * 100:.1f}%)"
+    )
     print("\n📊 CATEGORY BREAKDOWN:")
     print(f"{'Category':<18} | {'Total':<8} | {'Valid':<8} | {'Warnings':<8} | {'Health Rate'}")
     print("-" * 65)
-    for cat, stats in sorted(category_stats.items(), key=lambda x: x[1]['total'], reverse=True):
-        health = (stats['valid'] / stats['total']) * 100 if stats['total'] > 0 else 0
-        print(f"{cat:<18} | {stats['total']:<8} | {stats['valid']:<8} | {stats['issues']:<8} | {health:.1f}%")
+    for cat, stats in sorted(category_stats.items(), key=lambda x: x[1]["total"], reverse=True):
+        health = (stats["valid"] / stats["total"]) * 100 if stats["total"] > 0 else 0
+        print(
+            f"{cat:<18} | {stats['total']:<8} | {stats['valid']:<8} | {stats['issues']:<8} | {health:.1f}%"
+        )
 
     print("\n🔍 TOP DETECTED ISSUES:")
     for iss, cnt in sorted(issue_counts.items(), key=lambda x: x[1], reverse=True)[:10]:
         print(f" - [{cnt}x] {iss}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
