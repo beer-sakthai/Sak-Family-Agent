@@ -206,13 +206,14 @@ export const ChatStudio: React.FC = () => {
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="E.g., Review security guardrails, verify AST sandbox, and prepare automated CI/CD..."
+            aria-label="Dispatch prompt"
             disabled={isStreaming}
-            className="flex-1 rounded-lg border border-slate-800 bg-slate-950 px-4 py-2.5 text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+            className="flex-1 rounded-lg border border-slate-800 bg-slate-950 px-4 py-2.5 text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
           />
           <button
             type="submit"
             disabled={isStreaming || !prompt.trim()}
-            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-5 py-2.5 text-xs font-semibold text-white shadow hover:bg-blue-500 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-5 py-2.5 text-xs font-semibold text-white shadow hover:bg-blue-500 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
           >
             {isStreaming ? 'Streaming...' : '🚀 Dispatch'}
           </button>
