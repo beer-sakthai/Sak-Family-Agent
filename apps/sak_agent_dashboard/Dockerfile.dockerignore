@@ -1,0 +1,22 @@
+# BuildKit prefers <dockerfile>.dockerignore over the context root's
+# .dockerignore, which is what lets the dashboard build from the repository
+# root even though the root file excludes apps/ and docs/ for the agent image.
+#
+# Everything is excluded, then the trees this build actually needs are
+# re-included. An allowlist rather than a denylist: the repository root is
+# ~6,300 files across training runs, vendored SDKs and model artefacts, and a
+# denylist silently grows stale as new ones land.
+*
+
+!apps/sak_agent_dashboard
+!docs
+!personas
+!services
+
+# Re-excluded inside the allowed trees.
+**/node_modules
+**/.next
+**/__pycache__
+**/*.pyc
+apps/sak_agent_dashboard/.git
+personas/*/skills/.archive

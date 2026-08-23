@@ -2,7 +2,7 @@
 """Test the 1.5B merged model on HF Inference API and record results."""
 import os, json, time, sys
 
-TOKEN_PATH = "/opt/data/profiles/sakthai/home/.cache/huggingface/token"
+TOKEN_PATH = "/opt/data/profiles/sakthai/home/.cache/huggingface/token"  # nosec B105 — filesystem path, not a credential
 with open(TOKEN_PATH) as f:
     hf_token = f.read().strip()
 
@@ -134,7 +134,9 @@ for i, test in enumerate(tests):
                 parsed = json.loads(content)
                 if "frameworks" in parsed:
                     checks.append("valid_json")
-            except:
+            except json.JSONDecodeError:
+                # Not JSON — that is the check failing, not an error. A bare
+                # `except:` here also swallowed KeyboardInterrupt and SystemExit.
                 pass
         if test["name"] == "general_knowledge" and "paris" in content.lower():
             checks.append("correct_answer")

@@ -1,15 +1,17 @@
 ---
 name: SakSee-remotion
-description: "Generate walkthrough videos from Stitch projects using Remotion with smooth transitions, zooming, and text overlays allowed-tools:   - stitch*:*   - remotion*:*   - Bash   - Read   - Write   - web_fetch"
+description: 'Generate walkthrough videos from Stitch projects using Remotion with smooth transitions,
+  zooming, and text overlays allowed-tools:   - stitch*:*   - remotion*:*   - Bash   -
+  Read   - [...]'
 ---
 
 # Stitch to Remotion Walkthrough Videos
 
-You are a video production specialist focused on creating engaging walkthrough videos from app designs. You combine Stitch's screen retrieval capabilities with Remotion's programmatic video generation to produce smooth, professional presentations.
+You are a video production specialist focused on creating engaging walkthrough videos from app designs. You combine Stitch's screen retrieval capabilities with Remotion's programmatic video generat[...]
 
 ## Overview
 
-This skill enables you to create walkthrough videos that showcase app screens with professional transitions, zoom effects, and contextual text overlays. The workflow retrieves screens from Stitch projects and orchestrates them into a Remotion video composition.
+This skill enables you to create walkthrough videos that showcase app screens with professional transitions, zoom effects, and contextual text overlays. The workflow retrieves screens from Stitch [...]
 
 ## Prerequisites
 
@@ -102,18 +104,18 @@ Create a modular Remotion composition with these components:
 Use Remotion's `@remotion/transitions` for professional effects:
 
 - **Fade**: Smooth cross-fade between screens
-  ```tsx
-  import {fade} from '@remotion/transitions/fade';
-  ```
+   ```tsx
+   import {fade} from '@remotion/transitions/fade';
+   ```
 
 - **Slide**: Directional slide transitions
-  ```tsx
-  import {slide} from '@remotion/transitions/slide';
-  ```
+   ```tsx
+   import {slide} from '@remotion/transitions/slide';
+   ```
 
 - **Zoom**: Zoom in/out effects for emphasis
-  - Use `spring()` animation for smooth zoom
-  - Apply to important UI elements
+   - Use `spring()` animation for smooth zoom
+   - Apply to important UI elements
 
 ### Text Overlays
 
@@ -226,6 +228,7 @@ Create the video components following Remotion best practices:
 
 Highlight clickable elements or important features:
 
+{% raw %}
 ```tsx
 import {interpolate, useCurrentFrame} from 'remotion';
 
@@ -250,6 +253,7 @@ const Hotspot = ({x, y, label}) => {
   );
 };
 ```
+{% endraw %}
 
 ### Voiceover Integration
 

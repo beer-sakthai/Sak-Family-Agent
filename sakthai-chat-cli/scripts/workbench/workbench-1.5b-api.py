@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Test the 1.5B merged model on HF Inference API and record results."""
-import os, json, time, sys
+import json
+import os
+import time
 
 TOKEN_PATH = "/opt/data/profiles/sakthai/home/.cache/huggingface/token"
 with open(TOKEN_PATH) as f:

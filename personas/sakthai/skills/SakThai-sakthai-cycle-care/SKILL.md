@@ -1,7 +1,9 @@
 ---
 name: SakThai-SakKing-sakthai-cycle-care
-description: "Sakking Sakthai Cycle Care"
+description: Sakking Sakthai Cycle Care
+...
 ---
+
 # SakThai Cycle — Care
 
 Audit correctness, safety, and performance before shipping.

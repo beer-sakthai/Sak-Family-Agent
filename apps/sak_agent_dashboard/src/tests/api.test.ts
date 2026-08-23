@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { PERSONAS } from "@/lib/personas";
 
 // Interface Contracts as defined in PROJECT.md & TEST_INFRA.md
 export interface PersonaCard {
@@ -10,6 +11,14 @@ export interface PersonaCard {
   runs: number;
   skills: string[];
 }
+
+/**
+ * The roster is asserted against `lib/personas.ts`, which tracks
+ * `config.PERSONA_NAMES`, rather than against a literal count. These tests
+ * previously hard-coded 5 and named five personas, which is how SakTan's total
+ * absence from the dashboard went unnoticed.
+ */
+const ROSTER_NAMES = PERSONAS.map((p) => p.name);
 
 export interface MetricsData {
   totalRuns: number;
@@ -60,7 +69,7 @@ describe("API Routes Suite (Tier 1 & Tier 2)", () => {
 
   describe("Tier 1: Feature Coverage — Standard Response Contracts", () => {
 
-    it("GET /api/agents returns 5 Sak-Agent-Family personas with required fields", async () => {
+    it("GET /api/agents returns every Sak Family persona with required fields", async () => {
       const route = await getApiRouteModule("agents");
       if (route && typeof route.GET === "function") {
         const req = new Request("http://localhost:3000/api/agents");
@@ -69,12 +78,18 @@ describe("API Routes Suite (Tier 1 & Tier 2)", () => {
         const data = await res.json();
         expect(data.success).toBe(true);
         expect(Array.isArray(data.agents)).toBe(true);
-        expect(data.agents.length).toBe(5);
 
         const names = data.agents.map((a: PersonaCard) => a.name);
-        expect(names).toEqual(
-          expect.arrayContaining(["SakThai", "SakKing", "SakSee", "SakSit", "SakJules"])
-        );
+        // Every persona in the roster must be present — including SakTan, whose
+        // omission this assertion previously encoded as correct.
+        expect(names).toEqual(expect.arrayContaining(ROSTER_NAMES));
+        expect(names).toContain("SakTan");
+
+        // The only row allowed beyond the roster is the "Unattributed" bucket.
+        const extras = names.filter((n: string) => !ROSTER_NAMES.includes(n));
+        expect(extras.every((n: string) => n === "Unattributed")).toBe(true);
+
+        expect(["live", "demo", "unavailable"]).toContain(data.dataSource);
 
         data.agents.forEach((agent: PersonaCard) => {
           expect(agent).toHaveProperty("name");
@@ -86,22 +101,14 @@ describe("API Routes Suite (Tier 1 & Tier 2)", () => {
           expect(Array.isArray(agent.skills)).toBe(true);
         });
       } else {
-        // Contract fallback verification when route module is planned
-        const mockAgents: PersonaCard[] = [
-          { name: "SakThai", role: "Primary Orchestrator", status: "Active", model: "sakthai-v2", latencyMs: 320, runs: 300, skills: ["routing", "planning"] },
-          { name: "SakKing", role: "Reasoning Specialist", status: "Ready", model: "sakking-v1", latencyMs: 540, runs: 150, skills: ["reasoning"] },
-          { name: "SakSee", role: "Multimodal Specialist", status: "Ready", model: "saksee-v1", latencyMs: 410, runs: 120, skills: ["vision"] },
-          { name: "SakSit", role: "Security Auditor", status: "Ready", model: "saksit-v1", latencyMs: 290, runs: 91, skills: ["audit"] },
-          { name: "SakJules", role: "Async Specialist", status: "Ready", model: "sakjules-v1", latencyMs: 380, runs: 100, skills: ["async"] },
-        ];
-        expect(mockAgents.length).toBe(5);
-        expect(mockAgents.map((a) => a.name)).toEqual(
-          expect.arrayContaining(["SakThai", "SakKing", "SakSee", "SakSit", "SakJules"])
-        );
+        // The route exists; a missing module is a real failure, not something
+        // to substitute a local mock for. The previous fallback asserted
+        // against its own literal and could never fail.
+        throw new Error("src/app/api/agents/route.ts did not export a GET handler");
       }
     });
 
-    it("GET /api/agents?demo=true returns demo persona data", async () => {
+    it("GET /api/agents?demo=true returns the full demo roster", async () => {
       const route = await getApiRouteModule("agents");
       if (route && typeof route.GET === "function") {
         const req = new Request("http://localhost:3000/api/agents?demo=true");
@@ -109,16 +116,14 @@ describe("API Routes Suite (Tier 1 & Tier 2)", () => {
         expect(res.status).toBe(200);
         const data = await res.json();
         expect(data.success).toBe(true);
-        expect(data.agents.length).toBe(5);
+        expect(data.dataSource).toBe("demo");
+        // Demo mode shows exactly the roster — no unattributed bucket, since
+        // synthesized runs are all attributed by construction.
+        expect(data.agents.length).toBe(PERSONAS.length);
+        expect(data.agents.map((a: PersonaCard) => a.name)).toEqual([...ROSTER_NAMES]);
+        expect(data.unattributedRuns).toBe(0);
       } else {
-        const demoAgents: PersonaCard[] = [
-          { name: "SakThai", role: "Primary Orchestrator", status: "Active (Demo)", model: "sakthai-v2", latencyMs: 320, runs: 300, skills: ["demo-routing"] },
-          { name: "SakKing", role: "Reasoning Specialist", status: "Ready (Demo)", model: "sakking-v1", latencyMs: 540, runs: 150, skills: ["demo-reasoning"] },
-          { name: "SakSee", role: "Multimodal Specialist", status: "Ready (Demo)", model: "saksee-v1", latencyMs: 410, runs: 120, skills: ["demo-vision"] },
-          { name: "SakSit", role: "Security Auditor", status: "Ready (Demo)", model: "saksit-v1", latencyMs: 290, runs: 91, skills: ["demo-audit"] },
-          { name: "SakJules", role: "Async Specialist", status: "Ready (Demo)", model: "sakjules-v1", latencyMs: 380, runs: 100, skills: ["demo-async"] },
-        ];
-        expect(demoAgents.length).toBe(5);
+        throw new Error("src/app/api/agents/route.ts did not export a GET handler");
       }
     });
 

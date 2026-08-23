@@ -1,6 +1,7 @@
 ---
 name: SakThai-hf-hub-audit-logs
-description: "Complete reference for Hugging Face Hub Audit Logs — event types, access patterns, JSON export, and integration patterns for organization activity tracking"
+description: "Complete reference for Hugging Face Hub Audit Logs \u2014 event types, access patterns,\
+  \ JSON export, and integration patterns for organization activity tracking"
 ---
 
 # HF Hub Audit Logs — Complete Reference

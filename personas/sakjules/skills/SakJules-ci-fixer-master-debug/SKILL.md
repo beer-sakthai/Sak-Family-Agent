@@ -1,6 +1,7 @@
 ---
 name: SakJules-SakThai-ci-fixer-master-debug
-description: "Diagnose and fix GitHub Actions CI failures."
+description: Diagnose and fix GitHub Actions CI failures.
+...
 ---
 
 ## ⚠️ Cardinal Rule — Diagnose First, Fix Second

@@ -3,9 +3,7 @@
 # Designed for a Docker GPU Space with TRL + DeepSpeed installed.
 
 import os
-import sys
 from dataclasses import dataclass, field
-from typing import Optional
 
 from datasets import load_dataset
 from peft import LoraConfig, TaskType
@@ -32,12 +30,15 @@ class ScriptArguments:
     lora_alpha: int = field(default=64)
     lora_dropout: float = field(default=0.05)
     use_lora: bool = field(default=True)
-    deepspeed: Optional[str] = field(default="/workspace/configs/deepspeed_zero2.json")
+    deepspeed: str | None = field(default="/workspace/configs/deepspeed_zero2.json")
     bf16: bool = field(default=True)
     fp16: bool = field(default=False)
     report_to: str = field(default="none")
     push_to_hub: bool = field(default=False)
-    hub_model_id: Optional[str] = field(default=None)
+    hub_model_id: str | None = field(default=None)
+    # Hugging Face repos are mutable — a branch can be force-updated under a
+    # run. Pin downloads to one revision; pass a commit SHA for reproducibility.
+    revision: str = field(default_factory=lambda: os.environ.get("HF_REVISION", "main"))
 
 
 def main():
@@ -75,18 +76,21 @@ def main():
     print(f"Loading model: {args.model_name}")
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name,
+        revision=args.revision,
         trust_remote_code=True,
         torch_dtype="auto",
         device_map=None,  # let DeepSpeed / Accelerate handle placement
     )
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        args.model_name, trust_remote_code=True, revision=args.revision
+    )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
     print(f"Loading dataset: {args.dataset_name}")
-    dataset = load_dataset(args.dataset_name, split="train")
+    dataset = load_dataset(args.dataset_name, split="train", revision=args.revision)
 
     peft_config = None
     if args.use_lora:
@@ -96,7 +100,15 @@ def main():
             r=args.lora_r,
             lora_alpha=args.lora_alpha,
             lora_dropout=args.lora_dropout,
-            target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+            target_modules=[
+                "q_proj",
+                "k_proj",
+                "v_proj",
+                "o_proj",
+                "gate_proj",
+                "up_proj",
+                "down_proj",
+            ],
             bias="none",
         )
 

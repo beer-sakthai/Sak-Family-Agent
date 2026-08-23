@@ -1,6 +1,6 @@
 ---
 name: SakSee-playwright
-description: "Playwright browser automation: installation, script execution, common pitfalls."
+description: 'Playwright browser automation: installation, script execution, common pitfalls.'
 ---
 
 # Playwright Automation

@@ -1,15 +1,8 @@
 ---
 name: SakThai-github-pr-workflow
-author: SakThai
-license: MIT
-description: "GitHub PR lifecycle: branch, commit, open, CI, merge."
-version: 1.1.0
-platforms: [linux, macos, windows]
-metadata:
-  hermes:
-    tags: [GitHub, Pull-Requests, CI/CD, Git, Automation, Merge]
-    related_skills: [github-auth, github-code-review]
+description: 'GitHub PR lifecycle: branch, commit, open, CI, merge.'
 ---
+
 # GitHub Pull Request Workflow
 
 Complete guide for managing the PR lifecycle. Each section shows the `gh` way first, then the `git` + `curl` fallback for machines without `gh`.

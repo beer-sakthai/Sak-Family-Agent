@@ -68,7 +68,11 @@ def _get(
                 body = {}
             return resp.status, body
     except urllib.error.HTTPError as exc:
-        return exc.code, {}
+        try:
+            body = json.loads(exc.read().decode("utf-8"))
+        except Exception:
+            body = {}
+        return exc.code, body
 
 
 # ---------------------------------------------------------------------------
@@ -715,6 +719,32 @@ class TestEnhancedWebAuth:
         with urllib.request.urlopen(req, timeout=30) as resp:
             assert resp.status == 200
             assert b"index" in resp.read()
+
+
+class TestDocsEndpoints:
+    def test_list_docs_authenticated(self, api_base: str) -> None:
+        status, body = _get(f"{api_base}/api/docs")
+        assert status == 200
+        assert body.get("success") is True
+        assert "best-practices" in body.get("docs", [])
+
+    def test_get_best_practices_doc(self, api_base: str) -> None:
+        status, body = _get(f"{api_base}/api/docs/best-practices")
+        assert status == 200
+        assert body.get("success") is True
+        doc = body.get("doc", {})
+        assert doc.get("slug") == "best-practices"
+        assert "Engineering Best Practices" in doc.get("title", "")
+        assert "House of Sak" in doc.get("content", "")
+
+    def test_get_nonexistent_doc_returns_404(self, api_base: str) -> None:
+        status, body = _get(f"{api_base}/api/docs/nonexistent-doc-xyz-123")
+        assert status == 404
+        assert body.get("success") is False
+
+    def test_path_traversal_doc_slug_rejected(self, api_base: str) -> None:
+        status, body = _get(f"{api_base}/api/docs/..%2F..%2Fetc%2Fpasswd")
+        assert status in (403, 404)
 
 
 def test_all_persona_servers_hardened_against_loopback_bypass() -> None:

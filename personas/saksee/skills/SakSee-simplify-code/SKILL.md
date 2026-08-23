@@ -1,7 +1,9 @@
 ---
 name: SakSee-simplify-code
-description: "Parallel 3-agent cleanup of recent code changes."
+description: Parallel 3-agent cleanup of recent code changes.
+...
 ---
+
 # Simplify Code — Parallel Review & Cleanup
 
 Review your recent code changes with three focused reviewers running in
