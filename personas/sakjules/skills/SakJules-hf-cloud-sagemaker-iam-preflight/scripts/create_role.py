@@ -20,6 +20,7 @@ Without bucket, the inline policy keeps a placeholder for later editing.
 
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 import sys

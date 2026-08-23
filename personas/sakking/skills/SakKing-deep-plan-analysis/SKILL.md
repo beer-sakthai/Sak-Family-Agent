@@ -1,7 +1,6 @@
 ---
 name: SakSit-deep-plan-analysis
-description: Audit and diagnose PLAN.md files with deep analysis.
-...
+description: "Audit and diagnose PLAN.md files with deep analysis."
 ---
 
 # Deep Plan Analysis — Discover, Audit, Diagnose

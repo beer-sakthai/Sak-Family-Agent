@@ -80,11 +80,8 @@ export function AuditLogs({ logs, onSeverityChange }: AuditLogsProps) {
           {["ALL", "INFO", "WARNING", "CRITICAL"].map((sev) => (
             <button
               key={sev}
-              type="button"
               onClick={() => handleSeveritySelect(sev)}
-              aria-pressed={selectedSeverity === sev}
-              aria-label={`Filter audit logs by ${sev} severity`}
-              className={`px-3 py-1 rounded-lg text-[11px] uppercase font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
+              className={`px-3 py-1 rounded-lg text-[11px] uppercase font-bold transition-all ${
                 selectedSeverity === sev
                   ? "bg-slate-800 text-cyan-400 border border-cyan-500/30 shadow"
                   : "text-slate-400 hover:text-slate-200"
@@ -94,10 +91,6 @@ export function AuditLogs({ logs, onSeverityChange }: AuditLogsProps) {
             </button>
           ))}
         </div>
-      </div>
-
-      <div className="sr-only" aria-live="polite" aria-atomic="true">
-        Showing {filteredLogs.length} security audit log {filteredLogs.length === 1 ? "entry" : "entries"} matching severity level {selectedSeverity}.
       </div>
 
       {/* Audit Log Table */}
@@ -117,7 +110,7 @@ export function AuditLogs({ logs, onSeverityChange }: AuditLogsProps) {
               {filteredLogs.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-5 py-8 text-center text-slate-500 italic">
-                    No security audit events recorded matching severity level &quot;{selectedSeverity}&quot;.
+                    No security audit events recorded matching severity level "{selectedSeverity}".
                   </td>
                 </tr>
               ) : (

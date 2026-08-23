@@ -287,7 +287,7 @@ def test_persona_memory_db_path_respects_sakthai_home_override(
 
 
 def test_persona_memory_db_path_matches_vm_deployment_convention() -> None:
-    """Mirrors infra/vm-agents/systemd/sakthai-telegram@.service's SAKTHAI_HOME=$HOME/.sakthai/$AGENT."""
+    """Mirrors infra/vm-agents/sakthai-agent-run.sh's SAKTHAI_HOME=$HOME/.sakthai/$AGENT."""
     for persona in config.PERSONA_NAMES:
         assert config.persona_memory_db_path(persona) == (
             Path.home() / ".sakthai" / persona / "memory.db"

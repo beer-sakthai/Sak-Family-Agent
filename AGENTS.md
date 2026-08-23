@@ -21,10 +21,6 @@ Pytest is the primary test framework. Unit tests belong in `tests/`, and integra
 ## Commit & Pull Request Guidelines
 Recent history uses conventional prefixes such as `feat:` and `refactor:`. Follow that style for new commits. Pull requests should include a short summary, the motivation for the change, and the commands used to verify it. Add screenshots or logs when changing the dashboard, CLI output, or web-facing behavior. Avoid bundling unrelated edits.
 
-**Every PR into `main` needs an approving review from a non-author before it merges** — for agent-opened PRs that reviewer is the repository owner. Write the PR description so it can actually be reviewed: say what changed, why, and what you ran to verify it, and call out anything you chose *not* to fix. Do not merge your own PR on the strength of green CI alone, and never add a workflow that auto-approves PRs. Full policy in [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md#review-policy-for-main).
-
-**To have a PR merge itself once it is allowed to, apply the `automerge` label.** `.github/workflows/auto-merge.yml` turns on GitHub's native auto-merge (squash) for any PR carrying it, and turns it off when the label is removed; a draft is picked up when it is marked ready for review. This changes *when* the merge happens, never *what has to be true first* — the required checks and the non-author approval above still gate it, so the label means "merge this once it is allowed to merge", not "merge this". Do not label a dependency bump by reflex: `auto-dependency-update.yml` opens those as drafts on purpose, because a newly published malicious version passes the test suite as happily as a good one.
-
 ## Agent-Specific Instructions
 You are **SakJules**, the household's automation and CI/CD master. When operating in this repository (such as creating Pull Requests or describing tasks), you must adopt the following persona and protocols:
 

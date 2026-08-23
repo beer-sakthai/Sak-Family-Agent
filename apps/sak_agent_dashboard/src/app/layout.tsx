@@ -2,33 +2,53 @@ import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+});
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  variable: "--font-outfit",
+});
 
 export const metadata: Metadata = {
-  title: "Sak-Agent-Family | Runtime Command Center",
-  description: "Real-time intelligence, evaluation, and operations dashboard for Sak-Agent-Family personas.",
+  title: "Sak-Agent-Family Dashboard",
+  description: "Analytics & UI Dashboard for Sak-Agent-Family Personas",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en" className={`${inter.variable} ${outfit.variable} dark`}>
-      <body className="bg-[#080b12] text-slate-100 antialiased">
-        <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#080b12]/85 px-5 py-3 backdrop-blur-xl md:px-7">
-          <div className="mx-auto flex max-w-[1600px] items-center justify-between">
-            <div className="flex items-center gap-2 text-[11px] font-medium tracking-wide text-slate-500">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.8)]" />
-              <span>PRODUCTION RUNTIME</span>
-              <span className="text-slate-700">•</span>
-              <span className="hidden sm:inline">HOUSE OF SAK / MAIN</span>
+      <body className="bg-[#090d16] text-slate-100 antialiased min-h-screen">
+        <header className="sticky top-0 z-50 border-b border-slate-800/80 bg-[#090d16]/80 backdrop-blur-md px-6 py-4">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-cyan-500/20 font-display">
+                SAK
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-slate-100 font-display tracking-tight">
+                  Sak-Agent-Family Dashboard
+                </h1>
+                <p className="text-xs text-slate-400">
+                  Runtime Analytics & Memory Explorer
+                </p>
+              </div>
             </div>
-            <div className="flex items-center gap-4 text-[11px] text-slate-500">
-              <span className="hidden sm:inline">Last sync: just now</span>
-              <span className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-1 font-mono text-slate-400">v2.4.0</span>
+            <div className="flex items-center space-x-4">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                Runtime Active
+              </span>
             </div>
           </div>
         </header>
-        <main className="mx-auto max-w-[1600px]">{children}</main>
+        <main className="max-w-7xl mx-auto p-6">{children}</main>
       </body>
     </html>
   );

@@ -84,51 +84,6 @@ Every push to `main` and every pull request runs the following pipeline (`.githu
 
 Bandit skips: `B101` (assert in non-test code), `B404`/`B603`/`B606`/`B607` (subprocess flags — all subprocess calls use `shell=False` with fixed/parsed argument arrays).
 
-Dependencies are additionally audited by `dependency-audit.yml` (pip-audit over
-`uv.lock`) and `dependency-review.yml` (GitHub dependency review on the PR diff).
-
-### Accepted dependency risk: `sqlitedict` (PYSEC-2026-1939)
-
-**Status: accepted, reviewed 2026-08-14.** This is the only known vulnerability
-in the dependency tree, and it corresponds to Scorecard's `VulnerabilitiesID`
-alert (#15464).
-
-```
-sqlitedict 2.1.0  PYSEC-2026-1939 / GHSA-g4r7-86gm-pgqc  (insecure deserialization)
-Fix versions: none
-```
-
-Why it is accepted rather than fixed:
-
-- **No fixed version exists.** The advisory's affected range ends at
-  `last_affected: 2.1.0`; there is no `fixed` event. 2.1.0 *is* the newest
-  release, and the project's last upload to PyPI was 2022-12-03 — it is
-  unmaintained, so there is nothing to upgrade to.
-- **Nothing in the shipped package uses it.** It arrives only as a transitive
-  dependency of `lm-eval`, which lives in the optional `evals` dependency
-  group. `uv sync --all-extras` (what CI and a normal install run) does not
-  install it — only `run-evals.yml` does, weekly, via `--group evals`.
-  pip-audit over runtime + extras reports **zero** vulnerabilities; the finding
-  appears only when the `evals` group is included.
-- **The vulnerable path is not reachable with untrusted input.** The flaw is
-  pickle-based deserialization of a sqlite-backed cache. `lm-eval` uses it for
-  its own local result cache, written and read by the same CI job. No
-  attacker-controlled cache file is involved.
-- **The alternative costs more than it buys.** Every `lm-eval` release,
-  including the `0.5.0.dev1` pre-release, still requires `sqlitedict`, so the
-  only way to remove it is to drop `lm-eval` — deleting the weekly evaluation
-  capability and the `evaluation_tasks/` suite to silence one advisory on a
-  CI-only, non-network-facing code path.
-
-Re-evaluate if any of those change: a fixed `sqlitedict`, an `lm-eval` that
-drops the dependency, or `lm-eval` moving out of the optional group into the
-runtime install. Verify the current state with:
-
-```bash
-uv export --frozen --all-extras --all-groups --no-emit-project --no-hashes -o /tmp/all.txt
-uvx pip-audit -r /tmp/all.txt --disable-pip --no-deps
-```
-
 ## Environment Variables Controlling Security Gates
 
 | Variable | Effect | Recommendation |

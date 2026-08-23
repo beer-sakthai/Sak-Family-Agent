@@ -23,8 +23,9 @@ Exit code: 0 if all checks pass, 1 if any fail.
 """
 
 import sys
+import os
 import urllib.request
-
+import json
 
 def fetch_readme(repo_id, repo_type):
     """Fetch the raw README.md from Hugging Face."""

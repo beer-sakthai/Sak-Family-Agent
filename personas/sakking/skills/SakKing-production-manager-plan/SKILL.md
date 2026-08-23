@@ -1,7 +1,6 @@
 ---
 name: SakSit-production-manager-plan
-description: Plan, analyze, and report production with cost and metrics.
-...
+description: "Plan, analyze, and report production with cost and metrics."
 ---
 
 # Production Manager Plan

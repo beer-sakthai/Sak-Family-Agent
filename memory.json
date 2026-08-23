@@ -1,4 +1,0 @@
-{
-  "learning": "Testing Next.js App Router API handlers with NextRequest",
-  "pattern": "To test a Next.js App Router API handler (like `export const POST = ...`), construct a `NextRequest` object (`new NextRequest('url', { method: 'POST', body: ... })`), pass it to the handler module function, and await `res.json()` or check `res.status`."
-}

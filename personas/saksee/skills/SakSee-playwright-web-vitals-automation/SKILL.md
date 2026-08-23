@@ -1,9 +1,6 @@
 ---
 name: SakSee-SakThai-playwright-web-vitals-automation
-description: Automated capture/assertion of Core Web Vitals and custom metrics in   Playwright
-  using the web-vitals library + page console interception. Use when testing   performance,
-  LCP, INP, CLS, TTFB, FCP, or building regression-tested dashboards   for E2E s
-...
+description: "Automated capture/assertion of Core Web Vitals and custom metrics in   Playwright using the web-vitals library + page console interception. Use when testing   performance, LCP, INP, CLS, TTFB, FCP, or building regression-tested dashboards   for E2E s"
 ---
 
 # Playwright Web Vitals Automation

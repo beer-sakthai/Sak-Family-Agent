@@ -1,8 +1,6 @@
 ---
 name: SakSee-SakThai-hf-transformersjs
-description: "Comprehensive reference for Hugging Face Transformers.js (v3.x) \u2014 running state-of-the-art\
-  \ ML models directly in the browser and Node.js via ONNX Runtime. Covers pipeline\
-  \ API, WebGPU acceleration, quantized models (q4/q8/fp16), supported tasks spanni"
+description: "Comprehensive reference for Hugging Face Transformers.js (v3.x) — running state-of-the-art ML models directly in the browser and Node.js via ONNX Runtime. Covers pipeline API, WebGPU acceleration, quantized models (q4/q8/fp16), supported tasks spanni"
 ---
 
 # SakThai-hf-transformersjs

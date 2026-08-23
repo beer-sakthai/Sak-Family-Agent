@@ -1,9 +1,0 @@
-{
-  "name": "ci-cd-doctor",
-  "version": "0.1.0",
-  "description": "CI/CD failure triage skill for the Sak-Family-Agent workspace — diagnoses GitHub Actions failures, CodeQL alerts, and ESLint/Vitest gate blocks, and remediates them with safe, non-author-approved local fixes.",
-  "author": {
-    "name": "Beer",
-    "email": "beer@sakthai.local"
-  }
-}

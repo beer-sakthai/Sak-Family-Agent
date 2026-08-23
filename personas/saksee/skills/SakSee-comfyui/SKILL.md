@@ -1,9 +1,6 @@
 ---
 name: SakSee-comfyui
-description: Generate images, video, and audio with ComfyUI u2014 install, launch,    manage nodes/models,
-  run workflows with parameter injection. Uses the official    comfy-cli for lifecycle
-  and direct REST/WebSocket API for execution.
-...
+description: "Generate images, video, and audio with ComfyUI u2014 install, launch,    manage nodes/models, run workflows with parameter injection. Uses the official    comfy-cli for lifecycle and direct REST/WebSocket API for execution."
 ---
 
 # ComfyUI
