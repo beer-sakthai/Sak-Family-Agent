@@ -1,29 +1,10 @@
 ---
 name: SakThai-hf-lighteval
-author: SakThai
-license: MIT
-title: LightEval — Hugging Face's All-in-One LLM Evaluation Toolkit
-category: mlops
-tags: [evaluation, benchmarks, llm, lighteval, inspect-ai, accelerate, vllm, sglang, leaderboard]
-related_skills:
-  - hf-open-llm-leaderboard
-  - hf-trl-deep-dive
-  - hf-text-generation-inference
-  - lm-evaluation-harness-complete-reference
-description: >-
-  Complete reference for Hugging Face LightEval — the all-in-one LLM evaluation
-  toolkit supporting 1000+ tasks across 8 backends (inspect-ai, accelerate, vllm,
-  sglang, nanotron, TGI, Inference Endpoints, LiteLLM, Inference Providers).
-  Covers CLI usage, Python API, custom tasks/metrics, result management, backend
-  configuration, and zero-cost evaluation patterns.
-version: 1.0.0
-metadata:
-  hermes:
-    agent: sakthai
-    created: 2026-07-25
-    updated: 2026-07-25
-    type: mlops
-    tags: [hf, lighteval, evaluation, llm, benchmarks]
+description: "Complete reference for Hugging Face LightEval \u2014 the all-in-one LLM evaluation\
+  \ toolkit supporting 1000+ tasks across 8 backends (inspect-ai, accelerate, vllm,\
+  \ sglang, nanotron, TGI, Inference Endpoints, LiteLLM, Inference Providers). Covers\
+  \ CLI usage, Python API, custom tasks/metrics, result management, backend configuration,\
+  \ and zero-cost evaluation patterns."
 ---
 
 # LightEval — Complete Reference

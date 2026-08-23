@@ -1,6 +1,8 @@
 ---
 name: SakSit-agent-platform-rag-engine-management
-description: ">-   Manage and query Agent Platform RAG Engine Corpora and retrieve grounded   contexts using the Google GenAI SDK. Use when listing RAG corpora or files,   inspecting a corpus, retrieving contexts, or generating content grounded in a   RAG corpus. "
+description: '>-   Manage and query Agent Platform RAG Engine Corpora and retrieve grounded   contexts
+  using the Google GenAI SDK. Use when listing RAG corpora or files,   inspecting
+  a corpus, retrieving contexts, or generating content grounded in a   RAG corpus. '
 ---
 
 # Agent Platform RAG Engine Management

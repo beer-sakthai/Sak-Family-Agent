@@ -1,0 +1,172 @@
+# Builds and publishes the Sak Family agent image to GHCR.
+#
+# This workflow exists because `infra/vm-agents/systemd/sakthai-telegram@.service`
+# pulls `ghcr.io/beer-sakthai/sak-family-agent`, and until now nothing in the
+# repository built or published that image — every deployed unit failed at
+# `docker pull` and restarted every 10 seconds forever.
+#
+# Deliberately uses the Docker CLI rather than the docker/* marketplace actions:
+# the runner already has Docker and buildx, and `actions/checkout` is the only
+# third-party action here, pinned to the same SHA the rest of the repository
+# uses. Four more actions would be four more SHAs to keep current for no gain.
+name: Publish agent image
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Extra tag to publish alongside :latest (default: the pyproject version)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+# Never cancel: a cancelled run can leave some tags pushed and others not, and
+# the digest this job prints is what the systemd unit gets pinned to.
+concurrency:
+  group: publish-image-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build and push to GHCR
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Resolve image tags
+        id: tags
+        env:
+          # Not interpolated into the run block: a workflow_dispatch input is
+          # attacker-influenced text, and `${{ }}` inside `run:` is textual
+          # substitution into the shell.
+          INPUT_TAG: ${{ inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          set -euo pipefail
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          version="$(grep -E '^version = ' pyproject.toml | sed -E 's/version = "([^"]+)".*/\1/')"
+
+          if [ "$REF_TYPE" = "tag" ]; then
+            release="$REF_NAME"
+          elif [ -n "$INPUT_TAG" ]; then
+            release="$INPUT_TAG"
+          else
+            release="v${version}"
+          fi
+
+          # Reject anything that is not a plain Docker tag before it reaches
+          # `docker build -t`.
+          if ! printf '%s' "$release" | grep -qE '^[A-Za-z0-9_][A-Za-z0-9._-]{0,127}$'; then
+            echo "::error::refusing to publish malformed tag: ${release}"
+            exit 1
+          fi
+
+          {
+            echo "image=${image}"
+            echo "release=${release}"
+            echo "sha_tag=sha-${GITHUB_SHA::12}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GHCR_TOKEN" \
+            | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+      - name: Build image
+        env:
+          IMAGE: ${{ steps.tags.outputs.image }}
+          RELEASE: ${{ steps.tags.outputs.release }}
+          SHA_TAG: ${{ steps.tags.outputs.sha_tag }}
+        run: |
+          set -euo pipefail
+          docker build \
+            --tag "${IMAGE}:${RELEASE}" \
+            --tag "${IMAGE}:${SHA_TAG}" \
+            --tag "${IMAGE}:latest" \
+            --label "org.opencontainers.image.source=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --label "org.opencontainers.image.version=${RELEASE}" \
+            .
+
+      - name: Smoke-test the image before publishing
+        env:
+          IMAGE: ${{ steps.tags.outputs.image }}
+          SHA_TAG: ${{ steps.tags.outputs.sha_tag }}
+        run: |
+          set -euo pipefail
+          ref="${IMAGE}:${SHA_TAG}"
+
+          # The CLI is importable.
+          docker run --rm --entrypoint sakthai "$ref" --version
+
+          # Every persona kept its identity file. An image without these starts
+          # a persona with no SOUL.md and no skills, which looks healthy.
+          docker run --rm --entrypoint sh "$ref" -c '
+            set -eu
+            count=$(ls personas/*/SOUL.md | wc -l)
+            [ "$count" -eq 6 ] || { echo "expected 6 SOUL.md, found $count"; exit 1; }
+            echo "personas OK: $count"
+          '
+
+          # The entrypoint module actually imports.
+          docker run --rm --entrypoint python "$ref" \
+            -c 'import importlib; importlib.import_module("sakthai.telegram.bot"); print("entrypoint OK")'
+
+          # Shell execution must NOT be enabled in a bot image. Dockerfile.sandbox
+          # sets SAKTHAI_SHELL_ALLOW on purpose; this image must not inherit it.
+          docker run --rm --entrypoint sh "$ref" -c '
+            [ -z "${SAKTHAI_SHELL_ALLOW:-}" ] || { echo "SAKTHAI_SHELL_ALLOW is set"; exit 1; }
+            echo "shell tool correctly disabled"
+          '
+
+      - name: Push image
+        env:
+          IMAGE: ${{ steps.tags.outputs.image }}
+          RELEASE: ${{ steps.tags.outputs.release }}
+          SHA_TAG: ${{ steps.tags.outputs.sha_tag }}
+        run: |
+          set -euo pipefail
+          docker push "${IMAGE}:${RELEASE}"
+          docker push "${IMAGE}:${SHA_TAG}"
+          docker push "${IMAGE}:latest"
+
+      - name: Report the digest to pin
+        env:
+          IMAGE: ${{ steps.tags.outputs.image }}
+          RELEASE: ${{ steps.tags.outputs.release }}
+        run: |
+          set -euo pipefail
+          digest="$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE}:${RELEASE}")"
+          {
+            echo "### Published"
+            echo
+            echo '```'
+            echo "${digest}"
+            echo '```'
+            echo
+            echo "Pin this digest in \`infra/vm-agents/systemd/sakthai-telegram@.service\`"
+            echo "and \`infra/vm-agents/docker-compose.yml\`."
+          } >> "$GITHUB_STEP_SUMMARY"

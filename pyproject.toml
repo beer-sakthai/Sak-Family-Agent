@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=83.0.0", "wheel"]
+requires = ["setuptools>=84.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -12,13 +12,14 @@ authors = [{ name = "beer-sakthai" }]
 dependencies = [
     "click>=8.4.2,<9.0",
     "pyyaml>=6.0,<7.0",
-    "anthropic>=0.120.2,<1.0",
-    "httpx>=0.20.0",
-    "google-genai>=2.16.0",
+    "anthropic>=0.121.0,<1.0",
+    "httpx>=0.20.0,<2.0",
+    "google-genai>=2.17.0,<3.0",
     "tenacity>=8.0,<10.0",
     "python-telegram-bot==22.8",
     "rich>=15.0.0,<16.0",
     "prompt-toolkit>=3.0.53,<4.0",
+    "mcp[cli]>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -26,8 +27,8 @@ dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=0.23",
     "pytest-cov>=5.0",
-    "hypothesis>=6.164.0",
-    "ruff>=0.16.1",
+    "hypothesis>=6.165.3",
+    "ruff>=0.16.2",
     "mypy>=2.3.0",
     "bandit[toml]>=1.9.4",
 ]
@@ -53,7 +54,12 @@ markers = [
 
 [tool.coverage.run]
 source = ["sakthai"]
-omit = ["*/telegram/bot.py"]
+# `telegram/bot.py` used to be omitted here. Omitting it did not make it
+# tested — it made it *invisible*: the module sat at 38% while the reported
+# total stayed above the floor, and the uncovered half included
+# `_reply_with_agent_result`, the single function every handler funnels
+# through and where the authorization check lives. It is measured now.
+omit = []
 # Measure branch coverage too: line coverage alone hides untested conditional
 # paths (one side of an if/else). CI passes --cov-branch so the fail_under floor
 # below gates branches as well as lines.
@@ -70,7 +76,7 @@ fail_under = 96
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-exclude = ["library", "scripts"]
+exclude = ["library", "scripts", "apps", "services", "training", "infra", "build", ".venv"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]
@@ -136,7 +142,37 @@ also_copy = [
 # setup / web-server / read_file path handling, not the mutated core logic, so the
 # survivor list is unaffected in practice). A renamed/removed node id here degrades
 # to a harmless pytest warning rather than an error.
+#
+# The ``--ignore`` entries below solve a second, separate problem that made
+# ``make mutation`` fail outright before it ran a single mutant. mutmut copies
+# ``tests/`` into ``mutants/`` as well, so a test module that resolves repo
+# paths from its own ``__file__`` (``REPO_ROOT = Path(__file__).parents[1]``)
+# points at ``mutants/`` — where ``scripts/``, ``personas/`` and ``infra/`` do
+# not exist, since ``also_copy`` deliberately brings in only the package. Those
+# modules then raise ``FileNotFoundError`` at *import* time, which ``--deselect``
+# cannot suppress (deselection happens after collection), so the stats phase
+# aborted with "failed to collect stats" and the whole run died.
+#
+# These are repo-structure invariant tests (persona/skill layout, SOUL
+# consistency, script behavior). They exercise none of the mutated modules, so
+# ignoring them leaves the survivor list unchanged — the same rationale as the
+# deselects above.
 pytest_add_cli_args_test_selection = [
+    # Import-time failures: these load a module from `scripts/` (by path or by
+    # `from scripts.… import …`), which is not copied into mutants/.
+    "--ignore=tests/test_compose_persona.py",
+    "--ignore=tests/test_dataset_prep.py",
+    "--ignore=tests/test_eval_compare.py",
+    "--ignore=tests/test_eval_scoring.py",
+    "--ignore=tests/test_export_agent_repo.py",
+    "--ignore=tests/test_setup_servicequotebot.py",
+    "--ignore=tests/test_setup_vm_telegram_agents.py",
+    "--ignore=tests/test_train_configs.py",
+    # Runtime failures: these read `personas/` layout inside the test body.
+    "--ignore=tests/test_persona_guardrails_parity.py",
+    "--ignore=tests/test_persona_workspace_workflows.py",
+    "--ignore=tests/test_soul_consistency.py",
+    "--ignore=tests/test_cycle_skills_config.py",
     "--deselect=tests/test_cli.py::test_serve_dashboard_starts_and_stops_on_interrupt",
     "--deselect=tests/test_cli.py::test_dashboard_security_handler_sets_headers",
     "--deselect=tests/test_cli_system.py::TestSetupCommand::test_env_file_found_when_present",
@@ -196,6 +232,26 @@ evals = [
     # tool.uv.sources override below actually applies: uv only rewrites the
     # index for packages the project depends on directly, not transitive deps.
     "torch>=2.0",
+]
+# pylint for the pylint.yml workflow. Declared here rather than installed ad hoc
+# so the whole pylint toolchain resolves through uv.lock, which carries a hash
+# for every wheel — that is what closes Scorecard's PinnedDependenciesID
+# (`pipCommand`) alerts against that workflow. Its own group, not `dev`, so
+# ci.yml's `uv sync --all-extras` does not install a linter it never runs.
+# Version-floored, not pinned: the lock holds the exact version, and a pylint
+# release that moves the --fail-under scores should surface as a lock bump in a
+# reviewable diff rather than silently on the next push.
+lint = [
+    "pylint>=4.0.7,<5.0",
+]
+# Atheris for the harnesses in fuzz/. Its own group, and deliberately not in
+# `dev`: it builds against a matching clang/libFuzzer toolchain, so putting it
+# in the default install would make `uv sync --all-extras` fail on any machine
+# without one. Nothing in CI needs it — tests/test_fuzz_harnesses.py exercises
+# every harness invariant through a plain `exercise(bytes)` entry point that
+# imports nothing from Atheris. Install it only to run a real campaign.
+fuzz = [
+    "atheris>=3.0.0",
 ]
 
 [tool.uv.sources]

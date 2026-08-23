@@ -1,0 +1,105 @@
+# Alternative to the six systemd units: the same six personas plus the
+# dashboard, as one compose project sharing one memory volume.
+#
+# Use this OR the systemd units, not both — they would fight over container
+# names and over the same ~/.sakthai directory.
+#
+#   cd infra/vm-agents
+#   cp env-templates/common.env.example      config/common.env
+#   cp env-templates/<agent>.env.example     config/<agent>.env   # for all six
+#   docker compose up -d
+#
+# The systemd path is documented in README.md and remains the primary one; this
+# file exists because the dashboard has to sit on the same host reading the same
+# volume, and expressing "six writers plus one read-only reader" is what compose
+# is for.
+
+x-agent: &agent
+  image: ${IMAGE_NAME:-ghcr.io/beer-sakthai/sak-family-agent:latest}
+  restart: always
+  security_opt:
+    - no-new-privileges:true
+  env_file:
+    - config/common.env
+  volumes:
+    # Read-write: the personas own their shards.
+    - ${SAKTHAI_DIR:-~/.sakthai}:/data/.sakthai
+
+services:
+  sakking:
+    <<: *agent
+    container_name: sakthai-telegram-sakking
+    env_file: [config/common.env, config/sakking.env]
+    environment:
+      SAKTHAI_PERSONA: sakking
+      SAKTHAI_HOME: /data/.sakthai/sakking
+      SAKTHAI_SYSTEM_PROMPT_FILE: /app/personas/sakking/SOUL.md
+
+  sakthai:
+    <<: *agent
+    container_name: sakthai-telegram-sakthai
+    env_file: [config/common.env, config/sakthai.env]
+    environment:
+      SAKTHAI_PERSONA: sakthai
+      SAKTHAI_HOME: /data/.sakthai/sakthai
+      SAKTHAI_SYSTEM_PROMPT_FILE: /app/personas/sakthai/SOUL.md
+
+  saksee:
+    <<: *agent
+    container_name: sakthai-telegram-saksee
+    env_file: [config/common.env, config/saksee.env]
+    environment:
+      SAKTHAI_PERSONA: saksee
+      SAKTHAI_HOME: /data/.sakthai/saksee
+      SAKTHAI_SYSTEM_PROMPT_FILE: /app/personas/saksee/SOUL.md
+
+  saksit:
+    <<: *agent
+    container_name: sakthai-telegram-saksit
+    env_file: [config/common.env, config/saksit.env]
+    environment:
+      SAKTHAI_PERSONA: saksit
+      SAKTHAI_HOME: /data/.sakthai/saksit
+      SAKTHAI_SYSTEM_PROMPT_FILE: /app/personas/saksit/SOUL.md
+
+  saktan:
+    <<: *agent
+    container_name: sakthai-telegram-saktan
+    env_file: [config/common.env, config/saktan.env]
+    environment:
+      SAKTHAI_PERSONA: saktan
+      SAKTHAI_HOME: /data/.sakthai/saktan
+      SAKTHAI_SYSTEM_PROMPT_FILE: /app/personas/saktan/SOUL.md
+
+  sakjules:
+    <<: *agent
+    container_name: sakthai-telegram-sakjules
+    env_file: [config/common.env, config/sakjules.env]
+    environment:
+      SAKTHAI_PERSONA: sakjules
+      SAKTHAI_HOME: /data/.sakthai/sakjules
+      SAKTHAI_SYSTEM_PROMPT_FILE: /app/personas/sakjules/SOUL.md
+
+  dashboard:
+    image: ${DASHBOARD_IMAGE_NAME:-sak-dashboard:latest}
+    container_name: sak-agent-dashboard
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+    # LOOPBACK ONLY, deliberately. The dashboard serves the same personal memory
+    # the Python web server refuses to expose without SAKTHAI_WEB_ALLOW_PUBLIC
+    # (web/server.py), but 47 of its 48 API routes have no authentication at all
+    # and there is no middleware.ts. Publishing this to 0.0.0.0 puts every fact
+    # the family has ever learned on the open internet. Put an authenticating
+    # reverse proxy in front of 127.0.0.1:3000 instead.
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      SAKTHAI_DIR: /data/.sakthai
+    volumes:
+      # Read-only: the dashboard opens every shard with `readonly: true`
+      # (src/lib/db.ts), so `:ro` costs nothing and means a dashboard bug can
+      # never corrupt a persona's memory.
+      - ${SAKTHAI_DIR:-~/.sakthai}:/data/.sakthai:ro
+    depends_on:
+      - sakthai

@@ -3,7 +3,7 @@
 # requires-python = ">=3.10"
 # dependencies = [
 #     "huggingface_hub",
-#     "pyyaml",
+
 #     "requests",
 #     "python-dotenv",
 # ]
@@ -14,19 +14,18 @@ Manages paper indexing, linking, authorship, and article creation.
 """
 
 import argparse
-import os
-import sys
-import re
 import json
-from pathlib import Path
-from typing import Optional, List, Dict, Any
+import os
+import re
+import sys
 from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 try:
-    from huggingface_hub import HfApi, hf_hub_download, get_token
-    import yaml
     import requests
     from dotenv import load_dotenv
+    from huggingface_hub import HfApi, get_token, hf_hub_download
 except ImportError as e:
     print(f"Error: Missing required dependency: {e}")
     print("Tip: run this script with `uv run scripts/paper_manager.py ...`.")
@@ -39,14 +38,14 @@ load_dotenv()
 class PaperManager:
     """Manages paper publishing operations on Hugging Face Hub."""
 
-    def __init__(self, hf_token: Optional[str] = None):
+    def __init__(self, hf_token: str | None = None):
         """Initialize Paper Manager with HF token."""
         self.token = hf_token or os.getenv("HF_TOKEN") or get_token()
         if not self.token:
             print("Warning: No HF_TOKEN found. Some operations will fail.")
         self.api = HfApi(token=self.token)
 
-    def index_paper(self, arxiv_id: str) -> Dict[str, Any]:
+    def index_paper(self, arxiv_id: str) -> dict[str, Any]:
         """
         Index a paper on Hugging Face from arXiv.
 
@@ -81,7 +80,7 @@ class PaperManager:
             print(f"Error checking paper status: {e}")
             return {"status": "error", "message": str(e)}
 
-    def check_paper(self, arxiv_id: str) -> Dict[str, Any]:
+    def check_paper(self, arxiv_id: str) -> dict[str, Any]:
         """
         Check if a paper exists on Hugging Face.
 
@@ -121,9 +120,9 @@ class PaperManager:
         repo_id: str,
         arxiv_id: str,
         repo_type: str = "model",
-        citation: Optional[str] = None,
+        citation: str | None = None,
         create_pr: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Link a paper to a model/dataset/space repository.
 
@@ -154,7 +153,7 @@ class PaperManager:
                 token=self.token
             )
 
-            with open(readme_path, 'r', encoding='utf-8') as f:
+            with open(readme_path, encoding='utf-8') as f:
                 content = f.read()
 
             # Parse or create YAML frontmatter
@@ -179,7 +178,7 @@ class PaperManager:
             paper_url = f"https://huggingface.co/papers/{arxiv_id}"
             repo_url = f"https://huggingface.co/{repo_id}"
 
-            print(f"✓ Successfully linked paper to repository")
+            print("✓ Successfully linked paper to repository")
             print(f"  Paper: {paper_url}")
             print(f"  Repo: {repo_url}")
 
@@ -198,7 +197,7 @@ class PaperManager:
         self,
         content: str,
         arxiv_id: str,
-        citation: Optional[str] = None
+        citation: str | None = None
     ) -> str:
         """
         Add paper reference to README content.
@@ -214,18 +213,23 @@ class PaperManager:
         arxiv_url = f"https://arxiv.org/abs/{arxiv_id}"
         hf_paper_url = f"https://huggingface.co/papers/{arxiv_id}"
 
-        # Check if YAML frontmatter exists
-        yaml_pattern = r'^---\s*\n(.*?)\n---\s*\n'
-        match = re.match(yaml_pattern, content, re.DOTALL)
+        # Check if YAML frontmatter exists linearly without ReDoS risk
+        yaml_end: int | None = None
+        if content.startswith("---"):
+            lines = content.split("\n")
+            if lines and lines[0].strip() == "---":
+                for idx in range(1, len(lines)):
+                    if lines[idx].strip() == "---":
+                        yaml_end = sum(len(line) + 1 for line in lines[:idx + 1])
+                        break
 
-        if match:
+        if yaml_end is not None:
             # YAML exists, check if paper already referenced
             if arxiv_id in content:
                 print(f"Paper {arxiv_id} already referenced in README")
                 return content
 
             # Add to existing content (after YAML)
-            yaml_end = match.end()
             before = content[:yaml_end]
             after = content[yaml_end:]
         else:
@@ -236,7 +240,7 @@ class PaperManager:
 
         # Add paper reference section with boundary markers
         paper_section = "\n<!-- paper-manager:start -->\n"
-        paper_section += f"## Paper\n\n"
+        paper_section += "## Paper\n\n"
         paper_section += f"This {'model' if 'model' in content.lower() else 'work'} is based on research presented in:\n\n"
         paper_section += f"**[View on arXiv]({arxiv_url})** | "
         paper_section += f"**[View on Hugging Face]({hf_paper_url})**\n\n"
@@ -257,9 +261,9 @@ class PaperManager:
         template: str,
         title: str,
         output: str,
-        authors: Optional[str] = None,
-        abstract: Optional[str] = None
-    ) -> Dict[str, Any]:
+        authors: str | None = None,
+        abstract: str | None = None
+    ) -> dict[str, Any]:
         """
         Create a research article from template.
 
@@ -285,7 +289,7 @@ class PaperManager:
                 "message": f"Template '{template}' not found at {template_file}"
             }
 
-        with open(template_file, 'r', encoding='utf-8') as f:
+        with open(template_file, encoding='utf-8') as f:
             template_content = f.read()
 
         # Prepare safe values for different contexts
@@ -296,14 +300,26 @@ class PaperManager:
         abstract_val = abstract if abstract else "Abstract to be written..."
         safe_abstract_body = self._sanitize_text(abstract_val)
 
-        # Split frontmatter from body for context-aware escaping
-        fm_pattern = r'^(---\s*\n)(.*?\n)(---\s*\n)'
-        fm_match = re.match(fm_pattern, template_content, re.DOTALL)
+        # Split frontmatter from body linearly without ReDoS risk
+        fm_open = ""
+        fm_body = ""
+        fm_close = ""
+        body = template_content
+        if template_content.startswith("---"):
+            lines = template_content.split("\n")
+            if lines and lines[0].strip() == "---":
+                closing_idx = None
+                for idx in range(1, len(lines)):
+                    if lines[idx].strip() == "---":
+                        closing_idx = idx
+                        break
+                if closing_idx is not None:
+                    fm_open = lines[0] + "\n"
+                    fm_body = "\n".join(lines[1:closing_idx]) + ("\n" if closing_idx > 1 else "")
+                    fm_close = lines[closing_idx] + "\n"
+                    body = "\n".join(lines[closing_idx + 1:])
 
-        if fm_match:
-            fm_open, fm_body, fm_close = fm_match.group(1), fm_match.group(2), fm_match.group(3)
-            body = template_content[fm_match.end():]
-
+        if fm_open and fm_close:
             # YAML-escape values in frontmatter
             fm_body = fm_body.replace("{{TITLE}}", self._escape_yaml_value(title))
             fm_body = fm_body.replace("{{AUTHORS}}", self._escape_yaml_value(authors_val))
@@ -335,7 +351,7 @@ class PaperManager:
             "template": template
         }
 
-    def get_arxiv_info(self, arxiv_id: str) -> Dict[str, Any]:
+    def get_arxiv_info(self, arxiv_id: str) -> dict[str, Any]:
         """
         Fetch paper information from arXiv API.
 
@@ -355,13 +371,13 @@ class PaperManager:
             response = requests.get(api_url, timeout=10)
             response.raise_for_status()
 
-            # Parse XML response (simplified)
+            # Parse XML response
             content = response.text
 
-            # Extract basic info with regex (proper XML parsing would be better)
-            title_match = re.search(r'<title>(.*?)</title>', content, re.DOTALL)
-            authors_matches = re.findall(r'<name>(.*?)</name>', content)
-            summary_match = re.search(r'<summary>(.*?)</summary>', content, re.DOTALL)
+            # Extract basic info with non-backtracking character class regexes
+            title_match = re.search(r'<title>([^<]+)</title>', content)
+            authors_matches = re.findall(r'<name>([^<]+)</name>', content)
+            summary_match = re.search(r'<summary>([^<]+)</summary>', content)
 
             # Sanitize all text extracted from the external API
             raw_title = title_match.group(1).strip() if title_match else None

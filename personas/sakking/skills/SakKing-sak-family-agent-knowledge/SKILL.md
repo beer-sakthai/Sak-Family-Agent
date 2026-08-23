@@ -1,6 +1,7 @@
 ---
 name: SakSit-sak-family-agent-knowledge
-description: "Help and support for the Sak-Family-Agent monorepo."
+description: Help and support for the Sak-Family-Agent monorepo.
+...
 ---
 
 # Sak-Family-Agent — Help & Support Knowledge

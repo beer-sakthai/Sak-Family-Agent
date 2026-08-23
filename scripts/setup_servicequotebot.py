@@ -79,7 +79,13 @@ def build_customer_bundle(
     service_file = systemd_dir / "servicequotebot.service"
     memory_db = state_dir / "memory.db"
 
+    import os
+
     config_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        os.chmod(config_dir, 0o700)
+    except OSError:
+        pass
     systemd_dir.mkdir(parents=True, exist_ok=True)
     state_dir.mkdir(parents=True, exist_ok=True)
     inputs_dir.mkdir(parents=True, exist_ok=True)
@@ -94,6 +100,10 @@ def build_customer_bundle(
         ),
         encoding="utf-8",
     )
+    try:
+        os.chmod(env_file, 0o600)
+    except OSError:
+        pass
     service_file.write_text(
         _render_service_file(repo_root, env_file, state_dir),
         encoding="utf-8",

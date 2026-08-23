@@ -25,10 +25,69 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
-BIN = os.environ.get("SAKTHAI_BIN", "sakthai")
+def _urlopen_http(req, timeout):
+    """``urlopen`` restricted to http(s).
+
+    B310 asks for the permitted schemes to be audited, because ``urlopen``
+    will just as happily open ``file:``, ``ftp:`` or a custom handler. Every
+    URL reaching this helper is a literal, so the check cannot fail today —
+    it is here so that making the host configurable later cannot silently
+    become a local-file read.
+    """
+    url = req.full_url if isinstance(req, urllib.request.Request) else req
+    scheme = urllib.parse.urlparse(url).scheme
+    if scheme not in ("http", "https"):
+        raise ValueError(f"refusing non-HTTP(S) URL scheme {scheme!r}: {url!r}")
+    return urllib.request.urlopen(req, timeout=timeout)  # nosec B310 - scheme checked above
+
+
+
+def resolve_bin() -> str:
+    raw = os.environ.get("SAKTHAI_BIN")
+    if not raw:
+        return "sakthai"
+
+    candidate = Path(raw)
+
+    # Allow only the known-safe command token when no path is provided.
+    if candidate.name == raw and candidate.parent == Path("."):
+        if raw == "sakthai":
+            return raw
+        raise ValueError("SAKTHAI_BIN must be 'sakthai' or an absolute executable path.")
+
+    # For path-based overrides, require an absolute path text first.
+    if not os.path.isabs(raw):
+        raise ValueError("SAKTHAI_BIN path must be absolute.")
+
+    # Sanitize and canonicalize user-provided path text before using Path APIs.
+    # realpath resolves ".." segments and symlinks; strict existence is checked below.
+    sanitized_path = os.path.abspath(os.path.realpath(os.path.expanduser(raw)))
+    resolved = Path(sanitized_path)
+
+    trusted_roots = (
+        Path("/usr/bin"),
+        Path("/usr/local/bin"),
+        Path("/bin"),
+        Path("/opt/homebrew/bin"),
+    )
+    if not any(
+        root == resolved or root in resolved.parents
+        for root in trusted_roots
+    ):
+        raise ValueError("SAKTHAI_BIN path is outside trusted binary directories.")
+
+    if not resolved.is_file():
+        raise ValueError("SAKTHAI_BIN path must point to an existing file.")
+    if not os.access(resolved, os.X_OK):
+        raise ValueError("SAKTHAI_BIN path is not executable.")
+    return str(resolved)
+
+
+BIN = resolve_bin()
 failures: list[str] = []
 
 
@@ -50,6 +109,29 @@ def run(args: list[str], env: dict[str, str], stdin: str | None = None) -> tuple
         shell=False,
     )
     return proc.returncode, proc.stdout + proc.stderr
+
+
+def preflight_ok(rc: int, out: str) -> bool:
+    """Did `run --dry-run` get all the way through its preflight?
+
+    The printed report is the deliverable — provider, model, credentials, tool
+    count, runnable — and producing it costs nothing. But `sakthai run
+    --dry-run` deliberately exits 1 when no provider credential resolves
+    ("Not runnable: no credentials found for provider ..."), which is the
+    normal state of a container that has no key. This driver is documented to
+    need neither an API key nor the network, so that specific exit counts as a
+    pass once the report is on stdout. Every other non-zero exit — an
+    unresolved --with-skills name, a bad provider, an import error, a crash —
+    still fails.
+    """
+    if "runnable:" not in out:
+        return False
+    return rc == 0 or "no credentials found" in out
+
+
+def last_line(out: str) -> str:
+    lines = [line for line in out.splitlines() if line.strip()]
+    return lines[-1] if lines else "(no output)"
 
 
 def drive_mcp(env: dict[str, str]) -> dict[int, dict]:
@@ -144,7 +226,7 @@ def main() -> int:
 
         print("\nAgent preflight (no API call):")
         rc, out = run(["run", "say hi", "--dry-run", "--no-mcp"], env)
-        check("run --dry-run", rc == 0 and "runnable:" in out)
+        check("run --dry-run", preflight_ok(rc, out), last_line(out))
         rc, out = run(
             [
                 "run",
@@ -156,7 +238,7 @@ def main() -> int:
             ],
             env,
         )
-        check("run --dry-run --with-skills", rc == 0 and "runnable:" in out)
+        check("run --dry-run --with-skills", preflight_ok(rc, out), last_line(out))
 
         print("\nWeb API server (headless):")
         # The `dashboard` CLI command was removed (5de2c25); the JSON surface
@@ -164,7 +246,7 @@ def main() -> int:
         # /api/* endpoints require a Bearer token (web_auth fact in the same
         # MemoryStore the server reads), so fetch it via `sakthai web setup`.
         rc, setup_out = run(["web", "setup"], env)
-        token = ""
+        token = ""  # nosec B105 — empty initialiser; the real token is parsed below
         if rc == 0:
             for line in setup_out.splitlines():
                 if line.strip().startswith("Token:"):
@@ -185,7 +267,7 @@ def main() -> int:
                     req = urllib.request.Request(
                         "http://127.0.0.1:3001/api/stages", headers=headers
                     )
-                    with urllib.request.urlopen(req, timeout=2) as r:
+                    with _urlopen_http(req, timeout=2) as r:
                         stages = json.loads(r.read())
                     break
                 except OSError:
@@ -196,7 +278,7 @@ def main() -> int:
                 req = urllib.request.Request(
                     "http://127.0.0.1:3001/api/ecosystem", headers=headers
                 )
-                with urllib.request.urlopen(req, timeout=2) as r:
+                with _urlopen_http(req, timeout=2) as r:
                     eco = json.loads(r.read())
             except OSError:
                 pass

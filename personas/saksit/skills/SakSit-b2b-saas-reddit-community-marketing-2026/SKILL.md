@@ -1,6 +1,7 @@
 ---
 name: SakSit-b2b-saas-reddit-community-marketing-2026
-description: "Saksit B2B Saas Reddit Community Marketing 2026"
+description: Saksit B2B Saas Reddit Community Marketing 2026
+...
 ---
 
 # B2B SaaS Reddit Community Marketing Strategy 2026
