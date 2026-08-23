@@ -58,6 +58,26 @@ describe('ToolExecutionCard Component', () => {
     const approveBtn = screen.getByRole('button', { name: /Approve & Run/i });
     fireEvent.click(approveBtn);
     expect(onApprove).toHaveBeenCalled();
+    expect(screen.getByText(/Guardrail Action Approved & Executed/i)).toBeDefined();
+  });
+
+  it('renders approval intercept and handles rejection feedback', () => {
+    const onReject = vi.fn();
+    render(
+      <ToolExecutionCard
+        persona="sakjules"
+        tool="rm_rf"
+        args={{ path: '/tmp' }}
+        astSafe={false}
+        requiresApproval={true}
+        onReject={onReject}
+      />
+    );
+
+    const rejectBtn = screen.getByRole('button', { name: /Reject/i });
+    fireEvent.click(rejectBtn);
+    expect(onReject).toHaveBeenCalled();
+    expect(screen.getByText(/Guardrail Action Rejected/i)).toBeDefined();
   });
 });
 

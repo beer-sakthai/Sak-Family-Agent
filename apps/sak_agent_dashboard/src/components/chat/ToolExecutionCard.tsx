@@ -79,18 +79,32 @@ export const ToolExecutionCard: React.FC<ToolExecutionCardProps> = ({
             <button
               type="button"
               onClick={handleApprove}
-              className="rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500"
+              className="rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-950"
             >
               Approve &amp; Run
             </button>
             <button
               type="button"
               onClick={handleReject}
-              className="rounded bg-rose-600/80 px-3 py-1 text-xs font-semibold text-white hover:bg-rose-500"
+              className="rounded bg-rose-600/80 px-3 py-1 text-xs font-semibold text-white hover:bg-rose-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-950"
             >
               Reject
             </button>
           </div>
+        </div>
+      )}
+
+      {requiresApproval && approvedState === 'approved' && (
+        <div className="mt-2 rounded border border-emerald-800/60 bg-emerald-950/40 px-2.5 py-1.5 text-[11px] font-medium text-emerald-300 flex items-center gap-1.5">
+          <span>✓</span>
+          <span>Guardrail Action Approved &amp; Executed</span>
+        </div>
+      )}
+
+      {requiresApproval && approvedState === 'rejected' && (
+        <div className="mt-2 rounded border border-rose-800/60 bg-rose-950/40 px-2.5 py-1.5 text-[11px] font-medium text-rose-300 flex items-center gap-1.5">
+          <span>✕</span>
+          <span>Guardrail Action Rejected</span>
         </div>
       )}
 
