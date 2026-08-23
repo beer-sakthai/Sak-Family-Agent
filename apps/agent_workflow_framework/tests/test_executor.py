@@ -46,16 +46,47 @@ class TestWorkflowExecutor(unittest.TestCase):
         self.assertEqual(history.step_results["s1"].output.get("stdout"), "foo_bar")
 
     def test_python_action(self):
-        """Test python evaluation action handler."""
+        """Test python literal evaluation action handler."""
         wf = WorkflowDefinition(
             name="test_python",
             steps=[
-                StepDefinition(id="s1", action="python", params={"expr": "10 * 5"}),
+                StepDefinition(
+                    id="s1",
+                    action="python",
+                    params={"expr": "{'key': 'value', 'numbers': [1, 2, 3]}"},
+                ),
             ],
         )
         history = asyncio.run(self.executor.execute_workflow(wf))
         self.assertEqual(history.status, RunStatus.COMPLETED)
-        self.assertEqual(history.step_results["s1"].output.get("result"), 50)
+        self.assertEqual(
+            history.step_results["s1"].output.get("result"), {"key": "value", "numbers": [1, 2, 3]}
+        )
+
+    def test_python_action_security_blocking(self):
+        """Verify that unsafe Python expressions and code injection attempts are safely blocked."""
+        malicious_expressions = [
+            "__import__('os').system('echo pwned')",
+            "10 * 5",  # non-literal binary expression is blocked
+            "open('/etc/passwd').read()",
+            "eval('1+1')",
+            "exec('import os')",
+            "lambda: None",
+        ]
+        for expr in malicious_expressions:
+            with self.subTest(expr=expr):
+                wf = WorkflowDefinition(
+                    name="test_python_security",
+                    steps=[
+                        StepDefinition(id="s1", action="python", params={"expr": expr}),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(history.status, RunStatus.FAILED)
+                step_res = history.step_results["s1"]
+                self.assertEqual(step_res.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res.error)
+                self.assertIn("Invalid or unsafe expression", step_res.error)
 
     def test_file_write_and_read(self):
         """Test file_write and file_read pipeline."""
