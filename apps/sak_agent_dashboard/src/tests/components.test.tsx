@@ -210,6 +210,7 @@ describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
         const ToggleComponent = mod.DemoModeToggle || mod.DemoToggle;
         render(<ToggleComponent isDemo={false} onToggle={handleToggle} />);
         const btn = screen.getByRole("button", { name: /demo/i });
+        expect(btn).toHaveAttribute("aria-pressed", "false");
         fireEvent.click(btn);
         expect(handleToggle).toHaveBeenCalled();
       } else {
