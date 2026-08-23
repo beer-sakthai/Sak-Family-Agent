@@ -15,7 +15,6 @@ export function DemoModeToggle({ isDemo, onToggle }: DemoModeToggleProps) {
         type="button"
         onClick={() => onToggle(!isDemo)}
         aria-pressed={isDemo}
-        aria-label={`Toggle demo mode. Currently ${isDemo ? "ON (Sample Data)" : "OFF (Live Runtime)"}`}
         className={`relative inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono transition-all duration-300 border shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
           isDemo
             ? "bg-purple-950/60 border-purple-500/40 text-purple-300 shadow-purple-900/30 hover:bg-purple-900/60"
