@@ -117,8 +117,11 @@ export function StitchStudio() {
           return (
             <button
               key={preset.id}
+              type="button"
+              aria-pressed={isSelected}
+              aria-label={`Select preset ${preset.title}`}
               onClick={() => setActivePreset(preset)}
-              className={`text-left p-4 rounded-xl transition-all border ${
+              className={`text-left p-4 rounded-xl transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-950 ${
                 isSelected
                   ? "bg-cyan-950/40 border-cyan-500/60 shadow-lg shadow-cyan-950/30"
                   : "bg-slate-900/60 border-slate-800 hover:border-slate-700"
