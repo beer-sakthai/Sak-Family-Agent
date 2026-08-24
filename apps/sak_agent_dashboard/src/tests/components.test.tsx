@@ -240,16 +240,28 @@ describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
   });
 
   describe("StitchStudio Component", () => {
-    it("renders Stitch Studio header, preset controls, and tab switching", async () => {
+    it("renders Stitch Studio header, preset controls with accessible attributes, and tab switching", async () => {
       const mod = await getComponentModule("StitchStudio");
       if (mod && mod.StitchStudio) {
         const StitchStudio = mod.StitchStudio;
         render(<StitchStudio />);
         expect(screen.getByText(/Google Stitch Design & Component Workbench/i)).toBeInTheDocument();
         expect(screen.getByText(/SakThai Interactive Agent Drawer/i)).toBeInTheDocument();
+
+        // Verify accessibility attributes on preset buttons
+        const agentDrawerPresetBtn = screen.getByRole("button", { name: /select preset sakthai interactive agent drawer/i });
+        const mermaidPresetBtn = screen.getByRole("button", { name: /select preset multi-agent system architecture/i });
+
+        expect(agentDrawerPresetBtn).toHaveAttribute("aria-pressed", "true");
+        expect(mermaidPresetBtn).toHaveAttribute("aria-pressed", "false");
+
+        fireEvent.click(mermaidPresetBtn);
+        expect(agentDrawerPresetBtn).toHaveAttribute("aria-pressed", "false");
+        expect(mermaidPresetBtn).toHaveAttribute("aria-pressed", "true");
+
         const codeTab = screen.getByRole("button", { name: /tsx code/i });
         fireEvent.click(codeTab);
-        expect(screen.getByText(/SakThaiAgentCard/i)).toBeInTheDocument();
+        expect(screen.getByText(/Multi-Agent System Architecture/i)).toBeInTheDocument();
       }
     });
   });
