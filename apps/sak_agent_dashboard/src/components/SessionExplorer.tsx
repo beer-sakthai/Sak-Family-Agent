@@ -98,11 +98,13 @@ export function SessionExplorer({
           />
           {searchQuery && (
             <button
+              type="button"
+              aria-label="Clear search query"
               onClick={() => {
                 setSearchQuery("");
                 if (onSearchChange) onSearchChange("");
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -231,16 +233,20 @@ export function SessionExplorer({
           </span>
           <div className="flex items-center gap-2">
             <button
+              type="button"
+              aria-label="Previous page"
               disabled={currentPage <= 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="p-1.5 rounded bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800"
+              className="p-1.5 rounded bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
+              type="button"
+              aria-label="Next page"
               disabled={currentPage >= totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="p-1.5 rounded bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800"
+              className="p-1.5 rounded bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -264,8 +270,10 @@ export function SessionExplorer({
                 </h4>
               </div>
               <button
+                type="button"
+                aria-label="Close session detail modal"
                 onClick={() => setActiveModalSession(null)}
-                className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
               >
                 <X className="h-5 w-5" />
               </button>
