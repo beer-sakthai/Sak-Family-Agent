@@ -473,11 +473,12 @@ def test_build_client_google_oauth_client_init_error_raises_agent_error(
 
 def test_detect_ollama_via_env_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
     """With no gateway/local credentials, OLLAMA_HOST selects the ollama provider."""
-    for var in ("SAKTHAI_GATEWAY_URL", "GEMINI_API_KEY", "GOOGLE_API_KEY"):
+    for var in ("SAKTHAI_GATEWAY_URL", "GEMINI_API_KEY", "GOOGLE_API_KEY", "HF_TOKEN"):
         monkeypatch.delenv(var, raising=False)
     monkeypatch.setenv("OLLAMA_HOST", "http://127.0.0.1:11434")
     with (
         patch("sakthai.agent.providers.gateway_credential_source", return_value=None),
+        patch("sakthai.agent.providers.huggingface_credential_source", return_value=None),
         patch("sakthai.agent.providers.local_credential_source", return_value=None),
     ):
         assert detect_provider(None, "claude-3") == "ollama"
@@ -485,9 +486,11 @@ def test_detect_ollama_via_env_credentials(monkeypatch: pytest.MonkeyPatch) -> N
 
 def test_detect_local_via_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
     """Local credentials outrank the ollama/google/openai/anthropic fallbacks."""
+    monkeypatch.delenv("HF_TOKEN", raising=False)
     monkeypatch.setenv("OLLAMA_HOST", "http://127.0.0.1:11434")
     with (
         patch("sakthai.agent.providers.gateway_credential_source", return_value=None),
+        patch("sakthai.agent.providers.huggingface_credential_source", return_value=None),
         patch("sakthai.agent.providers.local_credential_source", return_value="local_url"),
     ):
         assert detect_provider(None, "claude-3") == "local"
