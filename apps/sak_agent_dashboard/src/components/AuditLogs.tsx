@@ -80,8 +80,11 @@ export function AuditLogs({ logs, onSeverityChange }: AuditLogsProps) {
           {["ALL", "INFO", "WARNING", "CRITICAL"].map((sev) => (
             <button
               key={sev}
+              type="button"
+              aria-label={`Filter audit logs by ${sev} severity`}
+              aria-pressed={selectedSeverity === sev}
               onClick={() => handleSeveritySelect(sev)}
-              className={`px-3 py-1 rounded-lg text-[11px] uppercase font-bold transition-all ${
+              className={`px-3 py-1 rounded-lg text-[11px] uppercase font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
                 selectedSeverity === sev
                   ? "bg-slate-800 text-cyan-400 border border-cyan-500/30 shadow"
                   : "text-slate-400 hover:text-slate-200"
