@@ -29,10 +29,14 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
         </div>
 
         {/* Tab Selector */}
-        <div className="flex items-center p-1 rounded-xl bg-slate-950/80 border border-slate-800/80 font-mono text-xs w-fit">
+        <div role="tablist" aria-label="Memory Database Explorer Views" className="flex items-center p-1 rounded-xl bg-slate-950/80 border border-slate-800/80 font-mono text-xs w-fit">
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "facts"}
+            aria-label={`View memory facts (${facts.length})`}
             onClick={() => setActiveTab("facts")}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg font-semibold transition-all ${
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-950 ${
               activeTab === "facts"
                 ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-950/50"
                 : "text-slate-400 hover:text-slate-200"
@@ -42,8 +46,12 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
             Facts ({facts.length})
           </button>
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "observations"}
+            aria-label={`View synthesis observations (${observations.length})`}
             onClick={() => setActiveTab("observations")}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg font-semibold transition-all ${
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-950 ${
               activeTab === "observations"
                 ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-950/50"
                 : "text-slate-400 hover:text-slate-200"
