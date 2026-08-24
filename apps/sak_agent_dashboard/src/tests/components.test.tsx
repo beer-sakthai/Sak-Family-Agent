@@ -147,7 +147,7 @@ describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
   });
 
   describe("MemoryExplorer & AuditLogs Components", () => {
-    it("renders MemoryExplorer with facts and observations", async () => {
+    it("renders MemoryExplorer with facts and observations and accessible tab attributes", async () => {
       const mod = await getComponentModule("MemoryExplorer");
       const mockMemory = {
         facts: [{ id: 1, entity: "SakThai", fact: "Primary model initialized", persona: "SakThai" }],
@@ -158,6 +158,17 @@ describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
         const MemoryExplorer = mod.MemoryExplorer;
         render(<MemoryExplorer memory={mockMemory} />);
         expect(screen.getByText("Primary model initialized")).toBeInTheDocument();
+
+        const factsTab = screen.getByRole("tab", { name: /view memory facts/i });
+        const obsTab = screen.getByRole("tab", { name: /view synthesis observations/i });
+
+        expect(factsTab).toHaveAttribute("aria-selected", "true");
+        expect(obsTab).toHaveAttribute("aria-selected", "false");
+
+        fireEvent.click(obsTab);
+        expect(factsTab).toHaveAttribute("aria-selected", "false");
+        expect(obsTab).toHaveAttribute("aria-selected", "true");
+        expect(screen.getByText("Benchmark 95% passed")).toBeInTheDocument();
       } else {
         render(
           <div className="memory-explorer">
