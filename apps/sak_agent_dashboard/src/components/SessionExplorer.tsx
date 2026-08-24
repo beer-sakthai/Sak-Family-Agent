@@ -119,12 +119,13 @@ export function SessionExplorer({
           </div>
 
           <select
+            aria-label="Filter sessions by persona"
             value={personaFilter}
             onChange={(e) => {
               setPersonaFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500"
+            className="bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus:border-cyan-500"
           >
             <option value="ALL">All Personas</option>
             <option value="SakThai">SakThai</option>
@@ -135,12 +136,13 @@ export function SessionExplorer({
           </select>
 
           <select
+            aria-label="Filter sessions by status"
             value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500"
+            className="bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus:border-cyan-500"
           >
             <option value="ALL">All Statuses</option>
             <option value="completed">Completed</option>
@@ -212,8 +214,10 @@ export function SessionExplorer({
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <button
+                        type="button"
+                        aria-label={`Inspect session ${session.sessionId} details`}
                         onClick={() => handleOpenDetail(session)}
-                        className="px-3 py-1 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 hover:bg-cyan-900 transition-all font-sans font-semibold text-xs inline-flex items-center gap-1"
+                        className="px-3 py-1 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 hover:bg-cyan-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 transition-all font-sans font-semibold text-xs inline-flex items-center gap-1"
                       >
                         <FileText className="h-3.5 w-3.5" />
                         Inspect
