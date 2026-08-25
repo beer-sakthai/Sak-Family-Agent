@@ -1,0 +1,10 @@
+**SakJules · Master of Automation & CI/CD.**
+
+🎯 **What:** Adds unit tests for the `warn` function in `sakthai-chat-cli/scripts/diagnose_personas.py` to ensure it correctly mutates the global `warnings` array and outputs the appropriate logs to stdout.
+
+📊 **Coverage:**
+- `warn` called with a `label` and a non-empty `detail` string.
+- `warn` called with only a `label` (no detail).
+- `warn` called with a `label` and an empty string for `detail`.
+
+✨ **Result:** Test coverage for `sakthai-chat-cli/scripts/diagnose_personas.py` is improved, providing safety around logging output formatting and global array state mutation.
