@@ -61,7 +61,7 @@ class A2AHandler(BaseHTTPRequestHandler):
         elif self.path == '/inbox':
             agent = body.get('agent', '')
             msgs = load_msgs()
-            inbox = [m for m in msgs if m['to'] in [agent, 'all']]
+            inbox = [m for m in msgs if m['to'] in {agent, 'all'}]
             self.send_json({'messages': inbox[-20:]})
             
         elif self.path == '/status':

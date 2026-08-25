@@ -218,7 +218,7 @@ class MemoryStore:
 
         self._conn = sqlite3.connect(self.db_path, timeout=DB_CONNECT_TIMEOUT)
         self._conn.row_factory = sqlite3.Row
-        self._conn.execute(f"PRAGMA busy_timeout={DB_BUSY_TIMEOUT_MS}")
+        self._conn.execute(f"PRAGMA busy_timeout={int(DB_BUSY_TIMEOUT_MS)}")
         # WAL is recorded in the file header and inherited by later opens. The
         # one-time flip briefly needs an exclusive lock that busy_timeout may not
         # cover, so a racing failure is tolerated — the default journal is safe.

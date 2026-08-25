@@ -35,6 +35,8 @@ personas/sakthai/agent-self-evolution/output/
 .coverage
 apps/*/node_modules
 apps/*/.next
+*.tsbuildinfo
+.github/aw/
 
 # Isolated workspaces for subagent-driven-development / plan execution
 .worktrees/

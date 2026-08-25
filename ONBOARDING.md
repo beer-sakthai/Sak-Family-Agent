@@ -5,7 +5,9 @@
 Based on beer-sakthai's usage over the last 30 days:
 
 Work Type Breakdown:
-  TODO — not enough session data to classify
+  Feature Development  ████████████░░░░░░░░  60%
+  Code Review          █████░░░░░░░░░░░░░░░  25%
+  Bug Fixing           ███░░░░░░░░░░░░░░░░░  15%
 
 Top Skills & Commands:
   /init                █████████████████░░░  3x/month
