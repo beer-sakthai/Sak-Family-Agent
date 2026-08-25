@@ -87,7 +87,7 @@ workspace runtime config under `infra/`.
 
 - `docs/agent-diagnosis.md` for the standalone run checklist and runtime notes.
 - `infra/hermes-agents/` for the live agent profiles, systemd services, and deployment config.
-- `product/todo.md` for the product delivery checklist.
+- `product/TODO.md` for the product delivery checklist.
 
 ---
 
