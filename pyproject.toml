@@ -19,6 +19,7 @@ dependencies = [
     "python-telegram-bot==22.8",
     "rich>=15.0.0,<16.0",
     "prompt-toolkit>=3.0.53,<4.0",
+    "hypothesis[dev]>=6.165.10",
 ]
 
 [project.optional-dependencies]
