@@ -129,10 +129,10 @@ def generate_html_viewer(results, output_path):
     metrics = results["metrics"]
     cases = results["cases"]
 
-    case_cards = ""
+    case_cards_list = []
     for c in cases:
         savings = round((1.0 - len(c["new_output"]) / len(c["old_output"])) * 100, 1)
-        case_cards += f"""
+        case_cards_list.append(f"""
         <div class="case-card" data-category="{c["category"]}">
             <div class="case-header">
                 <span class="category-badge">{c["category"]}</span>
@@ -157,7 +157,8 @@ def generate_html_viewer(results, output_path):
                 <strong>Judge Feedback:</strong> {c["eval_feedback"]}
             </div>
         </div>
-        """
+        """)
+    case_cards = "".join(case_cards_list)
 
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
