@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Validate all SKILL.md files: frontmatter, size, stale indicators, missing refs.
 Quick structural check — run after batch skill operations to catch issues early."""
-import os, re, sys
+
+import os
+import re
+import sys
 
 SKILLS_DIR = os.path.expanduser("~/profiles/saksit/skills")
 if not os.path.exists(SKILLS_DIR):
@@ -11,21 +14,21 @@ errors = []
 warnings = []
 ok_count = 0
 stale_pats = ["placeholder", "TODO", "FIXME", "NEEDS UPDATE", "stub", "not yet written"]
-compiled_stale_pats = [
-    (pat, re.compile(re.escape(pat), re.IGNORECASE)) for pat in stale_pats
-]
+compiled_stale_pats = [(pat, re.compile(re.escape(pat), re.IGNORECASE)) for pat in stale_pats]
 
 all_files = sorted(
     os.path.join(root, f)
     for root, dirs, files in os.walk(SKILLS_DIR)
-    for f in files if f == "SKILL.md"
+    for f in files
+    if f == "SKILL.md"
 )
 
 print(f"Found {len(all_files)} SKILL.md files")
 
 for path in all_files:
     rel = path.replace(SKILLS_DIR, "").lstrip("/")
-    content = open(path).read()
+    with open(path) as f:
+        content = f.read()
     lines = content.split("\n")
 
     if len(content) < 50:
@@ -41,12 +44,26 @@ for path in all_files:
         errors.append(f"BAD_FM {rel}")
 
     for pat, pat_re in compiled_stale_pats:
-        if pat_re.search(content):
-            txt = content[content.upper().find(pat.upper()):content.upper().find(pat.upper())+40]
+        match = pat_re.search(content)
+        if match:
             if "todo" in pat.lower():
-                # heuristic: if "todo" is near tags/status/kanban it's legit
-                ctx = content[max(0, content.upper().find(pat.upper())-30):content.upper().find(pat.upper())+50].lower()
-                if any(x in ctx for x in ["tags:", "status:", "kanban", "tool `todo`", "`todo`", "list", "airtable", "notion", "`[ ]`"]):
+                # heuristic: if the pattern is near tags/status/kanban it's legit
+                start_idx = match.start()
+                ctx = content[max(0, start_idx - 30) : start_idx + 50].lower()
+                if any(
+                    x in ctx
+                    for x in [
+                        "tags:",
+                        "status:",
+                        "kanban",
+                        "tool `todo`",
+                        "`todo`",
+                        "list",
+                        "airtable",
+                        "notion",
+                        "`[ ]`",
+                    ]
+                ):
                     continue  # false alarm
             warnings.append(f"STALE  {rel} ({pat.upper()} found)")
             break
