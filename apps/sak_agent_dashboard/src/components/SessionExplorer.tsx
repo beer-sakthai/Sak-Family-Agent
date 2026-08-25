@@ -91,10 +91,11 @@ export function SessionExplorer({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
             type="text"
+            aria-label="Search sessions or personas"
             placeholder="Search sessions or personas..."
             value={searchQuery}
             onChange={handleSearchInputChange}
-            className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 font-mono transition-all"
+            className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 font-mono transition-all"
           />
           {searchQuery && (
             <button
@@ -119,12 +120,13 @@ export function SessionExplorer({
           </div>
 
           <select
+            aria-label="Filter by persona"
             value={personaFilter}
             onChange={(e) => {
               setPersonaFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500"
+            className="bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             <option value="ALL">All Personas</option>
             <option value="SakThai">SakThai</option>
@@ -135,12 +137,13 @@ export function SessionExplorer({
           </select>
 
           <select
+            aria-label="Filter by status"
             value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500"
+            className="bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             <option value="ALL">All Statuses</option>
             <option value="completed">Completed</option>
@@ -212,8 +215,10 @@ export function SessionExplorer({
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <button
+                        type="button"
+                        aria-label={`Inspect details for session ${session.sessionId}`}
                         onClick={() => handleOpenDetail(session)}
-                        className="px-3 py-1 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 hover:bg-cyan-900 transition-all font-sans font-semibold text-xs inline-flex items-center gap-1"
+                        className="px-3 py-1 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 hover:bg-cyan-900 transition-all font-sans font-semibold text-xs inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
                       >
                         <FileText className="h-3.5 w-3.5" />
                         Inspect
@@ -370,8 +375,9 @@ export function SessionExplorer({
             {/* Modal Footer */}
             <div className="p-4 border-t border-slate-800 bg-slate-950/80 flex justify-end">
               <button
+                type="button"
                 onClick={() => setActiveModalSession(null)}
-                className="px-4 py-2 rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700 font-sans font-semibold text-xs transition-colors"
+                className="px-4 py-2 rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700 font-sans font-semibold text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
               >
                 Close Inspector
               </button>
