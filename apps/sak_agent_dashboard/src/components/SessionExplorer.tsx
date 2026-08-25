@@ -101,11 +101,12 @@ export function SessionExplorer({
             <button
               type="button"
               aria-label="Clear search query"
+              title="Clear search query"
               onClick={() => {
                 setSearchQuery("");
                 if (onSearchChange) onSearchChange("");
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-100 hover:bg-slate-800/80 active:bg-slate-700/80 transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
             >
               <X className="h-3.5 w-3.5" />
             </button>
