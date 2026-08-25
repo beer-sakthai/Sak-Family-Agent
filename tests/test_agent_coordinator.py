@@ -88,3 +88,43 @@ def test_run_persona_task_success() -> None:
         assert result.iterations == 3
         assert result.usage["total_tokens"] == 150
         mock_run.assert_called_once()
+
+
+def test_run_parallel_persona_tasks_empty() -> None:
+    from sakthai.agent.coordinator import run_parallel_persona_tasks
+
+    assert run_parallel_persona_tasks([]) == []
+
+
+def test_run_parallel_persona_tasks_success() -> None:
+    from sakthai.agent.coordinator import run_parallel_persona_tasks
+
+    mock_result_1 = AgentResult(
+        text="Research result",
+        iterations=2,
+        stop_reason="end_turn",
+        usage={"input_tokens": 50, "output_tokens": 25, "total_tokens": 75},
+    )
+    mock_result_2 = AgentResult(
+        text="Tech architecture",
+        iterations=3,
+        stop_reason="end_turn",
+        usage={"input_tokens": 60, "output_tokens": 30, "total_tokens": 90},
+    )
+
+    def _side_effect(**kwargs):
+        if kwargs.get("persona") == "saksee":
+            return mock_result_1
+        return mock_result_2
+
+    with patch("sakthai.agent.coordinator.run_agent", side_effect=_side_effect) as mock_run:
+        tasks = [
+            {"persona": "saksee", "task": "Research problem"},
+            {"persona": "sakking", "task": "Architect system"},
+        ]
+        results = run_parallel_persona_tasks(tasks)
+
+        assert len(results) == 2
+        assert results[0].text == "Research result"
+        assert results[1].text == "Tech architecture"
+        assert mock_run.call_count == 2

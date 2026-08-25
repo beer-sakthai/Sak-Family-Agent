@@ -165,3 +165,84 @@ def test_run_pipeline_step_failure() -> None:
         assert len(result.steps) == 1
         assert result.steps[0].is_error is True
         assert "LLM rate limit reached" in (result.steps[0].error_message or "")
+
+
+def test_run_pipeline_parallel_batch() -> None:
+    def fake_run_persona(persona: str, task: str, **kwargs):
+        return AgentResult(
+            text=f"Result from {persona}: {task[:15]}",
+            iterations=1,
+            stop_reason="end_turn",
+            usage={"input_tokens": 20, "output_tokens": 10, "total_tokens": 30},
+        )
+
+    pipeline = PipelineDefinition(
+        name="parallel-test",
+        description="Parallel batch test",
+        steps=(
+            PipelineStep(
+                name="p1",
+                persona="saksee",
+                prompt_template="Research: {task}",
+                output_key="research",
+                parallel_group="group_a",
+            ),
+            PipelineStep(
+                name="p2",
+                persona="sakking",
+                prompt_template="Arch: {task}",
+                output_key="arch",
+                parallel_group="group_a",
+            ),
+            PipelineStep(
+                name="synthesis",
+                persona="sakthai",
+                prompt_template="Combine {research} and {arch}",
+                output_key="final",
+            ),
+        ),
+    )
+
+    with patch("sakthai.team.engine.run_persona_task", side_effect=fake_run_persona):
+        result = run_pipeline(pipeline, "Deep analysis")
+
+        assert result.success is True
+        assert len(result.steps) == 3
+        assert "research" in result.context
+        assert "arch" in result.context
+        assert "final" in result.context
+        assert result.total_tokens == 90
+
+
+def test_stream_pipeline_events() -> None:
+    from sakthai.team.engine import stream_pipeline_events
+
+    def fake_run_persona(persona: str, task: str, **kwargs):
+        return AgentResult(
+            text=f"Output for {task[:10]}",
+            iterations=1,
+            stop_reason="end_turn",
+            usage={"input_tokens": 10, "output_tokens": 10, "total_tokens": 20},
+        )
+
+    pipeline = PipelineDefinition(
+        name="stream-test",
+        description="Streaming test",
+        steps=(
+            PipelineStep(
+                name="step1",
+                persona="sakthai",
+                prompt_template="Task: {task}",
+                output_key="out",
+            ),
+        ),
+    )
+
+    with patch("sakthai.team.engine.run_persona_task", side_effect=fake_run_persona):
+        events = list(stream_pipeline_events(pipeline, "Stream task"))
+
+        event_names = [e["event"] for e in events]
+        assert "pipeline_start" in event_names
+        assert "step_start" in event_names
+        assert "step_complete" in event_names
+        assert "pipeline_complete" in event_names

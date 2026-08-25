@@ -133,9 +133,61 @@ DAILY_SYNC = PipelineDefinition(
     ),
 )
 
+PARALLEL_DEEP_DIVE = PipelineDefinition(
+    name="parallel-deep-dive",
+    description="Concurrent deep-dive: [SakSee Research || SakKing Tech Architecture] -> SakThai Synthesis -> SakTan Ops Audit",
+    steps=(
+        PipelineStep(
+            name="research",
+            persona="saksee",
+            prompt_template=(
+                "You are SakSee. Conduct deep background research, user needs analysis, and "
+                "domain references for:\n\n{task}"
+            ),
+            output_key="research_findings",
+            max_iterations=8,
+            parallel_group="discovery",
+        ),
+        PipelineStep(
+            name="architecture",
+            persona="sakking",
+            prompt_template=(
+                "You are SakKing. Design technical architecture, component breakdown, and "
+                "data structures for:\n\n{task}"
+            ),
+            output_key="tech_design",
+            max_iterations=8,
+            parallel_group="discovery",
+        ),
+        PipelineStep(
+            name="synthesis",
+            persona="sakthai",
+            prompt_template=(
+                "You are SakThai. Synthesize parallel research and technical architecture into "
+                "a cohesive implementation roadmap.\n\nTask:\n{task}\n\n"
+                "Research Findings (SakSee):\n{research_findings}\n\n"
+                "Technical Architecture (SakKing):\n{tech_design}"
+            ),
+            output_key="roadmap",
+            max_iterations=8,
+        ),
+        PipelineStep(
+            name="ops_audit",
+            persona="saktan",
+            prompt_template=(
+                "You are SakTan. Audit operational readiness, deployment risks, and verification gates "
+                "for the synthesized roadmap:\n\n{roadmap}"
+            ),
+            output_key="ops_signoff",
+            max_iterations=6,
+        ),
+    ),
+)
+
 BUILTIN_PIPELINES: dict[str, PipelineDefinition] = {
     FEATURE_DELIVERY.name: FEATURE_DELIVERY,
     CODE_REVIEW.name: CODE_REVIEW,
     RESEARCH_BRIEF.name: RESEARCH_BRIEF,
     DAILY_SYNC.name: DAILY_SYNC,
+    PARALLEL_DEEP_DIVE.name: PARALLEL_DEEP_DIVE,
 }

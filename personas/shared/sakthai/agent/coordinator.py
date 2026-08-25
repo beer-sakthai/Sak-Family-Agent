@@ -165,3 +165,62 @@ def run_persona_task(
         return run_agent(**kwargs)
     finally:
         _DELEGATION_CHAIN.reset(token)
+
+
+def run_parallel_persona_tasks(
+    tasks: Sequence[dict[str, Any]],
+    *,
+    max_workers: int | None = None,
+    max_depth: int = DEFAULT_MAX_DELEGATION_DEPTH,
+    store: MemoryStore | None = None,
+    client: Any = None,
+    verbose: bool = False,
+) -> list[AgentResult]:
+    """Execute multiple persona tasks concurrently using ThreadPoolExecutor.
+
+    Each task dict should contain:
+      - 'persona': target persona name (str)
+      - 'task': task prompt (str)
+      - 'with_skills': optional Sequence[str]
+      - 'max_iterations': optional int
+      - 'max_tokens': optional int
+      - 'model': optional str
+      - 'provider': optional str
+      - 'no_mcp': optional bool
+    """
+    if not tasks:
+        return []
+
+    import concurrent.futures
+
+    workers = max_workers or min(len(tasks), 8)
+
+    def _worker(item: dict[str, Any]) -> AgentResult:
+        persona = str(item.get("persona", "sakthai"))
+        task_str = str(item.get("task", ""))
+        skills = item.get("with_skills", ())
+        max_iters = item.get("max_iterations")
+        max_toks = item.get("max_tokens")
+        model = item.get("model")
+        provider = item.get("provider")
+        no_mcp = bool(item.get("no_mcp", False))
+        item_store = item.get("store") or store
+
+        return run_persona_task(
+            persona=persona,
+            task=task_str,
+            with_skills=skills,
+            max_iterations=max_iters,
+            max_tokens=max_toks,
+            max_depth=max_depth,
+            store=item_store,
+            model=model,
+            provider=provider,
+            no_mcp=no_mcp,
+            client=client,
+            verbose=verbose,
+        )
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = [executor.submit(_worker, t) for t in tasks]
+        return [f.result() for f in futures]
