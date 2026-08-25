@@ -54,22 +54,12 @@ console = Console()
 
 
 def evolve_tools(
-    iterations: int = 10,
+    config: EvolutionConfig,
     eval_source: str = "synthetic",
     dataset_path: str | None = None,
-    optimizer_model: str = _DEFAULT_LOCAL_MODEL,
-    eval_model: str = _DEFAULT_LOCAL_MODEL,
-    hermes_repo: str | None = None,
     dry_run: bool = False,
 ):
     """Main tool description evolution orchestration function."""
-    config = EvolutionConfig(
-        hermes_agent_path=resolve_hermes_agent_path(hermes_repo),
-        iterations=iterations,
-        optimizer_model=optimizer_model,
-        eval_model=eval_model,
-        judge_model=eval_model,
-    )
 
     console.print(
         "\n[bold cyan]🧬 Hermes Agent Self-Evolution[/bold cyan] — Evolving Tool Descriptions\n"
@@ -101,7 +91,7 @@ def evolve_tools(
     if dry_run:
         console.print("\n[bold green]DRY RUN — setup validated successfully.[/bold green]")
         console.print(f"  Would generate tool selection dataset (source: {eval_source})")
-        console.print(f"  Would run GEPA optimization ({iterations} iterations)")
+        console.print(f"  Would run GEPA optimization ({config.iterations} iterations)")
         return
 
     # 2. Build or load evaluation dataset
@@ -144,15 +134,17 @@ def evolve_tools(
             all_pass = False
 
     if not all_pass:
-        console.print("[yellow]⚠ Baseline descriptions have constraint violations — proceeding anyway[/yellow]")
+        console.print(
+            "[yellow]⚠ Baseline descriptions have constraint violations — proceeding anyway[/yellow]"
+        )
 
     # 4. Set up DSPy + GEPA optimizer
     console.print("\n[bold]Configuring optimizer[/bold]")
-    console.print(f"  Optimizer: GEPA ({iterations} iterations)")
-    console.print(f"  Optimizer model: {optimizer_model}")
-    console.print(f"  Eval model: {eval_model}")
+    console.print(f"  Optimizer: GEPA ({config.iterations} iterations)")
+    console.print(f"  Optimizer model: {config.optimizer_model}")
+    console.print(f"  Eval model: {config.eval_model}")
 
-    lm = dspy.LM(eval_model)
+    lm = dspy.LM(config.eval_model)
     dspy.configure(lm=lm)
 
     # Create baseline tool selection module
@@ -164,7 +156,7 @@ def evolve_tools(
 
     # 5. Run GEPA optimization
     console.print(
-        f"\n[bold cyan]Running GEPA optimization ({iterations} iterations)...[/bold cyan]\n"
+        f"\n[bold cyan]Running GEPA optimization ({config.iterations} iterations)...[/bold cyan]\n"
     )
 
     start_time = time.time()
@@ -182,11 +174,11 @@ def evolve_tools(
         return dspy.Prediction(score=score, feedback=fb)
 
     try:
-        reflection_lm = dspy.LM(optimizer_model)
+        reflection_lm = dspy.LM(config.optimizer_model)
         optimizer = dspy.GEPA(
             metric=gepa_metric,
             reflection_lm=reflection_lm,
-            max_metric_calls=max(4, iterations * 2),
+            max_metric_calls=max(4, config.iterations * 2),
             reflection_minibatch_size=2,
         )
         optimized_module = optimizer.compile(
@@ -269,7 +261,7 @@ def evolve_tools(
         f"[{change_color}]{improvement:+.3f}[/{change_color}]",
     )
     table.add_row("Time", "", f"{elapsed:.1f}s", "")
-    table.add_row("Iterations", "", str(iterations), "")
+    table.add_row("Iterations", "", str(config.iterations), "")
 
     console.print()
     console.print(table)
@@ -291,9 +283,9 @@ def evolve_tools(
     # Save metrics
     metrics = {
         "timestamp": timestamp,
-        "iterations": iterations,
-        "optimizer_model": optimizer_model,
-        "eval_model": eval_model,
+        "iterations": config.iterations,
+        "optimizer_model": config.optimizer_model,
+        "eval_model": config.eval_model,
         "baseline_score": avg_baseline,
         "evolved_score": avg_evolved,
         "improvement": improvement,
@@ -349,13 +341,17 @@ def main(
     dry_run,
 ):
     """Evolve tool descriptions using DSPy + GEPA optimization."""
-    evolve_tools(
+    config = EvolutionConfig(
+        hermes_agent_path=resolve_hermes_agent_path(hermes_repo),
         iterations=iterations,
-        eval_source=eval_source,
-        dataset_path=dataset_path,
         optimizer_model=optimizer_model,
         eval_model=eval_model,
-        hermes_repo=hermes_repo,
+        judge_model=eval_model,
+    )
+    evolve_tools(
+        config=config,
+        eval_source=eval_source,
+        dataset_path=dataset_path,
         dry_run=dry_run,
     )
 
