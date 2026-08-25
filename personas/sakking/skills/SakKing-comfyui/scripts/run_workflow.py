@@ -50,6 +50,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import dataclasses
 import json
 import sys
 import time
@@ -101,6 +102,14 @@ class WorkflowRunError(Exception):
         return d
 
 
+@dataclasses.dataclass
+class UploadImageOptions:
+    image_type: str = "input"
+    overwrite: bool = True
+    endpoint: str = "/upload/image"
+    extra_form: dict | None = None
+
+
 class ComfyRunner:
     def __init__(
         self,
@@ -142,26 +151,23 @@ class ComfyRunner:
     def upload_image(
         self,
         path: Path,
-        *,
-        image_type: str = "input",
-        overwrite: bool = True,
-        endpoint: str = "/upload/image",
-        extra_form: dict | None = None,
+        options: UploadImageOptions | None = None,
     ) -> dict:
         """Upload an image file via multipart. Returns server-side ref dict."""
         if not path.exists():
             raise FileNotFoundError(f"input image not found: {path}")
+        options = options or UploadImageOptions()
         # Stream the file via a handle to avoid OOM on huge inputs (16MP+ photos).
         with path.open("rb") as fh:
             files = {"image": (path.name, fh)}
-            form = {"type": image_type}
-            if overwrite:
+            form = {"type": options.image_type}
+            if options.overwrite:
                 form["overwrite"] = "true"
-            if extra_form:
-                form.update({k: str(v) for k, v in extra_form.items()})
+            if options.extra_form:
+                form.update({k: str(v) for k, v in options.extra_form.items()})
             r = http_request(
                 "POST",
-                self._url(endpoint),
+                self._url(options.endpoint),
                 headers=self.headers,
                 files=files,
                 form=form,
@@ -187,11 +193,13 @@ class ComfyRunner:
         """
         return self.upload_image(
             path,
-            endpoint="/upload/mask",
-            extra_form={
-                "subfolder": "clipspace",
-                "original_ref": json.dumps(original_ref),
-            },
+            options=UploadImageOptions(
+                endpoint="/upload/mask",
+                extra_form={
+                    "subfolder": "clipspace",
+                    "original_ref": json.dumps(original_ref),
+                },
+            ),
         )
 
     # ---------- submit ----------
