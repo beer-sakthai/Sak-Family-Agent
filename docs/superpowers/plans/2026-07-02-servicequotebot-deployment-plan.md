@@ -18,7 +18,7 @@ setup, a systemd service template, and a repository-local deployment guide.
 
 **Files:**
 - Create: `docs/servicequotebot/deployment.md`
-- Modify: `product/todo.md`
+- Modify: `product/TODO.md`
 
 - [x] **Step 1: Write the deployment guide**
 
@@ -48,7 +48,7 @@ Expected:
 - [x] **Step 4: Commit**
 
 ```bash
-git add docs/servicequotebot/deployment.md product/todo.md
+git add docs/servicequotebot/deployment.md product/TODO.md
 git commit -m "docs: add servicequotebot deployment guide"
 ```
 
@@ -171,7 +171,7 @@ git commit -m "feat: add servicequotebot setup script"
 ## Task 4: Validate the full deployment story
 
 **Files:**
-- Modify: `product/todo.md`
+- Modify: `product/TODO.md`
 - Possibly modify: `docs/servicequotebot/deployment.md`, `infra/servicequotebot/systemd/servicequotebot.service`, `scripts/setup_servicequotebot.py`
 
 - [x] **Step 1: Run the repository checks**
@@ -186,12 +186,12 @@ uv run pytest tests/ -q -m "not integration"
 
 - [x] **Step 2: Update the tracker**
 
-Mark `Deployment Plan` complete in `product/todo.md`.
+Mark `Deployment Plan` complete in `product/TODO.md`.
 
 - [x] **Step 3: Commit**
 
 ```bash
-git add product/todo.md docs/servicequotebot/deployment.md infra/servicequotebot/systemd/servicequotebot.service scripts/setup_servicequotebot.py tests/test_setup_servicequotebot.py
+git add product/TODO.md docs/servicequotebot/deployment.md infra/servicequotebot/systemd/servicequotebot.service scripts/setup_servicequotebot.py tests/test_setup_servicequotebot.py
 git commit -m "docs: finish servicequotebot deployment plan"
 ```
 
@@ -201,7 +201,7 @@ This plan is complete. The deployment bundle is now live in the repository
 and the active trackers point to the completed ServiceQuoteBot MVP:
 
 - `PLAN.md` marks "MVP execution — ServiceQuoteBot build" complete.
-- `product/todo.md` marks the deployment plan complete.
+- `product/TODO.md` marks the deployment plan complete.
 - `docs/servicequotebot/deployment.md` documents the customer setup flow.
 - `infra/servicequotebot/systemd/servicequotebot.service` provides the
   portable user-service unit.
@@ -213,4 +213,4 @@ and the active trackers point to the completed ServiceQuoteBot MVP:
 - [x] `infra/servicequotebot/systemd/servicequotebot.service` satisfies the “systemd service file or Dockerfile” requirement.
 - [x] `scripts/setup_servicequotebot.py` satisfies the automated setup requirement for a new client.
 - [x] `tests/test_setup_servicequotebot.py` covers the new script behavior before it is committed.
-- [x] `product/todo.md` is the only active tracker and has been checked off since the artifacts exist and verify cleanly.
+- [x] `product/TODO.md` is the only active tracker and has been checked off since the artifacts exist and verify cleanly.

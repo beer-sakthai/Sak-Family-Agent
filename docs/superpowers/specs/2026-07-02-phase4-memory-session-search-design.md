@@ -1,7 +1,7 @@
 # Phase 4: Memory Architecture & Session Search — Design
 
 **Status:** Approved, ready for implementation planning
-**Roadmap:** Hermes Runtime Roadmap, Phase 4 (`PLAN.md`, `product/todo.md`)
+**Roadmap:** Hermes Runtime Roadmap, Phase 4 (`PLAN.md`, `product/TODO.md`)
 **Predecessor:** Phase 3 dependency inventory (`docs/agent-diagnosis.md`)
 
 ## Goal
@@ -173,18 +173,18 @@ skipping it:
 | Growth | `sakthai memory consolidate` | After merge, closing the loop before Phase 5 |
 
 The implementation plan should call `sakthai cycle next` at each transition
-so the persisted stage reflects real progress, not just `product/todo.md`
+so the persisted stage reflects real progress, not just `product/TODO.md`
 checkboxes.
 
 ## Plan-First Workflow Linkage
 
 Per this repository's `CLAUDE.md` ("Always read and update `PLAN.md`... mark tasks
 `[ ]` → `[x] YYYY-MM-DD` once verified"), the implementation plan derived from
-this spec adds a **Phase 4** section to `product/todo.md` (alongside the
+this spec adds a **Phase 4** section to `product/TODO.md` (alongside the
 existing Phase 1–3 sections) with these checklist items, each checked off
 with a date once its verification step passes:
 
-- [ ] **Architecture audit:** Part A of this spec folded into `product/todo.md`
+- [ ] **Architecture audit:** Part A of this spec folded into `product/TODO.md`
   or linked from it.
 - [ ] **`search_sessions()`:** implemented in `sakthai/memory/session_search.py`
   with the query/ordering/missing-dir semantics above.
