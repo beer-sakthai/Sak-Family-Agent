@@ -5,6 +5,7 @@ from __future__ import annotations
 from extract_schema import extract_schema
 from run_workflow import (
     ComfyRunner,
+    DownloadOptions,
     download_outputs,
     inject_params,
     parse_input_image_arg,
@@ -130,11 +131,9 @@ class TestDownloadOutputsWalk:
         downloads = []
 
         class FakeRunner:
-            def download_output(
-                self, *, filename, subfolder, file_type, output_dir, preserve_subfolder, overwrite
-            ):
-                downloads.append((filename, subfolder, file_type))
-                p = output_dir / filename
+            def download_output(self, options: DownloadOptions):
+                downloads.append((options.filename, options.subfolder, options.file_type))
+                p = options.output_dir / options.filename
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_bytes(b"x")
                 return p
@@ -153,10 +152,8 @@ class TestDownloadOutputsWalk:
         """Cloud uses 'video' (singular)."""
 
         class FakeRunner:
-            def download_output(
-                self, *, filename, subfolder, file_type, output_dir, preserve_subfolder, overwrite
-            ):
-                p = output_dir / filename
+            def download_output(self, options: DownloadOptions):
+                p = options.output_dir / options.filename
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_bytes(b"x")
                 return p
@@ -172,13 +169,11 @@ class TestDownloadOutputsWalk:
         """When preserve_subfolder=True, server subfolder becomes local subdir."""
 
         class FakeRunner:
-            def download_output(
-                self, *, filename, subfolder, file_type, output_dir, preserve_subfolder, overwrite
-            ):
-                if preserve_subfolder and subfolder:
-                    p = output_dir / subfolder / filename
+            def download_output(self, options: DownloadOptions):
+                if options.preserve_subfolder and options.subfolder:
+                    p = options.output_dir / options.subfolder / options.filename
                 else:
-                    p = output_dir / filename
+                    p = options.output_dir / options.filename
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_bytes(b"x")
                 return p
