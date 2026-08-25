@@ -212,8 +212,10 @@ export function SessionExplorer({
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <button
+                        type="button"
+                        aria-label={`Inspect transcript for session ${session.sessionId}`}
                         onClick={() => handleOpenDetail(session)}
-                        className="px-3 py-1 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 hover:bg-cyan-900 transition-all font-sans font-semibold text-xs inline-flex items-center gap-1"
+                        className="px-3 py-1 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 hover:bg-cyan-900 transition-all font-sans font-semibold text-xs inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
                       >
                         <FileText className="h-3.5 w-3.5" />
                         Inspect

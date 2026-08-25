@@ -123,6 +123,9 @@ describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
         const searchInput = screen.getByPlaceholderText(/search/i);
         fireEvent.change(searchInput, { target: { value: "SakThai" } });
         expect(searchInput).toHaveValue("SakThai");
+
+        const inspectBtn = screen.getByRole("button", { name: /Inspect transcript for session sess-1/i });
+        expect(inspectBtn).toBeInTheDocument();
       } else {
         const SearchContainer = () => {
           const [val, setVal] = React.useState("");
