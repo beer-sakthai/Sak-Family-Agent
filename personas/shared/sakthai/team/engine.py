@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -45,6 +45,7 @@ def load_pipeline_from_dict(data: dict[str, Any]) -> PipelineDefinition:
             max_iterations=int(step_data.get("max_iterations", 8)),
             model=step_data.get("model"),
             provider=step_data.get("provider"),
+            parallel_group=step_data.get("parallel_group"),
         )
         steps.append(step)
 
@@ -99,6 +100,34 @@ def interpolate_prompt(template: str, context: dict[str, Any]) -> str:
         return result
 
 
+def _group_steps(steps: Sequence[PipelineStep]) -> list[list[PipelineStep]]:
+    """Group consecutive steps sharing the same non-empty parallel_group."""
+    groups: list[list[PipelineStep]] = []
+    current_group: list[PipelineStep] = []
+    current_group_id: str | None = None
+
+    for step in steps:
+        if step.parallel_group:
+            if current_group_id == step.parallel_group:
+                current_group.append(step)
+            else:
+                if current_group:
+                    groups.append(current_group)
+                current_group = [step]
+                current_group_id = step.parallel_group
+        else:
+            if current_group:
+                groups.append(current_group)
+                current_group = []
+                current_group_id = None
+            groups.append([step])
+
+    if current_group:
+        groups.append(current_group)
+
+    return groups
+
+
 def run_pipeline(
     pipeline: PipelineDefinition | str,
     task: str,
@@ -110,10 +139,12 @@ def run_pipeline(
     on_step_complete: Callable[[StepResult, int, int], None] | None = None,
     verbose: bool = False,
 ) -> PipelineResult:
-    """Execute a multi-agent team pipeline sequentially.
+    """Execute a multi-agent team pipeline.
 
-    Passes outputs of earlier stages into subsequent prompt templates.
+    Supports both sequential stages and parallel batches (steps sharing `parallel_group`).
     """
+    import concurrent.futures
+
     definition = get_pipeline(pipeline) if isinstance(pipeline, str) else pipeline
 
     context: dict[str, Any] = {"task": task}
@@ -126,65 +157,145 @@ def run_pipeline(
     all_success = True
 
     total_steps = len(definition.steps)
-    for idx, step in enumerate(definition.steps, 1):
-        if on_step_start:
-            on_step_start(step, idx, total_steps)
+    step_groups = _group_steps(definition.steps)
+    global_step_idx = 1
 
-        step_prompt = interpolate_prompt(step.prompt_template, context)
-        step_start = time.time()
+    for group in step_groups:
+        if len(group) == 1:
+            step = group[0]
+            if on_step_start:
+                on_step_start(step, global_step_idx, total_steps)
 
-        try:
-            agent_res = run_persona_task(
-                persona=step.persona,
-                task=step_prompt,
-                with_skills=step.with_skills,
-                max_iterations=step.max_iterations,
-                store=store,
-                model=step.model,
-                provider=step.provider,
-                client=client,
-                verbose=verbose,
-            )
-            duration = time.time() - step_start
-            step_tokens = agent_res.usage.get("total_tokens", 0)
-            total_tokens += step_tokens
+            step_prompt = interpolate_prompt(step.prompt_template, context)
+            step_start = time.time()
 
-            step_res = StepResult(
-                step_name=step.name,
-                persona=step.persona,
-                output=agent_res.text,
-                iterations=agent_res.iterations,
-                usage=agent_res.usage,
-                duration_seconds=duration,
-                is_error=False,
-            )
-            if step.output_key:
-                context[step.output_key] = agent_res.text
+            try:
+                agent_res = run_persona_task(
+                    persona=step.persona,
+                    task=step_prompt,
+                    with_skills=step.with_skills,
+                    max_iterations=step.max_iterations,
+                    store=store,
+                    model=step.model,
+                    provider=step.provider,
+                    client=client,
+                    verbose=verbose,
+                )
+                duration = time.time() - step_start
+                step_tokens = agent_res.usage.get("total_tokens", 0)
+                total_tokens += step_tokens
 
-        except Exception as exc:  # noqa: BLE001
-            duration = time.time() - step_start
-            logger.error("Step '%s' (%s) failed: %s", step.name, step.persona, exc)
-            all_success = False
-            step_res = StepResult(
-                step_name=step.name,
-                persona=step.persona,
-                output="",
-                iterations=0,
-                usage={"total_tokens": 0},
-                duration_seconds=duration,
-                is_error=True,
-                error_message=str(exc),
-            )
-            if step.output_key:
-                context[step.output_key] = f"ERROR: {exc}"
+                step_res = StepResult(
+                    step_name=step.name,
+                    persona=step.persona,
+                    output=agent_res.text,
+                    iterations=agent_res.iterations,
+                    usage=agent_res.usage,
+                    duration_seconds=duration,
+                    is_error=False,
+                )
+                if step.output_key:
+                    context[step.output_key] = agent_res.text
 
-        step_results.append(step_res)
-        if on_step_complete:
-            on_step_complete(step_res, idx, total_steps)
+            except Exception as exc:  # noqa: BLE001
+                duration = time.time() - step_start
+                logger.error("Step '%s' (%s) failed: %s", step.name, step.persona, exc)
+                all_success = False
+                step_res = StepResult(
+                    step_name=step.name,
+                    persona=step.persona,
+                    output="",
+                    iterations=0,
+                    usage={"total_tokens": 0},
+                    duration_seconds=duration,
+                    is_error=True,
+                    error_message=str(exc),
+                )
+                if step.output_key:
+                    context[step.output_key] = f"ERROR: {exc}"
 
-        if step_res.is_error:
-            # Stop pipeline execution on failure
-            break
+            step_results.append(step_res)
+            if on_step_complete:
+                on_step_complete(step_res, global_step_idx, total_steps)
+            global_step_idx += 1
+
+            if step_res.is_error:
+                break
+
+        else:
+            # Parallel batch
+            for idx_offset, step in enumerate(group):
+                if on_step_start:
+                    on_step_start(step, global_step_idx + idx_offset, total_steps)
+
+            def _execute_parallel_step(
+                step_item: PipelineStep,
+            ) -> tuple[PipelineStep, StepResult, str]:
+                step_prompt = interpolate_prompt(step_item.prompt_template, context)
+                step_start = time.time()
+                try:
+                    agent_res = run_persona_task(
+                        persona=step_item.persona,
+                        task=step_prompt,
+                        with_skills=step_item.with_skills,
+                        max_iterations=step_item.max_iterations,
+                        store=store,
+                        model=step_item.model,
+                        provider=step_item.provider,
+                        client=client,
+                        verbose=verbose,
+                    )
+                    duration = time.time() - step_start
+                    sr = StepResult(
+                        step_name=step_item.name,
+                        persona=step_item.persona,
+                        output=agent_res.text,
+                        iterations=agent_res.iterations,
+                        usage=agent_res.usage,
+                        duration_seconds=duration,
+                        is_error=False,
+                    )
+                    return (step_item, sr, agent_res.text)
+                except Exception as exc:  # noqa: BLE001
+                    duration = time.time() - step_start
+                    logger.error(
+                        "Parallel step '%s' (%s) failed: %s",
+                        step_item.name,
+                        step_item.persona,
+                        exc,
+                    )
+                    sr = StepResult(
+                        step_name=step_item.name,
+                        persona=step_item.persona,
+                        output="",
+                        iterations=0,
+                        usage={"total_tokens": 0},
+                        duration_seconds=duration,
+                        is_error=True,
+                        error_message=str(exc),
+                    )
+                    return (step_item, sr, f"ERROR: {exc}")
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=len(group)) as executor:
+                futures = [executor.submit(_execute_parallel_step, s) for s in group]
+                batch_results = [f.result() for f in futures]
+
+            has_batch_error = False
+            for idx_offset, (step_item, step_res, out_text) in enumerate(batch_results):
+                step_tokens = step_res.usage.get("total_tokens", 0)
+                total_tokens += step_tokens
+                if step_item.output_key:
+                    context[step_item.output_key] = out_text
+                step_results.append(step_res)
+                if on_step_complete:
+                    on_step_complete(step_res, global_step_idx + idx_offset, total_steps)
+                if step_res.is_error:
+                    has_batch_error = True
+                    all_success = False
+
+            global_step_idx += len(group)
+            if has_batch_error:
+                break
 
     total_duration = time.time() - pipeline_start
 
@@ -221,3 +332,100 @@ def run_pipeline(
         success=all_success,
         summary="\n".join(summary_lines),
     )
+
+
+def stream_pipeline_events(
+    pipeline: PipelineDefinition | str,
+    task: str,
+    *,
+    initial_context: dict[str, Any] | None = None,
+    store: MemoryStore | None = None,
+    client: Any = None,
+    verbose: bool = False,
+) -> Any:
+    """Yield structured JSON events during pipeline execution (suitable for SSE / streaming)."""
+    import queue
+    import threading
+
+    event_queue: queue.Queue[dict[str, Any] | None] = queue.Queue()
+    definition = get_pipeline(pipeline) if isinstance(pipeline, str) else pipeline
+
+    event_queue.put(
+        {
+            "event": "pipeline_start",
+            "pipeline": definition.name,
+            "task": task,
+            "total_steps": len(definition.steps),
+        }
+    )
+
+    def _on_start(step: PipelineStep, idx: int, total: int) -> None:
+        event_queue.put(
+            {
+                "event": "step_start",
+                "step": step.name,
+                "persona": step.persona,
+                "index": idx,
+                "total": total,
+                "parallel_group": step.parallel_group,
+            }
+        )
+
+    def _on_complete(step_res: StepResult, idx: int, total: int) -> None:
+        event_queue.put(
+            {
+                "event": "step_complete",
+                "step": step_res.step_name,
+                "persona": step_res.persona,
+                "index": idx,
+                "total": total,
+                "duration": step_res.duration_seconds,
+                "iterations": step_res.iterations,
+                "tokens": step_res.usage.get("total_tokens", 0),
+                "is_error": step_res.is_error,
+                "output": step_res.output,
+                "error_message": step_res.error_message,
+            }
+        )
+
+    def _worker() -> None:
+        try:
+            res = run_pipeline(
+                definition,
+                task,
+                initial_context=initial_context,
+                store=store,
+                client=client,
+                on_step_start=_on_start,
+                on_step_complete=_on_complete,
+                verbose=verbose,
+            )
+            event_queue.put(
+                {
+                    "event": "pipeline_complete",
+                    "pipeline": definition.name,
+                    "success": res.success,
+                    "total_duration": res.total_duration_seconds,
+                    "total_tokens": res.total_tokens,
+                    "summary": res.summary,
+                }
+            )
+        except Exception as exc:  # noqa: BLE001
+            event_queue.put(
+                {
+                    "event": "pipeline_error",
+                    "pipeline": definition.name,
+                    "error": str(exc),
+                }
+            )
+        finally:
+            event_queue.put(None)
+
+    thread = threading.Thread(target=_worker, daemon=True)
+    thread.start()
+
+    while True:
+        item = event_queue.get()
+        if item is None:
+            break
+        yield item

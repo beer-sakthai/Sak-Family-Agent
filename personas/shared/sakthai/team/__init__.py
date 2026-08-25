@@ -7,6 +7,7 @@ from .builtin_pipelines import (
     CODE_REVIEW,
     DAILY_SYNC,
     FEATURE_DELIVERY,
+    PARALLEL_DEEP_DIVE,
     RESEARCH_BRIEF,
 )
 from .engine import (
@@ -15,6 +16,7 @@ from .engine import (
     load_pipeline_from_dict,
     load_pipeline_from_file,
     run_pipeline,
+    stream_pipeline_events,
 )
 from .models import PipelineDefinition, PipelineResult, PipelineStep, StepResult
 
@@ -23,6 +25,7 @@ __all__ = [
     "CODE_REVIEW",
     "DAILY_SYNC",
     "FEATURE_DELIVERY",
+    "PARALLEL_DEEP_DIVE",
     "PipelineDefinition",
     "PipelineResult",
     "PipelineStep",
@@ -33,4 +36,5 @@ __all__ = [
     "load_pipeline_from_dict",
     "load_pipeline_from_file",
     "run_pipeline",
+    "stream_pipeline_events",
 ]

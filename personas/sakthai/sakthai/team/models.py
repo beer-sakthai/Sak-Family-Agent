@@ -18,6 +18,7 @@ class PipelineStep:
     max_iterations: int = 8
     model: str | None = None
     provider: str | None = None
+    parallel_group: str | None = None
 
 
 @dataclass(frozen=True)
