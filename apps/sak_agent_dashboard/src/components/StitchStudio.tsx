@@ -144,10 +144,13 @@ export function StitchStudio() {
       <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl overflow-hidden shadow-2xl">
         {/* Workspace Toolbar */}
         <div className="flex items-center justify-between border-b border-slate-800 px-5 py-3 bg-slate-950/50">
-          <div className="flex items-center gap-2">
+          <div role="tablist" aria-label="Stitch Studio view options" className="flex items-center gap-2">
             <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "preview"}
               onClick={() => setActiveTab("preview")}
-              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
                 activeTab === "preview"
                   ? "bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20"
                   : "text-slate-400 hover:text-white"
@@ -157,8 +160,11 @@ export function StitchStudio() {
               Live Preview
             </button>
             <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "code"}
               onClick={() => setActiveTab("code")}
-              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
                 activeTab === "code"
                   ? "bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20"
                   : "text-slate-400 hover:text-white"
@@ -168,8 +174,11 @@ export function StitchStudio() {
               TSX Code
             </button>
             <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "spec"}
               onClick={() => setActiveTab("spec")}
-              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
                 activeTab === "spec"
                   ? "bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20"
                   : "text-slate-400 hover:text-white"
@@ -181,8 +190,10 @@ export function StitchStudio() {
           </div>
 
           <button
+            type="button"
+            aria-live="polite"
             onClick={handleCopyCode}
-            className="flex items-center gap-1 text-xs font-mono text-slate-400 hover:text-cyan-400 transition-colors bg-slate-800/60 px-2.5 py-1 rounded-lg border border-slate-700/60"
+            className="flex items-center gap-1 text-xs font-mono text-slate-400 hover:text-cyan-400 transition-colors bg-slate-800/60 px-2.5 py-1 rounded-lg border border-slate-700/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
             {copied ? "Copied!" : "Copy Code"}

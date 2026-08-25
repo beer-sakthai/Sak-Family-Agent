@@ -259,7 +259,7 @@ describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
         expect(agentDrawerPresetBtn).toHaveAttribute("aria-pressed", "false");
         expect(mermaidPresetBtn).toHaveAttribute("aria-pressed", "true");
 
-        const codeTab = screen.getByRole("button", { name: /tsx code/i });
+        const codeTab = screen.getByRole("tab", { name: /tsx code/i });
         fireEvent.click(codeTab);
         expect(screen.getByText(/Multi-Agent System Architecture/i)).toBeInTheDocument();
       }
