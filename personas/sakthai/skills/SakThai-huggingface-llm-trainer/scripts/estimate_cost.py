@@ -129,7 +129,7 @@ def main():
         print("   - Reducing epochs")
         print("   - Using a smaller dataset subset for testing")
     
-    if model_params >= 7 and args.hardware not in ["a10g-largex2", "a10g-largex4", "a100-large"]:
+    if model_params >= 7 and args.hardware not in {"a10g-largex2", "a10g-largex4", "a100-large"}:
         print("⚠️  Large model - consider using:")
         print("   - Larger GPU (a100-large)")
         print("   - Multi-GPU setup (a10g-largex2 or a10g-largex4)")
