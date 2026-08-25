@@ -53,6 +53,7 @@ import copy
 import json
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode, urlparse
@@ -99,6 +100,16 @@ class WorkflowRunError(Exception):
         d = {"status": self.status, "error": self.message}
         d.update(self.details)
         return d
+
+
+@dataclass
+class DownloadOutputArgs:
+    filename: str
+    subfolder: str
+    file_type: str
+    output_dir: Path
+    preserve_subfolder: bool = True
+    overwrite: bool = False
 
 
 class ComfyRunner:
@@ -412,29 +423,20 @@ class ComfyRunner:
         entry = body.get(prompt_id) or {}
         return entry.get("outputs", {}) or {}
 
-    def download_output(
-        self,
-        *,
-        filename: str,
-        subfolder: str,
-        file_type: str,
-        output_dir: Path,
-        preserve_subfolder: bool = True,
-        overwrite: bool = False,
-    ) -> Path:
+    def download_output(self, args: DownloadOutputArgs) -> Path:
         """Stream a single output to disk. Path-traversal-safe."""
-        params = {"filename": filename, "subfolder": subfolder, "type": file_type}
+        params = {"filename": args.filename, "subfolder": args.subfolder, "type": args.file_type}
         url = self._url("/view") + "?" + urlencode(params)
 
         # Compute target path safely. If preserve_subfolder, include subfolder in the
         # local path; otherwise put the file in output_dir flat.
         target_parts: list[str] = []
-        if preserve_subfolder and subfolder:
-            target_parts.extend(p for p in subfolder.split("/") if p and p not in {".", ".."})
-        target_parts.append(filename)
-        out_path = safe_path_join(output_dir, *target_parts)
+        if args.preserve_subfolder and args.subfolder:
+            target_parts.extend(p for p in args.subfolder.split("/") if p and p not in {".", ".."})
+        target_parts.append(args.filename)
+        out_path = safe_path_join(args.output_dir, *target_parts)
 
-        if out_path.exists() and not overwrite:
+        if out_path.exists() and not args.overwrite:
             stem, suffix = out_path.stem, out_path.suffix
             i = 1
             while True:
@@ -469,7 +471,7 @@ class ComfyRunner:
                 pass
             raise WorkflowRunError(
                 "download_failed",
-                f"Download of {filename} failed: HTTP {r.status}",
+                f"Download of {args.filename} failed: HTTP {r.status}",
                 url=url,
             )
         return out_path
@@ -593,7 +595,7 @@ def download_outputs(
                 subfolder = fi.get("subfolder") or ""
                 file_type = fi.get("type") or "output"
                 try:
-                    out_path = runner.download_output(
+                    args = DownloadOutputArgs(
                         filename=filename,
                         subfolder=subfolder,
                         file_type=file_type,
@@ -601,6 +603,7 @@ def download_outputs(
                         preserve_subfolder=preserve_subfolder,
                         overwrite=overwrite,
                     )
+                    out_path = runner.download_output(args)
                     downloaded.append(
                         {
                             "file": str(out_path),

@@ -130,11 +130,9 @@ class TestDownloadOutputsWalk:
         downloads = []
 
         class FakeRunner:
-            def download_output(
-                self, *, filename, subfolder, file_type, output_dir, preserve_subfolder, overwrite
-            ):
-                downloads.append((filename, subfolder, file_type))
-                p = output_dir / filename
+            def download_output(self, args):
+                downloads.append((args.filename, args.subfolder, args.file_type))
+                p = args.output_dir / args.filename
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_bytes(b"x")
                 return p
@@ -153,10 +151,8 @@ class TestDownloadOutputsWalk:
         """Cloud uses 'video' (singular)."""
 
         class FakeRunner:
-            def download_output(
-                self, *, filename, subfolder, file_type, output_dir, preserve_subfolder, overwrite
-            ):
-                p = output_dir / filename
+            def download_output(self, args):
+                p = args.output_dir / args.filename
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_bytes(b"x")
                 return p
@@ -172,13 +168,11 @@ class TestDownloadOutputsWalk:
         """When preserve_subfolder=True, server subfolder becomes local subdir."""
 
         class FakeRunner:
-            def download_output(
-                self, *, filename, subfolder, file_type, output_dir, preserve_subfolder, overwrite
-            ):
-                if preserve_subfolder and subfolder:
-                    p = output_dir / subfolder / filename
+            def download_output(self, args):
+                if args.preserve_subfolder and args.subfolder:
+                    p = args.output_dir / args.subfolder / args.filename
                 else:
-                    p = output_dir / filename
+                    p = args.output_dir / args.filename
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_bytes(b"x")
                 return p

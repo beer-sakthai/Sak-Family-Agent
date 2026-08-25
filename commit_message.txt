@@ -1,0 +1,6 @@
+**SakJules · Master of Automation & CI/CD.**
+
+🎯 **What:** The code health issue addressed was a function (`download_output` in `ComfyRunner` and its mock implementations) with too many parameters. This has been refactored to use a new `DownloadOutputArgs` dataclass.
+💡 **Why:** This improves maintainability and readability by grouping logically related arguments into a single structured object, reducing the cognitive load required to read and call the method, and making it easier to add or remove parameters in the future without modifying every call site.
+✅ **Verification:** I confirmed the change is safe by successfully running the unit test suite (`pytest`) on `test_run_workflow.py` for all three duplicated locations (`sakthai`, `saksee`, `sakking`) where this code resides, ensuring no regressions.
+✨ **Result:** A cleaner method signature and caller structure for `download_output`.
