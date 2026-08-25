@@ -406,31 +406,10 @@ def evolve(
 @click.option("--run-tests", is_flag=True, help="Run full pytest suite as constraint gate")
 @click.option("--test-layout", is_flag=True, help="Generate layout-specific test cases")
 @click.option("--dry-run", is_flag=True, help="Validate setup without running optimization")
-def main(
-    skill,
-    iterations,
-    eval_source,
-    dataset_path,
-    optimizer_model,
-    eval_model,
-    hermes_repo,
-    run_tests,
-    test_layout,
-    dry_run,
-):
+def main(**kwargs):
     """Evolve a Hermes Agent skill using DSPy + GEPA optimization."""
-    evolve(
-        skill_name=skill,
-        iterations=iterations,
-        eval_source=eval_source,
-        dataset_path=dataset_path,
-        optimizer_model=optimizer_model,
-        eval_model=eval_model,
-        hermes_repo=hermes_repo,
-        run_tests=run_tests,
-        test_layout=test_layout,
-        dry_run=dry_run,
-    )
+    kwargs["skill_name"] = kwargs.pop("skill")
+    evolve(**kwargs)
 
 
 if __name__ == "__main__":

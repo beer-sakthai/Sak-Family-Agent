@@ -777,8 +777,15 @@ def _load_skill_text(skill_name: str, skills_dir: Path | None = None) -> tuple[s
 )
 @click.option("--max-examples", default=50, help="Max eval examples to generate")
 @click.option("--dry-run", is_flag=True, help="Show message counts without LLM scoring")
-def main(source, skill, output, model, max_examples, dry_run):
+def main(**kwargs):
     """Import external session data into golden eval datasets for self-evolution."""
+    source = kwargs.get("source")
+    skill = kwargs.get("skill")
+    output = kwargs.get("output")
+    model = kwargs.get("model")
+    max_examples = kwargs.get("max_examples")
+    dry_run = kwargs.get("dry_run")
+
     console.print(
         f"\n[bold cyan]External Session Importer[/bold cyan] — skill: [bold]{skill}[/bold]\n"
     )

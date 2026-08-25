@@ -144,7 +144,9 @@ def evolve_tools(
             all_pass = False
 
     if not all_pass:
-        console.print("[yellow]⚠ Baseline descriptions have constraint violations — proceeding anyway[/yellow]")
+        console.print(
+            "[yellow]⚠ Baseline descriptions have constraint violations — proceeding anyway[/yellow]"
+        )
 
     # 4. Set up DSPy + GEPA optimizer
     console.print("\n[bold]Configuring optimizer[/bold]")
@@ -339,25 +341,9 @@ def evolve_tools(
 )
 @click.option("--hermes-repo", default=None, help="Path to hermes-agent repo")
 @click.option("--dry-run", is_flag=True, help="Validate setup without running optimization")
-def main(
-    iterations,
-    eval_source,
-    dataset_path,
-    optimizer_model,
-    eval_model,
-    hermes_repo,
-    dry_run,
-):
+def main(**kwargs):
     """Evolve tool descriptions using DSPy + GEPA optimization."""
-    evolve_tools(
-        iterations=iterations,
-        eval_source=eval_source,
-        dataset_path=dataset_path,
-        optimizer_model=optimizer_model,
-        eval_model=eval_model,
-        hermes_repo=hermes_repo,
-        dry_run=dry_run,
-    )
+    evolve_tools(**kwargs)
 
 
 if __name__ == "__main__":
