@@ -629,6 +629,102 @@ def _create_calendar_event(args: dict[str, Any], store: MemoryStore) -> str:
     return _graph_safe("creating calendar event", _do)
 
 
+def _family_recall(args: dict[str, Any], store: MemoryStore) -> str:
+    from ..memory.merged import FamilyMemoryView
+
+    limit = _coerce_limit(args.get("limit"), 20)
+    raw_personas = args.get("personas")
+    personas = tuple(raw_personas) if isinstance(raw_personas, list) else None
+    with FamilyMemoryView(personas=personas) as view:
+        facts = view.list_facts(limit=limit)
+        obs = view.top_observations(limit=limit)
+    if not facts and not obs:
+        return "Family memory is empty."
+    lines: list[str] = []
+    if facts:
+        lines.append(f"Family Facts ({len(facts)}):")
+        for sf in facts:
+            head = (
+                f"[{sf.persona}] [{sf.fact.kind}] {sf.fact.key}: "
+                if sf.fact.key
+                else f"[{sf.persona}] [{sf.fact.kind}] "
+            )
+            lines.append(f"  {sf.fact.id}  {head}{sf.fact.value}")
+    if obs:
+        lines.append(f"Family Observations ({len(obs)}):")
+        for so in obs:
+            lines.append(
+                f"  {so.observation.id}  [{so.persona}] ({so.observation.weight:.2f}) {so.observation.summary}"
+            )
+    return "\n".join(lines)
+
+
+def _family_search(args: dict[str, Any], store: MemoryStore) -> str:
+    from ..memory.merged import FamilyMemoryView
+
+    query = args.get("query")
+    if not isinstance(query, str) or not query.strip():
+        raise ValueError("`query` is required and must be a non-empty string.")
+    limit = _coerce_limit(args.get("limit"), 50)
+    raw_personas = args.get("personas")
+    personas = tuple(raw_personas) if isinstance(raw_personas, list) else None
+    with FamilyMemoryView(personas=personas) as view:
+        facts, obs = view.search(query.strip(), limit=limit)
+    if not facts and not obs:
+        return f"No family memory matches found for '{query}'."
+    lines: list[str] = []
+    if facts:
+        lines.append(f"Matching Family Facts ({len(facts)}):")
+        for sf in facts:
+            head = (
+                f"[{sf.persona}] [{sf.fact.kind}] {sf.fact.key}: "
+                if sf.fact.key
+                else f"[{sf.persona}] [{sf.fact.kind}] "
+            )
+            lines.append(f"  {sf.fact.id}  {head}{sf.fact.value}")
+    if obs:
+        lines.append(f"Matching Family Observations ({len(obs)}):")
+        for so in obs:
+            lines.append(
+                f"  {so.observation.id}  [{so.persona}] ({so.observation.weight:.2f}) {so.observation.summary}"
+            )
+    return "\n".join(lines)
+
+
+def _delegate_to_persona(args: dict[str, Any], store: MemoryStore) -> str:
+    from .coordinator import run_persona_task
+
+    persona = args.get("persona")
+    if not isinstance(persona, str) or not persona.strip():
+        raise ValueError("`persona` is required and must be a non-empty string.")
+    task = args.get("task")
+    if not isinstance(task, str) or not task.strip():
+        raise ValueError("`task` is required and must be a non-empty string.")
+
+    with_skills = args.get("with_skills")
+    resolved_skills = tuple(with_skills) if isinstance(with_skills, list) else ()
+
+    max_iter = args.get("max_iterations")
+    resolved_iter = None
+    if max_iter is not None:
+        import contextlib
+
+        with contextlib.suppress(TypeError, ValueError):
+            resolved_iter = int(max_iter)
+
+    result = run_persona_task(
+        persona=persona.strip().lower(),
+        task=task.strip(),
+        with_skills=resolved_skills,
+        max_iterations=resolved_iter,
+    )
+    return (
+        f"### Delegated Task Result ({persona.upper()}):\n"
+        f"{result.text}\n\n"
+        f"[Iterations: {result.iterations}, Tokens: {result.usage.get('total_tokens', 0)}]"
+    )
+
+
 def _run_agent_loop(args: dict[str, Any], store: MemoryStore) -> str:
     """Run a high-level task through the full SakThai agent loop."""
     import os
@@ -968,6 +1064,92 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["task"],
         },
         handler=_run_agent_loop,
+    ),
+    Tool(
+        name="family_recall",
+        description=(
+            "Recall facts and top observations across the entire Sak Family memory shards. "
+            "Use to inspect shared family learnings and context from sibling agents."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "personas": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional subset of personas to recall from (default: all).",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum entries per section (default: 20).",
+                    "default": 20,
+                },
+            },
+        },
+        handler=_family_recall,
+    ),
+    Tool(
+        name="family_search",
+        description=(
+            "Search facts and observations across all Sak Family personas' memory shards. "
+            "Use when you need cross-persona insights or context discovered by other agents."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search term to query across family memory shards.",
+                },
+                "personas": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional subset of personas to search (default: all).",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum entries per section (default: 20).",
+                    "default": 20,
+                },
+            },
+            "required": ["query"],
+        },
+        handler=_family_search,
+    ),
+    Tool(
+        name="delegate_to_persona",
+        description=(
+            "Delegate a focused subtask to another Sak Family persona (sakking, sakthai, "
+            "saksee, saksit, sakjules, saktan) in-process and return their response. "
+            "Use to dispatch tasks to domain specialists (e.g. SakKing for coding, "
+            "SakSee for review/architecture, SakSit for content/business, SakJules for CI/testing)."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "persona": {
+                    "type": "string",
+                    "description": "The target persona name (sakking, sakthai, saksee, saksit, sakjules, saktan).",
+                    "enum": ["sakking", "sakthai", "saksee", "saksit", "sakjules", "saktan"],
+                },
+                "task": {
+                    "type": "string",
+                    "description": "The specific task instructions for the persona to execute.",
+                },
+                "with_skills": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional list of skill names to activate for the persona.",
+                },
+                "max_iterations": {
+                    "type": "integer",
+                    "description": "Maximum iterations for the delegated loop (default: 8).",
+                    "default": 8,
+                },
+            },
+            "required": ["persona", "task"],
+        },
+        handler=_delegate_to_persona,
     ),
 )
 

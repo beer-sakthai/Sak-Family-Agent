@@ -209,8 +209,8 @@ and the active trackers point to the completed ServiceQuoteBot MVP:
 
 ## Coverage Check
 
-- `docs/servicequotebot/deployment.md` covers the customer deployment flow requested in the tracker.
-- `infra/servicequotebot/systemd/servicequotebot.service` satisfies the “systemd service file or Dockerfile” requirement.
-- `scripts/setup_servicequotebot.py` satisfies the automated setup requirement for a new client.
-- `tests/test_setup_servicequotebot.py` covers the new script behavior before it is committed.
-- `product/todo.md` is the only active tracker and will be checked off only after the artifacts exist and verify cleanly.
+- [x] `docs/servicequotebot/deployment.md` covers the customer deployment flow requested in the tracker.
+- [x] `infra/servicequotebot/systemd/servicequotebot.service` satisfies the “systemd service file or Dockerfile” requirement.
+- [x] `scripts/setup_servicequotebot.py` satisfies the automated setup requirement for a new client.
+- [x] `tests/test_setup_servicequotebot.py` covers the new script behavior before it is committed.
+- [x] `product/todo.md` is the only active tracker and has been checked off since the artifacts exist and verify cleanly.

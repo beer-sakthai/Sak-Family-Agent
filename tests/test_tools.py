@@ -1297,3 +1297,73 @@ def test_load_tool_overrides(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
         learn_tool.input_schema["properties"]["value"]["description"]
         == "Overridden param description."
     )
+
+
+def test_family_recall_and_search_tools(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+) -> None:
+
+    # Create dummy shard
+    shard1_path = tmp_path / "sakking" / "memory.db"
+    shard1_path.parent.mkdir(parents=True, exist_ok=True)
+    shard1 = MemoryStore(shard1_path)
+    shard1.add_fact("uses Python 3.12", kind="tech", key="python")
+    shard1.add_observation("Builds with uv fast", weight=0.9)
+    shard1.close()
+
+    monkeypatch.setattr(
+        "sakthai.memory.merged.persona_memory_db_path", lambda p: tmp_path / p / "memory.db"
+    )
+
+    family_recall = tool_by_name("family_recall")
+    assert family_recall is not None
+    recall_out = family_recall.handler({}, store)
+    assert "Family Facts" in recall_out
+    assert "uses Python 3.12" in recall_out
+    assert "Builds with uv fast" in recall_out
+
+    family_search = tool_by_name("family_search")
+    assert family_search is not None
+    search_out = family_search.handler({"query": "Python"}, store)
+    assert "Matching Family Facts" in search_out
+    assert "uses Python 3.12" in search_out
+
+    no_match_out = family_search.handler({"query": "nonexistent_term"}, store)
+    assert "No family memory matches found" in no_match_out
+
+    with pytest.raises(ValueError, match="`query` is required"):
+        family_search.handler({}, store)
+
+
+def test_delegate_to_persona_tool(store: MemoryStore) -> None:
+    from unittest.mock import patch
+
+    from sakthai.agent.loop import AgentResult
+
+    delegate = tool_by_name("delegate_to_persona")
+    assert delegate is not None
+
+    mock_res = AgentResult(
+        text="Finished refactoring.",
+        iterations=2,
+        stop_reason="end_turn",
+        usage={"input_tokens": 100, "output_tokens": 50, "total_tokens": 150},
+    )
+
+    with patch("sakthai.agent.coordinator.run_persona_task", return_value=mock_res) as mock_run:
+        out = delegate.handler({"persona": "sakking", "task": "Refactor codebase"}, store)
+        assert "Delegated Task Result (SAKKING)" in out
+        assert "Finished refactoring." in out
+        assert "Tokens: 150" in out
+        mock_run.assert_called_once_with(
+            persona="sakking",
+            task="Refactor codebase",
+            with_skills=(),
+            max_iterations=None,
+        )
+
+    with pytest.raises(ValueError, match="`persona` is required"):
+        delegate.handler({"task": "No persona"}, store)
+
+    with pytest.raises(ValueError, match="`task` is required"):
+        delegate.handler({"persona": "sakking"}, store)
