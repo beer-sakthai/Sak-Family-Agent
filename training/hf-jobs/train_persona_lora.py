@@ -36,6 +36,10 @@ from transformers import (
 from trl import SFTConfig, SFTTrainer
 
 BASE_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
+# Pinned to an immutable commit (bandit B615). A mutable branch ref lets an
+# upstream force-push silently change what this job downloads, and an unpinned
+# run is not reproducible.
+BASE_MODEL_REVISION = "7ae557604adf67be50417f59c2c2f167def9a775"
 DATASET_ID = "Nanthasit/hermes-dataset"
 OUTPUT_REPO = "Nanthasit/sakthai-persona-0.5b-lora"
 
@@ -49,7 +53,7 @@ SYSTEM_PROMPT = (
 
 def main() -> None:
     print(f"== Loading tokenizer + base model: {BASE_MODEL}")
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, revision=BASE_MODEL_REVISION)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -61,13 +65,16 @@ def main() -> None:
     )
     model = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
+        revision=BASE_MODEL_REVISION,
         quantization_config=bnb_config,
         device_map="auto",
     )
     model.config.use_cache = False
 
     print(f"== Loading dataset: {DATASET_ID}")
-    ds = load_dataset(DATASET_ID, split="train")
+    # Own-namespace dataset, republished by this project's own pipeline;
+    # pinning it would train against a stale snapshot of our own data.
+    ds = load_dataset(DATASET_ID, split="train")  # nosec B615
     print(f"   rows={len(ds)} columns={ds.column_names}")
 
     def to_text(example):

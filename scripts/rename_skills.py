@@ -60,7 +60,10 @@ def _planned_renames(root: Path, prefix: str) -> list[tuple[Path, str, str]]:
     for skill_md in sorted(root.rglob("SKILL.md")):
         try:
             skill = parse_skill(skill_md)
-        except Exception:  # noqa: BLE001 — malformed skills are validate's job
+        except Exception:  # noqa: BLE001 # nosec B112 — deliberate catch-all:
+            # a malformed SKILL.md is `skills validate`'s job to report, not
+            # this planner's; parse_skill raises several unrelated types and
+            # every one of them means "not renameable".
             continue
         new_name = target_skill_name(skill.name, prefix)
         folder = skill_md.parent.name

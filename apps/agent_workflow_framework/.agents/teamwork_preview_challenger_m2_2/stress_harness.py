@@ -348,8 +348,11 @@ class StressTestHarness:
                 store.get_run_path(bad_id)
             except ValueError:
                 rejected += 1
-            except Exception as e:
-                pass
+            except Exception as e:  # noqa: BLE001
+                # Any other exception means the input was rejected by an
+                # unexpected route — surface it instead of silently counting
+                # it as "not rejected" (bandit B110).
+                print(f"    unexpected rejection route for {bad_id!r}: {e!r}")
 
         passed = rejected == len(malicious_ids)
         details = f"Rejected {rejected}/{len(malicious_ids)} path traversal / malformed run_id inputs with ValueError."
