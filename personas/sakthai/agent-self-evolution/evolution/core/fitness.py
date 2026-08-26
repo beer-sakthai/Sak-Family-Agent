@@ -191,7 +191,10 @@ def tool_selection_metric(example: dspy.Example, prediction: dspy.Prediction, tr
                 json_clean = "\n".join(lines[1:-1]).strip()
         try:
             parsed_args = json.loads(json_clean)
-        except Exception:
+        except (json.JSONDecodeError, TypeError, ValueError):
+            # The model did not emit parseable JSON — that is a scoring
+            # outcome, not an error to hide. Catching bare Exception here
+            # also swallowed KeyboardInterrupt/SystemExit (bandit B110).
             pass
 
     args_match_score = 0.0

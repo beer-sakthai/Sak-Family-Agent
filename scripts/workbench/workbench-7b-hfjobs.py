@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """HF Jobs workbench test: SakThai Context 7B merged model, 4-bit, T4 GPU."""
 
-import json, time, os, sys
+import json, time, os, sys, tempfile
 import torch
 
 MODEL = "Nanthasit/sakthai-context-7b-merged"
@@ -30,8 +30,12 @@ bnb_config = BitsAndBytesConfig(
     bnb_4bit_quant_type="nf4",
 )
 
-tokenizer = AutoTokenizer.from_pretrained(MODEL, token=HF_TOKEN)
-model = AutoModelForCausalLM.from_pretrained(
+# MODEL is this project's own merged checkpoint (Nanthasit/*), republished by
+# its own training loop. A workbench probe is meant to exercise whatever was
+# last pushed, so pinning a revision here would defeat the script's purpose
+# rather than harden it (bandit B615).
+tokenizer = AutoTokenizer.from_pretrained(MODEL, token=HF_TOKEN)  # nosec B615
+model = AutoModelForCausalLM.from_pretrained(  # nosec B615
     MODEL,
     quantization_config=bnb_config,
     device_map="auto",
@@ -130,7 +134,10 @@ for i, test in enumerate(tests):
             try:
                 json.loads(response)
                 checks.append("valid_json")
-            except:
+            except (json.JSONDecodeError, TypeError):
+                # Not valid JSON — that is the check failing, not an error
+                # to hide. A bare `except` here also swallowed
+                # KeyboardInterrupt/SystemExit (bandit B110).
                 pass
         if test["name"] == "multi_step_reasoning":
             if any(c in response for c in ["7", "seven"]) and ("apple" in response.lower()):
@@ -181,7 +188,11 @@ record = {
     "summary": f"{passed}/{total} passed",
 }
 
-record_path = "/tmp/sakthai-7b-workbench-record.json"
+# Private per-run temp dir rather than a fixed /tmp name (bandit B108).
+record_path = os.path.join(
+    os.environ.get("SAKTHAI_ARTIFACT_DIR") or tempfile.mkdtemp(prefix="sakthai-7b-workbench-"),
+    "record.json",
+)
 with open(record_path, "w") as f:
     json.dump(record, f, indent=2)
 print(f"\n💾 Saved: {record_path}", flush=True)
