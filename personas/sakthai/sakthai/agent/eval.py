@@ -35,6 +35,11 @@ class EvalRecord:
     output_tokens: int
     tool_call_count: int
     had_error: bool
+    #: Which persona ran this, when the run was scoped to one. Trailing and
+    #: defaulted on purpose: the log is append-only, so records written before
+    #: this field existed simply lack the key and read back as ``None``. Do not
+    #: infer a persona for those — the dashboard shows them as "unattributed".
+    persona: str | None = None
 
 
 def task_preview(task: str, limit: int = _TASK_PREVIEW_LIMIT) -> str:

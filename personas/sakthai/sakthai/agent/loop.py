@@ -484,6 +484,7 @@ def run_agent(
                 output_tokens=usage["output_tokens"],
                 tool_call_count=len(tool_calls),
                 had_error=had_error,
+                persona=persona,
             )
         )
 
@@ -546,7 +547,7 @@ def run_agent(
                     usage=usage_tracker.to_dict(),
                     messages=[*messages, {"role": "assistant", "content": response.content}],
                 )
-                _save_session_log(task, model, messages, result)
+                _save_session_log(task, model, messages, result, persona)
                 _record_run_eval(iteration, stop_reason, had_error=False)
                 return result
 
@@ -564,7 +565,7 @@ def run_agent(
                     usage=usage_tracker.to_dict(),
                     messages=[*messages, {"role": "assistant", "content": response.content}],
                 )
-                _save_session_log(task, model, messages, result)
+                _save_session_log(task, model, messages, result, persona)
                 _record_run_eval(iteration, stop_reason, had_error=False)
                 return result
 
@@ -701,7 +702,13 @@ def _serialize_messages(messages: list[Any]) -> list[dict[str, Any]]:
     return serialized
 
 
-def _save_session_log(task: str, model: str, messages: list[Any], result: AgentResult) -> None:
+def _save_session_log(
+    task: str,
+    model: str,
+    messages: list[Any],
+    result: AgentResult,
+    persona: str | None = None,
+) -> None:
     try:
         base = sessions_dir().resolve()
         # Restrict permissions on the sessions directory: rwx------ (0700)
@@ -714,6 +721,9 @@ def _save_session_log(task: str, model: str, messages: list[Any], result: AgentR
             "timestamp": int(time.time()),
             "task": task,
             "model": model,
+            # None for an unscoped run; absent entirely in logs written before
+            # persona attribution existed. Readers must treat both as unknown.
+            "persona": persona,
             "messages": _serialize_messages(messages),
             "usage": result.usage,
             "result": {
