@@ -39,6 +39,7 @@ from ..config import (
     persona_model_defaults,
     sakthai_home,
 )
+from ..config import workflow_runs_dir as config_workflow_runs_dir
 from ..memory.merged import FamilyMemoryView
 from ..memory.store import MemoryStore
 from .contracts import (
@@ -62,6 +63,10 @@ from .contracts import (
     TokenStats,
     ToolCallRecord,
     TrendPoint,
+    WorkflowRunDetail,
+    WorkflowRunSummary,
+    WorkflowsPayload,
+    WorkflowStepResult,
 )
 
 #: How many eval records any one aggregate considers. The log is append-only and
@@ -671,6 +676,110 @@ def audit_payload(
     }
 
 
+# -- workflows ------------------------------------------------------------
+
+
+def _duration_seconds(started: str | None, finished: str | None) -> float | None:
+    """Elapsed seconds between two ISO-8601 stamps, or None if either is absent."""
+    if not started or not finished:
+        return None
+    try:
+        delta = datetime.fromisoformat(finished) - datetime.fromisoformat(started)
+    except (TypeError, ValueError):
+        return None
+    return max(0.0, delta.total_seconds())
+
+
+def _workflow_summary(run_id: str, data: dict[str, Any]) -> WorkflowRunSummary:
+    steps = _as_dict(data.get("step_results"))
+    started = data.get("start_time")
+    finished = data.get("end_time")
+    return {
+        "run_id": run_id,
+        "workflow_name": str(data.get("workflow_name", "")),
+        # RunStatus/StepStatus serialise as UPPERCASE; lowercased here so the
+        # client has one canonical form. Lossless — both are closed enums.
+        "status": str(data.get("status", "")).lower(),
+        "started_at": started if isinstance(started, str) else None,
+        "finished_at": finished if isinstance(finished, str) else None,
+        "duration_seconds": _duration_seconds(
+            started if isinstance(started, str) else None,
+            finished if isinstance(finished, str) else None,
+        ),
+        "step_count": len(steps),
+        "failed_steps": sum(
+            1
+            for step in steps.values()
+            if str(_as_dict(step).get("status", "")).lower() == "failed"
+        ),
+    }
+
+
+def _workflow_step(data: dict[str, Any]) -> WorkflowStepResult:
+    started = data.get("start_time")
+    finished = data.get("end_time")
+    error = data.get("error")
+    return {
+        "step_id": str(data.get("step_id", "")),
+        "status": str(data.get("status", "")).lower(),
+        "attempts": int(data.get("attempts", 0) or 0),
+        "error": error if isinstance(error, str) else None,
+        "started_at": started if isinstance(started, str) else None,
+        "finished_at": finished if isinstance(finished, str) else None,
+        "duration_seconds": _duration_seconds(
+            started if isinstance(started, str) else None,
+            finished if isinstance(finished, str) else None,
+        ),
+    }
+
+
+def workflow_runs_dir(home: Path | None = None) -> Path:
+    """Where ``agent_workflow`` writes its run histories."""
+    return (home / "workflow_runs") if home is not None else config_workflow_runs_dir()
+
+
+def workflows_payload(limit: int = 100, home: Path | None = None) -> WorkflowsPayload:
+    """Workflow run summaries, newest first.
+
+    Reads the JSON files ``agent_workflow.persistence.RunHistoryStore`` writes.
+    The framework is not imported: it is a separate stdlib-only package outside
+    this one's dependency graph, and its on-disk format is the contract.
+    """
+    limit = max(1, min(500, limit))
+    directory = workflow_runs_dir(home)
+    if not directory.is_dir():
+        return {"runs": []}
+
+    runs: list[WorkflowRunSummary] = []
+    for path in directory.glob("*.json"):
+        data = _load_session(path)
+        if data is not None:
+            runs.append(_workflow_summary(path.stem, data))
+    runs.sort(key=lambda run: run["started_at"] or "", reverse=True)
+    return {"runs": runs[:limit]}
+
+
+def workflow_detail(run_id: str, home: Path | None = None) -> WorkflowRunDetail | None:
+    """One run's full step history, or None if unknown.
+
+    The id is pattern-checked before it reaches a path join — it arrives from a
+    query string, mirroring ``RunHistoryStore._sanitize_run_id``'s own guard.
+    """
+    if not _SESSION_ID_RE.match(run_id):
+        return None
+    path = workflow_runs_dir(home) / f"{run_id}.json"
+    if not path.is_file():
+        return None
+    data = _load_session(path)
+    if data is None:
+        return None
+    steps = _as_dict(data.get("step_results"))
+    return {
+        "summary": _workflow_summary(run_id, data),
+        "steps": [_workflow_step(_as_dict(step)) for step in steps.values()],
+    }
+
+
 __all__ = [
     "EVAL_WINDOW",
     "MAX_AUDIT_LINES",
@@ -687,4 +796,7 @@ __all__ = [
     "session_detail",
     "sessions_payload",
     "runtime_roots",
+    "workflow_detail",
+    "workflow_runs_dir",
+    "workflows_payload",
 ]

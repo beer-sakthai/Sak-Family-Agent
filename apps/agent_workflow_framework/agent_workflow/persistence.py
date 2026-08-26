@@ -1,7 +1,19 @@
 """Execution run history and step log persistence store.
 
 Provides atomic, thread-safe persistence of RunHistory and StepResult dataclasses
-to structured JSON files under `.workflow_runs/<run_id>.json`.
+to structured JSON files, one per run.
+
+Runs are stored under ``$SAKTHAI_HOME/workflow_runs/`` (default
+``~/.sakthai/workflow_runs/``) so the SakThai web API and dashboard can find
+them at a known location, alongside the other runtime state — sessions, the
+eval log, memory shards. Previously they landed in ``.workflow_runs/`` relative
+to whatever directory the workflow happened to be launched from, which nothing
+else could reliably locate.
+
+The location is resolved by reading the environment variable directly rather
+than importing ``sakthai``: this package is deliberately stdlib-only and must
+stay independently runnable. If the home directory cannot be resolved at all,
+it falls back to the original cwd-relative directory.
 """
 
 import json
@@ -52,15 +64,32 @@ class WorkflowJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
+def default_storage_dir() -> Path:
+    """Where run histories live: ``$SAKTHAI_HOME/workflow_runs``.
+
+    Mirrors ``sakthai.config.workflow_runs_dir()`` without importing it, so this
+    package stays stdlib-only. Falls back to the historical cwd-relative
+    ``.workflow_runs`` only if the home directory cannot be resolved.
+    """
+    base = os.environ.get("SAKTHAI_HOME")
+    if base:
+        return Path(base) / "workflow_runs"
+    try:
+        return Path.home() / ".sakthai" / "workflow_runs"
+    except (RuntimeError, OSError):
+        return Path(RunHistoryStore.FALLBACK_STORAGE_DIR)
+
+
 class RunHistoryStore:
     """Thread-safe store for saving, loading, and querying workflow run histories."""
 
-    DEFAULT_STORAGE_DIR = ".workflow_runs"
+    #: Used only when the user's home directory cannot be resolved.
+    FALLBACK_STORAGE_DIR = ".workflow_runs"
 
     def __init__(self, storage_dir: Optional[Union[str, Path]] = None):
         """Initialize RunHistoryStore with optional custom storage directory."""
         if storage_dir is None:
-            storage_dir = Path(self.DEFAULT_STORAGE_DIR)
+            storage_dir = default_storage_dir()
         else:
             storage_dir = Path(storage_dir)
         self.storage_dir: Path = storage_dir.resolve()

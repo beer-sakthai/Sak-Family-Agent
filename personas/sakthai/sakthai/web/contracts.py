@@ -237,20 +237,36 @@ class AuditPayload(TypedDict):
 
 
 class WorkflowStepResult(TypedDict):
+    """One step of a workflow run.
+
+    ``status`` is an ``agent_workflow.models.StepStatus`` value, **lowercased**
+    (the framework serialises them uppercase; one canonical form is easier to
+    render against, and the enum is closed so nothing is lost). Timestamps are
+    ISO-8601 strings, matching what the framework writes — not epoch floats.
+    """
+
     step_id: str
     status: str
     attempts: int
     error: str | None
-    started_at: float | None
-    finished_at: float | None
+    started_at: str | None
+    finished_at: str | None
+    duration_seconds: float | None
 
 
 class WorkflowRunSummary(TypedDict):
+    """A workflow run's headline state, without its per-step output.
+
+    ``status`` is an ``agent_workflow.models.RunStatus`` value, lowercased, as
+    for :class:`WorkflowStepResult`.
+    """
+
     run_id: str
     workflow_name: str
     status: str
-    started_at: float | None
-    finished_at: float | None
+    started_at: str | None
+    finished_at: str | None
+    duration_seconds: float | None
     step_count: int
     failed_steps: int
 

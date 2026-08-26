@@ -635,3 +635,149 @@ class TestDefaultHomeResolution:
 
     def test_memory_uses_sakthai_home(self, sakthai_home: Path) -> None:
         assert api.memory_payload()["total_facts"] == 0
+
+
+class TestWorkflowsPayload:
+    """Workflow runs written by apps/agent_workflow_framework.
+
+    The framework is a separate stdlib-only package outside this one's
+    dependency graph, so these fixtures mirror the on-disk format
+    ``RunHistoryStore`` writes (``RunHistory.to_dict()``) rather than importing
+    it. ``tests/test_workflow_storage_location.py`` pins that format down
+    against the real writer.
+    """
+
+    @staticmethod
+    def _run_doc(**overrides: Any) -> str:
+        doc: dict[str, Any] = {
+            "run_id": "run-1",
+            "workflow_name": "nightly",
+            "status": "completed",
+            "start_time": "2026-08-26T10:00:00",
+            "end_time": "2026-08-26T10:00:30",
+            "step_results": {
+                "fetch": {
+                    "step_id": "fetch",
+                    "status": "completed",
+                    "output": {"n": 1},
+                    "error": None,
+                    "attempts": 1,
+                    "start_time": "2026-08-26T10:00:00",
+                    "end_time": "2026-08-26T10:00:10",
+                },
+                "publish": {
+                    "step_id": "publish",
+                    "status": "failed",
+                    "output": {},
+                    "error": "boom",
+                    "attempts": 3,
+                    "start_time": "2026-08-26T10:00:10",
+                    "end_time": "2026-08-26T10:00:30",
+                },
+            },
+        }
+        doc.update(overrides)
+        return json.dumps(doc)
+
+    def _seed(self, home: Path, run_id: str = "run-1", **overrides: Any) -> Path:
+        runs = home / "workflow_runs"
+        runs.mkdir(exist_ok=True)
+        path = runs / f"{run_id}.json"
+        path.write_text(self._run_doc(run_id=run_id, **overrides), encoding="utf-8")
+        return path
+
+    def test_missing_directory_is_empty_not_an_error(self, home: Path) -> None:
+        assert api.workflows_payload(home=home) == {"runs": []}
+
+    def test_summary_fields(self, home: Path) -> None:
+        self._seed(home)
+        run = api.workflows_payload(home=home)["runs"][0]
+        assert run["run_id"] == "run-1"
+        assert run["workflow_name"] == "nightly"
+        assert run["status"] == "completed"
+        assert run["step_count"] == 2
+        assert run["failed_steps"] == 1
+
+    def test_duration_is_computed_from_iso_stamps(self, home: Path) -> None:
+        self._seed(home)
+        assert api.workflows_payload(home=home)["runs"][0]["duration_seconds"] == 30.0
+
+    def test_duration_is_none_without_an_end(self, home: Path) -> None:
+        self._seed(home, end_time=None)
+        assert api.workflows_payload(home=home)["runs"][0]["duration_seconds"] is None
+
+    def test_duration_is_none_for_unparseable_stamps(self, home: Path) -> None:
+        self._seed(home, start_time="not-a-date")
+        assert api.workflows_payload(home=home)["runs"][0]["duration_seconds"] is None
+
+    def test_newest_first(self, home: Path) -> None:
+        self._seed(home, "run-a", start_time="2026-08-26T09:00:00")
+        self._seed(home, "run-b", start_time="2026-08-26T11:00:00")
+        assert [r["run_id"] for r in api.workflows_payload(home=home)["runs"]] == [
+            "run-b",
+            "run-a",
+        ]
+
+    def test_corrupt_run_file_is_skipped(self, home: Path) -> None:
+        self._seed(home)
+        (home / "workflow_runs" / "broken.json").write_text("{{{", encoding="utf-8")
+        assert len(api.workflows_payload(home=home)["runs"]) == 1
+
+    def test_limit_is_clamped(self, home: Path) -> None:
+        self._seed(home)
+        assert len(api.workflows_payload(limit=-3, home=home)["runs"]) == 1
+        assert len(api.workflows_payload(limit=99_999, home=home)["runs"]) == 1
+
+    def test_uses_config_dir_by_default(self, sakthai_home: Path) -> None:
+        assert api.workflow_runs_dir() == sakthai_home / "workflow_runs"
+
+
+class TestWorkflowDetail:
+    def test_steps_are_returned(self, home: Path) -> None:
+        TestWorkflowsPayload()._seed(home)
+        detail = api.workflow_detail("run-1", home)
+        assert detail is not None
+        assert {s["step_id"] for s in detail["steps"]} == {"fetch", "publish"}
+
+    def test_step_error_and_attempts(self, home: Path) -> None:
+        TestWorkflowsPayload()._seed(home)
+        detail = api.workflow_detail("run-1", home)
+        assert detail is not None
+        failed = next(s for s in detail["steps"] if s["step_id"] == "publish")
+        assert failed["error"] == "boom"
+        assert failed["attempts"] == 3
+        assert failed["duration_seconds"] == 20.0
+
+    def test_unknown_run_is_none(self, home: Path) -> None:
+        assert api.workflow_detail("nope", home) is None
+
+    @pytest.mark.parametrize("bad_id", ["../../etc/passwd", "a/b", "..", "with space"])
+    def test_traversal_ids_rejected(self, bad_id: str, home: Path) -> None:
+        (home / "workflow_runs").mkdir()
+        assert api.workflow_detail(bad_id, home) is None
+
+    def test_corrupt_run_is_none(self, home: Path) -> None:
+        runs = home / "workflow_runs"
+        runs.mkdir()
+        (runs / "bad.json").write_text("{{{", encoding="utf-8")
+        assert api.workflow_detail("bad", home) is None
+
+    def test_non_dict_step_entry_tolerated(self, home: Path) -> None:
+        runs = home / "workflow_runs"
+        runs.mkdir()
+        (runs / "r.json").write_text(
+            json.dumps(
+                {
+                    "run_id": "r",
+                    "workflow_name": "w",
+                    "status": "completed",
+                    "start_time": None,
+                    "end_time": None,
+                    "step_results": {"a": "not a dict"},
+                }
+            ),
+            encoding="utf-8",
+        )
+        detail = api.workflow_detail("r", home)
+        assert detail is not None
+        assert detail["steps"][0]["step_id"] == ""

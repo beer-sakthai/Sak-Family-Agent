@@ -68,7 +68,14 @@ _LOOPBACK_NAMES = frozenset({"localhost"})
 #: The endpoints backing apps/sak_agent_dashboard. Kept separate from the
 #: legacy /api/stages and /api/ecosystem, which stay as they were.
 _DASHBOARD_ROUTES = frozenset(
-    {"/api/personas", "/api/metrics", "/api/sessions", "/api/memory", "/api/audit"}
+    {
+        "/api/personas",
+        "/api/metrics",
+        "/api/sessions",
+        "/api/memory",
+        "/api/audit",
+        "/api/workflows",
+    }
 )
 
 
@@ -341,6 +348,13 @@ class _Handler(SimpleHTTPRequestHandler):
                 payload = _api.memory_payload(
                     query=params.get("query"),
                     limit=_int_param(params, "limit", 100),
+                )
+            elif path == "/api/workflows":
+                run_id = params.get("id")
+                payload = (
+                    _api.workflow_detail(run_id)
+                    if run_id
+                    else _api.workflows_payload(limit=_int_param(params, "limit", 100))
                 )
             else:  # /api/audit
                 payload = _api.audit_payload(

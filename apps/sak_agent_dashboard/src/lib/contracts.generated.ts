@@ -154,16 +154,18 @@ export interface WorkflowStepResult {
   status: string;
   attempts: number;
   error: string | null;
-  started_at: number | null;
-  finished_at: number | null;
+  started_at: string | null;
+  finished_at: string | null;
+  duration_seconds: number | null;
 }
 
 export interface WorkflowRunSummary {
   run_id: string;
   workflow_name: string;
   status: string;
-  started_at: number | null;
-  finished_at: number | null;
+  started_at: string | null;
+  finished_at: string | null;
+  duration_seconds: number | null;
   step_count: number;
   failed_steps: number;
 }

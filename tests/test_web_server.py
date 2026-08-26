@@ -937,3 +937,27 @@ class TestCors:
 
         monkeypatch.setenv("SAKTHAI_WEB_CORS_ORIGIN", "   ")
         assert _cors_origin() is None
+
+
+class TestWorkflowRoutes:
+    def test_workflows_list_is_enveloped(self, api_base: str) -> None:
+        status, body = _get(f"{api_base}/api/workflows")
+        assert status == 200
+        assert isinstance(body["data"]["runs"], list)
+
+    def test_workflows_requires_a_token(self, api_base: str) -> None:
+        req = urllib.request.Request(f"{api_base}/api/workflows")
+        with pytest.raises(urllib.error.HTTPError) as excinfo:
+            urllib.request.urlopen(req, timeout=30)
+        assert excinfo.value.code == 401
+
+    def test_id_param_switches_to_detail(self, api_base: str) -> None:
+        """?id= returns the detail shape (null here — no such run)."""
+        status, body = _get(f"{api_base}/api/workflows?id=nope")
+        assert status == 200
+        assert body["data"] is None
+
+    def test_traversal_id_is_not_reflected(self, api_base: str) -> None:
+        status, body = _get(f"{api_base}/api/workflows?id=../../etc/passwd")
+        assert status == 200
+        assert body["data"] is None

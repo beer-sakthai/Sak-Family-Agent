@@ -207,6 +207,18 @@ def sessions_dir() -> Path:
     return sakthai_home() / "sessions"
 
 
+def workflow_runs_dir() -> Path:
+    """Directory where ``agent_workflow`` run histories are stored.
+
+    The framework in ``apps/agent_workflow_framework/`` defaults its own store
+    here (reading ``SAKTHAI_HOME`` directly, so it stays stdlib-only and does
+    not import this package), which is what lets the web API and the dashboard
+    find runs at a known location instead of one relative to whatever directory
+    the workflow happened to be launched from.
+    """
+    return sakthai_home() / "workflow_runs"
+
+
 def tool_descriptions_path() -> Path:
     """Path to the custom tool descriptions overrides JSON file."""
     return sakthai_home() / "tool_descriptions.json"
