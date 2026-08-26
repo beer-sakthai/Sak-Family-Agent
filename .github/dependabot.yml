@@ -38,6 +38,16 @@ updates:
     directory: /apps/sak_agent_dashboard
     schedule:
       interval: daily
+    ignore:
+      # The dashboard is written against Tailwind v3: globals.css uses the v3
+      # `@tailwind base/components/utilities` directives and tailwind.config.ts
+      # is a v3 JS config. A v4 major needs the PostCSS plugin move to
+      # `@tailwindcss/postcss` plus a directive/config migration, none of which
+      # has been done. The v4 bump has landed and broken the Vercel build twice
+      # already (reverted once in b330e2f, re-proposed as 23745ae) — hold the
+      # major until someone does the migration deliberately.
+      - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /personas/saksee/skills/SakSee-stitch::react-components
