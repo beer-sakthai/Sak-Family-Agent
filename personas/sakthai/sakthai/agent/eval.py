@@ -77,6 +77,17 @@ def _read_records(path: Path | None = None) -> list[dict[str, Any]]:
     return records
 
 
+def read_records(path: Path | None = None, limit: int | None = None) -> list[dict[str, Any]]:
+    """The parsed eval log, oldest first; the most recent ``limit`` when given.
+
+    Records are plain dicts rather than :class:`EvalRecord`s on purpose: the log
+    is append-only and older lines predate fields the dataclass now has, so
+    callers read with ``.get()`` and treat a missing key as unknown.
+    """
+    records = _read_records(path)
+    return records[-limit:] if limit is not None else records
+
+
 def summarize_evals(path: Path | None = None, limit: int = 50) -> dict[str, Any]:
     """Aggregate the most recent ``limit`` eval records: latency, tokens, errors, per-model."""
     records = _read_records(path)[-limit:]

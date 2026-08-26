@@ -278,6 +278,32 @@ def web_setup() -> None:
     click.echo()
 
 
+@web.command("serve")
+@click.option("--host", default="127.0.0.1", show_default=True, help="Interface to bind.")
+@click.option("--port", default=3001, show_default=True, type=int, help="Port to listen on.")
+def web_serve(host: str, port: int) -> None:
+    """Serve the read-only web API.
+
+    Loopback-only unless ``SAKTHAI_WEB_ALLOW_PUBLIC`` is set; every path except
+    ``/health`` needs the bearer token from ``sakthai web setup``.
+    """
+    from ..web.server import serve
+
+    try:
+        server = serve(host=host, port=port)
+    except PermissionError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(click.style(f"\n  SakThai web API on http://{host}:{port}", bold=True))
+    click.echo("  Get a token with `sakthai web setup`. Ctrl-C to stop.\n")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        click.echo("\n  Stopped.")
+    finally:
+        server.server_close()
+
+
 @web.command("regen-token")
 @click.confirmation_option(
     prompt="Are you sure you want to regenerate the Web API bearer token? All existing clients will stop working."

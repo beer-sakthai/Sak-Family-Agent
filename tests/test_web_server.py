@@ -760,3 +760,180 @@ def test_all_persona_servers_hardened_against_loopback_bypass() -> None:
         assert "compare_digest" in content, (
             f"Timing attack vulnerability: compare_digest not found in {server_path}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Dashboard API routes (/api/personas|metrics|sessions|memory|audit)
+# ---------------------------------------------------------------------------
+
+
+class TestDashboardRoutes:
+    """The endpoints backing apps/sak_agent_dashboard.
+
+    Payload construction is covered in tests/test_web_api.py; these check the
+    HTTP layer — that each route is reachable, authenticated, enveloped, and
+    that a bad query param degrades rather than 500-ing.
+    """
+
+    ROUTES = ("personas", "metrics", "sessions", "memory", "audit")
+
+    @pytest.mark.parametrize("route", ROUTES)
+    def test_route_returns_an_envelope(self, api_base: str, route: str) -> None:
+        status, body = _get(f"{api_base}/api/{route}")
+        assert status == 200
+        assert body["ok"] is True
+        assert body["source"] == "local"
+        assert "generated_at" in body
+        assert "data" in body
+
+    @pytest.mark.parametrize("route", ROUTES)
+    def test_route_requires_a_token(self, api_base: str, route: str) -> None:
+        req = urllib.request.Request(f"{api_base}/api/{route}")
+        with pytest.raises(urllib.error.HTTPError) as excinfo:
+            urllib.request.urlopen(req, timeout=30)
+        assert excinfo.value.code == 401
+
+    @pytest.mark.parametrize("route", ROUTES)
+    def test_route_rejects_a_wrong_token(self, api_base: str, route: str) -> None:
+        status, _ = _get(f"{api_base}/api/{route}", token="not-the-token")
+        assert status == 403
+
+    def test_personas_lists_all_six(self, api_base: str) -> None:
+        _, body = _get(f"{api_base}/api/personas")
+        assert len(body["data"]["personas"]) == 6
+
+    def test_trailing_slash_is_normalised(self, api_base: str) -> None:
+        status, body = _get(f"{api_base}/api/personas/")
+        assert status == 200
+        assert body["ok"] is True
+
+    def test_unknown_api_path_is_still_forbidden(self, api_base: str) -> None:
+        status, _ = _get(f"{api_base}/api/does-not-exist")
+        assert status == 403
+
+    def test_non_numeric_limit_degrades_to_the_default(self, api_base: str) -> None:
+        """`?limit=abc` must not 500, and must not silently return nothing."""
+        status, body = _get(f"{api_base}/api/sessions?limit=abc")
+        assert status == 200
+        assert isinstance(body["data"]["sessions"], list)
+
+    def test_query_params_are_accepted(self, api_base: str) -> None:
+        status, body = _get(f"{api_base}/api/audit?severity=high&limit=5")
+        assert status == 200
+        assert body["data"]["total"] >= 0
+
+    def test_search_alias_query_is_accepted(self, api_base: str) -> None:
+        status, _ = _get(f"{api_base}/api/sessions?query=anything")
+        assert status == 200
+
+    def test_builder_failure_is_a_500_without_a_traceback(self, api_base: str) -> None:
+        """A payload builder blowing up must not leak internals to the client."""
+        with patch("sakthai.web.api.personas_payload", side_effect=RuntimeError("boom")):
+            status, body = _get(f"{api_base}/api/personas")
+        assert status == 500
+        assert body == {}  # HTTPError body isn't parsed by _get; the point is the code
+
+
+class TestQueryHelpers:
+    def test_parses_params(self) -> None:
+        from sakthai.web.server import _query_params
+
+        assert _query_params("a=1&b=two") == {"a": "1", "b": "two"}
+
+    def test_keeps_first_value_for_repeats(self) -> None:
+        from sakthai.web.server import _query_params
+
+        assert _query_params("a=1&a=2") == {"a": "1"}
+
+    def test_blank_query_is_empty(self) -> None:
+        from sakthai.web.server import _query_params
+
+        assert _query_params("") == {}
+
+    def test_int_param_reads_a_value(self) -> None:
+        from sakthai.web.server import _int_param
+
+        assert _int_param({"limit": "7"}, "limit", 20) == 7
+
+    def test_int_param_falls_back_when_missing(self) -> None:
+        from sakthai.web.server import _int_param
+
+        assert _int_param({}, "limit", 20) == 20
+
+    def test_int_param_falls_back_when_garbage(self) -> None:
+        from sakthai.web.server import _int_param
+
+        assert _int_param({"limit": "abc"}, "limit", 20) == 20
+
+
+# ---------------------------------------------------------------------------
+# CORS — opt-in, exact-match, never credentialed
+# ---------------------------------------------------------------------------
+
+
+class TestCors:
+    ORIGIN = "http://localhost:3000"
+
+    def _request(self, url: str, origin: str | None, method: str = "GET") -> Any:
+        req = urllib.request.Request(url, method=method)
+        if method == "GET":
+            req.add_header("Authorization", f"Bearer {_get_or_create_bearer_token()}")
+        if origin:
+            req.add_header("Origin", origin)
+        return urllib.request.urlopen(req, timeout=30)
+
+    def test_no_cors_headers_by_default(
+        self, api_base: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("SAKTHAI_WEB_CORS_ORIGIN", raising=False)
+        with self._request(f"{api_base}/api/personas", self.ORIGIN) as resp:
+            assert resp.headers.get("Access-Control-Allow-Origin") is None
+
+    def test_allowed_origin_is_echoed(self, api_base: str, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("SAKTHAI_WEB_CORS_ORIGIN", self.ORIGIN)
+        with self._request(f"{api_base}/api/personas", self.ORIGIN) as resp:
+            assert resp.headers.get("Access-Control-Allow-Origin") == self.ORIGIN
+            assert resp.headers.get("Vary") == "Origin"
+
+    def test_other_origin_gets_nothing(
+        self, api_base: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Exact match only — a different origin must not be echoed back."""
+        monkeypatch.setenv("SAKTHAI_WEB_CORS_ORIGIN", self.ORIGIN)
+        with self._request(f"{api_base}/api/personas", "http://evil.example") as resp:
+            assert resp.headers.get("Access-Control-Allow-Origin") is None
+
+    def test_wildcard_is_never_sent(self, api_base: str, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("SAKTHAI_WEB_CORS_ORIGIN", self.ORIGIN)
+        with self._request(f"{api_base}/api/personas", self.ORIGIN) as resp:
+            assert resp.headers.get("Access-Control-Allow-Origin") != "*"
+
+    def test_credentials_are_never_allowed(
+        self, api_base: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The token rides in Authorization; credentialed CORS buys nothing."""
+        monkeypatch.setenv("SAKTHAI_WEB_CORS_ORIGIN", self.ORIGIN)
+        with self._request(f"{api_base}/api/personas", self.ORIGIN) as resp:
+            assert resp.headers.get("Access-Control-Allow-Credentials") is None
+
+    def test_preflight_succeeds_when_configured(
+        self, api_base: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("SAKTHAI_WEB_CORS_ORIGIN", self.ORIGIN)
+        with self._request(f"{api_base}/api/personas", self.ORIGIN, "OPTIONS") as resp:
+            assert resp.status == 204
+
+    def test_preflight_is_rejected_when_cors_is_off(
+        self, api_base: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A default server must not advertise cross-origin support."""
+        monkeypatch.delenv("SAKTHAI_WEB_CORS_ORIGIN", raising=False)
+        with pytest.raises(urllib.error.HTTPError) as excinfo:
+            self._request(f"{api_base}/api/personas", self.ORIGIN, "OPTIONS")
+        assert excinfo.value.code == 405
+
+    def test_blank_env_var_counts_as_off(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from sakthai.web.server import _cors_origin
+
+        monkeypatch.setenv("SAKTHAI_WEB_CORS_ORIGIN", "   ")
+        assert _cors_origin() is None
