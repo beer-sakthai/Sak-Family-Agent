@@ -241,6 +241,7 @@ export function SessionExplorer({
             <button
               type="button"
               aria-label="Previous page"
+              title={currentPage <= 1 ? "First page reached" : "Previous page"}
               disabled={currentPage <= 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               className="p-1.5 rounded bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
@@ -250,6 +251,7 @@ export function SessionExplorer({
             <button
               type="button"
               aria-label="Next page"
+              title={currentPage >= totalPages ? "Last page reached" : "Next page"}
               disabled={currentPage >= totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               className="p-1.5 rounded bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"

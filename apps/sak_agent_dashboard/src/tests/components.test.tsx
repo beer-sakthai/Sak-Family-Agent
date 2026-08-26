@@ -123,6 +123,11 @@ describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
         const searchInput = screen.getByPlaceholderText(/search/i);
         fireEvent.change(searchInput, { target: { value: "SakThai" } });
         expect(searchInput).toHaveValue("SakThai");
+
+        const prevBtn = screen.getByRole("button", { name: /previous page/i });
+        const nextBtn = screen.getByRole("button", { name: /next page/i });
+        expect(prevBtn).toHaveAttribute("title", "First page reached");
+        expect(nextBtn).toHaveAttribute("title", "Last page reached");
       } else {
         const SearchContainer = () => {
           const [val, setVal] = React.useState("");
