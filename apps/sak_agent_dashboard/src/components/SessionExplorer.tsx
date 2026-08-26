@@ -171,8 +171,25 @@ export function SessionExplorer({
             <tbody className="divide-y divide-slate-800/60 text-slate-300">
               {paginatedSessions.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-8 text-center text-slate-500 italic">
-                    No sessions match the current search or filter criteria.
+                  <td colSpan={7} className="px-5 py-8 text-center text-slate-500">
+                    <div className="flex flex-col items-center justify-center gap-2 py-2">
+                      <p className="italic text-slate-500">No sessions match the current search or filter criteria.</p>
+                      {(searchQuery || statusFilter !== "ALL" || personaFilter !== "ALL") && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearchQuery("");
+                            setStatusFilter("ALL");
+                            setPersonaFilter("ALL");
+                            setCurrentPage(1);
+                            if (onSearchChange) onSearchChange("");
+                          }}
+                          className="mt-1 px-3 py-1 text-xs font-sans font-medium text-cyan-400 bg-cyan-950/60 border border-cyan-800/60 hover:bg-cyan-900/60 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+                        >
+                          Clear search & filters
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
