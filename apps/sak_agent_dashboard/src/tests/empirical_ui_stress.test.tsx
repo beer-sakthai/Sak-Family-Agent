@@ -217,20 +217,20 @@ describe("Empirical UI Stress & Interactive Verification Suite", () => {
       expect(screen.getByText("Sak-Agent-Family Personas")).toBeInTheDocument();
 
       // Click Analytics tab
-      const analyticsTab = screen.getByRole("button", { name: /Analytics & Charts/i });
+      const analyticsTab = screen.getByRole("tab", { name: /Analytics & Charts/i });
       fireEvent.click(analyticsTab);
 
       expect(screen.getByText("Performance & Benchmark Analytics")).toBeInTheDocument();
       expect(screen.queryByText("Sak-Agent-Family Personas")).not.toBeInTheDocument();
 
       // Click Sessions tab
-      const sessionsTab = screen.getByRole("button", { name: /Session Explorer/i });
+      const sessionsTab = screen.getByRole("tab", { name: /Session Explorer/i });
       fireEvent.click(sessionsTab);
 
       expect(screen.getByText("Session History & Transcript Explorer")).toBeInTheDocument();
 
       // Click Memory tab
-      const memoryTab = screen.getByRole("button", { name: /Memory & Security Logs/i });
+      const memoryTab = screen.getByRole("tab", { name: /Memory & Security Logs/i });
       fireEvent.click(memoryTab);
 
       expect(screen.getByText(/SQLite Memory Store Explorer/i)).toBeInTheDocument();
