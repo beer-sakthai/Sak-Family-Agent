@@ -1,0 +1,175 @@
+# OpenSSF Security Insights v2.0.0
+# https://github.com/ossf/security-insights-spec
+#
+# Every value below is verifiable against this repository — a file that exists,
+# a workflow that runs, or a setting the GitHub API reports. Fields the
+# repository does not yet state are OMITTED rather than guessed. That is
+# deliberate: a plausible-looking security manifest asserting facts nobody
+# checked is worse than an incomplete one, and this repository has a documented
+# history of exactly that failure mode (docs/code-scanning-sweep-2026-08-18.md).
+#
+# Known-omitted, and why:
+#   * `project.funding` / `project.roadmap` — no such page is published.
+#   * `repository.release` — the block requires `distribution-points`, and this
+#     project publishes no official distribution point for the agent package
+#     itself. It is installed from source; the Hugging Face collection in
+#     `project.homepage` distributes the *models*, not this software. Leaving
+#     the block out keeps OSPS-BR-03.02 open, which is the honest outcome.
+#   * `repository.security.assessments.third-party` — none has been performed.
+#
+# When a fact below changes, update `header.last-updated`. When you have
+# re-read the whole file and confirmed it still holds, update
+# `header.last-reviewed`.
+
+header:
+  schema-version: "2.0.0"
+  last-updated: "2026-08-19"
+  last-reviewed: "2026-08-19"
+  url: https://github.com/beer-sakthai/Sak-Family-Agent/blob/main/SECURITY-INSIGHTS.yml
+  comment: |
+    Sak-Family-Agent — six AI agent personas sharing one Python package
+    (`sakthai`) with a durable SQLite memory, a tool registry, and an MCP
+    stdio server.
+
+project:
+  name: Sak-Family-Agent
+  homepage: https://github.com/beer-sakthai/Sak-Family-Agent
+
+  administrators:
+    - name: beer-sakthai
+      primary: true
+      email: beernanthasit@gmail.com
+      social: https://github.com/beer-sakthai
+
+  repositories:
+    - name: Sak-Family-Agent
+      url: https://github.com/beer-sakthai/Sak-Family-Agent
+      comment: |
+        The single source repository for the whole project: the `sakthai`
+        package, all six personas, the shared skill library, deployment
+        config, and the training assets. There are no other repositories.
+
+  vulnerability-reporting:
+    reports-accepted: true
+    bug-bounty-available: false
+    security-policy: https://github.com/beer-sakthai/Sak-Family-Agent/blob/main/SECURITY.md
+    contact:
+      name: beer-sakthai
+      primary: true
+      email: beernanthasit@gmail.com
+    comment: |
+      Report privately by email with the subject `[SECURITY] sakthai-agent-v2`,
+      or through GitHub private vulnerability reporting, which is enabled on
+      this repository. Do not open a public issue. SECURITY.md commits to
+      acknowledgement within 3 business days, an initial assessment within 7
+      days, and public disclosure coordinated with the reporter after a patch
+      is available. Only the `main` branch (v2.x) receives security patches;
+      the archived v1.x "OG" line does not.
+
+  documentation:
+    detailed-guide: https://github.com/beer-sakthai/Sak-Family-Agent/blob/main/docs/README.md
+    quickstart-guide: https://github.com/beer-sakthai/Sak-Family-Agent/blob/main/README.md
+    code-of-conduct: https://github.com/beer-sakthai/Sak-Family-Agent/blob/main/CODE_OF_CONDUCT.md
+
+repository:
+  status: active
+  url: https://github.com/beer-sakthai/Sak-Family-Agent
+  accepts-change-request: true
+  accepts-automated-change-request: true
+
+  core-team:
+    - name: beer-sakthai
+      primary: true
+      email: beernanthasit@gmail.com
+      social: https://github.com/beer-sakthai
+
+  license:
+    url: https://github.com/beer-sakthai/Sak-Family-Agent/blob/main/LICENSE
+    # A bespoke "House of Sak — Intellectual Property License, All Rights
+    # Reserved". It is neither OSI- nor FSF-approved and is not intended to be,
+    # so it has no SPDX short identifier; `LicenseRef-` is SPDX's own encoding
+    # for exactly this case. Scanners that require an approved licence will
+    # keep reporting this, correctly and permanently.
+    expression: LicenseRef-House-of-Sak-IP
+
+  documentation:
+    contributing-guide: https://github.com/beer-sakthai/Sak-Family-Agent/blob/main/CONTRIBUTING.md
+    security-policy: https://github.com/beer-sakthai/Sak-Family-Agent/blob/main/SECURITY.md
+    review-policy: https://github.com/beer-sakthai/Sak-Family-Agent/blob/main/docs/CONTRIBUTING.md
+
+  security:
+    assessments:
+      self:
+        name: Bandit remediation across the non-package trees
+        date: "2026-08-26"
+        comment: |
+          First-party triage of the Bandit backlog: every finding outside the
+          shipped package either fixed or suppressed with its reasoning written
+          at the call site, verified with bandit 1.9.4 rather than asserted. The agent
+          tool surface is the primary attack surface and is defended by
+          `sakthai/agent/guardrails.py`: `run_command` is opt-in via
+          SAKTHAI_SHELL_ALLOW, `read_file` is confined to an allowlist,
+          sensitive paths are refused across separators and cases, and tool
+          output is scanned for secrets before it reaches the model. Roughly 15
+          test files cover that subsystem and every closed bypass has a
+          regression test. Findings judged not to be exploitable are recorded
+          with the reasoning rather than silently suppressed.
+
+    champions:
+      - name: beer-sakthai
+        primary: true
+        email: beernanthasit@gmail.com
+
+    tools:
+
+      - name: Bandit
+        type: SAST
+        comment: |
+          Runs as a gate in ci.yml with `-c pyproject.toml` over the installed
+          package. Note this publishes no SARIF: the workflow that uploaded
+          Bandit results to code scanning is not currently on main.
+        rulesets:
+          - pyproject.toml [tool.bandit]
+        integration: { adhoc: true, ci: true, release: false }
+        results: {}
+
+      - name: gitleaks
+        type: secret
+        comment: |
+          secret-scan.yml, on every push to main and every pull request, with
+          the repository's own .gitleaks.toml allowlist.
+        rulesets:
+          - .gitleaks.toml
+        integration: { adhoc: true, ci: true, release: false }
+        results: {}
+
+      - name: pip-audit
+        type: SCA
+        comment: |
+          dependency-audit.yml, over uv.lock, on pull requests that touch the
+          dependency manifests and weekly. Dependabot covers five ecosystems
+          alongside it.
+        rulesets:
+          - PyPI Advisory Database
+        integration: { adhoc: true, ci: true, release: false }
+        results: {}
+
+      - name: OSSAR
+        type: SAST
+        comment: |
+          ossar.yml, uploading SARIF to GitHub code scanning via
+          codeql-action/upload-sarif.
+        rulesets:
+          - default
+        integration: { adhoc: true, ci: true, release: false }
+        results: {}
+
+      - name: SonarCloud
+        type: SAST
+        comment: |
+          sonarcloud.yml, on pushes to main and on pull requests (skipped on a
+          fork's PR, which has no SONAR_TOKEN).
+        rulesets:
+          - SonarCloud default quality profile
+        integration: { adhoc: true, ci: true, release: false }
+        results: {}

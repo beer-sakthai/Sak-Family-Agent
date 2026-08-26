@@ -42,7 +42,17 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hf-jobs"))
 from build_toolcalling_dataset import SYSTEM_PROMPT, TOOLS  # noqa: E402
 
-BASE_MODEL = os.environ.get("BASE_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
+_DEFAULT_BASE_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"
+_DEFAULT_BASE_REVISION = "989aa7980e4cf806f80c7fef2b1adb7bc71aa306"
+BASE_MODEL = os.environ.get("BASE_MODEL", _DEFAULT_BASE_MODEL)
+# Pinned to an immutable commit (bandit B615). A mutable branch ref lets an
+# upstream force-push silently change what this job downloads, and an unpinned
+# run is not reproducible. Only the default model carries the pin — an override
+# supplies its own revision, or tracks that repo's default branch.
+BASE_MODEL_REVISION = os.environ.get(
+    "BASE_MODEL_REVISION",
+    _DEFAULT_BASE_REVISION if BASE_MODEL == _DEFAULT_BASE_MODEL else None,
+)
 ADAPTER_REPO = os.environ.get("ADAPTER_REPO", "Nanthasit/sakthai-toolcalling-1.5b-lora")
 
 # (prompt, expectation) — expectation is just a human hint printed alongside output.
@@ -59,9 +69,11 @@ PROBES = [
 
 def main() -> None:
     print(f"== Loading base {BASE_MODEL} + adapter {ADAPTER_REPO}")
-    tokenizer = AutoTokenizer.from_pretrained(ADAPTER_REPO)
+    # Own-namespace adapter: eval must see the latest one it just trained.
+    tokenizer = AutoTokenizer.from_pretrained(ADAPTER_REPO)  # nosec B615
     base = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
+        revision=BASE_MODEL_REVISION,
         torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
         device_map="auto" if torch.cuda.is_available() else None,
     )

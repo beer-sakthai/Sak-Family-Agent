@@ -10,12 +10,12 @@ so the model learns when NOT to call a tool.
 """
 
 import json
-import random
+import random  # nosec B311
 from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
 
-random.seed(7)
+random.seed(7)  # nosec B311
 
 SYSTEM_PROMPT = (
     "You are SakThai-Agent, Beer's Growth Partner. You are a sharp, calm, and direct assistant. "
@@ -223,7 +223,7 @@ def generate_tool_rows(
 ) -> Iterable[tuple[str, str, dict[str, Any]]]:
     """Generic row generator for a tool."""
     for item in items:
-        for template in random.sample(templates, min(sample_size, len(templates))):
+        for template in random.sample(templates, min(sample_size, len(templates))):  # nosec B311
             user_text = template.format(item=item)
             args = arg_builder(item)
             yield user_text, tool_name, args
@@ -238,7 +238,7 @@ def learn_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
         "FYI, {f} — hold onto that.",
     ]
     for fact_value, fact_kind, fact_key in FACTS:
-        for template in random.sample(templates, 3):
+        for template in random.sample(templates, 3):  # nosec B311
             yield (
                 template.format(f=fact_value.lower()),
                 "learn",
@@ -260,7 +260,7 @@ def recall_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
         "What's in long-term memory right now?",
     ]
     for user_prompt in user_prompts:
-        args = {} if random.random() < 0.5 else {"limit": random.choice([10, 20, 50])}
+        args = {} if random.random() < 0.5 else {"limit": random.choice([10, 20, 50])}  # nosec B311
         yield user_prompt, "recall", args
 
 
@@ -272,7 +272,7 @@ def search_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
         "What do you remember about {q}?",
     ]
     for topic in SEARCH_TOPICS:
-        for template in random.sample(templates, 2):
+        for template in random.sample(templates, 2):  # nosec B311
             yield template.format(q=topic), "search", {"query": topic}
 
 
@@ -296,7 +296,7 @@ def read_file_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
         "Pull up the contents of {p}.",
     ]
     for file_path in FILES:
-        yield random.choice(templates).format(p=file_path), "read_file", {"path": file_path}
+        yield random.choice(templates).format(p=file_path), "read_file", {"path": file_path}  # nosec B311
 
 
 def run_command_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
@@ -310,9 +310,9 @@ def run_command_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
     ]
     for command in COMMANDS:
         args = {"command": command}
-        if random.random() < 0.3:
-            args["timeout"] = random.choice([10, 60, 120])
-        yield random.choice(templates).format(c=command), "run_command", args
+        if random.random() < 0.3:  # nosec B311
+            args["timeout"] = random.choice([10, 60, 120])  # nosec B311
+        yield random.choice(templates).format(c=command), "run_command", args  # nosec B311
 
 
 def telegram_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
@@ -323,7 +323,7 @@ def telegram_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
         "Message me '{m}' on Telegram.",
     ]
     for msg in TG_MSGS:
-        yield random.choice(templates).format(m=msg), "send_telegram_message", {"message": msg}
+        yield random.choice(templates).format(m=msg), "send_telegram_message", {"message": msg}  # nosec B311
 
 
 def agent_loop_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
@@ -335,9 +335,9 @@ def agent_loop_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
     ]
     for task in BIG_TASKS:
         args = {"task": task}
-        if random.random() < 0.3:
-            args["max_iterations"] = random.choice([6, 12, 20])
-        yield random.choice(templates).format(t=task), "run_agent_loop", args
+        if random.random() < 0.3:  # nosec B311
+            args["max_iterations"] = random.choice([6, 12, 20])  # nosec B311
+        yield random.choice(templates).format(t=task), "run_agent_loop", args  # nosec B311
 
 
 # ---- negatives: answer directly, no tool call ----
@@ -426,7 +426,7 @@ def build():
                 ],
             }
         )
-    random.shuffle(all_rows)
+    random.shuffle(all_rows)  # nosec B311
     return all_rows
 
 

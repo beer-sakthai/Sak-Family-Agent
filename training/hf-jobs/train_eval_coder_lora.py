@@ -45,7 +45,17 @@ from peft import LoraConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from trl import SFTConfig, SFTTrainer
 
-BASE_MODEL = os.environ.get("BASE_MODEL", "Qwen/Qwen2.5-Coder-1.5B-Instruct")
+_DEFAULT_BASE_MODEL = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
+_DEFAULT_BASE_REVISION = "2e1fd397ee46e1388853d2af2c993145b0f1098a"
+BASE_MODEL = os.environ.get("BASE_MODEL", _DEFAULT_BASE_MODEL)
+# Pinned to an immutable commit (bandit B615). A mutable branch ref lets an
+# upstream force-push silently change what this job downloads, and an unpinned
+# run is not reproducible. Only the default model carries the pin — an override
+# supplies its own revision, or tracks that repo's default branch.
+BASE_MODEL_REVISION = os.environ.get(
+    "BASE_MODEL_REVISION",
+    _DEFAULT_BASE_REVISION if BASE_MODEL == _DEFAULT_BASE_MODEL else None,
+)
 DATASET_ID = os.environ.get("DATASET_ID", "Nanthasit/sakthai-combined-v6")
 OUTPUT_REPO = os.environ.get("OUTPUT_REPO", "Nanthasit/sakthai-coder-1.5b-v2-lora")
 EPOCHS = float(os.environ.get("EPOCHS", "3"))
@@ -166,12 +176,15 @@ def _run_code_probes(model: Any, tokenizer: Any) -> list[dict[str, Any]]:
 
 
 def main() -> None:
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=False)
+    tokenizer = AutoTokenizer.from_pretrained(
+        BASE_MODEL, revision=BASE_MODEL_REVISION, trust_remote_code=False
+    )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
     model = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
+        revision=BASE_MODEL_REVISION,
         quantization_config=BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
@@ -183,7 +196,12 @@ def main() -> None:
     )
     model.config.use_cache = False
 
-    train_dataset, eval_dataset = _prepare_splits(load_dataset(DATASET_ID), tokenizer)
+    # Own-namespace dataset, republished by this project's own pipeline;
+    # pinning it would train against a stale snapshot of our own data.
+    train_dataset, eval_dataset = _prepare_splits(
+        load_dataset(DATASET_ID),  # nosec B615
+        tokenizer,
+    )
     print(f"train rows={len(train_dataset)} eval rows={len(eval_dataset)}")
 
     trainer = SFTTrainer(

@@ -362,7 +362,17 @@ class WorkflowExecutor:
             loop = asyncio.get_event_loop()
 
             def _fetch():
-                with urllib.request.urlopen(req, timeout=params.get("timeout", 10)) as resp:
+                # nosec B310 — B310 warns that urlopen may accept `file:` or a
+                # custom scheme. It cannot here: the scheme is allowlisted to
+                # http/https above, the hostname is required, and every address
+                # it resolves to is rejected unless globally routable and
+                # non-multicast. (That check resolves DNS separately from the
+                # request, so it does not defend against DNS rebinding — a
+                # narrower gap than the one B310 describes, and out of scope
+                # for this suppression.)
+                with urllib.request.urlopen(  # nosec B310
+                    req, timeout=params.get("timeout", 10)
+                ) as resp:
                     body = resp.read().decode("utf-8", errors="replace")
                     status_code = resp.status
                     try:

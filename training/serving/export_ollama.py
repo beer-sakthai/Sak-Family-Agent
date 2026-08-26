@@ -44,7 +44,17 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hf-jobs"))
 from build_toolcalling_dataset import SYSTEM_PROMPT  # noqa: E402
 
-BASE_MODEL = os.environ.get("BASE_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
+_DEFAULT_BASE_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"
+_DEFAULT_BASE_REVISION = "989aa7980e4cf806f80c7fef2b1adb7bc71aa306"
+BASE_MODEL = os.environ.get("BASE_MODEL", _DEFAULT_BASE_MODEL)
+# Pinned to an immutable commit (bandit B615). A mutable branch ref lets an
+# upstream force-push silently change what this job downloads, and an unpinned
+# run is not reproducible. Only the default model carries the pin — an override
+# supplies its own revision, or tracks that repo's default branch.
+BASE_MODEL_REVISION = os.environ.get(
+    "BASE_MODEL_REVISION",
+    _DEFAULT_BASE_REVISION if BASE_MODEL == _DEFAULT_BASE_MODEL else None,
+)
 ADAPTER_REPO = os.environ.get("ADAPTER_REPO", "Nanthasit/sakthai-toolcalling-1.5b-lora")
 
 MODELFILE = """\
@@ -70,8 +80,13 @@ def main() -> None:
     out = Path(args.out)
 
     print(f"== Loading base {BASE_MODEL} + adapter {ADAPTER_REPO}")
-    tokenizer = AutoTokenizer.from_pretrained(ADAPTER_REPO)
-    base = AutoModelForCausalLM.from_pretrained(BASE_MODEL, torch_dtype=torch.float16)
+    # ADAPTER_REPO is this project's own adapter, republished by its own
+    # training loop; pinning it here would freeze export against a stale
+    # adapter, which is the opposite of what this script is for.
+    tokenizer = AutoTokenizer.from_pretrained(ADAPTER_REPO)  # nosec B615
+    base = AutoModelForCausalLM.from_pretrained(
+        BASE_MODEL, revision=BASE_MODEL_REVISION, torch_dtype=torch.float16
+    )
     model = PeftModel.from_pretrained(base, ADAPTER_REPO)
 
     print("== Merging adapter into base weights")

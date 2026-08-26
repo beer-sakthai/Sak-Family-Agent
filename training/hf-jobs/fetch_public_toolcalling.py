@@ -33,7 +33,9 @@ def fetch_page(offset):
     delay = 3
     for _attempt in range(6):
         try:
-            return json.load(urllib.request.urlopen(req))["rows"]
+            # nosec B310 — literal https://datasets-server.huggingface.co URL
+            # built from module constants a few lines up.
+            return json.load(urllib.request.urlopen(req))["rows"]  # nosec B310
         except urllib.error.HTTPError as e:
             if e.code == 429:
                 print(f"  429 rate-limited, backing off {delay}s")

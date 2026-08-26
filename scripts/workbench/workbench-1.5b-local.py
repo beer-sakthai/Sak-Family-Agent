@@ -10,8 +10,12 @@ OUTPUT = "/opt/data/sakthai-workbench-record.json"
 # Load model + tokenizer
 print(f"Loading {MODEL}...", flush=True)
 start = time.time()
-tokenizer = AutoTokenizer.from_pretrained(MODEL, trust_remote_code=True)
-model = AutoModelForCausalLM.from_pretrained(
+# MODEL is this project's own merged checkpoint (Nanthasit/*), republished by
+# its own training loop. A workbench probe is meant to exercise whatever was
+# last pushed, so pinning a revision here would defeat the script's purpose
+# rather than harden it (bandit B615).
+tokenizer = AutoTokenizer.from_pretrained(MODEL, trust_remote_code=True)  # nosec B615
+model = AutoModelForCausalLM.from_pretrained(  # nosec B615
     MODEL,
     trust_remote_code=True,
     torch_dtype=torch.float16,
@@ -118,7 +122,10 @@ for i, test in enumerate(tests):
             try:
                 json.loads(response)
                 checks.append("valid_json")
-            except:
+            except (json.JSONDecodeError, TypeError):
+                # Not valid JSON — that is the check failing, not an error
+                # to hide. A bare `except` here also swallowed
+                # KeyboardInterrupt/SystemExit (bandit B110).
                 pass
         
         result = {
