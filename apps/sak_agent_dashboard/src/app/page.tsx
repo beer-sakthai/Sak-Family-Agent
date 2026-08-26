@@ -278,9 +278,11 @@ export default function Home() {
 
           {/* Refresh Button */}
           <button
+            type="button"
+            aria-label="Refresh Telemetry"
             onClick={() => fetchAllData(isDemo)}
             disabled={isLoading}
-            className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors disabled:opacity-50"
+            className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
             title="Refresh Telemetry"
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin text-cyan-400" : ""}`} />
@@ -336,10 +338,13 @@ export default function Home() {
       </div>
 
       {/* Navigation Tab Bar */}
-      <div className="flex items-center p-1.5 rounded-2xl bg-slate-900/90 border border-slate-800/80 font-mono text-xs gap-2">
+      <div role="tablist" aria-label="Dashboard view tabs" className="flex items-center p-1.5 rounded-2xl bg-slate-900/90 border border-slate-800/80 font-mono text-xs gap-2">
         <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "overview"}
           onClick={() => setActiveTab("overview")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
             activeTab === "overview"
               ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
               : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
@@ -350,8 +355,11 @@ export default function Home() {
         </button>
 
         <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "analytics"}
           onClick={() => setActiveTab("analytics")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
             activeTab === "analytics"
               ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
               : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
@@ -362,8 +370,11 @@ export default function Home() {
         </button>
 
         <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "sessions"}
           onClick={() => setActiveTab("sessions")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
             activeTab === "sessions"
               ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
               : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
@@ -374,8 +385,11 @@ export default function Home() {
         </button>
 
         <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "memory"}
           onClick={() => setActiveTab("memory")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
             activeTab === "memory"
               ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
               : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
@@ -386,8 +400,11 @@ export default function Home() {
         </button>
 
         <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "stitch"}
           onClick={() => setActiveTab("stitch")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
             activeTab === "stitch"
               ? "bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
               : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
