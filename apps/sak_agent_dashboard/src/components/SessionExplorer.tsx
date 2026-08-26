@@ -122,12 +122,13 @@ export function SessionExplorer({
 
           <select
             aria-label="Filter by persona"
+            title="Filter by persona"
             value={personaFilter}
             onChange={(e) => {
               setPersonaFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+            className="bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             <option value="ALL">All Personas</option>
             <option value="SakThai">SakThai</option>
@@ -139,12 +140,13 @@ export function SessionExplorer({
 
           <select
             aria-label="Filter by status"
+            title="Filter by status"
             value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+            className="bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             <option value="ALL">All Statuses</option>
             <option value="completed">Completed</option>
