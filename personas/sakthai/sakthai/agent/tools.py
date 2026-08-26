@@ -26,6 +26,7 @@ from urllib.error import HTTPError, URLError
 from ..config import register_secret, sakthai_home
 from ..lead.capture import capture_lead as capture_lead_fact
 from ..learn.ingest import ingest_document as ingest_document_facts
+from ..memory.session_search import search_sessions as search_past_sessions
 from ..memory.store import MemoryStore
 
 logger = logging.getLogger(__name__)
@@ -247,6 +248,19 @@ def _search(args: dict[str, Any], store: MemoryStore) -> str:
     if obs:
         lines.append(f"Matching Observations ({len(obs)}):")
         lines.extend(_format_observations(obs))
+    return "\n".join(lines)
+
+
+def _search_sessions(args: dict[str, Any], store: MemoryStore) -> str:
+    query = args.get("query")
+    if not isinstance(query, str) or not query.strip():
+        raise ValueError("`query` is required and must be a non-empty string.")
+    limit = _coerce_limit(args.get("limit"), 20)
+    matches = search_past_sessions(query, limit=limit)
+    if not matches:
+        return f"No matching sessions found for '{query}'."
+    lines = [f"Matching Sessions ({len(matches)}):"]
+    lines.extend(f"  {m.session_id}  {m.task}  — {m.matched_snippet}" for m in matches)
     return "\n".join(lines)
 
 
@@ -878,6 +892,30 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["query"],
         },
         handler=_search,
+    ),
+    Tool(
+        name="search_sessions",
+        description=(
+            "Search past agent session logs by content (task, final answer, and tool "
+            "calls). Use to find what was done or discussed in a prior session, as "
+            "opposed to `search`, which searches stored facts/observations."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Whitespace-separated search terms; all must match.",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum sessions to return.",
+                    "default": 20,
+                },
+            },
+            "required": ["query"],
+        },
+        handler=_search_sessions,
     ),
     Tool(
         name="forget",

@@ -20,6 +20,7 @@ from sakthai.agent.tools import (
     _path_under_any_root,
     tool_by_name,
 )
+from sakthai.config import sessions_dir
 from sakthai.memory.store import MemoryStore
 
 
@@ -1367,3 +1368,39 @@ def test_delegate_to_persona_tool(store: MemoryStore) -> None:
 
     with pytest.raises(ValueError, match="`task` is required"):
         delegate.handler({"persona": "sakking"}, store)
+
+
+def test_search_sessions_tool_finds_and_filters(sakthai_home: Path, store: MemoryStore) -> None:
+    s_dir = sessions_dir()
+    s_dir.mkdir(parents=True, exist_ok=True)
+    (s_dir / "100_quantum.json").write_text(
+        json.dumps(
+            {
+                "timestamp": 100,
+                "task": "Explain quantum physics",
+                "result": {"text": "", "tool_calls": []},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (s_dir / "200_cake.json").write_text(
+        json.dumps(
+            {"timestamp": 200, "task": "Bake a cake", "result": {"text": "", "tool_calls": []}}
+        ),
+        encoding="utf-8",
+    )
+
+    out = tool_by_name("search_sessions").handler({"query": "quantum"}, store)
+
+    assert "quantum" in out.lower()
+    assert "cake" not in out.lower()
+
+
+def test_search_sessions_tool_no_matches(sakthai_home: Path, store: MemoryStore) -> None:
+    out = tool_by_name("search_sessions").handler({"query": "nonexistent"}, store)
+    assert "No matching sessions found" in out
+
+
+def test_search_sessions_tool_requires_query(sakthai_home: Path, store: MemoryStore) -> None:
+    with pytest.raises(ValueError, match="`query` is required"):
+        tool_by_name("search_sessions").handler({"query": "  "}, store)
