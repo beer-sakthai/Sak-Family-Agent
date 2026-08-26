@@ -23,11 +23,19 @@ jobs:
       uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Install pylint
+      # Hash-locked (see .github/pylint-requirements.in/.lock, regenerate with
+      # scripts/gen_hash_lock.py). Keeps this every-push job from silently
+      # picking up a pylint whose defaults move the --fail-under scores below,
+      # and satisfies Scorecard's Pinned-Dependencies check.
       run: |
-        python -m pip install --upgrade pip
-        pip install pylint
-        pip install -e ".[dev]" || pip install -e "."
+        python -m pip install --disable-pip-version-check \
+          --require-hashes -r .github/pylint-requirements.lock
+
+    - name: Install the project
+      # A local editable install is pinned by construction — the source is this
+      # checkout, resolved through pyproject.toml.
+      run: pip install -e ".[dev]" || pip install -e "."
     - name: Analysing the code with pylint
       run: |
         # Monorepo: lint only the core sakthai-agent package (canonical copy at
