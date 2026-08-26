@@ -1,0 +1,118 @@
+# Builds and tests the two projects under apps/, which ci.yml does not cover.
+#
+# ci.yml scopes ruff/mypy/bandit/pytest to personas/sakthai/sakthai and tests/,
+# and pyproject sets testpaths = ["tests"] and mypy.files to the package — so
+# apps/ has had no CI at all. Dependabot has been opening npm PRs against the
+# dashboard that nothing verified.
+#
+# Path-filtered so this stays off every Python-only change.
+name: Apps
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/**"
+      - "personas/sakthai/sakthai/web/contracts.py"
+      - "scripts/gen_dashboard_types.py"
+      - ".github/workflows/apps.yml"
+  pull_request:
+    paths:
+      - "apps/**"
+      - "personas/sakthai/sakthai/web/contracts.py"
+      - "scripts/gen_dashboard_types.py"
+      - ".github/workflows/apps.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dashboard:
+    name: sak_agent_dashboard
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/sak_agent_dashboard
+    steps:
+      - uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/sak_agent_dashboard/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # Build before typecheck: next-env.d.ts imports ./.next/types/*.d.ts,
+      # which only exists once a build has generated it, so a cold
+      # `tsc --noEmit` fails on a clean checkout.
+      - name: Build
+        run: npm run build
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test
+
+  workflow-framework:
+    name: agent_workflow_framework
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/agent_workflow_framework
+    steps:
+      - uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        run: pip install pytest
+
+      # Kept out of the main suite on purpose: pyproject sets
+      # testpaths = ["tests"], and this package is stdlib-only with no
+      # dependency on sakthai.
+      - name: Test
+        run: python -m pytest tests/ -q
+
+  contracts:
+    name: contract types in sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      # contracts.py is the single definition the dashboard's TypeScript types
+      # are generated from. If the committed file is stale the two runtimes
+      # have drifted, which is the failure this whole seam exists to prevent.
+      - name: Check generated types are current
+        run: python scripts/gen_dashboard_types.py --check

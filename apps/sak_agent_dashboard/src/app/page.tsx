@@ -1,451 +1,310 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Activity,
-  Cpu,
-  Database,
-  ShieldCheck,
-  Terminal,
-  RefreshCw,
   BarChart3,
+  Database,
+  GitBranch,
   MessageSquare,
+  RefreshCw,
   Shield,
-  Sparkles,
+  Terminal,
 } from "lucide-react";
-import DemoModeToggle from "@/components/DemoModeToggle";
+
 import AgentOverview from "@/components/AgentOverview";
 import AnalyticsCharts from "@/components/AnalyticsCharts";
-import SessionExplorer from "@/components/SessionExplorer";
-import MemoryExplorer from "@/components/MemoryExplorer";
 import AuditLogs from "@/components/AuditLogs";
-import StitchStudio from "@/components/StitchStudio";
-import {
-  AgentPersona,
-  MetricsData,
-  MemoryData,
-  AuditLog,
-  SessionMeta,
-  SessionTranscript,
-} from "@/lib/types";
+import DemoModeToggle from "@/components/DemoModeToggle";
+import MemoryExplorer from "@/components/MemoryExplorer";
+import SessionExplorer from "@/components/SessionExplorer";
+import WorkflowRuns from "@/components/WorkflowRuns";
+import type {
+  ApiEnvelope,
+  AuditPayload,
+  DataSource,
+  MemoryPayload,
+  MetricsPayload,
+  PersonasPayload,
+  SessionDetail,
+  SessionsPayload,
+  WorkflowRunDetail,
+  WorkflowsPayload,
+} from "@/lib/contracts.generated";
 
-const defaultPersonas: AgentPersona[] = [
-  {
-    name: "SakThai",
-    role: "Primary Orchestrator & Fine-Tuned Agent",
-    status: "Active",
-    model: "sakthai-v2-qlora",
-    latencyMs: 320,
-    runs: 300,
-    skills: ["routing", "planning", "tool-call"],
-    badge: "1P Tuned",
-    benchmarkScore: 96.5,
-  },
-  {
-    name: "SakKing",
-    role: "High-Capacity Reasoning Specialist",
-    status: "Ready",
-    model: "sakking-v1-reasoning",
-    latencyMs: 540,
-    runs: 150,
-    skills: ["math", "logic-proof", "tree-search"],
-    badge: "Reasoning",
-    benchmarkScore: 94.2,
-  },
-  {
-    name: "SakSee",
-    role: "Multimodal & Vision Specialist",
-    status: "Ready",
-    model: "saksee-v1-vision",
-    latencyMs: 410,
-    runs: 120,
-    skills: ["ocr", "diagram-parsing", "image-eval"],
-    badge: "Multimodal",
-    benchmarkScore: 91.8,
-  },
-  {
-    name: "SakSit",
-    role: "Code Review & Security Auditor",
-    status: "Ready",
-    model: "saksit-v1-auditor",
-    latencyMs: 290,
-    runs: 91,
-    skills: ["static-analysis", "vulnerability-scan", "policy-check"],
-    badge: "Security",
-    benchmarkScore: 98.0,
-  },
-  {
-    name: "SakJules",
-    role: "Background Task & Async Execution Specialist",
-    status: "Ready",
-    model: "sakjules-v1-async",
-    latencyMs: 380,
-    runs: 100,
-    skills: ["cron-scheduler", "bg-worker", "liveness"],
-    badge: "Async",
-    benchmarkScore: 93.5,
-  },
+type Tab = "overview" | "analytics" | "sessions" | "memory" | "workflows" | "audit";
+
+const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  { id: "overview", label: "Overview", icon: <Activity className="h-3.5 w-3.5" /> },
+  { id: "analytics", label: "Analytics", icon: <BarChart3 className="h-3.5 w-3.5" /> },
+  { id: "sessions", label: "Sessions", icon: <MessageSquare className="h-3.5 w-3.5" /> },
+  { id: "memory", label: "Memory", icon: <Database className="h-3.5 w-3.5" /> },
+  { id: "workflows", label: "Workflows", icon: <GitBranch className="h-3.5 w-3.5" /> },
+  { id: "audit", label: "Audit", icon: <Shield className="h-3.5 w-3.5" /> },
 ];
 
-const defaultMetrics: MetricsData = {
-  totalRuns: 761,
-  avgLatencyMs: 388,
-  successRate: 0.985,
-  tokenStats: {
-    totalTokens: 1450000,
-    promptTokens: 950000,
-    completionTokens: 500000,
-  },
-  stopReasons: {
-    end_turn: 740,
-    max_tokens: 21,
-  },
-  trends: [
-    { date: "2026-07-29", runs: 110, latencyMs: 395 },
-    { date: "2026-07-30", runs: 145, latencyMs: 382 },
-    { date: "2026-07-31", runs: 180, latencyMs: 390 },
-    { date: "2026-08-01", runs: 210, latencyMs: 375 },
-    { date: "2026-08-02", runs: 116, latencyMs: 388 },
-  ],
-};
+const PAGE_SIZE = 10;
 
-const defaultMemory: MemoryData = {
-  facts: [
-    { id: 1, entity: "SakThai", fact: "Primary model initialized", persona: "SakThai", createdAt: "2026-08-02" },
-    { id: 2, entity: "SakKing", fact: "GRPO mathematical solver loaded", persona: "SakKing", createdAt: "2026-08-02" },
-  ],
-  observations: [
-    { id: 1, category: "eval", observation: "Benchmark 95% passed", timestamp: "2026-08-02" },
-  ],
-};
-
-const defaultAuditLogs: AuditLog[] = [
-  {
-    id: 1,
-    timestamp: "2026-08-02T12:00:00Z",
-    persona: "SakSit",
-    severity: "critical",
-    event: "Unauthorized access blocked",
-    details: "Blocked non-whitelisted egress attempt",
-  },
-  {
-    id: 2,
-    timestamp: "2026-08-02T12:05:00Z",
-    persona: "SakThai",
-    severity: "info",
-    event: "Session initialized",
-    details: "Runtime state synchronized cleanly",
-  },
-];
-
-const defaultSessions: SessionMeta[] = [
-  {
-    sessionId: "sess-1",
-    persona: "SakThai",
-    timestamp: "2026-08-02T12:00:00Z",
-    messageCount: 5,
-    tokenUsage: 1200,
-    status: "completed",
-  },
-  {
-    sessionId: "sess-2",
-    persona: "SakKing",
-    timestamp: "2026-08-02T12:10:00Z",
-    messageCount: 12,
-    tokenUsage: 3400,
-    status: "completed",
-  },
-];
+/**
+ * Fetch one envelope. Returns null on failure rather than substituting demo
+ * data: which source is in play is the API's decision, reported back in
+ * `source`, and the UI shows it. Quietly swapping in fiction here is exactly
+ * what made the old dashboard untrustworthy.
+ */
+async function fetchEnvelope<T>(url: string): Promise<ApiEnvelope<T> | null> {
+  try {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) return null;
+    return (await response.json()) as ApiEnvelope<T>;
+  } catch {
+    return null;
+  }
+}
 
 export default function Home() {
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [isDemo, setIsDemo] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "sessions" | "memory" | "stitch">("overview");
+  const [activeSource, setActiveSource] = useState<DataSource | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [agents, setAgents] = useState<AgentPersona[]>(defaultPersonas);
-  const [metrics, setMetrics] = useState<MetricsData>(defaultMetrics);
-  const [memory, setMemory] = useState<MemoryData>(defaultMemory);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(defaultAuditLogs);
-  const [sessions, setSessions] = useState<SessionMeta[]>(defaultSessions);
-  const [totalSessions, setTotalSessions] = useState<number>(761);
+  const [personas, setPersonas] = useState<PersonasPayload | null>(null);
+  const [metrics, setMetrics] = useState<MetricsPayload | null>(null);
+  const [memory, setMemory] = useState<MemoryPayload | null>(null);
+  const [audit, setAudit] = useState<AuditPayload | null>(null);
+  const [sessions, setSessions] = useState<SessionsPayload | null>(null);
+  const [workflows, setWorkflows] = useState<WorkflowsPayload | null>(null);
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedSessionDetail, setSelectedSessionDetail] = useState<SessionTranscript | null>(null);
+  // Server-driven query state. These reach the API rather than filtering a
+  // client-side copy, so the severity and search parameters the routes have
+  // always accepted are finally used.
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [severity, setSeverity] = useState("ALL");
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionDetail, setSessionDetail] = useState<{
+    id: string;
+    detail: SessionDetail | null;
+  } | null>(null);
+  const [runId, setRunId] = useState<string | null>(null);
+  const [runDetail, setRunDetail] = useState<{
+    id: string;
+    detail: WorkflowRunDetail | null;
+  } | null>(null);
 
-  const isMountedRef = React.useRef(true);
+  const demoParam = isDemo ? "demo=1" : "";
+  const qs = useCallback(
+    (extra: Record<string, string | number | null> = {}) => {
+      const params = new URLSearchParams();
+      if (isDemo) params.set("demo", "1");
+      for (const [key, value] of Object.entries(extra)) {
+        if (value !== null && value !== "" && value !== "ALL") params.set(key, String(value));
+      }
+      const encoded = params.toString();
+      return encoded ? `?${encoded}` : "";
+    },
+    [isDemo],
+  );
 
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  const fetchAllData = useCallback(async (demoMode: boolean) => {
-    setIsLoading(true);
-    try {
-      const demoParam = demoMode ? "?demo=true" : "?demo=false";
-      const origin = typeof window !== "undefined" && window.location?.origin && window.location.origin !== "null"
-        ? window.location.origin
-        : "http://localhost:3000";
-
-      const safeFetch = async (url: string) => {
-        try {
-          const res = await fetch(url);
-          return res && res.ok ? await res.json() : null;
-        } catch {
-          return null;
-        }
-      };
-
-      const [agentsRes, metricsRes, memoryRes, sessionsRes] = await Promise.all([
-        safeFetch(`${origin}/api/agents${demoParam}`),
-        safeFetch(`${origin}/api/metrics${demoParam}`),
-        safeFetch(`${origin}/api/memory${demoParam}`),
-        safeFetch(`${origin}/api/sessions${demoParam}`),
+  // No state is set before the first `await`: the effect below calls this, and
+  // a synchronous setState inside an effect schedules a cascading render.
+  // The Refresh button sets `isLoading` itself, which is an event handler and
+  // therefore fine.
+  const refresh = useCallback(async () => {
+    const [personasRes, metricsRes, memoryRes, auditRes, sessionsRes, workflowsRes] =
+      await Promise.all([
+        fetchEnvelope<PersonasPayload>(`/api/agents${qs()}`),
+        fetchEnvelope<MetricsPayload>(`/api/metrics${qs()}`),
+        fetchEnvelope<MemoryPayload>(`/api/memory${qs()}`),
+        fetchEnvelope<AuditPayload>(`/api/audit${qs({ severity })}`),
+        fetchEnvelope<SessionsPayload>(
+          `/api/sessions${qs({ search, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE })}`,
+        ),
+        fetchEnvelope<WorkflowsPayload>(`/api/workflows${qs()}`),
       ]);
 
-      if (!isMountedRef.current) return;
-
-      if (agentsRes?.success && Array.isArray(agentsRes.agents)) {
-        setAgents(agentsRes.agents);
-      }
-      if (metricsRes?.success && metricsRes.metrics) {
-        setMetrics(metricsRes.metrics);
-      }
-      if (memoryRes?.success) {
-        if (memoryRes.memory) setMemory(memoryRes.memory);
-        if (Array.isArray(memoryRes.auditLogs)) setAuditLogs(memoryRes.auditLogs);
-      }
-      if (sessionsRes?.success) {
-        if (Array.isArray(sessionsRes.sessions)) setSessions(sessionsRes.sessions);
-        if (typeof sessionsRes.total === "number") setTotalSessions(sessionsRes.total);
-      }
-    } catch (error) {
-      console.error("Failed to load dashboard telemetry:", error);
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
+    if (personasRes) {
+      setPersonas(personasRes.data);
+      setActiveSource(personasRes.source);
     }
-  }, []);
+    if (metricsRes) setMetrics(metricsRes.data);
+    if (memoryRes) setMemory(memoryRes.data);
+    if (auditRes) setAudit(auditRes.data);
+    if (sessionsRes) setSessions(sessionsRes.data);
+    if (workflowsRes) setWorkflows(workflowsRes.data);
+
+    setError(
+      !personasRes && !metricsRes
+        ? "Could not reach the dashboard API. Check the server and try again."
+        : null,
+    );
+    setIsLoading(false);
+  }, [qs, search, page, severity]);
 
   useEffect(() => {
-    fetchAllData(isDemo);
-  }, [isDemo, fetchAllData]);
+    // refresh() sets no state before its first `await`, so nothing here runs
+    // synchronously; the rule cannot see through the useCallback to tell.
+    // Fetching on mount is the intended use of an effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refresh();
+  }, [refresh]);
 
-  const handleToggleDemo = (newVal?: boolean) => {
-    const nextVal = typeof newVal === "boolean" ? newVal : !isDemo;
-    setIsDemo(nextVal);
+  // Session and workflow detail are fetched on demand rather than up front —
+  // a transcript is large and only one is ever open at a time.
+  //
+  // Neither effect clears state synchronously on the way out; the "nothing
+  // selected" case is derived at render instead (see `activeSessionDetail`),
+  // so a stale detail can never be shown for a newly selected id.
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    void fetchEnvelope<SessionsPayload>(`/api/sessions${qs({ id: sessionId })}`).then((res) => {
+      if (!cancelled) setSessionDetail({ id: sessionId, detail: res?.data.detail ?? null });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, qs]);
+
+  useEffect(() => {
+    if (!runId) return;
+    let cancelled = false;
+    void fetchEnvelope<WorkflowRunDetail | null>(`/api/workflows${qs({ id: runId })}`).then(
+      (res) => {
+        if (!cancelled) setRunDetail({ id: runId, detail: res?.data ?? null });
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [runId, qs]);
+
+  // Only surface a fetched detail when it belongs to the currently selected id.
+  const activeSessionDetail = sessionId && sessionDetail?.id === sessionId
+    ? sessionDetail.detail
+    : null;
+  const activeRunDetail = runId && runDetail?.id === runId ? runDetail.detail : null;
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
   };
 
-  const handleFetchSessionDetail = async (sessionId: string) => {
-    try {
-      const demoParam = isDemo ? "&demo=true" : "";
-      const origin = typeof window !== "undefined" && window.location?.origin && window.location.origin !== "null"
-        ? window.location.origin
-        : "http://localhost:3000";
-      const res = await fetch(`${origin}/api/sessions?id=${sessionId}${demoParam}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-      if (!isMountedRef.current) return;
-      if (res?.success && res?.detail) {
-        setSelectedSessionDetail(res.detail);
-      }
-    } catch (e) {
-      console.error("Failed to fetch session detail:", e);
-    }
+  const handleSeverityChange = (value: string) => {
+    setSeverity(value);
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header Bar with Branding & Demo Mode Toggle */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/90 border border-slate-800/80 backdrop-blur-xl shadow-xl">
+    <main className="min-h-screen px-4 sm:px-6 lg:px-10 py-8 space-y-8 max-w-[100rem] mx-auto">
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-lg shadow-cyan-500/20 text-white font-bold font-display">
-            SAK
+          <div className="p-2.5 rounded-2xl bg-slate-900 border border-slate-800">
+            <Terminal className="h-6 w-6 text-cyan-400" />
           </div>
           <div>
-            <h2 className="text-xl font-bold font-display text-white tracking-tight flex items-center gap-2">
-              Sak-Agent-Family Runtime Intelligence
-            </h2>
-            <p className="text-xs text-slate-400">
-              Real-time telemetry, session transcripts, memory SQLite store inspector, and multi-model benchmark evaluation
+            <h1 className="text-2xl font-bold font-display text-white tracking-tight">
+              Sak-Agent-Family Dashboard
+            </h1>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Agents, workflows, memory, and security across the family
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          {/* Demo Mode Toggle Switch */}
-          <DemoModeToggle isDemo={isDemo} onToggle={handleToggleDemo} />
-
-          {/* Refresh Button */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <DemoModeToggle
+            isDemo={isDemo}
+            onToggle={(next) => {
+              setIsDemo(next);
+              setPage(1);
+            }}
+            activeSource={activeSource}
+          />
           <button
-            type="button"
-            aria-label="Refresh Telemetry"
-            onClick={() => fetchAllData(isDemo)}
+            onClick={() => {
+              setIsLoading(true);
+              void refresh();
+            }}
             disabled={isLoading}
-            className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
-            title="Refresh Telemetry"
+            aria-label="Refresh dashboard data"
+            className="px-3 py-1.5 rounded-xl text-[11px] font-mono bg-slate-900/60 text-slate-300 border border-slate-800 hover:border-slate-700 disabled:opacity-50 transition-colors inline-flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
           >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin text-cyan-400" : ""}`} />
+            <RefreshCw className={`h-3 w-3 ${isLoading ? "animate-spin" : ""}`} />
+            Refresh
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Overview Stat Counter Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="glass-panel p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl transition-all hover:border-cyan-500/30">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider font-mono">Total Runs</span>
-            <Activity className="h-4 w-4 text-cyan-400" />
-          </div>
-          <div className="text-3xl font-extrabold text-white font-display">
-            {metrics?.totalRuns ?? totalSessions ?? 761}
-          </div>
-          <p className="text-xs text-slate-400 mt-1">Recorded in runtime</p>
+      {error && (
+        <div className="p-4 rounded-2xl bg-rose-950/30 border border-rose-800/50 text-rose-200 text-sm">
+          {error}
         </div>
+      )}
 
-        <div className="glass-panel p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl transition-all hover:border-purple-500/30">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider font-mono">Active Personas</span>
-            <Cpu className="h-4 w-4 text-purple-400" />
-          </div>
-          <div className="text-3xl font-extrabold text-white font-display">
-            {agents.length}
-          </div>
-          <p className="text-xs text-slate-400 mt-1">Sak-Agent-Family members</p>
-        </div>
+      <nav role="tablist" aria-label="Dashboard sections" className="flex flex-wrap gap-2">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors inline-flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+              activeTab === tab.id
+                ? "bg-cyan-950/50 text-cyan-300 border-cyan-700/50"
+                : "bg-slate-900/60 text-slate-400 border-slate-800 hover:border-slate-700"
+            }`}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </nav>
 
-        <div className="glass-panel p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl transition-all hover:border-emerald-500/30">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider font-mono">Memory Database</span>
-            <Database className="h-4 w-4 text-emerald-400" />
-          </div>
-          <div className="text-3xl font-extrabold text-white font-display">
-            ~/.sakthai
-          </div>
-          <p className="text-xs text-slate-400 mt-1">memory.db & transcripts</p>
-        </div>
-
-        <div className="glass-panel p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl transition-all hover:border-rose-500/30">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider font-mono">Security Audit</span>
-            <ShieldCheck className="h-4 w-4 text-rose-400" />
-          </div>
-          <div className="text-3xl font-extrabold text-emerald-400 font-display">
-            100% Pass
-          </div>
-          <p className="text-xs text-slate-400 mt-1">Zero vulnerabilities logged</p>
-        </div>
-      </div>
-
-      {/* Navigation Tab Bar */}
-      <div role="tablist" aria-label="Dashboard view tabs" className="flex items-center p-1.5 rounded-2xl bg-slate-900/90 border border-slate-800/80 font-mono text-xs gap-2">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "overview"}
-          onClick={() => setActiveTab("overview")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
-            activeTab === "overview"
-              ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
-              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          }`}
-        >
-          <Cpu className="h-4 w-4 text-cyan-400" />
-          Agent Overview ({agents.length})
-        </button>
-
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "analytics"}
-          onClick={() => setActiveTab("analytics")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
-            activeTab === "analytics"
-              ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
-              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          }`}
-        >
-          <BarChart3 className="h-4 w-4 text-emerald-400" />
-          Analytics & Charts
-        </button>
-
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "sessions"}
-          onClick={() => setActiveTab("sessions")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
-            activeTab === "sessions"
-              ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
-              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          }`}
-        >
-          <MessageSquare className="h-4 w-4 text-purple-400" />
-          Session Explorer ({sessions.length})
-        </button>
-
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "memory"}
-          onClick={() => setActiveTab("memory")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
-            activeTab === "memory"
-              ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
-              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          }`}
-        >
-          <Shield className="h-4 w-4 text-rose-400" />
-          Memory & Security Logs
-        </button>
-
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "stitch"}
-          onClick={() => setActiveTab("stitch")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
-            activeTab === "stitch"
-              ? "bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
-              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          }`}
-        >
-          <Sparkles className="h-4 w-4 text-cyan-400" />
-          Stitch Studio ⚡
-        </button>
-      </div>
-
-      {/* Main Tab Content */}
-      <div className="space-y-8">
-        {activeTab === "overview" && (
-          <div className="space-y-8">
-            <AgentOverview agents={agents} />
-            <AnalyticsCharts metrics={metrics} agents={agents} />
-          </div>
+      <section>
+        {activeTab === "overview" && personas && <AgentOverview personas={personas} />}
+        {activeTab === "analytics" && metrics && (
+          <AnalyticsCharts metrics={metrics} personas={personas ?? undefined} />
         )}
-
-        {activeTab === "analytics" && (
-          <AnalyticsCharts metrics={metrics} agents={agents} />
-        )}
-
-        {activeTab === "sessions" && (
+        {activeTab === "sessions" && sessions && (
           <SessionExplorer
-            sessions={sessions}
-            total={totalSessions}
-            onSessionSelect={handleFetchSessionDetail}
-            selectedSessionDetail={selectedSessionDetail}
+            sessions={sessions.sessions}
+            total={sessions.total}
+            search={search}
+            onSearchChange={handleSearchChange}
+            page={page}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+            onSessionSelect={setSessionId}
+            detail={activeSessionDetail}
+            isLoadingDetail={sessionId !== null && activeSessionDetail === null}
+          />
+        )}
+        {activeTab === "memory" && memory && <MemoryExplorer memory={memory} />}
+        {activeTab === "workflows" && workflows && (
+          <WorkflowRuns
+            runs={workflows.runs}
+            onRunSelect={setRunId}
+            detail={activeRunDetail}
+            isLoadingDetail={runId !== null && activeRunDetail === null}
+          />
+        )}
+        {activeTab === "audit" && audit && (
+          <AuditLogs
+            audit={audit}
+            severity={severity}
+            onSeverityChange={handleSeverityChange}
           />
         )}
 
-        {activeTab === "memory" && (
-          <div className="space-y-8">
-            <MemoryExplorer memory={memory} />
-            <AuditLogs logs={auditLogs} />
-          </div>
+        {isLoading && !personas && (
+          <p className="text-sm text-slate-500 font-mono py-12 text-center">Loading…</p>
         )}
+      </section>
 
-        {activeTab === "stitch" && <StitchStudio />}
-      </div>
-    </div>
+      <footer className="text-[11px] font-mono text-slate-600 pt-4 border-t border-slate-900">
+        Read-only. Data from {activeSource ?? "…"}
+        {demoParam && " · sample data"}
+      </footer>
+    </main>
   );
 }

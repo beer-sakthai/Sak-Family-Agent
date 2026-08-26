@@ -1,38 +1,20 @@
-import { NextResponse } from "next/server";
-import { getSessionTranscripts } from "@/lib/sakthai";
+/** `GET /api/sessions` — session summaries, and one transcript via `?id=`. */
 
-export async function GET(request: Request) {
-  try {
-    const url = new URL(request.url);
-    const demo = url.searchParams.get("demo") === "true";
-    const search = url.searchParams.get("search") || url.searchParams.get("query") || undefined;
-    const id = url.searchParams.get("id") || undefined;
+import { intParam, respond } from "@/lib/source";
 
-    const rawLimit = url.searchParams.get("limit");
-    const rawOffset = url.searchParams.get("offset");
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-    const limit = rawLimit !== null ? parseInt(rawLimit, 10) : 20;
-    const offset = rawOffset !== null ? parseInt(rawOffset, 10) : 0;
-
-    const result = await getSessionTranscripts({
-      demo,
-      search,
-      limit,
-      offset,
-      id,
-    });
-
-    return NextResponse.json({
-      success: true,
-      sessions: result.sessions,
-      total: result.total,
-      ...(result.detail ? { detail: result.detail } : {}),
-    });
-  } catch (error: any) {
-    console.error("Secure Log [GET /api/sessions]: Failed to fetch sessions data:", error);
-    return NextResponse.json(
-      { success: false, error: "An unexpected error occurred while fetching sessions data." },
-      { status: 500 }
-    );
-  }
+export async function GET(request: Request): Promise<Response> {
+  const params = new URL(request.url).searchParams;
+  return respond(request, (source) =>
+    source.getSessions({
+      // `search` is the documented name; `query` stays accepted since the
+      // existing frontend sends it.
+      search: params.get("search") ?? params.get("query"),
+      limit: intParam(params.get("limit"), 20, 1, 100),
+      offset: intParam(params.get("offset"), 0, 0, 1_000_000),
+      id: params.get("id"),
+    }),
+  );
 }

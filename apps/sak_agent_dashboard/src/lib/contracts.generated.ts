@@ -6,6 +6,8 @@
 
 export type DataSource = "local" | "api" | "demo";
 
+export const PERSONA_NAMES = ["sakking", "sakthai", "saksee", "saksit", "sakjules", "saktan"] as const;
+
 export const UNATTRIBUTED = "unattributed";
 
 export interface TokenStats {
