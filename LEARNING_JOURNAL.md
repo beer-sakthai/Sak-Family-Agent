@@ -696,7 +696,6 @@ The 0.5b-tools card was decent but lacked hook content — no "why choose this" 
 
 ---
 
-<<<<<<< HEAD
 ## 2026-07-30 — Cron #052: 1.5b-tools-v7 Ecosystem Count & Family Table Enrichment
 
 **Target:** `Nanthasit/sakthai-context-1.5b-tools-v7` (0 dl — newest model, zero traction)
@@ -867,7 +866,9 @@ The root cause: the deprecated English embedding (`sakthai-embedding`, now priva
 ### Lesson
 
 **Model counts aren't static — they change when models are deprecated or added. Every card needs the canonical count, and there's no source-of-truth sync mechanism.** The family table and the count line drifted independently across 14 repos. Recommendation: extract the family table + count into a shared snippet (or generate it from the HF API on build) so one update fixes all cards. Manual patching of 14 repos is not sustainable.
-=======
+
+---
+
 ## 2026-07-30 — Cron #009: 0.5B-tools Discoverability Tags
 
 **One concrete improvement:** Added 8 new discoverability tags to `sakthai-context-0.5b-tools` (7 dl — only model under 50 downloads).
@@ -1091,7 +1092,6 @@ Ecosystem is **growing steadily** with all key metrics trending up. Models gaine
 - New orphans (4): irrelevance-supplement (0), combined-v7 (0), bench-v1 (0), bench-v2 (0)
 - All 4 new datasets have YAML-only cards — no README, no badges, no cross-links
 
-<<<<<<< Updated upstream
 **Spaces — 3 (all static HTML, 0 likes)**
 - sakthai-tts, sakthai-leaderboard, sakthai-vision-demo
 - No inference widgets, no try-before-download path
@@ -1151,8 +1151,9 @@ The sakthai profile cron file is completely empty — 0 bytes, created Jul 23. T
 - Dataset ecosystem expanded 2x (4 to 8) — New datasets need active promotion within the first week or they orphan at 0 dl.
 - Downloads grow at ~120/day regardless of card changes — Card enrichment alone doesn't move the needle.
 - CI fixes are working — But need GH_TOKEN to verify from cron.
->>>>>>> fix-441-v2
-=======
+
+---
+
 1. ⭐ Star all own repos on GitHub (basic credibility)
 2. 🔗 Cross-link HF models ↔ datasets in model cards (boosts discovery)
 3. 🚀 Deploy 1+ HF Space (even minimal Gradio demo in ZeroGPU)
@@ -1422,7 +1423,9 @@ Cross-check the OTHER 2 Spaces (sakthai-tts, sakthai-leaderboard) for missing `s
 
 ### Lesson
 The 60-char limit on Space `short_description` is enforced at YAML validation time, not at API schema time. `write_file` based on API data ("no short_description") was a false positive — the `/api/spaces` endpoint does not include `short_description` in its cardData even when present in the YAML. Always verify via the README raw endpoint, not the REST API cardData.
->>>>>>> Stashed changes
+
+---
+
 ## 2026-07-31 — Ecosystem Gap Fix: Collection description + phantom item cleanup
 
 **Gap found:** `sakthai-model-family` collection described **26 models / 15 datasets / 6 Spaces** but the actual live portfolio was smaller — 19 collection items were either 404 phantoms or empty repos with `usedStorage=0` and only stub files. That mismatch overstates visible inventory and misleads visitors.
