@@ -12,7 +12,9 @@
 #
 # checkov:skip=CKV_DOCKER_2: Training Space kept alive via sleep infinity; no service endpoint to health-check
 # checkov:skip=CKV_DOCKER_3: HF Spaces/Jobs manage the runtime user; training needs root for CUDA tooling
-FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
+# Pinned by digest (Scorecard Pinned-Dependencies). The tag is kept alongside
+# the digest so Dependabot's docker ecosystem can bump both together.
+FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04@sha256:622e78a1d02c0f90ed900e3985d6c975d8e2dc9ee5e61643aed587dcf9129f42
 
 # Build-time args / env
 ENV DEBIAN_FRONTEND=noninteractive
