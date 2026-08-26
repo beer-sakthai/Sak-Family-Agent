@@ -1,14 +1,27 @@
 # Architecture
 
 SakThai is a small, layered Python package. Each layer has one job; keep them
-separate.
+separate. Above the package sits a read-only presentation layer — an HTTP API
+and the Next.js dashboard in `apps/sak_agent_dashboard/`.
 
 ```
-                ┌─────────────────────────────────────────────┐
-   sakthai run  │                   CLI (click)                │  sakthai mcp
-   ───────────▶ │   cli/ — learn, recall, memory, run, mcp,    │ ◀───────────
-                │         cycle, skills, extensions, dashboard  │
-                └───────────────┬───────────────┬──────────────┘
+   ┌──────────────────────────────────────────────────────────────────────┐
+   │            apps/sak_agent_dashboard  (Next.js · read-only)           │
+   │   src/lib/source.ts → LocalFsSource | ApiSource | DemoSource         │
+   └───────────────┬──────────────────────────────────┬───────────────────┘
+        direct fs reads                        HTTP (bearer token)
+                   │                                  │
+                   │                    ┌─────────────▼──────────────┐
+                   │                    │   web/server.py (stdlib)   │
+                   │                    │   web/api.py  — payloads   │
+                   │                    │   web/contracts.py — types │
+                   │                    └─────────────┬──────────────┘
+                   │                                  │
+                ┌──────────────────────────────────────────────┐
+   sakthai run  │                   CLI (click)                 │  sakthai mcp
+   ───────────▶ │   cli/ — learn, recall, memory, run, mcp,     │ ◀───────────
+                │      cycle, skills, extensions, eval, web     │
+                └───────────────┬───────────────┬───────────────┘
                                 │               │
                   ┌─────────────▼──┐      ┌──────▼───────────┐
                   │  agent/loop    │      │  mcp/server      │
@@ -23,8 +36,15 @@ separate.
                             │   MemoryStore (SQLite)   │
                             └────────────┬─────────────┘
                                          │
-                                  ~/.sakthai/memory.db
+   ~/.sakthai/  memory.db · <persona>/memory.db · sessions/ · eval.jsonl
+                audit.log · workflow_runs/
 ```
+
+`web/contracts.py` is the single definition of every payload shape. The
+TypeScript equivalents are **generated** from it by
+`scripts/gen_dashboard_types.py`; CI fails if the committed
+`src/lib/contracts.generated.ts` is stale. See
+[the unified-system design](./superpowers/specs/2026-08-26-sak-agent-dashboard-unified-design.md).
 
 ## Layers
 
@@ -61,8 +81,18 @@ and `library/`.
 
 **`extensions/`** — clone skill/MCP bundles from git into `~/.sakthai`.
 
-**`dashboard/`** — `data.py` builds an honest snapshot of the store (testable,
-no UI deps); `app.py` renders it with Streamlit.
+**`dashboard/`** — `data.py` only. It builds an honest snapshot of the store
+(testable, no UI deps) and is served by `web/server.py`'s `/api/stages`. There is
+no in-package UI: the Streamlit `app.py` this doc used to describe is gone, and
+the frontend now lives in `apps/sak_agent_dashboard/`.
+
+**`web/`** — the read-only HTTP surface. `contracts.py` defines every payload
+shape (the source of truth the TypeScript types are generated from), `api.py`
+builds those payloads by reusing the existing parsers — `summarize_evals`, the
+session readers, `FamilyMemoryView`, `store.get_dashboard_aggregates` — and
+`server.py` is a thin stdlib `http.server` dispatcher. Loopback-bound unless
+`SAKTHAI_WEB_ALLOW_PUBLIC` is set; every path except `/health` requires the
+bearer token. Started with `sakthai web serve`.
 
 ## Memory schema
 
