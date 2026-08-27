@@ -262,6 +262,14 @@ describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
         const codeTab = screen.getByRole("tab", { name: /tsx code/i });
         fireEvent.click(codeTab);
         expect(screen.getByText(/Multi-Agent System Architecture/i)).toBeInTheDocument();
+
+        // Verify copy button updates text dynamically based on active tab
+        const specTab = screen.getByRole("tab", { name: /stitch json spec/i });
+        fireEvent.click(specTab);
+        expect(screen.getByRole("button", { name: /copy stitch json spec/i })).toHaveTextContent("Copy Spec");
+
+        fireEvent.click(codeTab);
+        expect(screen.getByRole("button", { name: /copy tsx code/i })).toHaveTextContent("Copy Code");
       }
     });
   });
