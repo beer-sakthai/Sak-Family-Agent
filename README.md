@@ -257,6 +257,8 @@ frontend build.
 
 Under `training/sakthai-7b-lora`, there are ongoing efforts to train `Qwen2.5-7B-Instruct` using a tool-calling dataset (v5) with LoRA. This includes `train.py` for the training script and `submit_job.py` for submission to Hugging Face Jobs. Configured with LoRA r=16, alpha=32, 4-bit NF4, 4 epochs, 300 steps.
 
+The adapter this produces, [`Nanthasit/sakthai-context-7b-tools`](https://huggingface.co/Nanthasit/sakthai-context-7b-tools), is the hand-off point to [`beer-sakthai/openenv-rl-training`](https://github.com/beer-sakthai/openenv-rl-training), which GRPO-trains it further against OpenEnv environments. See [Related Repositories](#-related-repositories).
+
 ---
 
 ## 🛡️ Security Hardening System
@@ -424,6 +426,23 @@ See [`CHANGELOG.md`](CHANGELOG.md) for the full history.
 | [`docs/security-hardening.md`](docs/security-hardening.md) | Audit findings, fixes, regression tests |
 | [`docs/workspace.md`](docs/workspace.md) | Dev environment setup |
 | [`HOUSE_OF_SAK.md`](HOUSE_OF_SAK.md) · [`ONBOARDING.md`](ONBOARDING.md) | Family identity & onboarding |
+
+---
+
+## 🔗 Related Repositories
+
+The Sak family spans three repositories under [`beer-sakthai`](https://github.com/beer-sakthai).
+This one is the hub: the agent runtime, the six personas, and the shared `sakthai` package.
+
+| Repository | What it is | How it connects to this repo |
+|---|---|---|
+| [`Sak-Family-Agent`](https://github.com/beer-sakthai/Sak-Family-Agent) | **This repo.** The `sakthai` package, six personas, memory store, MCP stdio server, web API, and the `training/` job definitions. | — |
+| [`openenv-rl-training`](https://github.com/beer-sakthai/openenv-rl-training) | The training half of the pipeline: QLoRA/SFT on Qwen2.5 for tool-calling, plus GRPO over [OpenEnv](https://github.com/huggingface/OpenEnv) environments via [TRL](https://huggingface.co/docs/trl)'s `GRPOTrainer(environment_factory=...)`, and the agentic-eval harness. | Picks up where [`training/`](training) stops. `training/sakthai-7b-lora/train.py` here pushes the adapter [`Nanthasit/sakthai-context-7b-tools`](https://huggingface.co/Nanthasit/sakthai-context-7b-tools); that adapter is the GRPO base over there. Its `FINDINGS.md` is the durable record of how the family's models behave in multi-turn tool-calling — read it before picking a model to serve. |
+| [`codeql-action`](https://github.com/beer-sakthai/codeql-action) | A fork of [`github/codeql-action`](https://github.com/github/codeql-action) maintained under this account, carrying local dependency-advisory remediation (`js-yaml`, `tar`) against the action's own dev-dependency tree. | Not consumed by the workflows here — `codeql.yml`, `bandit.yml`, `ossar.yml` and `scorecard.yml` all pin **upstream** `github/codeql-action` by commit SHA, which is what Scorecard's Pinned-Dependencies check expects. The fork is where advisory fixes against the action itself are staged. |
+
+Models, datasets and Spaces shared across all three live under
+[`Nanthasit`](https://huggingface.co/Nanthasit) on the Hub — see the
+[SakThai model family collection](https://huggingface.co/collections/Nanthasit/sakthai-model-family-6a64745450b12d421c1f9f02).
 
 ---
 
