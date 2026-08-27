@@ -18,6 +18,19 @@ v2 is local-first — the CLI, the agent loop, and the MCP stdio server.
 
 ---
 
+## Related repositories
+
+Three repos under `beer-sakthai` make up the family; this one is the hub. When a
+task spans more than the agent runtime, check which repo actually owns the code:
+
+| Repo | Owns | Boundary with this repo |
+|---|---|---|
+| `beer-sakthai/Sak-Family-Agent` | **This repo.** The `sakthai` package, the six personas, memory, MCP, web API, and the `training/` HF Jobs definitions. | — |
+| `beer-sakthai/openenv-rl-training` | The SFT (QLoRA on Qwen2.5) and RL (GRPO over OpenEnv via TRL's `environment_factory`) training pipeline, the agentic-eval harness, and `FINDINGS.md`. | `training/sakthai-7b-lora/train.py` here pushes `Nanthasit/sakthai-context-7b-tools`; that adapter is the GRPO base there. The two repos share **no code** and have deliberately incompatible dependency pinsets — do not cross-import, and do not restate that repo's benchmark numbers here (`FINDINGS.md` and its workspace READMEs are the durable records). |
+| `beer-sakthai/codeql-action` | A fork of `github/codeql-action` carrying local dependency-advisory remediation against the action's own dev-dependency tree. | Not referenced by any workflow here. `codeql.yml`, `bandit.yml`, `ossar.yml` and `scorecard.yml` pin **upstream** `github/codeql-action` by commit SHA — repointing them at the fork would break Scorecard's Pinned-Dependencies expectations and is not the intent of the fork. |
+
+---
+
 ## Monorepo Structure
 
 This repo is the shared source workspace for the whole Sak family, not just one
