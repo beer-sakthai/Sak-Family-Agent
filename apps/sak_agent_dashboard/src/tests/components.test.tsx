@@ -92,15 +92,20 @@ describe("AgentOverview", () => {
 });
 
 describe("AnalyticsCharts", () => {
-  it("renders headline figures from the metrics payload", () => {
+  // The headline run/success/latency figures moved to the KPI strip, which is
+  // on screen above these charts; see `shell.test.tsx`. What is left here is
+  // how much of the family the per-persona charts actually speak for.
+  it("says how many personas the per-persona charts are drawn from", () => {
+    const attributed = personas.personas.filter((p) => p.runs > 0).length;
     render(<AnalyticsCharts metrics={demoMetrics()} personas={personas} />);
-    expect(screen.getByText(/Total runs:/)).toBeInTheDocument();
+    expect(
+      screen.getByText(`${attributed} of ${personas.personas.length} personas have attributed runs`),
+    ).toBeInTheDocument();
   });
 
-  it("shows an em dash rather than a fake success rate with no runs", () => {
-    const empty = { ...demoMetrics(), total_runs: 0 };
-    render(<AnalyticsCharts metrics={empty} personas={personas} />);
-    expect(screen.getByText("—")).toBeInTheDocument();
+  it("counts nothing rather than guessing without a personas payload", () => {
+    render(<AnalyticsCharts metrics={demoMetrics()} />);
+    expect(screen.getByText("0 of 0 personas have attributed runs")).toBeInTheDocument();
   });
 
   it("renders without a personas payload", () => {

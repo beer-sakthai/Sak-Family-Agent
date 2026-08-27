@@ -124,34 +124,16 @@ export function AnalyticsCharts({ metrics, personas }: AnalyticsChartsProps) {
     latency: Math.round(point.avg_latency_ms),
   }));
 
-  const successRate = metrics.total_runs > 0 ? (1 - metrics.error_rate) * 100 : null;
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div>
-          <h3 className="text-xl font-bold font-display text-white tracking-tight">
-            Performance & Run Analytics
-          </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Token distribution, latency trends, and execution outcomes from the eval log
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-mono px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-cyan-400">
-            Total runs: <strong className="text-white">{metrics.total_runs.toLocaleString()}</strong>
-          </span>
-          <span className="text-xs font-mono px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-emerald-400">
-            Success rate:{" "}
-            <strong className="text-white">
-              {successRate === null ? "—" : `${successRate.toFixed(1)}%`}
-            </strong>
-          </span>
-          <span className="text-xs font-mono px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-amber-400">
-            Avg latency:{" "}
-            <strong className="text-white">{Math.round(metrics.avg_latency_ms)}ms</strong>
-          </span>
-        </div>
+      {/* The title, the description and the three headline figures that used to
+          sit here are all on screen already — in the topbar and the KPI strip
+          above. What only this view can say is how many personas its per-persona
+          charts are actually drawn from. */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <span className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 font-mono text-xs text-slate-400">
+          {activePersonas.length} of {personas?.personas.length ?? 0} personas have attributed runs
+        </span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

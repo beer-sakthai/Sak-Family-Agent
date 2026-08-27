@@ -59,7 +59,10 @@ export function DemoModeToggle({ isDemo, onToggle, activeSource }: DemoModeToggl
             : "bg-slate-900/60 text-slate-400 border-slate-800 hover:border-slate-700"
         }`}
       >
-        Sample data: {isDemo ? "ON" : "OFF"}
+        {/* "Sample" not "Sample data": the badge to its left already reads
+            "Sample data" whenever that is what is being served, and two
+            controls a centimetre apart saying the same words is a puzzle. */}
+        Sample: {isDemo ? "ON" : "OFF"}
       </button>
     </div>
   );

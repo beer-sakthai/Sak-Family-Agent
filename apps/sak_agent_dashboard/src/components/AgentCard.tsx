@@ -67,28 +67,40 @@ export function AgentCard({ agent }: AgentCardProps) {
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-cyan-500/5 rounded-full blur-2xl group-hover:bg-cyan-500/10 transition-all duration-500 pointer-events-none" />
 
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center space-x-2.5">
-            <div className="p-2 rounded-xl bg-slate-800/80 border border-slate-700/50">{icon}</div>
-            <div>
-              <h4 className="text-lg font-bold font-display text-white tracking-tight flex items-center gap-2">
+        {/* items-start: the text column is three lines tall, so centring the
+            icon and the status pill against it leaves the name floating alone
+            above both. */}
+        <div className="mb-3 flex items-start justify-between gap-2">
+          {/* The name owns the first line alone. Sharing it with the provider
+              badge meant the two competed for the same shrinking row, and the
+              name — the one thing that identifies the card — is what a
+              `truncate` gave up first. min-w-0 on every level so the card can
+              still narrow to whatever column the auto-fill grid gives it. */}
+          <div className="flex min-w-0 flex-1 items-start space-x-2.5">
+            <div className="p-2 rounded-xl bg-slate-800/80 border border-slate-700/50 shrink-0">
+              {icon}
+            </div>
+            <div className="min-w-0 flex-1">
+              <h4 className="truncate text-lg font-bold font-display text-white tracking-tight">
                 {agent.display_name}
+              </h4>
+              <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 font-mono text-xs leading-snug text-slate-400">
                 {agent.provider && (
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800/50">
+                  <span className="rounded bg-cyan-950 px-1.5 py-0.5 text-[10px] text-cyan-400 border border-cyan-800/50">
                     {agent.provider}
                   </span>
                 )}
-              </h4>
-              <p className="text-xs text-slate-400 mt-0.5 leading-snug font-mono">
-                {agent.has_shard
-                  ? `${agent.fact_count} facts · ${agent.observation_count} observations`
-                  : "no memory shard yet"}
+                <span className="min-w-0">
+                  {agent.has_shard
+                    ? `${agent.fact_count} facts · ${agent.observation_count} observations`
+                    : "no memory shard yet"}
+                </span>
               </p>
             </div>
           </div>
 
           <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold font-mono border ${
+            className={`inline-flex shrink-0 items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold font-mono border ${
               status === "Active"
                 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
                 : status === "Ready"

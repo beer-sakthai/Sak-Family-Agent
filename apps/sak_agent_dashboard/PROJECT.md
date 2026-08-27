@@ -65,15 +65,40 @@ src/
 │   ├── layout.tsx · page.tsx · globals.css
 │   └── api/{agents,metrics,sessions,memory,audit,workflows}/route.ts
 ├── components/
+│   ├── shell/Sidebar.tsx · shell/TopBar.tsx      (the app chrome)
+│   ├── CommandPalette.tsx · KpiStrip.tsx
+│   ├── Skeletons.tsx · HostedNotice.tsx
 │   ├── AgentCard.tsx · AgentOverview.tsx · AnalyticsCharts.tsx
 │   ├── SessionExplorer.tsx · MemoryExplorer.tsx · AuditLogs.tsx
-│   └── WorkflowRuns.tsx · DemoModeToggle.tsx
+│   └── WorkflowRuns.tsx · DemoModeToggle.tsx · StitchStudio.tsx
 ├── lib/
 │   ├── contracts.generated.ts   (generated — do not edit)
 │   ├── source.ts · runtime.ts · demo.ts · db.ts
+│   ├── nav.ts · format.ts · browser-state.ts
 │   └── sources/{local,api,demo}.ts
 └── tests/
 ```
+
+### The shell
+
+`layout.tsx` renders the document and an inert ambient background, nothing
+else. All the chrome — sidebar, topbar, command palette — is composed in
+`page.tsx`, because it is driven by the same client state as the panels it
+frames. `lib/nav.ts` is the single definition of the seven sections; the
+sidebar, the topbar heading, the command palette and the keyboard shortcuts
+all read it.
+
+Two pieces of state live in the browser rather than in React, and
+`lib/browser-state.ts` reads both through `useSyncExternalStore` so the server
+snapshot and the hydrating client agree:
+
+- **the active section** is the URL fragment (`#memory`), so a section is
+  linkable and the back button moves between them;
+- **sample-data mode, sidebar collapse and the auto-refresh interval** are
+  `localStorage` preferences, so they survive a reload.
+
+Keyboard: `⌘K`/`Ctrl+K` opens the palette, `R` refreshes. Both are suppressed
+while a text field has focus.
 
 ## Local development
 
@@ -92,15 +117,25 @@ no server at all.
 
 This app **is** deployed: a Vercel project (`houseofsak/sak-family-agent`) builds
 it on every push, with its root directory set to `apps/sak_agent_dashboard` in
-Vercel's settings rather than a `vercel.json` in the repo.
+Vercel's settings — that part is still a project setting, because Vercel resolves
+the root directory *before* reading any config file. Everything downstream of it
+now lives in [`vercel.json`](./vercel.json): the framework, the install command,
+and the response headers (CSP, `X-Frame-Options`, `Referrer-Policy`,
+`Permissions-Policy`, and `Cache-Control: no-store` over `/api/*` so a CDN can
+never serve a stale reading as a live one).
 
 What does **not** exist is a hosted SakThai API. With no `~/.sakthai` on a Vercel
 lambda and no `SAKTHAI_API_URL` configured, `resolveSource()` serves demo data —
-labelled as sample data in the header. To show real data, stand up a reachable
+labelled as sample data in the header, and now with an on-page notice saying how
+to point it at a live agent. To show real data, stand up a reachable
 `sakthai web serve` and set `SAKTHAI_API_URL` and `SAKTHAI_API_TOKEN` in the
 Vercel project. Note that the API refuses non-loopback binds unless
 `SAKTHAI_WEB_ALLOW_PUBLIC` is set: it serves personal memory, so exposing it is
 a deliberate decision.
+
+Full walkthrough, including the root-directory setting and how to verify a
+deploy: [`DEPLOYMENT.md`](./DEPLOYMENT.md). Environment variables:
+[`.env.example`](./.env.example).
 
 ## Status
 

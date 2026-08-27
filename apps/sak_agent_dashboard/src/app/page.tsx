@@ -1,26 +1,21 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
-import {
-  Activity,
-  BarChart3,
-  Database,
-  GitBranch,
-  MessageSquare,
-  RefreshCw,
-  Shield,
-  Sparkles,
-  Terminal,
-} from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import AgentOverview from "@/components/AgentOverview";
 import AnalyticsCharts from "@/components/AnalyticsCharts";
 import AuditLogs from "@/components/AuditLogs";
-import DemoModeToggle from "@/components/DemoModeToggle";
+import CommandPalette, { type Command } from "@/components/CommandPalette";
+import HostedNotice from "@/components/HostedNotice";
+import KpiStrip from "@/components/KpiStrip";
 import MemoryExplorer from "@/components/MemoryExplorer";
 import SessionExplorer from "@/components/SessionExplorer";
+import Sidebar from "@/components/shell/Sidebar";
+import TopBar, { REFRESH_INTERVALS, type RefreshInterval } from "@/components/shell/TopBar";
+import { CardGridSkeleton, KpiSkeleton, PanelSkeleton } from "@/components/Skeletons";
 import StitchStudio from "@/components/StitchStudio";
 import WorkflowRuns from "@/components/WorkflowRuns";
+import { useHashRoute, usePersistedString } from "@/lib/browser-state";
 import type {
   ApiEnvelope,
   AuditPayload,
@@ -33,20 +28,15 @@ import type {
   WorkflowRunDetail,
   WorkflowsPayload,
 } from "@/lib/contracts.generated";
-
-type Tab = "overview" | "analytics" | "sessions" | "memory" | "workflows" | "audit" | "stitch";
-
-const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: "overview", label: "Overview", icon: <Activity className="h-3.5 w-3.5" /> },
-  { id: "analytics", label: "Analytics", icon: <BarChart3 className="h-3.5 w-3.5" /> },
-  { id: "sessions", label: "Sessions", icon: <MessageSquare className="h-3.5 w-3.5" /> },
-  { id: "memory", label: "Memory", icon: <Database className="h-3.5 w-3.5" /> },
-  { id: "workflows", label: "Workflows", icon: <GitBranch className="h-3.5 w-3.5" /> },
-  { id: "audit", label: "Audit", icon: <Shield className="h-3.5 w-3.5" /> },
-  { id: "stitch", label: "Stitch", icon: <Sparkles className="h-3.5 w-3.5" /> },
-];
+import { isTabId, type TabId } from "@/lib/nav";
 
 const PAGE_SIZE = 10;
+
+const STORAGE_KEYS = {
+  demo: "sak-dashboard:demo",
+  collapsed: "sak-dashboard:sidebar-collapsed",
+  refresh: "sak-dashboard:refresh-interval",
+} as const;
 
 /**
  * Fetch one envelope. Returns null on failure rather than substituting demo
@@ -64,12 +54,35 @@ async function fetchEnvelope<T>(url: string): Promise<ApiEnvelope<T> | null> {
   }
 }
 
+/** Narrow a stored preference to one of the offered intervals. */
+function parseInterval(raw: string): RefreshInterval {
+  const parsed = Number(raw);
+  return (REFRESH_INTERVALS as readonly number[]).includes(parsed)
+    ? (parsed as RefreshInterval)
+    : 0;
+}
+
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
-  const [isDemo, setIsDemo] = useState(false);
-  const [activeSource, setActiveSource] = useState<DataSource | null>(null);
+  // Section lives in the URL fragment, so a section is linkable and the back
+  // button moves between them.
+  const [hash, setHash] = useHashRoute("overview");
+  const activeTab: TabId = isTabId(hash) ? hash : "overview";
+
+  const [demoPref, setDemoPref] = usePersistedString(STORAGE_KEYS.demo, "off");
+  const isDemo = demoPref === "on";
+
+  const [collapsedPref, setCollapsedPref] = usePersistedString(STORAGE_KEYS.collapsed, "off");
+  const sidebarCollapsed = collapsedPref === "on";
+
+  const [refreshPref, setRefreshPref] = usePersistedString(STORAGE_KEYS.refresh, "0");
+  const refreshInterval = parseInterval(refreshPref);
+
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   const [personas, setPersonas] = useState<PersonasPayload | null>(null);
   const [metrics, setMetrics] = useState<MetricsPayload | null>(null);
@@ -77,6 +90,7 @@ export default function Home() {
   const [audit, setAudit] = useState<AuditPayload | null>(null);
   const [sessions, setSessions] = useState<SessionsPayload | null>(null);
   const [workflows, setWorkflows] = useState<WorkflowsPayload | null>(null);
+  const [activeSource, setActiveSource] = useState<DataSource | null>(null);
 
   // Server-driven query state. These reach the API rather than filtering a
   // client-side copy, so the severity and search parameters the routes have
@@ -95,7 +109,6 @@ export default function Home() {
     detail: WorkflowRunDetail | null;
   } | null>(null);
 
-  const demoParam = isDemo ? "demo=1" : "";
   const qs = useCallback(
     (extra: Record<string, string | number | null> = {}) => {
       const params = new URLSearchParams();
@@ -141,6 +154,7 @@ export default function Home() {
         ? "Could not reach the dashboard API. Check the server and try again."
         : null,
     );
+    setLastUpdatedAt(Date.now());
     setIsLoading(false);
   }, [qs, search, page, severity]);
 
@@ -151,6 +165,20 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh();
   }, [refresh]);
+
+  // Auto-refresh. Off by default; the interval is a stored preference, so a
+  // wall-mounted tab keeps polling across a reload.
+  useEffect(() => {
+    if (refreshInterval === 0) return;
+    const timer = window.setInterval(() => void refresh(), refreshInterval * 1_000);
+    return () => window.clearInterval(timer);
+  }, [refreshInterval, refresh]);
+
+  // Ages the "3m ago" label without re-fetching anything.
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 10_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   // Session and workflow detail are fetched on demand rather than up front —
   // a transcript is large and only one is ever open at a time.
@@ -182,10 +210,85 @@ export default function Home() {
     };
   }, [runId, qs]);
 
+  const goToTab = useCallback(
+    (tab: TabId) => {
+      setHash(tab);
+    },
+    [setHash],
+  );
+
+  const handleRefresh = useCallback(() => {
+    setIsLoading(true);
+    void refresh();
+  }, [refresh]);
+
+  const toggleDemo = useCallback(
+    (next: boolean) => {
+      setDemoPref(next ? "on" : "off");
+      setPage(1);
+    },
+    [setDemoPref],
+  );
+
+  // Keyboard: ⌘K/Ctrl+K for the palette, digits for sections, `r` to refresh.
+  // Suppressed while typing, so a search field never eats a shortcut.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typing =
+        target instanceof HTMLElement &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable);
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen((open) => !open);
+        return;
+      }
+      if (typing || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.key === "r") {
+        event.preventDefault();
+        handleRefresh();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleRefresh]);
+
+  const paletteActions = useMemo<Command[]>(
+    () => [
+      {
+        id: "action-refresh",
+        label: "Refresh data",
+        hint: "Re-fetch every panel from the active source",
+        group: "Actions",
+        run: handleRefresh,
+      },
+      {
+        id: "action-demo",
+        label: isDemo ? "Use live data" : "Use sample data",
+        hint: isDemo
+          ? "Stop requesting the demo dataset"
+          : "Request the built-in demo dataset instead of the runtime",
+        group: "Actions",
+        run: () => toggleDemo(!isDemo),
+      },
+      ...REFRESH_INTERVALS.filter((seconds) => seconds !== refreshInterval).map((seconds) => ({
+        id: `action-interval-${seconds}`,
+        label: seconds === 0 ? "Turn auto-refresh off" : `Auto-refresh every ${seconds}s`,
+        hint: "Applies to every panel",
+        group: "Auto-refresh",
+        run: () => setRefreshPref(String(seconds)),
+      })),
+    ],
+    [handleRefresh, isDemo, toggleDemo, refreshInterval, setRefreshPref],
+  );
+
   // Only surface a fetched detail when it belongs to the currently selected id.
-  const activeSessionDetail = sessionId && sessionDetail?.id === sessionId
-    ? sessionDetail.detail
-    : null;
+  const activeSessionDetail =
+    sessionId && sessionDetail?.id === sessionId ? sessionDetail.detail : null;
   const activeRunDetail = runId && runDetail?.id === runId ? runDetail.detail : null;
 
   const handleSearchChange = (value: string) => {
@@ -193,124 +296,144 @@ export default function Home() {
     setPage(1);
   };
 
-  const handleSeverityChange = (value: string) => {
-    setSeverity(value);
+  const counts: Partial<Record<TabId, number>> = {
+    overview: personas?.personas.length,
+    sessions: sessions?.total,
+    memory: memory?.total_facts,
+    workflows: workflows?.runs.length,
+    audit: audit?.total,
   };
 
+  const awaitingFirstLoad = isLoading && personas === null && metrics === null;
+
   return (
-    <main className="min-h-screen px-4 sm:px-6 lg:px-10 py-8 space-y-8 max-w-[100rem] mx-auto">
-      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-2xl bg-slate-900 border border-slate-800">
-            <Terminal className="h-6 w-6 text-cyan-400" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold font-display text-white tracking-tight">
-              Sak-Agent-Family Dashboard
-            </h1>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Agents, workflows, memory, and security across the family
-            </p>
-          </div>
-        </div>
+    <div className="flex min-h-screen">
+      <Sidebar
+        active={activeTab}
+        onSelect={goToTab}
+        collapsed={sidebarCollapsed}
+        onCollapsedChange={(next) => setCollapsedPref(next ? "on" : "off")}
+        counts={counts}
+        mobileOpen={mobileNavOpen}
+        onMobileClose={() => setMobileNavOpen(false)}
+      />
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <DemoModeToggle
-            isDemo={isDemo}
-            onToggle={(next) => {
-              setIsDemo(next);
-              setPage(1);
-            }}
-            activeSource={activeSource}
-          />
-          <button
-            onClick={() => {
-              setIsLoading(true);
-              void refresh();
-            }}
-            disabled={isLoading}
-            aria-label="Refresh dashboard data"
-            className="px-3 py-1.5 rounded-xl text-[11px] font-mono bg-slate-900/60 text-slate-300 border border-slate-800 hover:border-slate-700 disabled:opacity-50 transition-colors inline-flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
-          >
-            <RefreshCw className={`h-3 w-3 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
-        </div>
-      </header>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <TopBar
+          active={activeTab}
+          isDemo={isDemo}
+          onDemoToggle={toggleDemo}
+          activeSource={activeSource}
+          isLoading={isLoading}
+          onRefresh={handleRefresh}
+          refreshInterval={refreshInterval}
+          onRefreshIntervalChange={(seconds) => setRefreshPref(String(seconds))}
+          lastUpdatedAt={lastUpdatedAt}
+          now={now}
+          onOpenPalette={() => setPaletteOpen(true)}
+          onOpenMobileNav={() => setMobileNavOpen(true)}
+        />
 
-      {error && (
-        <div className="p-4 rounded-2xl bg-rose-950/30 border border-rose-800/50 text-rose-200 text-sm">
-          {error}
-        </div>
+        <main className="mx-auto w-full max-w-[110rem] flex-1 space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+          {error && (
+            <div
+              role="alert"
+              className="flex items-start justify-between gap-3 rounded-2xl border border-rose-800/50 bg-rose-950/30 p-4 text-sm text-rose-200"
+            >
+              <span>{error}</span>
+              <button
+                onClick={() => setError(null)}
+                aria-label="Dismiss error"
+                className="shrink-0 rounded-lg border border-rose-800/60 px-2 py-0.5 font-mono text-[11px] text-rose-300 hover:bg-rose-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
+          <HostedNotice activeSource={activeSource} isDemo={isDemo} />
+
+          {awaitingFirstLoad ? <KpiSkeleton /> : (
+            <KpiStrip metrics={metrics} memory={memory} sessions={sessions} audit={audit} />
+          )}
+
+          <section key={activeTab} className="animate-panel-in">
+            {activeTab === "overview" &&
+              (personas ? <AgentOverview personas={personas} /> : <CardGridSkeleton />)}
+
+            {activeTab === "analytics" &&
+              (metrics ? (
+                <AnalyticsCharts metrics={metrics} personas={personas ?? undefined} />
+              ) : (
+                <PanelSkeleton label="Loading analytics" />
+              ))}
+
+            {activeTab === "sessions" &&
+              (sessions ? (
+                <SessionExplorer
+                  sessions={sessions.sessions}
+                  total={sessions.total}
+                  search={search}
+                  onSearchChange={handleSearchChange}
+                  page={page}
+                  pageSize={PAGE_SIZE}
+                  onPageChange={setPage}
+                  onSessionSelect={setSessionId}
+                  detail={activeSessionDetail}
+                  isLoadingDetail={sessionId !== null && activeSessionDetail === null}
+                />
+              ) : (
+                <PanelSkeleton label="Loading sessions" />
+              ))}
+
+            {activeTab === "memory" &&
+              (memory ? <MemoryExplorer memory={memory} /> : <PanelSkeleton label="Loading memory" />)}
+
+            {activeTab === "workflows" &&
+              (workflows ? (
+                <WorkflowRuns
+                  runs={workflows.runs}
+                  onRunSelect={setRunId}
+                  detail={activeRunDetail}
+                  isLoadingDetail={runId !== null && activeRunDetail === null}
+                />
+              ) : (
+                <PanelSkeleton label="Loading workflow runs" />
+              ))}
+
+            {activeTab === "audit" &&
+              (audit ? (
+                <AuditLogs audit={audit} severity={severity} onSeverityChange={setSeverity} />
+              ) : (
+                <PanelSkeleton label="Loading audit log" />
+              ))}
+
+            {/* Static showcase; it reads no runtime data, so it needs no source. */}
+            {activeTab === "stitch" && <StitchStudio />}
+          </section>
+
+          <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-900 pt-4 font-mono text-[11px] text-slate-600">
+            <span>
+              Read-only. Data from {activeSource ?? "…"}
+              {isDemo && " · sample data requested"}
+            </span>
+            <span className="hidden sm:inline">
+              <kbd className="rounded border border-slate-800 px-1 py-0.5">⌘K</kbd> commands ·{" "}
+              <kbd className="rounded border border-slate-800 px-1 py-0.5">R</kbd> refresh
+            </span>
+          </footer>
+        </main>
+      </div>
+
+      {/* Mounted only while open: the palette's query and highlighted row
+          reset by unmounting, with no effect clearing them on the way in. */}
+      {paletteOpen && (
+        <CommandPalette
+          onClose={() => setPaletteOpen(false)}
+          onNavigate={goToTab}
+          actions={paletteActions}
+        />
       )}
-
-      <nav role="tablist" aria-label="Dashboard sections" className="flex flex-wrap gap-2">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors inline-flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
-              activeTab === tab.id
-                ? "bg-cyan-950/50 text-cyan-300 border-cyan-700/50"
-                : "bg-slate-900/60 text-slate-400 border-slate-800 hover:border-slate-700"
-            }`}
-          >
-            {tab.icon}
-            {tab.label}
-          </button>
-        ))}
-      </nav>
-
-      <section>
-        {activeTab === "overview" && personas && <AgentOverview personas={personas} />}
-        {activeTab === "analytics" && metrics && (
-          <AnalyticsCharts metrics={metrics} personas={personas ?? undefined} />
-        )}
-        {activeTab === "sessions" && sessions && (
-          <SessionExplorer
-            sessions={sessions.sessions}
-            total={sessions.total}
-            search={search}
-            onSearchChange={handleSearchChange}
-            page={page}
-            pageSize={PAGE_SIZE}
-            onPageChange={setPage}
-            onSessionSelect={setSessionId}
-            detail={activeSessionDetail}
-            isLoadingDetail={sessionId !== null && activeSessionDetail === null}
-          />
-        )}
-        {activeTab === "memory" && memory && <MemoryExplorer memory={memory} />}
-        {activeTab === "workflows" && workflows && (
-          <WorkflowRuns
-            runs={workflows.runs}
-            onRunSelect={setRunId}
-            detail={activeRunDetail}
-            isLoadingDetail={runId !== null && activeRunDetail === null}
-          />
-        )}
-        {activeTab === "audit" && audit && (
-          <AuditLogs
-            audit={audit}
-            severity={severity}
-            onSeverityChange={handleSeverityChange}
-          />
-        )}
-
-        {/* Static showcase; it reads no runtime data, so it needs no source. */}
-        {activeTab === "stitch" && <StitchStudio />}
-
-        {isLoading && !personas && (
-          <p className="text-sm text-slate-500 font-mono py-12 text-center">Loading…</p>
-        )}
-      </section>
-
-      <footer className="text-[11px] font-mono text-slate-600 pt-4 border-t border-slate-900">
-        Read-only. Data from {activeSource ?? "…"}
-        {demoParam && " · sample data"}
-      </footer>
-    </main>
+    </div>
   );
 }
