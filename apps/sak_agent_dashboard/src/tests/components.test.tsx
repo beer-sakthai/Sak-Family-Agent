@@ -123,6 +123,14 @@ describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
         const searchInput = screen.getByPlaceholderText(/search/i);
         fireEvent.change(searchInput, { target: { value: "SakThai" } });
         expect(searchInput).toHaveValue("SakThai");
+
+        // Test non-matching search shows reset filters button & clicking it resets search
+        fireEvent.change(searchInput, { target: { value: "nonexistent-session-query" } });
+        const resetBtn = screen.getByRole("button", { name: /clear search and filters/i });
+        expect(resetBtn).toBeInTheDocument();
+        fireEvent.click(resetBtn);
+        expect(searchInput).toHaveValue("");
+        expect(screen.getByText("sess-1")).toBeInTheDocument();
       } else {
         const SearchContainer = () => {
           const [val, setVal] = React.useState("");
