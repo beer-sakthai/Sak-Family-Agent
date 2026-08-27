@@ -59,9 +59,9 @@ held constant.
 ## 1. The coverage floor prints a failure in CI and does not fail the build
 
 **Severity: high** · `.github/workflows/ci.yml`, `pyproject.toml` · **verified on
-PR #1200's head `e9fca70`**
+two separate CI runs, PR #1200's heads `e9fca70` and `831ce7c`**
 
-CI's `test (3.11)` job on that commit logged:
+CI's `test (3.11)` job on `e9fca70` logged:
 
 ```
 Coverage XML written to file coverage.xml
@@ -72,6 +72,10 @@ FAIL Required test coverage of 96.0% not reached. Total coverage: 95.88%
 The `Run tests with coverage` step that produced that line reports
 `conclusion: success`. The next step (Codecov) ran, the job concluded success,
 and the PR shows a green check. `test (3.12)` is the same.
+
+It is reproducible, not a one-off: the next push (`831ce7c`, a docs-only change)
+produced the identical `95.88%` and the identical `FAIL` line, and `test (3.11)`
+again concluded `success`.
 
 Locally the identical command exits 1:
 
