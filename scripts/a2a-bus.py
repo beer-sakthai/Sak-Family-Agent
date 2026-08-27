@@ -194,6 +194,16 @@ class A2AHandler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps(d).encode())
 
 if __name__ == '__main__':
-    port = 3005
-    print(f'Family A2A Bus on port {port}')
-    HTTPServer(('0.0.0.0', port), A2AHandler).serve_forever()
+    port = int(os.environ.get('A2A_BUS_PORT', '3005'))
+    # Loopback by default (bandit B104). This bus has no authentication of any
+    # kind and it reads/writes shared message and task files, so binding every
+    # interface publishes an unauthenticated read-write endpoint to whatever
+    # network the host sits on. That mirrors the rule the package's own web
+    # server already applies (see `_is_loopback_host` in sakthai/web/server.py):
+    # loopback needs no opt-in, anything wider does.
+    #
+    # Set A2A_BUS_HOST=0.0.0.0 to restore the previous behaviour where the
+    # fleet genuinely needs cross-host access.
+    host = os.environ.get('A2A_BUS_HOST', '127.0.0.1')
+    print(f'Family A2A Bus on {host}:{port}')
+    HTTPServer((host, port), A2AHandler).serve_forever()

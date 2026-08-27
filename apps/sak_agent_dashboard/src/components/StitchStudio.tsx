@@ -1,8 +1,22 @@
 "use client";
 
 import React, { useState } from "react";
-import { Sparkles, Code2, Eye, Cpu, Layers, Terminal, Copy, Check } from "lucide-react";
-import { StitchScreenPreset } from "@/lib/types";
+import { Code2, Eye, Terminal, Copy, Check } from "lucide-react";
+/**
+ * A UI-only shape: this component is a static showcase and reads nothing from
+ * the API, so the type lives here rather than in the generated contract, which
+ * describes API payloads only. It previously came from `@/lib/types`, which was
+ * removed when the data layer moved to `contracts.generated.ts`.
+ */
+interface StitchScreenPreset {
+  id: string;
+  title: string;
+  category: string;
+  prompt: string;
+  codeSnippet: string;
+  displayMode: "HTML" | "MARKDOWN" | "CODE" | "MERMAID";
+  theme: "dark-glassmorphism" | "midnight-emerald" | "cyber-cyan";
+}
 
 const STITCH_PRESETS: StitchScreenPreset[] = [
   {
@@ -73,11 +87,29 @@ const STITCH_PRESETS: StitchScreenPreset[] = [
 export function StitchStudio() {
   const [activePreset, setActivePreset] = useState<StitchScreenPreset>(STITCH_PRESETS[0]);
   const [activeTab, setActiveTab] = useState<"preview" | "code" | "spec">("preview");
-  const [customPrompt, setCustomPrompt] = useState("");
   const [copied, setCopied] = useState(false);
 
+  const jsonSpec = JSON.stringify(
+    {
+      serverUrl: "https://stitch.googleapis.com/mcp",
+      protocolVersion: "2024-11-05",
+      presetId: activePreset.id,
+      theme: activePreset.theme,
+      displayMode: activePreset.displayMode,
+      screenMetadata: {
+        agentType: "GEMINI_3_AGENT",
+        status: "COMPLETE",
+        displayMode: activePreset.displayMode,
+        summary: activePreset.prompt,
+      },
+    },
+    null,
+    2
+  );
+
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(activePreset.codeSnippet);
+    const textToCopy = activeTab === "spec" ? jsonSpec : activePreset.codeSnippet;
+    navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -192,11 +224,12 @@ export function StitchStudio() {
           <button
             type="button"
             aria-live="polite"
+            aria-label={copied ? "Copied to clipboard" : activeTab === "spec" ? "Copy Stitch JSON spec" : "Copy TSX code"}
             onClick={handleCopyCode}
             className="flex items-center gap-1 text-xs font-mono text-slate-400 hover:text-cyan-400 transition-colors bg-slate-800/60 px-2.5 py-1 rounded-lg border border-slate-700/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            {copied ? "Copied!" : "Copy Code"}
+            {copied ? "Copied!" : activeTab === "spec" ? "Copy Spec" : "Copy Code"}
           </button>
         </div>
 
@@ -248,19 +281,7 @@ export function StitchStudio() {
 
           {activeTab === "spec" && (
             <pre className="p-4 rounded-xl bg-slate-950 text-cyan-400 font-mono text-xs overflow-x-auto border border-slate-800/80 leading-relaxed">
-              <code>{JSON.stringify({
-                serverUrl: "https://stitch.googleapis.com/mcp",
-                protocolVersion: "2024-11-05",
-                presetId: activePreset.id,
-                theme: activePreset.theme,
-                displayMode: activePreset.displayMode,
-                screenMetadata: {
-                  agentType: "GEMINI_3_AGENT",
-                  status: "COMPLETE",
-                  displayMode: activePreset.displayMode,
-                  summary: activePreset.prompt
-                }
-              }, null, 2)}</code>
+              <code>{jsonSpec}</code>
             </pre>
           )}
         </div>

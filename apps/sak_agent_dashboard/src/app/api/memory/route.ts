@@ -1,27 +1,16 @@
-import { NextResponse } from "next/server";
-import { getMemoryData } from "@/lib/db";
-import { getAuditLogs } from "@/lib/sakthai";
+/** `GET /api/memory` — facts and observations merged across persona shards. */
 
-export async function GET(request: Request) {
-  try {
-    const url = new URL(request.url);
-    const demo = url.searchParams.get("demo") === "true";
-    const query = url.searchParams.get("query") || undefined;
-    const severity = url.searchParams.get("severity") || undefined;
+import { intParam, respond } from "@/lib/source";
 
-    const memory = await getMemoryData(demo, query);
-    const auditLogs = await getAuditLogs(demo, severity);
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-    return NextResponse.json({
-      success: true,
-      memory,
-      auditLogs,
-    });
-  } catch (error: any) {
-    console.error("Secure Log [GET /api/memory]: Failed to fetch memory data:", error);
-    return NextResponse.json(
-      { success: false, error: "An unexpected error occurred while fetching memory data." },
-      { status: 500 }
-    );
-  }
+export async function GET(request: Request): Promise<Response> {
+  const params = new URL(request.url).searchParams;
+  return respond(request, (source) =>
+    source.getMemory({
+      query: params.get("query"),
+      limit: intParam(params.get("limit"), 100, 1, 500),
+    }),
+  );
 }

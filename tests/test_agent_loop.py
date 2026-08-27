@@ -2295,3 +2295,74 @@ class TestUntrustedDataWrapping:
         assert "⚠️ BEGIN UNTRUSTED DATA" in block
         assert "⚠️ END UNTRUSTED DATA" in block
         assert "test fact from untrusted source" in block
+
+
+# -- persona attribution --------------------------------------------------
+
+
+def test_session_log_records_the_persona(sakthai_home: Path, store: MemoryStore) -> None:
+    """`--persona X` must reach the session log, so readers need not guess."""
+    import json
+
+    client = FakeClient([_Resp("end_turn", [_Block(type="text", text="ok")])])
+    run_agent(
+        "scoped task",
+        client=client,
+        store=store,
+        provider="anthropic",
+        persona="saksee",
+    )
+    payload = json.loads(
+        next((sakthai_home / "sessions").glob("*.json")).read_text(encoding="utf-8")
+    )
+    assert payload["persona"] == "saksee"
+
+
+def test_session_log_persona_is_none_for_unscoped_run(
+    sakthai_home: Path, store: MemoryStore
+) -> None:
+    import json
+
+    client = FakeClient([_Resp("end_turn", [_Block(type="text", text="ok")])])
+    run_agent("unscoped task", client=client, store=store, provider="anthropic")
+    payload = json.loads(
+        next((sakthai_home / "sessions").glob("*.json")).read_text(encoding="utf-8")
+    )
+    assert payload["persona"] is None
+
+
+def test_eval_log_records_the_persona(sakthai_home: Path, store: MemoryStore) -> None:
+    """The same run must attribute itself in eval.jsonl too."""
+    import json
+
+    client = FakeClient([_Resp("end_turn", [_Block(type="text", text="ok")])])
+    run_agent(
+        "scoped task",
+        client=client,
+        store=store,
+        provider="anthropic",
+        persona="sakjules",
+    )
+    line = json.loads((sakthai_home / "eval.jsonl").read_text(encoding="utf-8").strip())
+    assert line["persona"] == "sakjules"
+
+
+def test_persona_recorded_on_the_non_terminal_stop_path(
+    sakthai_home: Path, store: MemoryStore
+) -> None:
+    """The second _save_session_log call site must pass persona too."""
+    import json
+
+    # An unexpected stop_reason takes the other return branch in run_agent.
+    client = FakeClient([_Resp("some_other_reason", [_Block(type="text", text="ok")])])
+    run_agent(
+        "odd task",
+        client=client,
+        store=store,
+        provider="anthropic",
+        persona="sakking",
+    )
+    payload = json.loads(
+        next((sakthai_home / "sessions").glob("*.json")).read_text(encoding="utf-8")
+    )
+    assert payload["persona"] == "sakking"
