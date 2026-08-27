@@ -9,6 +9,7 @@ import {
   MessageSquare,
   RefreshCw,
   Shield,
+  Sparkles,
   Terminal,
 } from "lucide-react";
 
@@ -18,6 +19,7 @@ import AuditLogs from "@/components/AuditLogs";
 import DemoModeToggle from "@/components/DemoModeToggle";
 import MemoryExplorer from "@/components/MemoryExplorer";
 import SessionExplorer from "@/components/SessionExplorer";
+import StitchStudio from "@/components/StitchStudio";
 import WorkflowRuns from "@/components/WorkflowRuns";
 import type {
   ApiEnvelope,
@@ -32,7 +34,7 @@ import type {
   WorkflowsPayload,
 } from "@/lib/contracts.generated";
 
-type Tab = "overview" | "analytics" | "sessions" | "memory" | "workflows" | "audit";
+type Tab = "overview" | "analytics" | "sessions" | "memory" | "workflows" | "audit" | "stitch";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview", label: "Overview", icon: <Activity className="h-3.5 w-3.5" /> },
@@ -41,6 +43,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "memory", label: "Memory", icon: <Database className="h-3.5 w-3.5" /> },
   { id: "workflows", label: "Workflows", icon: <GitBranch className="h-3.5 w-3.5" /> },
   { id: "audit", label: "Audit", icon: <Shield className="h-3.5 w-3.5" /> },
+  { id: "stitch", label: "Stitch", icon: <Sparkles className="h-3.5 w-3.5" /> },
 ];
 
 const PAGE_SIZE = 10;
@@ -295,6 +298,9 @@ export default function Home() {
             onSeverityChange={handleSeverityChange}
           />
         )}
+
+        {/* Static showcase; it reads no runtime data, so it needs no source. */}
+        {activeTab === "stitch" && <StitchStudio />}
 
         {isLoading && !personas && (
           <p className="text-sm text-slate-500 font-mono py-12 text-center">Loading…</p>

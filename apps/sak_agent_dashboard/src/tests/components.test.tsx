@@ -216,6 +216,48 @@ describe("SessionExplorer", () => {
     renderExplorer({ sessions: [], total: 0, search: "nothing" });
     expect(screen.getByText(/No sessions match/)).toBeInTheDocument();
   });
+
+  // Ported from main (6f6ef8d, f2b0d71): a clear-search affordance and an
+  // empty-state reset. Adapted because search is server-driven here, so both
+  // report upward rather than mutating local state.
+  it("offers a clear-search button only once there is a query", () => {
+    const { rerender } = renderExplorer({ search: "" });
+    expect(screen.queryByLabelText("Clear search query")).not.toBeInTheDocument();
+    rerender(
+      <SessionExplorer
+        sessions={sessions.sessions}
+        total={sessions.total}
+        search="deploy"
+        onSearchChange={vi.fn()}
+        page={1}
+        pageSize={10}
+        onPageChange={vi.fn()}
+        onSessionSelect={vi.fn()}
+        detail={null}
+      />,
+    );
+    expect(screen.getByLabelText("Clear search query")).toBeInTheDocument();
+  });
+
+  it("clears the query through the parent when the button is used", () => {
+    const onSearchChange = vi.fn();
+    renderExplorer({ search: "deploy", onSearchChange });
+    fireEvent.click(screen.getByLabelText("Clear search query"));
+    expect(onSearchChange).toHaveBeenCalledWith("");
+  });
+
+  it("offers a reset action from the empty state", () => {
+    const onSearchChange = vi.fn();
+    renderExplorer({ sessions: [], total: 0, search: "nothing", onSearchChange });
+    fireEvent.click(screen.getByRole("button", { name: /Clear search and filters/i }));
+    expect(onSearchChange).toHaveBeenCalledWith("");
+  });
+
+  it("shows no reset action when the list is empty for lack of data", () => {
+    renderExplorer({ sessions: [], total: 0, search: "" });
+    expect(screen.getByText("No sessions recorded yet.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Clear search/i })).not.toBeInTheDocument();
+  });
 });
 
 describe("WorkflowRuns", () => {

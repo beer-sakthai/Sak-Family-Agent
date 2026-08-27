@@ -88,13 +88,24 @@ export function SessionExplorer({
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
         <input
-          type="search"
+          type="text"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search sessions by task, model, id, or persona…"
           aria-label="Search sessions"
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-sm text-slate-200 placeholder:text-slate-600 font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus:border-cyan-700/50 transition-colors"
+          className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-sm text-slate-200 placeholder:text-slate-600 font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus:border-cyan-700/50 transition-colors"
         />
+        {search && (
+          <button
+            type="button"
+            aria-label="Clear search query"
+            title="Clear search query"
+            onClick={() => onSearchChange("")}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-slate-400 hover:text-slate-100 hover:bg-slate-800/80 active:bg-slate-700/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
 
       <div className="glass-panel rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl overflow-hidden shadow-xl">
@@ -114,8 +125,24 @@ export function SessionExplorer({
             <tbody className="divide-y divide-slate-800/60 text-slate-300">
               {sessions.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-8 text-center text-slate-500 italic">
-                    {search ? `No sessions match “${search}”.` : "No sessions recorded yet."}
+                  <td colSpan={7} className="px-5 py-8 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2 font-sans">
+                      <p className="text-slate-500 text-xs">
+                        {search
+                          ? `No sessions match \u201C${search}\u201D.`
+                          : "No sessions recorded yet."}
+                      </p>
+                      {search && (
+                        <button
+                          type="button"
+                          aria-label="Clear search and filters"
+                          onClick={() => onSearchChange("")}
+                          className="px-3 py-1 rounded-lg bg-slate-800 text-cyan-400 hover:text-cyan-300 hover:bg-slate-700 font-mono text-xs border border-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                        >
+                          Reset search
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
