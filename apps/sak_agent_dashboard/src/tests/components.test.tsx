@@ -258,6 +258,20 @@ describe("SessionExplorer", () => {
     expect(onSearchChange).toHaveBeenCalledWith("");
   });
 
+  // Ported from PR #1180, rewritten against the server-driven props: the
+  // original asserted on a `currentPage` state this component no longer owns.
+  it("says which end of the list a disabled pagination button is at", () => {
+    renderExplorer({ total: 25, page: 1 });
+    expect(screen.getByLabelText("Previous page")).toHaveAttribute("title", "First page reached");
+    expect(screen.getByLabelText("Next page")).toHaveAttribute("title", "Next page");
+  });
+
+  it("names the action on a pagination button that is still usable", () => {
+    renderExplorer({ total: 25, page: 3 });
+    expect(screen.getByLabelText("Previous page")).toHaveAttribute("title", "Previous page");
+    expect(screen.getByLabelText("Next page")).toHaveAttribute("title", "Last page reached");
+  });
+
   it("shows no reset action when the list is empty for lack of data", () => {
     renderExplorer({ sessions: [], total: 0, search: "" });
     expect(screen.getByText("No sessions recorded yet.")).toBeInTheDocument();
