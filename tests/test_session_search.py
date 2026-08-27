@@ -116,6 +116,16 @@ def test_corrupt_session_file_is_skipped(tmp_path: Path) -> None:
     assert [m.session_id for m in results] == ["s1"]
 
 
+def test_invalid_utf8_session_file_is_skipped(tmp_path: Path) -> None:
+    # An interrupted session write can truncate mid-multibyte-sequence.
+    (tmp_path / "bad.json").write_bytes(b'{"task": "quantum\xff\xfe')
+    _write_session(tmp_path, "s1", timestamp=100, task="quantum physics")
+
+    results = search_sessions("quantum", sessions_dir=tmp_path)
+
+    assert [m.session_id for m in results] == ["s1"]
+
+
 def test_results_ordered_by_timestamp_descending(tmp_path: Path) -> None:
     _write_session(tmp_path, "oldest", timestamp=100, task="quantum")
     _write_session(tmp_path, "newest", timestamp=300, task="quantum")

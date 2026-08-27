@@ -12,6 +12,13 @@ from ..config import sessions_dir
 from ..memory.session_search import search_sessions
 
 
+def _fmt_dt(ts: float | None) -> str:
+    """Format a session timestamp for table output, or empty string."""
+    if not ts:
+        return ""
+    return datetime.fromtimestamp(ts, tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
+
+
 def parse_duration(val: str) -> float:
     """Parse duration string like '30d' or '12h' into seconds."""
     if not val:
@@ -67,10 +74,7 @@ def sessions_list(limit: int) -> None:
         except (json.JSONDecodeError, OSError):
             continue
 
-        ts = data.get("timestamp")
-        dt_str = ""
-        if ts:
-            dt_str = datetime.fromtimestamp(ts, tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
+        dt_str = _fmt_dt(data.get("timestamp"))
 
         session_id = f.stem
         task = data.get("task", "")
@@ -103,10 +107,7 @@ def sessions_show(session_id: str) -> None:
     except Exception as exc:
         raise click.ClickException(f"Failed to read session file: {exc}") from exc
 
-    ts = data.get("timestamp")
-    dt_str = ""
-    if ts:
-        dt_str = datetime.fromtimestamp(ts, tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
+    dt_str = _fmt_dt(data.get("timestamp"))
 
     click.secho("=== Session Summary ===", bold=True, fg="cyan")
     click.echo(f"ID:         {session_id}")
@@ -176,10 +177,7 @@ def sessions_search(query: str, limit: int) -> None:
     click.secho(f"{'Session ID':<45} {'Date/Time':<19} {'Snippet':<70}", bold=True)
     click.echo("-" * 140)
     for m in matches:
-        dt_str = ""
-        if m.timestamp:
-            dt_str = datetime.fromtimestamp(m.timestamp, tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
-        click.echo(f"{m.session_id:<45} {dt_str:<19} {m.matched_snippet:<70}")
+        click.echo(f"{m.session_id:<45} {_fmt_dt(m.timestamp):<19} {m.matched_snippet:<70}")
 
 
 @sessions.command("clean")

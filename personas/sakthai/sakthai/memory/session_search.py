@@ -72,7 +72,7 @@ def search_sessions(
     for path in directory.glob("*.json"):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError):
             continue
         if not isinstance(data, dict):
             continue
