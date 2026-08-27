@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Sparkles, Code2, Eye, Cpu, Layers, Terminal, Copy, Check } from "lucide-react";
+import { Code2, Eye, Terminal, Copy, Check } from "lucide-react";
 /**
  * A UI-only shape: this component is a static showcase and reads nothing from
  * the API, so the type lives here rather than in the generated contract, which
@@ -87,7 +87,6 @@ const STITCH_PRESETS: StitchScreenPreset[] = [
 export function StitchStudio() {
   const [activePreset, setActivePreset] = useState<StitchScreenPreset>(STITCH_PRESETS[0]);
   const [activeTab, setActiveTab] = useState<"preview" | "code" | "spec">("preview");
-  const [customPrompt, setCustomPrompt] = useState("");
   const [copied, setCopied] = useState(false);
 
   const jsonSpec = JSON.stringify(

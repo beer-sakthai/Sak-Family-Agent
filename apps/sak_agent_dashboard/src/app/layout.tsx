@@ -1,22 +1,42 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  display: "swap",
 });
 
 const outfit = Outfit({
   subsets: ["latin"],
   variable: "--font-outfit",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "Sak-Agent-Family Dashboard",
-  description: "Analytics & UI Dashboard for Sak-Agent-Family Personas",
+  description:
+    "Read-only analytics over the SakThai agent family: runs, latency, memory shards, workflows, and guardrail events.",
+  applicationName: "Sak-Agent-Family Dashboard",
+  robots: { index: false, follow: false },
 };
 
+export const viewport: Viewport = {
+  themeColor: "#070a12",
+  width: "device-width",
+  initialScale: 1,
+};
+
+/**
+ * The document shell only.
+ *
+ * The application chrome — sidebar, topbar, command palette — lives in
+ * `page.tsx`, because all of it is driven by the same client state as the
+ * panels it frames. This file previously rendered a *second* header with the
+ * same title and a hardcoded "Runtime Active" badge that was true regardless
+ * of whether anything was running; both are gone.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -24,31 +44,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${outfit.variable} dark`}>
-      <body className="bg-[#090d16] text-slate-100 antialiased min-h-screen">
-        <header className="sticky top-0 z-50 border-b border-slate-800/80 bg-[#090d16]/80 backdrop-blur-md px-6 py-4">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-cyan-500/20 font-display">
-                SAK
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-slate-100 font-display tracking-tight">
-                  Sak-Agent-Family Dashboard
-                </h1>
-                <p className="text-xs text-slate-400">
-                  Runtime Analytics & Memory Explorer
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                Runtime Active
-              </span>
-            </div>
-          </div>
-        </header>
-        <main className="max-w-7xl mx-auto p-6">{children}</main>
+      <body className="min-h-screen bg-[#070a12] text-slate-100 antialiased">
+        {/* Ambient wash. Fixed and inert, so it never scrolls, never catches a
+            click, and never shows up in the tab order. */}
+        <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+          <div className="absolute -left-40 -top-40 h-[32rem] w-[32rem] rounded-full bg-cyan-500/10 blur-[120px]" />
+          <div className="absolute -right-40 top-1/3 h-[28rem] w-[28rem] rounded-full bg-violet-500/10 blur-[120px]" />
+          <div className="absolute bottom-0 left-1/3 h-[24rem] w-[24rem] rounded-full bg-emerald-500/[0.06] blur-[120px]" />
+          <div className="absolute inset-0 bg-grid" />
+        </div>
+        {children}
       </body>
     </html>
   );

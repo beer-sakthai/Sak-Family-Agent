@@ -207,10 +207,16 @@ export function SessionExplorer({
             Page {page} of {totalPages}
           </span>
           <div className="flex items-center gap-2">
+            {/* A disabled icon button explains nothing about why it is
+                disabled; the title says which end of the list you are at.
+                Ported from PR #1180, which was written against the local-state
+                version of this component that the server-driven rewrite
+                replaced. */}
             <button
               onClick={() => onPageChange(Math.max(1, page - 1))}
               disabled={page <= 1}
               aria-label="Previous page"
+              title={page <= 1 ? "First page reached" : "Previous page"}
               className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 disabled:opacity-40 hover:border-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
@@ -219,6 +225,7 @@ export function SessionExplorer({
               onClick={() => onPageChange(Math.min(totalPages, page + 1))}
               disabled={page >= totalPages}
               aria-label="Next page"
+              title={page >= totalPages ? "Last page reached" : "Next page"}
               className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 disabled:opacity-40 hover:border-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
             >
               <ChevronRight className="h-3.5 w-3.5" />

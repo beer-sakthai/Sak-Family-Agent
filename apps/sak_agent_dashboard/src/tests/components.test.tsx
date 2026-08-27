@@ -92,15 +92,20 @@ describe("AgentOverview", () => {
 });
 
 describe("AnalyticsCharts", () => {
-  it("renders headline figures from the metrics payload", () => {
+  // The headline run/success/latency figures moved to the KPI strip, which is
+  // on screen above these charts; see `shell.test.tsx`. What is left here is
+  // how much of the family the per-persona charts actually speak for.
+  it("says how many personas the per-persona charts are drawn from", () => {
+    const attributed = personas.personas.filter((p) => p.runs > 0).length;
     render(<AnalyticsCharts metrics={demoMetrics()} personas={personas} />);
-    expect(screen.getByText(/Total runs:/)).toBeInTheDocument();
+    expect(
+      screen.getByText(`${attributed} of ${personas.personas.length} personas have attributed runs`),
+    ).toBeInTheDocument();
   });
 
-  it("shows an em dash rather than a fake success rate with no runs", () => {
-    const empty = { ...demoMetrics(), total_runs: 0 };
-    render(<AnalyticsCharts metrics={empty} personas={personas} />);
-    expect(screen.getByText("—")).toBeInTheDocument();
+  it("counts nothing rather than guessing without a personas payload", () => {
+    render(<AnalyticsCharts metrics={demoMetrics()} />);
+    expect(screen.getByText("0 of 0 personas have attributed runs")).toBeInTheDocument();
   });
 
   it("renders without a personas payload", () => {
@@ -251,6 +256,20 @@ describe("SessionExplorer", () => {
     renderExplorer({ sessions: [], total: 0, search: "nothing", onSearchChange });
     fireEvent.click(screen.getByRole("button", { name: /Clear search and filters/i }));
     expect(onSearchChange).toHaveBeenCalledWith("");
+  });
+
+  // Ported from PR #1180, rewritten against the server-driven props: the
+  // original asserted on a `currentPage` state this component no longer owns.
+  it("says which end of the list a disabled pagination button is at", () => {
+    renderExplorer({ total: 25, page: 1 });
+    expect(screen.getByLabelText("Previous page")).toHaveAttribute("title", "First page reached");
+    expect(screen.getByLabelText("Next page")).toHaveAttribute("title", "Next page");
+  });
+
+  it("names the action on a pagination button that is still usable", () => {
+    renderExplorer({ total: 25, page: 3 });
+    expect(screen.getByLabelText("Previous page")).toHaveAttribute("title", "Previous page");
+    expect(screen.getByLabelText("Next page")).toHaveAttribute("title", "Last page reached");
   });
 
   it("shows no reset action when the list is empty for lack of data", () => {
