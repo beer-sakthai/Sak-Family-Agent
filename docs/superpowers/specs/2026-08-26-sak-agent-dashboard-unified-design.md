@@ -345,14 +345,28 @@ bundled into a route handler.
 
 ## 9. Deployment, stated plainly
 
-There is no hosted API and no `vercel.json`. On a hosted deploy the app has no
-`~/.sakthai/`, so it runs in `ApiSource` mode against a reachable API, or in
-`DemoSource` mode. Local end-to-end is `make dashboard-dev`: `sakthai web serve`
-on :3001 and `next dev` on :3000 with `SAKTHAI_API_URL` and `SAKTHAI_API_TOKEN`
-from `sakthai web setup`.
+**The dashboard is deployed.** A Vercel project (`houseofsak/sak-family-agent`)
+builds it on every push, with its root directory set to
+`apps/sak_agent_dashboard` in Vercel's own settings — there is no `vercel.json`
+in the repository, which is why this is easy to miss. Preview deployments are
+behind Vercel's deployment protection.
 
-This design does not create a production deployment and does not imply one
-exists.
+**There is no hosted SakThai API.** That is the part that does not exist, and it
+is what decides how the deployed app behaves: with no `~/.sakthai/` on a Vercel
+lambda and no `SAKTHAI_API_URL` configured, `resolveSource()` finds no runtime
+directory and serves `DemoSource` — labelled as sample data in the header, which
+is the whole point of carrying `source` on every envelope.
+
+To make the deployment show real data, someone must stand up a reachable
+`sakthai web serve` and set `SAKTHAI_API_URL` / `SAKTHAI_API_TOKEN` in the
+Vercel project. That is deliberately out of scope here: this design does not
+provision a server, and the loopback guard plus
+`SAKTHAI_WEB_ALLOW_PUBLIC` exist precisely because exposing personal memory to
+the internet is a decision for a human, not a default.
+
+Local end-to-end is `make dashboard-dev`: `sakthai web serve` on :3001 and
+`next dev` on :3000 with `SAKTHAI_API_URL` and `SAKTHAI_API_TOKEN` from
+`sakthai web setup`.
 
 ---
 

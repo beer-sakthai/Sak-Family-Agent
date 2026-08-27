@@ -90,9 +90,17 @@ no server at all.
 
 ## Deployment
 
-There is no hosted API and no `vercel.json`. On a hosted deploy there is no
-`~/.sakthai`, so the app runs in `ApiSource` mode against a reachable SakThai
-server, or in demo mode. Nothing here provisions that server.
+This app **is** deployed: a Vercel project (`houseofsak/sak-family-agent`) builds
+it on every push, with its root directory set to `apps/sak_agent_dashboard` in
+Vercel's settings rather than a `vercel.json` in the repo.
+
+What does **not** exist is a hosted SakThai API. With no `~/.sakthai` on a Vercel
+lambda and no `SAKTHAI_API_URL` configured, `resolveSource()` serves demo data —
+labelled as sample data in the header. To show real data, stand up a reachable
+`sakthai web serve` and set `SAKTHAI_API_URL` and `SAKTHAI_API_TOKEN` in the
+Vercel project. Note that the API refuses non-loopback binds unless
+`SAKTHAI_WEB_ALLOW_PUBLIC` is set: it serves personal memory, so exposing it is
+a deliberate decision.
 
 ## Status
 
