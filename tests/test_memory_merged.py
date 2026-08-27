@@ -70,9 +70,7 @@ def test_include_unscoped_false_leaves_the_legacy_store_out(
     _seed(shard_paths["shared"], [("unattributed note", "note", None)], [])
     _seed(shard_paths["sakthai"], [("attributed note", "note", "k")], [])
 
-    with FamilyMemoryView(
-        ["sakthai"], shard_paths=shard_paths, include_unscoped=False
-    ) as view:
+    with FamilyMemoryView(["sakthai"], shard_paths=shard_paths, include_unscoped=False) as view:
         assert {f.persona for f in view.list_facts()} == {"sakthai"}
 
 
@@ -83,9 +81,7 @@ def test_include_unscoped_false_also_excludes_its_observations(
     _seed(shard_paths["shared"], [], [("legacy observation", 3.0)])
     _seed(shard_paths["sakthai"], [], [("scoped observation", 1.0)])
 
-    with FamilyMemoryView(
-        ["sakthai"], shard_paths=shard_paths, include_unscoped=False
-    ) as view:
+    with FamilyMemoryView(["sakthai"], shard_paths=shard_paths, include_unscoped=False) as view:
         assert [o.persona for o in view.top_observations()] == ["sakthai"]
 
 

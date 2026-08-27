@@ -644,9 +644,7 @@ def memory_payload(
     # A persona-filtered view is that persona's own memory; the unscoped
     # legacy store is attributed to nobody, so it is excluded alongside the
     # other personas' shards.
-    view = FamilyMemoryView(
-        personas, shard_paths=shard_paths, include_unscoped=personas is None
-    )
+    view = FamilyMemoryView(personas, shard_paths=shard_paths, include_unscoped=personas is None)
     try:
         if query and query.strip():
             sharded_facts, sharded_obs = view.search(query.strip(), limit=limit)
