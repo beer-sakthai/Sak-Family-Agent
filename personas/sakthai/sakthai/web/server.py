@@ -18,7 +18,7 @@ import secrets
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +64,19 @@ def _get_or_create_bearer_token() -> str:
 
 _DEFAULT_PORT = 3001
 _LOOPBACK_NAMES = frozenset({"localhost"})
+
+#: The endpoints backing apps/sak_agent_dashboard. Kept separate from the
+#: legacy /api/stages and /api/ecosystem, which stay as they were.
+_DASHBOARD_ROUTES = frozenset(
+    {
+        "/api/personas",
+        "/api/metrics",
+        "/api/sessions",
+        "/api/memory",
+        "/api/audit",
+        "/api/workflows",
+    }
+)
 
 
 def _is_loopback_host(host: str) -> bool:
@@ -117,6 +130,45 @@ def _dashboard_data(days: int = 30) -> dict[str, Any]:
         "top_observations": [],
         "categories": [],
     }
+
+
+def _load_api() -> Any:
+    """Import the payload builders, working both as a package and standalone.
+
+    ``server.py`` is also runnable directly (``python .../web/server.py``),
+    where there is no parent package for a relative import to resolve against —
+    the same reason ``_dashboard_data`` below does its own sys.path insertion.
+    """
+    try:
+        from . import api
+
+        return api
+    except ImportError:  # pragma: no cover — only hit when run as a script
+        import sys
+
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+        from sakthai.web import api as api_mod
+
+        return api_mod
+
+
+def _cors_origin() -> str | None:
+    """The single allowed cross-origin, or None (the default) for no CORS."""
+    origin = os.environ.get("SAKTHAI_WEB_CORS_ORIGIN", "").strip()
+    return origin or None
+
+
+def _query_params(query: str) -> dict[str, str]:
+    """Parse a query string, keeping the first value for each key."""
+    return {key: values[0] for key, values in parse_qs(query, keep_blank_values=True).items()}
+
+
+def _int_param(params: dict[str, str], name: str, default: int) -> int:
+    """Read an int query param, falling back rather than 500-ing on garbage."""
+    try:
+        return int(params[name])
+    except (KeyError, ValueError):
+        return default
 
 
 def _ecosystem_status() -> dict[str, Any]:
@@ -209,10 +261,31 @@ class _Handler(SimpleHTTPRequestHandler):
 
         return False
 
+    def _send_cors_headers(self) -> None:
+        """Echo the one configured origin, and only when the request matches it.
+
+        Off unless ``SAKTHAI_WEB_CORS_ORIGIN`` is set; it exists so ``next dev``
+        on :3000 can call this server on :3001 in local development.
+
+        Never ``*``, and ``Allow-Credentials`` is deliberately never sent: the
+        bearer token travels in the ``Authorization`` header, so credentialed
+        CORS buys nothing and would expose the cookie auth path cross-origin.
+        """
+        allowed = _cors_origin()
+        if not allowed:
+            return
+        if self.headers.get("Origin") != allowed:
+            return
+        self.send_header("Access-Control-Allow-Origin", allowed)
+        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+        self.send_header("Vary", "Origin")
+
     def end_headers(self) -> None:
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+        self._send_cors_headers()
         self.send_header(
             "Content-Security-Policy",
             "default-src 'self'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';",
@@ -245,6 +318,69 @@ class _Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _dispatch_dashboard_api(self, path: str, query: str) -> bool:
+        """Serve the dashboard endpoints. Returns True if the path was handled.
+
+        Payloads come from :mod:`sakthai.web.api`, which reuses the package's
+        existing parsers; this method only maps a URL onto a call. A payload
+        builder that raises returns 500 with a generic message rather than
+        leaking a traceback or a filesystem path to the client.
+        """
+        if path not in _DASHBOARD_ROUTES:
+            return False
+
+        _api = _load_api()
+        params = _query_params(query)
+        try:
+            if path == "/api/personas":
+                payload: Any = _api.personas_payload()
+            elif path == "/api/metrics":
+                payload = _api.metrics_payload(limit=_int_param(params, "limit", _api.EVAL_WINDOW))
+            elif path == "/api/sessions":
+                payload = _api.sessions_payload(
+                    search=params.get("search") or params.get("query"),
+                    limit=_int_param(params, "limit", 20),
+                    offset=_int_param(params, "offset", 0),
+                    session_id=params.get("id"),
+                )
+            elif path == "/api/memory":
+                payload = _api.memory_payload(
+                    query=params.get("query"),
+                    limit=_int_param(params, "limit", 100),
+                )
+            elif path == "/api/workflows":
+                run_id = params.get("id")
+                payload = (
+                    _api.workflow_detail(run_id)
+                    if run_id
+                    else _api.workflows_payload(limit=_int_param(params, "limit", 100))
+                )
+            else:  # /api/audit
+                payload = _api.audit_payload(
+                    severity=params.get("severity"),
+                    limit=_int_param(params, "limit", 200),
+                )
+        except Exception:
+            logger.warning("Dashboard API call failed for %s", path, exc_info=True)
+            self._send_json(500, {"error": "InternalError", "message": "Failed to build payload"})
+            return True
+
+        self._send_json(200, dict(_api.envelope(payload)))
+        return True
+
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        """Answer CORS preflight. No body, and no auth — a preflight carries none.
+
+        Returns 204 only when CORS is configured; otherwise 405, so a
+        default-configured server does not advertise cross-origin support.
+        """
+        if _cors_origin() is None:
+            self.send_error(405, "Method Not Allowed")
+            return
+        self.send_response(204)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
@@ -297,6 +433,9 @@ class _Handler(SimpleHTTPRequestHandler):
 
         if path == "/api/ecosystem":
             self._send_json(200, _ecosystem_status())
+            return
+
+        if self._dispatch_dashboard_api(path, parsed.query):
             return
 
         if path.startswith("/api/"):

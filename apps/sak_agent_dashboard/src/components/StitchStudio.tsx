@@ -2,7 +2,21 @@
 
 import React, { useState } from "react";
 import { Sparkles, Code2, Eye, Cpu, Layers, Terminal, Copy, Check } from "lucide-react";
-import { StitchScreenPreset } from "@/lib/types";
+/**
+ * A UI-only shape: this component is a static showcase and reads nothing from
+ * the API, so the type lives here rather than in the generated contract, which
+ * describes API payloads only. It previously came from `@/lib/types`, which was
+ * removed when the data layer moved to `contracts.generated.ts`.
+ */
+interface StitchScreenPreset {
+  id: string;
+  title: string;
+  category: string;
+  prompt: string;
+  codeSnippet: string;
+  displayMode: "HTML" | "MARKDOWN" | "CODE" | "MERMAID";
+  theme: "dark-glassmorphism" | "midnight-emerald" | "cyber-cyan";
+}
 
 const STITCH_PRESETS: StitchScreenPreset[] = [
   {
