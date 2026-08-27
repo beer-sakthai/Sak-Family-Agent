@@ -1,13 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
-import { CheckCircle2, CircleDashed, GitBranch, Loader2, X, XCircle } from "lucide-react";
+import React from "react";
+import { CheckCircle2, CircleDashed, GitBranch, Loader2, XCircle } from "lucide-react";
 
 import type { WorkflowRunDetail, WorkflowRunSummary } from "@/lib/contracts.generated";
+import Drawer from "./Drawer";
 
 interface WorkflowRunsProps {
   runs: WorkflowRunSummary[];
   onRunSelect: (runId: string | null) => void;
+  /** The open run's id, owned by the page because it lives in the URL. */
+  openRunId: string | null;
   detail: WorkflowRunDetail | null;
   isLoadingDetail?: boolean;
 }
@@ -62,19 +65,12 @@ function started(iso: string | null): string {
 export function WorkflowRuns({
   runs,
   onRunSelect,
+  openRunId,
   detail,
   isLoadingDetail = false,
 }: WorkflowRunsProps) {
-  const [openRunId, setOpenRunId] = useState<string | null>(null);
-
-  const open = (runId: string) => {
-    setOpenRunId(runId);
-    onRunSelect(runId);
-  };
-  const close = () => {
-    setOpenRunId(null);
-    onRunSelect(null);
-  };
+  const open = (runId: string) => onRunSelect(runId);
+  const close = () => onRunSelect(null);
 
   return (
     <div className="space-y-4">
@@ -153,32 +149,14 @@ export function WorkflowRuns({
       </div>
 
       {openRunId && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-sunken/80 backdrop-blur-sm p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Workflow run steps"
-          onClick={close}
+        <Drawer
+          title={detail?.summary.workflow_name ?? openRunId}
+          subtitle={openRunId}
+          icon={<GitBranch className="h-4 w-4 text-hue-violet" />}
+          onClose={close}
+          data-testid="workflow-drawer"
         >
-          <div
-            className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl bg-panel border border-line shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 flex items-center justify-between px-6 py-4 bg-panel border-b border-line">
-              <h4 className="font-display font-bold text-fg flex items-center gap-2">
-                <GitBranch className="h-4 w-4 text-hue-violet" />
-                {detail?.summary.workflow_name ?? openRunId}
-              </h4>
-              <button
-                onClick={close}
-                aria-label="Close run detail"
-                className="p-1.5 rounded-lg hover:bg-raised text-fg-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-hue-violet"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-3 font-mono text-xs">
+          <div className="space-y-3 font-mono text-xs">
               {isLoadingDetail ? (
                 <p className="text-fg-4 italic">Loading steps…</p>
               ) : !detail ? (
@@ -206,10 +184,9 @@ export function WorkflowRuns({
                     )}
                   </div>
                 ))
-              )}
-            </div>
+            )}
           </div>
-        </div>
+        </Drawer>
       )}
     </div>
   );

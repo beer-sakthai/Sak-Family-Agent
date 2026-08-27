@@ -619,7 +619,13 @@ export default function Home() {
           {awaitingFirstLoad ? (
             <KpiSkeleton />
           ) : (
-            <KpiStrip metrics={metrics} memory={memory} sessions={sessions} audit={audit} />
+            <KpiStrip
+              metrics={metrics}
+              memory={memory}
+              sessions={sessions}
+              audit={audit}
+              onNavigate={goToTab}
+            />
           )}
 
           <section key={activeTab} className="animate-panel-in">
@@ -636,7 +642,11 @@ export default function Home() {
 
             {activeTab === "analytics" &&
               (metrics ? (
-                <AnalyticsCharts metrics={metrics} personas={personasPayload ?? undefined} />
+                <AnalyticsCharts
+                  metrics={metrics}
+                  personas={personasPayload ?? undefined}
+                  selectedPersonas={personas}
+                />
               ) : (
                 <PanelSkeleton label="Loading analytics" />
               ))}
@@ -652,6 +662,7 @@ export default function Home() {
                   pageSize={PAGE_SIZE}
                   onPageChange={(next) => patchView({ page: next })}
                   onSessionSelect={(id) => patchView({ session: id })}
+                  openSessionId={sessionId}
                   detail={activeSessionDetail}
                   isLoadingDetail={sessionId !== null && activeSessionDetail === null}
                 />
@@ -671,6 +682,7 @@ export default function Home() {
                 <WorkflowRuns
                   runs={workflows.runs}
                   onRunSelect={(id) => patchView({ run: id })}
+                  openRunId={runId}
                   detail={activeRunDetail}
                   isLoadingDetail={runId !== null && activeRunDetail === null}
                 />

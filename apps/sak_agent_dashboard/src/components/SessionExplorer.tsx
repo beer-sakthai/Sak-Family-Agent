@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { UNATTRIBUTED, type SessionDetail, type SessionSummary } from "@/lib/contracts.generated";
+import Drawer from "./Drawer";
 
 interface SessionExplorerProps {
   sessions: SessionSummary[];
@@ -26,6 +27,12 @@ interface SessionExplorerProps {
   pageSize: number;
   onPageChange: (page: number) => void;
   onSessionSelect: (sessionId: string | null) => void;
+  /**
+   * The open transcript's id, owned by the page because it lives in the URL.
+   * Local state here would mean `#sessions?session=abc` rendered the list with
+   * nothing open, which is the whole point of putting it in the URL.
+   */
+  openSessionId: string | null;
   detail: SessionDetail | null;
   isLoadingDetail?: boolean;
 }
@@ -49,22 +56,14 @@ export function SessionExplorer({
   pageSize,
   onPageChange,
   onSessionSelect,
+  openSessionId,
   detail,
   isLoadingDetail = false,
 }: SessionExplorerProps) {
-  const [openSessionId, setOpenSessionId] = useState<string | null>(null);
-
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  const openDetail = (session: SessionSummary) => {
-    setOpenSessionId(session.id);
-    onSessionSelect(session.id);
-  };
-
-  const closeDetail = () => {
-    setOpenSessionId(null);
-    onSessionSelect(null);
-  };
+  const openDetail = (session: SessionSummary) => onSessionSelect(session.id);
+  const closeDetail = () => onSessionSelect(null);
 
   const openSummary = sessions.find((s) => s.id === openSessionId) ?? detail?.summary ?? null;
 
@@ -235,32 +234,14 @@ export function SessionExplorer({
       )}
 
       {openSessionId && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-sunken/80 backdrop-blur-sm p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Session transcript"
-          onClick={closeDetail}
+        <Drawer
+          title="Session transcript"
+          subtitle={openSessionId}
+          icon={<Terminal className="h-4 w-4 text-hue-cyan" />}
+          onClose={closeDetail}
+          data-testid="session-drawer"
         >
-          <div
-            className="w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-2xl bg-panel border border-line shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 flex items-center justify-between px-6 py-4 bg-panel border-b border-line">
-              <h4 className="font-display font-bold text-fg flex items-center gap-2">
-                <Terminal className="h-4 w-4 text-hue-cyan" />
-                Session transcript
-              </h4>
-              <button
-                onClick={closeDetail}
-                aria-label="Close transcript"
-                className="p-1.5 rounded-lg hover:bg-raised text-fg-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-5 font-mono text-xs">
+          <div className="space-y-5 font-mono text-xs">
               {openSummary && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
@@ -361,9 +342,8 @@ export function SessionExplorer({
                   </p>
                 </div>
               )}
-            </div>
           </div>
-        </div>
+        </Drawer>
       )}
     </div>
   );

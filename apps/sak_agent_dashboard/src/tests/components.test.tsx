@@ -179,6 +179,7 @@ describe("SessionExplorer", () => {
         pageSize={10}
         onPageChange={vi.fn()}
         onSessionSelect={vi.fn()}
+        openSessionId={null}
         detail={null}
         {...overrides}
       />,
@@ -209,12 +210,32 @@ describe("SessionExplorer", () => {
     expect(onSessionSelect).toHaveBeenCalledWith(sessions.sessions[0].id);
   });
 
-  it("opens and closes the transcript modal", () => {
-    renderExplorer();
-    fireEvent.click(screen.getAllByText("View")[0]);
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-    fireEvent.click(screen.getByLabelText("Close transcript"));
+  // The open transcript now lives in the URL, so the page owns it: the panel
+  // renders the drawer when told to and reports a close upward rather than
+  // opening and closing itself.
+  it("renders no drawer when nothing is open", () => {
+    renderExplorer({ openSessionId: null });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("renders the drawer for the open session id", () => {
+    renderExplorer({ openSessionId: sessions.sessions[0].id });
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByTestId("session-drawer")).toBeInTheDocument();
+  });
+
+  it("reports a close upward instead of closing itself", () => {
+    const onSessionSelect = vi.fn();
+    renderExplorer({ openSessionId: sessions.sessions[0].id, onSessionSelect });
+    fireEvent.click(screen.getByLabelText("Close"));
+    expect(onSessionSelect).toHaveBeenCalledWith(null);
+  });
+
+  it("closes the drawer on Escape", () => {
+    const onSessionSelect = vi.fn();
+    renderExplorer({ openSessionId: sessions.sessions[0].id, onSessionSelect });
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onSessionSelect).toHaveBeenCalledWith(null);
   });
 
   it("renders an empty state naming the search term", () => {
@@ -238,6 +259,7 @@ describe("SessionExplorer", () => {
         pageSize={10}
         onPageChange={vi.fn()}
         onSessionSelect={vi.fn()}
+        openSessionId={null}
         detail={null}
       />,
     );
@@ -283,25 +305,25 @@ describe("WorkflowRuns", () => {
   const workflows = demoWorkflows();
 
   it("lists runs with their status", () => {
-    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} detail={null} />);
+    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
     expect(screen.getByText("nightly-consolidation")).toBeInTheDocument();
     expect(screen.getAllByText("completed").length).toBeGreaterThan(0);
   });
 
   it("marks failed steps", () => {
-    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} detail={null} />);
+    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
     expect(screen.getByText("(1 failed)")).toBeInTheDocument();
   });
 
   it("requests detail when a run is opened", () => {
     const onRunSelect = vi.fn();
-    render(<WorkflowRuns runs={workflows.runs} onRunSelect={onRunSelect} detail={null} />);
+    render(<WorkflowRuns runs={workflows.runs} onRunSelect={onRunSelect} openRunId={null} detail={null} />);
     // By role, not by text: the table's own column header is also "Steps".
     fireEvent.click(screen.getAllByRole("button", { name: "Steps" })[0]);
     expect(onRunSelect).toHaveBeenCalledWith(workflows.runs[0].run_id);
   });
 
-  it("shows step detail in the modal", () => {
+  it("shows step detail in the drawer", () => {
     const detail = {
       summary: workflows.runs[0],
       steps: [
@@ -316,15 +338,21 @@ describe("WorkflowRuns", () => {
         },
       ],
     };
-    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} detail={detail} />);
-    fireEvent.click(screen.getAllByRole("button", { name: "Steps" })[0]);
+    render(
+      <WorkflowRuns
+        runs={workflows.runs}
+        onRunSelect={vi.fn()}
+        openRunId={workflows.runs[0].run_id}
+        detail={detail}
+      />,
+    );
     expect(screen.getByText("fetch")).toBeInTheDocument();
     expect(screen.getByText("boom")).toBeInTheDocument();
     expect(screen.getByText("3 attempts")).toBeInTheDocument();
   });
 
   it("renders an empty state", () => {
-    render(<WorkflowRuns runs={[]} onRunSelect={vi.fn()} detail={null} />);
+    render(<WorkflowRuns runs={[]} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
     expect(screen.getByText("No workflow runs recorded yet.")).toBeInTheDocument();
   });
 });
