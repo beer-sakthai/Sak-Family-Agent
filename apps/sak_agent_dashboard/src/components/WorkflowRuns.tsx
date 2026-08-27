@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { CheckCircle2, CircleDashed, GitBranch, Loader2, X, XCircle } from "lucide-react";
 
 import type { WorkflowRunDetail, WorkflowRunSummary } from "@/lib/contracts.generated";
@@ -71,10 +71,21 @@ export function WorkflowRuns({
     setOpenRunId(runId);
     onRunSelect(runId);
   };
-  const close = () => {
+  const close = useCallback(() => {
     setOpenRunId(null);
     onRunSelect(null);
-  };
+  }, [onRunSelect]);
+
+  useEffect(() => {
+    if (!openRunId) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        close();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [openRunId, close]);
 
   return (
     <div className="space-y-4">

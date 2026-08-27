@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -61,12 +61,23 @@ export function SessionExplorer({
     onSessionSelect(session.id);
   };
 
-  const closeDetail = () => {
+  const closeDetail = useCallback(() => {
     setOpenSessionId(null);
     onSessionSelect(null);
-  };
+  }, [onSessionSelect]);
 
   const openSummary = sessions.find((s) => s.id === openSessionId) ?? detail?.summary ?? null;
+
+  useEffect(() => {
+    if (!openSessionId) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeDetail();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [openSessionId, closeDetail]);
 
   return (
     <div className="space-y-4">

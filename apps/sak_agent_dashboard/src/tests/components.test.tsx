@@ -217,6 +217,14 @@ describe("SessionExplorer", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("closes the transcript modal when pressing Escape", () => {
+    renderExplorer();
+    fireEvent.click(screen.getAllByText("View")[0]);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("renders an empty state naming the search term", () => {
     renderExplorer({ sessions: [], total: 0, search: "nothing" });
     expect(screen.getByText(/No sessions match/)).toBeInTheDocument();
@@ -321,6 +329,14 @@ describe("WorkflowRuns", () => {
     expect(screen.getByText("fetch")).toBeInTheDocument();
     expect(screen.getByText("boom")).toBeInTheDocument();
     expect(screen.getByText("3 attempts")).toBeInTheDocument();
+  });
+
+  it("closes the steps modal when pressing Escape", () => {
+    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} detail={null} />);
+    fireEvent.click(screen.getAllByRole("button", { name: "Steps" })[0]);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("renders an empty state", () => {
