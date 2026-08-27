@@ -26,21 +26,21 @@ export function HostedNotice({ activeSource, isDemo }: HostedNoticeProps) {
   return (
     <div
       data-testid="hosted-notice"
-      className="flex flex-wrap items-start gap-3 rounded-2xl border border-amber-800/40 bg-amber-950/20 p-4 text-amber-100"
+      className="flex flex-wrap items-start gap-3 rounded-2xl border border-hue-amber-line/40 bg-hue-amber-tint/20 p-4 text-hue-amber"
     >
-      <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden />
+      <Info className="mt-0.5 h-4 w-4 shrink-0 text-hue-amber" aria-hidden />
       <div className="min-w-0 flex-1 space-y-1">
         <p className="text-sm font-medium">
           This deployment is showing sample data, not a live agent family.
         </p>
-        <p className="text-xs leading-relaxed text-amber-200/80">
+        <p className="text-xs leading-relaxed text-hue-amber/80">
           No SakThai runtime directory is reachable from this host. Point the dashboard at a
           running agent by setting{" "}
-          <code className="rounded bg-amber-950/60 px-1 py-0.5 font-mono text-[11px]">
+          <code className="rounded bg-hue-amber-tint/60 px-1 py-0.5 font-mono text-[11px]">
             SAKTHAI_API_URL
           </code>{" "}
           (and{" "}
-          <code className="rounded bg-amber-950/60 px-1 py-0.5 font-mono text-[11px]">
+          <code className="rounded bg-hue-amber-tint/60 px-1 py-0.5 font-mono text-[11px]">
             SAKTHAI_API_TOKEN
           </code>
           , from <code className="font-mono text-[11px]">sakthai web setup</code>) in the
@@ -48,7 +48,7 @@ export function HostedNotice({ activeSource, isDemo }: HostedNoticeProps) {
           <code className="font-mono text-[11px]">~/.sakthai</code>.
         </p>
       </div>
-      <Cloud className="hidden h-4 w-4 shrink-0 text-amber-500/60 sm:block" aria-hidden />
+      <Cloud className="hidden h-4 w-4 shrink-0 text-hue-amber/60 sm:block" aria-hidden />
     </div>
   );
 }

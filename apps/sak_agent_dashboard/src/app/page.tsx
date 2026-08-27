@@ -15,7 +15,13 @@ import TopBar, { REFRESH_INTERVALS, type RefreshInterval } from "@/components/sh
 import { CardGridSkeleton, KpiSkeleton, PanelSkeleton } from "@/components/Skeletons";
 import StitchStudio from "@/components/StitchStudio";
 import WorkflowRuns from "@/components/WorkflowRuns";
-import { useHashRoute, usePersistedString } from "@/lib/browser-state";
+import {
+  useDensity,
+  useHashRoute,
+  usePersistedString,
+  usePrefersLight,
+  useTheme,
+} from "@/lib/browser-state";
 import type {
   ApiEnvelope,
   AuditPayload,
@@ -29,6 +35,7 @@ import type {
   WorkflowsPayload,
 } from "@/lib/contracts.generated";
 import { isTabId, type TabId } from "@/lib/nav";
+import { DENSITIES, THEMES } from "@/lib/theme";
 
 const PAGE_SIZE = 10;
 
@@ -76,6 +83,12 @@ export default function Home() {
 
   const [refreshPref, setRefreshPref] = usePersistedString(STORAGE_KEYS.refresh, "0");
   const refreshInterval = parseInterval(refreshPref);
+
+  // Appearance. Both are already applied to <html> by the bootstrap script
+  // in layout.tsx; these hooks own changing them.
+  const [theme, setTheme] = useTheme();
+  const [density, setDensity] = useDensity();
+  const prefersLight = usePrefersLight();
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -282,8 +295,32 @@ export default function Home() {
         group: "Auto-refresh",
         run: () => setRefreshPref(String(seconds)),
       })),
+      ...THEMES.filter((option) => option !== theme).map((option) => ({
+        id: `action-theme-${option}`,
+        label: option === "system" ? "Theme: match system" : `Theme: ${option}`,
+        hint: "Stored per browser",
+        group: "Appearance",
+        run: () => setTheme(option),
+      })),
+      ...DENSITIES.filter((option) => option !== density).map((option) => ({
+        id: `action-density-${option}`,
+        label: `Density: ${option}`,
+        hint: "Tightens or relaxes panel spacing",
+        group: "Appearance",
+        run: () => setDensity(option),
+      })),
     ],
-    [handleRefresh, isDemo, toggleDemo, refreshInterval, setRefreshPref],
+    [
+      handleRefresh,
+      isDemo,
+      toggleDemo,
+      refreshInterval,
+      setRefreshPref,
+      theme,
+      setTheme,
+      density,
+      setDensity,
+    ],
   );
 
   // Only surface a fetched detail when it belongs to the currently selected id.
@@ -332,19 +369,24 @@ export default function Home() {
           now={now}
           onOpenPalette={() => setPaletteOpen(true)}
           onOpenMobileNav={() => setMobileNavOpen(true)}
+          theme={theme}
+          onThemeChange={setTheme}
+          density={density}
+          onDensityChange={setDensity}
+          prefersLight={prefersLight}
         />
 
         <main className="mx-auto w-full max-w-[110rem] flex-1 space-y-6 px-4 py-6 sm:px-6 lg:px-8">
           {error && (
             <div
               role="alert"
-              className="flex items-start justify-between gap-3 rounded-2xl border border-rose-800/50 bg-rose-950/30 p-4 text-sm text-rose-200"
+              className="flex items-start justify-between gap-3 rounded-2xl border border-hue-rose-line/50 bg-hue-rose-tint/30 p-4 text-sm text-hue-rose"
             >
               <span>{error}</span>
               <button
                 onClick={() => setError(null)}
                 aria-label="Dismiss error"
-                className="shrink-0 rounded-lg border border-rose-800/60 px-2 py-0.5 font-mono text-[11px] text-rose-300 hover:bg-rose-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+                className="shrink-0 rounded-lg border border-hue-rose-line/60 px-2 py-0.5 font-mono text-[11px] text-hue-rose hover:bg-hue-rose-tint/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-hue-rose"
               >
                 Dismiss
               </button>
@@ -412,14 +454,14 @@ export default function Home() {
             {activeTab === "stitch" && <StitchStudio />}
           </section>
 
-          <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-900 pt-4 font-mono text-[11px] text-slate-600">
+          <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-line-soft pt-4 font-mono text-[11px] text-fg-5">
             <span>
               Read-only. Data from {activeSource ?? "…"}
               {isDemo && " · sample data requested"}
             </span>
             <span className="hidden sm:inline">
-              <kbd className="rounded border border-slate-800 px-1 py-0.5">⌘K</kbd> commands ·{" "}
-              <kbd className="rounded border border-slate-800 px-1 py-0.5">R</kbd> refresh
+              <kbd className="rounded border border-line px-1 py-0.5">⌘K</kbd> commands ·{" "}
+              <kbd className="rounded border border-line px-1 py-0.5">R</kbd> refresh
             </span>
           </footer>
         </main>

@@ -77,26 +77,26 @@ function TileCard({ tile }: { tile: Tile }) {
   return (
     // pb-9 reserves the strip the sparkline occupies, so the line sits under
     // the figure rather than striking through the hint beneath it.
-    <div className="group relative overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 pb-9 backdrop-blur-xl transition-colors hover:border-slate-700">
+    <div className="group relative overflow-hidden rounded-2xl border border-line/80 bg-panel/70 p-4 pb-9 backdrop-blur-xl transition-colors hover:border-line-strong">
       {tile.series && <Sparkline values={tile.series} className={tile.accent} />}
       <div className="relative flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-500">
+          <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-fg-4">
             <Icon className={`h-3 w-3 ${tile.accent}`} />
             {tile.label}
           </p>
-          <p className="mt-1.5 font-display text-2xl font-bold tracking-tight text-white">
+          <p className="mt-1.5 font-display text-2xl font-bold tracking-tight text-fg">
             {tile.value}
           </p>
-          <p className="mt-0.5 truncate font-mono text-[11px] text-slate-500">{tile.hint}</p>
+          <p className="mt-0.5 truncate font-mono text-[11px] text-fg-4">{tile.hint}</p>
         </div>
         {delta && Number.isFinite(delta.value) && delta.value !== 0 && (
           <span
             data-testid="kpi-delta"
             className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 font-mono text-[10px] ${
               deltaGood
-                ? "border-emerald-800/50 bg-emerald-950/40 text-emerald-300"
-                : "border-rose-800/50 bg-rose-950/40 text-rose-300"
+                ? "border-hue-emerald-line/50 bg-hue-emerald-tint/40 text-hue-emerald"
+                : "border-hue-rose-line/50 bg-hue-rose-tint/40 text-hue-rose"
             }`}
           >
             {delta.value >= 0 ? (
@@ -148,7 +148,7 @@ export function KpiStrip({ metrics, memory, sessions, audit }: KpiStripProps) {
       value: metrics ? totalRuns.toLocaleString() : "—",
       hint: metrics ? "from eval.jsonl" : "no metrics yet",
       icon: Activity,
-      accent: "text-cyan-400",
+      accent: "text-hue-cyan",
       delta: runsDelta,
       series: runsSeries,
     },
@@ -160,14 +160,14 @@ export function KpiStrip({ metrics, memory, sessions, audit }: KpiStripProps) {
           ? "no runs recorded"
           : `${errorCount} ${errorCount === 1 ? "error" : "errors"}`,
       icon: TrendingUp,
-      accent: "text-emerald-400",
+      accent: "text-hue-emerald",
     },
     {
       label: "Avg latency",
       value: metrics && totalRuns > 0 ? duration(metrics.avg_latency_ms) : "—",
       hint: totalRuns > 0 ? "mean across all runs" : "no runs recorded",
       icon: Clock,
-      accent: "text-amber-400",
+      accent: "text-hue-amber",
       series: latencySeries,
     },
     {
@@ -177,7 +177,7 @@ export function KpiStrip({ metrics, memory, sessions, audit }: KpiStripProps) {
         ? `${compactNumber(metrics.tokens.input_tokens)} in · ${compactNumber(metrics.tokens.output_tokens)} out`
         : "no metrics yet",
       icon: Brain,
-      accent: "text-violet-400",
+      accent: "text-hue-violet",
       series: tokenSeries,
     },
     {
@@ -187,14 +187,14 @@ export function KpiStrip({ metrics, memory, sessions, audit }: KpiStripProps) {
         ? `${compactNumber(memory.total_observations)} observations`
         : "no shards readable",
       icon: Database,
-      accent: "text-teal-400",
+      accent: "text-hue-teal",
     },
     {
       label: "Sessions",
       value: sessions ? sessions.total.toLocaleString() : "—",
       hint: criticalEvents > 0 ? `${criticalEvents} high/critical events` : "no high-severity events",
       icon: criticalEvents > 0 ? AlertTriangle : MessageSquare,
-      accent: criticalEvents > 0 ? "text-rose-400" : "text-sky-400",
+      accent: criticalEvents > 0 ? "text-hue-rose" : "text-hue-sky",
     },
   ];
 

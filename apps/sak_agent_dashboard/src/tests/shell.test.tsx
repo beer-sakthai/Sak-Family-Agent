@@ -149,6 +149,11 @@ describe("TopBar", () => {
       now: 1_700_000_000_000,
       onOpenPalette: vi.fn(),
       onOpenMobileNav: vi.fn(),
+      theme: "system" as const,
+      onThemeChange: vi.fn(),
+      density: "comfortable" as const,
+      onDensityChange: vi.fn(),
+      prefersLight: false,
       ...overrides,
     };
     return { props, ...render(<TopBar {...props} />) };

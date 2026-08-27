@@ -39,7 +39,7 @@ const TOOLTIP_STYLE = {
 /** Rendered in place of a chart that has nothing real to show. */
 function EmptyChart({ label }: { label: string }) {
   return (
-    <div className="h-64 w-full flex items-center justify-center text-xs font-mono text-slate-500 border border-dashed border-slate-800 rounded-xl">
+    <div className="h-64 w-full flex items-center justify-center text-xs font-mono text-fg-4 border border-dashed border-line rounded-xl">
       {label}
     </div>
   );
@@ -59,13 +59,13 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <div className="glass-panel p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl space-y-4">
+    <div className="glass-panel p-5 rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className={`p-2 rounded-lg border ${accent}`}>{icon}</div>
-          <h4 className="text-sm font-bold font-display text-slate-200">{title}</h4>
+          <h4 className="text-sm font-bold font-display text-fg">{title}</h4>
         </div>
-        <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+        <span className="text-[10px] font-mono text-fg-4 uppercase tracking-wider">
           {source}
         </span>
       </div>
@@ -131,7 +131,7 @@ export function AnalyticsCharts({ metrics, personas }: AnalyticsChartsProps) {
           above. What only this view can say is how many personas its per-persona
           charts are actually drawn from. */}
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <span className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 font-mono text-xs text-slate-400">
+        <span className="rounded-full border border-line bg-panel px-3 py-1 font-mono text-xs text-fg-3">
           {activePersonas.length} of {personas?.personas.length ?? 0} personas have attributed runs
         </span>
       </div>
@@ -140,7 +140,7 @@ export function AnalyticsCharts({ metrics, personas }: AnalyticsChartsProps) {
         <Panel
           title="Success Rate by Persona (%)"
           source="eval.jsonl"
-          accent="bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
+          accent="bg-hue-cyan/10 text-hue-cyan border-hue-cyan-line/20"
           icon={<BarChart3 className="h-4 w-4" />}
         >
           {!isMounted ? null : successData.length === 0 ? (
@@ -161,7 +161,7 @@ export function AnalyticsCharts({ metrics, personas }: AnalyticsChartsProps) {
         <Panel
           title="Token Usage by Persona"
           source="eval.jsonl"
-          accent="bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+          accent="bg-hue-emerald/10 text-hue-emerald border-hue-emerald-line/20"
           icon={<Zap className="h-4 w-4" />}
         >
           {!isMounted ? null : tokenData.length === 0 ? (
@@ -200,7 +200,7 @@ export function AnalyticsCharts({ metrics, personas }: AnalyticsChartsProps) {
         <Panel
           title="Runs & Latency Over Time"
           source="eval.jsonl"
-          accent="bg-violet-500/10 text-violet-400 border-violet-500/20"
+          accent="bg-hue-violet/10 text-hue-violet border-hue-violet-line/20"
           icon={<TrendingUp className="h-4 w-4" />}
         >
           {!isMounted ? null : trendData.length === 0 ? (
@@ -230,7 +230,7 @@ export function AnalyticsCharts({ metrics, personas }: AnalyticsChartsProps) {
         <Panel
           title="Stop Reason Breakdown"
           source="eval.jsonl"
-          accent="bg-amber-500/10 text-amber-400 border-amber-500/20"
+          accent="bg-hue-amber/10 text-hue-amber border-hue-amber-line/20"
           icon={<PieIcon className="h-4 w-4" />}
         >
           {!isMounted ? null : stopReasonData.length === 0 ? (

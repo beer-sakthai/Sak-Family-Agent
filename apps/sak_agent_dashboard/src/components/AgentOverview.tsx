@@ -23,13 +23,13 @@ export function AgentOverview({ personas }: AgentOverviewProps) {
               old round-robin heuristic did. */}
           {unattributed > 0 && (
             <div
-              className="text-xs font-mono text-amber-300 bg-amber-950/30 border border-amber-800/40 px-3 py-1 rounded-full"
+              className="text-xs font-mono text-hue-amber bg-hue-amber-tint/30 border border-hue-amber-line/40 px-3 py-1 rounded-full"
               title="Runs recorded before persona attribution existed. Not assigned to any persona."
             >
               {unattributed} unattributed
             </div>
           )}
-          <div className="text-xs font-mono text-cyan-400 bg-cyan-950/40 border border-cyan-800/40 px-3 py-1 rounded-full">
+          <div className="text-xs font-mono text-hue-cyan bg-hue-cyan-tint/40 border border-hue-cyan-line/40 px-3 py-1 rounded-full">
             {agents.length} Personas Registered
           </div>
         </div>

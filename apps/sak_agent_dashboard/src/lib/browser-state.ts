@@ -12,7 +12,18 @@
  * agree, and React re-renders once with the real value afterwards.
  */
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
+
+import {
+  applyDensity,
+  applyTheme,
+  DENSITY_STORAGE_KEY,
+  isDensity,
+  isTheme,
+  THEME_STORAGE_KEY,
+  type Density,
+  type Theme,
+} from "./theme";
 
 type Listener = () => void;
 
@@ -106,4 +117,57 @@ export function useHashRoute(fallback: string): [string, (next: string) => void]
   }, []);
 
   return [hash || fallback, setHash];
+}
+
+/**
+ * The theme preference, kept in sync with the `data-theme` attribute.
+ *
+ * The attribute is already correct on arrival — the inline bootstrap in
+ * `layout.tsx` sets it before first paint — so the effect here is not what
+ * makes the first render right. It exists to re-apply the attribute when the
+ * preference *changes*, including from another tab, which the `storage`
+ * listener in `subscribe` above surfaces.
+ */
+export function useTheme(): [Theme, (next: Theme) => void] {
+  const [raw, setRaw] = usePersistedString(THEME_STORAGE_KEY, "system");
+  const theme: Theme = isTheme(raw) ? raw : "system";
+
+  useEffect(() => {
+    applyTheme(theme, document.documentElement);
+  }, [theme]);
+
+  const setTheme = useCallback((next: Theme) => setRaw(next), [setRaw]);
+  return [theme, setTheme];
+}
+
+/** The density preference, same contract as `useTheme`. */
+export function useDensity(): [Density, (next: Density) => void] {
+  const [raw, setRaw] = usePersistedString(DENSITY_STORAGE_KEY, "comfortable");
+  const density: Density = isDensity(raw) ? raw : "comfortable";
+
+  useEffect(() => {
+    applyDensity(density, document.documentElement);
+  }, [density]);
+
+  const setDensity = useCallback((next: Density) => setRaw(next), [setRaw]);
+  return [density, setDensity];
+}
+
+/**
+ * Whether the OS currently asks for a light palette.
+ *
+ * Only needed to render the *resolved* appearance of the "system" setting —
+ * the CSS follows the media query on its own. Returns false during SSR, which
+ * matches the dark-first default the server renders.
+ */
+export function usePrefersLight(): boolean {
+  return useSyncExternalStore(
+    (listener) => {
+      const query = window.matchMedia("(prefers-color-scheme: light)");
+      query.addEventListener("change", listener);
+      return () => query.removeEventListener("change", listener);
+    },
+    () => window.matchMedia("(prefers-color-scheme: light)").matches,
+    () => false,
+  );
 }
