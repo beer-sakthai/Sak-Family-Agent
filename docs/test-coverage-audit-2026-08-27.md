@@ -16,36 +16,28 @@ over 106 test files (26,515 lines of test against 17,029 lines of package).
 
 | Metric | Value |
 |---|---|
-| Total branch coverage | **95.849%** |
+| Branch coverage, measured locally | **95.849%** |
+| Branch coverage, measured by CI on `test (3.11)` | **95.88%** |
 | Floor (`fail_under`) | 96 |
-| Headroom | **−0.151pp — floor breached**, `pytest` exits 1 |
+| Headroom | **breached in both environments** |
 | Uncovered statements | 213 |
 | Partial branches | 170 |
 
-### One caveat on the number
-
-CI reports **success** on this same commit. That could not be reproduced here:
-the exact CI command (`uv run pytest --cov=sakthai --cov-report=xml tests/`)
-exits 1 locally at 95.849%. The likeliest cause is the user the suite runs as —
-this container runs as root, and at least one test
-(`tests/test_security_hardening.py:635`) skips itself when `chmod 000` cannot
-lock the current user out of a file, which GitHub's unprivileged runner would
-execute. `tests/test_guardrails_hardened.py:419` has the same shape.
-
-Whichever environment is trusted, the margin is under two tenths of a point and
-it moves depending on who runs the suite. That fragility is finding 5 below.
+Both environments agree that the floor is missed. They disagree about what
+happens next, and that turned out to be the finding — see 1 below.
 
 ## The read
 
-The suite grew by 247 tests in one day and coverage *fell*. That is the whole
-story: the gate is a package-wide average, so new code arriving below the
-average is absorbed silently until the accumulated headroom runs out. Yesterday's
-audit measured that headroom at 0.018pp — roughly one statement — and finding 8
-called it out as undetectable erosion. It has now happened.
+The suite grew by 247 tests in one day and coverage *fell*. Yesterday's audit
+measured the headroom above the floor at 0.018pp — roughly one statement — and
+its finding 8 noted the decline "produced no CI signal, because it stayed above
+the floor." The first half was right and the second half was too generous: the
+floor has now been crossed, and there is still no CI signal, because **the floor
+does not fail the build at all**.
 
-Nothing on yesterday's findings list has been acted on; `guardrails.py` measures
-identically today (89%, 44 miss / 36 partial). Findings 3 and 6 below are that
-audit's, re-verified as still open. Findings 1, 2, 4 and 5 are new.
+Findings 1, 2, 4 and 5 are new. Findings 3 and 6 are yesterday's, re-verified as
+still open — `guardrails.py` measures identically today (89%, 44 miss / 36
+partial).
 
 ---
 
@@ -64,32 +56,61 @@ held constant.
 
 ---
 
-## 1. The gate measures the average, so new code can only dilute it
+## 1. The coverage floor prints a failure in CI and does not fail the build
 
-**Severity: high** · `pyproject.toml` · mechanism, not a symptom
+**Severity: high** · `.github/workflows/ci.yml`, `pyproject.toml` · **verified on
+PR #1200's head `e9fca70`**
 
-`fail_under = 96` is a whole-package threshold over 7,688 statements. A module
-landing at 88% fails nothing — it spends headroom that the rest of the package
-built up. There is no per-file floor and no diff-coverage gate, so the only
-signal is the aggregate, and the aggregate is dominated by code written months
-ago.
+CI's `test (3.11)` job on that commit logged:
 
-Everything else in this document is a consequence of that.
+```
+Coverage XML written to file coverage.xml
+FAIL Required test coverage of 96.0% not reached. Total coverage: 95.88%
+2252 passed, 7 skipped, 1 warning, 124 subtests passed in 118.65s
+```
+
+The `Run tests with coverage` step that produced that line reports
+`conclusion: success`. The next step (Codecov) ran, the job concluded success,
+and the PR shows a green check. `test (3.12)` is the same.
+
+Locally the identical command exits 1:
+
+```
+$ uv run pytest tests/test_giturl.py --cov=sakthai --cov-report=xml -q ; echo $?
+FAIL Required test coverage of 96.0% not reached. Total coverage: 2.05%
+1
+```
+
+Verified with pytest-cov 7.1.0 and both `--cov-report=xml` and `--cov-report=`,
+so the report format is not the variable. **The mechanism has not been
+identified** and should be reproduced before anyone trusts a diagnosis; one
+candidate worth testing is another plugin overwriting `session.exitstatus` after
+pytest-cov sets it (`pytest-subtests` is active — note the 124 subtests). Do not
+treat that as established.
+
+What *is* established is the consequence: for as long as this has been true, the
+96% floor has been decorative. That fully explains why a real decline produced
+no signal, and it means the number in `CLAUDE.md` and `README.md` has been
+drifting unchecked.
+
+There is a second, independent weakness in the same gate: `fail_under` is a
+whole-package threshold over 7,688 statements, so even when it *is* enforced a
+module landing at 88% fails nothing — it spends headroom the rest of the package
+built up. Finding 2 is what that looks like in practice.
 
 **Proposal**
 
-- Add a per-file floor so a module cannot land far under the package average
-  unnoticed — `coverage report --fail-under` per file, or a short check over
-  `coverage.json` in the CI step that already runs.
-- Better, gate the diff: require new and changed lines in a PR to clear a higher
-  bar (95–100%) than the package. That targets the failure mode directly and asks
-  nobody to retrofit old code.
-- Only then re-set `fail_under` to the real number, and fix two stale claims
-  about it: `ci.yml`'s comment says the floor is 85 (it is 96), and `CLAUDE.md`
-  records 96.56% over 1,978 tests in 95 files — none of which still holds.
-- `CLAUDE.md` also states CI passes `--cov-branch`. It does not; branch coverage
-  is on because `[tool.coverage.run] branch = true`. Harmless, but the doc
-  describes a flag that isn't there.
+- Pass the threshold explicitly on the command line —
+  `uv run pytest --cov=sakthai --cov-report=xml --cov-fail-under=96 tests/` —
+  rather than relying on `[tool.coverage.report] fail_under`. Then verify it
+  actually fails by pushing a branch that trips it; a gate nobody has watched
+  fail is not known to work.
+- Add a per-file floor or diff coverage so new code cannot land far under the
+  package average unnoticed.
+- Then re-set the threshold to the real number and fix the stale claims about
+  it: `ci.yml`'s comment says the floor is 85 (it is 96); `CLAUDE.md` records
+  96.56% over 1,978 tests in 95 files, and says CI passes `--cov-branch` (it does
+  not — branch coverage is on via `[tool.coverage.run] branch = true`).
 
 ## 2. The client-onboarding subsystem is the drop, and it is the newest code in the repo
 
@@ -175,24 +196,26 @@ is the worst of both — the maintenance cost of a suite with none of the signal
 - If they are run, expect breakage — `CLAUDE.md` notes its docs still describe a
   five-persona roster, so the tree has drifted.
 
-## 5. The coverage number depends on which user runs the suite
+## 5. The measured number shifts with the user running the suite
 
-**Severity: medium** · `tests/` · reproducibility
+**Severity: low** · `tests/` · reproducibility
 
 Two tests branch on filesystem permissions and self-skip when `chmod` cannot
 restrict the current user — `test_security_hardening.py:635` (TOCTOU
 unreadable-file path) and `test_guardrails_hardened.py:419`. Running as root
-skips them; running unprivileged executes them. With the gate margin at ~0.15pp,
-that difference is large enough to flip the result, which is the most likely
-explanation for CI passing where a local root run fails.
+skips them; running unprivileged executes them. That is the likeliest reason
+local (95.849%, as root) and CI (95.88%, unprivileged) differ slightly, and it is
+also why local reports 2,251 passed / 2 skipped where CI reports 2,252 / 7.
+
+This is a small effect and, given finding 1, it is *not* why CI is green. It is
+still worth removing: once the floor actually gates, a threshold whose outcome
+depends on the invoking user is not a threshold.
 
 **Proposal**
 
 - Make those tests deterministic rather than conditional — drop privileges for
   the assertion, or simulate the unreadable case by patching `os.access` /
   `open` so the branch is exercised identically for every user.
-- A gate whose outcome depends on the invoking user is not a gate. This is cheap
-  to fix and it makes finding 1's threshold trustworthy.
 
 ## 6. Still open from 2026-08-26
 
@@ -249,11 +272,11 @@ to close.
 
 ## Suggested order
 
-1. **Decide what the gate measures** — finding 1. Per-file floor or diff
-   coverage. Until this changes every other fix is temporary; the next feature
-   merge spends it again.
+1. **Make the floor actually fail** — finding 1. Everything below is unverifiable
+   until the gate works; there is currently no automated signal on coverage at
+   all. Fix it, then prove it fails on a branch that trips it.
 2. **Backfill the `client/` error paths** — finding 2. Highest coverage-per-test
-   in the repo right now, and it is the code that broke the floor. One
+   in the repo right now, and it is the code that crossed the floor. One
    parametrized `CliRunner` table closes most of it.
 3. **Resolve the shadowed guardrail rules** — finding 3. A correctness question
    wearing a coverage costume.
@@ -261,7 +284,7 @@ to close.
    An unasserted allowlist in front of an in-process agent loop.
 5. **Write the web-auth rejection matrix** — finding 6, carried. One
    parametrized test.
-6. **Wire up or retire `sakthai-chat-cli/`'s suite** — finding 4 — and pin the
+6. **Wire up or retire `sakthai-chat-cli/`'s suite** — finding 4 — pin the
    permission-dependent tests — finding 5 — then refresh the `CLAUDE.md` and
    `ci.yml` figures once the real number settles.
 
