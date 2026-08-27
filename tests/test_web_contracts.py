@@ -48,13 +48,23 @@ class TestContractModule:
         assert len(contracts.__all__) == len(set(contracts.__all__))
 
     def test_every_exported_member_is_emittable(self) -> None:
-        """Only string constants, Literal aliases, and TypedDicts are allowed."""
+        """Only string constants, string tuples, Literal aliases, and TypedDicts."""
         for name in contracts.__all__:
             obj = getattr(contracts, name)
             emittable = (
-                isinstance(obj, str) or typing.is_typeddict(obj) or get_origin(obj) is Literal
+                isinstance(obj, str)
+                or (isinstance(obj, tuple) and all(isinstance(x, str) for x in obj))
+                or typing.is_typeddict(obj)
+                or get_origin(obj) is Literal
             )
             assert emittable, f"contracts.{name} is not an emittable kind: {type(obj)!r}"
+
+    def test_persona_names_matches_config(self) -> None:
+        """The dashboard's roster must come from config, not a hand-kept list."""
+        from sakthai.config import PERSONA_NAMES
+
+        assert contracts.PERSONA_NAMES == PERSONA_NAMES
+        assert len(contracts.PERSONA_NAMES) == 6
 
     def test_data_source_values(self) -> None:
         assert typing.get_args(contracts.DataSource) == ("local", "api", "demo")
@@ -126,6 +136,14 @@ class TestRenderType:
 class TestRenderMember:
     def test_string_constant(self, gen: Any) -> None:
         assert gen.render_member("X", "hello", {}) == 'export const X = "hello";'
+
+    def test_string_tuple_becomes_a_readonly_const_array(self, gen: Any) -> None:
+        rendered = gen.render_member("NAMES", ("a", "b"), {})
+        assert rendered == 'export const NAMES = ["a", "b"] as const;'
+
+    def test_persona_names_renders_all_six(self, gen: Any) -> None:
+        rendered = gen.render_member("PERSONA_NAMES", contracts.PERSONA_NAMES, {})
+        assert rendered.count('"') == 12  # six quoted names
 
     def test_literal_alias_does_not_self_reference(self, gen: Any) -> None:
         """Rendering the alias's own declaration must not emit `= DataSource`."""

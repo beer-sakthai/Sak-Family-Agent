@@ -138,6 +138,9 @@ def render_member(name: str, obj: Any, aliases: dict[Any, str]) -> str:
     """Render one exported member of the contracts module."""
     if isinstance(obj, str):
         return f"export const {name} = {json.dumps(obj)};"
+    if isinstance(obj, tuple) and all(isinstance(item, str) for item in obj):
+        # `as const` so the array is readonly and its members are literal types.
+        return f"export const {name} = {json.dumps(list(obj))} as const;"
     if typing.is_typeddict(obj):
         return render_interface(name, obj, aliases)
     if get_origin(obj) is Literal:

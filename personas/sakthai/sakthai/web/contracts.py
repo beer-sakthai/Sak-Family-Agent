@@ -23,8 +23,11 @@ from __future__ import annotations
 
 from typing import Generic, Literal, TypedDict, TypeVar
 
+from ..config import PERSONA_NAMES as _CONFIG_PERSONA_NAMES
+
 __all__ = [
     "DataSource",
+    "PERSONA_NAMES",
     "UNATTRIBUTED",
     "TokenStats",
     "TrendPoint",
@@ -59,6 +62,10 @@ DataSource = Literal["local", "api", "demo"]
 #: The bucket for runs recorded before ``persona`` was written to the eval log
 #: and session files. An honest "we don't know", not a guess.
 UNATTRIBUTED = "unattributed"
+
+#: Re-exported from ``config`` so the generated TypeScript carries the real
+#: roster. The dashboard previously hardcoded five of these six.
+PERSONA_NAMES: tuple[str, ...] = _CONFIG_PERSONA_NAMES
 
 
 class TokenStats(TypedDict):
