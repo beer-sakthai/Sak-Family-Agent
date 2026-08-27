@@ -154,6 +154,12 @@ describe("TopBar", () => {
       density: "comfortable" as const,
       onDensityChange: vi.fn(),
       prefersLight: false,
+      personas: [] as string[],
+      onPersonasChange: vi.fn(),
+      personaCounts: {},
+      canExport: true,
+      onExport: vi.fn(),
+      onCopyLink: vi.fn(),
       ...overrides,
     };
     return { props, ...render(<TopBar {...props} />) };

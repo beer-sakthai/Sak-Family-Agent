@@ -77,6 +77,9 @@ export class ApiSource implements DashboardSource {
       limit: query?.limit,
       offset: query?.offset,
       id: query?.id,
+      // The Python API takes one comma-separated `persona`; it applies the
+      // same filter to both the rows and the totals.
+      persona: query?.personas?.join(","),
     });
   }
 
@@ -84,6 +87,7 @@ export class ApiSource implements DashboardSource {
     return this.fetchJson<MemoryPayload>("api/memory", {
       query: query?.query,
       limit: query?.limit,
+      persona: query?.personas?.join(","),
     });
   }
 

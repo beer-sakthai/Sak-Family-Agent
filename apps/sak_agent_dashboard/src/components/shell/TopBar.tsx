@@ -1,10 +1,11 @@
 "use client";
 
 import React from "react";
-import { Menu, RefreshCw, Search } from "lucide-react";
+import { Download, Link2, Menu, RefreshCw, Search } from "lucide-react";
 
 import DemoModeToggle from "@/components/DemoModeToggle";
 import DisplayMenu from "@/components/DisplayMenu";
+import PersonaFilter from "@/components/PersonaFilter";
 import type { DataSource } from "@/lib/contracts.generated";
 import { relativeTime } from "@/lib/format";
 import { navItem, type TabId } from "@/lib/nav";
@@ -34,6 +35,15 @@ interface TopBarProps {
   density: Density;
   onDensityChange: (next: Density) => void;
   prefersLight: boolean;
+  /** Persona filter selection; empty means the whole family. */
+  personas: string[];
+  onPersonasChange: (next: string[]) => void;
+  /** Run counts per persona, shown beside each name in the filter menu. */
+  personaCounts?: Record<string, number>;
+  /** False when the active panel holds no rows — the button says so. */
+  canExport: boolean;
+  onExport: (format: "json" | "csv") => void;
+  onCopyLink: () => void;
 }
 
 function intervalLabel(seconds: RefreshInterval): string {
@@ -58,6 +68,12 @@ export function TopBar({
   density,
   onDensityChange,
   prefersLight,
+  personas,
+  onPersonasChange,
+  personaCounts,
+  canExport,
+  onExport,
+  onCopyLink,
 }: TopBarProps) {
   const item = navItem(active);
 
@@ -94,6 +110,12 @@ export function TopBar({
             </kbd>
           </button>
 
+          <PersonaFilter
+            selected={personas}
+            onChange={onPersonasChange}
+            counts={personaCounts}
+          />
+
           <DemoModeToggle isDemo={isDemo} onToggle={onDemoToggle} activeSource={activeSource} />
 
           <DisplayMenu
@@ -119,6 +141,44 @@ export function TopBar({
                   {intervalLabel(seconds)}
                 </option>
               ))}
+            </select>
+          </label>
+
+          <button
+            onClick={onCopyLink}
+            aria-label="Copy a link to this view"
+            title="Copy a link to this view"
+            className="hidden rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:block"
+          >
+            <Link2 className="h-3.5 w-3.5" />
+          </button>
+
+          {/* A select rather than two buttons: export is a rare action, and
+              two more buttons in this row would crowd the ones used often. */}
+          <label className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-2.5 py-1.5 font-mono text-[11px] text-fg-3 focus-within:ring-2 focus-within:ring-accent">
+            <Download className="h-3 w-3" aria-hidden />
+            <select
+              aria-label="Export the current panel"
+              value=""
+              disabled={!canExport}
+              onChange={(event) => {
+                const format = event.target.value;
+                if (format === "json" || format === "csv") onExport(format);
+                // Back to the placeholder, so exporting the same format twice
+                // in a row still fires a change event.
+                event.target.value = "";
+              }}
+              className="bg-transparent text-fg-2 outline-none disabled:opacity-50"
+            >
+              <option value="" className="bg-panel">
+                {canExport ? "Export" : "No rows"}
+              </option>
+              <option value="json" className="bg-panel">
+                JSON
+              </option>
+              <option value="csv" className="bg-panel">
+                CSV
+              </option>
             </select>
           </label>
 

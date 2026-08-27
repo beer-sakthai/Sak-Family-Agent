@@ -52,6 +52,66 @@ def test_missing_shards_are_skipped_silently(tmp_path: Path) -> None:
         assert view.top_observations() == []
 
 
+def test_unscoped_store_is_included_by_default(
+    tmp_path: Path, shard_paths: dict[str, Path]
+) -> None:
+    shard_paths["shared"] = tmp_path / "legacy.db"
+    _seed(shard_paths["shared"], [("unattributed note", "note", None)], [])
+    _seed(shard_paths["sakthai"], [("attributed note", "note", "k")], [])
+
+    with FamilyMemoryView(shard_paths=shard_paths) as view:
+        assert {f.persona for f in view.list_facts()} == {"shared", "sakthai"}
+
+
+def test_include_unscoped_false_leaves_the_legacy_store_out(
+    tmp_path: Path, shard_paths: dict[str, Path]
+) -> None:
+    shard_paths["shared"] = tmp_path / "legacy.db"
+    _seed(shard_paths["shared"], [("unattributed note", "note", None)], [])
+    _seed(shard_paths["sakthai"], [("attributed note", "note", "k")], [])
+
+    with FamilyMemoryView(
+        ["sakthai"], shard_paths=shard_paths, include_unscoped=False
+    ) as view:
+        assert {f.persona for f in view.list_facts()} == {"sakthai"}
+
+
+def test_include_unscoped_false_also_excludes_its_observations(
+    tmp_path: Path, shard_paths: dict[str, Path]
+) -> None:
+    shard_paths["shared"] = tmp_path / "legacy.db"
+    _seed(shard_paths["shared"], [], [("legacy observation", 3.0)])
+    _seed(shard_paths["sakthai"], [], [("scoped observation", 1.0)])
+
+    with FamilyMemoryView(
+        ["sakthai"], shard_paths=shard_paths, include_unscoped=False
+    ) as view:
+        assert [o.persona for o in view.top_observations()] == ["sakthai"]
+
+
+def test_omitting_the_shared_key_is_not_how_you_exclude_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A missing "shared" key falls back to memory_db_path(), not to nothing.
+
+    This is the trap `include_unscoped` exists to avoid: filtering the key out
+    of `shard_paths` sends the view to the real ~/.sakthai/memory.db rather
+    than excluding the unscoped store.
+    """
+    fallback_home = tmp_path / "fallback-home"
+    (fallback_home / ".sakthai").mkdir(parents=True)
+    monkeypatch.setattr(Path, "home", lambda: fallback_home)
+    _seed(fallback_home / ".sakthai" / "memory.db", [("from the fallback", "note", None)], [])
+
+    with FamilyMemoryView(["sakthai"], shard_paths={"sakthai": tmp_path / "none.db"}) as view:
+        assert [f.persona for f in view.list_facts()] == ["shared"]
+
+    with FamilyMemoryView(
+        ["sakthai"], shard_paths={"sakthai": tmp_path / "none.db"}, include_unscoped=False
+    ) as view:
+        assert view.list_facts() == []
+
+
 def test_list_facts_merges_across_shards_tagged_with_persona(
     tmp_path: Path, shard_paths: dict[str, Path]
 ) -> None:

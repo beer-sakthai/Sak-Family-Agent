@@ -12,12 +12,13 @@ import MemoryExplorer from "@/components/MemoryExplorer";
 import SessionExplorer from "@/components/SessionExplorer";
 import Sidebar from "@/components/shell/Sidebar";
 import TopBar, { REFRESH_INTERVALS, type RefreshInterval } from "@/components/shell/TopBar";
+import ShortcutsOverlay from "@/components/ShortcutsOverlay";
 import { CardGridSkeleton, KpiSkeleton, PanelSkeleton } from "@/components/Skeletons";
 import StitchStudio from "@/components/StitchStudio";
+import { ToastStack, useToasts } from "@/components/Toasts";
 import WorkflowRuns from "@/components/WorkflowRuns";
 import {
   useDensity,
-  useHashRoute,
   usePersistedString,
   usePrefersLight,
   useTheme,
@@ -34,13 +35,14 @@ import type {
   WorkflowRunDetail,
   WorkflowsPayload,
 } from "@/lib/contracts.generated";
-import { isTabId, type TabId } from "@/lib/nav";
+import { downloadFile, exportFilename, toCsv } from "@/lib/export";
+import { NAV_ITEMS, navItem, type TabId } from "@/lib/nav";
 import { DENSITIES, THEMES } from "@/lib/theme";
+import { useViewState } from "@/lib/url-state";
 
 const PAGE_SIZE = 10;
 
 const STORAGE_KEYS = {
-  demo: "sak-dashboard:demo",
   collapsed: "sak-dashboard:sidebar-collapsed",
   refresh: "sak-dashboard:refresh-interval",
 } as const;
@@ -70,13 +72,12 @@ function parseInterval(raw: string): RefreshInterval {
 }
 
 export default function Home() {
-  // Section lives in the URL fragment, so a section is linkable and the back
-  // button moves between them.
-  const [hash, setHash] = useHashRoute("overview");
-  const activeTab: TabId = isTabId(hash) ? hash : "overview";
-
-  const [demoPref, setDemoPref] = usePersistedString(STORAGE_KEYS.demo, "off");
-  const isDemo = demoPref === "on";
+  // The whole view — section, filters, page, open detail, demo flag — lives in
+  // the URL fragment, so it is linkable, survives a reload, and the back button
+  // walks it. See `lib/url-state.ts`.
+  const [view, patchView] = useViewState();
+  const { tab: activeTab, search, severity, page, personas, session: sessionId, run: runId } = view;
+  const isDemo = view.demo;
 
   const [collapsedPref, setCollapsedPref] = usePersistedString(STORAGE_KEYS.collapsed, "off");
   const sidebarCollapsed = collapsedPref === "on";
@@ -92,12 +93,15 @@ export default function Home() {
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
-  const [personas, setPersonas] = useState<PersonasPayload | null>(null);
+  const { toasts, push: pushToast, dismiss: dismissToast } = useToasts();
+
+  const [personasPayload, setPersonasPayload] = useState<PersonasPayload | null>(null);
   const [metrics, setMetrics] = useState<MetricsPayload | null>(null);
   const [memory, setMemory] = useState<MemoryPayload | null>(null);
   const [audit, setAudit] = useState<AuditPayload | null>(null);
@@ -105,34 +109,31 @@ export default function Home() {
   const [workflows, setWorkflows] = useState<WorkflowsPayload | null>(null);
   const [activeSource, setActiveSource] = useState<DataSource | null>(null);
 
-  // Server-driven query state. These reach the API rather than filtering a
-  // client-side copy, so the severity and search parameters the routes have
-  // always accepted are finally used.
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [severity, setSeverity] = useState("ALL");
-  const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionDetail, setSessionDetail] = useState<{
     id: string;
     detail: SessionDetail | null;
   } | null>(null);
-  const [runId, setRunId] = useState<string | null>(null);
   const [runDetail, setRunDetail] = useState<{
     id: string;
     detail: WorkflowRunDetail | null;
   } | null>(null);
 
+  // The persona filter is a string in the URL and an array here; joining it
+  // once keeps it out of every `useCallback` dependency list as a new array.
+  const personaParam = personas.join(",");
+
   const qs = useCallback(
     (extra: Record<string, string | number | null> = {}) => {
       const params = new URLSearchParams();
       if (isDemo) params.set("demo", "1");
+      if (personaParam) params.set("persona", personaParam);
       for (const [key, value] of Object.entries(extra)) {
         if (value !== null && value !== "" && value !== "ALL") params.set(key, String(value));
       }
       const encoded = params.toString();
       return encoded ? `?${encoded}` : "";
     },
-    [isDemo],
+    [isDemo, personaParam],
   );
 
   // No state is set before the first `await`: the effect below calls this, and
@@ -153,7 +154,7 @@ export default function Home() {
       ]);
 
     if (personasRes) {
-      setPersonas(personasRes.data);
+      setPersonasPayload(personasRes.data);
       setActiveSource(personasRes.source);
     }
     if (metricsRes) setMetrics(metricsRes.data);
@@ -224,10 +225,13 @@ export default function Home() {
   }, [runId, qs]);
 
   const goToTab = useCallback(
-    (tab: TabId) => {
-      setHash(tab);
+    (nextTab: TabId) => {
+      // A section change clears the open detail: a transcript id means nothing
+      // on the memory panel, and leaving it in the URL would reopen the drawer
+      // on the way back.
+      patchView({ tab: nextTab, session: null, run: null });
     },
-    [setHash],
+    [patchView],
   );
 
   const handleRefresh = useCallback(() => {
@@ -237,14 +241,152 @@ export default function Home() {
 
   const toggleDemo = useCallback(
     (next: boolean) => {
-      setDemoPref(next ? "on" : "off");
-      setPage(1);
+      patchView({ demo: next, page: 1 });
     },
-    [setDemoPref],
+    [patchView],
   );
 
-  // Keyboard: ⌘K/Ctrl+K for the palette, digits for sections, `r` to refresh.
-  // Suppressed while typing, so a search field never eats a shortcut.
+  const setPersonas = useCallback(
+    (next: string[]) => {
+      // Narrowing the family can leave the current page past the end of the
+      // filtered set, which would render an empty page with a pager saying
+      // otherwise. Back to the first page.
+      patchView({ personas: next, page: 1 });
+    },
+    [patchView],
+  );
+
+  /** What the active panel holds, as rows plus the columns a CSV should use. */
+  const exportable = useMemo((): {
+    rows: Record<string, unknown>[];
+    columns: string[];
+  } | null => {
+    switch (activeTab) {
+      case "overview":
+        return personasPayload
+          ? {
+              rows: personasPayload.personas as unknown as Record<string, unknown>[],
+              columns: [
+                "name",
+                "display_name",
+                "provider",
+                "model",
+                "runs",
+                "errors",
+                "avg_latency_ms",
+                "input_tokens",
+                "output_tokens",
+                "fact_count",
+                "observation_count",
+                "has_shard",
+                "last_run_at",
+              ],
+            }
+          : null;
+      case "analytics":
+        return metrics
+          ? {
+              rows: metrics.trends as unknown as Record<string, unknown>[],
+              columns: [
+                "date",
+                "runs",
+                "errors",
+                "avg_latency_ms",
+                "input_tokens",
+                "output_tokens",
+              ],
+            }
+          : null;
+      case "sessions":
+        return sessions
+          ? {
+              rows: sessions.sessions as unknown as Record<string, unknown>[],
+              columns: [
+                "id",
+                "timestamp",
+                "persona",
+                "task",
+                "model",
+                "iterations",
+                "stop_reason",
+                "message_count",
+                "tool_call_count",
+                "had_error",
+              ],
+            }
+          : null;
+      case "memory":
+        return memory
+          ? {
+              rows: memory.facts as unknown as Record<string, unknown>[],
+              columns: ["id", "persona", "kind", "key", "value", "tags", "created_at", "updated_at"],
+            }
+          : null;
+      case "workflows":
+        return workflows
+          ? {
+              rows: workflows.runs as unknown as Record<string, unknown>[],
+              columns: [
+                "run_id",
+                "workflow_name",
+                "status",
+                "started_at",
+                "finished_at",
+                "duration_seconds",
+                "step_count",
+                "failed_steps",
+              ],
+            }
+          : null;
+      case "audit":
+        return audit
+          ? {
+              rows: audit.events as unknown as Record<string, unknown>[],
+              columns: ["timestamp", "type", "severity", "message", "details"],
+            }
+          : null;
+      // The Stitch panel reads no runtime data, so there is nothing to export.
+      default:
+        return null;
+    }
+  }, [activeTab, personasPayload, metrics, sessions, memory, workflows, audit]);
+
+  const handleExport = useCallback(
+    (format: "json" | "csv") => {
+      if (!exportable || exportable.rows.length === 0) {
+        pushToast("info", `Nothing to export from ${navItem(activeTab).label}.`);
+        return;
+      }
+      const { rows, columns } = exportable;
+      const content =
+        format === "json"
+          ? JSON.stringify(rows, null, 2)
+          : toCsv(rows, columns as (keyof (typeof rows)[number] & string)[]);
+      downloadFile(
+        exportFilename(activeTab, format),
+        content,
+        format === "json" ? "application/json" : "text/csv",
+      );
+      pushToast(
+        "success",
+        `Exported ${rows.length} ${rows.length === 1 ? "row" : "rows"} as ${format.toUpperCase()}.`,
+      );
+    },
+    [exportable, activeTab, pushToast],
+  );
+
+  const handleCopyLink = useCallback(() => {
+    // The fragment already carries the whole view, so the current href is the
+    // shareable link with no assembly needed.
+    navigator.clipboard
+      .writeText(window.location.href)
+      .then(() => pushToast("success", "Link to this view copied."))
+      .catch(() => pushToast("error", "Could not copy to the clipboard."));
+  }, [pushToast]);
+
+  // Keyboard. ⌘K/Ctrl+K for the palette, digits for sections, `r` refresh,
+  // `e` export, `[` sidebar, `?` help. Suppressed while typing, so a search
+  // field never eats a shortcut.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -261,14 +403,41 @@ export default function Home() {
         return;
       }
       if (typing || event.metaKey || event.ctrlKey || event.altKey) return;
-      if (event.key === "r") {
+
+      // The digits were described in a comment here for a long time without
+      // ever being implemented. They are 1-based over the same NAV_ITEMS the
+      // sidebar renders, so the numbering matches what is on screen.
+      const digit = Number.parseInt(event.key, 10);
+      if (Number.isFinite(digit) && digit >= 1 && digit <= NAV_ITEMS.length) {
         event.preventDefault();
-        handleRefresh();
+        goToTab(NAV_ITEMS[digit - 1].id);
+        return;
+      }
+
+      switch (event.key) {
+        case "r":
+          event.preventDefault();
+          handleRefresh();
+          break;
+        case "e":
+          event.preventDefault();
+          handleExport("json");
+          break;
+        case "[":
+          event.preventDefault();
+          setCollapsedPref(sidebarCollapsed ? "off" : "on");
+          break;
+        case "?":
+          event.preventDefault();
+          setShortcutsOpen((open) => !open);
+          break;
+        default:
+          break;
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleRefresh]);
+  }, [handleRefresh, handleExport, goToTab, sidebarCollapsed, setCollapsedPref]);
 
   const paletteActions = useMemo<Command[]>(
     () => [
@@ -287,6 +456,34 @@ export default function Home() {
           : "Request the built-in demo dataset instead of the runtime",
         group: "Actions",
         run: () => toggleDemo(!isDemo),
+      },
+      {
+        id: "action-copy-link",
+        label: "Copy link to this view",
+        hint: "Section, filters and open detail are all in the URL",
+        group: "Actions",
+        run: handleCopyLink,
+      },
+      {
+        id: "action-shortcuts",
+        label: "Keyboard shortcuts",
+        hint: "Also on ?",
+        group: "Actions",
+        run: () => setShortcutsOpen(true),
+      },
+      {
+        id: "action-export-json",
+        label: "Export this panel as JSON",
+        hint: "Downloads exactly the rows on screen",
+        group: "Export",
+        run: () => handleExport("json"),
+      },
+      {
+        id: "action-export-csv",
+        label: "Export this panel as CSV",
+        hint: "Downloads exactly the rows on screen",
+        group: "Export",
+        run: () => handleExport("csv"),
       },
       ...REFRESH_INTERVALS.filter((seconds) => seconds !== refreshInterval).map((seconds) => ({
         id: `action-interval-${seconds}`,
@@ -314,6 +511,8 @@ export default function Home() {
       handleRefresh,
       isDemo,
       toggleDemo,
+      handleCopyLink,
+      handleExport,
       refreshInterval,
       setRefreshPref,
       theme,
@@ -328,20 +527,22 @@ export default function Home() {
     sessionId && sessionDetail?.id === sessionId ? sessionDetail.detail : null;
   const activeRunDetail = runId && runDetail?.id === runId ? runDetail.detail : null;
 
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
-    setPage(1);
-  };
-
   const counts: Partial<Record<TabId, number>> = {
-    overview: personas?.personas.length,
+    overview: personasPayload?.personas.length,
     sessions: sessions?.total,
     memory: memory?.total_facts,
     workflows: workflows?.runs.length,
     audit: audit?.total,
   };
 
-  const awaitingFirstLoad = isLoading && personas === null && metrics === null;
+  /** Run counts per persona, for the filter menu's secondary column. */
+  const personaRunCounts = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const persona of personasPayload?.personas ?? []) out[persona.name] = persona.runs;
+    return out;
+  }, [personasPayload]);
+
+  const awaitingFirstLoad = isLoading && personasPayload === null && metrics === null;
 
   return (
     <div className="flex min-h-screen">
@@ -374,19 +575,39 @@ export default function Home() {
           density={density}
           onDensityChange={setDensity}
           prefersLight={prefersLight}
+          personas={personas}
+          onPersonasChange={setPersonas}
+          personaCounts={personaRunCounts}
+          canExport={exportable !== null && exportable.rows.length > 0}
+          onExport={handleExport}
+          onCopyLink={handleCopyLink}
         />
 
-        <main className="mx-auto w-full max-w-[110rem] flex-1 space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <main
+          id="main"
+          tabIndex={-1}
+          className="mx-auto w-full max-w-[110rem] flex-1 space-y-gap px-4 py-6 focus:outline-none sm:px-6 lg:px-8"
+        >
+          {/* Announces each completed refresh to a screen reader without
+              moving focus or rendering anything. */}
+          <p className="sr-only" role="status" aria-live="polite">
+            {isLoading
+              ? "Loading dashboard data"
+              : lastUpdatedAt === null
+                ? ""
+                : `${navItem(activeTab).label} updated`}
+          </p>
+
           {error && (
             <div
               role="alert"
-              className="flex items-start justify-between gap-3 rounded-2xl border border-hue-rose-line/50 bg-hue-rose-tint/30 p-4 text-sm text-hue-rose"
+              className="flex items-start justify-between gap-3 rounded-2xl border border-hue-rose-line bg-hue-rose-tint/40 p-4 text-sm text-hue-rose"
             >
               <span>{error}</span>
               <button
                 onClick={() => setError(null)}
                 aria-label="Dismiss error"
-                className="shrink-0 rounded-lg border border-hue-rose-line/60 px-2 py-0.5 font-mono text-[11px] text-hue-rose hover:bg-hue-rose-tint/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-hue-rose"
+                className="shrink-0 rounded-lg border border-hue-rose-line px-2 py-0.5 font-mono text-[11px] text-hue-rose hover:bg-hue-rose-tint focus:outline-none focus-visible:ring-2 focus-visible:ring-hue-rose"
               >
                 Dismiss
               </button>
@@ -395,17 +616,27 @@ export default function Home() {
 
           <HostedNotice activeSource={activeSource} isDemo={isDemo} />
 
-          {awaitingFirstLoad ? <KpiSkeleton /> : (
+          {awaitingFirstLoad ? (
+            <KpiSkeleton />
+          ) : (
             <KpiStrip metrics={metrics} memory={memory} sessions={sessions} audit={audit} />
           )}
 
           <section key={activeTab} className="animate-panel-in">
             {activeTab === "overview" &&
-              (personas ? <AgentOverview personas={personas} /> : <CardGridSkeleton />)}
+              (personasPayload ? (
+                <AgentOverview
+                  personas={personasPayload}
+                  selected={personas}
+                  onSelect={setPersonas}
+                />
+              ) : (
+                <CardGridSkeleton />
+              ))}
 
             {activeTab === "analytics" &&
               (metrics ? (
-                <AnalyticsCharts metrics={metrics} personas={personas ?? undefined} />
+                <AnalyticsCharts metrics={metrics} personas={personasPayload ?? undefined} />
               ) : (
                 <PanelSkeleton label="Loading analytics" />
               ))}
@@ -416,11 +647,11 @@ export default function Home() {
                   sessions={sessions.sessions}
                   total={sessions.total}
                   search={search}
-                  onSearchChange={handleSearchChange}
+                  onSearchChange={(value) => patchView({ search: value, page: 1 })}
                   page={page}
                   pageSize={PAGE_SIZE}
-                  onPageChange={setPage}
-                  onSessionSelect={setSessionId}
+                  onPageChange={(next) => patchView({ page: next })}
+                  onSessionSelect={(id) => patchView({ session: id })}
                   detail={activeSessionDetail}
                   isLoadingDetail={sessionId !== null && activeSessionDetail === null}
                 />
@@ -429,13 +660,17 @@ export default function Home() {
               ))}
 
             {activeTab === "memory" &&
-              (memory ? <MemoryExplorer memory={memory} /> : <PanelSkeleton label="Loading memory" />)}
+              (memory ? (
+                <MemoryExplorer memory={memory} />
+              ) : (
+                <PanelSkeleton label="Loading memory" />
+              ))}
 
             {activeTab === "workflows" &&
               (workflows ? (
                 <WorkflowRuns
                   runs={workflows.runs}
-                  onRunSelect={setRunId}
+                  onRunSelect={(id) => patchView({ run: id })}
                   detail={activeRunDetail}
                   isLoadingDetail={runId !== null && activeRunDetail === null}
                 />
@@ -445,7 +680,11 @@ export default function Home() {
 
             {activeTab === "audit" &&
               (audit ? (
-                <AuditLogs audit={audit} severity={severity} onSeverityChange={setSeverity} />
+                <AuditLogs
+                  audit={audit}
+                  severity={severity}
+                  onSeverityChange={(value) => patchView({ severity: value })}
+                />
               ) : (
                 <PanelSkeleton label="Loading audit log" />
               ))}
@@ -458,10 +697,11 @@ export default function Home() {
             <span>
               Read-only. Data from {activeSource ?? "…"}
               {isDemo && " · sample data requested"}
+              {personas.length > 0 && ` · filtered to ${personas.length} persona${personas.length === 1 ? "" : "s"}`}
             </span>
             <span className="hidden sm:inline">
               <kbd className="rounded border border-line px-1 py-0.5">⌘K</kbd> commands ·{" "}
-              <kbd className="rounded border border-line px-1 py-0.5">R</kbd> refresh
+              <kbd className="rounded border border-line px-1 py-0.5">?</kbd> shortcuts
             </span>
           </footer>
         </main>
@@ -476,6 +716,10 @@ export default function Home() {
           actions={paletteActions}
         />
       )}
+
+      {shortcutsOpen && <ShortcutsOverlay onClose={() => setShortcutsOpen(false)} />}
+
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }

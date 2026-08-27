@@ -7,10 +7,19 @@ import { AgentCard } from "./AgentCard";
 
 interface AgentOverviewProps {
   personas: PersonasPayload;
+  /** The global persona filter's current selection; empty means everyone. */
+  selected?: string[];
+  /** Clicking a card toggles it in the filter, when a handler is given. */
+  onSelect?: (next: string[]) => void;
 }
 
-export function AgentOverview({ personas }: AgentOverviewProps) {
+export function AgentOverview({ personas, selected = [], onSelect }: AgentOverviewProps) {
   const { personas: agents, unattributed_runs: unattributed } = personas;
+
+  // Every card renders; the filter dims the ones it excludes rather than
+  // hiding them. Six personas is the whole family, and a filtered grid that
+  // silently drops four of them loses the one thing this panel is for.
+  const filtering = selected.length > 0;
 
   return (
     <div className="space-y-4">
@@ -30,7 +39,9 @@ export function AgentOverview({ personas }: AgentOverviewProps) {
             </div>
           )}
           <div className="text-xs font-mono text-hue-cyan bg-hue-cyan-tint/40 border border-hue-cyan-line/40 px-3 py-1 rounded-full">
-            {agents.length} Personas Registered
+            {filtering
+              ? `${selected.length} of ${agents.length} personas`
+              : `${agents.length} Personas Registered`}
           </div>
         </div>
       </div>
@@ -42,7 +53,22 @@ export function AgentOverview({ personas }: AgentOverviewProps) {
           six fixed columns did not, and squeezed the name out entirely. */}
       <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))]">
         {agents.map((agent) => (
-          <AgentCard key={agent.name} agent={agent} />
+          <AgentCard
+            key={agent.name}
+            agent={agent}
+            dimmed={filtering && !selected.includes(agent.name)}
+            onToggle={
+              onSelect
+                ? () =>
+                    onSelect(
+                      selected.includes(agent.name)
+                        ? selected.filter((name) => name !== agent.name)
+                        : [...selected, agent.name],
+                    )
+                : undefined
+            }
+            selected={selected.includes(agent.name)}
+          />
         ))}
       </div>
     </div>

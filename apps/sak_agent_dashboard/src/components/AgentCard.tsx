@@ -7,6 +7,12 @@ import type { PersonaSummary } from "@/lib/contracts.generated";
 
 interface AgentCardProps {
   agent: PersonaSummary;
+  /** Excluded by the persona filter: still rendered, but pushed back. */
+  dimmed?: boolean;
+  /** Included by the persona filter. */
+  selected?: boolean;
+  /** When given, the card becomes a toggle for the global persona filter. */
+  onToggle?: () => void;
 }
 
 /** Keyed by the canonical lowercase persona name, all six of them. */
@@ -47,7 +53,7 @@ function deriveStatus(agent: PersonaSummary): Status {
   return "Ready";
 }
 
-export function AgentCard({ agent }: AgentCardProps) {
+export function AgentCard({ agent, dimmed = false, selected = false, onToggle }: AgentCardProps) {
   const status = deriveStatus(agent);
   const glowClass = personaGlows[agent.name] ?? "border-line hover:border-line-strong";
   const icon = personaIcons[agent.name] ?? <Cpu className="h-5 w-5 text-hue-cyan" />;
@@ -57,10 +63,26 @@ export function AgentCard({ agent }: AgentCardProps) {
   // shown as such.
   const successRate = agent.runs > 0 ? ((agent.runs - agent.errors) / agent.runs) * 100 : null;
 
+  // Interactive cards are <button>s so they are reachable by keyboard and
+  // announced as pressable; a plain card stays a <div> rather than becoming a
+  // button that does nothing.
+  const Root = onToggle ? "button" : "div";
+  const interactive = onToggle
+    ? {
+        type: "button" as const,
+        onClick: onToggle,
+        "aria-pressed": selected,
+        "aria-label": `${selected ? "Remove" : "Add"} ${agent.display_name} ${selected ? "from" : "to"} the persona filter`,
+      }
+    : {};
+
   return (
-    <div
-      className={`glass-card p-5 rounded-2xl bg-panel/80 border backdrop-blur-xl shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4 relative overflow-hidden group ${glowClass} ${
+    <Root
+      {...interactive}
+      className={`glass-card p-5 rounded-2xl bg-panel/80 border backdrop-blur-xl shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4 relative overflow-hidden group text-left w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${glowClass} ${
         status === "Idle" ? "opacity-70" : ""
+      } ${dimmed ? "opacity-40 saturate-50" : ""} ${
+        selected ? "ring-2 ring-accent ring-offset-2 ring-offset-canvas" : ""
       }`}
       data-testid={`agent-card-${agent.name}`}
     >
@@ -176,7 +198,7 @@ export function AgentCard({ agent }: AgentCardProps) {
           </span>
         )}
       </div>
-    </div>
+    </Root>
   );
 }
 
