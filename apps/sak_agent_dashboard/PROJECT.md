@@ -5,10 +5,47 @@ Read-only analytics UI over the SakThai agent family's runtime state.
 ## Architecture
 
 - **Framework:** Next.js 16 (App Router) + React 19 + TypeScript 6
-- **Styling:** Tailwind CSS 3, Inter & Outfit via `next/font/google`, dark
-  glassmorphism (`#090d16` background, `bg-slate-900/80` cards)
-- **Charts:** Recharts 3
+- **Styling:** Tailwind CSS 3 over a semantic token layer (below); Inter,
+  Outfit and JetBrains Mono via `next/font/google`, which self-hosts them
+- **Charts:** Recharts 3, coloured from the same tokens via `lib/chart-theme.ts`
 - **Tests:** Vitest 4 + React Testing Library — see [`TESTING.md`](./TESTING.md)
+
+### Theming
+
+No component names a palette shade. Every colour is a role — `bg-panel`,
+`text-fg-3`, `border-hue-rose-line` — defined once per theme as CSS variables
+in `globals.css` and bound into Tailwind in `tailwind.config.ts` with
+`<alpha-value>`, so `bg-panel/70` composes exactly as `bg-slate-900/70` did.
+
+- **Surfaces:** `canvas`, `sunken`, `panel`, `raised`, `raised-2`
+- **Hairlines:** `line`, `line-strong`, `line-soft`
+- **Text:** `fg` … `fg-5`
+- **Brand:** `accent`, `accent-strong`, `accent-contrast`
+- **Ten status/category hues,** three roles each: `hue-<name>` (readable text,
+  icons, solid fills), `hue-<name>-tint` (the wash behind a pill),
+  `hue-<name>-line` (its border)
+
+The three-role split is what makes the light theme readable rather than
+merely inverted: `text-hue-emerald` on `bg-hue-emerald-tint` is emerald-400 on
+emerald-950 in dark and emerald-700 on emerald-50 in light.
+
+Theme (`system`/`light`/`dark`) and density (`comfortable`/`compact`) are
+stored per browser and written to `<html>` as `data-theme`/`data-density` by
+an inline bootstrap in `<head>` — before first paint, so there is no flash.
+`system` removes the attribute rather than resolving it, letting the
+`prefers-color-scheme` block keep following the OS with no media listener.
+
+Recharts takes colours as props, not classes, so `lib/chart-theme.ts` reads
+the same variables back out of the computed style and re-reads them when
+either the attribute or the OS preference changes.
+
+### View state
+
+The whole view — section, search, severity, page, persona filter, open
+detail, demo flag — serialises into the URL fragment as
+`#section?q=…&persona=…` (`lib/url-state.ts`), with defaults omitted. A view
+is therefore linkable and survives a reload, and the back button walks it.
+Panels do not own their open detail id; the page passes it down.
 
 ### Data layer
 
@@ -49,10 +86,20 @@ TypeScript and fails on a diff. Do not edit the generated file.
 |---|---|
 | `/api/agents` | `PersonasPayload` — all six personas plus an unattributed-run count |
 | `/api/metrics` | `MetricsPayload` — runs, latency, tokens, stop reasons, daily trends |
-| `/api/sessions` | `SessionsPayload` — summaries; `?id=` adds one transcript |
-| `/api/memory` | `MemoryPayload` — facts and observations merged across shards |
+| `/api/sessions` | `SessionsPayload` — summaries; `?id=` adds one transcript; `?persona=a,b` filters |
+| `/api/memory` | `MemoryPayload` — facts and observations merged across shards; `?persona=a,b` filters |
 | `/api/audit` | `AuditPayload` — security events from `audit.log` |
 | `/api/workflows` | `WorkflowsPayload` — `agent_workflow` runs; `?id=` for one run |
+
+`?persona=` is applied **at the source**, before the search and before the
+offset, in all three implementations and in the Python API — so `total`
+counts the filtered set and paging through it lands on the right rows. A
+value naming no known persona means "no filter", never an empty result.
+Under a filter the unscoped legacy `memory.db` is excluded: it is attributed
+to no persona.
+
+Static routes alongside them: `/robots.txt`, `/manifest.webmanifest`,
+`/icon.svg`, and `/opengraph-image` (edge runtime).
 
 All are `runtime = "nodejs"` and `dynamic = "force-dynamic"`: they read the
 filesystem and a native SQLite addon, and serve live state.
@@ -66,15 +113,17 @@ src/
 │   └── api/{agents,metrics,sessions,memory,audit,workflows}/route.ts
 ├── components/
 │   ├── shell/Sidebar.tsx · shell/TopBar.tsx      (the app chrome)
-│   ├── CommandPalette.tsx · KpiStrip.tsx
-│   ├── Skeletons.tsx · HostedNotice.tsx
+│   ├── CommandPalette.tsx · ShortcutsOverlay.tsx · KpiStrip.tsx
+│   ├── Drawer.tsx · Toasts.tsx · Skeletons.tsx · HostedNotice.tsx
+│   ├── DisplayMenu.tsx · PersonaFilter.tsx · DemoModeToggle.tsx
 │   ├── AgentCard.tsx · AgentOverview.tsx · AnalyticsCharts.tsx
 │   ├── SessionExplorer.tsx · MemoryExplorer.tsx · AuditLogs.tsx
-│   └── WorkflowRuns.tsx · DemoModeToggle.tsx · StitchStudio.tsx
+│   └── WorkflowRuns.tsx · StitchStudio.tsx
 ├── lib/
 │   ├── contracts.generated.ts   (generated — do not edit)
 │   ├── source.ts · runtime.ts · demo.ts · db.ts
-│   ├── nav.ts · format.ts · browser-state.ts
+│   ├── theme.ts · chart-theme.ts · url-state.ts · export.ts
+│   ├── nav.ts · format.ts · persona.ts · browser-state.ts
 │   └── sources/{local,api,demo}.ts
 └── tests/
 ```
@@ -142,3 +191,27 @@ deploy: [`DEPLOYMENT.md`](./DEPLOYMENT.md). Environment variables:
 M1–M3 (scaffold, data layer, UI) and M4 (testing and build) are complete: `npm
 run lint`, `npm run build`, `tsc --noEmit` and `npm test` all pass, and
 `.github/workflows/apps.yml` runs them on every change under `apps/`.
+
+
+## Keyboard
+
+| Key | Does |
+|---|---|
+| `⌘K` / `Ctrl+K` | Command palette |
+| `1`–`7` | Jump to a section, in sidebar order |
+| `R` | Refresh every panel |
+| `E` | Export the current panel as JSON |
+| `[` | Collapse or expand the sidebar |
+| `?` | The shortcut list |
+| `Esc` | Close a drawer, menu or overlay |
+
+Single letters and digits are suppressed while a text field has focus, so a
+search box never eats a shortcut.
+
+## Export
+
+`lib/export.ts` writes JSON or RFC 4180 CSV of exactly the rows on screen,
+from the payload already in the browser — an export never re-queries and can
+never show a different set from the one being looked at. Column order is
+passed explicitly rather than derived from the first row's keys, so a row
+missing an optional field cannot shift every later column left by one.
