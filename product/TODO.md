@@ -70,5 +70,5 @@ price book and captures leads.
   - `uv run pytest tests/test_session_search.py tests/test_tools.py tests/test_sessions_cli.py -q`
     passing, plus a manual `sakthai sessions search` smoke run.
 
-- [ ] **GitHub delivery:**
+- [x] 2026-08-27 **GitHub delivery:**
   - Committed, pushed, PR opened, merged after green CI.
