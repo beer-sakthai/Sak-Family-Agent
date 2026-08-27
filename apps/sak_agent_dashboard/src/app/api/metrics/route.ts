@@ -1,17 +1,12 @@
-import { NextResponse } from "next/server";
-import { getMetricsSummary } from "@/lib/sakthai";
+/** `GET /api/metrics` — run, latency and token aggregates over the eval log. */
 
-export async function GET(request: Request) {
-  try {
-    const url = new URL(request.url);
-    const demo = url.searchParams.get("demo") === "true";
-    const metrics = await getMetricsSummary(demo);
-    return NextResponse.json({ success: true, metrics });
-  } catch (error: any) {
-    console.error("Secure Log [GET /api/metrics]: Failed to fetch metrics:", error);
-    return NextResponse.json(
-      { success: false, error: "An unexpected error occurred while fetching metrics data." },
-      { status: 500 }
-    );
-  }
+import { intParam, respond } from "@/lib/source";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET(request: Request): Promise<Response> {
+  const params = new URL(request.url).searchParams;
+  const limit = intParam(params.get("limit"), 2000, 1, 20_000);
+  return respond(request, (source) => source.getMetrics(limit));
 }

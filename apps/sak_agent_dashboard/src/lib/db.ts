@@ -1,167 +1,54 @@
-import path from "path";
-import os from "os";
+/**
+ * Read-only SQLite access to a memory shard.
+ *
+ * Three things this fixes over what it replaces:
+ *
+ *  - It used CommonJS `require("better-sqlite3")` inside an ESM module. Under
+ *    Vitest's ESM transform `require` is undefined, so every call threw and was
+ *    swallowed into a demo-data fallback — meaning the SQLite path had never
+ *    once executed under test.
+ *  - `db.close()` was skipped whenever an error escaped the inner try/catches,
+ *    leaking the handle.
+ *  - A missing database and a genuinely broken one were indistinguishable, both
+ *    silently becoming fake data.
+ *
+ * `openDb` returns `null` for "no such shard" — a normal state, since a shard
+ * file only exists once a persona has been written to — and lets a real error
+ * propagate so the caller can report it instead of inventing data.
+ */
+
 import fs from "fs";
-import { MemoryData, FactRecord, ObservationRecord } from "./types";
 
-const SAKTHAI_DIR = process.env.SAKTHAI_DIR || path.join(os.homedir(), ".sakthai");
-const DB_FILE = path.join(SAKTHAI_DIR, "memory.db");
+import Database from "better-sqlite3";
 
-export function getDemoMemoryData(): MemoryData {
-  return {
-    facts: [
-      {
-        id: 1,
-        entity: "SakThai",
-        fact: "Primary model initialized with v2 architecture",
-        persona: "SakThai",
-        createdAt: "2026-08-02T12:00:00Z",
-      },
-      {
-        id: 2,
-        entity: "SakKing",
-        fact: "Math proof solver loaded and verified",
-        persona: "SakKing",
-        createdAt: "2026-08-02T11:45:00Z",
-      },
-      {
-        id: 3,
-        entity: "SakSee",
-        fact: "Vision image parser cached and operational",
-        persona: "SakSee",
-        createdAt: "2026-08-02T11:30:00Z",
-      },
-      {
-        id: 4,
-        entity: "SakSit",
-        fact: "Security boundary rules enforced for filesystem access",
-        persona: "SakSit",
-        createdAt: "2026-08-02T11:00:00Z",
-      },
-      {
-        id: 5,
-        entity: "SakJules",
-        fact: "Async background worker queue initialized",
-        persona: "SakJules",
-        createdAt: "2026-08-02T10:30:00Z",
-      },
-    ],
-    observations: [
-      {
-        id: 1,
-        category: "eval",
-        observation: "Benchmark 95% passed across test suites",
-        timestamp: "2026-08-02T12:00:00Z",
-      },
-      {
-        id: 2,
-        category: "telemetry",
-        observation: "Average latency stable at 388ms",
-        timestamp: "2026-08-02T11:50:00Z",
-      },
-      {
-        id: 3,
-        category: "security",
-        observation: "Zero unauthorized memory access attempts detected",
-        timestamp: "2026-08-02T11:15:00Z",
-      },
-    ],
+/** The subset of better-sqlite3 we use, so callers need no `any`. */
+export interface ReadonlyDatabase {
+  prepare(sql: string): {
+    get(...params: unknown[]): Record<string, unknown> | undefined;
+    all(...params: unknown[]): Record<string, unknown>[];
   };
+  close(): void;
 }
 
-export async function getMemoryData(demo?: boolean, query?: string): Promise<MemoryData> {
-  let memory: MemoryData = { facts: [], observations: [] };
+/**
+ * Open `file` read-only, run `read`, and always close the handle.
+ *
+ * Returns null when the shard does not exist. Anything else — a corrupt file, a
+ * missing native binding — throws, so the route reports a failure rather than
+ * serving plausible fiction.
+ *
+ * `better-sqlite3` is a native addon, so `next.config.mjs` lists it in
+ * `serverExternalPackages` to keep it out of the bundle; this module is only
+ * ever reached from a route handler declaring `runtime = "nodejs"`.
+ */
+export function openDb<T>(file: string, read: (db: ReadonlyDatabase) => T): T | null {
+  if (!fs.existsSync(file)) return null;
 
-  if (demo || !fs.existsSync(DB_FILE)) {
-    memory = getDemoMemoryData();
-  } else {
-    try {
-      // Dynamic import/require for better-sqlite3
-      const Database = require("better-sqlite3");
-      const db = new Database(DB_FILE, { readonly: true, fileMustExist: true });
-
-      let facts: FactRecord[] = [];
-      try {
-        const factRows = db.prepare("SELECT * FROM facts").all();
-        facts = factRows.map((row: any) => {
-          const entity = row.entity || row.key || row.kind || row.source_session || "SakThai";
-          const fact = row.fact || row.value || row.summary || "";
-          const persona = row.persona || row.source_session || entity;
-          const rawTs = row.createdAt || row.created_at;
-          const createdAt =
-            typeof rawTs === "number"
-              ? new Date(rawTs * 1000).toISOString()
-              : typeof rawTs === "string"
-              ? rawTs
-              : new Date().toISOString();
-
-          return {
-            id: row.id,
-            entity,
-            fact,
-            persona,
-            createdAt,
-          };
-        });
-      } catch {
-        facts = [];
-      }
-
-      let observations: ObservationRecord[] = [];
-      try {
-        const obsRows = db.prepare("SELECT * FROM observations").all();
-        observations = obsRows.map((row: any) => {
-          const category = row.category || row.evidence_session_id || "general";
-          const observation = row.observation || row.summary || "";
-          const rawTs = row.timestamp || row.created_at;
-          const timestamp =
-            typeof rawTs === "number"
-              ? new Date(rawTs * 1000).toISOString()
-              : typeof rawTs === "string"
-              ? rawTs
-              : new Date().toISOString();
-
-          return {
-            id: row.id,
-            category,
-            observation,
-            timestamp,
-          };
-        });
-      } catch {
-        observations = [];
-      }
-
-      db.close();
-
-      if (facts.length === 0 && observations.length === 0) {
-        memory = getDemoMemoryData();
-      } else {
-        memory = { facts, observations };
-      }
-    } catch {
-      memory = getDemoMemoryData();
-    }
+  const db = new Database(file, { readonly: true, fileMustExist: true }) as ReadonlyDatabase;
+  try {
+    return read(db);
+  } finally {
+    // finally, not the happy path only — the old code leaked on the error path.
+    db.close();
   }
-
-  if (query && query.trim().length > 0) {
-    // Sanitize search query input
-    const cleanQuery = query.replace(/[<>]/g, "").trim().toLowerCase();
-    if (cleanQuery.length > 0) {
-      memory = {
-        facts: memory.facts.filter((f) => {
-          const inEntity = (f.entity || "").toLowerCase().includes(cleanQuery);
-          const inFact = (f.fact || "").toLowerCase().includes(cleanQuery);
-          const inPersona = (f.persona || "").toLowerCase().includes(cleanQuery);
-          return inEntity || inFact || inPersona;
-        }),
-        observations: memory.observations.filter((o) => {
-          const inCat = (o.category || "").toLowerCase().includes(cleanQuery);
-          const inObs = (o.observation || "").toLowerCase().includes(cleanQuery);
-          return inCat || inObs;
-        }),
-      };
-    }
-  }
-
-  return memory;
 }

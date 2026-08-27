@@ -1,6 +1,8 @@
 # Dependabot keeps dependencies and pinned action versions current.
-# Three ecosystems live in this repo: Python (uv), the Playwright probe's npm
-# packages, and the GitHub Actions used by the workflows.
+# Four ecosystems live in this repo: Python (uv), the npm projects, the GitHub
+# Actions used by the workflows, and the Docker base images. Everything here is
+# pinned by SHA/digest for OpenSSF Scorecard's Pinned-Dependencies check, so
+# Dependabot is what keeps those pins from going stale.
 version: 2
 updates:
   # Python dependencies — pyproject.toml + uv.lock at the repo root.
@@ -38,6 +40,16 @@ updates:
     directory: /apps/sak_agent_dashboard
     schedule:
       interval: daily
+    ignore:
+      # The dashboard is written against Tailwind v3: globals.css uses the v3
+      # `@tailwind base/components/utilities` directives and tailwind.config.ts
+      # is a v3 JS config. A v4 major needs the PostCSS plugin move to
+      # `@tailwindcss/postcss` plus a directive/config migration, none of which
+      # has been done. The v4 bump has landed and broken the Vercel build twice
+      # already (reverted once in b330e2f, re-proposed as 23745ae) — hold the
+      # major until someone does the migration deliberately.
+      - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /personas/saksee/skills/SakSee-stitch::react-components
@@ -48,3 +60,15 @@ updates:
     directory: /personas/saksee/skills/SakSee-stitch::react-native
     schedule:
       interval: daily
+
+  # Docker base images. Both Dockerfiles pin their base by digest, which only
+  # stays current if something bumps it — that something is this.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /infra/sakthai-training-space
+    schedule:
+      interval: weekly

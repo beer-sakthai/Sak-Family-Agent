@@ -1,75 +1,144 @@
 # Project: Sak-Agent-Family Dashboard
 
+Read-only analytics UI over the SakThai agent family's runtime state.
+
 ## Architecture
-- Framework: Next.js 14/15 TypeScript App Router
-- Styling: Tailwind CSS, Inter & Outfit Google fonts, dark-mode styling (`#090d16` background, glassmorphic cards `bg-slate-900/80`)
-- Data Storage & Runtime Access: Read-only access to `~/.sakthai/` (`eval.jsonl`, `audit.log`, `memory.db` SQLite via Node `sqlite3`/`better-sqlite3`, `sessions/*.json`)
-- Charts & Visualization: Recharts / Chart.js for responsive performance, token usage, latency trends, and stop reason breakdown
-- Test Suite: Vitest / Jest + React Testing Library for API route testing and component unit/integration tests (`npm test`)
 
-## Feature Inventory
-| # | Feature | Description | Milestone | Source |
-|---|---------|-------------|-----------|--------|
-| 1 | App Scaffold & Infrastructure | Next.js TS project setup, Tailwind CSS, typography (Inter/Outfit), layout wrapper | M1 | Survey |
-| 2 | Data Access Layer & Services | Helper modules (`lib/sakthai.ts`, `lib/db.ts`) to read/parse `eval.jsonl`, `audit.log`, `memory.db`, `sessions/*.json` | M2 | Survey |
-| 3 | API Routes | `/api/agents`, `/api/metrics`, `/api/memory`, `/api/sessions` with JSON response payloads & query filters | M2 | Survey |
-| 4 | Agent Overview Panel UI | Live status cards for SakThai, SakKing, SakSee, SakSit, SakJules (model, status, skills, latency, runs) | M3 | Survey |
-| 5 | Analytics & Interactive Charts UI | Visualizations for benchmark scores, token consumption, latency trends, and stop reason breakdown | M3 | Survey |
-| 6 | Session & Memory Explorer UI | Searchable transcripts, modal transcript detail viewer, security audit log inspector, memory.db viewer | M3 | Survey |
-| 7 | Automated Test Suite | Comprehensive API unit/integration tests and UI component rendering tests (`npm test` 100% pass) | Testing Track & M4 | Survey |
-| 8 | Build Hardening & E2E Acceptance | `npm run build` succeeds with 0 TS/lint errors; full verification by Reviewers, Challengers, Auditor | M4 | Survey |
+- **Framework:** Next.js 16 (App Router) + React 19 + TypeScript 6
+- **Styling:** Tailwind CSS 3, Inter & Outfit via `next/font/google`, dark
+  glassmorphism (`#090d16` background, `bg-slate-900/80` cards)
+- **Charts:** Recharts 3
+- **Tests:** Vitest 4 + React Testing Library — see [`TESTING.md`](./TESTING.md)
 
-## Milestones
-| # | Name | Scope | Dependencies | Status |
-|---|------|-------|-------------|--------|
-| 1 | M1: App Setup & Infrastructure | Scaffold Next.js TS app, install dependencies, Tailwind setup, Root Layout, dark mode theme | None | DONE (2f901ad7-3ff8-425b-a653-ec2d03b7838b) |
-| 2 | M2: Data Layer & API Routes | `lib/` data parsers, SQLite reader, `/api/agents`, `/api/metrics`, `/api/memory`, `/api/sessions` | M1 | DONE (78895c9f-0c72-475d-8ad7-1df011545d3a) |
-| 3 | M3: Dashboard UI Components | Agent Overview cards, Recharts visualizations, Session explorer modal, Audit log viewer | M2 | DONE (8fbba1f0-a7e1-4e88-9ad2-1ab00b630184) |
-| 4 | M4: Testing, Verification & Build | Vitest/Jest unit/integration test suite (`npm test`), clean compilation (`npm run build`) | M3, Testing Track | IN_PROGRESS (Gate verification: Reviewers, Challengers, Auditor) |
+### Data layer
 
-## Interface Contracts
-### Data Parsers ↔ API Routes
-- `getAgentOverview()` -> `PersonaOverview[]` (SakThai, SakKing, SakSee, SakSit, SakJules)
-- `getMetricsSummary()` -> `{ totalRuns, avgLatencyMs, successRate, tokenStats, stopReasons, trends }`
-- `getMemoryAndAudit(query, severity)` -> `{ facts: [], observations: [], auditLogs: [] }`
-- `getSessionTranscripts(search, limit, offset)` -> `{ sessions: [], total: 761 }`
+One seam, `src/lib/source.ts`, with three implementations. `resolveSource()`
+picks per request:
 
-### API Routes ↔ Frontend UI
-- `GET /api/agents` -> `{ success: true, agents: PersonaCard[] }`
-- `GET /api/metrics` -> `{ success: true, metrics: MetricsData }`
-- `GET /api/memory` -> `{ success: true, memory: MemoryData, auditLogs: AuditLog[] }`
-- `GET /api/sessions` -> `{ success: true, sessions: SessionMeta[], total: number }`
+1. explicit `?demo=1` → `DemoSource`
+2. `SAKTHAI_API_URL` set → `ApiSource` (the SakThai HTTP API; the hosted case)
+3. otherwise → `LocalFsSource` reading `~/.sakthai/` directly, degrading to
+   `DemoSource` only when the runtime directory genuinely is not there
 
-## Code Layout
+Every response carries which source answered, and the header renders it, so
+sample data can never be mistaken for live data.
+
+Both `LocalFsSource` and the Python API walk the unscoped runtime root **and**
+each `~/.sakthai/<persona>/` shard, because every deployed persona runs with its
+own `SAKTHAI_HOME`.
+
+### The contract
+
+`src/lib/contracts.generated.ts` is generated from
+`personas/sakthai/sakthai/web/contracts.py` by `scripts/gen_dashboard_types.py`.
+That Python module is the single definition of every payload; CI regenerates the
+TypeScript and fails on a diff. Do not edit the generated file.
+
+## Environment
+
+| Variable | Purpose |
+|---|---|
+| `SAKTHAI_HOME` | Runtime root (default `~/.sakthai`). Matches the Python package. |
+| `SAKTHAI_DIR` | Deprecated alias for `SAKTHAI_HOME`. |
+| `SAKTHAI_API_URL` | Base URL of a running `sakthai web serve`. Set it to use `ApiSource`. |
+| `SAKTHAI_API_TOKEN` | Bearer token for that API, from `sakthai web setup`. |
+
+## Routes
+
+| Route | Payload |
+|---|---|
+| `/api/agents` | `PersonasPayload` — all six personas plus an unattributed-run count |
+| `/api/metrics` | `MetricsPayload` — runs, latency, tokens, stop reasons, daily trends |
+| `/api/sessions` | `SessionsPayload` — summaries; `?id=` adds one transcript |
+| `/api/memory` | `MemoryPayload` — facts and observations merged across shards |
+| `/api/audit` | `AuditPayload` — security events from `audit.log` |
+| `/api/workflows` | `WorkflowsPayload` — `agent_workflow` runs; `?id=` for one run |
+
+All are `runtime = "nodejs"` and `dynamic = "force-dynamic"`: they read the
+filesystem and a native SQLite addon, and serve live state.
+
+## Code layout
+
 ```
-sak_agent_dashboard/
-├── src/
-│   ├── app/
-│   │   ├── layout.tsx
-│   │   ├── page.tsx
-│   │   ├── globals.css
-│   │   ├── api/
-│   │   │   ├── agents/route.ts
-│   │   │   ├── metrics/route.ts
-│   │   │   ├── memory/route.ts
-│   │   │   └── sessions/route.ts
-│   ├── components/
-│   │   ├── AgentCard.tsx
-│   │   ├── AgentOverview.tsx
-│   │   ├── AnalyticsCharts.tsx
-│   │   ├── SessionExplorer.tsx
-│   │   ├── MemoryExplorer.tsx
-│   │   └── AuditLogs.tsx
-│   ├── lib/
-│   │   ├── sakthai.ts
-│   │   ├── db.ts
-│   │   └── types.ts
-│   └── tests/
-│       ├── api.test.ts
-│       └── components.test.tsx
-├── public/
-├── package.json
-├── tsconfig.json
-├── next.config.mjs
-└── tailwind.config.ts
+src/
+├── app/
+│   ├── layout.tsx · page.tsx · globals.css
+│   └── api/{agents,metrics,sessions,memory,audit,workflows}/route.ts
+├── components/
+│   ├── shell/Sidebar.tsx · shell/TopBar.tsx      (the app chrome)
+│   ├── CommandPalette.tsx · KpiStrip.tsx
+│   ├── Skeletons.tsx · HostedNotice.tsx
+│   ├── AgentCard.tsx · AgentOverview.tsx · AnalyticsCharts.tsx
+│   ├── SessionExplorer.tsx · MemoryExplorer.tsx · AuditLogs.tsx
+│   └── WorkflowRuns.tsx · DemoModeToggle.tsx · StitchStudio.tsx
+├── lib/
+│   ├── contracts.generated.ts   (generated — do not edit)
+│   ├── source.ts · runtime.ts · demo.ts · db.ts
+│   ├── nav.ts · format.ts · browser-state.ts
+│   └── sources/{local,api,demo}.ts
+└── tests/
 ```
+
+### The shell
+
+`layout.tsx` renders the document and an inert ambient background, nothing
+else. All the chrome — sidebar, topbar, command palette — is composed in
+`page.tsx`, because it is driven by the same client state as the panels it
+frames. `lib/nav.ts` is the single definition of the seven sections; the
+sidebar, the topbar heading, the command palette and the keyboard shortcuts
+all read it.
+
+Two pieces of state live in the browser rather than in React, and
+`lib/browser-state.ts` reads both through `useSyncExternalStore` so the server
+snapshot and the hydrating client agree:
+
+- **the active section** is the URL fragment (`#memory`), so a section is
+  linkable and the back button moves between them;
+- **sample-data mode, sidebar collapse and the auto-refresh interval** are
+  `localStorage` preferences, so they survive a reload.
+
+Keyboard: `⌘K`/`Ctrl+K` opens the palette, `R` refreshes. Both are suppressed
+while a text field has focus.
+
+## Local development
+
+From the repository root:
+
+```bash
+make dashboard-dev    # the Python API on :3001 and the dashboard on :3000
+make dashboard-test   # the full CI sequence
+make contract-types   # regenerate the TypeScript contract
+```
+
+Without `SAKTHAI_API_URL` the dashboard reads `~/.sakthai` directly, which needs
+no server at all.
+
+## Deployment
+
+This app **is** deployed: a Vercel project (`houseofsak/sak-family-agent`) builds
+it on every push, with its root directory set to `apps/sak_agent_dashboard` in
+Vercel's settings — that part is still a project setting, because Vercel resolves
+the root directory *before* reading any config file. Everything downstream of it
+now lives in [`vercel.json`](./vercel.json): the framework, the install command,
+and the response headers (CSP, `X-Frame-Options`, `Referrer-Policy`,
+`Permissions-Policy`, and `Cache-Control: no-store` over `/api/*` so a CDN can
+never serve a stale reading as a live one).
+
+What does **not** exist is a hosted SakThai API. With no `~/.sakthai` on a Vercel
+lambda and no `SAKTHAI_API_URL` configured, `resolveSource()` serves demo data —
+labelled as sample data in the header, and now with an on-page notice saying how
+to point it at a live agent. To show real data, stand up a reachable
+`sakthai web serve` and set `SAKTHAI_API_URL` and `SAKTHAI_API_TOKEN` in the
+Vercel project. Note that the API refuses non-loopback binds unless
+`SAKTHAI_WEB_ALLOW_PUBLIC` is set: it serves personal memory, so exposing it is
+a deliberate decision.
+
+Full walkthrough, including the root-directory setting and how to verify a
+deploy: [`DEPLOYMENT.md`](./DEPLOYMENT.md). Environment variables:
+[`.env.example`](./.env.example).
+
+## Status
+
+M1–M3 (scaffold, data layer, UI) and M4 (testing and build) are complete: `npm
+run lint`, `npm run build`, `tsc --noEmit` and `npm test` all pass, and
+`.github/workflows/apps.yml` runs them on every change under `apps/`.

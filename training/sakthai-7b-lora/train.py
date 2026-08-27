@@ -5,11 +5,24 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 
 # ── Config ────────────────────────────────────────────────────────
 BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
+# Pinned to an immutable commit (bandit B615). A mutable branch ref lets an
+# upstream force-push silently change what this job downloads, and an unpinned
+# run is not reproducible.
+BASE_MODEL_REVISION = "a09a35458c702b33eeacc393d103063234e8bc28"
 DATASET_ID = "Nanthasit/sakthai-combined-v5"
 ADAPTER_REPO = "Nanthasit/sakthai-context-7b-tools"
+
+# Training artefacts land in a private per-run directory (mkdtemp is 0700)
+# rather than a fixed /tmp path (bandit B108): a predictable name in a
+# world-writable directory can be pre-created or symlinked by another user
+# before this process writes to it.
+ARTIFACT_DIR = os.environ.get("SAKTHAI_ARTIFACT_DIR") or tempfile.mkdtemp(prefix="sakthai-7b-")
+ADAPTER_DIR = os.path.join(ARTIFACT_DIR, "7b-adapter")
+METRICS_PATH = os.path.join(ARTIFACT_DIR, "metrics.json")
 
 LORA_R = 16
 LORA_ALPHA = 32
@@ -59,7 +72,9 @@ print(f"Auth OK: {api.whoami()['name']}", flush=True)
 from datasets import load_dataset
 
 print("Loading dataset...", flush=True)
-dataset = load_dataset(DATASET_ID, split="train")
+# Own-namespace dataset, republished by this project's own pipeline;
+# pinning it would train against a stale snapshot of our own data.
+dataset = load_dataset(DATASET_ID, split="train")  # nosec B615
 print(f"Loaded {len(dataset)} examples", flush=True)
 
 
@@ -99,12 +114,15 @@ bnb = BitsAndBytesConfig(
 print("Loading model...", flush=True)
 model = AutoModelForCausalLM.from_pretrained(
     BASE_MODEL,
+    revision=BASE_MODEL_REVISION,
     quantization_config=bnb,
     device_map="auto",
     torch_dtype="auto",
     trust_remote_code=True,
 )
-tok = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
+tok = AutoTokenizer.from_pretrained(
+    BASE_MODEL, revision=BASE_MODEL_REVISION, trust_remote_code=True
+)
 tok.pad_token = tok.eos_token
 tok.padding_side = "right"
 print(f"Loaded. Params: {model.num_parameters():,}", flush=True)
@@ -169,12 +187,12 @@ trainer.train()
 print("Done training!", flush=True)
 
 # ── Save & push ───────────────────────────────────────────────────
-trainer.save_model("/tmp/7b-adapter")
-tok.save_pretrained("/tmp/7b-adapter")
+trainer.save_model(ADAPTER_DIR)
+tok.save_pretrained(ADAPTER_DIR)
 print(f"Pushing to {ADAPTER_REPO}...", flush=True)
 api.create_repo(ADAPTER_REPO, exist_ok=True)
 api.upload_folder(
-    folder_path="/tmp/7b-adapter",
+    folder_path=ADAPTER_DIR,
     repo_id=ADAPTER_REPO,
     repo_type="model",
     commit_message="SakThai 7B LoRA adapter",
@@ -183,10 +201,10 @@ print(f"Pushed! https://huggingface.co/{ADAPTER_REPO}", flush=True)
 
 # ── Metrics ───────────────────────────────────────────────────────
 log = trainer.state.log_history
-with open("/tmp/metrics.json", "w") as f:
+with open(METRICS_PATH, "w") as f:
     json.dump({"base": BASE_MODEL, "dataset": DATASET_ID, "log": log}, f, indent=2)
 api.upload_file(
-    path_or_fileobj="/tmp/metrics.json",
+    path_or_fileobj=METRICS_PATH,
     path_in_repo="training_metrics.json",
     repo_id=ADAPTER_REPO,
     repo_type="model",

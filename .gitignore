@@ -35,6 +35,7 @@ personas/sakthai/agent-self-evolution/output/
 .coverage
 apps/*/node_modules
 apps/*/.next
+apps/*/.vercel
 *.tsbuildinfo
 .github/aw/
 

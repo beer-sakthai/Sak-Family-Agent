@@ -1,268 +1,364 @@
-import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+/**
+ * Component rendering against contract-shaped data.
+ *
+ * Every fixture here comes from `lib/demo.ts` — the one demo dataset — so a
+ * component that renders in a test renders the same shapes it gets at runtime.
+ * Imports are direct: a broken component fails the suite rather than falling
+ * through to an inline literal.
+ */
 
-// Helper to dynamically load component modules if available
-async function getComponentModule(componentName: string) {
-  try {
-    return await import(`../components/${componentName}`);
-  } catch {
-    return null;
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+
+import AgentCard from "@/components/AgentCard";
+import AgentOverview from "@/components/AgentOverview";
+import AnalyticsCharts from "@/components/AnalyticsCharts";
+import AuditLogs from "@/components/AuditLogs";
+import DemoModeToggle from "@/components/DemoModeToggle";
+import MemoryExplorer from "@/components/MemoryExplorer";
+import SessionExplorer from "@/components/SessionExplorer";
+import WorkflowRuns from "@/components/WorkflowRuns";
+import type { PersonaSummary } from "@/lib/contracts.generated";
+import {
+  demoAudit,
+  demoMemory,
+  demoMetrics,
+  demoPersonas,
+  demoSessions,
+  demoWorkflows,
+} from "@/lib/demo";
+
+const personas = demoPersonas();
+const active = personas.personas.find((p) => p.runs > 0)!;
+const idle = personas.personas.find((p) => p.runs === 0)!;
+
+describe("AgentCard", () => {
+  it("renders the persona's display name", () => {
+    render(<AgentCard agent={active} />);
+    expect(screen.getByText(active.display_name)).toBeInTheDocument();
+  });
+
+  it("shows a computed success rate, not a hardcoded score", () => {
+    const agent: PersonaSummary = { ...active, runs: 10, errors: 2 };
+    render(<AgentCard agent={agent} />);
+    expect(screen.getByText("80.0%")).toBeInTheDocument();
+  });
+
+  it("says so when a persona has no runs instead of inventing a score", () => {
+    render(<AgentCard agent={idle} />);
+    expect(screen.getByText("no runs yet")).toBeInTheDocument();
+  });
+
+  it("labels a persona with no shard as Idle", () => {
+    render(<AgentCard agent={idle} />);
+    expect(screen.getByText("Idle")).toBeInTheDocument();
+  });
+
+  it("reports a missing memory shard plainly", () => {
+    render(<AgentCard agent={idle} />);
+    expect(screen.getByText("no memory shard yet")).toBeInTheDocument();
+  });
+
+  it("renders identically across repeated renders", () => {
+    // The previous card filled a missing score with Math.random().
+    const first = render(<AgentCard agent={active} />).container.innerHTML;
+    const second = render(<AgentCard agent={active} />).container.innerHTML;
+    expect(first).toBe(second);
+  });
+
+  it("shows an error count only when there are errors", () => {
+    const { rerender } = render(<AgentCard agent={{ ...active, errors: 0 }} />);
+    expect(screen.queryByText(/error/)).not.toBeInTheDocument();
+    rerender(<AgentCard agent={{ ...active, errors: 3 }} />);
+    expect(screen.getByText("3 errors")).toBeInTheDocument();
+  });
+});
+
+describe("AgentOverview", () => {
+  it("renders a card for all six personas", () => {
+    render(<AgentOverview personas={personas} />);
+    expect(screen.getByText("6 Personas Registered")).toBeInTheDocument();
+  });
+
+  it("surfaces unattributed runs rather than hiding them", () => {
+    render(<AgentOverview personas={personas} />);
+    expect(screen.getByText(`${personas.unattributed_runs} unattributed`)).toBeInTheDocument();
+  });
+
+  it("omits the unattributed badge when there are none", () => {
+    render(<AgentOverview personas={{ ...personas, unattributed_runs: 0 }} />);
+    expect(screen.queryByText(/unattributed/)).not.toBeInTheDocument();
+  });
+});
+
+describe("AnalyticsCharts", () => {
+  // The headline run/success/latency figures moved to the KPI strip, which is
+  // on screen above these charts; see `shell.test.tsx`. What is left here is
+  // how much of the family the per-persona charts actually speak for.
+  it("says how many personas the per-persona charts are drawn from", () => {
+    const attributed = personas.personas.filter((p) => p.runs > 0).length;
+    render(<AnalyticsCharts metrics={demoMetrics()} personas={personas} />);
+    expect(
+      screen.getByText(`${attributed} of ${personas.personas.length} personas have attributed runs`),
+    ).toBeInTheDocument();
+  });
+
+  it("counts nothing rather than guessing without a personas payload", () => {
+    render(<AnalyticsCharts metrics={demoMetrics()} />);
+    expect(screen.getByText("0 of 0 personas have attributed runs")).toBeInTheDocument();
+  });
+
+  it("renders without a personas payload", () => {
+    expect(() => render(<AnalyticsCharts metrics={demoMetrics()} />)).not.toThrow();
+  });
+});
+
+describe("MemoryExplorer", () => {
+  it("shows facts by default", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    expect(screen.getByText("Prefers a dark, low-contrast terminal")).toBeInTheDocument();
+  });
+
+  it("switches to observations", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    fireEvent.click(screen.getByRole("tab", { name: /Observations/ }));
+    expect(screen.getByText("Works late into the evening most days")).toBeInTheDocument();
+  });
+
+  it("tags each fact with its shard", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    expect(screen.getAllByText("sakthai").length).toBeGreaterThan(0);
+  });
+
+  it("renders an empty state", () => {
+    const empty = { ...demoMemory(), facts: [] };
+    render(<MemoryExplorer memory={empty} />);
+    expect(screen.getByText("No memory facts found.")).toBeInTheDocument();
+  });
+});
+
+describe("AuditLogs", () => {
+  it("renders events", () => {
+    render(<AuditLogs audit={demoAudit()} severity="ALL" onSeverityChange={vi.fn()} />);
+    expect(screen.getByText("Blocked a destructive shell command")).toBeInTheDocument();
+  });
+
+  it("reports the filter upward instead of filtering locally", () => {
+    const onChange = vi.fn();
+    render(<AuditLogs audit={demoAudit()} severity="ALL" onSeverityChange={onChange} />);
+    fireEvent.click(screen.getByRole("button", { name: /critical severity/ }));
+    expect(onChange).toHaveBeenCalledWith("critical");
+  });
+
+  it("marks the active severity", () => {
+    render(<AuditLogs audit={demoAudit()} severity="high" onSeverityChange={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /high severity/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("explains an empty log rather than looking broken", () => {
+    const empty = { events: [], severity_counts: {}, total: 0 };
+    render(<AuditLogs audit={empty} severity="ALL" onSeverityChange={vi.fn()} />);
+    expect(screen.getByText(/An empty audit log is a normal state/)).toBeInTheDocument();
+  });
+});
+
+describe("SessionExplorer", () => {
+  const sessions = demoSessions();
+
+  function renderExplorer(overrides = {}) {
+    return render(
+      <SessionExplorer
+        sessions={sessions.sessions}
+        total={sessions.total}
+        search=""
+        onSearchChange={vi.fn()}
+        page={1}
+        pageSize={10}
+        onPageChange={vi.fn()}
+        onSessionSelect={vi.fn()}
+        detail={null}
+        {...overrides}
+      />,
+    );
   }
-}
 
-describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
-
-  describe("AgentCard & AgentOverview Components", () => {
-    it("renders agent card details when AgentCard is invoked", async () => {
-      const mod = await getComponentModule("AgentCard");
-      const sampleAgent = {
-        name: "SakThai",
-        role: "Primary Orchestrator & Fine-Tuned Agent",
-        status: "Active",
-        model: "sakthai-v2-qlora",
-        latencyMs: 320,
-        runs: 300,
-        skills: ["routing", "planning", "tool-call"],
-      };
-
-      if (mod && mod.AgentCard) {
-        const AgentCard = mod.AgentCard;
-        render(<AgentCard agent={sampleAgent} />);
-        expect(screen.getByText("SakThai")).toBeInTheDocument();
-        expect(screen.getByText("Primary Orchestrator & Fine-Tuned Agent")).toBeInTheDocument();
-        expect(screen.getByText("Active")).toBeInTheDocument();
-        expect(screen.getByText(/320ms/)).toBeInTheDocument();
-      } else {
-        render(
-          <div className="agent-card">
-            <h4>{sampleAgent.name}</h4>
-            <p>{sampleAgent.role}</p>
-            <span>{sampleAgent.status}</span>
-            <span>{sampleAgent.latencyMs}ms</span>
-          </div>
-        );
-        expect(screen.getByText("SakThai")).toBeInTheDocument();
-        expect(screen.getByText("Primary Orchestrator & Fine-Tuned Agent")).toBeInTheDocument();
-        expect(screen.getByText("Active")).toBeInTheDocument();
-        expect(screen.getByText("320ms")).toBeInTheDocument();
-      }
-    });
-
-    it("renders overview grid with all 5 Sak-Agent-Family personas", async () => {
-      const mod = await getComponentModule("AgentOverview");
-      const mockAgents = [
-        { name: "SakThai", role: "Primary Orchestrator", status: "Active", model: "m1", latencyMs: 300, runs: 100, skills: [] },
-        { name: "SakKing", role: "Reasoning Specialist", status: "Ready", model: "m2", latencyMs: 500, runs: 80, skills: [] },
-        { name: "SakSee", role: "Multimodal Specialist", status: "Ready", model: "m3", latencyMs: 400, runs: 60, skills: [] },
-        { name: "SakSit", role: "Security Auditor", status: "Ready", model: "m4", latencyMs: 280, runs: 50, skills: [] },
-        { name: "SakJules", role: "Async Execution", status: "Ready", model: "m5", latencyMs: 350, runs: 70, skills: [] },
-      ];
-
-      if (mod && mod.AgentOverview) {
-        const AgentOverview = mod.AgentOverview;
-        render(<AgentOverview agents={mockAgents} />);
-        expect(screen.getByText("SakThai")).toBeInTheDocument();
-        expect(screen.getByText("SakKing")).toBeInTheDocument();
-        expect(screen.getByText("SakSee")).toBeInTheDocument();
-        expect(screen.getByText("SakSit")).toBeInTheDocument();
-        expect(screen.getByText("SakJules")).toBeInTheDocument();
-      } else {
-        render(
-          <div className="agent-overview">
-            {mockAgents.map((a) => (
-              <div key={a.name}>{a.name}</div>
-            ))}
-          </div>
-        );
-        mockAgents.forEach((a) => expect(screen.getByText(a.name)).toBeInTheDocument());
-      }
-    });
+  it("lists sessions", () => {
+    renderExplorer();
+    expect(screen.getByText("Draft the release notes for v2.1")).toBeInTheDocument();
   });
 
-  describe("AnalyticsCharts Component", () => {
-    it("renders token usage and benchmark analytics sections", async () => {
-      const mod = await getComponentModule("AnalyticsCharts");
-      const mockMetrics = {
-        totalRuns: 761,
-        avgLatencyMs: 388,
-        successRate: 0.985,
-        tokenStats: { totalTokens: 1450000, promptTokens: 950000, completionTokens: 500000 },
-        stopReasons: { end_turn: 740, max_tokens: 21 },
-        trends: [{ date: "2026-08-01", runs: 350, latencyMs: 380 }],
-      };
-
-      if (mod && mod.AnalyticsCharts) {
-        const AnalyticsCharts = mod.AnalyticsCharts;
-        render(<AnalyticsCharts metrics={mockMetrics} />);
-        expect(screen.getByText(/Token Usage/i)).toBeInTheDocument();
-      } else {
-        render(
-          <div className="analytics-charts">
-            <h3>Token Usage & Benchmark Analytics</h3>
-            <div>Total Tokens: {mockMetrics.tokenStats.totalTokens}</div>
-          </div>
-        );
-        expect(screen.getByText("Token Usage & Benchmark Analytics")).toBeInTheDocument();
-        expect(screen.getByText(/1450000/)).toBeInTheDocument();
-      }
-    });
+  it("labels an unattributed session as such", () => {
+    renderExplorer();
+    expect(screen.getAllByText("unattributed").length).toBeGreaterThan(0);
   });
 
-  describe("SessionExplorer Component", () => {
-    it("allows interactive search query input and renders session rows", async () => {
-      const mod = await getComponentModule("SessionExplorer");
-      const mockSessions = [
-        { sessionId: "sess-1", persona: "SakThai", timestamp: "2026-08-02", messageCount: 5, tokenUsage: 1200, status: "completed" },
-        { sessionId: "sess-2", persona: "SakKing", timestamp: "2026-08-02", messageCount: 10, tokenUsage: 3400, status: "completed" },
-      ];
-
-      if (mod && mod.SessionExplorer) {
-        const SessionExplorer = mod.SessionExplorer;
-        render(<SessionExplorer sessions={mockSessions} />);
-        const searchInput = screen.getByPlaceholderText(/search/i);
-        fireEvent.change(searchInput, { target: { value: "SakThai" } });
-        expect(searchInput).toHaveValue("SakThai");
-      } else {
-        const SearchContainer = () => {
-          const [val, setVal] = React.useState("");
-          return (
-            <div className="session-explorer">
-              <input
-                placeholder="Search sessions..."
-                value={val}
-                onChange={(e) => setVal(e.target.value)}
-              />
-              <div>{val === "SakThai" ? "sess-1" : "all"}</div>
-            </div>
-          );
-        };
-        render(<SearchContainer />);
-        const input = screen.getByPlaceholderText("Search sessions...");
-        fireEvent.change(input, { target: { value: "SakThai" } });
-        expect(input).toHaveValue("SakThai");
-        expect(screen.getByText("sess-1")).toBeInTheDocument();
-      }
-    });
+  it("sends search upward for a server-side query", () => {
+    const onSearchChange = vi.fn();
+    renderExplorer({ onSearchChange });
+    fireEvent.change(screen.getByLabelText("Search sessions"), { target: { value: "deploy" } });
+    expect(onSearchChange).toHaveBeenCalledWith("deploy");
   });
 
-  describe("MemoryExplorer & AuditLogs Components", () => {
-    it("renders MemoryExplorer with facts and observations and accessible tab attributes", async () => {
-      const mod = await getComponentModule("MemoryExplorer");
-      const mockMemory = {
-        facts: [{ id: 1, entity: "SakThai", fact: "Primary model initialized", persona: "SakThai" }],
-        observations: [{ id: 1, category: "eval", observation: "Benchmark 95% passed" }],
-      };
-
-      if (mod && mod.MemoryExplorer) {
-        const MemoryExplorer = mod.MemoryExplorer;
-        render(<MemoryExplorer memory={mockMemory} />);
-        expect(screen.getByText("Primary model initialized")).toBeInTheDocument();
-
-        const factsTab = screen.getByRole("tab", { name: /view memory facts/i });
-        const obsTab = screen.getByRole("tab", { name: /view synthesis observations/i });
-
-        expect(factsTab).toHaveAttribute("aria-selected", "true");
-        expect(obsTab).toHaveAttribute("aria-selected", "false");
-
-        fireEvent.click(obsTab);
-        expect(factsTab).toHaveAttribute("aria-selected", "false");
-        expect(obsTab).toHaveAttribute("aria-selected", "true");
-        expect(screen.getByText("Benchmark 95% passed")).toBeInTheDocument();
-      } else {
-        render(
-          <div className="memory-explorer">
-            <h3>Memory Explorer</h3>
-            <div>{mockMemory.facts[0].fact}</div>
-            <div>{mockMemory.observations[0].observation}</div>
-          </div>
-        );
-        expect(screen.getByText("Memory Explorer")).toBeInTheDocument();
-        expect(screen.getByText("Primary model initialized")).toBeInTheDocument();
-        expect(screen.getByText("Benchmark 95% passed")).toBeInTheDocument();
-      }
-    });
-
-    it("renders security audit log entries with severity badges", async () => {
-      const mod = await getComponentModule("AuditLogs");
-      const mockLogs = [
-        { id: 1, timestamp: "2026-08-02T12:00:00Z", persona: "SakSit", severity: "critical", event: "Unauthorized access blocked", details: "Blocked IP 10.0.0.1" },
-        { id: 2, timestamp: "2026-08-02T12:05:00Z", persona: "SakThai", severity: "info", event: "Session initialized", details: "OK" },
-      ];
-
-      if (mod && mod.AuditLogs) {
-        const AuditLogs = mod.AuditLogs;
-        render(<AuditLogs logs={mockLogs} />);
-        expect(screen.getByText("Unauthorized access blocked")).toBeInTheDocument();
-        expect(screen.getByText("critical")).toBeInTheDocument();
-      } else {
-        render(
-          <div className="audit-logs">
-            {mockLogs.map((log) => (
-              <div key={log.id}>
-                <span>[{log.severity.toUpperCase()}]</span>
-                <span>{log.event}</span>
-              </div>
-            ))}
-          </div>
-        );
-        expect(screen.getByText("[CRITICAL]")).toBeInTheDocument();
-        expect(screen.getByText("Unauthorized access blocked")).toBeInTheDocument();
-      }
-    });
+  it("requests a transcript when a row is opened", () => {
+    const onSessionSelect = vi.fn();
+    renderExplorer({ onSessionSelect });
+    fireEvent.click(screen.getAllByText("View")[0]);
+    expect(onSessionSelect).toHaveBeenCalledWith(sessions.sessions[0].id);
   });
 
-  describe("Demo Mode Toggle Component", () => {
-    it("renders demo mode toggle button and handles click state toggle", async () => {
-      const mod = await getComponentModule("DemoModeToggle") || await getComponentModule("DemoToggle");
-      const handleToggle = vi.fn();
-
-      if (mod && (mod.DemoModeToggle || mod.DemoToggle)) {
-        const ToggleComponent = mod.DemoModeToggle || mod.DemoToggle;
-        render(<ToggleComponent isDemo={false} onToggle={handleToggle} />);
-        const btn = screen.getByRole("button", { name: /demo/i });
-        expect(btn).toHaveAttribute("aria-pressed", "false");
-        fireEvent.click(btn);
-        expect(handleToggle).toHaveBeenCalled();
-      } else {
-        const DemoToggleContainer = ({ isDemo, onToggle }: { isDemo: boolean; onToggle: () => void }) => (
-          <button aria-label="demo mode toggle" onClick={onToggle}>
-            Demo Mode: {isDemo ? "ON" : "OFF"}
-          </button>
-        );
-        render(<DemoToggleContainer isDemo={false} onToggle={handleToggle} />);
-        const btn = screen.getByRole("button", { name: /demo mode/i });
-        expect(btn).toHaveTextContent("Demo Mode: OFF");
-        fireEvent.click(btn);
-        expect(handleToggle).toHaveBeenCalledTimes(1);
-      }
-    });
+  it("opens and closes the transcript modal", () => {
+    renderExplorer();
+    fireEvent.click(screen.getAllByText("View")[0]);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Close transcript"));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  describe("StitchStudio Component", () => {
-    it("renders Stitch Studio header, preset controls with accessible attributes, and tab switching", async () => {
-      const mod = await getComponentModule("StitchStudio");
-      if (mod && mod.StitchStudio) {
-        const StitchStudio = mod.StitchStudio;
-        render(<StitchStudio />);
-        expect(screen.getByText(/Google Stitch Design & Component Workbench/i)).toBeInTheDocument();
-        expect(screen.getByText(/SakThai Interactive Agent Drawer/i)).toBeInTheDocument();
+  it("renders an empty state naming the search term", () => {
+    renderExplorer({ sessions: [], total: 0, search: "nothing" });
+    expect(screen.getByText(/No sessions match/)).toBeInTheDocument();
+  });
 
-        // Verify accessibility attributes on preset buttons
-        const agentDrawerPresetBtn = screen.getByRole("button", { name: /select preset sakthai interactive agent drawer/i });
-        const mermaidPresetBtn = screen.getByRole("button", { name: /select preset multi-agent system architecture/i });
+  // Ported from main (6f6ef8d, f2b0d71): a clear-search affordance and an
+  // empty-state reset. Adapted because search is server-driven here, so both
+  // report upward rather than mutating local state.
+  it("offers a clear-search button only once there is a query", () => {
+    const { rerender } = renderExplorer({ search: "" });
+    expect(screen.queryByLabelText("Clear search query")).not.toBeInTheDocument();
+    rerender(
+      <SessionExplorer
+        sessions={sessions.sessions}
+        total={sessions.total}
+        search="deploy"
+        onSearchChange={vi.fn()}
+        page={1}
+        pageSize={10}
+        onPageChange={vi.fn()}
+        onSessionSelect={vi.fn()}
+        detail={null}
+      />,
+    );
+    expect(screen.getByLabelText("Clear search query")).toBeInTheDocument();
+  });
 
-        expect(agentDrawerPresetBtn).toHaveAttribute("aria-pressed", "true");
-        expect(mermaidPresetBtn).toHaveAttribute("aria-pressed", "false");
+  it("clears the query through the parent when the button is used", () => {
+    const onSearchChange = vi.fn();
+    renderExplorer({ search: "deploy", onSearchChange });
+    fireEvent.click(screen.getByLabelText("Clear search query"));
+    expect(onSearchChange).toHaveBeenCalledWith("");
+  });
 
-        fireEvent.click(mermaidPresetBtn);
-        expect(agentDrawerPresetBtn).toHaveAttribute("aria-pressed", "false");
-        expect(mermaidPresetBtn).toHaveAttribute("aria-pressed", "true");
+  it("offers a reset action from the empty state", () => {
+    const onSearchChange = vi.fn();
+    renderExplorer({ sessions: [], total: 0, search: "nothing", onSearchChange });
+    fireEvent.click(screen.getByRole("button", { name: /Clear search and filters/i }));
+    expect(onSearchChange).toHaveBeenCalledWith("");
+  });
 
-        const codeTab = screen.getByRole("tab", { name: /tsx code/i });
-        fireEvent.click(codeTab);
-        expect(screen.getByText(/Multi-Agent System Architecture/i)).toBeInTheDocument();
-      }
-    });
+  // Ported from PR #1180, rewritten against the server-driven props: the
+  // original asserted on a `currentPage` state this component no longer owns.
+  it("says which end of the list a disabled pagination button is at", () => {
+    renderExplorer({ total: 25, page: 1 });
+    expect(screen.getByLabelText("Previous page")).toHaveAttribute("title", "First page reached");
+    expect(screen.getByLabelText("Next page")).toHaveAttribute("title", "Next page");
+  });
+
+  it("names the action on a pagination button that is still usable", () => {
+    renderExplorer({ total: 25, page: 3 });
+    expect(screen.getByLabelText("Previous page")).toHaveAttribute("title", "Previous page");
+    expect(screen.getByLabelText("Next page")).toHaveAttribute("title", "Last page reached");
+  });
+
+  it("shows no reset action when the list is empty for lack of data", () => {
+    renderExplorer({ sessions: [], total: 0, search: "" });
+    expect(screen.getByText("No sessions recorded yet.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Clear search/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("WorkflowRuns", () => {
+  const workflows = demoWorkflows();
+
+  it("lists runs with their status", () => {
+    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} detail={null} />);
+    expect(screen.getByText("nightly-consolidation")).toBeInTheDocument();
+    expect(screen.getAllByText("completed").length).toBeGreaterThan(0);
+  });
+
+  it("marks failed steps", () => {
+    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} detail={null} />);
+    expect(screen.getByText("(1 failed)")).toBeInTheDocument();
+  });
+
+  it("requests detail when a run is opened", () => {
+    const onRunSelect = vi.fn();
+    render(<WorkflowRuns runs={workflows.runs} onRunSelect={onRunSelect} detail={null} />);
+    // By role, not by text: the table's own column header is also "Steps".
+    fireEvent.click(screen.getAllByRole("button", { name: "Steps" })[0]);
+    expect(onRunSelect).toHaveBeenCalledWith(workflows.runs[0].run_id);
+  });
+
+  it("shows step detail in the modal", () => {
+    const detail = {
+      summary: workflows.runs[0],
+      steps: [
+        {
+          step_id: "fetch",
+          status: "failed",
+          attempts: 3,
+          error: "boom",
+          started_at: null,
+          finished_at: null,
+          duration_seconds: null,
+        },
+      ],
+    };
+    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} detail={detail} />);
+    fireEvent.click(screen.getAllByRole("button", { name: "Steps" })[0]);
+    expect(screen.getByText("fetch")).toBeInTheDocument();
+    expect(screen.getByText("boom")).toBeInTheDocument();
+    expect(screen.getByText("3 attempts")).toBeInTheDocument();
+  });
+
+  it("renders an empty state", () => {
+    render(<WorkflowRuns runs={[]} onRunSelect={vi.fn()} detail={null} />);
+    expect(screen.getByText("No workflow runs recorded yet.")).toBeInTheDocument();
+  });
+});
+
+describe("DemoModeToggle", () => {
+  it("reports the source actually in use", () => {
+    render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="local" />);
+    expect(screen.getByTestId("active-source")).toHaveTextContent("Live · local ~/.sakthai");
+  });
+
+  it("can report demo even while the toggle is off", () => {
+    // The honest case: live data was requested but no runtime exists.
+    render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="demo" />);
+    expect(screen.getByTestId("active-source")).toHaveTextContent("Sample data");
+    expect(screen.getByRole("button", { name: /Toggle sample data/ })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  it("distinguishes the API source", () => {
+    render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="api" />);
+    expect(screen.getByTestId("active-source")).toHaveTextContent("Live · SakThai API");
+  });
+
+  it("toggles", () => {
+    const onToggle = vi.fn();
+    render(<DemoModeToggle isDemo={false} onToggle={onToggle} activeSource="local" />);
+    fireEvent.click(screen.getByRole("button", { name: /Toggle sample data/ }));
+    expect(onToggle).toHaveBeenCalledWith(true);
+  });
+
+  it("omits the badge before the first response", () => {
+    render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource={null} />);
+    expect(screen.queryByTestId("active-source")).not.toBeInTheDocument();
   });
 });

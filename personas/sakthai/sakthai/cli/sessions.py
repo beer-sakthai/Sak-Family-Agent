@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 import click
 
 from ..config import sessions_dir
+from ..memory.session_search import search_sessions
 
 
 def parse_duration(val: str) -> float:
@@ -156,6 +157,29 @@ def sessions_show(session_id: str) -> None:
                     click.echo(f"    {result_text}")
         else:
             click.echo(content)
+
+
+@sessions.command("search")
+@click.argument("query")
+@click.option("--limit", default=20, show_default=True, help="Maximum sessions to show.")
+def sessions_search(query: str, limit: int) -> None:
+    """Search past sessions by content (task, final answer, and tool calls)."""
+    try:
+        matches = search_sessions(query, limit=limit)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if not matches:
+        click.echo("No matching sessions found.")
+        return
+
+    click.secho(f"{'Session ID':<45} {'Date/Time':<19} {'Snippet':<70}", bold=True)
+    click.echo("-" * 140)
+    for m in matches:
+        dt_str = ""
+        if m.timestamp:
+            dt_str = datetime.fromtimestamp(m.timestamp, tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
+        click.echo(f"{m.session_id:<45} {dt_str:<19} {m.matched_snippet:<70}")
 
 
 @sessions.command("clean")
