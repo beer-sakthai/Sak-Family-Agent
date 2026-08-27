@@ -147,7 +147,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
                     aria-selected={index === clampedHighlight}
                     onMouseEnter={() => setHighlight(index)}
                     onClick={() => runAt(index)}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors ${
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
                       index === clampedHighlight
                         ? "bg-slate-800/80 text-white"
                         : "text-slate-300 hover:bg-slate-800/40"
