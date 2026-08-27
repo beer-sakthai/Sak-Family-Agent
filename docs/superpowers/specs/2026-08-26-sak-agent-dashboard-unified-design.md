@@ -304,7 +304,8 @@ package the framework into `sakthai`.**
 `$SAKTHAI_HOME/workflow_runs` (or `~/.sakthai/workflow_runs`), falling back to
 the current cwd-relative `.workflow_runs` when home resolution fails. The
 framework reads the environment variable directly and does **not** import
-`sakthai`, so it stays stdlib-only and independently runnable.
+`sakthai`, so it stays independently runnable. (Its only third-party
+dependency is PyYAML, for parsing workflow definitions.)
 
 **Deferred, deliberately:** `executor.py:_validate_filepath()` duplicates path
 validation that `agent/guardrails.py` already owns — a second, independently

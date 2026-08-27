@@ -640,7 +640,7 @@ class TestDefaultHomeResolution:
 class TestWorkflowsPayload:
     """Workflow runs written by apps/agent_workflow_framework.
 
-    The framework is a separate stdlib-only package outside this one's
+    The framework is a separate package outside this one's
     dependency graph, so these fixtures mirror the on-disk format
     ``RunHistoryStore`` writes (``RunHistory.to_dict()``) rather than importing
     it. ``tests/test_workflow_storage_location.py`` pins that format down

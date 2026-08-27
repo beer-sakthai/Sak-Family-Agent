@@ -199,7 +199,8 @@ suite **red**; both source modes exercised against the fixture tree.
       `RunHistoryStore.DEFAULT_STORAGE_DIR` resolves to
       `$SAKTHAI_HOME/workflow_runs` (or `~/.sakthai/workflow_runs`), falling back
       to the cwd-relative `.workflow_runs` when home resolution fails. Read the
-      env var directly — **no `sakthai` import**, the framework stays stdlib-only.
+      env var directly — **no `sakthai` import**. (The framework's only third-party
+      dependency is PyYAML.)
 - [ ] **Edit** `web/api.py` + `web/server.py` — `workflows_payload()` and
       `workflow_detail(run_id)`; routes `/api/workflows` and
       `/api/workflows/<run_id>`. Run ids are already sanitised against traversal

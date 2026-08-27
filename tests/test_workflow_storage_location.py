@@ -1,9 +1,9 @@
 """Contract test between agent_workflow's writer and sakthai's reader.
 
 ``apps/agent_workflow_framework`` writes workflow run histories; ``web/api.py``
-reads them. The two are separate packages — the framework is stdlib-only and
-deliberately does not import ``sakthai`` — so the on-disk JSON *is* the
-interface between them, and nothing else would notice if it drifted.
+reads them. The two are separate packages — the framework deliberately does not
+import ``sakthai`` — so the on-disk JSON *is* the interface between them, and
+nothing else would notice if it drifted.
 
 These tests import the real ``RunHistoryStore``, write a run with it, and read
 it back with the real payload builders. If the framework changes its format, or

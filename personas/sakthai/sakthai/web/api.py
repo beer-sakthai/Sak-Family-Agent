@@ -742,7 +742,7 @@ def workflows_payload(limit: int = 100, home: Path | None = None) -> WorkflowsPa
     """Workflow run summaries, newest first.
 
     Reads the JSON files ``agent_workflow.persistence.RunHistoryStore`` writes.
-    The framework is not imported: it is a separate stdlib-only package outside
+    The framework is not imported: it is a separate package outside
     this one's dependency graph, and its on-disk format is the contract.
     """
     limit = max(1, min(500, limit))

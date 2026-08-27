@@ -211,7 +211,7 @@ def workflow_runs_dir() -> Path:
     """Directory where ``agent_workflow`` run histories are stored.
 
     The framework in ``apps/agent_workflow_framework/`` defaults its own store
-    here (reading ``SAKTHAI_HOME`` directly, so it stays stdlib-only and does
+    here (reading ``SAKTHAI_HOME`` directly, so it needs no sakthai import and does
     not import this package), which is what lets the web API and the dashboard
     find runs at a known location instead of one relative to whatever directory
     the workflow happened to be launched from.

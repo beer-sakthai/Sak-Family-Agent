@@ -85,12 +85,13 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install pytest
-        run: pip install pytest
+      # PyYAML is the framework's one third-party dependency (agent_workflow
+      # parses YAML workflow definitions); everything else it imports is stdlib.
+      - name: Install test dependencies
+        run: pip install pytest pyyaml
 
       # Kept out of the main suite on purpose: pyproject sets
-      # testpaths = ["tests"], and this package is stdlib-only with no
-      # dependency on sakthai.
+      # testpaths = ["tests"], and this package does not depend on sakthai.
       - name: Test
         run: python -m pytest tests/ -q
 

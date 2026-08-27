@@ -11,8 +11,8 @@ to whatever directory the workflow happened to be launched from, which nothing
 else could reliably locate.
 
 The location is resolved by reading the environment variable directly rather
-than importing ``sakthai``: this package is deliberately stdlib-only and must
-stay independently runnable. If the home directory cannot be resolved at all,
+than importing ``sakthai``: this package depends only on the stdlib plus
+PyYAML, and must stay independently runnable. If the home directory cannot be resolved at all,
 it falls back to the original cwd-relative directory.
 """
 
@@ -68,7 +68,7 @@ def default_storage_dir() -> Path:
     """Where run histories live: ``$SAKTHAI_HOME/workflow_runs``.
 
     Mirrors ``sakthai.config.workflow_runs_dir()`` without importing it, so this
-    package stays stdlib-only. Falls back to the historical cwd-relative
+    package free of any sakthai import. Falls back to the historical cwd-relative
     ``.workflow_runs`` only if the home directory cannot be resolved.
     """
     base = os.environ.get("SAKTHAI_HOME")
