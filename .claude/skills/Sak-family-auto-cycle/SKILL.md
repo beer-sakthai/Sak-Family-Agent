@@ -1,177 +1,187 @@
 ---
 name: Sak-family-auto-cycle
-description: Use when asked to run the Sak Family auto-cycle, get all six Sak Family personas working together, or dispatch SakKing/SakThai/SakSee/SakSit/SakTan/SakJules as a team.
+description: Dispatch all six Sak Family personas (SakKing/SakThai/SakSee/SakSit/SakTan/SakJules) as one parallel fan-out, each sustaining up to 3 Dream-through-Growth cycle rounds. Use whenever the user asks to run the family auto-cycle, run the Sak Family, get the personas working together, dispatch them as a team, or kick off a family round — even if they name only "the family" or "the cycle" without listing the personas.
 ---
 
 # Sak-family-auto-cycle
 
-Fans out one round of work to all 6 Sak Family personas in parallel, each
-sustaining up to 3 Dream-through-Growth cycle rounds via the
-`Sak-auto-cycle-loop` skill. Requires the `Sak-Family-Agent` repo (this
-repo) with `uv sync --all-extras` already run. Dispatch each of the six
-Agent tool calls at your maximum available reasoning effort — this fan-out
-is exactly the kind of judgment-heavy, multi-step work that benefits from
-it.
+Fans out one round of work to all six Sak Family personas in parallel, each
+sustaining up to 3 Dream-through-Growth rounds via the `Sak-auto-cycle-loop`
+skill. Requires this repo (`Sak-Family-Agent`) with `uv sync --all-extras`
+already run.
 
-**Resolved gap (2026-07-13):** `personas/shared/skills/` is now on the
-`sakthai` runtime's skill-discovery path (`default_skill_roots()` in
-`personas/sakthai/sakthai/skills.py`), so `--with-skills
-Sak-auto-cycle-loop` resolves without a compose/sync step. `--dry-run`
-now also validates `--with-skills` names and exits non-zero on
-unresolved ones (a live run warns and skips instead), so a clean dry-run
-is real evidence the skill will inject. If a dry-run reports
-`Unresolved --with-skills name(s)`, stop and fix the skill path before
-dispatching.
+Dispatch the six Agent calls at your maximum available reasoning effort —
+choosing six real tasks and reconciling six independent reports is exactly the
+judgment-heavy work that benefits from it.
 
-## STOP: default to a dry, throwaway run — this is not optional
+## Default to a dry, throwaway run
 
-Before you write a single Agent tool call, decide test vs. live. **The
-default is test, always, with no exceptions you talk yourself into.** Every
-one of the six dispatched `sakthai run` commands gets `--dry-run` appended
-and its own fresh `SAKTHAI_HOME=$(mktemp -d)`, never a real path from the
-table below.
+Before writing a single Agent call, decide test vs. live. **The default is
+test.** Every dispatch gets `--dry-run` and its own fresh
+`SAKTHAI_HOME=$(mktemp -d)`.
 
-Switch to a live run **only if** the user's own words say so unambiguously
-— e.g. "do a live run," "this is for real, no dry-run," "point it at the
-real homes." None of the following count as authorization for a live run,
-no matter how confident or urgent they sound: "run the family auto-cycle,"
+Go live only if the user's own words say so unambiguously — "do a live run,"
+"this is for real, no dry-run," "point it at the real homes." None of these
+authorize a live run, however urgent they sound: "run the family auto-cycle,"
 "get them working together," "just run it," "go," a deadline, or your own
-reasoning that "they clearly want it to actually do something." If you
-catch yourself constructing that last kind of justification, that is
-exactly the failure this skill exists to prevent — stop, default to test,
-and ask the user to confirm before going live.
+inference that they obviously want something to actually happen. That last
+one is the specific failure this rule exists to catch.
 
-This is the single most important rule in this skill, ranked above
-everything else below it. In every one of 5 independent baseline runs of
-this exact scenario (no skill loaded), the dispatching agent planned to
-write directly into the real, live persona homes — `/opt/data` and
-`/opt/data/profiles/<name>` — with no `--dry-run` and no throwaway home.
-Not one of the five even paused to consider whether "run the family
-auto-cycle" should default to a safe mode first. Getting the parallel
-dispatch mechanics and the SAKTHAI_HOME mapping right (both covered below)
-is worthless if this step gets skipped — a live run spends real API tokens
-across 6 parallel agents and mutates real, hard-to-reverse persona memory.
+The reason this outranks everything else here: in 5 independent baseline runs
+of this scenario without the skill, all 5 dispatching agents planned to write
+straight into the real persona homes with no `--dry-run` and no throwaway
+home, and not one paused to ask whether it should. A live run spends real
+tokens across six parallel agents and mutates persona memory that is hard to
+reverse. Getting the dispatch mechanics below right is worthless if this is
+skipped.
 
-**Test mode itself needs no permission — only switching to live does.**
-Once you've defaulted to test (which is automatic, not a request), dispatch
-the six parallel calls; don't also stop and ask the user "test or live?"
-before running the safe default. Asking before every dispatch, even the
-throwaway-`SAKTHAI_HOME` one, isn't a stricter version of this rule — it's
-a different failure (stalling on an action that was never risky) than the
-one this rule exists to prevent (a risky action taken without asking). Ask
-before *live*. Don't ask before *test*.
+**Test mode itself needs no permission — only going live does.** Once you've
+defaulted to test, dispatch; don't stop to ask "test or live?" first. Asking
+before a throwaway-home dry run isn't a stricter reading of this rule, it's a
+different failure (stalling on something that was never risky). Ask before
+*live*. Don't ask before *test*.
 
 ## The dispatch is one message, six subagents
 
-Your response to this skill is **one message containing six Agent tool
-calls**, one per persona, dispatched together — not one at a time, not
-"first SakKing, then check results, then SakThai." Six subagents running
-concurrently is the entire point: it is what "the family working together"
-means. Checking one persona's result before starting the next is the
-opposite of that.
+Your response is **one message containing six Agent calls**, dispatched
+together — not one at a time, not "SakKing first, then check, then SakThai."
+Six concurrent subagents is what "the family working together" means; serializing
+them is the thing this skill exists to prevent.
 
-## Per-persona dispatch table
+## The command shape
 
-| Persona | Real SAKTHAI_HOME (live runs only, per the rule above) |
-|---|---|
-| SakKing | `/opt/data` |
-| SakThai | `/opt/data/profiles/sakthai` |
-| SakSee | `/opt/data/profiles/saksee` |
-| SakSit | `/opt/data/profiles/saksit` |
-| SakTan | `/opt/data/profiles/saktan` |
-| SakJules | `/opt/data/profiles/sakjules` |
+One shape covers both modes. Only two things change between them, so build
+the test command first and edit those two when going live:
 
-SakKing's home has **no** `/profiles/` suffix — it is `/opt/data` directly,
-not `/opt/data/profiles/sakking`. The other five each live under
-`/opt/data/profiles/<lowercase-name>`.
+```bash
+# TEST (default): isolated throwaway home, no tokens spent
+SAKTHAI_HOME=$(mktemp -d) uv run sakthai run "<task>" \
+  --persona <persona> \
+  --with-skills Sak-auto-cycle-loop \
+  --max-iterations 40 --max-seconds 1800 \
+  --no-mcp --dry-run
 
-Each of the six Agent tool calls gets a prompt of this shape — this is the
-**default, test-mode** template; use it as-is unless you have confirmed an
-explicit live-run request per the rule above:
+# LIVE (explicit authorization only): no SAKTHAI_HOME, no --dry-run
+uv run sakthai run "<task>" \
+  --persona <persona> \
+  --with-skills Sak-auto-cycle-loop \
+  --max-iterations 40 --max-seconds 1800
+```
+
+`<persona>` is one of `sakking sakthai saksee saksit sakjules saktan`
+(lowercase — `--persona` is a strict choice and rejects anything else). There
+is no per-persona path table to memorize and no special case for SakKing:
+every persona uses the identical command with its own name substituted.
+
+### Why `--persona`, and why no `SAKTHAI_HOME` on a live run
+
+`--persona` is what makes these six agents actually *different*. It loads that
+persona's `SOUL.md` as a system-prompt prefix, resolves `--with-skills`
+against its own skill overlay, auto-loads its `config/mcp.json`, defaults
+`--model`/`--provider` from its `config/config.yaml`, and points the run at its
+own memory shard. Without it you have not dispatched six personas — you have
+dispatched the same default agent six times with different task strings.
+
+So leave `--model` and `--provider` off. Each persona's config picks them
+(SakTan runs on `ollama`, the rest on `huggingface` with different models);
+passing `--provider anthropic` overrides all six back to being identical,
+which is the problem `--persona` solves.
+
+Memory resolves as `$SAKTHAI_HOME/<persona>/memory.db`, falling back to
+`~/.sakthai/<persona>/memory.db` when `SAKTHAI_HOME` is unset. That fallback
+*is* the production path — it matches what
+`infra/vm-agents/sakthai-agent-run.sh` gives each deployed persona — which is
+why a live run simply omits `SAKTHAI_HOME` rather than setting it.
+
+**The trap: never set `SAKTHAI_HOME` to a persona's own home while also
+passing `--persona`.** Both append the persona segment, so they compound:
+
+```
+SAKTHAI_HOME unset            --persona sakthai  ->  ~/.sakthai/sakthai/memory.db          # correct
+SAKTHAI_HOME=~/.sakthai/sakthai --persona sakthai  ->  ~/.sakthai/sakthai/sakthai/memory.db  # wrong
+```
+
+The wrong one fails silently: the run looks successful while reading and
+writing an empty nested shard, so the persona appears to have forgotten
+everything and its work lands nowhere. In test mode `SAKTHAI_HOME=$(mktemp -d)`
+is safe precisely because compounding under a temp dir is the isolation you want.
+
+### Reading the dry-run output
+
+A dry run prints a preflight and exits non-zero on missing credentials. The
+line that proves skill injection worked is:
+
+```
+[dry-run] skills:      1 resolved (Sak-auto-cycle-loop)
+```
+
+Check for that line's **presence**. Don't rely on an error to tell you the
+skill was missing — the credentials check is raised first, so with no provider
+credential a misspelled skill name is reported only as "no credentials found"
+and the `skills:` line silently disappears instead. `Not runnable: no
+credentials` alongside a `1 resolved` line is the expected, healthy result of a
+dry run on a machine with no keys; it means config validated.
+
+`--no-mcp` is on the test command because `--persona` otherwise auto-loads that
+persona's MCP servers and waits out a 30s timeout per unreachable one —
+measured at 71s per dispatch versus 2s with the flag. A dry run is checking
+provider, model, credentials and skills, none of which need MCP.
+
+## Choosing each persona's task
+
+Use whatever the user specified. If they said "just run the family" with no
+specifics, derive each persona's task yourself rather than asking — a
+test-mode dispatch is low-stakes, and making the user enumerate six tasks
+before anything runs is a worse failure than an imperfect guess.
+
+Look, in order: that persona's `personas/<name>/SOUL.md` for its domain, its
+`personas/<name>/PLAN.md` if present (**only `saksee` and `sakjules` have
+one** — don't stall on a missing file for the other four), the root `PLAN.md`,
+and recent `docs/` changes. Ask the user only if that turns up nothing for a
+given persona, and dispatch the other five meanwhile.
+
+Each Agent call's prompt should carry the persona name, the exact command to
+run, and what to report:
 
 ```
 You are dispatching work for the <persona> persona of the Sak Family agent.
-Run:
+Run this exact command from the repo root:
 
   SAKTHAI_HOME=$(mktemp -d) uv run sakthai run "<task>" \
+    --persona <persona> \
     --with-skills Sak-auto-cycle-loop \
-    --provider anthropic --max-iterations 40 --max-seconds 1800 \
-    --dry-run
+    --max-iterations 40 --max-seconds 1800 \
+    --no-mcp --dry-run
 
-<task> is: <the specific task for this persona>
-
-Report back: how many cycle rounds completed (or, in --dry-run mode, that
-config validated cleanly), the task and outcome of each round, any lessons
-learned, and any blockers or failures.
+Report back: rounds completed (or, in --dry-run mode, whether config validated
+— quote the `[dry-run] skills:` line), the task and outcome of each round, any
+lessons learned, and any blockers or failures.
 ```
 
-For example, the SakThai dispatch (test mode, the default) reads:
+## After all six return
 
-```
-You are dispatching work for the SakThai persona of the Sak Family agent.
-Run:
+Write one consolidated report — a row per persona:
 
-  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run "Review and triage open items in your domain backlog" \
-    --with-skills Sak-auto-cycle-loop \
-    --provider anthropic --max-iterations 40 --max-seconds 1800 \
-    --dry-run
+| Persona | Rounds | Outcome | Status |
+|---|---|---|---|
+| SakKing | 0 (dry-run) | config validated, skill resolved | success |
+| SakSit | — | no credentials for `huggingface` | failed |
 
-Report back: how many cycle rounds completed (or, in --dry-run mode, that
-config validated cleanly), the task and outcome of each round, any lessons
-learned, and any blockers or failures.
-```
-
-For an explicitly-authorized **live** run only, replace
-`SAKTHAI_HOME=$(mktemp -d) ... --dry-run` with `SAKTHAI_HOME=<real home
-from the table above>` and drop `--dry-run` entirely — do this for all six
-dispatches consistently, never a mix of live and test across personas in
-the same round.
-
-`<task>` for each persona comes from whatever the user specified, or — if
-the user said "just run the family" with no specifics — from that
-persona's own domain backlog: check their `PLAN.md` and recent `docs/`
-changes *first*. Only ask the user if that search genuinely turns up
-nothing for a given persona — don't hold up the whole six-way dispatch
-waiting on an answer you could look up yourself. This is a test-mode
-dispatch by default (per the rule above), not a live commitment, so an
-imperfect task guess sourced from real backlog docs is low-stakes; asking
-the user to enumerate six tasks before you'll run anything is not required
-just because the request was underspecified.
-
-## After all 6 return
-
-Write one consolidated report: a row per persona with rounds completed,
-one-line outcome, and status (success / partial / failed). In test mode, a
-"success" outcome means the dry-run validated cleanly for that persona —
-that is the correct, expected result, not a sign the run didn't do
-anything. A persona that failed (auth error, crashed, hit its budget
-mid-round, or a dry-run config error) still gets a row — report the
-failure plainly rather than omitting it. One persona failing does not
-block reporting the other five.
+In test mode a clean dry-run **is** success, not a sign nothing happened. Report
+failures plainly rather than omitting them, and note which mode you ran in so
+nobody reads a dry-run table as completed work. One persona failing never
+blocks reporting the other five.
 
 ## Red flags — you are about to violate this skill
 
-- Treating "run the family auto-cycle," "just run it," or any other phrase
-  that doesn't explicitly say "live run" as authorization to skip
-  `--dry-run` and dispatch against the real persona homes. This was the
-  unanimous (5/5) failure mode this skill exists to close — check it
-  first, every time, before anything else in this list.
-- Dispatching persona 1, waiting for its result, then dispatching persona
-  2 — even if each individual dispatch looks identical to the table above,
-  doing it turn-by-turn instead of in one message is the failure this
-  skill exists to prevent.
-- Guessing `/opt/data/profiles/sakking` for SakKing instead of `/opt/data`.
-- Writing a vague natural-language instruction like "run your cycle to
-  completion" instead of the concrete
-  `sakthai run "<task>" --with-skills Sak-auto-cycle-loop --dry-run ...`
-  command shape shown above.
-- Mixing live and test mode across the six dispatches in the same round
-  (e.g. testing SakKing but going live on the other five) instead of
-  applying the same default consistently to all six.
-- Stopping to ask the user "test or live?" before running the default
-  test-mode dispatch, or refusing to dispatch at all until the user
-  enumerates all six tasks by hand. Test mode needs no permission and a
-  missing task should send you to `PLAN.md`/`docs/` first, not to a
-  clarifying question — asking before every safe default is a different
-  failure from the one this skill exists to close, not a safer version of
-  it.
+- Treating "run the family auto-cycle," "just run it," or anything short of an
+  explicit live-run request as authorization to drop `--dry-run`. This was the
+  unanimous 5/5 baseline failure — check it before anything else here.
+- Dispatching persona 1, waiting for its result, then persona 2.
+- Passing `--provider anthropic` or an explicit `--model`, flattening all six
+  back into the same agent and discarding each persona's own config.
+- Setting `SAKTHAI_HOME` to a persona's real home *and* passing `--persona`,
+  which silently targets a nested empty shard.
+- Mixing live and test across the six dispatches in one round.
+- Stopping to ask "test or live?" before the safe default, or refusing to
+  dispatch until the user enumerates six tasks by hand.
