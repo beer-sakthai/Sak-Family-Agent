@@ -3,6 +3,8 @@
 import React, { useMemo, useState } from "react";
 import { CornerDownLeft, Search } from "lucide-react";
 
+import { useFocusTrap } from "@/lib/focus";
+import { highlightSegments, rankBy, type FuzzyMatch } from "@/lib/fuzzy";
 import { NAV_ITEMS, type TabId } from "@/lib/nav";
 
 export interface Command {
@@ -11,6 +13,16 @@ export interface Command {
   hint: string;
   group: string;
   run: () => void;
+  /** Rendered on the right of the row — the same key that runs it from the page. */
+  shortcut?: string;
+}
+
+interface Result {
+  command: Command;
+  /** Where the query matched the label, when it did. */
+  match: FuzzyMatch | null;
+  /** Whether this row opens a new group, and so carries its heading. */
+  startsGroup: boolean;
 }
 
 interface CommandPaletteProps {
@@ -23,9 +35,12 @@ interface CommandPaletteProps {
 /**
  * ⌘K navigation.
  *
- * Filtering is a plain substring match over label and hint. Fuzzy ranking
- * would be a dependency and a behaviour to explain for a list of at most a
- * dozen entries.
+ * Matching is a scored fuzzy subsequence over the label and the description
+ * (`lib/fuzzy.ts`), not a substring: "usd" finds "Use sample data" and "ovw"
+ * finds "Overview", which is how people actually type into one of these. The
+ * matched characters are underlined in the row, so a non-obvious hit explains
+ * itself instead of looking like a bug. It is forty lines and no dependency —
+ * the note this replaces weighed a dependency it turned out not to need.
  *
  * The caller mounts this only while the palette is open, so the query and the
  * highlighted row reset by unmounting rather than by an effect that clears
@@ -34,14 +49,20 @@ interface CommandPaletteProps {
 export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
+  // The drawer has trapped and returned focus since it landed; the palette,
+  // the other modal on this page, did neither.
+  const dialogRef = useFocusTrap<HTMLDivElement>();
 
   const commands = useMemo<Command[]>(
     () => [
-      ...NAV_ITEMS.map((item) => ({
+      ...NAV_ITEMS.map((item, index) => ({
         id: `nav-${item.id}`,
         label: item.label,
         hint: item.description,
         group: "Go to",
+        // The digit that reaches this section from the page, shown on the row
+        // it runs rather than only in the shortcuts overlay.
+        shortcut: String(index + 1),
         run: () => onNavigate(item.id),
       })),
       ...actions,
@@ -49,22 +70,34 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
     [onNavigate, actions],
   );
 
-  const results = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return commands;
-    return commands.filter(
-      (command) =>
-        command.label.toLowerCase().includes(needle) ||
-        command.hint.toLowerCase().includes(needle),
-    );
+  // An empty query keeps the declared order — sections, then actions — rather
+  // than an arbitrary ranking of identical scores.
+  const results = useMemo<Result[]>(() => {
+    const matched: { command: Command; match: FuzzyMatch | null }[] =
+      query.trim() === ""
+        ? commands.map((command) => ({ command, match: null }))
+        : rankBy(commands, query, (command) => [command.label, command.hint]).map((ranked) => ({
+            command: ranked.item,
+            // Only highlight when the label itself matched; underlining half
+            // the description because the *hint* matched is noise.
+            match: ranked.fieldIndex === 0 ? ranked.match : null,
+          }));
+
+    // The group heading belongs to the first row of each run. Computed here
+    // rather than by mutating a variable inside the render's `map`, so the
+    // list renders the same whether React renders it once or twice.
+    return matched.map((entry, index) => ({
+      ...entry,
+      startsGroup: entry.command.group !== matched[index - 1]?.command.group,
+    }));
   }, [commands, query]);
 
   const clampedHighlight = results.length === 0 ? 0 : Math.min(highlight, results.length - 1);
 
   const runAt = (index: number) => {
-    const command = results[index];
-    if (!command) return;
-    command.run();
+    const result = results[index];
+    if (!result) return;
+    result.command.run();
     onClose();
   };
 
@@ -86,8 +119,6 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
     }
   };
 
-  let lastGroup = "";
-
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[12vh]">
       <button
@@ -96,6 +127,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
         className="absolute inset-0 h-full w-full bg-sunken/80 backdrop-blur-sm"
       />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
@@ -128,12 +160,11 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
               Nothing matches “{query}”.
             </li>
           )}
-          {results.map((command, index) => {
-            const showGroup = command.group !== lastGroup;
-            lastGroup = command.group;
+          {results.map(({ command, match, startsGroup }, index) => {
+            const segments = highlightSegments(command.label, match?.positions ?? []);
             return (
               <React.Fragment key={command.id}>
-                {showGroup && (
+                {startsGroup && (
                   <li
                     aria-hidden
                     className="px-3 pb-1 pt-3 text-[10px] font-medium uppercase tracking-wider text-fg-5"
@@ -154,11 +185,29 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
                     }`}
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">{command.label}</span>
+                      <span className="block truncate text-sm font-medium">
+                        {segments.map((segment, segmentIndex) =>
+                          segment.matched ? (
+                            <mark
+                              key={segmentIndex}
+                              className="bg-transparent text-accent underline decoration-accent/60 underline-offset-2"
+                            >
+                              {segment.text}
+                            </mark>
+                          ) : (
+                            <React.Fragment key={segmentIndex}>{segment.text}</React.Fragment>
+                          ),
+                        )}
+                      </span>
                       <span className="block truncate text-[11px] text-fg-4">
                         {command.hint}
                       </span>
                     </span>
+                    {command.shortcut && (
+                      <kbd className="hidden shrink-0 rounded border border-line-strong bg-sunken px-1.5 py-0.5 font-mono text-[10px] text-fg-4 sm:block">
+                        {command.shortcut}
+                      </kbd>
+                    )}
                     {index === clampedHighlight && (
                       <CornerDownLeft className="h-3.5 w-3.5 shrink-0 text-fg-4" aria-hidden />
                     )}

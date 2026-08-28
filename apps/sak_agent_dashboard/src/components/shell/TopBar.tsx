@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Download, Link2, Menu, RefreshCw, Search } from "lucide-react";
+import { Download, Link2, Maximize2, Menu, Minimize2, RefreshCw, Search } from "lucide-react";
 
 import DemoModeToggle from "@/components/DemoModeToggle";
 import DisplayMenu from "@/components/DisplayMenu";
@@ -44,6 +44,9 @@ interface TopBarProps {
   canExport: boolean;
   onExport: (format: "json" | "csv") => void;
   onCopyLink: () => void;
+  /** Presentation mode hides the chrome for a wall-mounted display. */
+  presenting: boolean;
+  onPresentingChange: (next: boolean) => void;
 }
 
 function intervalLabel(seconds: RefreshInterval): string {
@@ -74,6 +77,8 @@ export function TopBar({
   canExport,
   onExport,
   onCopyLink,
+  presenting,
+  onPresentingChange,
 }: TopBarProps) {
   const item = navItem(active);
 
@@ -101,6 +106,7 @@ export function TopBar({
           <button
             onClick={onOpenPalette}
             aria-label="Open command palette"
+            data-chrome="secondary"
             className="hidden items-center gap-2 rounded-xl border border-line bg-panel/60 px-3 py-1.5 text-[11px] text-fg-4 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:flex"
           >
             <Search className="h-3.5 w-3.5" />
@@ -110,11 +116,13 @@ export function TopBar({
             </kbd>
           </button>
 
-          <PersonaFilter
-            selected={personas}
-            onChange={onPersonasChange}
-            counts={personaCounts}
-          />
+          <span data-chrome="secondary">
+            <PersonaFilter
+              selected={personas}
+              onChange={onPersonasChange}
+              counts={personaCounts}
+            />
+          </span>
 
           <DemoModeToggle isDemo={isDemo} onToggle={onDemoToggle} activeSource={activeSource} />
 
@@ -126,7 +134,10 @@ export function TopBar({
             prefersLight={prefersLight}
           />
 
-          <label className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-2.5 py-1.5 font-mono text-[11px] text-fg-3 focus-within:ring-2 focus-within:ring-hue-cyan">
+          <label
+            data-chrome="secondary"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-2.5 py-1.5 font-mono text-[11px] text-fg-3 focus-within:ring-2 focus-within:ring-hue-cyan"
+          >
             <span className="text-fg-4">Auto</span>
             <select
               aria-label="Auto-refresh interval"
@@ -146,6 +157,7 @@ export function TopBar({
 
           <button
             onClick={onCopyLink}
+            data-chrome="secondary"
             aria-label="Copy a link to this view"
             title="Copy a link to this view"
             className="hidden rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:block"
@@ -155,7 +167,10 @@ export function TopBar({
 
           {/* A select rather than two buttons: export is a rare action, and
               two more buttons in this row would crowd the ones used often. */}
-          <label className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-2.5 py-1.5 font-mono text-[11px] text-fg-3 focus-within:ring-2 focus-within:ring-accent">
+          <label
+            data-chrome="secondary"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-2.5 py-1.5 font-mono text-[11px] text-fg-3 focus-within:ring-2 focus-within:ring-accent"
+          >
             <Download className="h-3 w-3" aria-hidden />
             <select
               aria-label="Export the current panel"
@@ -181,6 +196,30 @@ export function TopBar({
               </option>
             </select>
           </label>
+
+          <button
+            onClick={() => {
+              const next = !presenting;
+              onPresentingChange(next);
+              try {
+                if (next) void document.documentElement.requestFullscreen?.();
+                else if (document.fullscreenElement) void document.exitFullscreen?.();
+              } catch {
+                // Fullscreen is gesture- and permission-gated, and absent in
+                // some embeddings. The mode still applies without it.
+              }
+            }}
+            aria-pressed={presenting}
+            aria-label="Toggle presentation mode"
+            title={presenting ? "Leave presentation mode" : "Presentation mode"}
+            className="rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            {presenting ? (
+              <Minimize2 className="h-3.5 w-3.5" />
+            ) : (
+              <Maximize2 className="h-3.5 w-3.5" />
+            )}
+          </button>
 
           <button
             onClick={onRefresh}

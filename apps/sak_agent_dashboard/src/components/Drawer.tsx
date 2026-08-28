@@ -3,6 +3,8 @@
 import React, { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 
+import { focusableWithin } from "@/lib/focus";
+
 interface DrawerProps {
   title: string;
   /** Secondary line under the title — an id, a timestamp, a status. */
@@ -61,9 +63,8 @@ export function Drawer({
         return;
       }
       if (event.key !== "Tab" || !panelRef.current) return;
-      const focusable = panelRef.current.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
+      // One definition of "what Tab reaches", shared with the command palette.
+      const focusable = focusableWithin(panelRef.current);
       if (focusable.length === 0) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
