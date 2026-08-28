@@ -175,7 +175,7 @@ Other `make` targets: `compose-personas` (rebuild full skill trees into
 
 ### CI
 
-Twenty workflows live in `.github/workflows/`. The ones that gate a change:
+Twenty-one workflows live in `.github/workflows/`. The ones that gate a change:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
@@ -196,7 +196,21 @@ Scheduled / manual only, so they never block a PR: `continuous-security.yml`
 lm-eval, installs the `evals` dependency group), `auto-dependency-update.yml`
 (weekly), `stale.yml` (daily), `summary.yml` (on new issues), `manual.yml`,
 `scorecard.yml` (push to `main` + weekly), `code-scanning-cleanup.yml`
-(`workflow_dispatch` only).
+(`workflow_dispatch` only), `branch-cleanup.yml` (`workflow_dispatch` only —
+deletes branches whose merge into `main` would change nothing, dry-run unless
+`apply` is checked; see below).
+
+**`branch-cleanup.yml` asks whether a branch still has anything to give.**
+Not "is its tip an ancestor of `main`" — that misses the common case here, a
+branch whose content already landed under a different PR but which has since
+merged `main` back into itself, leaving a tip that is an ancestor of nothing and
+a merge that changes nothing (both `alert-autofix-15365` and
+`claude/dashboard-vercel-ui-9akuov` looked like that during the round-3
+consolidation). The test is `git merge-tree --write-tree main <branch>`: if the
+merge resolves to `main`'s own tree, the branch contributes nothing and is
+eligible. A conflict or a different tree keeps it, reported with the reason.
+Protected branches and open-PR heads are never eligible, whatever the tree says;
+`force_branches` overrides only the tree test, never those two.
 
 **The code-scanning producers have to keep running.** A SARIF alert only closes
 when a *newer* analysis from the same tool stops reporting it, so deleting the
