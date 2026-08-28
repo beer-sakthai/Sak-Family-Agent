@@ -58,7 +58,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
               : "bg-panel/60 text-fg-3 border-line hover:border-line-strong"
           }`}
         >
-          <BookOpen className="h-3.5 w-3.5 inline mr-1.5" />
+          <BookOpen className="h-3.5 w-3.5 inline mr-1.5" aria-hidden />
           Facts ({facts.length})
         </button>
         <button
@@ -71,7 +71,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
               : "bg-panel/60 text-fg-3 border-line hover:border-line-strong"
           }`}
         >
-          <Lightbulb className="h-3.5 w-3.5 inline mr-1.5" />
+          <Lightbulb className="h-3.5 w-3.5 inline mr-1.5" aria-hidden />
           Observations ({observations.length})
         </button>
       </div>
