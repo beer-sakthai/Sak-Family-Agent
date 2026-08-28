@@ -188,7 +188,7 @@ export function StitchStudio() {
                   : "text-fg-3 hover:text-fg"
               }`}
             >
-              <Eye className="w-3.5 h-3.5" />
+              <Eye className="w-3.5 h-3.5" aria-hidden />
               Live Preview
             </button>
             <button
@@ -202,7 +202,7 @@ export function StitchStudio() {
                   : "text-fg-3 hover:text-fg"
               }`}
             >
-              <Code2 className="w-3.5 h-3.5" />
+              <Code2 className="w-3.5 h-3.5" aria-hidden />
               TSX Code
             </button>
             <button
@@ -216,7 +216,7 @@ export function StitchStudio() {
                   : "text-fg-3 hover:text-fg"
               }`}
             >
-              <Terminal className="w-3.5 h-3.5" />
+              <Terminal className="w-3.5 h-3.5" aria-hidden />
               Stitch JSON Spec
             </button>
           </div>
@@ -228,7 +228,7 @@ export function StitchStudio() {
             onClick={handleCopyCode}
             className="flex items-center gap-1 text-xs font-mono text-fg-3 hover:text-hue-cyan transition-colors bg-raised/60 px-2.5 py-1 rounded-lg border border-line-strong/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-hue-emerald" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-hue-emerald" aria-hidden /> : <Copy className="w-3.5 h-3.5" aria-hidden />}
             {copied ? "Copied!" : activeTab === "spec" ? "Copy Spec" : "Copy Code"}
           </button>
         </div>

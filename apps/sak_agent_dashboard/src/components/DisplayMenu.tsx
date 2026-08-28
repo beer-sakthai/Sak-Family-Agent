@@ -83,7 +83,7 @@ export function DisplayMenu({
         title="Display settings"
         className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-2.5 py-1.5 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
-        <TriggerIcon className="h-3.5 w-3.5" />
+        <TriggerIcon className="h-3.5 w-3.5" aria-hidden />
         <Settings2 className="h-3 w-3 opacity-60" aria-hidden />
       </button>
 

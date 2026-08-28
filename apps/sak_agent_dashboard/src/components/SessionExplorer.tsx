@@ -102,7 +102,7 @@ export function SessionExplorer({
             onClick={() => onSearchChange("")}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-fg-3 hover:text-fg hover:bg-raised/80 active:bg-raised-2/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-3.5 w-3.5" aria-hidden />
           </button>
         )}
       </div>
@@ -218,7 +218,7 @@ export function SessionExplorer({
               title={page <= 1 ? "First page reached" : "Previous page"}
               className="px-3 py-1.5 rounded-lg bg-panel border border-line disabled:opacity-40 hover:border-line-strong transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
-              <ChevronLeft className="h-3.5 w-3.5" />
+              <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
             </button>
             <button
               onClick={() => onPageChange(Math.min(totalPages, page + 1))}
@@ -227,7 +227,7 @@ export function SessionExplorer({
               title={page >= totalPages ? "Last page reached" : "Next page"}
               className="px-3 py-1.5 rounded-lg bg-panel border border-line disabled:opacity-40 hover:border-line-strong transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
-              <ChevronRight className="h-3.5 w-3.5" />
+              <ChevronRight className="h-3.5 w-3.5" aria-hidden />
             </button>
           </div>
         </div>
