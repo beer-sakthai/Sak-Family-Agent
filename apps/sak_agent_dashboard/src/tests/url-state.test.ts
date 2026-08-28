@@ -52,6 +52,20 @@ describe("parseView", () => {
     expect(parseView("overview?persona=").personas).toEqual([]);
   });
 
+  // A stale or mistyped fragment used to survive parsing, which split the page
+  // against itself: the server ignores an unknown name and answers unfiltered,
+  // while the client-side panels matched nothing.
+  it("drops a persona name outside the known family", () => {
+    expect(parseView("overview?persona=sakwho").personas).toEqual([]);
+  });
+
+  it("keeps the known personas when a list mixes known and unknown names", () => {
+    expect(parseView("overview?persona=sakthai,sakwho,saksee").personas).toEqual([
+      "sakthai",
+      "saksee",
+    ]);
+  });
+
   it("reads the open session and run", () => {
     const view = parseView("sessions?session=abc&run=xyz");
     expect(view.session).toBe("abc");

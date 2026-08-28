@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-This is a monorepo. The installable core package (`sakthai`) lives at `personas/sakthai/sakthai/` — not at the repo root — with subpackages for `agent/`, `cli/`, `memory/`, `mcp/`, `dashboard/`, `cycle/`, `learn/`, `telegram/`, and `web/`. Tests live in `tests/`. Shared documentation is in `docs/`, while assets are in `assets/`. Persona overlays and skills are under `personas/<name>/`; there is no root-level `skills/`. Supporting scripts live in `scripts/`, and longer-running or experimental projects are under `personas/sakthai/agent-self-evolution/` and `infra/`.
+This is a monorepo. The installable core package (`sakthai`) lives at `personas/sakthai/sakthai/` — not at the repo root — with subpackages for `agent/`, `cli/`, `client/`, `cycle/`, `dashboard/`, `extensions/`, `lead/`, `learn/`, `mcp/`, `memory/`, `scripts/`, `team/`, `telegram/`, and `web/`. Tests live in `tests/`. Shared documentation is in `docs/`. Persona overlays and skills are under `personas/<name>/`; there is no root-level `skills/`. Supporting scripts live in `scripts/`, and longer-running or experimental projects are under `personas/sakthai/agent-self-evolution/` and `infra/`.
 
 ## Build, Test, and Development Commands
 - `uv sync --all-extras`: install the full local Python environment.
@@ -16,7 +16,7 @@ This is a monorepo. The installable core package (`sakthai`) lives at `personas/
 Use Python 3.11+ conventions with 4-space indentation and type annotations on public code paths. Ruff enforces formatting and import order; the project uses a 100-character line length. Prefer `snake_case` for functions, variables, and modules, `PascalCase` for classes, and descriptive test names like `test_memory_store.py` or `test_cli_system.py`. Keep changes localized to the relevant subsystem.
 
 ## Testing Guidelines
-Pytest is the primary test framework. Unit tests belong in `tests/`, and integration tests should be marked with `@pytest.mark.integration` when they may touch external services. The repository targets at least 85% coverage for the core package. Add or update tests with any behavior change, especially for memory, CLI, MCP, and provider code.
+Pytest is the primary test framework. Unit tests belong in `tests/`, and integration tests should be marked with `@pytest.mark.integration` when they may touch external services. The coverage floor for the core package is `fail_under = 96` in `pyproject.toml`; the suite currently measures 95.86%, and `ci.yml` does not fail on the shortfall (see `docs/test-coverage-audit-2026-08-27.md`), so check the coverage line in your own pytest output rather than trusting a green check. Add or update tests with any behavior change, especially for memory, CLI, MCP, and provider code.
 
 ## Commit & Pull Request Guidelines
 Recent history uses conventional prefixes such as `feat:` and `refactor:`. Follow that style for new commits. Pull requests should include a short summary, the motivation for the change, and the commands used to verify it. Add screenshots or logs when changing the dashboard, CLI output, or web-facing behavior. Avoid bundling unrelated edits.

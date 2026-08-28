@@ -251,7 +251,13 @@ export default function Home() {
       // Narrowing the family can leave the current page past the end of the
       // filtered set, which would render an empty page with a pager saying
       // otherwise. Back to the first page.
-      patchView({ personas: next, page: 1 });
+      //
+      // The open transcript goes too. Only the summary rows are filtered by
+      // persona -- the detail is fetched by id and would keep rendering, so a
+      // SakSee transcript would sit open over a page claiming to show only
+      // SakThai. Runs stay: `getWorkflows` takes no persona, so a run detail
+      // is still valid under any filter.
+      patchView({ personas: next, page: 1, session: null });
     },
     [patchView],
   );
