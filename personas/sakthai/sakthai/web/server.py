@@ -343,11 +343,13 @@ class _Handler(SimpleHTTPRequestHandler):
                     limit=_int_param(params, "limit", 20),
                     offset=_int_param(params, "offset", 0),
                     session_id=params.get("id"),
+                    personas=_api.parse_personas(params.get("persona")),
                 )
             elif path == "/api/memory":
                 payload = _api.memory_payload(
                     query=params.get("query"),
                     limit=_int_param(params, "limit", 100),
+                    personas=_api.parse_personas(params.get("persona")),
                 )
             elif path == "/api/workflows":
                 run_id = params.get("id")

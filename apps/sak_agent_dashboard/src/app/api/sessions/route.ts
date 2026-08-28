@@ -1,6 +1,6 @@
 /** `GET /api/sessions` — session summaries, and one transcript via `?id=`. */
 
-import { intParam, respond } from "@/lib/source";
+import { intParam, parsePersonas, respond } from "@/lib/source";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,6 +15,7 @@ export async function GET(request: Request): Promise<Response> {
       limit: intParam(params.get("limit"), 20, 1, 100),
       offset: intParam(params.get("offset"), 0, 0, 1_000_000),
       id: params.get("id"),
+      personas: parsePersonas(params.get("persona")),
     }),
   );
 }

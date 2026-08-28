@@ -20,7 +20,7 @@ const SEVERITIES = ["ALL", "critical", "high", "medium", "low"] as const;
 
 const BADGES: Record<string, { classes: string; icon: React.ReactNode }> = {
   critical: {
-    classes: "bg-rose-500/20 text-rose-400 border-rose-500/40",
+    classes: "bg-hue-rose/20 text-hue-rose border-hue-rose-line/40",
     icon: <ShieldAlert className="h-3 w-3" />,
   },
   high: {
@@ -28,11 +28,11 @@ const BADGES: Record<string, { classes: string; icon: React.ReactNode }> = {
     icon: <AlertTriangle className="h-3 w-3" />,
   },
   medium: {
-    classes: "bg-amber-500/20 text-amber-400 border-amber-500/40",
+    classes: "bg-hue-amber/20 text-hue-amber border-hue-amber-line/40",
     icon: <AlertTriangle className="h-3 w-3" />,
   },
   low: {
-    classes: "bg-slate-700/40 text-slate-300 border-slate-600/40",
+    classes: "bg-raised-2/40 text-fg-2 border-line-strong/40",
     icon: <Info className="h-3 w-3" />,
   },
 };
@@ -65,15 +65,15 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-xl font-bold font-display text-white tracking-tight flex items-center gap-2">
-            <Shield className="h-5 w-5 text-rose-400" />
+          <h3 className="text-xl font-bold font-display text-fg tracking-tight flex items-center gap-2">
+            <Shield className="h-5 w-5 text-hue-rose" />
             Security Audit Log
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Guardrail and hardening events from <code className="text-slate-300">audit.log</code>
+          <p className="text-xs text-fg-3 mt-0.5">
+            Guardrail and hardening events from <code className="text-fg-2">audit.log</code>
           </p>
         </div>
-        <span className="text-xs font-mono px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-300">
+        <span className="text-xs font-mono px-3 py-1 rounded-full bg-panel border border-line text-fg-2">
           {audit.total.toLocaleString()} shown
         </span>
       </div>
@@ -88,23 +88,23 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
               onClick={() => onSeverityChange(sev)}
               aria-pressed={active}
               aria-label={`Filter audit log by ${sev} severity`}
-              className={`px-3 py-1.5 rounded-xl text-[11px] font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 active
-                  ? "bg-cyan-950/50 text-cyan-300 border-cyan-700/50"
-                  : "bg-slate-900/60 text-slate-400 border-slate-800 hover:border-slate-700"
+                  ? "bg-hue-cyan-tint/50 text-hue-cyan border-hue-cyan-line/50"
+                  : "bg-panel/60 text-fg-3 border-line hover:border-line-strong"
               }`}
             >
               {sev}
-              {count !== null && <span className="ml-1.5 text-slate-500">{count}</span>}
+              {count !== null && <span className="ml-1.5 text-fg-4">{count}</span>}
             </button>
           );
         })}
       </div>
 
-      <div className="glass-panel rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl overflow-hidden shadow-xl">
+      <div className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left font-mono text-xs">
-            <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800/80 uppercase text-[10px] tracking-wider">
+            <thead className="bg-sunken/80 text-fg-3 border-b border-line/80 uppercase text-[10px] tracking-wider">
               <tr>
                 <th className="px-5 py-3">Timestamp</th>
                 <th className="px-5 py-3">Severity</th>
@@ -113,10 +113,10 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
                 <th className="px-5 py-3">Details</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 text-slate-300">
+            <tbody className="divide-y divide-line/60 text-fg-2">
               {events.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-slate-500 italic">
+                  <td colSpan={5} className="px-5 py-8 text-center text-fg-4 italic">
                     {severity === "ALL"
                       ? "No security audit events recorded."
                       : `No ${severity} severity events recorded.`}
@@ -126,19 +126,19 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
                 events.map((event, index) => (
                   <tr
                     key={`${event.timestamp}-${event.type}-${index}`}
-                    className="hover:bg-slate-800/40 transition-colors"
+                    className="hover:bg-raised/40 transition-colors"
                   >
-                    <td className="px-5 py-3.5 text-slate-400 whitespace-nowrap text-[11px]">
+                    <td className="px-5 py-3.5 text-fg-3 whitespace-nowrap text-[11px]">
                       {new Date(event.timestamp * 1000).toISOString().replace("T", " ").slice(0, 19)}
                     </td>
                     <td className="px-5 py-3.5">
                       <SeverityBadge severity={event.severity} />
                     </td>
-                    <td className="px-5 py-3.5 font-bold text-slate-200">{event.type || "—"}</td>
-                    <td className="px-5 py-3.5 font-sans font-medium text-slate-100">
+                    <td className="px-5 py-3.5 font-bold text-fg">{event.type || "—"}</td>
+                    <td className="px-5 py-3.5 font-sans font-medium text-fg">
                       {event.message}
                     </td>
-                    <td className="px-5 py-3.5 text-slate-400 text-[11px] font-mono">
+                    <td className="px-5 py-3.5 text-fg-3 text-[11px] font-mono">
                       {formatDetails(event.details)}
                     </td>
                   </tr>
@@ -150,8 +150,8 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
       </div>
 
       {audit.total === 0 && severity === "ALL" && (
-        <p className="text-xs text-slate-500 flex items-center gap-1.5">
-          <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+        <p className="text-xs text-fg-4 flex items-center gap-1.5">
+          <ShieldCheck className="h-3.5 w-3.5 text-hue-emerald" />
           An empty audit log is a normal state — events are only written when a guardrail acts.
         </p>
       )}

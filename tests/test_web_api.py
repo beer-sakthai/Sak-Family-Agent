@@ -303,6 +303,58 @@ class TestSessionsPayload:
         )
         assert api.sessions_payload(home=home)["sessions"][0]["persona"] == "saksit"
 
+    def test_persona_filter_narrows_to_one_persona(self, home: Path) -> None:
+        (home / "sessions").mkdir()
+        (home / "sessions" / f"{NOW}_a.json").write_text(
+            _session_doc(persona="sakthai"), encoding="utf-8"
+        )
+        (home / "sessions" / f"{NOW}_b.json").write_text(
+            _session_doc(persona="saksee"), encoding="utf-8"
+        )
+        payload = api.sessions_payload(personas=["sakthai"], home=home)
+        assert [s["persona"] for s in payload["sessions"]] == ["sakthai"]
+
+    def test_persona_filter_counts_the_filtered_set(self, home: Path) -> None:
+        # `total` drives the pager. Filtering after the slice would leave it
+        # reporting the unfiltered count beside a filtered page.
+        (home / "sessions").mkdir()
+        for index in range(3):
+            (home / "sessions" / f"{NOW}_t{index}.json").write_text(
+                _session_doc(persona="sakthai" if index == 0 else "saksee"), encoding="utf-8"
+            )
+        assert api.sessions_payload(personas=["sakthai"], home=home)["total"] == 1
+
+    def test_persona_filter_applies_before_the_offset(self, home: Path) -> None:
+        (home / "sessions").mkdir()
+        for index in range(4):
+            (home / "sessions" / f"{NOW}_p{index}.json").write_text(
+                _session_doc(persona="sakthai" if index < 2 else "saksee"), encoding="utf-8"
+            )
+        page = api.sessions_payload(personas=["sakthai"], limit=1, offset=1, home=home)
+        assert len(page["sessions"]) == 1
+        assert page["sessions"][0]["persona"] == "sakthai"
+
+    def test_persona_filter_combines_with_search(self, home: Path) -> None:
+        (home / "sessions").mkdir()
+        (home / "sessions" / f"{NOW}_s1.json").write_text(
+            _session_doc(persona="sakthai", task="deploy the thing"), encoding="utf-8"
+        )
+        (home / "sessions" / f"{NOW}_s2.json").write_text(
+            _session_doc(persona="saksee", task="deploy the thing"), encoding="utf-8"
+        )
+        payload = api.sessions_payload(search="deploy", personas=["sakthai"], home=home)
+        assert payload["total"] == 1
+
+    def test_no_persona_filter_returns_every_persona(self, home: Path) -> None:
+        (home / "sessions").mkdir()
+        (home / "sessions" / f"{NOW}_a.json").write_text(
+            _session_doc(persona="sakthai"), encoding="utf-8"
+        )
+        (home / "sessions" / f"{NOW}_b.json").write_text(
+            _session_doc(persona="saksee"), encoding="utf-8"
+        )
+        assert api.sessions_payload(home=home)["total"] == 2
+
     def test_had_error_from_tool_calls(self, home: Path) -> None:
         (home / "sessions").mkdir()
         (home / "sessions" / f"{NOW}_e.json").write_text(
@@ -446,6 +498,31 @@ class TestSessionDetail:
         assert detail["messages"][0]["content"] == ""
 
 
+class TestParsePersonas:
+    def test_absent_filter_is_none(self) -> None:
+        assert api.parse_personas(None) is None
+
+    def test_blank_filter_is_none(self) -> None:
+        assert api.parse_personas("   ") is None
+
+    def test_single_name(self) -> None:
+        assert api.parse_personas("sakthai") == ["sakthai"]
+
+    def test_comma_separated_list(self) -> None:
+        assert api.parse_personas("saksee,sakthai") == ["sakthai", "saksee"]
+
+    def test_whitespace_and_case_are_tolerated(self) -> None:
+        assert api.parse_personas(" SakThai , saksee ") == ["sakthai", "saksee"]
+
+    def test_unknown_name_falls_back_to_the_whole_family(self) -> None:
+        # None, not [] -- an empty list would read as "this persona has no
+        # data" when the truth is that the caller named no persona we know.
+        assert api.parse_personas("nobody") is None
+
+    def test_known_names_survive_an_unknown_one(self) -> None:
+        assert api.parse_personas("nobody,sakthai") == ["sakthai"]
+
+
 class TestMemoryPayload:
     def test_empty_home(self, home: Path) -> None:
         payload = api.memory_payload(home=home)
@@ -464,6 +541,56 @@ class TestMemoryPayload:
         observations = api.memory_payload(home=seeded)["observations"]
         assert observations[0]["summary"] == "works late"
         assert observations[0]["weight"] == 2.0
+
+    def test_persona_filter_narrows_the_rows(self, home: Path) -> None:
+        for persona, value in (("sakthai", "dark mode"), ("saksee", "light mode")):
+            store = MemoryStore(home / persona / "memory.db")
+            store.add_fact(value, kind="preference", key="theme")
+            store.close()
+        payload = api.memory_payload(personas=["sakthai"], home=home)
+        assert [f["value"] for f in payload["facts"]] == ["dark mode"]
+
+    def test_persona_filter_narrows_the_totals(self, home: Path) -> None:
+        # The regression this covers: FamilyMemoryView took the filter but the
+        # aggregate loop did not, so a filtered request answered one persona's
+        # facts under the whole family's counts.
+        for persona in ("sakthai", "saksee"):
+            store = MemoryStore(home / persona / "memory.db")
+            store.add_fact(f"{persona} fact", kind="preference", key="k")
+            store.add_observation(f"{persona} observed", weight=1.0, confidence=0.5)
+            store.close()
+        payload = api.memory_payload(personas=["sakthai"], home=home)
+        assert payload["total_facts"] == 1
+        assert payload["total_observations"] == 1
+
+    def test_unfiltered_totals_span_the_family(self, home: Path) -> None:
+        for persona in ("sakthai", "saksee"):
+            store = MemoryStore(home / persona / "memory.db")
+            store.add_fact(f"{persona} fact", kind="preference", key="k")
+            store.close()
+        assert api.memory_payload(home=home)["total_facts"] == 2
+
+    def test_persona_filter_excludes_the_unscoped_shard(self, home: Path) -> None:
+        # "shared" is the legacy unscoped memory.db. Asking for one persona's
+        # memory means that persona's own shard, not the family's spillover.
+        shared = MemoryStore(home / "memory.db")
+        shared.add_fact("unscoped", kind="preference", key="k")
+        shared.close()
+        scoped = MemoryStore(home / "sakthai" / "memory.db")
+        scoped.add_fact("scoped", kind="preference", key="k")
+        scoped.close()
+        payload = api.memory_payload(personas=["sakthai"], home=home)
+        assert payload["total_facts"] == 1
+        assert [f["value"] for f in payload["facts"]] == ["scoped"]
+
+    def test_persona_filter_counts_kinds_from_that_shard_only(self, home: Path) -> None:
+        for persona, kind in (("sakthai", "preference"), ("saksee", "goal")):
+            store = MemoryStore(home / persona / "memory.db")
+            store.add_fact("v", kind=kind, key="k")
+            store.close()
+        assert api.memory_payload(personas=["sakthai"], home=home)["kind_counts"] == {
+            "preference": 1
+        }
 
     def test_kind_counts(self, seeded: Path) -> None:
         assert api.memory_payload(home=seeded)["kind_counts"] == {"preference": 1}
