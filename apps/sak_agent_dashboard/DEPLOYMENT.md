@@ -94,7 +94,32 @@ public bind on a whim.
 
 ## Verifying a deploy
 
+`/api/health` is the endpoint to point an uptime monitor at. It answers without
+reading a memory shard and reports which source *would* serve a data request:
+
+```json
+{
+  "ok": true,
+  "status": "ok",
+  "source": "demo",
+  "configuration": {
+    "api_url_configured": false,
+    "api_token_configured": false,
+    "live": false
+  },
+  "generated_at": "2026-08-28T02:45:54.877Z"
+}
+```
+
+`configuration.live` is false for exactly the case above: a deploy with no
+environment variables, up and serving sample data. That is a 200, not an
+error — 503 is reserved for no source resolving at all. Nothing in the response
+names a path, a hostname or a token, because anyone who can reach the
+deployment can read it.
+
+
 ```bash
+curl -s https://<deployment>/api/health                 # is it up, and is it live?
 curl -s https://<deployment>/api/agents | head -c 400   # envelope + `source`
 curl -sI https://<deployment>/ | grep -i 'content-security-policy\|x-robots'
 curl -s https://<deployment>/robots.txt                 # Disallow: /

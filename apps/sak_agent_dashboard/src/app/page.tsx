@@ -19,6 +19,7 @@ import { ToastStack, useToasts } from "@/components/Toasts";
 import WorkflowRuns from "@/components/WorkflowRuns";
 import {
   useDensity,
+  usePresentation,
   usePersistedString,
   usePrefersLight,
   useTheme,
@@ -76,7 +77,16 @@ export default function Home() {
   // the URL fragment, so it is linkable, survives a reload, and the back button
   // walks it. See `lib/url-state.ts`.
   const [view, patchView] = useViewState();
-  const { tab: activeTab, search, severity, page, personas, session: sessionId, run: runId } = view;
+  const {
+    tab: activeTab,
+    search,
+    severity,
+    page,
+    personas,
+    session: sessionId,
+    run: runId,
+    trend,
+  } = view;
   const isDemo = view.demo;
 
   const [collapsedPref, setCollapsedPref] = usePersistedString(STORAGE_KEYS.collapsed, "off");
@@ -89,6 +99,7 @@ export default function Home() {
   // in layout.tsx; these hooks own changing them.
   const [theme, setTheme] = useTheme();
   const [density, setDensity] = useDensity();
+  const [presenting, setPresenting] = usePresentation();
   const prefersLight = usePrefersLight();
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -391,8 +402,8 @@ export default function Home() {
   }, [pushToast]);
 
   // Keyboard. ⌘K/Ctrl+K for the palette, digits for sections, `r` refresh,
-  // `e` export, `[` sidebar, `?` help. Suppressed while typing, so a search
-  // field never eats a shortcut.
+  // `e` export, `[` sidebar, `?` help, Escape out of presentation mode.
+  // Suppressed while typing, so a search field never eats a shortcut.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -437,13 +448,29 @@ export default function Home() {
           event.preventDefault();
           setShortcutsOpen((open) => !open);
           break;
+        case "Escape":
+          // The one way out that needs no visible control, which is the point
+          // of a mode that hides the controls.
+          if (presenting) {
+            event.preventDefault();
+            setPresenting(false);
+          }
+          break;
         default:
           break;
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleRefresh, handleExport, goToTab, sidebarCollapsed, setCollapsedPref]);
+  }, [
+    handleRefresh,
+    handleExport,
+    goToTab,
+    sidebarCollapsed,
+    setCollapsedPref,
+    presenting,
+    setPresenting,
+  ]);
 
   const paletteActions = useMemo<Command[]>(
     () => [
@@ -505,6 +532,20 @@ export default function Home() {
         group: "Appearance",
         run: () => setTheme(option),
       })),
+      {
+        id: "action-presenting",
+        label: presenting ? "Leave presentation mode" : "Presentation mode",
+        hint: "Hide the sidebar and secondary controls for a wall display",
+        group: "Actions",
+        run: () => setPresenting(!presenting),
+      },
+      {
+        id: "action-print",
+        label: "Print this view",
+        hint: "Renders the panels on a light background, chrome removed",
+        group: "Actions",
+        run: () => window.print(),
+      },
       ...DENSITIES.filter((option) => option !== density).map((option) => ({
         id: `action-density-${option}`,
         label: `Density: ${option}`,
@@ -525,6 +566,8 @@ export default function Home() {
       setTheme,
       density,
       setDensity,
+      presenting,
+      setPresenting,
     ],
   );
 
@@ -580,6 +623,8 @@ export default function Home() {
           onThemeChange={setTheme}
           density={density}
           onDensityChange={setDensity}
+          presenting={presenting}
+          onPresentingChange={setPresenting}
           prefersLight={prefersLight}
           personas={personas}
           onPersonasChange={setPersonas}
@@ -652,6 +697,8 @@ export default function Home() {
                   metrics={metrics}
                   personas={personasPayload ?? undefined}
                   selectedPersonas={personas}
+                  trend={trend}
+                  onTrendChange={(days) => patchView({ trend: days })}
                 />
               ) : (
                 <PanelSkeleton label="Loading analytics" />

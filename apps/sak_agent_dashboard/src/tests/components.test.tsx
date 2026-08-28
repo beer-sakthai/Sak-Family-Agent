@@ -7,6 +7,7 @@
  * through to an inline literal.
  */
 
+import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -27,6 +28,7 @@ import {
   demoSessions,
   demoWorkflows,
 } from "@/lib/demo";
+import { TREND_WINDOWS, trendWindowLabel } from "@/lib/url-state";
 
 const personas = demoPersonas();
 const active = personas.personas.find((p) => p.runs > 0)!;
@@ -92,24 +94,69 @@ describe("AgentOverview", () => {
 });
 
 describe("AnalyticsCharts", () => {
+  // The scope pill now carries the trend length as well as the persona count,
+  // so it is asked for by test id rather than by its full sentence.
+  function renderCharts(props: Partial<React.ComponentProps<typeof AnalyticsCharts>> = {}) {
+    return render(
+      <AnalyticsCharts
+        metrics={demoMetrics()}
+        trend={30}
+        onTrendChange={vi.fn()}
+        {...props}
+      />,
+    );
+  }
+
   // The headline run/success/latency figures moved to the KPI strip, which is
   // on screen above these charts; see `shell.test.tsx`. What is left here is
   // how much of the family the per-persona charts actually speak for.
   it("says how many personas the per-persona charts are drawn from", () => {
     const attributed = personas.personas.filter((p) => p.runs > 0).length;
-    render(<AnalyticsCharts metrics={demoMetrics()} personas={personas} />);
-    expect(
-      screen.getByText(`${attributed} of ${personas.personas.length} personas have attributed runs`),
-    ).toBeInTheDocument();
+    renderCharts({ personas });
+    expect(screen.getByTestId("analytics-scope")).toHaveTextContent(
+      `${attributed} of ${personas.personas.length} personas have attributed runs`,
+    );
   });
 
   it("counts nothing rather than guessing without a personas payload", () => {
-    render(<AnalyticsCharts metrics={demoMetrics()} />);
-    expect(screen.getByText("0 of 0 personas have attributed runs")).toBeInTheDocument();
+    renderCharts();
+    expect(screen.getByTestId("analytics-scope")).toHaveTextContent(
+      "0 of 0 personas have attributed runs",
+    );
   });
 
   it("renders without a personas payload", () => {
-    expect(() => render(<AnalyticsCharts metrics={demoMetrics()} />)).not.toThrow();
+    expect(() => renderCharts()).not.toThrow();
+  });
+
+  it("draws only the last N days for a narrowed window", () => {
+    renderCharts({ trend: 7 });
+    const expected = Math.min(7, demoMetrics().trends.length);
+    expect(screen.getByTestId("analytics-scope")).toHaveTextContent(`${expected} days of trend`);
+  });
+
+  it("draws every recorded day for the all-history window", () => {
+    renderCharts({ trend: 0 });
+    expect(screen.getByTestId("analytics-scope")).toHaveTextContent(
+      `${demoMetrics().trends.length} days of trend`,
+    );
+  });
+
+  it("marks the active window and reports a change upward", () => {
+    const onTrendChange = vi.fn();
+    renderCharts({ trend: 30, onTrendChange });
+    expect(screen.getByRole("button", { name: "30d" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "7d" }));
+    expect(onTrendChange).toHaveBeenCalledWith(7);
+  });
+
+  it("offers every window the URL can carry", () => {
+    renderCharts();
+    for (const days of TREND_WINDOWS) {
+      expect(
+        screen.getByRole("button", { name: trendWindowLabel(days) }),
+      ).toBeInTheDocument();
+    }
   });
 });
 

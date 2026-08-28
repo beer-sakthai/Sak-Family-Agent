@@ -16,10 +16,12 @@ import { useCallback, useEffect, useSyncExternalStore } from "react";
 
 import {
   applyDensity,
+  applyPresentation,
   applyTheme,
   DENSITY_STORAGE_KEY,
   isDensity,
   isTheme,
+  PRESENTATION_STORAGE_KEY,
   THEME_STORAGE_KEY,
   type Density,
   type Theme,
@@ -151,6 +153,24 @@ export function useDensity(): [Density, (next: Density) => void] {
 
   const setDensity = useCallback((next: Density) => setRaw(next), [setRaw]);
   return [density, setDensity];
+}
+
+/**
+ * Presentation mode, same contract as `useTheme`.
+ *
+ * A boolean rather than a string union: there is no third state, and the
+ * stored value is only ever compared against "on".
+ */
+export function usePresentation(): [boolean, (next: boolean) => void] {
+  const [raw, setRaw] = usePersistedString(PRESENTATION_STORAGE_KEY, "off");
+  const presenting = raw === "on";
+
+  useEffect(() => {
+    applyPresentation(presenting, document.documentElement);
+  }, [presenting]);
+
+  const setPresenting = useCallback((next: boolean) => setRaw(next ? "on" : "off"), [setRaw]);
+  return [presenting, setPresenting];
 }
 
 /**
