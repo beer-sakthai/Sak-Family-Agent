@@ -10,13 +10,29 @@ carried forward here.
 
 ## [Unreleased]
 
+> This changelog has lagged the repository. The entries below cover the early
+> v2 rewrite; the bulk of what landed since — the six-persona layout, per-persona
+> memory sharding, the guardrails hardening rounds, the dashboard web API — is
+> recorded in `PLAN.md`'s status table and the dated audits under `docs/`
+> rather than here.
+
 ### Changed
-- License posture is now **all rights reserved** (© 2026 beer-sakthai). The
-  `LICENSE` file (MIT) was removed and README, `pyproject.toml`, `SECURITY.md`,
-  and `CODE_OF_CONDUCT.md` were updated to match the source-available,
-  no-redistribution terms.
+- License posture is now **all rights reserved** (© 2026 beer-sakthai). The MIT
+  terms were replaced: `LICENSE` now carries the House of Sak Intellectual
+  Property License (source-available, no redistribution), and README,
+  `SECURITY.md`, and `CODE_OF_CONDUCT.md` were updated to match. Note
+  `pyproject.toml` currently declares no `license` field at all.
 
 ### Added
+- Built-in tools beyond the original set: `ingest_document`, `capture_lead`,
+  `search_sessions`, the four Microsoft Graph mail/calendar tools,
+  `run_agent_loop`, `family_recall`, `family_search`, and
+  `delegate_to_persona` — 18 in total.
+- `sakthai team` (declarative multi-agent pipelines) and `sakthai client`
+  (ServiceQuoteBot provisioning) CLI groups.
+- Dashboard HTTP API: `/api/personas`, `/api/metrics`, `/api/sessions`,
+  `/api/memory`, `/api/audit`, `/api/workflows`, shaped by `web/contracts.py`
+  and consumed by `apps/sak_agent_dashboard/`.
 - Identity & governance docs re-derived for v2: `SAKTHAI.md`, `CODE_OF_CONDUCT.md`,
   and this `CHANGELOG.md`.
 - OG→v2 information-parity audit (`docs/og_parity_audit.md`) recording keep/drop
