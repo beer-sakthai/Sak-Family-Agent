@@ -18,6 +18,8 @@
 
 import { useCallback, useMemo } from "react";
 
+import { PERSONA_NAMES } from "./contracts.generated";
+
 import { useHashRoute } from "./browser-state";
 import { isTabId, type TabId } from "./nav";
 
@@ -62,18 +64,25 @@ export function parseView(hash: string): ViewState {
   const params = new URLSearchParams(rawQuery);
 
   const page = Number.parseInt(params.get("page") ?? "", 10);
+  // An unknown name is dropped rather than kept. The server's `parsePersonas`
+  // already ignores anything outside PERSONA_NAMES and answers unfiltered, so
+  // holding on to e.g. `?persona=sakwho` client-side would split the page
+  // against itself: the lists show the whole family while AgentOverview dims
+  // every card and AnalyticsCharts excludes every persona, none of them
+  // matching the unknown name. Dropping it here lands a stale or mistyped
+  // fragment on the documented unfiltered view everywhere at once.
+  const known = new Set<string>(PERSONA_NAMES);
   const personas = (params.get("persona") ?? "")
     .split(",")
     .map((part) => part.trim().toLowerCase())
-    .filter((part) => part.length > 0);
+    .filter((part) => known.has(part));
 
   return {
     tab: isTabId(rawTab) ? rawTab : DEFAULT_VIEW.tab,
     search: params.get("q") ?? DEFAULT_VIEW.search,
     severity: params.get("severity") ?? DEFAULT_VIEW.severity,
     page: Number.isFinite(page) && page > 0 ? page : DEFAULT_VIEW.page,
-    // Deduplicated, and validated against the known names by the caller —
-    // `parsePersonas` on the server rejects anything it does not recognise.
+    // Deduplicated; already narrowed to PERSONA_NAMES above.
     personas: [...new Set(personas)],
     session: params.get("session") || null,
     run: params.get("run") || null,
