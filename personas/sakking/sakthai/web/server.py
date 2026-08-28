@@ -229,7 +229,8 @@ class _Handler(SimpleHTTPRequestHandler):
                         val = unquote(v)
                         if secrets.compare_digest(val, expected_token):
                             self.send_header(
-                                "Set-Cookie", f"token={expected_token}; Path=/; HttpOnly; SameSite=Strict"
+                                "Set-Cookie",
+                                f"token={expected_token}; Path=/; HttpOnly; SameSite=Strict",
                             )
                             break
         super().end_headers()
