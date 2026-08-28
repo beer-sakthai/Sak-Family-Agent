@@ -27,7 +27,7 @@ This repository is the living workspace of the Sak Family — autonomous AI agen
 │  SakThai Agent v2.0 — Core Package Status                   │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  Tests (~2,251)  ██████████████████████████████████████ 100%│
+│  Tests (2,275)   ██████████████████████████████████████ 100%│
 │  Type Safety     ██████████████████████████████████████ 100%│
 │  Security scan   ██████████████████████████████████████ 100%│
 │  Coverage        ████████████████████████████████████░░  96%│
@@ -44,13 +44,13 @@ Verified locally on **2026-08-28** (`uv sync --all-extras`, Python 3.11):
 
 | Check | Command | Result |
 |---|---|---|
-| Test suite | `uv run pytest tests/ -m "not integration"` | **~2,251 tests** across 107 files, 0 failures |
-| Coverage | `pytest --cov=sakthai --cov-branch` | **95.85%** line+branch — **below** the `fail_under = 96` floor |
+| Test suite | `uv run pytest tests/ -m "not integration"` | **2,275 tests** across 107 files, 0 failures |
+| Coverage | `pytest --cov=sakthai --cov-branch` | **95.86%** line+branch — **below** the `fail_under = 96` floor |
 | Type safety | `uv run mypy personas/sakthai/sakthai` | **0 issues** across 83 source files (`strict`) |
 | Security | `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` | **0 findings** (high/medium/low) |
 | Lint | `uv run ruff check` + `ruff format --check` | All checks passed, 191 files formatted |
 
-Package size: **7,688 statements** under coverage measurement.
+Package size: **7,699 statements** under coverage measurement.
 
 > **Coverage is below its own floor.** pytest prints
 > `FAIL Required test coverage of 96.0% not reached` and exits 1 locally, but
