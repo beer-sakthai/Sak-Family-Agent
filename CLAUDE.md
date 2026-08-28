@@ -227,7 +227,7 @@ available tooling, not an enforced gate.
 
 Coverage floor is **96%** (`fail_under = 96`, branch coverage on) over the
 `sakthai` package, with `telegram/bot.py` omitted from measurement. The suite
-currently sits at **95.85%** — *below* the floor. pytest prints
+currently sits at **95.86%** — *below* the floor. pytest prints
 `FAIL Required test coverage of 96.0% not reached` and exits 1 locally, but
 `ci.yml`'s test step still concludes success, so the floor does not actually
 gate the build; see finding 1 of
@@ -594,7 +594,7 @@ There is no `dashboard.py` here — see the dashboard note below.
 
 ## Tests
 
-Tests live in `tests/` (107 test files, ~2,251 tests, ~26,500 lines) and are the only suite —
+Tests live in `tests/` (107 test files, ~2,275 tests, ~26,700 lines) and are the only suite —
 there is no per-persona test tree. All tests are hermetic: no network, no GCP
 credentials. Integration tests that may hit real endpoints (Ollama, Anthropic)
 are marked `@pytest.mark.integration` and self-skip when credentials/endpoints
