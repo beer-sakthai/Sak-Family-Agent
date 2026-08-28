@@ -122,11 +122,11 @@ export default function Home() {
   // once keeps it out of every `useCallback` dependency list as a new array.
   const personaParam = personas.join(",");
 
-  const qs = useCallback(
-    (extra: Record<string, string | number | null> = {}) => {
+  const buildQs = useCallback(
+    (includePersona: boolean, extra: Record<string, string | number | null>) => {
       const params = new URLSearchParams();
       if (isDemo) params.set("demo", "1");
-      if (personaParam) params.set("persona", personaParam);
+      if (includePersona && personaParam) params.set("persona", personaParam);
       for (const [key, value] of Object.entries(extra)) {
         if (value !== null && value !== "" && value !== "ALL") params.set(key, String(value));
       }
@@ -136,6 +136,26 @@ export default function Home() {
     [isDemo, personaParam],
   );
 
+  /** For the routes that honour the persona filter: metrics, sessions, memory, audit. */
+  const qs = useCallback(
+    (extra: Record<string, string | number | null> = {}) => buildQs(true, extra),
+    [buildQs],
+  );
+
+  /**
+   * For the routes with no persona dimension to filter on.
+   *
+   * `/api/agents` must return all six personas whatever the filter — the
+   * overview dims the excluded cards rather than dropping them, and the filter
+   * menu needs every name to offer. `/api/workflows` reads one directory that
+   * records no persona at all, so a `?persona=` there would be ignored; sending
+   * it anyway would imply a narrowing that never happens.
+   */
+  const qsFamilyWide = useCallback(
+    (extra: Record<string, string | number | null> = {}) => buildQs(false, extra),
+    [buildQs],
+  );
+
   // No state is set before the first `await`: the effect below calls this, and
   // a synchronous setState inside an effect schedules a cascading render.
   // The Refresh button sets `isLoading` itself, which is an event handler and
@@ -143,14 +163,14 @@ export default function Home() {
   const refresh = useCallback(async () => {
     const [personasRes, metricsRes, memoryRes, auditRes, sessionsRes, workflowsRes] =
       await Promise.all([
-        fetchEnvelope<PersonasPayload>(`/api/agents${qs()}`),
+        fetchEnvelope<PersonasPayload>(`/api/agents${qsFamilyWide()}`),
         fetchEnvelope<MetricsPayload>(`/api/metrics${qs()}`),
         fetchEnvelope<MemoryPayload>(`/api/memory${qs()}`),
         fetchEnvelope<AuditPayload>(`/api/audit${qs({ severity })}`),
         fetchEnvelope<SessionsPayload>(
           `/api/sessions${qs({ search, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE })}`,
         ),
-        fetchEnvelope<WorkflowsPayload>(`/api/workflows${qs()}`),
+        fetchEnvelope<WorkflowsPayload>(`/api/workflows${qsFamilyWide()}`),
       ]);
 
     if (personasRes) {
@@ -170,7 +190,7 @@ export default function Home() {
     );
     setLastUpdatedAt(Date.now());
     setIsLoading(false);
-  }, [qs, search, page, severity]);
+  }, [qs, qsFamilyWide, search, page, severity]);
 
   useEffect(() => {
     // refresh() sets no state before its first `await`, so nothing here runs
@@ -214,7 +234,7 @@ export default function Home() {
   useEffect(() => {
     if (!runId) return;
     let cancelled = false;
-    void fetchEnvelope<WorkflowRunDetail | null>(`/api/workflows${qs({ id: runId })}`).then(
+    void fetchEnvelope<WorkflowRunDetail | null>(`/api/workflows${qsFamilyWide({ id: runId })}`).then(
       (res) => {
         if (!cancelled) setRunDetail({ id: runId, detail: res?.data ?? null });
       },
@@ -222,7 +242,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [runId, qs]);
+  }, [runId, qsFamilyWide]);
 
   const goToTab = useCallback(
     (nextTab: TabId) => {
@@ -687,6 +707,7 @@ export default function Home() {
               (workflows ? (
                 <WorkflowRuns
                   runs={workflows.runs}
+                  familyWide={personas.length > 0}
                   onRunSelect={(id) => patchView({ run: id })}
                   openRunId={runId}
                   detail={activeRunDetail}

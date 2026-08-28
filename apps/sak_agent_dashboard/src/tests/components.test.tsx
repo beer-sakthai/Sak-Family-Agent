@@ -362,6 +362,28 @@ describe("WorkflowRuns", () => {
     render(<WorkflowRuns runs={[]} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
     expect(screen.getByText("No workflow runs recorded yet.")).toBeInTheDocument();
   });
+
+  // Workflow runs record no persona, so this panel cannot honour the global
+  // filter — and must not let the topbar's filter imply that it did.
+  it("says so when a persona filter it cannot honour is active", () => {
+    render(
+      <WorkflowRuns
+        runs={workflows.runs}
+        onRunSelect={vi.fn()}
+        openRunId={null}
+        familyWide
+        detail={null}
+      />,
+    );
+    expect(screen.getByTestId("workflows-family-wide")).toBeInTheDocument();
+  });
+
+  it("stays quiet when no filter is active", () => {
+    render(
+      <WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
+    );
+    expect(screen.queryByTestId("workflows-family-wide")).not.toBeInTheDocument();
+  });
 });
 
 describe("DemoModeToggle", () => {

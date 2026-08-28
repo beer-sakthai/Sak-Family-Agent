@@ -18,7 +18,13 @@ import type {
   WorkflowRunDetail,
   WorkflowsPayload,
 } from "../contracts.generated";
-import type { AuditQuery, DashboardSource, MemoryQuery, SessionQuery } from "../source";
+import type {
+  AuditQuery,
+  DashboardSource,
+  MemoryQuery,
+  MetricsQuery,
+  SessionQuery,
+} from "../source";
 
 /** Requests are cheap and local-ish; a short timeout beats a hung route. */
 const TIMEOUT_MS = 10_000;
@@ -67,8 +73,11 @@ export class ApiSource implements DashboardSource {
     return this.fetchJson<PersonasPayload>("api/personas");
   }
 
-  getMetrics(limit?: number): Promise<MetricsPayload> {
-    return this.fetchJson<MetricsPayload>("api/metrics", { limit });
+  getMetrics(query?: MetricsQuery): Promise<MetricsPayload> {
+    return this.fetchJson<MetricsPayload>("api/metrics", {
+      limit: query?.limit,
+      persona: query?.personas?.join(","),
+    });
   }
 
   getSessions(query?: SessionQuery): Promise<SessionsPayload> {
@@ -95,6 +104,7 @@ export class ApiSource implements DashboardSource {
     return this.fetchJson<AuditPayload>("api/audit", {
       severity: query?.severity,
       limit: query?.limit,
+      persona: query?.personas?.join(","),
     });
   }
 

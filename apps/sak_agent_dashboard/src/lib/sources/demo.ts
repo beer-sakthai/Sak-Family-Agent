@@ -17,7 +17,13 @@ import {
   demoSessions,
   demoWorkflows,
 } from "../demo";
-import type { AuditQuery, DashboardSource, MemoryQuery, SessionQuery } from "../source";
+import type {
+  AuditQuery,
+  DashboardSource,
+  MemoryQuery,
+  MetricsQuery,
+  SessionQuery,
+} from "../source";
 
 export class DemoSource implements DashboardSource {
   readonly kind = "demo" as const;
@@ -26,8 +32,8 @@ export class DemoSource implements DashboardSource {
     return demoPersonas();
   }
 
-  async getMetrics(): Promise<MetricsPayload> {
-    return demoMetrics();
+  async getMetrics(query?: MetricsQuery): Promise<MetricsPayload> {
+    return demoMetrics(query);
   }
 
   async getSessions(query?: SessionQuery): Promise<SessionsPayload> {

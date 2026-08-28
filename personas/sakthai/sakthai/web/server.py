@@ -336,7 +336,10 @@ class _Handler(SimpleHTTPRequestHandler):
             if path == "/api/personas":
                 payload: Any = _api.personas_payload()
             elif path == "/api/metrics":
-                payload = _api.metrics_payload(limit=_int_param(params, "limit", _api.EVAL_WINDOW))
+                payload = _api.metrics_payload(
+                    limit=_int_param(params, "limit", _api.EVAL_WINDOW),
+                    personas=_api.parse_personas(params.get("persona")),
+                )
             elif path == "/api/sessions":
                 payload = _api.sessions_payload(
                     search=params.get("search") or params.get("query"),
@@ -362,6 +365,7 @@ class _Handler(SimpleHTTPRequestHandler):
                 payload = _api.audit_payload(
                     severity=params.get("severity"),
                     limit=_int_param(params, "limit", 200),
+                    personas=_api.parse_personas(params.get("persona")),
                 )
         except Exception:
             logger.warning("Dashboard API call failed for %s", path, exc_info=True)

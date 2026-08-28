@@ -52,6 +52,17 @@ describe("parseView", () => {
     expect(parseView("overview?persona=").personas).toEqual([]);
   });
 
+  it("drops a persona name that is not one of the six", () => {
+    // Keeping it would split the page against itself: the lists would show the
+    // whole family (the server reads the value as "no filter") while the
+    // overview dimmed every card against a name that matches none of them.
+    expect(parseView("overview?persona=nobody").personas).toEqual([]);
+  });
+
+  it("keeps the known names from a mixed list", () => {
+    expect(parseView("overview?persona=nobody,sakthai").personas).toEqual(["sakthai"]);
+  });
+
   // A stale or mistyped fragment used to survive parsing, which split the page
   // against itself: the server ignores an unknown name and answers unfiltered,
   // while the client-side panels matched nothing.
