@@ -154,7 +154,8 @@ export function WorkflowRuns({
                     <td className="px-5 py-3.5 text-right">
                       <button
                         onClick={() => open(run.run_id)}
-                        className="text-[11px] px-2.5 py-1 rounded-lg bg-raised border border-line-strong text-hue-violet hover:border-hue-violet-line/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-hue-violet"
+                        aria-label={`View steps for ${run.workflow_name || run.run_id}`}
+                        className="text-[11px] px-2.5 py-1 rounded-lg bg-raised border border-line-strong text-hue-violet hover:border-hue-violet-line/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                       >
                         Steps
                       </button>
