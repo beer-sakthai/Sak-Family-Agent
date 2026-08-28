@@ -422,6 +422,16 @@ export class LocalFsSource implements DashboardSource {
     const offset = Math.max(0, query?.offset ?? 0);
 
     let summaries = loadSessions(this.home);
+
+    // Before the search and before the slice: `total` has to count the
+    // filtered set or the pager reports the family's count beside one
+    // persona's page.
+    const personas = query?.personas;
+    if (personas && personas.length > 0) {
+      const wanted = new Set(personas);
+      summaries = summaries.filter((s) => s.persona !== null && wanted.has(s.persona));
+    }
+
     const search = query?.search?.trim().toLowerCase();
     if (search) {
       const terms = search.split(/\s+/);
@@ -471,13 +481,21 @@ export class LocalFsSource implements DashboardSource {
     const startTs = now - 30 * 86_400;
     const weekAgo = now - 7 * 86_400;
 
-    const shards: { persona: string; file: string }[] = [
+    // "shared" is the legacy unscoped memory.db. A persona-filtered view is
+    // about that persona's own shard, so the filter drops it — matching
+    // `web/api.py:memory_payload`, whose totals this mirrors.
+    const wantedPersonas = query?.personas;
+    const allShards: { persona: string; file: string }[] = [
       ...PERSONA_NAMES.map((persona) => ({
         persona,
         file: path.join(this.home, persona, "memory.db"),
       })),
       { persona: "shared", file: path.join(this.home, "memory.db") },
     ];
+    const shards =
+      wantedPersonas && wantedPersonas.length > 0
+        ? allShards.filter((shard) => wantedPersonas.includes(shard.persona))
+        : allShards;
 
     const facts: FactRecord[] = [];
     const observations: ObservationRecord[] = [];

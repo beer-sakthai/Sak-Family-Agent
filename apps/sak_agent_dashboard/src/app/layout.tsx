@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Outfit } from "next/font/google";
+import { Inter, JetBrains_Mono, Outfit } from "next/font/google";
 import "./globals.css";
+
+import { THEME_BOOTSTRAP } from "@/lib/theme";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -14,16 +16,47 @@ const outfit = Outfit({
   display: "swap",
 });
 
+/**
+ * Ids, models, token counts and timestamps are all tabular here, and the
+ * system mono stack varies enough between platforms that columns stopped
+ * lining up. One webfont fixes the alignment everywhere `font-mono` is used.
+ */
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "Sak-Agent-Family Dashboard",
+  title: {
+    default: "Sak-Agent-Family Dashboard",
+    template: "%s · Sak-Agent-Family",
+  },
   description:
     "Read-only analytics over the SakThai agent family: runs, latency, memory shards, workflows, and guardrail events.",
   applicationName: "Sak-Agent-Family Dashboard",
   robots: { index: false, follow: false },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Sak Dashboard",
+    statusBarStyle: "black-translucent",
+  },
+  openGraph: {
+    title: "Sak-Agent-Family Dashboard",
+    description:
+      "Runs, latency, memory shards, workflows and guardrail events across the six-persona SakThai agent family.",
+    type: "website",
+  },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#070a12",
+  // One entry per scheme: the browser picks the matching one, so the address
+  // bar follows the theme instead of staying near-black on a light page.
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#070a12" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f6fb" },
+  ],
   width: "device-width",
   initialScale: 1,
 };
@@ -43,14 +76,36 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${outfit.variable} dark`}>
-      <body className="min-h-screen bg-[#070a12] text-slate-100 antialiased">
+    <html
+      lang="en"
+      className={`${inter.variable} ${outfit.variable} ${jetbrainsMono.variable}`}
+      // The bootstrap script writes both attributes before React hydrates, so
+      // the server's markup and the client's first read necessarily differ.
+      // That is the point of the script; suppress the warning for this node.
+      suppressHydrationWarning
+    >
+      <head>
+        {/* Before first paint, not after hydration: see THEME_BOOTSTRAP. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+      </head>
+      <body className="min-h-screen bg-canvas text-fg antialiased">
+        {/* The first tab stop on the page. Sighted keyboard users get past the
+            sidebar's eight controls in one keystroke; it is off-screen until
+            focused. */}
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:border focus:border-accent/50 focus:bg-panel focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-fg focus:shadow-glass"
+        >
+          Skip to content
+        </a>
+
         {/* Ambient wash. Fixed and inert, so it never scrolls, never catches a
-            click, and never shows up in the tab order. */}
+            click, and never shows up in the tab order. Opacity is a token, so
+            the light theme gets a wash that reads as tint rather than haze. */}
         <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-          <div className="absolute -left-40 -top-40 h-[32rem] w-[32rem] rounded-full bg-cyan-500/10 blur-[120px]" />
-          <div className="absolute -right-40 top-1/3 h-[28rem] w-[28rem] rounded-full bg-violet-500/10 blur-[120px]" />
-          <div className="absolute bottom-0 left-1/3 h-[24rem] w-[24rem] rounded-full bg-emerald-500/[0.06] blur-[120px]" />
+          <div className="absolute -left-40 -top-40 h-[32rem] w-[32rem] rounded-full bg-hue-cyan opacity-[var(--wash-alpha)] blur-[120px]" />
+          <div className="absolute -right-40 top-1/3 h-[28rem] w-[28rem] rounded-full bg-hue-violet opacity-[var(--wash-alpha)] blur-[120px]" />
+          <div className="absolute bottom-0 left-1/3 h-[24rem] w-[24rem] rounded-full bg-hue-emerald opacity-[calc(var(--wash-alpha)*0.6)] blur-[120px]" />
           <div className="absolute inset-0 bg-grid" />
         </div>
         {children}

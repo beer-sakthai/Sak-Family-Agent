@@ -149,6 +149,17 @@ describe("TopBar", () => {
       now: 1_700_000_000_000,
       onOpenPalette: vi.fn(),
       onOpenMobileNav: vi.fn(),
+      theme: "system" as const,
+      onThemeChange: vi.fn(),
+      density: "comfortable" as const,
+      onDensityChange: vi.fn(),
+      prefersLight: false,
+      personas: [] as string[],
+      onPersonasChange: vi.fn(),
+      personaCounts: {},
+      canExport: true,
+      onExport: vi.fn(),
+      onCopyLink: vi.fn(),
       ...overrides,
     };
     return { props, ...render(<TopBar {...props} />) };

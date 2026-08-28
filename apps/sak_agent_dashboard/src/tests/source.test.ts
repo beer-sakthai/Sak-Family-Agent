@@ -13,7 +13,7 @@ import path from "path";
 
 import { PERSONA_NAMES } from "@/lib/contracts.generated";
 import { displayName, runtimeAvailable, runtimeRoots, sakthaiHome } from "@/lib/runtime";
-import { envelope, intParam, resolveSource } from "@/lib/source";
+import { envelope, intParam, parsePersonas, resolveSource } from "@/lib/source";
 import { makeHome, removeHome } from "./fixtures";
 
 const ENV_KEYS = ["SAKTHAI_HOME", "SAKTHAI_DIR", "SAKTHAI_API_URL", "SAKTHAI_API_TOKEN"];
@@ -126,6 +126,43 @@ describe("intParam", () => {
 
   it("clamps above the maximum", () => {
     expect(intParam("100000", 20, 1, 100)).toBe(100);
+  });
+});
+
+describe("parsePersonas", () => {
+  it("returns null for an absent filter", () => {
+    expect(parsePersonas(null)).toBeNull();
+    expect(parsePersonas(undefined)).toBeNull();
+  });
+
+  it("returns null for blank text", () => {
+    expect(parsePersonas("   ")).toBeNull();
+  });
+
+  it("reads a single name", () => {
+    expect(parsePersonas("sakthai")).toEqual(["sakthai"]);
+  });
+
+  it("reads a comma-separated list", () => {
+    expect(parsePersonas("saksee,sakthai")).toEqual(["sakthai", "saksee"]);
+  });
+
+  it("tolerates whitespace and case", () => {
+    expect(parsePersonas(" SakThai , saksee ")).toEqual(["sakthai", "saksee"]);
+  });
+
+  it("returns null when nothing named is a known persona", () => {
+    // Not [] -- an empty list would render as "this persona has nothing",
+    // when the truth is the filter named no persona we know.
+    expect(parsePersonas("nobody")).toBeNull();
+  });
+
+  it("keeps the known names from a mixed list", () => {
+    expect(parsePersonas("nobody,sakthai")).toEqual(["sakthai"]);
+  });
+
+  it("matches the order of PERSONA_NAMES, not the input", () => {
+    expect(parsePersonas("saktan,sakking")).toEqual(["sakking", "saktan"]);
   });
 });
 

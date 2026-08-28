@@ -233,6 +233,124 @@ describe("LocalFsSource.getSessions", () => {
   });
 });
 
+describe("LocalFsSource persona filter", () => {
+  function seedTwoPersonaSessions(): void {
+    fs.mkdirSync(path.join(home, "sessions"), { recursive: true });
+    fs.writeFileSync(
+      path.join(home, "sessions", `${NOW}_a.json`),
+      sessionDoc({ persona: "sakthai" }),
+    );
+    fs.writeFileSync(
+      path.join(home, "sessions", `${NOW + 10}_b.json`),
+      sessionDoc({ persona: "saksee" }),
+    );
+    clearSessionCache();
+  }
+
+  it("narrows sessions to the named persona", async () => {
+    seedTwoPersonaSessions();
+    const payload = await new LocalFsSource(home).getSessions({ personas: ["sakthai"] });
+    expect(payload.sessions.map((s) => s.persona)).toEqual(["sakthai"]);
+  });
+
+  it("counts the filtered set", async () => {
+    seedTwoPersonaSessions();
+    expect((await new LocalFsSource(home).getSessions({ personas: ["sakthai"] })).total).toBe(1);
+  });
+
+  it("drops unattributed sessions from a filtered view", async () => {
+    fs.mkdirSync(path.join(home, "sessions"), { recursive: true });
+    fs.writeFileSync(path.join(home, "sessions", `${NOW}_u.json`), sessionDoc());
+    clearSessionCache();
+    expect((await new LocalFsSource(home).getSessions({ personas: ["sakthai"] })).total).toBe(0);
+  });
+
+  it("applies the filter before the offset", async () => {
+    fs.mkdirSync(path.join(home, "sessions"), { recursive: true });
+    for (const [index, persona] of ["sakthai", "saksee", "sakthai", "saksee"].entries()) {
+      fs.writeFileSync(
+        path.join(home, "sessions", `${NOW + index}_p.json`),
+        sessionDoc({ persona }),
+      );
+    }
+    clearSessionCache();
+    const page = await new LocalFsSource(home).getSessions({
+      personas: ["sakthai"],
+      limit: 1,
+      offset: 1,
+    });
+    expect(page.total).toBe(2);
+    expect(page.sessions[0].persona).toBe("sakthai");
+  });
+
+  it("combines with the search text", async () => {
+    fs.mkdirSync(path.join(home, "sessions"), { recursive: true });
+    fs.writeFileSync(
+      path.join(home, "sessions", `${NOW}_s1.json`),
+      sessionDoc({ persona: "sakthai", task: "deploy the thing" }),
+    );
+    fs.writeFileSync(
+      path.join(home, "sessions", `${NOW + 1}_s2.json`),
+      sessionDoc({ persona: "saksee", task: "deploy the thing" }),
+    );
+    clearSessionCache();
+    const payload = await new LocalFsSource(home).getSessions({
+      personas: ["sakthai"],
+      search: "deploy",
+    });
+    expect(payload.total).toBe(1);
+  });
+
+  it("returns every persona when the filter is empty", async () => {
+    seedTwoPersonaSessions();
+    expect((await new LocalFsSource(home).getSessions({ personas: [] })).total).toBe(2);
+  });
+
+  it("narrows memory to the named persona's own shard", async () => {
+    seedShard(path.join(home, "sakthai", "memory.db"), [
+      { kind: "preference", key: "theme", value: "dark mode" },
+    ]);
+    seedShard(path.join(home, "saksee", "memory.db"), [
+      { kind: "preference", key: "theme", value: "light mode" },
+    ]);
+    const payload = await new LocalFsSource(home).getMemory({ personas: ["sakthai"] });
+    expect(payload.facts.map((f) => f.value)).toEqual(["dark mode"]);
+  });
+
+  it("narrows the memory totals, not only the rows", async () => {
+    seedShard(path.join(home, "sakthai", "memory.db"), [
+      { kind: "preference", key: "a", value: "one" },
+    ]);
+    seedShard(path.join(home, "saksee", "memory.db"), [
+      { kind: "preference", key: "b", value: "two" },
+    ]);
+    const payload = await new LocalFsSource(home).getMemory({ personas: ["sakthai"] });
+    expect(payload.total_facts).toBe(1);
+  });
+
+  it("excludes the unscoped shard from a filtered memory view", async () => {
+    seedShard(path.join(home, "memory.db"), [
+      { kind: "preference", key: "a", value: "unscoped" },
+    ]);
+    seedShard(path.join(home, "sakthai", "memory.db"), [
+      { kind: "preference", key: "b", value: "scoped" },
+    ]);
+    const payload = await new LocalFsSource(home).getMemory({ personas: ["sakthai"] });
+    expect(payload.facts.map((f) => f.value)).toEqual(["scoped"]);
+    expect(payload.total_facts).toBe(1);
+  });
+
+  it("spans the family when memory is unfiltered", async () => {
+    seedShard(path.join(home, "sakthai", "memory.db"), [
+      { kind: "preference", key: "a", value: "one" },
+    ]);
+    seedShard(path.join(home, "saksee", "memory.db"), [
+      { kind: "preference", key: "b", value: "two" },
+    ]);
+    expect((await new LocalFsSource(home).getMemory()).total_facts).toBe(2);
+  });
+});
+
 describe("LocalFsSource.getSessionDetail", () => {
   it("flattens block content", async () => {
     seedHome(home);

@@ -458,6 +458,21 @@ def _load_session(path: Path) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
+def parse_personas(raw: str | None) -> list[str] | None:
+    """Narrow a ``persona=`` query value to known persona names.
+
+    Accepts one name or a comma-separated list. Returns None for anything that
+    names no persona we know — an absent filter, blank text, or a typo — so the
+    caller falls back to the whole family rather than to an empty result that
+    would read as "this persona has no data".
+    """
+    if not raw or not raw.strip():
+        return None
+    wanted = [part.strip().lower() for part in raw.split(",")]
+    known = [name for name in PERSONA_NAMES if name in wanted]
+    return known or None
+
+
 def _matches(summary: SessionSummary, terms: list[str]) -> bool:
     haystack = f"{summary['id']} {summary['task']} {summary['model']} {summary['persona']}".lower()
     return all(term in haystack for term in terms)
@@ -468,12 +483,18 @@ def sessions_payload(
     limit: int = 20,
     offset: int = 0,
     session_id: str | None = None,
+    personas: list[str] | None = None,
     home: Path | None = None,
 ) -> SessionsPayload:
     """A page of session summaries, plus one full transcript when asked for.
 
     ``limit``/``offset`` are clamped rather than trusted: a non-numeric limit
     reaching ``slice`` as NaN is exactly the bug this replaces on the TS side.
+
+    ``personas`` narrows to those personas' runs. It is applied before both the
+    search and the offset, so ``total`` counts the filtered set and paging
+    through a filtered view lands on the right rows — filtering a page after
+    slicing it would give a page-scoped answer wearing a global label.
     """
     limit = max(1, min(100, limit))
     offset = max(0, offset)
@@ -484,6 +505,10 @@ def sessions_payload(
         data = _load_session(path)
         if data is not None:
             summaries.append(_session_summary(path.stem, data, persona))
+
+    if personas is not None:
+        wanted = set(personas)
+        summaries = [s for s in summaries if s["persona"] in wanted]
 
     if search and search.strip():
         terms = search.strip().lower().split()
@@ -569,9 +594,23 @@ def memory_payload(
 
     Uses ``get_dashboard_aggregates`` for the growth series that
     ``dashboard/data.py`` has always returned empty, summing across shards.
+
+    ``personas`` narrows both the rows and the totals. It previously scoped only
+    the rows — ``FamilyMemoryView`` took the filter but the aggregate loop did
+    not — so a filtered request answered one persona's facts under the whole
+    family's counts.
     """
     limit = max(1, min(500, limit))
     shard_paths = _shard_paths(home)
+    # The aggregate loop below reads these paths directly, so it takes the
+    # filtered map. `shard_paths` itself stays whole and is handed to
+    # FamilyMemoryView untouched: dropping a key there would not exclude that
+    # shard, it would send the view to the real ~/.sakthai instead.
+    aggregate_paths = (
+        {name: path for name, path in shard_paths.items() if name in set(personas)}
+        if personas is not None
+        else shard_paths
+    )
     now = int(time.time())
     start_ts = now - 30 * 86400
     week_ago = now - 7 * 86400
@@ -582,7 +621,7 @@ def memory_payload(
     before_start = {"facts": 0, "observations": 0}
     kind_counts: dict[str, int] = {}
 
-    for path in shard_paths.values():
+    for path in aggregate_paths.values():
         if not path.exists():
             continue
         store = MemoryStore(path)
@@ -602,7 +641,10 @@ def memory_payload(
         finally:
             store.close()
 
-    view = FamilyMemoryView(personas, shard_paths=shard_paths)
+    # A persona-filtered view is that persona's own memory; the unscoped
+    # legacy store is attributed to nobody, so it is excluded alongside the
+    # other personas' shards.
+    view = FamilyMemoryView(personas, shard_paths=shard_paths, include_unscoped=personas is None)
     try:
         if query and query.strip():
             sharded_facts, sharded_obs = view.search(query.strip(), limit=limit)

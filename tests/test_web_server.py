@@ -826,6 +826,28 @@ class TestDashboardRoutes:
         status, _ = _get(f"{api_base}/api/sessions?query=anything")
         assert status == 200
 
+    def test_sessions_persona_param_reaches_the_builder(self, api_base: str) -> None:
+        with patch(
+            "sakthai.web.api.sessions_payload", return_value={"sessions": [], "total": 0}
+        ) as builder:
+            status, _ = _get(f"{api_base}/api/sessions?persona=sakthai")
+        assert status == 200
+        assert builder.call_args.kwargs["personas"] == ["sakthai"]
+
+    def test_memory_persona_param_reaches_the_builder(self, api_base: str) -> None:
+        with patch("sakthai.web.api.memory_payload", return_value={"facts": []}) as builder:
+            status, _ = _get(f"{api_base}/api/memory?persona=saksee,sakthai")
+        assert status == 200
+        assert builder.call_args.kwargs["personas"] == ["sakthai", "saksee"]
+
+    def test_unknown_persona_param_does_not_filter(self, api_base: str) -> None:
+        with patch(
+            "sakthai.web.api.sessions_payload", return_value={"sessions": [], "total": 0}
+        ) as builder:
+            status, _ = _get(f"{api_base}/api/sessions?persona=nobody")
+        assert status == 200
+        assert builder.call_args.kwargs["personas"] is None
+
     def test_builder_failure_is_a_500_without_a_traceback(self, api_base: str) -> None:
         """A payload builder blowing up must not leak internals to the client."""
         with patch("sakthai.web.api.personas_payload", side_effect=RuntimeError("boom")):
