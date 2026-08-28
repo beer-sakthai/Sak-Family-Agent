@@ -541,9 +541,11 @@ There is no `dashboard.py` here — see the dashboard note below.
   `personas/sakthai/sakthai/dashboard/data.py` was re-added: it collects
   KPI/lead/revenue metrics from the memory store and is served by
   `web/server.py`'s `/api/stages` endpoint (covered by
-  `tests/test_dashboard_data.py`). `_STATIC_ROOT` resolves to
-  `personas/sakthai/sakthai/dashboard/dist/`, which does not exist, so the web
-  server runs API-only and static requests fall through to 404.
+  `tests/test_dashboard_data.py`). `_find_static_root()` walks up from
+  `web/server.py` for the first `dashboard/dist/` that exists and otherwise
+  falls back to the repo-root `dashboard/dist/`; neither is present, so the web
+  server runs API-only and static requests fall through to 404. The frontend
+  that consumes the API is `apps/sak_agent_dashboard/` (Next.js).
 - **`web/server.py`** — HTTP API server exposing `/health`, `/api/stages`,
   `/api/ecosystem`, and the dashboard endpoints `/api/personas`,
   `/api/metrics`, `/api/sessions`, `/api/memory`, `/api/audit`,
