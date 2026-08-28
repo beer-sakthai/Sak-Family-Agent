@@ -117,7 +117,7 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
           <button
             ref={closeRef}
             onClick={onClose}
-            aria-label="Close"
+            aria-label="Close keyboard shortcuts"
             className="shrink-0 rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-raised/60 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <X className="h-4 w-4" />
