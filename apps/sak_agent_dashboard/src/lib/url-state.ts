@@ -23,6 +23,14 @@ import { PERSONA_NAMES } from "./contracts.generated";
 import { useHashRoute } from "./browser-state";
 import { isTabId, type TabId } from "./nav";
 
+/** Trend windows, in days. `0` is every point the source returned. */
+export const TREND_WINDOWS = [7, 14, 30, 0] as const;
+export type TrendWindow = (typeof TREND_WINDOWS)[number];
+
+export function trendWindowLabel(days: TrendWindow): string {
+  return days === 0 ? "All" : `${days}d`;
+}
+
 export interface ViewState {
   tab: TabId;
   /** Free-text session search. */
@@ -42,6 +50,8 @@ export interface ViewState {
   run: string | null;
   /** Whether sample data was explicitly requested. */
   demo: boolean;
+  /** How many days of trend the analytics charts draw. */
+  trend: TrendWindow;
 }
 
 export const DEFAULT_VIEW: ViewState = {
@@ -53,6 +63,7 @@ export const DEFAULT_VIEW: ViewState = {
   session: null,
   run: null,
   demo: false,
+  trend: 30,
 };
 
 /**
@@ -74,6 +85,9 @@ export function parseView(hash: string): ViewState {
   // every card and AnalyticsCharts excludes every persona, none of them
   // matching the unknown name. Dropping it here lands a stale or mistyped
   // fragment on the documented unfiltered view everywhere at once.
+  // Narrowed to the offered windows: `trend=9999` would otherwise reach the
+  // slice as a number nobody chose, and `trend=abc` as NaN.
+  const trend = Number.parseInt(params.get("trend") ?? "", 10);
   const known = new Set<string>(PERSONA_NAMES);
   const personas = (params.get("persona") ?? "")
     .split(",")
@@ -90,6 +104,9 @@ export function parseView(hash: string): ViewState {
     session: params.get("session") || null,
     run: params.get("run") || null,
     demo: params.get("demo") === "1",
+    trend: (TREND_WINDOWS as readonly number[]).includes(trend)
+      ? (trend as TrendWindow)
+      : DEFAULT_VIEW.trend,
   };
 }
 
@@ -109,6 +126,7 @@ export function serializeView(view: ViewState): string {
   if (view.session) params.set("session", view.session);
   if (view.run) params.set("run", view.run);
   if (view.demo) params.set("demo", "1");
+  if (view.trend !== DEFAULT_VIEW.trend) params.set("trend", String(view.trend));
 
   const encoded = params.toString();
   return encoded ? `${view.tab}?${encoded}` : view.tab;

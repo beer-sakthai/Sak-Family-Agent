@@ -413,3 +413,40 @@ body {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Presentation mode: the figures, without the controls nobody is going to
+   click from across the room. Set on the root element by `applyPresentation`,
+   so it reaches the sidebar and the topbar without either of them knowing the
+   mode exists. */
+:root[data-presentation="on"] [data-chrome="sidebar"],
+:root[data-presentation="on"] [data-chrome="secondary"] {
+  display: none;
+}
+
+/* A printed dashboard is a report: drop the ambient wash and the chrome, force
+   the light palette regardless of the reader's theme, and let the panels break
+   across pages instead of being clipped to one screen. */
+@media print {
+  :root {
+    color-scheme: light;
+  }
+
+  body {
+    background: #fff;
+    color: #0f172a;
+  }
+
+  [data-chrome],
+  .skip-link {
+    display: none !important;
+  }
+
+  [data-panel],
+  .surface-panel {
+    background: #fff !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    break-inside: avoid;
+  }
+}

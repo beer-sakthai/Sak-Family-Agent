@@ -90,6 +90,7 @@ TypeScript and fails on a diff. Do not edit the generated file.
 | `/api/memory` | `MemoryPayload` — facts and observations merged across shards; `?persona=a,b` filters |
 | `/api/audit` | `AuditPayload` — security events from `audit.log` |
 | `/api/workflows` | `WorkflowsPayload` — `agent_workflow` runs; `?id=` for one run |
+| `/api/health` | Liveness probe: which source *would* answer, and whether an API URL/token is configured. Names no path, host or token — anyone who can reach the deployment can read it |
 
 `?persona=` is applied **at the source**, before the search and before the
 offset, in all three implementations and in the Python API — so `total`
@@ -146,8 +147,33 @@ snapshot and the hydrating client agree:
 - **sample-data mode, sidebar collapse and the auto-refresh interval** are
   `localStorage` preferences, so they survive a reload.
 
-Keyboard: `⌘K`/`Ctrl+K` opens the palette, `R` refreshes. Both are suppressed
-while a text field has focus.
+See [Keyboard](#keyboard) for the shortcuts. The sidebar tablist is a **single
+tab stop** with the arrow keys, `Home` and `End` moving between sections — the
+WAI-ARIA authoring practice, and the difference between one Tab to reach the
+panel and seven. Both modals, the drawer and the command palette, trap Tab and
+return focus to whatever opened them; `lib/focus.ts` holds the one definition
+of "what would Tab reach in here" that both use.
+
+The palette matches on a **scored fuzzy subsequence** over each command's label
+and description (`lib/fuzzy.ts`): "usd" finds *Use sample data*, "ovw" finds
+*Overview*. Consecutive and word-initial characters score highest, a label hit
+outranks a description hit, and the matched characters are underlined in the
+row so a non-obvious match explains itself rather than looking like a bug.
+
+### Presentation mode
+
+A third document-level preference beside theme and density (`lib/theme.ts`),
+mirrored onto `<html data-presentation="on">` and restored by the same
+pre-paint bootstrap. It hides `[data-chrome="sidebar"]` and every
+`[data-chrome="secondary"]` control — the palette trigger, persona filter,
+sample toggle, display menu, auto-refresh, copy-link and export — leaving the
+figures, the source badge and the refresh clock. For a wall-mounted tab, where
+none of what it hides is reachable anyway. The topbar button also requests
+fullscreen, ignoring its absence, and `Esc` leaves the mode: the one way out
+that needs no visible control, which is the point of a mode that hides them.
+
+`@media print` does the same thing for paper — chrome removed, panels forced
+light and `break-inside: avoid` — so the dashboard prints as a report.
 
 ## Local development
 
@@ -169,9 +195,18 @@ it on every push, with its root directory set to `apps/sak_agent_dashboard` in
 Vercel's settings — that part is still a project setting, because Vercel resolves
 the root directory *before* reading any config file. Everything downstream of it
 now lives in [`vercel.json`](./vercel.json): the framework, the install command,
-and the response headers (CSP, `X-Frame-Options`, `Referrer-Policy`,
-`Permissions-Policy`, and `Cache-Control: no-store` over `/api/*` so a CDN can
-never serve a stale reading as a live one).
+and the response headers (CSP, HSTS, `X-Frame-Options`, `Referrer-Policy`,
+`Permissions-Policy`, `Cross-Origin-Opener-Policy`,
+`Cross-Origin-Resource-Policy`, `X-DNS-Prefetch-Control`, `X-Robots-Tag`, and
+`Cache-Control: no-store` over `/api/*` so a CDN can never serve a stale
+reading as a live one).
+
+The App Router conventions are all present, which is what keeps a bad deploy
+legible rather than blank: `loading.tsx` (shaped like the real page),
+`error.tsx` and `global-error.tsx` — both surfacing the digest that finds the
+trace in the Vercel logs, and the latter carrying its own two-palette
+stylesheet because it renders when the layout, the token layer and the theme
+bootstrap have all failed — and `not-found.tsx`.
 
 What does **not** exist is a hosted SakThai API. With no `~/.sakthai` on a Vercel
 lambda and no `SAKTHAI_API_URL` configured, `resolveSource()` serves demo data —
@@ -203,10 +238,22 @@ run lint`, `npm run build`, `tsc --noEmit` and `npm test` all pass, and
 | `E` | Export the current panel as JSON |
 | `[` | Collapse or expand the sidebar |
 | `?` | The shortcut list |
-| `Esc` | Close a drawer, menu or overlay |
+| `Esc` | Close a drawer, menu or overlay; leave presentation mode |
+| `←` `→` `↑` `↓` `Home` `End` | Move between sections, with the sidebar focused |
 
 Single letters and digits are suppressed while a text field has focus, so a
 search box never eats a shortcut.
+
+## The trend window
+
+Analytics carries a 7d/14d/30d/All window over the recorded history. It lives
+in the view state (`lib/url-state.ts`) like every other filter, so a link
+carries it — `#analytics?trend=7` — and the back button walks it. The window
+slices the `trends` series the payload already holds rather than re-requesting
+it: a second fetch could return a different set from the one the KPI strip
+above was drawn from, and the two would silently disagree. The scope pill under
+the charts states how many days it actually drew, so a window wider than the
+recorded history is visible as such rather than implied.
 
 ## Export
 

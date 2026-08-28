@@ -1,8 +1,8 @@
 /**
- * Theme and density: the two document-level display preferences.
+ * Theme, density and presentation: the document-level display preferences.
  *
- * Both are stored in `localStorage` and mirrored onto `<html>` as data
- * attributes, which is what the token blocks in `globals.css` key off. Keeping
+ * Each is stored in `localStorage` and mirrored onto `<html>` as a data
+ * attribute, which is what the token blocks in `globals.css` key off. Keeping
  * the attribute — not a React context — as the source of truth means the
  * inline bootstrap below can set the correct theme before first paint, with no
  * hydration disagreement to reconcile afterwards.
@@ -16,6 +16,7 @@ export type Density = (typeof DENSITIES)[number];
 
 export const THEME_STORAGE_KEY = "sak-dashboard:theme";
 export const DENSITY_STORAGE_KEY = "sak-dashboard:density";
+export const PRESENTATION_STORAGE_KEY = "sak-dashboard:presentation";
 
 export function isTheme(value: unknown): value is Theme {
   return typeof value === "string" && (THEMES as readonly string[]).includes(value);
@@ -47,6 +48,23 @@ export function applyDensity(density: Density, root: HTMLElement): void {
 }
 
 /**
+ * Presentation mode: the figures without the chrome.
+ *
+ * For a wall-mounted tab, where the sidebar, the auto-refresh select and the
+ * sample-data toggle are dead pixels — nobody is going to click them from
+ * across the room. Expressed as an attribute rather than a prop because the
+ * elements it hides (`[data-chrome]`) span the whole shell, and the off state
+ * removes the attribute so the default costs no CSS at all.
+ */
+export function applyPresentation(presenting: boolean, root: HTMLElement): void {
+  if (presenting) {
+    root.setAttribute("data-presentation", "on");
+  } else {
+    root.removeAttribute("data-presentation");
+  }
+}
+
+/**
  * What the browser will actually render for a given setting.
  *
  * Used for the toggle's icon and for `<meta name="theme-color">`, both of which
@@ -72,4 +90,5 @@ var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});
 if(t==="light"||t==="dark"){d.setAttribute("data-theme",t)}
 var n=localStorage.getItem(${JSON.stringify(DENSITY_STORAGE_KEY)});
 d.setAttribute("data-density",n==="compact"?"compact":"comfortable");
+if(localStorage.getItem(${JSON.stringify(PRESENTATION_STORAGE_KEY)})==="on"){d.setAttribute("data-presentation","on")}
 }catch(e){}})();`;

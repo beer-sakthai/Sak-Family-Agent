@@ -127,6 +127,7 @@ describe("serializeView", () => {
       session: "1700000000_abc",
       run: "run-1",
       demo: true,
+      trend: 7 as const,
     };
     expect(parseView(serializeView(view))).toEqual(view);
   });
@@ -135,5 +136,24 @@ describe("serializeView", () => {
     // `?`, `&` and `=` in the query have to survive the fragment encoding.
     const view = { ...DEFAULT_VIEW, search: "a=b&c?d" };
     expect(parseView(serializeView(view)).search).toBe("a=b&c?d");
+  });
+
+  it("keeps the trend window in the URL, so a link carries it", () => {
+    expect(serializeView({ ...DEFAULT_VIEW, trend: 7 })).toBe("overview?trend=7");
+    expect(parseView("analytics?trend=7").trend).toBe(7);
+  });
+
+  it("omits the default window rather than spelling it out", () => {
+    expect(serializeView({ ...DEFAULT_VIEW, trend: 30 })).toBe("overview");
+  });
+
+  it("keeps the all-history window, which is not the default", () => {
+    expect(parseView(serializeView({ ...DEFAULT_VIEW, trend: 0 })).trend).toBe(0);
+  });
+
+  it("falls back to the default for a window nobody offers", () => {
+    expect(parseView("analytics?trend=9999").trend).toBe(30);
+    expect(parseView("analytics?trend=abc").trend).toBe(30);
+    expect(parseView("analytics?trend=-7").trend).toBe(30);
   });
 });

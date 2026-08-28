@@ -10,6 +10,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { GET as agentsGET } from "@/app/api/agents/route";
+import { GET as healthGET } from "@/app/api/health/route";
 import { GET as auditGET } from "@/app/api/audit/route";
 import { GET as memoryGET } from "@/app/api/memory/route";
 import { GET as metricsGET } from "@/app/api/metrics/route";
@@ -172,5 +173,52 @@ describe("failure handling", () => {
     expect(response.status).toBe(500);
     const body = (await response.json()) as { ok: boolean };
     expect(body.ok).toBe(false);
+  });
+});
+
+describe("GET /api/health", () => {
+  async function health(url = "http://localhost/api/health") {
+    const response = await healthGET(new Request(url));
+    return { response, body: await response.json() };
+  }
+
+  it("answers 200 with the source that would serve a data request", async () => {
+    const { response, body } = await health();
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.source).toBe("local");
+    expect(body.configuration.live).toBe(true);
+  });
+
+  it("reports a demo fallback as up but not live", async () => {
+    // The hosted case: no runtime directory, no API URL configured. A working
+    // deployment showing sample data is not a failure, so it is still a 200.
+    process.env.SAKTHAI_HOME = `${home}-does-not-exist`;
+    const { response, body } = await health();
+    expect(response.status).toBe(200);
+    expect(body.source).toBe("demo");
+    expect(body.configuration.live).toBe(false);
+    expect(body.configuration.api_url_configured).toBe(false);
+  });
+
+  it("says an API is configured without disclosing it", async () => {
+    process.env.SAKTHAI_API_URL = "https://agents.example.com";
+    process.env.SAKTHAI_API_TOKEN = "s3cret";
+    try {
+      const { body } = await health();
+      expect(body.configuration.api_url_configured).toBe(true);
+      expect(body.configuration.api_token_configured).toBe(true);
+      // The probe is readable by anyone who can reach the deployment.
+      expect(JSON.stringify(body)).not.toContain("agents.example.com");
+      expect(JSON.stringify(body)).not.toContain("s3cret");
+    } finally {
+      delete process.env.SAKTHAI_API_URL;
+      delete process.env.SAKTHAI_API_TOKEN;
+    }
+  });
+
+  it("carries a timestamp, so a cached answer is visible as one", async () => {
+    const { body } = await health();
+    expect(Number.isNaN(Date.parse(body.generated_at))).toBe(false);
   });
 });

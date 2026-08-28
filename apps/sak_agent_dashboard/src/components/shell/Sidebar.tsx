@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useCallback } from "react";
 import { ChevronLeft, ChevronRight, Terminal, X } from "lucide-react";
 
+import { useRovingFocus } from "@/lib/focus";
 import { NAV_ITEMS, type TabId } from "@/lib/nav";
 
 interface SidebarProps {
@@ -19,23 +20,32 @@ interface SidebarProps {
 
 function NavButton({
   item,
+  index,
   active,
   collapsed,
   count,
   onSelect,
+  register,
 }: {
   item: (typeof NAV_ITEMS)[number];
+  index: number;
   active: boolean;
   collapsed: boolean;
   count: number | undefined;
   onSelect: (tab: TabId) => void;
+  register: (index: number) => (element: HTMLElement | null) => void;
 }) {
   const Icon = item.icon;
   return (
     <button
+      ref={register(index)}
       role="tab"
       aria-selected={active}
       aria-label={item.label}
+      // Roving tabindex: the tablist is one tab stop and the arrow keys move
+      // within it, per the WAI-ARIA authoring practice. Seven tab stops
+      // between the page start and the panel is the alternative.
+      tabIndex={active ? 0 : -1}
       title={collapsed ? item.label : undefined}
       onClick={() => onSelect(item.id)}
       className={`group relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
@@ -76,6 +86,31 @@ export function Sidebar({
   mobileOpen,
   onMobileClose,
 }: SidebarProps) {
+  const activeIndex = Math.max(
+    0,
+    NAV_ITEMS.findIndex((item) => item.id === active),
+  );
+
+  // One handler for both copies of the list: choosing a section always closes
+  // the drawer, which is a no-op for the desktop column.
+  const navigate = useCallback(
+    (tab: TabId) => {
+      onSelect(tab);
+      onMobileClose();
+    },
+    [onSelect, onMobileClose],
+  );
+
+  const activateIndex = useCallback(
+    (index: number) => {
+      const item = NAV_ITEMS[index];
+      if (item) navigate(item.id);
+    },
+    [navigate],
+  );
+
+  const { register, onKeyDown } = useRovingFocus(NAV_ITEMS.length, activeIndex, activateIndex);
+
   const content = (isCollapsed: boolean) => (
     <>
       <div
@@ -98,19 +133,19 @@ export function Sidebar({
         role="tablist"
         aria-label="Dashboard sections"
         aria-orientation="vertical"
+        onKeyDown={onKeyDown}
         className="flex flex-1 flex-col gap-1"
       >
-        {NAV_ITEMS.map((item) => (
+        {NAV_ITEMS.map((item, index) => (
           <NavButton
             key={item.id}
+            index={index}
             item={item}
             active={active === item.id}
             collapsed={isCollapsed}
             count={counts[item.id]}
-            onSelect={(tab) => {
-              onSelect(tab);
-              onMobileClose();
-            }}
+            onSelect={navigate}
+            register={register}
           />
         ))}
       </nav>
@@ -131,6 +166,7 @@ export function Sidebar({
       {/* Desktop column. `lg:` only — below that the drawer below is the nav. */}
       <aside
         data-testid="sidebar"
+        data-chrome="sidebar"
         className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-line/70 bg-sunken/60 p-4 backdrop-blur-xl transition-[width] duration-200 lg:flex ${
           collapsed ? "w-[76px]" : "w-[248px]"
         }`}

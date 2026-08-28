@@ -160,6 +160,8 @@ describe("TopBar", () => {
       canExport: true,
       onExport: vi.fn(),
       onCopyLink: vi.fn(),
+      presenting: false,
+      onPresentingChange: vi.fn(),
       ...overrides,
     };
     return { props, ...render(<TopBar {...props} />) };
