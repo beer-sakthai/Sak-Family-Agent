@@ -47,7 +47,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
         </div>
       </div>
 
-      <div role="tablist" className="flex items-center gap-2">
+      <div role="tablist" aria-label="Memory Explorer tabs" className="flex items-center gap-2">
         <button
           role="tab"
           aria-selected={activeTab === "facts"}
