@@ -1,0 +1,17 @@
+{
+  "eval_id": 1,
+  "eval_name": "explicit-live-request",
+  "prompt": "get all six personas going on their backlogs, this is for real, point them at the actual homes",
+  "assertions": [
+    "Avoids the SAKTHAI_HOME + --persona double-append trap",
+    "Dispatches all six personas",
+    "Fans out in a single message rather than serially",
+    "Final report carries a row per persona with status",
+    "Injects Sak-auto-cycle-loop on every dispatch",
+    "Leaves --provider/--model unset so each persona's own config applies",
+    "Passes --persona for each of the six personas",
+    "Recognizes explicit live authorization (no --dry-run on dispatches)",
+    "States the correct production memory path per persona",
+    "Targets no /opt/data memory home"
+  ]
+}
