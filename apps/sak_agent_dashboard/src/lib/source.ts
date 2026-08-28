@@ -45,13 +45,25 @@ export interface MemoryQuery {
 export interface AuditQuery {
   severity?: string | null;
   limit?: number;
+  /**
+   * Narrow to the logs under these personas' own roots. An AuditEvent carries
+   * no persona of its own, so the attribution is positional: only that
+   * persona's process writes to that root.
+   */
+  personas?: string[] | null;
+}
+
+export interface MetricsQuery {
+  limit?: number;
+  /** Narrow to these personas' runs. Null/absent means the whole family. */
+  personas?: string[] | null;
 }
 
 /** Everything a dashboard route can ask for, independent of where it comes from. */
 export interface DashboardSource {
   readonly kind: DataSource;
   getPersonas(): Promise<PersonasPayload>;
-  getMetrics(limit?: number): Promise<MetricsPayload>;
+  getMetrics(query?: MetricsQuery): Promise<MetricsPayload>;
   getSessions(query?: SessionQuery): Promise<SessionsPayload>;
   getMemory(query?: MemoryQuery): Promise<MemoryPayload>;
   getAudit(query?: AuditQuery): Promise<AuditPayload>;

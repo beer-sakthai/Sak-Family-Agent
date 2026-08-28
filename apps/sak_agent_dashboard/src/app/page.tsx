@@ -19,6 +19,7 @@ import { ToastStack, useToasts } from "@/components/Toasts";
 import WorkflowRuns from "@/components/WorkflowRuns";
 import {
   useDensity,
+  usePresentation,
   usePersistedString,
   usePrefersLight,
   useTheme,
@@ -76,7 +77,16 @@ export default function Home() {
   // the URL fragment, so it is linkable, survives a reload, and the back button
   // walks it. See `lib/url-state.ts`.
   const [view, patchView] = useViewState();
-  const { tab: activeTab, search, severity, page, personas, session: sessionId, run: runId } = view;
+  const {
+    tab: activeTab,
+    search,
+    severity,
+    page,
+    personas,
+    session: sessionId,
+    run: runId,
+    trend,
+  } = view;
   const isDemo = view.demo;
 
   const [collapsedPref, setCollapsedPref] = usePersistedString(STORAGE_KEYS.collapsed, "off");
@@ -89,6 +99,7 @@ export default function Home() {
   // in layout.tsx; these hooks own changing them.
   const [theme, setTheme] = useTheme();
   const [density, setDensity] = useDensity();
+  const [presenting, setPresenting] = usePresentation();
   const prefersLight = usePrefersLight();
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -122,11 +133,11 @@ export default function Home() {
   // once keeps it out of every `useCallback` dependency list as a new array.
   const personaParam = personas.join(",");
 
-  const qs = useCallback(
-    (extra: Record<string, string | number | null> = {}) => {
+  const buildQs = useCallback(
+    (includePersona: boolean, extra: Record<string, string | number | null>) => {
       const params = new URLSearchParams();
       if (isDemo) params.set("demo", "1");
-      if (personaParam) params.set("persona", personaParam);
+      if (includePersona && personaParam) params.set("persona", personaParam);
       for (const [key, value] of Object.entries(extra)) {
         if (value !== null && value !== "" && value !== "ALL") params.set(key, String(value));
       }
@@ -136,6 +147,26 @@ export default function Home() {
     [isDemo, personaParam],
   );
 
+  /** For the routes that honour the persona filter: metrics, sessions, memory, audit. */
+  const qs = useCallback(
+    (extra: Record<string, string | number | null> = {}) => buildQs(true, extra),
+    [buildQs],
+  );
+
+  /**
+   * For the routes with no persona dimension to filter on.
+   *
+   * `/api/agents` must return all six personas whatever the filter — the
+   * overview dims the excluded cards rather than dropping them, and the filter
+   * menu needs every name to offer. `/api/workflows` reads one directory that
+   * records no persona at all, so a `?persona=` there would be ignored; sending
+   * it anyway would imply a narrowing that never happens.
+   */
+  const qsFamilyWide = useCallback(
+    (extra: Record<string, string | number | null> = {}) => buildQs(false, extra),
+    [buildQs],
+  );
+
   // No state is set before the first `await`: the effect below calls this, and
   // a synchronous setState inside an effect schedules a cascading render.
   // The Refresh button sets `isLoading` itself, which is an event handler and
@@ -143,14 +174,14 @@ export default function Home() {
   const refresh = useCallback(async () => {
     const [personasRes, metricsRes, memoryRes, auditRes, sessionsRes, workflowsRes] =
       await Promise.all([
-        fetchEnvelope<PersonasPayload>(`/api/agents${qs()}`),
+        fetchEnvelope<PersonasPayload>(`/api/agents${qsFamilyWide()}`),
         fetchEnvelope<MetricsPayload>(`/api/metrics${qs()}`),
         fetchEnvelope<MemoryPayload>(`/api/memory${qs()}`),
         fetchEnvelope<AuditPayload>(`/api/audit${qs({ severity })}`),
         fetchEnvelope<SessionsPayload>(
           `/api/sessions${qs({ search, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE })}`,
         ),
-        fetchEnvelope<WorkflowsPayload>(`/api/workflows${qs()}`),
+        fetchEnvelope<WorkflowsPayload>(`/api/workflows${qsFamilyWide()}`),
       ]);
 
     if (personasRes) {
@@ -170,7 +201,7 @@ export default function Home() {
     );
     setLastUpdatedAt(Date.now());
     setIsLoading(false);
-  }, [qs, search, page, severity]);
+  }, [qs, qsFamilyWide, search, page, severity]);
 
   useEffect(() => {
     // refresh() sets no state before its first `await`, so nothing here runs
@@ -214,7 +245,7 @@ export default function Home() {
   useEffect(() => {
     if (!runId) return;
     let cancelled = false;
-    void fetchEnvelope<WorkflowRunDetail | null>(`/api/workflows${qs({ id: runId })}`).then(
+    void fetchEnvelope<WorkflowRunDetail | null>(`/api/workflows${qsFamilyWide({ id: runId })}`).then(
       (res) => {
         if (!cancelled) setRunDetail({ id: runId, detail: res?.data ?? null });
       },
@@ -222,7 +253,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [runId, qs]);
+  }, [runId, qsFamilyWide]);
 
   const goToTab = useCallback(
     (nextTab: TabId) => {
@@ -391,8 +422,8 @@ export default function Home() {
   }, [pushToast]);
 
   // Keyboard. ⌘K/Ctrl+K for the palette, digits for sections, `r` refresh,
-  // `e` export, `[` sidebar, `?` help. Suppressed while typing, so a search
-  // field never eats a shortcut.
+  // `e` export, `[` sidebar, `?` help, Escape out of presentation mode.
+  // Suppressed while typing, so a search field never eats a shortcut.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -437,13 +468,29 @@ export default function Home() {
           event.preventDefault();
           setShortcutsOpen((open) => !open);
           break;
+        case "Escape":
+          // The one way out that needs no visible control, which is the point
+          // of a mode that hides the controls.
+          if (presenting) {
+            event.preventDefault();
+            setPresenting(false);
+          }
+          break;
         default:
           break;
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleRefresh, handleExport, goToTab, sidebarCollapsed, setCollapsedPref]);
+  }, [
+    handleRefresh,
+    handleExport,
+    goToTab,
+    sidebarCollapsed,
+    setCollapsedPref,
+    presenting,
+    setPresenting,
+  ]);
 
   const paletteActions = useMemo<Command[]>(
     () => [
@@ -505,6 +552,20 @@ export default function Home() {
         group: "Appearance",
         run: () => setTheme(option),
       })),
+      {
+        id: "action-presenting",
+        label: presenting ? "Leave presentation mode" : "Presentation mode",
+        hint: "Hide the sidebar and secondary controls for a wall display",
+        group: "Actions",
+        run: () => setPresenting(!presenting),
+      },
+      {
+        id: "action-print",
+        label: "Print this view",
+        hint: "Renders the panels on a light background, chrome removed",
+        group: "Actions",
+        run: () => window.print(),
+      },
       ...DENSITIES.filter((option) => option !== density).map((option) => ({
         id: `action-density-${option}`,
         label: `Density: ${option}`,
@@ -525,6 +586,8 @@ export default function Home() {
       setTheme,
       density,
       setDensity,
+      presenting,
+      setPresenting,
     ],
   );
 
@@ -580,6 +643,8 @@ export default function Home() {
           onThemeChange={setTheme}
           density={density}
           onDensityChange={setDensity}
+          presenting={presenting}
+          onPresentingChange={setPresenting}
           prefersLight={prefersLight}
           personas={personas}
           onPersonasChange={setPersonas}
@@ -652,6 +717,8 @@ export default function Home() {
                   metrics={metrics}
                   personas={personasPayload ?? undefined}
                   selectedPersonas={personas}
+                  trend={trend}
+                  onTrendChange={(days) => patchView({ trend: days })}
                 />
               ) : (
                 <PanelSkeleton label="Loading analytics" />
@@ -687,6 +754,7 @@ export default function Home() {
               (workflows ? (
                 <WorkflowRuns
                   runs={workflows.runs}
+                  familyWide={personas.length > 0}
                   onRunSelect={(id) => patchView({ run: id })}
                   openRunId={runId}
                   detail={activeRunDetail}

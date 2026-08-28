@@ -22,9 +22,13 @@ import { BarChart3, PieChart as PieIcon, TrendingUp, Zap } from "lucide-react";
 
 import { useChartTokens } from "@/lib/chart-theme";
 import type { MetricsPayload, PersonasPayload } from "@/lib/contracts.generated";
+import { TREND_WINDOWS, trendWindowLabel, type TrendWindow } from "@/lib/url-state";
 
 interface AnalyticsChartsProps {
   metrics: MetricsPayload;
+  /** Days of trend to draw; 0 is everything the source returned. */
+  trend: TrendWindow;
+  onTrendChange: (days: TrendWindow) => void;
   personas?: PersonasPayload;
   /** The global persona filter; empty means the whole family. */
   selectedPersonas?: string[];
@@ -87,6 +91,8 @@ function useHydrated(): boolean {
 
 export function AnalyticsCharts({
   metrics,
+  trend,
+  onTrendChange,
   personas,
   selectedPersonas = [],
 }: AnalyticsChartsProps) {
@@ -130,7 +136,12 @@ export function AnalyticsCharts({
     value,
   }));
 
-  const trendData = metrics.trends.map((point) => ({
+  // The window is a lens on the series the payload already carries, not a
+  // second request: a re-fetch could return a different set from the one the
+  // KPI strip above was drawn from, and the two would silently disagree.
+  const windowed = trend === 0 ? metrics.trends : metrics.trends.slice(-trend);
+
+  const trendData = windowed.map((point) => ({
     date: point.date.slice(5), // MM-DD is enough on a crowded axis
     runs: point.runs,
     errors: point.errors,
@@ -144,10 +155,36 @@ export function AnalyticsCharts({
           above. What only this view can say is how many personas its per-persona
           charts are actually drawn from. */}
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <span className="rounded-full border border-line bg-panel px-3 py-1 font-mono text-xs text-fg-3">
+        {/* The window belongs beside the charts it scopes, not in the topbar:
+            it is the only control that means anything on this section alone. */}
+        <div
+          role="group"
+          aria-label="Trend window"
+          className="inline-flex overflow-hidden rounded-full border border-line bg-panel"
+        >
+          {TREND_WINDOWS.map((days) => (
+            <button
+              key={days}
+              onClick={() => onTrendChange(days)}
+              aria-pressed={trend === days}
+              className={`px-2.5 py-1 font-mono text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                trend === days ? "bg-raised/80 text-fg" : "text-fg-3 hover:text-fg"
+              }`}
+            >
+              {trendWindowLabel(days)}
+            </button>
+          ))}
+        </div>
+
+        <span
+          data-testid="analytics-scope"
+          className="rounded-full border border-line bg-panel px-3 py-1 font-mono text-xs text-fg-3"
+        >
           {selectedPersonas.length > 0
             ? `${activePersonas.length} of ${selectedPersonas.length} filtered personas have attributed runs`
             : `${activePersonas.length} of ${personas?.personas.length ?? 0} personas have attributed runs`}
+          {" · "}
+          {windowed.length} {windowed.length === 1 ? "day" : "days"} of trend
         </span>
       </div>
 

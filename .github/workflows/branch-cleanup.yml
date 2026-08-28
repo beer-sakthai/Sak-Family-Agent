@@ -1,0 +1,198 @@
+# Deletes branches that have nothing left to give.
+#
+# Dispatch-only and dry-run by default: a run with `apply` unset reports what it
+# would delete and deletes nothing. Nothing here is scheduled — an unattended job
+# that deletes refs is a worse trade than a button someone presses.
+#
+# The eligibility test is not "is the tip an ancestor of the default branch".
+# That misses the common case: a branch whose own content already landed under a
+# different PR, but which has since merged the default branch back into itself.
+# Its tip is not an ancestor of anything, yet merging it changes nothing. So the
+# test is the question that actually matters —
+#
+#   would merging this branch into the default branch alter a single byte?
+#
+# answered with `git merge-tree --write-tree`, which performs the merge in memory
+# and prints the resulting tree. If that tree is the default branch's own tree,
+# the branch contributes nothing and is eligible. If the merge conflicts, or
+# resolves to a different tree, the branch still carries something and is kept —
+# reported, with the reason, for a human to decide on.
+name: Branch cleanup
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Actually delete. Leave unchecked for a dry run."
+        type: boolean
+        default: false
+      force_branches:
+        description: "Comma-separated branches to delete even if they still carry changes (deliberate override; open-PR heads and protected branches are still refused)."
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    name: Sweep merged branches
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      # Deleting a ref is a write to repository contents.
+      contents: write
+      # Read-only: an open pull request's head branch is never eligible.
+      pull-requests: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      # fetch-depth 0 is what populates refs/remotes/origin/* with every branch,
+      # which the classification step below iterates. Credentials are not
+      # persisted: the deletions go through the API step, so the git remote never
+      # needs write access.
+      - name: Checkout repository (all branches)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Classify every branch
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          base_tree="$(git rev-parse "origin/${DEFAULT_BRANCH}^{tree}")"
+          : > /tmp/verdicts.tsv
+          for ref in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin | grep -v '^origin/HEAD$'); do
+            branch="${ref#origin/}"
+            if [ "$branch" = "$DEFAULT_BRANCH" ]; then
+              continue
+            fi
+            # `merge-tree --write-tree` prints the merged tree on its first line
+            # and exits non-zero on conflict. Neither case touches the worktree.
+            if merged="$(git merge-tree --write-tree "origin/${DEFAULT_BRANCH}" "$ref" 2>/dev/null)"; then
+              if [ "$(printf '%s\n' "$merged" | head -1)" = "$base_tree" ]; then
+                verdict="no-op"
+              else
+                verdict="changes-default"
+              fi
+            else
+              verdict="conflicts"
+            fi
+            printf '%s\t%s\t%s\n' "$branch" "$verdict" "$(git rev-parse --short "$ref")" >> /tmp/verdicts.tsv
+            echo "  ${verdict}: ${branch}"
+          done
+          jq -R -s -c '
+            split("\n")
+            | map(select(length > 0) | split("\t") | {branch: .[0], verdict: .[1], tip: .[2]})
+          ' /tmp/verdicts.tsv > /tmp/verdicts.json
+
+      # The inputs reach this script through the environment rather than through
+      # `${{ }}` interpolation into the script body: `force_branches` is free
+      # text, and interpolating it would splice caller-controlled characters into
+      # the source being evaluated.
+      - name: Delete the eligible branches
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          APPLY: ${{ inputs.apply }}
+          FORCE_BRANCHES: ${{ inputs.force_branches }}
+        with:
+          script: |
+            const fs = require("fs");
+            const { owner, repo } = context.repo;
+            const apply = process.env.APPLY === "true";
+            const forced = new Set(
+              (process.env.FORCE_BRANCHES || "")
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean),
+            );
+            const verdicts = JSON.parse(fs.readFileSync("/tmp/verdicts.json", "utf8"));
+
+            // An open PR's head branch is never eligible, however empty its diff
+            // looks — deleting it closes the PR out from under its author.
+            // Cross-repository heads live in a fork and are not ours to delete.
+            const openHeads = new Set();
+            for await (const res of github.paginate.iterator(github.rest.pulls.list, {
+              owner, repo, state: "open", per_page: 100,
+            })) {
+              for (const pr of res.data) {
+                if (pr.head.repo && pr.head.repo.full_name === `${owner}/${repo}`) {
+                  openHeads.add(pr.head.ref);
+                }
+              }
+            }
+
+            const protectedNames = new Set();
+            for await (const res of github.paginate.iterator(github.rest.repos.listBranches, {
+              owner, repo, protected: true, per_page: 100,
+            })) {
+              for (const b of res.data) protectedNames.add(b.name);
+            }
+
+            const rows = [];
+            let deleted = 0;
+            let eligible = 0;
+
+            for (const { branch, verdict, tip } of verdicts) {
+              let action;
+              if (protectedNames.has(branch)) {
+                action = "kept — protected";
+              } else if (openHeads.has(branch)) {
+                action = "kept — open pull request";
+              } else if (verdict === "no-op") {
+                action = "delete — merging it would change nothing";
+              } else if (forced.has(branch)) {
+                action = `delete — forced (${verdict})`;
+              } else if (verdict === "conflicts") {
+                action = "kept — conflicts with the default branch";
+              } else {
+                action = "kept — still carries changes";
+              }
+
+              if (action.startsWith("delete")) {
+                eligible += 1;
+                if (apply) {
+                  try {
+                    await github.rest.git.deleteRef({ owner, repo, ref: `heads/${branch}` });
+                    deleted += 1;
+                  } catch (err) {
+                    action = `FAILED — ${err.status || ""} ${err.message}`;
+                    core.error(`could not delete ${branch}: ${err.message}`);
+                  }
+                }
+              }
+              rows.push([branch, tip, action]);
+            }
+
+            rows.sort((a, b) => a[2].localeCompare(b[2]) || a[0].localeCompare(b[0]));
+
+            await core.summary
+              .addHeading(apply ? "Branch cleanup" : "Branch cleanup (dry run)", 2)
+              .addRaw(
+                apply
+                  ? `Deleted ${deleted} of ${eligible} eligible branch(es).`
+                  : `${eligible} branch(es) would be deleted. Re-run with **apply** checked to do it.`,
+              )
+              .addTable([
+                [
+                  { data: "Branch", header: true },
+                  { data: "Tip", header: true },
+                  { data: "Outcome", header: true },
+                ],
+                ...rows,
+              ])
+              .write();
+
+            // A forced name that matched no branch is a typo, and silently doing
+            // nothing about it is how a cleanup gets believed but not performed.
+            for (const name of forced) {
+              if (!verdicts.some((v) => v.branch === name)) {
+                core.warning(`force_branches named "${name}", which is not a branch here`);
+              }
+            }
