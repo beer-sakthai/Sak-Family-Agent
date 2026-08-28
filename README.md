@@ -15,10 +15,9 @@ This repository is the living workspace of the Sak Family — autonomous AI agen
 │  Repository Metrics                                         │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  💾 Repo Size: 10M                                          │
-│  📂 Files: 4461                                             │
-│  🌳 Git Tree (Commits): 1                                   │
-│  📚 Docs/Articles: 63                                       │
+│  💾 Repo Size: 11M (tracked files)                          │
+│  📂 Files: 4543 (tracked)                                   │
+│  📚 Docs/Articles: 61 under docs/                           │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -28,10 +27,10 @@ This repository is the living workspace of the Sak Family — autonomous AI agen
 │  SakThai Agent v2.0 — Core Package Status                   │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  Tests (1,978)   ██████████████████████████████████████ 100%│
+│  Tests (~2,251)  ██████████████████████████████████████ 100%│
 │  Type Safety     ██████████████████████████████████████ 100%│
 │  Security scan   ██████████████████████████████████████ 100%│
-│  Coverage        ████████████████████████████████████░░  97%│
+│  Coverage        ████████████████████████████████████░░  96%│
 │                                                             │
 │  🟢 Status: Production Ready   🔒 Security: Hardened        │
 │  ✅ Lint / mypy / bandit: clean                             │
@@ -41,17 +40,23 @@ This repository is the living workspace of the Sak Family — autonomous AI agen
 
 ### 🎯 Quick Metrics
 
-Verified locally on **2026-08-08** (`uv sync --all-extras`, Python 3.12):
+Verified locally on **2026-08-28** (`uv sync --all-extras`, Python 3.11):
 
 | Check | Command | Result |
 |---|---|---|
-| Test suite | `uv run pytest tests/ -m "not integration"` | **1,978 tests** collected across 95 files, 0 failures, 1 skipped |
-| Coverage | `pytest --cov=sakthai --cov-branch` | **96.56%** line+branch (floor: `fail_under = 96`) |
-| Type safety | `uv run mypy personas/sakthai/sakthai` | **0 issues** across 69 source files (`strict`) |
+| Test suite | `uv run pytest tests/ -m "not integration"` | **~2,251 tests** across 107 files, 0 failures |
+| Coverage | `pytest --cov=sakthai --cov-branch` | **95.85%** line+branch — **below** the `fail_under = 96` floor |
+| Type safety | `uv run mypy personas/sakthai/sakthai` | **0 issues** across 83 source files (`strict`) |
 | Security | `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` | **0 findings** (high/medium/low) |
-| Lint | `uv run ruff check` + `ruff format --check` | All checks passed, 166 files formatted |
+| Lint | `uv run ruff check` + `ruff format --check` | All checks passed, 191 files formatted |
 
-Package size: **6,225 statements** under coverage measurement.
+Package size: **7,688 statements** under coverage measurement.
+
+> **Coverage is below its own floor.** pytest prints
+> `FAIL Required test coverage of 96.0% not reached` and exits 1 locally, but
+> `ci.yml`'s test step reports success regardless, so the floor is not currently
+> gating the build. See finding 1 of
+> [`docs/test-coverage-audit-2026-08-27.md`](docs/test-coverage-audit-2026-08-27.md).
 
 ---
 
@@ -116,7 +121,7 @@ The heart of the family — a **provider-agnostic, tool-using AI agent** with pe
 personas/sakthai/sakthai/
 ├── agent/                    # Orchestration & provider abstraction
 │   ├── loop.py               # Main agent orchestration (tool use, retries)
-│   ├── tools.py              # BUILTIN_TOOLS registry (14 tools)
+│   ├── tools.py              # BUILTIN_TOOLS registry (18 tools)
 │   ├── registry.py           # Tool discovery & dispatch
 │   ├── guardrails.py         # Shell command denylist + path validation
 │   ├── guardrails_hardened.py# Composed hardened guardrail layer
@@ -166,12 +171,13 @@ personas/sakthai/sakthai/
 - ✅ **6-stage cycle** — Dream → Hope → Care → Joy → Trust → Growth state machine
 - ✅ **Skill system** — 31 curated + 3 shared + 823 persona skills, YAML frontmatter parsed
 
-### 📦 Built-in Tools (14)
+### 📦 Built-in Tools (18)
 
 | Tool | Purpose | Safety Gate |
 |------|---------|-------------|
 | `learn` | Store facts in memory | None (always on) |
 | `recall` / `search` | Query memory by keyword | None (read-only) |
+| `search_sessions` | Search past session logs by content | None (read-only) |
 | `forget` | Delete facts | Confirmation required |
 | `read_file` | Read local files | Allowlisted roots + sensitive file blocks |
 | `run_command` | Execute shell commands | **Off by default** — requires `SAKTHAI_SHELL_ALLOW` |
@@ -183,6 +189,9 @@ personas/sakthai/sakthai/
 | `list_calendar_events` | List upcoming Outlook calendar events | Requires Graph client ID + refresh token |
 | `create_calendar_event` | Create an Outlook calendar event | Requires Graph client ID + refresh token |
 | `run_agent_loop` | Spawn nested agent (MCP only) | Filtered out of the in-loop tool set |
+| `family_recall` | Recall across every persona's memory shard | None (read-only) |
+| `family_search` | Search across every persona's memory shard | None (read-only) |
+| `delegate_to_persona` | Hand a subtask to another Sak Family persona | Persona name is enum-constrained |
 
 Adding a `Tool(...)` to `BUILTIN_TOOLS` surfaces it in **both** `sakthai run` and
 `sakthai mcp` — there is no second wiring step.

@@ -161,6 +161,13 @@ describe("AnalyticsCharts", () => {
 });
 
 describe("MemoryExplorer", () => {
+  // Two tablists can share a page, so the role alone does not identify this
+  // one to a screen reader.
+  it("names its tablist for assistive tech", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    expect(screen.getByRole("tablist", { name: "Memory Explorer tabs" })).toBeInTheDocument();
+  });
+
   it("shows facts by default", () => {
     render(<MemoryExplorer memory={demoMemory()} />);
     expect(screen.getByText("Prefers a dark, low-contrast terminal")).toBeInTheDocument();
