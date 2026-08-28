@@ -848,6 +848,18 @@ class TestDashboardRoutes:
         assert status == 200
         assert builder.call_args.kwargs["personas"] is None
 
+    def test_metrics_persona_param_reaches_the_builder(self, api_base: str) -> None:
+        with patch("sakthai.web.api.metrics_payload", return_value={"total_runs": 0}) as builder:
+            status, _ = _get(f"{api_base}/api/metrics?persona=sakthai")
+        assert status == 200
+        assert builder.call_args.kwargs["personas"] == ["sakthai"]
+
+    def test_audit_persona_param_reaches_the_builder(self, api_base: str) -> None:
+        with patch("sakthai.web.api.audit_payload", return_value={"events": []}) as builder:
+            status, _ = _get(f"{api_base}/api/audit?persona=saksee")
+        assert status == 200
+        assert builder.call_args.kwargs["personas"] == ["saksee"]
+
     def test_builder_failure_is_a_500_without_a_traceback(self, api_base: str) -> None:
         """A payload builder blowing up must not leak internals to the client."""
         with patch("sakthai.web.api.personas_payload", side_effect=RuntimeError("boom")):

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CheckCircle2, CircleDashed, GitBranch, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, CircleDashed, GitBranch, Info, Loader2, XCircle } from "lucide-react";
 
 import type { WorkflowRunDetail, WorkflowRunSummary } from "@/lib/contracts.generated";
 import Drawer from "./Drawer";
@@ -11,6 +11,12 @@ interface WorkflowRunsProps {
   onRunSelect: (runId: string | null) => void;
   /** The open run's id, owned by the page because it lives in the URL. */
   openRunId: string | null;
+  /**
+   * True when a persona filter is active. Workflow runs record no persona, so
+   * this panel cannot honour it — and says so rather than letting the filter in
+   * the topbar imply these rows were narrowed.
+   */
+  familyWide?: boolean;
   detail: WorkflowRunDetail | null;
   isLoadingDetail?: boolean;
 }
@@ -66,6 +72,7 @@ export function WorkflowRuns({
   runs,
   onRunSelect,
   openRunId,
+  familyWide = false,
   detail,
   isLoadingDetail = false,
 }: WorkflowRunsProps) {
@@ -85,9 +92,21 @@ export function WorkflowRuns({
             <code className="text-fg-2">~/.sakthai/workflow_runs/</code>
           </p>
         </div>
-        <span className="text-xs font-mono px-3 py-1 rounded-full bg-panel border border-line text-hue-violet">
-          {runs.length} {runs.length === 1 ? "run" : "runs"}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          {familyWide && (
+            <span
+              data-testid="workflows-family-wide"
+              title="agent_workflow records no persona, so these runs cannot be attributed to one."
+              className="inline-flex items-center gap-1.5 rounded-full border border-hue-amber-line bg-hue-amber-tint/40 px-3 py-1 font-mono text-xs text-hue-amber"
+            >
+              <Info className="h-3 w-3" aria-hidden />
+              Not filtered by persona
+            </span>
+          )}
+          <span className="text-xs font-mono px-3 py-1 rounded-full bg-panel border border-line text-hue-violet">
+            {runs.length} {runs.length === 1 ? "run" : "runs"}
+          </span>
+        </div>
       </div>
 
       <div className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl">
