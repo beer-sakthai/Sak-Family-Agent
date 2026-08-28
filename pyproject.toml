@@ -64,7 +64,7 @@ branch = true
 [tool.coverage.report]
 show_missing = true
 skip_covered = false
-# The suite currently measures 95.85%, i.e. BELOW this floor. pytest reports
+# The suite currently measures 95.86%, i.e. BELOW this floor. pytest reports
 # the shortfall and exits 1 locally, but ci.yml's test step concludes success
 # anyway, so this floor is not presently gating the build -- see finding 1 of
 # docs/test-coverage-audit-2026-08-27.md. Treat the number as the target to
