@@ -11,7 +11,7 @@ import React from "react";
  */
 
 function Shimmer({ className }: { className: string }) {
-  return <div className={`animate-pulse rounded-lg bg-slate-800/60 ${className}`} aria-hidden />;
+  return <div className={`animate-pulse rounded-lg bg-raised/60 ${className}`} aria-hidden />;
 }
 
 export function KpiSkeleton() {
@@ -20,7 +20,7 @@ export function KpiSkeleton() {
       {Array.from({ length: 6 }).map((_, index) => (
         <div
           key={index}
-          className="rounded-2xl border border-slate-800/80 bg-slate-900/50 p-4 backdrop-blur-xl"
+          className="rounded-2xl border border-line/80 bg-panel/50 p-4 backdrop-blur-xl"
         >
           <Shimmer className="h-2.5 w-20" />
           <Shimmer className="mt-3 h-7 w-16" />
@@ -40,7 +40,7 @@ export function CardGridSkeleton({ count = 6 }: { count?: number }) {
       {Array.from({ length: count }).map((_, index) => (
         <div
           key={index}
-          className="space-y-3 rounded-2xl border border-slate-800/80 bg-slate-900/50 p-5 backdrop-blur-xl"
+          className="space-y-3 rounded-2xl border border-line/80 bg-panel/50 p-5 backdrop-blur-xl"
         >
           <div className="flex items-center gap-2.5">
             <Shimmer className="h-9 w-9 rounded-xl" />
@@ -62,7 +62,7 @@ export function PanelSkeleton({ label }: { label: string }) {
     <div
       role="status"
       aria-label={label}
-      className="space-y-4 rounded-2xl border border-slate-800/80 bg-slate-900/50 p-5 backdrop-blur-xl"
+      className="space-y-4 rounded-2xl border border-line/80 bg-panel/50 p-5 backdrop-blur-xl"
     >
       <Shimmer className="h-4 w-40" />
       <Shimmer className="h-3 w-64" />

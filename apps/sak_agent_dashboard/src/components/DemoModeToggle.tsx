@@ -17,17 +17,17 @@ const SOURCE_LABELS: Record<DataSource, { label: string; icon: React.ReactNode; 
     local: {
       label: "Live · local ~/.sakthai",
       icon: <Database className="h-3 w-3" />,
-      classes: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+      classes: "bg-hue-emerald/10 text-hue-emerald border-hue-emerald-line/30",
     },
     api: {
       label: "Live · SakThai API",
       icon: <Cloud className="h-3 w-3" />,
-      classes: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30",
+      classes: "bg-hue-cyan/10 text-hue-cyan border-hue-cyan-line/30",
     },
     demo: {
       label: "Sample data",
       icon: <FlaskConical className="h-3 w-3" />,
-      classes: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+      classes: "bg-hue-amber/10 text-hue-amber border-hue-amber-line/30",
     },
   };
 
@@ -53,10 +53,10 @@ export function DemoModeToggle({ isDemo, onToggle, activeSource }: DemoModeToggl
         onClick={() => onToggle(!isDemo)}
         aria-pressed={isDemo}
         aria-label="Toggle sample data"
-        className={`px-3 py-1.5 rounded-xl text-[11px] font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+        className={`px-3 py-1.5 rounded-xl text-[11px] font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
           isDemo
-            ? "bg-amber-950/40 text-amber-300 border-amber-700/50"
-            : "bg-slate-900/60 text-slate-400 border-slate-800 hover:border-slate-700"
+            ? "bg-hue-amber-tint/40 text-hue-amber border-hue-amber-line/50"
+            : "bg-panel/60 text-fg-3 border-line hover:border-line-strong"
         }`}
       >
         {/* "Sample" not "Sample data": the badge to its left already reads

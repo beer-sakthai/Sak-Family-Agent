@@ -101,6 +101,62 @@ describe("demoMemory", () => {
   });
 });
 
+describe("persona filtering", () => {
+  it("narrows sessions to the named personas", () => {
+    const rows = demoSessions({ personas: ["sakthai"] }).sessions;
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((row) => row.persona === "sakthai")).toBe(true);
+  });
+
+  it("counts the filtered session set, not the whole one", () => {
+    const all = demoSessions().total;
+    const filtered = demoSessions({ personas: ["sakthai"] }).total;
+    expect(filtered).toBeGreaterThan(0);
+    expect(filtered).toBeLessThan(all);
+  });
+
+  it("excludes unattributed sessions from a filtered view", () => {
+    // Every fourth demo session has no persona; a filter naming a persona
+    // must not sweep those in.
+    const rows = demoSessions({ personas: ["sakthai"] }).sessions;
+    expect(rows.some((row) => row.persona === null)).toBe(false);
+  });
+
+  it("combines the persona filter with the search text", () => {
+    const rows = demoSessions({ personas: ["sakthai"] }).sessions;
+    const term = rows[0].task.split(" ")[0].toLowerCase();
+    const searched = demoSessions({ personas: ["sakthai"], search: term }).sessions;
+    expect(searched.every((row) => row.persona === "sakthai")).toBe(true);
+  });
+
+  it("returns every persona when the filter is empty", () => {
+    expect(demoSessions({ personas: [] }).total).toBe(demoSessions().total);
+  });
+
+  it("narrows memory rows to the named personas", () => {
+    const payload = demoMemory({ personas: ["sakthai"] });
+    expect(payload.facts.every((fact) => fact.persona === "sakthai")).toBe(true);
+  });
+
+  it("scales the memory totals with the filter", () => {
+    // The sample totals stand in for a larger store. Left unscaled they would
+    // report the family's count above one persona's rows.
+    const all = demoMemory().total_facts;
+    const filtered = demoMemory({ personas: ["sakthai"] }).total_facts;
+    expect(filtered).toBeGreaterThan(0);
+    expect(filtered).toBeLessThan(all);
+  });
+
+  it("keeps the memory growth series integral under a filter", () => {
+    const values = demoMemory({ personas: ["sakthai"] }).fact_growth.values;
+    expect(values.every((value) => Number.isInteger(value))).toBe(true);
+  });
+
+  it("leaves memory totals whole when the filter is empty", () => {
+    expect(demoMemory({ personas: [] }).total_facts).toBe(demoMemory().total_facts);
+  });
+});
+
 describe("demoAudit", () => {
   it("counts every severity", () => {
     expect(Object.keys(demoAudit().severity_counts).length).toBeGreaterThan(1);
