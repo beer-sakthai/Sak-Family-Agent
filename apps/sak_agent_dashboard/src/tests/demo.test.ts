@@ -157,6 +157,54 @@ describe("persona filtering", () => {
   });
 });
 
+describe("persona-scoped aggregates", () => {
+  it("scales the metrics totals with the filter", () => {
+    const all = demoMetrics().total_runs;
+    const filtered = demoMetrics({ personas: ["sakthai"] }).total_runs;
+    expect(filtered).toBeGreaterThan(0);
+    expect(filtered).toBeLessThan(all);
+  });
+
+  it("leaves the metrics whole when the filter is empty", () => {
+    expect(demoMetrics({ personas: [] }).total_runs).toBe(demoMetrics().total_runs);
+  });
+
+  it("keeps the mean latency a mean, not a total", () => {
+    // Latency does not scale with how many personas are selected.
+    const all = demoMetrics().trends[0].avg_latency_ms;
+    expect(demoMetrics({ personas: ["sakthai"] }).trends[0].avg_latency_ms).toBe(all);
+  });
+
+  it("keeps the stop-reason histogram summing to the runs above it", () => {
+    const payload = demoMetrics({ personas: ["sakthai"] });
+    const stopped = Object.values(payload.stop_reasons).reduce((sum, n) => sum + n, 0);
+    expect(stopped).toBeLessThanOrEqual(payload.total_runs);
+  });
+
+  it("never emits a negative stop-reason count", () => {
+    // A small enough share would drive `end_turn` below zero unclamped.
+    const payload = demoMetrics({ personas: ["saktan"] });
+    expect(Object.values(payload.stop_reasons).every((n) => n >= 0)).toBe(true);
+  });
+
+  it("narrows audit events to the filtered personas", () => {
+    const all = demoAudit().total;
+    const filtered = demoAudit({ personas: ["sakking"] }).total;
+    expect(filtered).toBeGreaterThan(0);
+    expect(filtered).toBeLessThan(all);
+  });
+
+  it("counts severities over the filtered audit set", () => {
+    const payload = demoAudit({ personas: ["sakking"] });
+    const counted = Object.values(payload.severity_counts).reduce((sum, n) => sum + n, 0);
+    expect(counted).toBe(payload.total);
+  });
+
+  it("returns every audit event when the filter is empty", () => {
+    expect(demoAudit({ personas: [] }).total).toBe(demoAudit().total);
+  });
+});
+
 describe("demoAudit", () => {
   it("counts every severity", () => {
     expect(Object.keys(demoAudit().severity_counts).length).toBeGreaterThan(1);

@@ -38,7 +38,13 @@ import {
   type WorkflowsPayload,
 } from "../contracts.generated";
 import { displayName, runtimeRoots, sakthaiHome } from "../runtime";
-import type { AuditQuery, DashboardSource, MemoryQuery, SessionQuery } from "../source";
+import type {
+  AuditQuery,
+  DashboardSource,
+  MemoryQuery,
+  MetricsQuery,
+  SessionQuery,
+} from "../source";
 
 /** Matches `web/api.py:MAX_SESSION_SCAN`. */
 const MAX_SESSION_SCAN = 500;
@@ -329,10 +335,21 @@ export class LocalFsSource implements DashboardSource {
     };
   }
 
-  async getMetrics(limit = EVAL_WINDOW): Promise<MetricsPayload> {
-    const records = evalRecordsWithAttribution(this.home)
-      .map(([record]) => record)
-      .slice(-Math.max(1, limit));
+  async getMetrics(query?: MetricsQuery): Promise<MetricsPayload> {
+    const limit = query?.limit ?? EVAL_WINDOW;
+
+    // Filter before the window, not after: the last N of *this* persona's runs,
+    // rather than whichever of them fall inside the family's last N. A run
+    // attributed to nobody belongs to no persona's figures, so it is excluded
+    // from a filtered view entirely.
+    const personas = query?.personas;
+    const attributed = evalRecordsWithAttribution(this.home);
+    const scoped =
+      personas && personas.length > 0
+        ? attributed.filter(([, persona]) => persona !== null && personas.includes(persona))
+        : attributed;
+
+    const records = scoped.map(([record]) => record).slice(-Math.max(1, limit));
 
     const tokens: TokenStats = { input_tokens: 0, output_tokens: 0, total_tokens: 0 };
     if (records.length === 0) {
@@ -441,10 +458,20 @@ export class LocalFsSource implements DashboardSource {
       });
     }
 
+    // The detail lookup is unscoped on its own, so a filtered view must
+    // withhold a transcript the filter excludes: `?persona=sakthai&id=<a
+    // saksee session>` would otherwise open the other persona's transcript in
+    // a drawer labelled as filtered.
+    let detail = query?.id ? await this.getSessionDetail(query.id) : null;
+    if (detail && personas && personas.length > 0) {
+      const persona = detail.summary.persona;
+      if (persona === null || !personas.includes(persona)) detail = null;
+    }
+
     return {
       sessions: summaries.slice(offset, offset + limit),
       total: summaries.length,
-      detail: query?.id ? await this.getSessionDetail(query.id) : null,
+      detail,
     };
   }
 
@@ -595,8 +622,19 @@ export class LocalFsSource implements DashboardSource {
 
   async getAudit(query?: AuditQuery): Promise<AuditPayload> {
     const limit = Math.min(1000, Math.max(1, query?.limit ?? 200));
+    // An AuditEvent carries no persona, so the filter is positional: only that
+    // persona's process writes to that root. The unscoped root (persona null)
+    // is attributed to nobody and drops out under a filter.
+    const personas = query?.personas;
+    const roots =
+      personas && personas.length > 0
+        ? runtimeRoots(this.home).filter(
+            (root) => root.persona !== null && personas.includes(root.persona),
+          )
+        : runtimeRoots(this.home);
+
     const events: AuditEvent[] = [];
-    for (const root of runtimeRoots(this.home)) {
+    for (const root of roots) {
       for (const raw of readJsonl(path.join(root.path, "audit.log"), MAX_AUDIT_LINES)) {
         events.push({
           timestamp: num(raw.timestamp),
