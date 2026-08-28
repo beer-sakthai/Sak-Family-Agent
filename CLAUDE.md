@@ -263,22 +263,22 @@ advanced run fails while default setup is on. See the header of `codeql.yml`.
 `.claude/skills/run-sakthai-agent-v2/driver.py` existing — treat that as
 available tooling, not an enforced gate.
 
-Coverage floor is **96%** (`fail_under = 96`, branch coverage on) over the
-`sakthai` package, with `telegram/bot.py` omitted from measurement. The suite
-sits at **95.88%** (212 uncovered statements and 169 partial branches out of
-7,708 measured statements / 2,610 branches, measured at `8e6d785`) — *below*
-the floor. pytest prints `FAIL Required test coverage of 96.0% not reached` and
-exits 1 locally, but `ci.yml`'s test step still concludes success, so the floor
-does not actually gate the build. The one-line fix — adding
-`--cov-fail-under=96` to `ci.yml`'s pytest step — is known and simply not
-applied yet; see finding 1 of
-[`docs/test-coverage-audit-2026-08-28.md`](docs/test-coverage-audit-2026-08-28.md),
-the third in a series with the
-[26th](docs/test-coverage-audit-2026-08-26.md) and
-[27th](docs/test-coverage-audit-2026-08-27.md). The debt has been frozen at that
-figure across ~76 commits, because nothing pushes back on it.
-Run the lint→pytest sequence locally before pushing; green CI is the bar for
-`main`, but treat the coverage line in its output as the real signal.
+Coverage floor is **96%** (branch coverage on) over the `sakthai` package,
+with `telegram/bot.py` omitted from measurement. The suite sits at **96.21%**
+(191 uncovered statements and 156 partial branches out of 7,710 measured
+statements / 2,610 branches) — above the floor, with 0.21pp of headroom.
+
+**The gate is `--cov-fail-under=96` on `ci.yml`'s pytest step, not
+`pyproject.toml`.** `[tool.coverage.report] fail_under` alone printed
+`FAIL Required test coverage of 96.0% not reached` while the step still
+concluded success, so the floor went unenforced across ~76 commits — the
+finding common to all three audits
+([26th](docs/test-coverage-audit-2026-08-26.md),
+[27th](docs/test-coverage-audit-2026-08-27.md),
+[28th](docs/test-coverage-audit-2026-08-28.md)). The command-line flag is what
+actually fails the build; keep the two numbers in step when changing either.
+Run the lint→pytest sequence locally before pushing — a drop below the floor now
+turns CI red rather than passing quietly.
 
 ---
 
@@ -658,9 +658,9 @@ There is no `dashboard.py` here — see the dashboard note below.
   dispatches each step through `agent/coordinator.run_persona_task`), and
   `builtin_pipelines.py` (the shipped pipeline definitions).
 - **`client/`** — ServiceQuoteBot client provisioning behind `sakthai client`:
-  `models.py`, `manager.py` (onboarding; `get_clients_base_dir()` resolves
-  `SAKTHAI_CLIENTS_DIR` or `~/.sakthai/clients` directly, bypassing `config.py`),
-  and `verifier.py` (the pre-flight checks behind `client test`, which also go
+  `models.py`, `manager.py` (onboarding; `get_clients_base_dir()` defers to
+  `config.clients_dir()`, so the workspace root follows `SAKTHAI_CLIENTS_DIR`
+  first and `SAKTHAI_HOME` otherwise), and `verifier.py` (the pre-flight checks behind `client test`, which also go
   through `run_persona_task`). `manager.py` writes `SAKTHAI_DEFAULT_MODEL` /
   `SAKTHAI_DEFAULT_PROVIDER` into each provisioned client's env file.
 - **`extensions/install.py`** — clones skill/MCP bundles from git into
@@ -687,7 +687,7 @@ There is no `dashboard.py` here — see the dashboard note below.
 
 ## Tests
 
-Tests live in `tests/` (106 `test_*.py` files, ~2,300 tests, 26,874 lines
+Tests live in `tests/` (106 `test_*.py` files, ~2,305 tests, ~26,900 lines
 against 17,128 lines of package). This is the only suite for the `sakthai`
 package — there is no per-persona test tree. Two files in `tests/` are not test
 modules: `conftest.py` and `security_audit.py` (a helper, not collected).
@@ -837,7 +837,7 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 | `SAKTHAI_WEB_CORS_ORIGIN` | The single origin the web API echoes in CORS headers; unset = CORS off (used by `make dashboard-dev`) |
 | `SAKTHAI_AGENT_ACTIVE` | Set by the loop itself; the `run_agent_loop` recursion guard reads it |
 | `SAKTHAI_DEFAULT_MODEL` / `SAKTHAI_DEFAULT_PROVIDER` | Written into a provisioned client's env file by `client/manager.py` — not read by the package itself |
-| `SAKTHAI_CLIENTS_DIR` | Override where `sakthai client` stores provisioned client workspaces (default `~/.sakthai/clients`, resolved in `client/manager.py` from `Path.home()` — it does **not** honour `SAKTHAI_HOME`, and is the one path not routed through `config.py`) |
+| `SAKTHAI_CLIENTS_DIR` | Override where `sakthai client` stores provisioned client workspaces (default `SAKTHAI_HOME/clients`, i.e. `~/.sakthai/clients` when `SAKTHAI_HOME` is unset) |
 | `SAKKING_HOME` | Override the SakKing data dir (default `~/.sakking`) for `skills sync-sakking` |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` / `TELEGRAM_ALLOWED_USER_IDS` | Telegram gateway and the `send_telegram_message` tool |
 | `MS_GRAPH_CLIENT_ID` / `MS_GRAPH_TENANT_ID` / `MS_GRAPH_REFRESH_TOKEN` | Microsoft Graph mail + calendar tools (seed via `scripts/graph_device_login.py`) |

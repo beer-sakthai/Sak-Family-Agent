@@ -52,7 +52,11 @@ jobs:
           uv run bandit -c pyproject.toml -r personas/sakthai/sakthai
 
       - name: Run tests with coverage
-        run: uv run pytest --cov=sakthai --cov-report=xml tests/
+        # --cov-fail-under is passed explicitly rather than relying on
+        # [tool.coverage.report] fail_under, which pytest-cov printed but which
+        # did not fail this step -- finding 1 of
+        # docs/test-coverage-audit-2026-08-27.md.
+        run: uv run pytest --cov=sakthai --cov-report=xml --cov-fail-under=96 tests/
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v5
