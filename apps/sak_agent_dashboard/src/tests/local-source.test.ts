@@ -351,6 +351,128 @@ describe("LocalFsSource persona filter", () => {
   });
 });
 
+describe("LocalFsSource persona-scoped aggregates", () => {
+  it("narrows metrics to the named persona", async () => {
+    fs.writeFileSync(
+      path.join(home, "eval.jsonl"),
+      [evalLine({ persona: "sakthai" }), evalLine({ persona: "saksee" })].join("\n") + "\n",
+    );
+    expect((await new LocalFsSource(home).getMetrics({ personas: ["sakthai"] })).total_runs).toBe(
+      1,
+    );
+  });
+
+  it("attributes a metric by its root when the record is silent", async () => {
+    fs.mkdirSync(path.join(home, "saksee"), { recursive: true });
+    fs.writeFileSync(path.join(home, "saksee", "eval.jsonl"), evalLine() + "\n");
+    const source = new LocalFsSource(home);
+    expect((await source.getMetrics({ personas: ["saksee"] })).total_runs).toBe(1);
+    expect((await source.getMetrics({ personas: ["sakthai"] })).total_runs).toBe(0);
+  });
+
+  it("excludes unattributed runs from a filtered view", async () => {
+    fs.writeFileSync(path.join(home, "eval.jsonl"), evalLine() + "\n");
+    const source = new LocalFsSource(home);
+    expect((await source.getMetrics({ personas: ["sakthai"] })).total_runs).toBe(0);
+    expect((await source.getMetrics()).total_runs).toBe(1);
+  });
+
+  it("applies the metrics filter before the window", async () => {
+    // The window must be the last N of this persona's runs, not whichever of
+    // them fall inside the family's last N.
+    const lines = Array.from({ length: 5 }, () => evalLine({ persona: "saksee" }));
+    lines.push(evalLine({ persona: "sakthai" }));
+    fs.writeFileSync(path.join(home, "eval.jsonl"), lines.join("\n") + "\n");
+    const payload = await new LocalFsSource(home).getMetrics({
+      limit: 2,
+      personas: ["sakthai"],
+    });
+    expect(payload.total_runs).toBe(1);
+  });
+
+  it("spans the family when metrics are unfiltered", async () => {
+    fs.writeFileSync(
+      path.join(home, "eval.jsonl"),
+      [evalLine({ persona: "sakthai" }), evalLine({ persona: "saksee" })].join("\n") + "\n",
+    );
+    expect((await new LocalFsSource(home).getMetrics()).total_runs).toBe(2);
+  });
+
+  function writeAudit(root: string, message: string): void {
+    fs.mkdirSync(root, { recursive: true });
+    fs.writeFileSync(
+      path.join(root, "audit.log"),
+      JSON.stringify({
+        timestamp: NOW,
+        type: "mcp_validation",
+        severity: "high",
+        message,
+        details: {},
+      }) + "\n",
+    );
+  }
+
+  it("narrows audit events to the named persona's root", async () => {
+    writeAudit(path.join(home, "sakthai"), "from sakthai");
+    writeAudit(path.join(home, "saksee"), "from saksee");
+    const payload = await new LocalFsSource(home).getAudit({ personas: ["sakthai"] });
+    expect(payload.events.map((e) => e.message)).toEqual(["from sakthai"]);
+    expect(payload.total).toBe(1);
+  });
+
+  it("excludes the unscoped root from a filtered audit view", async () => {
+    writeAudit(home, "unscoped");
+    writeAudit(path.join(home, "sakthai"), "scoped");
+    const payload = await new LocalFsSource(home).getAudit({ personas: ["sakthai"] });
+    expect(payload.events.map((e) => e.message)).toEqual(["scoped"]);
+  });
+
+  it("spans every root when audit is unfiltered", async () => {
+    writeAudit(home, "unscoped");
+    writeAudit(path.join(home, "sakthai"), "scoped");
+    expect((await new LocalFsSource(home).getAudit()).total).toBe(2);
+  });
+
+  it("withholds a session detail outside the filter", async () => {
+    fs.mkdirSync(path.join(home, "sessions"), { recursive: true });
+    fs.writeFileSync(
+      path.join(home, "sessions", `${NOW}_other.json`),
+      sessionDoc({ persona: "saksee" }),
+    );
+    clearSessionCache();
+    const payload = await new LocalFsSource(home).getSessions({
+      id: `${NOW}_other`,
+      personas: ["sakthai"],
+    });
+    expect(payload.detail).toBeNull();
+  });
+
+  it("returns a session detail inside the filter", async () => {
+    fs.mkdirSync(path.join(home, "sessions"), { recursive: true });
+    fs.writeFileSync(
+      path.join(home, "sessions", `${NOW}_mine.json`),
+      sessionDoc({ persona: "sakthai" }),
+    );
+    clearSessionCache();
+    const payload = await new LocalFsSource(home).getSessions({
+      id: `${NOW}_mine`,
+      personas: ["sakthai"],
+    });
+    expect(payload.detail?.summary.persona).toBe("sakthai");
+  });
+
+  it("leaves the detail unrestricted without a filter", async () => {
+    fs.mkdirSync(path.join(home, "sessions"), { recursive: true });
+    fs.writeFileSync(
+      path.join(home, "sessions", `${NOW}_any.json`),
+      sessionDoc({ persona: "saksee" }),
+    );
+    clearSessionCache();
+    const payload = await new LocalFsSource(home).getSessions({ id: `${NOW}_any` });
+    expect(payload.detail).not.toBeNull();
+  });
+});
+
 describe("LocalFsSource.getSessionDetail", () => {
   it("flattens block content", async () => {
     seedHome(home);

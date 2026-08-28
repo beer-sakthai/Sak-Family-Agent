@@ -301,14 +301,33 @@ def _trends(records: list[dict[str, Any]]) -> list[TrendPoint]:
     return [days[date] for date in sorted(days)]
 
 
-def metrics_payload(limit: int = EVAL_WINDOW, home: Path | None = None) -> MetricsPayload:
+def metrics_payload(
+    limit: int = EVAL_WINDOW,
+    personas: list[str] | None = None,
+    home: Path | None = None,
+) -> MetricsPayload:
     """Run/latency/token aggregates over the eval log across every root.
 
     Wraps :func:`summarize_evals` for the headline numbers rather than
     recomputing them, and adds the daily series and stop-reason histogram the
     dashboard charts need.
+
+    ``personas`` narrows to those personas' runs, using the same attribution as
+    :func:`personas_payload` — the record's own ``persona`` field, else the root
+    its log was found under. A run attributed to nobody is *excluded* from a
+    filtered view: it belongs to no persona, so it belongs to no persona's
+    figures either.
+
+    The filter is applied before ``limit``, so the window is the last N of that
+    persona's runs rather than whichever of them fall inside the family's last
+    N — otherwise a quiet persona would report nothing while a busy one filled
+    the window.
     """
-    records = [record for record, _ in _eval_records_with_attribution(home)][-limit:]
+    attributed = _eval_records_with_attribution(home)
+    if personas is not None:
+        wanted = set(personas)
+        attributed = [pair for pair in attributed if pair[1] in wanted]
+    records = [record for record, _ in attributed][-limit:]
     if not records:
         return _empty_metrics()
 
@@ -517,6 +536,15 @@ def sessions_payload(
     detail: SessionDetail | None = None
     if session_id:
         detail = session_detail(session_id, home)
+        # A filtered view must not open a transcript the filter excludes:
+        # `?persona=sakthai&id=<a-saksee-session>` would otherwise render the
+        # other persona's transcript in a drawer labelled as filtered.
+        if (
+            detail is not None
+            and personas is not None
+            and detail["summary"]["persona"] not in personas
+        ):
+            detail = None
 
     return {
         "sessions": summaries[offset : offset + limit],
@@ -530,6 +558,9 @@ def session_detail(session_id: str, home: Path | None = None) -> SessionDetail |
 
     The id is pattern-checked before it ever reaches a path join — it arrives
     from a query string, and ``sessions/../../x`` must not resolve.
+
+    Deliberately unscoped by persona: this is the raw lookup. Callers that hold
+    a persona filter apply it themselves — see :func:`sessions_payload`.
     """
     if not _SESSION_ID_RE.match(session_id):
         return None
@@ -689,6 +720,7 @@ def _audit_event(raw: dict[str, Any]) -> AuditEvent:
 def audit_payload(
     severity: str | None = None,
     limit: int = 200,
+    personas: list[str] | None = None,
     home: Path | None = None,
 ) -> AuditPayload:
     """Security audit events from every root's ``audit.log``, newest first.
@@ -696,10 +728,19 @@ def audit_payload(
     An unrecognised ``severity`` filter matches nothing and says so through
     ``total: 0`` — it does not silently fall back to returning everything, which
     is how the TypeScript reader currently behaves.
+
+    ``personas`` narrows to the logs under those personas' own roots. An
+    ``AuditEvent`` carries no persona of its own, so the attribution is
+    positional: only that persona's process writes to that root. The unscoped
+    root is excluded under a filter, for the same reason it is in
+    :func:`memory_payload` — it is attributed to nobody.
     """
     limit = max(1, min(1000, limit))
+    wanted_personas = set(personas) if personas is not None else None
     events: list[AuditEvent] = []
-    for _persona, root in runtime_roots(home):
+    for persona, root in runtime_roots(home):
+        if wanted_personas is not None and persona not in wanted_personas:
+            continue
         events.extend(_audit_event(raw) for raw in _read_jsonl(root / "audit.log", MAX_AUDIT_LINES))
 
     severity_counts: dict[str, int] = {}

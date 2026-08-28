@@ -277,6 +277,108 @@ class TestMetricsPayload:
         assert summary["count"] == 2
 
 
+class TestMetricsPersonaFilter:
+    def test_narrows_runs_to_the_named_persona(self, home: Path) -> None:
+        (home / "eval.jsonl").write_text(
+            "\n".join([_eval_line(persona="sakthai"), _eval_line(persona="saksee")]) + "\n",
+            encoding="utf-8",
+        )
+        assert api.metrics_payload(personas=["sakthai"], home=home)["total_runs"] == 1
+
+    def test_attributes_by_root_when_the_record_is_silent(self, home: Path) -> None:
+        # Same rule as personas_payload: a log under a persona's own root is
+        # that persona's, because only its process writes there.
+        (home / "saksee").mkdir()
+        (home / "saksee" / "eval.jsonl").write_text(_eval_line() + "\n", encoding="utf-8")
+        assert api.metrics_payload(personas=["saksee"], home=home)["total_runs"] == 1
+        assert api.metrics_payload(personas=["sakthai"], home=home)["total_runs"] == 0
+
+    def test_excludes_unattributed_runs(self, home: Path) -> None:
+        # A run attributed to nobody belongs to no persona's figures.
+        (home / "eval.jsonl").write_text(_eval_line() + "\n", encoding="utf-8")
+        assert api.metrics_payload(personas=["sakthai"], home=home)["total_runs"] == 0
+        assert api.metrics_payload(home=home)["total_runs"] == 1
+
+    def test_tokens_and_stop_reasons_follow_the_filter(self, home: Path) -> None:
+        (home / "eval.jsonl").write_text(
+            "\n".join(
+                [
+                    _eval_line(persona="sakthai", input_tokens=10, output_tokens=4),
+                    _eval_line(persona="saksee", input_tokens=99, output_tokens=99),
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        payload = api.metrics_payload(personas=["sakthai"], home=home)
+        assert payload["tokens"]["input_tokens"] == 10
+        assert payload["tokens"]["output_tokens"] == 4
+        assert sum(payload["stop_reasons"].values()) == 1
+
+    def test_empty_when_the_persona_has_no_runs(self, home: Path) -> None:
+        (home / "eval.jsonl").write_text(_eval_line(persona="saksee") + "\n", encoding="utf-8")
+        payload = api.metrics_payload(personas=["sakthai"], home=home)
+        assert payload["total_runs"] == 0
+        assert payload["trends"] == []
+
+    def test_limit_applies_after_the_filter(self, home: Path) -> None:
+        # The window must be the last N of *this* persona's runs, not whichever
+        # of them survive the family's last N.
+        lines = [_eval_line(persona="saksee") for _ in range(5)]
+        lines.append(_eval_line(persona="sakthai"))
+        (home / "eval.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        assert api.metrics_payload(limit=2, personas=["sakthai"], home=home)["total_runs"] == 1
+
+    def test_no_filter_spans_the_family(self, home: Path) -> None:
+        (home / "eval.jsonl").write_text(
+            "\n".join([_eval_line(persona="sakthai"), _eval_line(persona="saksee")]) + "\n",
+            encoding="utf-8",
+        )
+        assert api.metrics_payload(home=home)["total_runs"] == 2
+
+
+class TestAuditPersonaFilter:
+    def _write(self, root: Path, message: str) -> None:
+        root.mkdir(parents=True, exist_ok=True)
+        (root / "audit.log").write_text(
+            json.dumps(
+                {
+                    "timestamp": float(NOW),
+                    "type": "mcp_validation",
+                    "severity": "high",
+                    "message": message,
+                    "details": {},
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+    def test_narrows_to_the_named_persona_root(self, home: Path) -> None:
+        self._write(home / "sakthai", "from sakthai")
+        self._write(home / "saksee", "from saksee")
+        payload = api.audit_payload(personas=["sakthai"], home=home)
+        assert [event["message"] for event in payload["events"]] == ["from sakthai"]
+        assert payload["total"] == 1
+
+    def test_excludes_the_unscoped_root(self, home: Path) -> None:
+        # The unscoped root is attributed to nobody, as in memory_payload.
+        self._write(home, "unscoped")
+        self._write(home / "sakthai", "scoped")
+        payload = api.audit_payload(personas=["sakthai"], home=home)
+        assert [event["message"] for event in payload["events"]] == ["scoped"]
+
+    def test_severity_counts_describe_the_filtered_set(self, home: Path) -> None:
+        self._write(home / "sakthai", "one")
+        self._write(home / "saksee", "two")
+        assert api.audit_payload(personas=["sakthai"], home=home)["severity_counts"] == {"high": 1}
+
+    def test_no_filter_spans_every_root(self, home: Path) -> None:
+        self._write(home, "unscoped")
+        self._write(home / "sakthai", "scoped")
+        assert api.audit_payload(home=home)["total"] == 2
+
+
 class TestSessionsPayload:
     def test_empty_home(self, home: Path) -> None:
         payload = api.sessions_payload(home=home)
@@ -354,6 +456,39 @@ class TestSessionsPayload:
             _session_doc(persona="saksee"), encoding="utf-8"
         )
         assert api.sessions_payload(home=home)["total"] == 2
+
+    def test_detail_outside_the_filter_is_withheld(self, home: Path) -> None:
+        # `?persona=sakthai&id=<a-saksee-session>` must not open the other
+        # persona's transcript in a drawer labelled as filtered.
+        (home / "sessions").mkdir()
+        (home / "sessions" / f"{NOW}_other.json").write_text(
+            _session_doc(persona="saksee"), encoding="utf-8"
+        )
+        payload = api.sessions_payload(session_id=f"{NOW}_other", personas=["sakthai"], home=home)
+        assert payload["detail"] is None
+
+    def test_detail_inside_the_filter_is_returned(self, home: Path) -> None:
+        (home / "sessions").mkdir()
+        (home / "sessions" / f"{NOW}_mine.json").write_text(
+            _session_doc(persona="sakthai"), encoding="utf-8"
+        )
+        payload = api.sessions_payload(session_id=f"{NOW}_mine", personas=["sakthai"], home=home)
+        assert payload["detail"] is not None
+        assert payload["detail"]["summary"]["persona"] == "sakthai"
+
+    def test_unattributed_detail_is_withheld_under_a_filter(self, home: Path) -> None:
+        (home / "sessions").mkdir()
+        (home / "sessions" / f"{NOW}_anon.json").write_text(_session_doc(), encoding="utf-8")
+        payload = api.sessions_payload(session_id=f"{NOW}_anon", personas=["sakthai"], home=home)
+        assert payload["detail"] is None
+
+    def test_detail_is_unrestricted_without_a_filter(self, home: Path) -> None:
+        # The guard must not fire when no filter was given.
+        (home / "sessions").mkdir()
+        (home / "sessions" / f"{NOW}_any.json").write_text(
+            _session_doc(persona="saksee"), encoding="utf-8"
+        )
+        assert api.sessions_payload(session_id=f"{NOW}_any", home=home)["detail"] is not None
 
     def test_had_error_from_tool_calls(self, home: Path) -> None:
         (home / "sessions").mkdir()

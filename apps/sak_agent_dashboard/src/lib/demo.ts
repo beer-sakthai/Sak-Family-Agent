@@ -82,18 +82,40 @@ export function demoPersonas(): PersonasPayload {
   return { personas, unattributed_runs: 37 };
 }
 
-export function demoMetrics(): MetricsPayload {
+export function demoMetrics(query?: { personas?: string[] | null }): MetricsPayload {
+  // Under a persona filter the sample aggregates are scaled by that persona's
+  // share of the family's runs, taken from `demoPersonas` — so the filtered KPI
+  // strip agrees with the cards on the overview instead of contradicting them.
+  const wanted = query?.personas;
+  const share = (() => {
+    if (!wanted || wanted.length === 0) return 1;
+    const familyRuns = PERSONA_NAMES.reduce((sum, name) => sum + (RUNS[name] ?? 0), 0);
+    if (familyRuns === 0) return 0;
+    return wanted.reduce((sum, name) => sum + (RUNS[name] ?? 0), 0) / familyRuns;
+  })();
+  const scale = (value: number) => Math.round(value * share);
+
   const trends: TrendPoint[] = Array.from({ length: 14 }, (_, i) => ({
     date: isoDay(i - 13),
-    runs: 28 + ((i * 7) % 23),
-    errors: i % 5 === 0 ? 2 : 1,
+    runs: scale(28 + ((i * 7) % 23)),
+    errors: scale(i % 5 === 0 ? 2 : 1),
+    // A mean is not a total: latency does not scale with how many personas
+    // are selected.
     avg_latency_ms: 300 + ((i * 31) % 180),
-    input_tokens: 12_000 + i * 640,
-    output_tokens: 4_100 + i * 210,
+    input_tokens: scale(12_000 + i * 640),
+    output_tokens: scale(4_100 + i * 210),
   }));
   const total = trends.reduce((sum, t) => sum + t.runs, 0);
   const inputTokens = trends.reduce((sum, t) => sum + t.input_tokens, 0);
   const outputTokens = trends.reduce((sum, t) => sum + t.output_tokens, 0);
+
+  const maxTokens = scale(29);
+  const toolUse = scale(12);
+  const stopReasons = {
+    end_turn: Math.max(0, total - maxTokens - toolUse),
+    max_tokens: maxTokens,
+    tool_use: toolUse,
+  };
 
   return {
     total_runs: total,
@@ -104,24 +126,28 @@ export function demoMetrics(): MetricsPayload {
       output_tokens: outputTokens,
       total_tokens: inputTokens + outputTokens,
     },
-    stop_reasons: { end_turn: total - 41, max_tokens: 29, tool_use: 12 },
+    // A partition of `total`, not three independently scaled figures: taking
+    // `end_turn` as the remainder makes the histogram sum to the run count
+    // above it exactly, where rounding each share separately drifts by one.
+    // Clamped, since a small enough share leaves no remainder to give.
+    stop_reasons: stopReasons,
     per_model: {
       "gemini-3.1-flash-lite": {
-        count: 351,
-        input_tokens: 288_000,
-        output_tokens: 109_000,
+        count: scale(351),
+        input_tokens: scale(288_000),
+        output_tokens: scale(109_000),
         avg_latency_s: 0.34,
       },
       "Qwen/Qwen3-Coder-30B-A3B-Instruct": {
-        count: 82,
-        input_tokens: 67_000,
-        output_tokens: 25_000,
+        count: scale(82),
+        input_tokens: scale(67_000),
+        output_tokens: scale(25_000),
         avg_latency_s: 0.62,
       },
       "DeepSeek-V4-Flash": {
-        count: 46,
-        input_tokens: 37_000,
-        output_tokens: 14_000,
+        count: scale(46),
+        input_tokens: scale(37_000),
+        output_tokens: scale(14_000),
         avg_latency_s: 0.48,
       },
     },
@@ -285,8 +311,15 @@ export function demoMemory(query?: {
   };
 }
 
-export function demoAudit(query?: { severity?: string | null; limit?: number }): AuditPayload {
-  const events: AuditEvent[] = [
+export function demoAudit(query?: {
+  severity?: string | null;
+  limit?: number;
+  personas?: string[] | null;
+}): AuditPayload {
+  // Each sample event is seeded under one persona's root, mirroring the real
+  // source: an AuditEvent carries no persona, so attribution is positional —
+  // only that persona's process writes to that root.
+  const seeded = [
     ["mcp_validation", "high", "Rejected an MCP server outside the allowlist"],
     ["symlink_detected", "medium", "Symlink encountered while resolving a read path"],
     ["env_pin", "low", "Environment fingerprint verified at startup"],
@@ -294,12 +327,22 @@ export function demoAudit(query?: { severity?: string | null; limit?: number }):
     ["config_integrity", "low", "Config file checksum unchanged"],
     ["path_validation", "medium", "Denied a read outside the allowed roots"],
   ].map(([type, severity, message], i) => ({
-    timestamp: EPOCH - i * 5400,
-    type: type as string,
-    severity: severity as string,
-    message: message as string,
-    details: { source: "demo" },
+    root: PERSONA_NAMES[i % PERSONA_NAMES.length],
+    event: {
+      timestamp: EPOCH - i * 5400,
+      type: type as string,
+      severity: severity as string,
+      message: message as string,
+      details: { source: "demo" },
+    },
   }));
+
+  const wantedPersonas = query?.personas;
+  const events: AuditEvent[] = (
+    wantedPersonas && wantedPersonas.length > 0
+      ? seeded.filter((entry) => wantedPersonas.includes(entry.root))
+      : seeded
+  ).map((entry) => entry.event);
 
   const counts: Record<string, number> = {};
   for (const event of events) {

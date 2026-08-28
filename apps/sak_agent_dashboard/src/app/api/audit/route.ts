@@ -6,7 +6,7 @@
  * memory shards.
  */
 
-import { intParam, respond } from "@/lib/source";
+import { intParam, parsePersonas, respond } from "@/lib/source";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +17,7 @@ export async function GET(request: Request): Promise<Response> {
     source.getAudit({
       severity: params.get("severity"),
       limit: intParam(params.get("limit"), 200, 1, 1000),
+      personas: parsePersonas(params.get("persona")),
     }),
   );
 }

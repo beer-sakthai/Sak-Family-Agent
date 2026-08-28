@@ -39,7 +39,10 @@ export interface ViewState {
   severity: string;
   /** 1-based session page. */
   page: number;
-  /** Persona filter; empty means the whole family. */
+  /**
+   * Persona filter; empty means the whole family. Only names in
+   * `PERSONA_NAMES` ever appear here — see `parseView`.
+   */
   personas: string[];
   /** Open session transcript, if any. */
   session: string | null;
