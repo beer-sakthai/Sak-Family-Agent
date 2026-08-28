@@ -114,6 +114,11 @@ describe("AnalyticsCharts", () => {
 });
 
 describe("MemoryExplorer", () => {
+  it("renders tablist with accessible label", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    expect(screen.getByRole("tablist", { name: "Memory Explorer tabs" })).toBeInTheDocument();
+  });
+
   it("shows facts by default", () => {
     render(<MemoryExplorer memory={demoMemory()} />);
     expect(screen.getByText("Prefers a dark, low-contrast terminal")).toBeInTheDocument();
