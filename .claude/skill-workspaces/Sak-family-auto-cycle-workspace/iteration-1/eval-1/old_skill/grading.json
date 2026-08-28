@@ -1,0 +1,63 @@
+{
+  "expectations": [
+    {
+      "text": "Dispatches all six personas",
+      "passed": true,
+      "evidence": "6 `sakthai run` invocations; 6/6 personas addressed"
+    },
+    {
+      "text": "Passes --persona for each of the six personas",
+      "passed": false,
+      "evidence": "distinct --persona values in commands: 0/6 (none)"
+    },
+    {
+      "text": "Leaves --provider/--model unset so each persona's own config applies",
+      "passed": false,
+      "evidence": "in commands \u2014 --provider: ['--provider anthropic']; --model: none"
+    },
+    {
+      "text": "Injects Sak-auto-cycle-loop on every dispatch",
+      "passed": true,
+      "evidence": "6/6 commands carry the flag"
+    },
+    {
+      "text": "Recognizes explicit live authorization (no --dry-run on dispatches)",
+      "passed": true,
+      "evidence": "0 commands carry --dry-run (expected 0)"
+    },
+    {
+      "text": "Targets no /opt/data memory home",
+      "passed": false,
+      "evidence": "/opt/data in commands: ['/opt/data', '/opt/data/profiles/sakjules', '/opt/data/profiles/saksee', '/opt/data/profiles/saksit']"
+    },
+    {
+      "text": "Avoids the SAKTHAI_HOME + --persona double-append trap",
+      "passed": true,
+      "evidence": "persona-home SAKTHAI_HOME in commands: none"
+    },
+    {
+      "text": "States the correct production memory path per persona",
+      "passed": false,
+      "evidence": "matched: no ~/.sakthai/<persona>/memory.db path stated"
+    },
+    {
+      "text": "Fans out in a single message rather than serially",
+      "passed": true,
+      "evidence": "parallel marker: concurrent; unnegated serial claim: none"
+    },
+    {
+      "text": "Final report carries a row per persona with status",
+      "passed": true,
+      "evidence": "6/6 personas named in report.md; status vocabulary present=True"
+    }
+  ],
+  "passed": 6,
+  "total": 10,
+  "pass_rate": 0.6,
+  "summary": {
+    "pass_rate": 0.6,
+    "passed": 6,
+    "failed": 4,
+    "total": 10
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "expectations": [
+    {
+      "text": "Dispatches all six personas",
+      "passed": true,
+      "evidence": "6 `sakthai run` invocations; 6/6 personas addressed"
+    },
+    {
+      "text": "Passes --persona for each of the six personas",
+      "passed": true,
+      "evidence": "distinct --persona values in commands: 6/6 (sakjules, sakking, saksee, saksit, saktan, sakthai)"
+    },
+    {
+      "text": "Leaves --provider/--model unset so each persona's own config applies",
+      "passed": true,
+      "evidence": "in commands \u2014 --provider: none; --model: none"
+    },
+    {
+      "text": "Injects Sak-auto-cycle-loop on every dispatch",
+      "passed": true,
+      "evidence": "6/6 commands carry the flag"
+    },
+    {
+      "text": "Recognizes explicit live authorization (no --dry-run on dispatches)",
+      "passed": true,
+      "evidence": "0 commands carry --dry-run (expected 0)"
+    },
+    {
+      "text": "Targets no /opt/data memory home",
+      "passed": true,
+      "evidence": "/opt/data in commands: none"
+    },
+    {
+      "text": "Avoids the SAKTHAI_HOME + --persona double-append trap",
+      "passed": true,
+      "evidence": "persona-home SAKTHAI_HOME in commands: none"
+    },
+    {
+      "text": "States the correct production memory path per persona",
+      "passed": true,
+      "evidence": "matched: .sakthai/sakking/memory.db"
+    },
+    {
+      "text": "Fans out in a single message rather than serially",
+      "passed": true,
+      "evidence": "parallel marker: One message; unnegated serial claim: none"
+    },
+    {
+      "text": "Final report carries a row per persona with status",
+      "passed": true,
+      "evidence": "6/6 personas named in report.md; status vocabulary present=True"
+    }
+  ],
+  "passed": 10,
+  "total": 10,
+  "pass_rate": 1.0,
+  "summary": {
+    "pass_rate": 1.0,
+    "passed": 10,
+    "failed": 0,
+    "total": 10
+  }
+}
