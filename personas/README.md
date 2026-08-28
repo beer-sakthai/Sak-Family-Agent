@@ -4,7 +4,7 @@ Six core agent personas — **sakthai**, **sakking**, **saksee**, **saksit**,
 **saktan**, and **sakjules** — each formerly had its own `*-skills`
 repository. 
 
-Today, they collectively host **826 specialized skills** in their overlays
+Today, they collectively host **823 specialized skills** in their overlays
 (counted as skill directories and files on disk — see the per-persona counts in the
 layout below), plus 3 shared skills. Most of that content
 lives directly within each persona's own `skills/` folder (its overlay); a
