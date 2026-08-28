@@ -20,12 +20,15 @@ import type {
   SessionsPayload,
 } from "@/lib/contracts.generated";
 import { compactNumber, duration, percent } from "@/lib/format";
+import type { TabId } from "@/lib/nav";
 
 interface KpiStripProps {
   metrics: MetricsPayload | null;
   memory: MemoryPayload | null;
   sessions: SessionsPayload | null;
   audit: AuditPayload | null;
+  /** When given, a tile becomes a shortcut to the panel behind its figure. */
+  onNavigate?: (tab: TabId) => void;
 }
 
 interface Tile {
@@ -38,6 +41,8 @@ interface Tile {
   delta?: { value: number; goodWhenUp: boolean } | null;
   /** Normalised 0..1 series drawn as a sparkline behind the figure. */
   series?: number[];
+  /** The panel this figure is drawn from, when there is one to jump to. */
+  tab?: TabId;
 }
 
 /**
@@ -69,34 +74,54 @@ function Sparkline({ values, className }: { values: number[]; className: string 
   );
 }
 
-function TileCard({ tile }: { tile: Tile }) {
+function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) => void }) {
   const Icon = tile.icon;
   const delta = tile.delta;
   const deltaGood = delta ? (delta.value >= 0) === delta.goodWhenUp : false;
 
+  // A figure that comes from a panel should get you to that panel. Tiles with
+  // no panel behind them (success rate, latency — both aggregates over the
+  // eval log rather than a view) stay inert rather than becoming buttons that
+  // navigate somewhere arbitrary.
+  const target = tile.tab;
+  const Root = target && onNavigate ? "button" : "div";
+  const interactive =
+    target && onNavigate
+      ? {
+          type: "button" as const,
+          onClick: () => onNavigate(target),
+          "aria-label": `${tile.label}: ${tile.value}. Open the ${target} panel.`,
+        }
+      : {};
+
   return (
     // pb-9 reserves the strip the sparkline occupies, so the line sits under
     // the figure rather than striking through the hint beneath it.
-    <div className="group relative overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 pb-9 backdrop-blur-xl transition-colors hover:border-slate-700">
+    <Root
+      {...interactive}
+      className={`group relative w-full overflow-hidden rounded-2xl border border-line/80 bg-panel/70 p-4 pb-9 text-left backdrop-blur-xl transition-colors hover:border-line-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+        target && onNavigate ? "cursor-pointer hover:border-accent/40" : ""
+      }`}
+    >
       {tile.series && <Sparkline values={tile.series} className={tile.accent} />}
       <div className="relative flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-500">
+          <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-fg-4">
             <Icon className={`h-3 w-3 ${tile.accent}`} />
             {tile.label}
           </p>
-          <p className="mt-1.5 font-display text-2xl font-bold tracking-tight text-white">
+          <p className="mt-1.5 font-display text-2xl font-bold tracking-tight text-fg">
             {tile.value}
           </p>
-          <p className="mt-0.5 truncate font-mono text-[11px] text-slate-500">{tile.hint}</p>
+          <p className="mt-0.5 truncate font-mono text-[11px] text-fg-4">{tile.hint}</p>
         </div>
         {delta && Number.isFinite(delta.value) && delta.value !== 0 && (
           <span
             data-testid="kpi-delta"
             className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 font-mono text-[10px] ${
               deltaGood
-                ? "border-emerald-800/50 bg-emerald-950/40 text-emerald-300"
-                : "border-rose-800/50 bg-rose-950/40 text-rose-300"
+                ? "border-hue-emerald-line/50 bg-hue-emerald-tint/40 text-hue-emerald"
+                : "border-hue-rose-line/50 bg-hue-rose-tint/40 text-hue-rose"
             }`}
           >
             {delta.value >= 0 ? (
@@ -108,7 +133,7 @@ function TileCard({ tile }: { tile: Tile }) {
           </span>
         )}
       </div>
-    </div>
+    </Root>
   );
 }
 
@@ -119,7 +144,7 @@ function TileCard({ tile }: { tile: Tile }) {
  * — no runs recorded, no audit log — it renders an em dash and says why in the
  * hint, rather than showing a zero that reads as a measurement.
  */
-export function KpiStrip({ metrics, memory, sessions, audit }: KpiStripProps) {
+export function KpiStrip({ metrics, memory, sessions, audit, onNavigate }: KpiStripProps) {
   const trends = metrics?.trends ?? [];
   const runsSeries = trends.map((point) => point.runs);
   const latencySeries = trends.map((point) => point.avg_latency_ms);
@@ -148,9 +173,10 @@ export function KpiStrip({ metrics, memory, sessions, audit }: KpiStripProps) {
       value: metrics ? totalRuns.toLocaleString() : "—",
       hint: metrics ? "from eval.jsonl" : "no metrics yet",
       icon: Activity,
-      accent: "text-cyan-400",
+      accent: "text-hue-cyan",
       delta: runsDelta,
       series: runsSeries,
+      tab: "analytics",
     },
     {
       label: "Success rate",
@@ -160,14 +186,14 @@ export function KpiStrip({ metrics, memory, sessions, audit }: KpiStripProps) {
           ? "no runs recorded"
           : `${errorCount} ${errorCount === 1 ? "error" : "errors"}`,
       icon: TrendingUp,
-      accent: "text-emerald-400",
+      accent: "text-hue-emerald",
     },
     {
       label: "Avg latency",
       value: metrics && totalRuns > 0 ? duration(metrics.avg_latency_ms) : "—",
       hint: totalRuns > 0 ? "mean across all runs" : "no runs recorded",
       icon: Clock,
-      accent: "text-amber-400",
+      accent: "text-hue-amber",
       series: latencySeries,
     },
     {
@@ -177,8 +203,9 @@ export function KpiStrip({ metrics, memory, sessions, audit }: KpiStripProps) {
         ? `${compactNumber(metrics.tokens.input_tokens)} in · ${compactNumber(metrics.tokens.output_tokens)} out`
         : "no metrics yet",
       icon: Brain,
-      accent: "text-violet-400",
+      accent: "text-hue-violet",
       series: tokenSeries,
+      tab: "analytics",
     },
     {
       label: "Memory",
@@ -187,14 +214,18 @@ export function KpiStrip({ metrics, memory, sessions, audit }: KpiStripProps) {
         ? `${compactNumber(memory.total_observations)} observations`
         : "no shards readable",
       icon: Database,
-      accent: "text-teal-400",
+      accent: "text-hue-teal",
+      tab: "memory",
     },
     {
       label: "Sessions",
       value: sessions ? sessions.total.toLocaleString() : "—",
       hint: criticalEvents > 0 ? `${criticalEvents} high/critical events` : "no high-severity events",
       icon: criticalEvents > 0 ? AlertTriangle : MessageSquare,
-      accent: criticalEvents > 0 ? "text-rose-400" : "text-sky-400",
+      accent: criticalEvents > 0 ? "text-hue-rose" : "text-hue-sky",
+      // The hint is about audit events when there are any, so that is where
+      // the tile leads; otherwise it leads to the sessions it counts.
+      tab: criticalEvents > 0 ? "audit" : "sessions",
     },
   ];
 
@@ -204,7 +235,7 @@ export function KpiStrip({ metrics, memory, sessions, audit }: KpiStripProps) {
       className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6"
     >
       {tiles.map((tile) => (
-        <TileCard key={tile.label} tile={tile} />
+        <TileCard key={tile.label} tile={tile} onNavigate={onNavigate} />
       ))}
     </div>
   );

@@ -58,6 +58,6 @@ jobs:
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          # The coverage floor (fail_under = 85) is enforced by pytest itself;
+          # The coverage floor (fail_under = 96) is enforced by pytest itself;
           # a failed upload (e.g. no CODECOV_TOKEN secret) must not fail CI.
           fail_ci_if_error: false

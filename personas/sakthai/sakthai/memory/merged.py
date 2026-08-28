@@ -45,6 +45,13 @@ class FamilyMemoryView:
     override where each named shard lives (tests inject tmp paths this way
     instead of touching the real ``~/.sakthai``).
 
+    Pass ``include_unscoped=False`` to leave the legacy store out entirely.
+    A caller narrowing to specific personas wants those personas' own memory;
+    the unscoped store is by definition attributed to none of them. Note that
+    omitting the ``"shared"`` key from ``shard_paths`` does *not* do this — a
+    missing key falls back to ``memory_db_path()``, which is the real
+    ``~/.sakthai/memory.db``.
+
     Deduplication mirrors ``MemoryStore``'s own conventions: facts collide on
     ``(kind, key)`` when keyed, else ``(kind, value)``, keeping the most
     recently updated; observations collide on exact ``summary``, keeping the
@@ -57,6 +64,7 @@ class FamilyMemoryView:
         personas: Sequence[str] | None = None,
         *,
         shard_paths: dict[str, Path] | None = None,
+        include_unscoped: bool = True,
     ) -> None:
         self.personas: tuple[str, ...] = tuple(personas) if personas is not None else PERSONA_NAMES
         for p in self.personas:
@@ -71,9 +79,10 @@ class FamilyMemoryView:
             if path.exists():
                 self._stores[persona] = MemoryStore(path)
 
-        legacy_path = (shard_paths or {}).get(_UNSCOPED_LABEL) or memory_db_path()
-        if legacy_path.exists() and legacy_path not in resolved_paths.values():
-            self._stores[_UNSCOPED_LABEL] = MemoryStore(legacy_path)
+        if include_unscoped:
+            legacy_path = (shard_paths or {}).get(_UNSCOPED_LABEL) or memory_db_path()
+            if legacy_path.exists() and legacy_path not in resolved_paths.values():
+                self._stores[_UNSCOPED_LABEL] = MemoryStore(legacy_path)
 
     def close(self) -> None:
         for store in self._stores.values():

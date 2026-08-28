@@ -93,8 +93,15 @@ def test_personas_readme_skill_counts_match_disk() -> None:
         for count, name in re.findall(r"Contains the (\d+) skills mapped to (\w+)", readme)
     }
     assert set(listed) == set(PERSONAS.values()), f"README lists counts for {sorted(listed)}"
+    # Count skill directories, not directory entries: personas/sakthai/skills
+    # also holds README.md, .gitignore and hf-topics-covered.json, and a bare
+    # iterdir() counted those three as skills.
     actual = {
-        name: len(list((PERSONAS_DIR / slug / "skills").iterdir()))
+        name: sum(
+            1
+            for entry in (PERSONAS_DIR / slug / "skills").iterdir()
+            if entry.is_dir() and (entry / "SKILL.md").is_file()
+        )
         for slug, name in PERSONAS.items()
     }
     assert listed == actual, f"README counts {listed} != on-disk counts {actual}"

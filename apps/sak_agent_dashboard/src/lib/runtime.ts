@@ -60,8 +60,11 @@ export function runtimeAvailable(home = sakthaiHome()): boolean {
   }
 }
 
-/** `"sakthai"` -> `"SakThai"`. Mirrors `web/api.py:display_name`. */
-export function displayName(persona: string): string {
-  if (persona.length <= 3) return persona;
-  return "Sak" + persona[3].toUpperCase() + persona.slice(4).toLowerCase();
-}
+/**
+ * `"sakthai"` -> `"SakThai"`. Mirrors `web/api.py:display_name`.
+ *
+ * Re-exported rather than defined here: client components need it too, and
+ * this module touches `fs`/`os` at import time, so it cannot be one of their
+ * dependencies. `persona.ts` holds the one definition.
+ */
+export { displayName } from "./persona";

@@ -140,7 +140,12 @@ const DEMO_TASKS = [
   "Prepare the ServiceQuoteBot revenue rollup",
 ];
 
-export function demoSessions(query?: { search?: string | null; limit?: number; offset?: number }) {
+export function demoSessions(query?: {
+  search?: string | null;
+  limit?: number;
+  offset?: number;
+  personas?: string[] | null;
+}) {
   const all: SessionSummary[] = DEMO_TASKS.map((task, i) => {
     const persona = i % 4 === 3 ? null : PERSONA_NAMES[i % PERSONA_NAMES.length];
     return {
@@ -164,10 +169,18 @@ export function demoSessions(query?: { search?: string | null; limit?: number; o
     };
   });
 
+  // Persona first, then search, matching the order the real sources apply
+  // them — so the count below describes the same set that is paged.
+  const wanted = query?.personas;
+  const scoped =
+    wanted && wanted.length > 0
+      ? all.filter((s) => s.persona !== null && wanted.includes(s.persona))
+      : all;
+
   const search = query?.search?.trim().toLowerCase();
   const filtered = search
-    ? all.filter((s) => `${s.task} ${s.model} ${s.persona}`.toLowerCase().includes(search))
-    : all;
+    ? scoped.filter((s) => `${s.task} ${s.model} ${s.persona}`.toLowerCase().includes(search))
+    : scoped;
   const offset = Math.max(0, query?.offset ?? 0);
   const limit = Math.min(100, Math.max(1, query?.limit ?? 20));
 
@@ -191,7 +204,11 @@ function growth(start: number, step: number): GrowthSeries {
   return { labels, values };
 }
 
-export function demoMemory(query?: { query?: string | null; limit?: number }): MemoryPayload {
+export function demoMemory(query?: {
+  query?: string | null;
+  limit?: number;
+  personas?: string[] | null;
+}): MemoryPayload {
   const facts: FactRecord[] = [
     ["preference", "theme", "Prefers a dark, low-contrast terminal"],
     ["profile", "location", "Based in Cork, Ireland"],
@@ -224,25 +241,47 @@ export function demoMemory(query?: { query?: string | null; limit?: number }): M
     created_at: EPOCH - i * 10_800,
   }));
 
+  const wanted = query?.personas;
+  const scopedFacts =
+    wanted && wanted.length > 0 ? facts.filter((f) => wanted.includes(f.persona)) : facts;
+  const scopedObservations =
+    wanted && wanted.length > 0
+      ? observations.filter((o) => wanted.includes(o.persona))
+      : observations;
+
+  // The demo totals are deliberately larger than the row list: they stand in
+  // for a store the sample rows are a window onto. Under a persona filter they
+  // are scaled by the fraction of the family selected, so the headline figure
+  // moves with the filter instead of contradicting the rows beneath it.
+  const share = wanted && wanted.length > 0 ? wanted.length / PERSONA_NAMES.length : 1;
+  const scale = (value: number) => Math.round(value * share);
+
   const search = query?.query?.trim().toLowerCase();
   const limit = Math.min(500, Math.max(1, query?.limit ?? 100));
 
   return {
     facts: (search
-      ? facts.filter((f) => `${f.kind} ${f.key} ${f.value}`.toLowerCase().includes(search))
-      : facts
+      ? scopedFacts.filter((f) => `${f.kind} ${f.key} ${f.value}`.toLowerCase().includes(search))
+      : scopedFacts
     ).slice(0, limit),
     observations: (search
-      ? observations.filter((o) => o.summary.toLowerCase().includes(search))
-      : observations
+      ? scopedObservations.filter((o) => o.summary.toLowerCase().includes(search))
+      : scopedObservations
     ).slice(0, limit),
-    total_facts: 412,
-    total_observations: 87,
-    facts_this_week: 23,
-    observations_this_week: 6,
-    fact_growth: growth(280, 4),
-    observation_growth: growth(52, 1),
-    kind_counts: { note: 198, preference: 96, profile: 71, lead: 31, revenue: 16 },
+    total_facts: scale(412),
+    total_observations: scale(87),
+    facts_this_week: scale(23),
+    observations_this_week: scale(6),
+    // A fractional step would put non-integer fact counts on the axis.
+    fact_growth: growth(scale(280), Math.max(1, Math.round(4 * share))),
+    observation_growth: growth(scale(52), 1),
+    kind_counts: {
+      note: scale(198),
+      preference: scale(96),
+      profile: scale(71),
+      lead: scale(31),
+      revenue: scale(16),
+    },
   };
 }
 

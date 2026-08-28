@@ -93,17 +93,17 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
       <button
         aria-label="Close command palette"
         onClick={onClose}
-        className="absolute inset-0 h-full w-full bg-slate-950/80 backdrop-blur-sm"
+        className="absolute inset-0 h-full w-full bg-sunken/80 backdrop-blur-sm"
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
         onKeyDown={onKeyDown}
-        className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-slate-700/70 bg-slate-900/95 shadow-2xl shadow-black/60"
+        className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-line-strong/70 bg-panel/95 shadow-2xl shadow-black/60"
       >
-        <div className="flex items-center gap-2 border-b border-slate-800 px-4 py-3">
-          <Search className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
+        <div className="flex items-center gap-2 border-b border-line px-4 py-3">
+          <Search className="h-4 w-4 shrink-0 text-fg-4" aria-hidden />
           <input
             // The palette is a modal opened by an explicit ⌘K; focusing its
             // only field is the whole point of opening it.
@@ -115,16 +115,16 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
             }}
             placeholder="Jump to a section or run a command…"
             aria-label="Search commands"
-            className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-600 outline-none"
+            className="w-full bg-transparent text-sm text-fg placeholder:text-fg-5 outline-none"
           />
-          <kbd className="hidden rounded border border-slate-700 bg-slate-950 px-1.5 py-0.5 font-mono text-[10px] text-slate-500 sm:block">
+          <kbd className="hidden rounded border border-line-strong bg-sunken px-1.5 py-0.5 font-mono text-[10px] text-fg-4 sm:block">
             esc
           </kbd>
         </div>
 
         <ul className="max-h-[50vh] overflow-y-auto p-2" role="listbox" aria-label="Commands">
           {results.length === 0 && (
-            <li className="px-3 py-6 text-center font-mono text-xs text-slate-500">
+            <li className="px-3 py-6 text-center font-mono text-xs text-fg-4">
               Nothing matches “{query}”.
             </li>
           )}
@@ -136,7 +136,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
                 {showGroup && (
                   <li
                     aria-hidden
-                    className="px-3 pb-1 pt-3 text-[10px] font-medium uppercase tracking-wider text-slate-600"
+                    className="px-3 pb-1 pt-3 text-[10px] font-medium uppercase tracking-wider text-fg-5"
                   >
                     {command.group}
                   </li>
@@ -147,20 +147,20 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
                     aria-selected={index === clampedHighlight}
                     onMouseEnter={() => setHighlight(index)}
                     onClick={() => runAt(index)}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                       index === clampedHighlight
-                        ? "bg-slate-800/80 text-white"
-                        : "text-slate-300 hover:bg-slate-800/40"
+                        ? "bg-raised/80 text-fg"
+                        : "text-fg-2 hover:bg-raised/40"
                     }`}
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium">{command.label}</span>
-                      <span className="block truncate text-[11px] text-slate-500">
+                      <span className="block truncate text-[11px] text-fg-4">
                         {command.hint}
                       </span>
                     </span>
                     {index === clampedHighlight && (
-                      <CornerDownLeft className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden />
+                      <CornerDownLeft className="h-3.5 w-3.5 shrink-0 text-fg-4" aria-hidden />
                     )}
                   </button>
                 </li>

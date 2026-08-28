@@ -13,16 +13,17 @@
  * memory data indefinitely with nothing to indicate it.
  */
 
-import type {
-  ApiEnvelope,
-  AuditPayload,
-  DataSource,
-  MemoryPayload,
-  MetricsPayload,
-  PersonasPayload,
-  SessionsPayload,
-  WorkflowRunDetail,
-  WorkflowsPayload,
+import {
+  PERSONA_NAMES,
+  type ApiEnvelope,
+  type AuditPayload,
+  type DataSource,
+  type MemoryPayload,
+  type MetricsPayload,
+  type PersonasPayload,
+  type SessionsPayload,
+  type WorkflowRunDetail,
+  type WorkflowsPayload,
 } from "./contracts.generated";
 
 export interface SessionQuery {
@@ -30,11 +31,15 @@ export interface SessionQuery {
   limit?: number;
   offset?: number;
   id?: string | null;
+  /** Narrow to these personas. Null/absent means the whole family. */
+  personas?: string[] | null;
 }
 
 export interface MemoryQuery {
   query?: string | null;
   limit?: number;
+  /** Narrow to these personas' own shards. Null/absent means the whole family. */
+  personas?: string[] | null;
 }
 
 export interface AuditQuery {
@@ -78,6 +83,21 @@ export function intParam(
   // empty page with a 200. Fall back instead.
   if (!Number.isFinite(parsed)) return fallback;
   return Math.min(max, Math.max(min, parsed));
+}
+
+/**
+ * Narrow a `persona=` query value to known persona names.
+ *
+ * Mirrors `web/api.py:parse_personas`, deliberately including its fallback:
+ * a value naming no persona we know yields null — the whole family — rather
+ * than an empty list, which would render as "this persona has nothing"
+ * when the truth is that the filter was unreadable.
+ */
+export function parsePersonas(raw: string | null | undefined): string[] | null {
+  if (!raw || raw.trim() === "") return null;
+  const wanted = new Set(raw.split(",").map((part) => part.trim().toLowerCase()));
+  const known = PERSONA_NAMES.filter((name) => wanted.has(name));
+  return known.length > 0 ? [...known] : null;
 }
 
 /**
