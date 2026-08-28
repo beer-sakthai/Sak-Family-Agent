@@ -24,6 +24,7 @@ jobs:
           - 'yaml_validity'
       fail-fast: false # Allow all jobs to run even if some fail
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
@@ -33,6 +34,8 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -108,6 +111,7 @@ jobs:
   # Aggregate by downloading every per-cell artifact instead.
   aggregate-results:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [run-evaluations]
     if: always() # Run even if some evals fail
     steps:
@@ -154,6 +158,7 @@ jobs:
 
   post-summary:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [aggregate-results]
     if: always() # Run even if some evals fail
     env:
@@ -215,6 +220,7 @@ jobs:
 
   check-regressions:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [aggregate-results]
     if: always() # Run even if some evals fail
     permissions:
