@@ -40,9 +40,17 @@ permissions:
   contents: read
   pull-requests: read # allows SonarCloud to decorate PRs with analysis results
 
+# Supersede in-flight runs for the same ref, but never cancel a run on main:
+# a code-scanning alert only closes when a newer analysis from the same tool
+# stops reporting it, so main's producers must always finish.
+concurrency:
+  group: sonarcloud-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   Analysis:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: >-
       github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch' ||
@@ -58,6 +66,8 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Analyze with SonarCloud
         if: env.SONAR_TOKEN != ''

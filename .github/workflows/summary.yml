@@ -4,9 +4,14 @@ on:
   issues:
     types: [opened]
 
+# Restrictive default; the job below widens only what it needs.
+permissions:
+  contents: read
+
 jobs:
   summary:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       issues: write
       models: read
@@ -21,6 +26,8 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Run AI inference
         id: inference
