@@ -39,11 +39,12 @@ personas, deployment config, training assets, or docs.
 
 ```
 personas/          the six agents + the shared package (see below)
-tests/             the one pytest suite (imports `sakthai`, ~107 test files)
+tests/             the one pytest suite (imports `sakthai`, 106 test files)
 library/           31 curated skills across 11 categories (a live skill root)
 docs/              architecture, security, plans/specs under docs/superpowers/
 scripts/           dev + maintenance scripts (compose_persona, export_agent_repo, …)
-infra/             hermes-agents profiles, vm-agents systemd/env, pw-poc (npm), servicequotebot
+infra/             hermes-agents, vm-agents systemd/env, pw-poc (npm), servicequotebot,
+                   sakthai-training-space
 services/          servicequotebot, inference-endpoint, HF dataset publishing, teams-copilot-mcp
 apps/              agent_workflow_framework, sak_agent_dashboard
 training/          LoRA/model runs, HF jobs, serving configs
@@ -56,6 +57,21 @@ product/ security/ profiles/ data/ bin/ dataset-cards/
 [`docs/repo-audit-2026-08-08.md`](docs/repo-audit-2026-08-08.md). The orphaned
 root `skills/` directory and `migrated-repos-archive/` were removed in that same
 cleanup; git history still has them.
+
+**Every count in this file goes stale.** Re-derive rather than trust, especially
+before quoting a number back to someone:
+
+```bash
+# persona skill count
+find personas/<persona>/skills -maxdepth 1 -mindepth 1 -type d | wc -l
+# package divergence between the canonical and shared copies
+diff -rq personas/shared/sakthai personas/sakthai/sakthai
+# test files, then test count + real coverage
+ls tests/test_*.py | wc -l
+uv run pytest tests/ -q --cov=sakthai --cov-branch
+```
+
+Everything quoted below was measured on 2026-08-28 at `8e6d785`.
 
 ### The persona package copies (read this before editing `sakthai/`)
 
@@ -84,13 +100,16 @@ longer has. Don't treat them as live code, and don't "fix" them by deleting the
 shadowing files without checking the parity test first.
 
 `personas/sakthai/sakthai/` has also genuinely diverged from
-`personas/shared/sakthai/`. As of 2026-08-28 the differing files are
-`config.py`, `auth.py`, `skills.py`, `agent/chat.py`, `agent/eval.py`,
-`agent/loop.py`, `agent/tools.py`, `agent/providers/__init__.py`,
-`cli/agent.py`, `cli/chat.py`, `cli/sessions.py`, `cli/system.py`, and
-`web/server.py`; `agent/security_hardening.py`, `agent/guardrails_hardened.py`,
-`memory/session_search.py`, `web/api.py`, `web/contracts.py`, and the whole
-`client/`, `team/`, and `scripts/` subpackages exist only in the SakThai copy.
+`personas/shared/sakthai/`. As of 2026-08-28 the two trees differ in exactly 19
+places: the files `config.py`, `auth.py`, `skills.py`, `agent/chat.py`,
+`agent/eval.py`, `agent/loop.py`, `agent/tools.py`,
+`agent/providers/__init__.py`, `cli/agent.py`, `cli/chat.py`,
+`cli/sessions.py`, `cli/system.py`, `memory/merged.py`, and `web/server.py`
+differ in content, and `agent/security_hardening.py`,
+`agent/guardrails_hardened.py`, `memory/session_search.py`, `web/api.py`, and
+`web/contracts.py` exist only in the SakThai copy. The `client/`, `team/`, and
+`scripts/` subpackages are now present and byte-identical in both trees — they
+used to be SakThai-only, so don't rely on older notes saying otherwise.
 Regenerate this list with
 `diff -rq personas/shared/sakthai personas/sakthai/sakthai` rather than trusting
 it — it goes stale on every change to the canonical package. Reconciling the two
@@ -167,7 +186,12 @@ which aborts the whole run.
 
 Other `make` targets: `compose-personas` (rebuild full skill trees into
 `build/personas/`), `export-agent-repos` / `export-agent-repo PERSONA=<name>`
-(materialize standalone per-persona repo snapshots), `test`, `lint`.
+(materialize standalone per-persona repo snapshots), `test`, `lint`, and three
+for the dashboard seam — `contract-types` (regenerate the TypeScript types from
+`web/contracts.py`; `apps.yml` fails on drift), `dashboard-test` (the
+`apps/sak_agent_dashboard` npm lint/build/tsc/test chain), and `dashboard-dev`
+(runs `sakthai web serve` on :3001 with `SAKTHAI_WEB_CORS_ORIGIN` set and
+`next dev` on :3000, wiring the token through automatically).
 
 `.githooks/` holds a `pre-commit` hook that fails if `uv.lock` is out of sync with
 `pyproject.toml`, and a `pre-push` hook. Opt in with
@@ -241,11 +265,18 @@ available tooling, not an enforced gate.
 
 Coverage floor is **96%** (`fail_under = 96`, branch coverage on) over the
 `sakthai` package, with `telegram/bot.py` omitted from measurement. The suite
-currently sits at **95.86%** — *below* the floor. pytest prints
-`FAIL Required test coverage of 96.0% not reached` and exits 1 locally, but
-`ci.yml`'s test step still concludes success, so the floor does not actually
-gate the build; see finding 1 of
-[`docs/test-coverage-audit-2026-08-27.md`](docs/test-coverage-audit-2026-08-27.md).
+sits at **95.88%** (212 uncovered statements and 169 partial branches out of
+7,708 measured statements / 2,610 branches, measured at `8e6d785`) — *below*
+the floor. pytest prints `FAIL Required test coverage of 96.0% not reached` and
+exits 1 locally, but `ci.yml`'s test step still concludes success, so the floor
+does not actually gate the build. The one-line fix — adding
+`--cov-fail-under=96` to `ci.yml`'s pytest step — is known and simply not
+applied yet; see finding 1 of
+[`docs/test-coverage-audit-2026-08-28.md`](docs/test-coverage-audit-2026-08-28.md),
+the third in a series with the
+[26th](docs/test-coverage-audit-2026-08-26.md) and
+[27th](docs/test-coverage-audit-2026-08-27.md). The debt has been frozen at that
+figure across ~76 commits, because nothing pushes back on it.
 Run the lint→pytest sequence locally before pushing; green CI is the bar for
 `main`, but treat the coverage line in its output as the real signal.
 
@@ -280,7 +311,8 @@ get the same per-persona shard without setting `SAKTHAI_HOME` yourself — see
      `--persona <name>`, `-v/--verbose`.
    - Chat: `chat` — interactive multi-turn REPL over the same loop and memory.
    - Server: `mcp` (start the MCP stdio server).
-   - Web: `web setup` (print/create the API bearer token), `web regen-token`.
+   - Web: `web setup` (print/create the API bearer token), `web regen-token`,
+     `web serve [--host 127.0.0.1] [--port 3001]` (serve the read-only API).
    - Cycle: `cycle status|next|set|list`
    - Skills: `skills list|show|validate|create|sync-sakking`
    - Extensions: `extensions install|list|remove`
@@ -432,7 +464,9 @@ not an error.
   `~/.sakthai/sessions/`. Returns `AgentResult` (iterations, stop_reason,
   tool_calls, usage). `client`, `store`, `guardrail_policy`, and `context_filter`
   are all injectable for testing. Defaults live here: `DEFAULT_MODEL =
-  "claude-opus-4-8"`, `DEFAULT_MAX_TOKENS = 16000`, `DEFAULT_MAX_ITERATIONS = 12`.
+  "claude-opus-4-8"`, `DEFAULT_MAX_TOKENS = 16000`, `DEFAULT_MAX_ITERATIONS = 12`,
+  and `DEFAULT_MAX_SECONDS = None` — the wall-clock budget is opt-in via
+  `--max-seconds`.
 - **`agent/chat.py`** — the interactive REPL behind `sakthai chat`. Keeps
   `rich`/`prompt_toolkit` I/O at the module edges (renderers take an injected
   `Console`, the loop takes an injected `read_input`) so conversation flow is
@@ -445,6 +479,13 @@ not an error.
 - **`agent/context_filter.py`** — the `ContextFilter` protocol plus
   `TurnSummarizationFilter` (currently truncates older long turns rather than
   LLM-summarizing them) and `DEFAULT_CONTEXT_FILTER`, wired into `run_agent`.
+- **`agent/coordinator.py`** — depth-bounded, cycle-safe in-process delegation
+  between personas. `run_persona_task()` runs `run_agent` under a target
+  persona's shard, skills, MCP config and model defaults; a `ContextVar`
+  delegation chain enforces `DEFAULT_MAX_DELEGATION_DEPTH = 2` and raises
+  `DelegationDepthError` / `DelegationCycleError` on overflow or an `A -> B -> A`
+  loop. It backs the `delegate_to_persona` tool, `team/engine.py`, and
+  `client/verifier.py`; tested in `tests/test_agent_coordinator.py`.
 - **`agent/prompt_builder.py`** / **`agent/context_manager.py`** — an extracted
   prompt-assembly seam (`build_system_prompt`, `render_skills_prompt_block`,
   `ContextManager`). Both are tested (`tests/test_prompt_builder.py`,
@@ -481,12 +522,34 @@ attacked surface — several rounds of Sentinel audits landed here.
 - **`agent/guardrails_hardened.py`** — wires those primitives on top of the base
   policy.
 
+**Both hardened modules are currently dead code.** Grep every importer of
+`security_hardening.py` and `guardrails_hardened.py` and you get test files and
+nothing else — not `agent/loop.py`, not `cli/`, not `mcp/`. `DEFAULT_POLICY`
+from the base `guardrails.py` is what actually runs; the 371 statements of
+"defense in depth" ship without ever executing, and inflate the coverage
+denominator by ~4.8%. Several of their tests also assert nothing (they call a
+function and discard the result), so they cannot fail. Wiring the layer in or
+deleting it is an open decision — don't assume a change to these files affects
+runtime behavior. See findings 5 and 6 of
+[`docs/test-coverage-audit-2026-08-28.md`](docs/test-coverage-audit-2026-08-28.md).
+
 **When you change guardrails, you must sync the file.** `guardrails.py` is
 copied per persona and `tests/test_persona_guardrails_parity.py` fails CI the
 moment any copy drifts from `personas/sakthai/sakthai/agent/guardrails.py`
 (it checks sakthai, sakjules, sakking, saksee, saksit). Roughly 15 test files
 (`test_guardrails_*.py`, `test_sentinel_*.py`, `test_security_*.py`) cover this
 area; add a regression test for every new bypass you close.
+
+**`web/server.py` has the same copy-per-persona property and no parity test.**
+It carries the bearer-token auth, it is copied into the same five trees, and it
+took two code-scanning autofixes this week (#1214, #1219) for cookie
+construction from user-supplied input — exactly the class of fix that must not
+land in one copy only. The auth block is byte-identical across all five right
+now, so there is no live vulnerability, but nothing keeps it that way, and the
+suite only ever imports the canonical copy. **Sync `web/server.py` by hand
+across every persona copy when you touch its auth, and diff before you finish** —
+CI will not catch you. `memory/merged.py` has already drifted between the
+canonical and shared copies for want of the same check.
 
 ### MCP subsystem (`mcp/`)
 
@@ -544,7 +607,10 @@ There is no `dashboard.py` here — see the dashboard note below.
   `SKILL.md` files. `default_skill_roots(persona=None)` returns, in order:
   the persona's own overlay (`persona_skills_dir(persona)`, else `SKILLS_DIR` =
   `personas/sakthai/skills/`), `personas/shared/skills/`
-  (`SHARED_SKILLS_DIR`/`LIBRARY_DIR`, 3 skills identical across personas), root
+  (3 skills identical across personas — `config.py` defines both
+  `SHARED_SKILLS_DIR` and `LIBRARY_DIR` as that same path and
+  `default_skill_roots()` lists both, so this root appears twice in the returned
+  tuple; harmless, but don't read it as two directories), root
   `library/` (`CURATED_LIBRARY_DIR`, 31 curated skills across 11 categories,
   pre-dating the `Sak-`/`SakThai-` convention), `~/.sakthai/extensions`, and the
   Gemini extensions dir if it exists. The **root-level `skills/` directory is not
@@ -569,21 +635,34 @@ There is no `dashboard.py` here — see the dashboard note below.
   the gap described in
   `docs/superpowers/specs/2026-08-03-sakthai-web-auth-design.md`. The token comes
   from `_get_or_create_bearer_token()` (stored as a `web_auth` fact in
-  `memory.db`, managed with `sakthai web setup` / `web regen-token`). Static
-  serving additionally canonicalises the request path against `_STATIC_ROOT`
-  before delegating.
+  `memory.db`, managed with `sakthai web setup` / `web regen-token`;
+  `sakthai web serve` starts the server). `_is_authenticated()` accepts the
+  token from three places, each compared with `secrets.compare_digest`: an
+  `Authorization: Bearer` header, a `token`/`bearer_token` query parameter, or a
+  `token`/`bearer_token` cookie — a successful query-param auth sets that cookie
+  so follow-up static requests work. **Build the `Set-Cookie` value from the
+  server-side token, never from the request string**: interpolating the
+  user-supplied value is what CodeQL flags as "construction of a cookie using
+  user-supplied input", and it was reported once per persona copy before
+  `7657cd4` fixed all five. CORS is off unless `SAKTHAI_WEB_CORS_ORIGIN` names
+  exactly one origin to echo (never `*`, and `Allow-Credentials` is deliberately
+  never sent); it exists so `next dev` on :3000 can call the API on :3001.
+  Static serving additionally canonicalises the request path against
+  `_STATIC_ROOT` before delegating.
 - **`web/api.py`** — builds the dashboard payloads by reusing the existing eval,
   session, and store parsers. **`web/contracts.py`** is the single definition of
   those payload shapes; `scripts/gen_dashboard_types.py` generates the
   TypeScript types from it and `apps.yml` fails CI on drift.
 - **`team/`** — declarative multi-agent pipelines behind `sakthai team`:
-  `models.py` (`PipelineStep`/`StepResult`), `engine.py` (the runner), and
+  `models.py` (`PipelineStep`/`StepResult`), `engine.py` (the runner, which
+  dispatches each step through `agent/coordinator.run_persona_task`), and
   `builtin_pipelines.py` (the shipped pipeline definitions).
 - **`client/`** — ServiceQuoteBot client provisioning behind `sakthai client`:
   `models.py`, `manager.py` (onboarding; `get_clients_base_dir()` resolves
   `SAKTHAI_CLIENTS_DIR` or `~/.sakthai/clients` directly, bypassing `config.py`),
-  and
-  `verifier.py` (the pre-flight checks behind `client test`).
+  and `verifier.py` (the pre-flight checks behind `client test`, which also go
+  through `run_persona_task`). `manager.py` writes `SAKTHAI_DEFAULT_MODEL` /
+  `SAKTHAI_DEFAULT_PROVIDER` into each provisioned client's env file.
 - **`extensions/install.py`** — clones skill/MCP bundles from git into
   `~/.sakthai/extensions` (URLs validated via `giturl.py`, removal containment-
   checked); `list`/`remove` manage installed bundles.
@@ -608,10 +687,28 @@ There is no `dashboard.py` here — see the dashboard note below.
 
 ## Tests
 
-Tests live in `tests/` (107 test files, ~2,275 tests, ~26,700 lines) and are the only suite —
-there is no per-persona test tree. All tests are hermetic: no network, no GCP
-credentials. Integration tests that may hit real endpoints (Ollama, Anthropic)
-are marked `@pytest.mark.integration` and self-skip when credentials/endpoints
+Tests live in `tests/` (106 `test_*.py` files, ~2,300 tests, 26,874 lines
+against 17,128 lines of package). This is the only suite for the `sakthai`
+package — there is no per-persona test tree. Two files in `tests/` are not test
+modules: `conftest.py` and `security_audit.py` (a helper, not collected).
+
+It is not, however, the repo's only test tree. Four others exist, and **two of
+them no workflow runs**:
+
+| Tree | Files | Run by |
+|---|---:|---|
+| `tests/` | 106 | `ci.yml` |
+| `apps/agent_workflow_framework/tests/` | 9 | `apps.yml` (no coverage measured) |
+| `apps/sak_agent_dashboard` (TypeScript) | 14 | `apps.yml` |
+| `sakthai-chat-cli/` | 86 | **nothing** — only `bandit.yml`/`codeql.yml` scan it |
+| `services/teams-copilot-mcp/tests/` | 3 | **nothing** — only `bandit.yml` scans it |
+
+The chat-CLI tree is still being written to (72 files on 27 Aug, 86 now) while
+remaining unexecuted, so expect breakage the first time anyone runs it. Don't
+assume a green `ci.yml` says anything about those two trees.
+
+All tests are hermetic: no network, no GCP credentials. Integration tests that
+may hit real endpoints (Ollama, Anthropic) are marked `@pytest.mark.integration` and self-skip when credentials/endpoints
 are absent. Note that `ci.yml` does **not** pass `-m "not integration"` — the
 markers' self-skip is what keeps CI hermetic.
 
@@ -624,7 +721,8 @@ Key test areas:
 - **Agent** — `test_agent_loop.py`, `test_agent_loop_failure_seams.py`,
   `test_tools.py`, `test_tools_overrides.py`, `test_registry.py`, `test_usage.py`,
   `test_chat.py`, `test_eval*.py`, `test_context_filter.py`,
-  `test_context_manager.py`, `test_prompt_builder.py`, `test_providers*.py`,
+  `test_context_manager.py`, `test_prompt_builder.py`,
+  `test_agent_coordinator.py`, `test_providers*.py`,
   `test_provider_contracts.py`, `test_provider_resilience.py`
 - **Security** — `test_guardrails*.py` (10 files), `test_sentinel_*.py` (6 files),
   `test_security_hardening.py`, `test_security_sentinel.py`,
@@ -664,7 +762,8 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
   `SAKTHAI_SHELL_ALLOW`. Don't widen these without reason.
 - **Guardrail changes must be synced across personas.** Copy the canonical
   `personas/sakthai/sakthai/agent/guardrails.py` to every persona copy, or
-  `tests/test_persona_guardrails_parity.py` fails CI.
+  `tests/test_persona_guardrails_parity.py` fails CI. `web/server.py` needs the
+  same sync and has **no** test enforcing it — diff the copies yourself.
 - **Not linted / not type-checked:** ruff excludes `library/` and `scripts/`;
   mypy covers only `personas/sakthai/sakthai`. Don't "fix" lint/types in the
   other trees.
@@ -723,9 +822,9 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 | `SAKTHAI_HF_API_BASE` | HF Inference Providers router base URL (default: `https://router.huggingface.co/v1`) |
 | `SAKTHAI_HOME` | Override the `~/.sakthai` root (memory db, sessions, extensions, eval log) |
 | `SAKTHAI_PERSONA` | Persona identity for systemd/Telegram launches — scopes skill discovery |
-| `SAKTHAI_MODEL` / `SAKTHAI_PROVIDER` | Default model/provider for non-interactive launches |
-| `SAKTHAI_FAST` / `SAKTHAI_STATELESS` / `SAKTHAI_NO_MCP` | Env equivalents of `--fast` / `--stateless` / `--no-mcp` |
-| `SAKTHAI_WITH_SKILLS` | Comma-separated skill names injected into the system prompt |
+| `SAKTHAI_MODEL` / `SAKTHAI_PROVIDER` | Default model/provider for non-interactive launches. Blank string reads as unset (`value or None`) |
+| `SAKTHAI_FAST` / `SAKTHAI_STATELESS` / `SAKTHAI_NO_MCP` | Env equivalents of `--fast` / `--stateless` / `--no-mcp`. Truthy set is exactly `{1, true, yes, on}` after `.strip().lower()` — `SAKTHAI_FAST=True` works, `SAKTHAI_FAST=enabled` silently does not |
+| `SAKTHAI_WITH_SKILLS` | Skill names injected into the system prompt. Comma **or** space separated — the reader does `raw.replace(",", " ").split()`, so `"a,b"`, `"a b"` and `"a, b"` are equivalent |
 | `SAKTHAI_SYSTEM_PROMPT` / `SAKTHAI_SYSTEM_PROMPT_FILE` | Inline or file-backed system-prompt prefix |
 | `SAKTHAI_READ_ALLOW` | `os.pathsep`-separated extra paths the `read_file` tool may read |
 | `SAKTHAI_SHELL_ALLOW` | Any non-empty value enables the `run_command` tool |
@@ -735,11 +834,22 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 | `SAKTHAI_MCP_ENV_PASSTHROUGH` | Env vars forwarded to spawned MCP servers |
 | `SAKTHAI_EVAL_LOG` | Override the eval/MLOps JSONL log path (default `SAKTHAI_HOME/eval.jsonl`) |
 | `SAKTHAI_WEB_ALLOW_PUBLIC` | Opt-in to non-loopback binds for the web server (default: refused — loopback-only) |
+| `SAKTHAI_WEB_CORS_ORIGIN` | The single origin the web API echoes in CORS headers; unset = CORS off (used by `make dashboard-dev`) |
 | `SAKTHAI_AGENT_ACTIVE` | Set by the loop itself; the `run_agent_loop` recursion guard reads it |
+| `SAKTHAI_DEFAULT_MODEL` / `SAKTHAI_DEFAULT_PROVIDER` | Written into a provisioned client's env file by `client/manager.py` — not read by the package itself |
 | `SAKTHAI_CLIENTS_DIR` | Override where `sakthai client` stores provisioned client workspaces (default `~/.sakthai/clients`, resolved in `client/manager.py` from `Path.home()` — it does **not** honour `SAKTHAI_HOME`, and is the one path not routed through `config.py`) |
 | `SAKKING_HOME` | Override the SakKing data dir (default `~/.sakking`) for `skills sync-sakking` |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` / `TELEGRAM_ALLOWED_USER_IDS` | Telegram gateway and the `send_telegram_message` tool |
 | `MS_GRAPH_CLIENT_ID` / `MS_GRAPH_TENANT_ID` / `MS_GRAPH_REFRESH_TOKEN` | Microsoft Graph mail + calendar tools (seed via `scripts/graph_device_login.py`) |
+
+**Nine of these variables have zero test references** — `SAKTHAI_FAST`,
+`SAKTHAI_NO_MCP`, `SAKTHAI_WITH_SKILLS`, `SAKTHAI_MODEL`, `SAKTHAI_PROVIDER`,
+`SAKTHAI_STATELESS`, `SAKTHAI_EVAL_LOG`, `SAKTHAI_DEFAULT_MODEL` /
+`SAKTHAI_DEFAULT_PROVIDER`, and `MS_GRAPH_TENANT_ID` — and `config.py`'s
+uncovered statements are precisely those reader functions. These are not obscure:
+`infra/vm-agents/env-templates/*.env.example` sets four of them, and they are how
+each deployed persona is configured. Tread carefully when changing a reader, and
+add the test while you are there (finding 2 of the 28 Aug coverage audit).
 
 ---
 
@@ -814,5 +924,7 @@ A skill directory may also carry `commands/<name>.md` files, which become
 | `docs/SOUL.md` · `docs/USER.md` · `docs/OPERATING_CONTRACT.md` | Team identity · Beer's profile · agent operating rules |
 | `docs/SECURITY.md` · `docs/security-hardening.md` · `docs/SECURITY_HARDENING_IMPLEMENTATION.md` | Security policy/architecture · audit findings and the prevention pattern + regression test for each · implementation notes |
 | `docs/security_audit_2026-07-11.md` · `docs/security_audit_2026-07-12.md` | Point-in-time audit reports |
+| `docs/test-coverage-audit-2026-08-{26,27,28}.md` | The coverage-debt series; the 28th is current |
+| `docs/repo-audit-2026-08-08.md` | The cleanup that removed root `skills/` and `migrated-repos-archive/`, and left `assets/` untracked |
 | `docs/superpowers/plans/` · `docs/superpowers/specs/` | Dated feature plans and design specs |
 | `AGENTS.md` | Repo guidelines + the SakJules PR protocol |
