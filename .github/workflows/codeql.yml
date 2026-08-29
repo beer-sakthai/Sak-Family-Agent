@@ -32,10 +32,18 @@ on:
 permissions:
   contents: read
 
+# Supersede in-flight runs for the same ref, but never cancel a run on main:
+# a code-scanning alert only closes when a newer analysis from the same tool
+# stops reporting it, so main's producers must always finish.
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       security-events: write  # upload the analysis to the code-scanning API
       packages: read          # fetch CodeQL query packs

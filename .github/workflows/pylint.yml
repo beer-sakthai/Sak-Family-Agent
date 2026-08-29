@@ -5,9 +5,15 @@ on: [push]
 permissions:
   contents: read
 
+# A newer push to the same ref supersedes any run still in flight.
+concurrency:
+  group: pylint-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       matrix:
         python-version: ["3.11", "3.12"]
@@ -19,6 +25,8 @@ jobs:
         api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
 
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
       with:
