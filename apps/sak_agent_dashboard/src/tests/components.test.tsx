@@ -173,9 +173,11 @@ describe("MemoryExplorer", () => {
     expect(screen.getByText("Prefers a dark, low-contrast terminal")).toBeInTheDocument();
   });
 
-  it("switches to observations", () => {
+  it("switches to observations and links tabpanel to tab", () => {
     render(<MemoryExplorer memory={demoMemory()} />);
+    expect(screen.getByRole("tabpanel", { name: /Facts/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: /Observations/ }));
+    expect(screen.getByRole("tabpanel", { name: /Observations/ })).toBeInTheDocument();
     expect(screen.getByText("Works late into the evening most days")).toBeInTheDocument();
   });
 

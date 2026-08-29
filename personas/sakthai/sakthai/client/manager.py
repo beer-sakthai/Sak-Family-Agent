@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from pathlib import Path
 
+from .. import config
 from ..learn.ingest import ingest_document
 from ..memory.store import MemoryStore
 from .models import ClientConfig, OnboardResult, _slugify
@@ -16,11 +16,7 @@ logger = logging.getLogger(__name__)
 
 def get_clients_base_dir() -> Path:
     """Return the root directory where all provisioned client workspaces live."""
-    override = os.getenv("SAKTHAI_CLIENTS_DIR")
-    if override:
-        p = Path(override).expanduser().resolve()
-    else:
-        p = Path.home() / ".sakthai" / "clients"
+    p = config.clients_dir()
     p.mkdir(parents=True, exist_ok=True)
     return p
 
