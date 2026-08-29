@@ -374,8 +374,8 @@ describe("WorkflowRuns", () => {
   it("requests detail when a run is opened", () => {
     const onRunSelect = vi.fn();
     render(<WorkflowRuns runs={workflows.runs} onRunSelect={onRunSelect} openRunId={null} detail={null} />);
-    // By role, not by text: the table's own column header is also "Steps".
-    fireEvent.click(screen.getAllByRole("button", { name: "Steps" })[0]);
+    const expectedLabel = `View steps for ${workflows.runs[0].workflow_name || workflows.runs[0].run_id}`;
+    fireEvent.click(screen.getByRole("button", { name: expectedLabel }));
     expect(onRunSelect).toHaveBeenCalledWith(workflows.runs[0].run_id);
   });
 
