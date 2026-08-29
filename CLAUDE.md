@@ -68,10 +68,11 @@ find personas/<persona>/skills -maxdepth 1 -mindepth 1 -type d | wc -l
 diff -rq personas/shared/sakthai personas/sakthai/sakthai
 # test files, then test count + real coverage
 ls tests/test_*.py | wc -l
-uv run pytest tests/ -q --cov=sakthai --cov-branch
+uv run pytest tests/ -q --cov=sakthai --cov-branch   # ~2,305 pass, 8 skip
 ```
 
-Everything quoted below was measured on 2026-08-28 at `8e6d785`.
+Everything quoted below was measured on 2026-08-28 at `8e6d785`, except the
+coverage figures, re-measured after the `team/engine.py` tests landed.
 
 ### The persona package copies (read this before editing `sakthai/`)
 
@@ -277,6 +278,15 @@ finding common to all three audits
 [27th](docs/test-coverage-audit-2026-08-27.md),
 [28th](docs/test-coverage-audit-2026-08-28.md)). The command-line flag is what
 actually fails the build; keep the two numbers in step when changing either.
+
+**The figure is not deterministic.** Back-to-back runs on an identical tree
+have differed by one uncovered statement and one partial branch — roughly
+0.02pp (95.86% vs 95.88% at `8e6d785`). Don't read a move that size as a
+regression, and don't spend a session chasing the statement that flapped. It
+does not threaten the gate: 0.21pp of headroom is about ten times the observed
+flap. Headroom under ~0.05pp would be, so if it ever gets that thin, raise
+coverage rather than lowering the floor.
+
 Run the lint→pytest sequence locally before pushing — a drop below the floor now
 turns CI red rather than passing quietly.
 
