@@ -49,8 +49,10 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
 
       <div role="tablist" aria-label="Memory Explorer tabs" className="flex items-center gap-2">
         <button
+          id="tab-facts"
           role="tab"
           aria-selected={activeTab === "facts"}
+          aria-controls="panel-facts"
           onClick={() => setActiveTab("facts")}
           className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
             activeTab === "facts"
@@ -62,8 +64,10 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           Facts ({facts.length})
         </button>
         <button
+          id="tab-observations"
           role="tab"
           aria-selected={activeTab === "observations"}
+          aria-controls="panel-observations"
           onClick={() => setActiveTab("observations")}
           className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
             activeTab === "observations"
@@ -77,7 +81,12 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
       </div>
 
       {activeTab === "facts" && (
-        <div className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl">
+        <div
+          role="tabpanel"
+          id="panel-facts"
+          aria-labelledby="tab-facts"
+          className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl"
+        >
           <div className="overflow-x-auto">
             <table className="w-full text-left font-mono text-xs">
               <thead className="bg-sunken/80 text-fg-3 border-b border-line/80 uppercase text-[10px] tracking-wider">
@@ -130,7 +139,12 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
       )}
 
       {activeTab === "observations" && (
-        <div className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl">
+        <div
+          role="tabpanel"
+          id="panel-observations"
+          aria-labelledby="tab-observations"
+          className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl"
+        >
           <div className="overflow-x-auto">
             <table className="w-full text-left font-mono text-xs">
               <thead className="bg-sunken/80 text-fg-3 border-b border-line/80 uppercase text-[10px] tracking-wider">
