@@ -68,7 +68,7 @@ find personas/<persona>/skills -maxdepth 1 -mindepth 1 -type d | wc -l
 diff -rq personas/shared/sakthai personas/sakthai/sakthai
 # test files, then test count + real coverage
 ls tests/test_*.py | wc -l
-uv run pytest tests/ -q --cov=sakthai --cov-branch
+uv run pytest tests/ -q --cov=sakthai --cov-branch   # ~2,292 pass, 8 skip
 ```
 
 Everything quoted below was measured on 2026-08-28 at `8e6d785`.
@@ -265,10 +265,14 @@ available tooling, not an enforced gate.
 
 Coverage floor is **96%** (`fail_under = 96`, branch coverage on) over the
 `sakthai` package, with `telegram/bot.py` omitted from measurement. The suite
-sits at **95.88%** (212 uncovered statements and 169 partial branches out of
-7,708 measured statements / 2,610 branches, measured at `8e6d785`) — *below*
-the floor. pytest prints `FAIL Required test coverage of 96.0% not reached` and
-exits 1 locally, but `ci.yml`'s test step still concludes success, so the floor
+sits at **95.86%** — *below* the floor — over 7,708 measured statements and
+2,610 branches. The figure is **not deterministic**: back-to-back runs at
+`8e6d785` gave 213 uncovered statements / 170 partial branches (95.86%) and
+212 / 169 (95.88%), so one statement and one partial branch flap between runs.
+Don't treat a 0.02pp move as a real change, and don't chase it.
+
+pytest prints `FAIL Required test coverage of 96.0% not reached` and exits 1
+locally, but `ci.yml`'s test step still concludes success, so the floor
 does not actually gate the build. The one-line fix — adding
 `--cov-fail-under=96` to `ci.yml`'s pytest step — is known and simply not
 applied yet; see finding 1 of
