@@ -219,6 +219,20 @@ def workflow_runs_dir() -> Path:
     return sakthai_home() / "workflow_runs"
 
 
+def clients_dir() -> Path:
+    """Directory where ``sakthai client`` stores provisioned client workspaces.
+
+    Honours ``SAKTHAI_CLIENTS_DIR`` first, then falls back under
+    :func:`sakthai_home` so the per-persona ``SAKTHAI_HOME`` convention applies
+    here as it does to every other path. With neither set this resolves to
+    ``~/.sakthai/clients``, unchanged from before it was routed through here.
+    """
+    override = os.environ.get("SAKTHAI_CLIENTS_DIR")
+    if override:
+        return Path(override).expanduser().resolve()
+    return sakthai_home() / "clients"
+
+
 def tool_descriptions_path() -> Path:
     """Path to the custom tool descriptions overrides JSON file."""
     return sakthai_home() / "tool_descriptions.json"

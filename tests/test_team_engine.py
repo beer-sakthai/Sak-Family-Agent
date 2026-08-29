@@ -246,3 +246,205 @@ def test_stream_pipeline_events() -> None:
         assert "step_start" in event_names
         assert "step_complete" in event_names
         assert "pipeline_complete" in event_names
+
+
+# --- Parser and loader edge cases -------------------------------------------
+
+
+def test_load_pipeline_from_dict_skips_non_dict_steps() -> None:
+    """Malformed step entries are skipped rather than aborting the whole load."""
+    data = {
+        "name": "mixed",
+        "steps": [
+            "not-a-step",
+            42,
+            {"name": "real", "persona": "sakthai"},
+        ],
+    }
+    pipeline = load_pipeline_from_dict(data)
+    assert [s.name for s in pipeline.steps] == ["real"]
+
+
+def test_load_pipeline_from_file_missing(tmp_path: Path) -> None:
+    with pytest.raises(FileNotFoundError, match="Pipeline file not found"):
+        load_pipeline_from_file(tmp_path / "absent.json")
+
+
+def test_load_pipeline_from_yaml_file(tmp_path: Path) -> None:
+    path = tmp_path / "pipe.yaml"
+    path.write_text(
+        "name: yaml-pipe\ndescription: from yaml\nsteps:\n  - name: only\n    persona: saksee\n",
+        encoding="utf-8",
+    )
+    pipeline = load_pipeline_from_file(path)
+    assert pipeline.name == "yaml-pipe"
+    assert pipeline.steps[0].persona == "saksee"
+
+
+def test_load_pipeline_from_file_non_mapping(tmp_path: Path) -> None:
+    path = tmp_path / "list.json"
+    path.write_text(json.dumps([1, 2, 3]), encoding="utf-8")
+    with pytest.raises(ValueError, match="Expected top-level object"):
+        load_pipeline_from_file(path)
+
+
+def test_get_pipeline_accepts_a_file_path(tmp_path: Path) -> None:
+    """A name that is not a built-in but is a real file loads from disk."""
+    path = tmp_path / "custom.json"
+    path.write_text(
+        json.dumps({"name": "from-disk", "steps": [{"name": "s", "persona": "saktan"}]}),
+        encoding="utf-8",
+    )
+    assert get_pipeline(str(path)).name == "from-disk"
+
+
+# --- Step grouping ----------------------------------------------------------
+
+
+def _names(groups: list[list[PipelineStep]]) -> list[list[str]]:
+    return [[s.name for s in g] for g in groups]
+
+
+def test_group_steps_splits_adjacent_distinct_parallel_groups() -> None:
+    """Two different parallel groups back to back must not merge into one batch."""
+    from sakthai.team.engine import _group_steps
+
+    steps = (
+        PipelineStep(name="a", persona="sakthai", prompt_template="{task}", parallel_group="one"),
+        PipelineStep(name="b", persona="sakking", prompt_template="{task}", parallel_group="one"),
+        PipelineStep(name="c", persona="saksee", prompt_template="{task}", parallel_group="two"),
+        PipelineStep(name="d", persona="saksit", prompt_template="{task}", parallel_group="two"),
+    )
+    assert _names(_group_steps(steps)) == [["a", "b"], ["c", "d"]]
+
+
+def test_group_steps_flushes_a_trailing_parallel_group() -> None:
+    """A parallel group at the very end still gets emitted."""
+    from sakthai.team.engine import _group_steps
+
+    steps = (
+        PipelineStep(name="seq", persona="sakthai", prompt_template="{task}"),
+        PipelineStep(name="p1", persona="sakking", prompt_template="{task}", parallel_group="tail"),
+        PipelineStep(name="p2", persona="saksee", prompt_template="{task}", parallel_group="tail"),
+    )
+    assert _names(_group_steps(steps)) == [["seq"], ["p1", "p2"]]
+
+
+# --- Parallel execution failure and callback paths --------------------------
+
+
+def _parallel_pipeline() -> PipelineDefinition:
+    return PipelineDefinition(
+        name="parallel-fail",
+        description="Two personas in one batch",
+        steps=(
+            PipelineStep(
+                name="good",
+                persona="sakthai",
+                prompt_template="{task}",
+                output_key="good_out",
+                parallel_group="batch",
+            ),
+            PipelineStep(
+                name="bad",
+                persona="sakking",
+                prompt_template="{task}",
+                output_key="bad_out",
+                parallel_group="batch",
+            ),
+        ),
+    )
+
+
+def test_run_pipeline_parallel_step_failure_is_captured() -> None:
+    """A raising step in a parallel batch fails that step, not the whole process."""
+
+    def fake_run_persona(persona: str, task: str, **kwargs):
+        if persona == "sakking":
+            raise RuntimeError("provider exploded")
+        return AgentResult(
+            text="fine",
+            iterations=1,
+            stop_reason="end_turn",
+            usage={"total_tokens": 10},
+        )
+
+    with patch("sakthai.team.engine.run_persona_task", side_effect=fake_run_persona):
+        result = run_pipeline(_parallel_pipeline(), "go")
+
+    assert result.success is False
+    by_name = {s.step_name: s for s in result.steps}
+    assert by_name["good"].is_error is False
+    assert by_name["bad"].is_error is True
+    assert "provider exploded" in (by_name["bad"].error_message or "")
+    # The failing step still contributes its (empty) output under its key.
+    assert result.context["bad_out"].startswith("ERROR:")
+    assert result.context["good_out"] == "fine"
+    # Only the healthy step's tokens count toward the total.
+    assert result.total_tokens == 10
+
+
+def test_run_pipeline_parallel_invokes_both_callbacks() -> None:
+    """on_step_start/on_step_complete fire for every step in a parallel batch."""
+    started: list[str] = []
+    completed: list[str] = []
+
+    def fake_run_persona(persona: str, task: str, **kwargs):
+        return AgentResult(
+            text="ok", iterations=1, stop_reason="end_turn", usage={"total_tokens": 5}
+        )
+
+    with patch("sakthai.team.engine.run_persona_task", side_effect=fake_run_persona):
+        result = run_pipeline(
+            _parallel_pipeline(),
+            "go",
+            on_step_start=lambda step, idx, total: started.append(step.name),
+            on_step_complete=lambda res, idx, total: completed.append(res.step_name),
+        )
+
+    assert result.success is True
+    assert sorted(started) == ["bad", "good"]
+    assert sorted(completed) == ["bad", "good"]
+
+
+def test_run_pipeline_seeds_initial_context() -> None:
+    """initial_context is available to the first prompt template."""
+    seen: list[str] = []
+
+    def fake_run_persona(persona: str, task: str, **kwargs):
+        seen.append(task)
+        return AgentResult(
+            text="ok", iterations=1, stop_reason="end_turn", usage={"total_tokens": 1}
+        )
+
+    pipeline = PipelineDefinition(
+        name="ctx",
+        description="uses seeded context",
+        steps=(PipelineStep(name="s", persona="sakthai", prompt_template="Brief: {brief}"),),
+    )
+
+    with patch("sakthai.team.engine.run_persona_task", side_effect=fake_run_persona):
+        result = run_pipeline(pipeline, "task", initial_context={"brief": "seeded-value"})
+
+    assert result.success is True
+    assert seen == ["Brief: seeded-value"]
+
+
+def test_stream_pipeline_events_emits_pipeline_error() -> None:
+    """A crash inside the worker surfaces as a pipeline_error event, not a hang."""
+    from sakthai.team.engine import stream_pipeline_events
+
+    pipeline = PipelineDefinition(
+        name="boom",
+        description="explodes",
+        steps=(PipelineStep(name="s", persona="sakthai", prompt_template="{task}"),),
+    )
+
+    with patch("sakthai.team.engine.run_pipeline", side_effect=RuntimeError("worker died")):
+        events = list(stream_pipeline_events(pipeline, "task"))
+
+    kinds = [e["event"] for e in events]
+    assert "pipeline_error" in kinds
+    error_event = next(e for e in events if e["event"] == "pipeline_error")
+    assert error_event["error"] == "worker died"
+    assert error_event["pipeline"] == "boom"
