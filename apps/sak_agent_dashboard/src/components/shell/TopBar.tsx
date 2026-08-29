@@ -90,7 +90,7 @@ export function TopBar({
           aria-label="Open navigation menu"
           className="rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:hidden"
         >
-          <Menu className="h-4 w-4" />
+          <Menu className="h-4 w-4" aria-hidden />
         </button>
 
         <div className="min-w-0 flex-1">
@@ -109,7 +109,7 @@ export function TopBar({
             data-chrome="secondary"
             className="hidden items-center gap-2 rounded-xl border border-line bg-panel/60 px-3 py-1.5 text-[11px] text-fg-4 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:flex"
           >
-            <Search className="h-3.5 w-3.5" />
+            <Search className="h-3.5 w-3.5" aria-hidden />
             Jump to…
             <kbd className="rounded border border-line-strong bg-sunken px-1.5 py-0.5 font-mono text-[10px] text-fg-3">
               ⌘K
@@ -162,7 +162,7 @@ export function TopBar({
             title="Copy a link to this view"
             className="hidden rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:block"
           >
-            <Link2 className="h-3.5 w-3.5" />
+            <Link2 className="h-3.5 w-3.5" aria-hidden />
           </button>
 
           {/* A select rather than two buttons: export is a rare action, and
@@ -215,9 +215,9 @@ export function TopBar({
             className="rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             {presenting ? (
-              <Minimize2 className="h-3.5 w-3.5" />
+              <Minimize2 className="h-3.5 w-3.5" aria-hidden />
             ) : (
-              <Maximize2 className="h-3.5 w-3.5" />
+              <Maximize2 className="h-3.5 w-3.5" aria-hidden />
             )}
           </button>
 
@@ -227,7 +227,7 @@ export function TopBar({
             aria-label="Refresh dashboard data"
             className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-3 py-1.5 font-mono text-[11px] text-fg-2 transition-colors hover:border-line-strong disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
-            <RefreshCw className={`h-3 w-3 ${isLoading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-3 w-3 ${isLoading ? "animate-spin" : ""}`} aria-hidden />
             <span className="hidden sm:inline">
               {lastUpdatedAt === null ? "Refresh" : relativeTime(lastUpdatedAt, now)}
             </span>
