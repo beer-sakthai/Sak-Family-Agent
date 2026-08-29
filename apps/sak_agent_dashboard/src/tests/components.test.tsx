@@ -163,9 +163,13 @@ describe("AnalyticsCharts", () => {
 describe("MemoryExplorer", () => {
   // Two tablists can share a page, so the role alone does not identify this
   // one to a screen reader.
-  it("names its tablist for assistive tech", () => {
+  it("names its tablist and configures accessible tabs for assistive tech", () => {
     render(<MemoryExplorer memory={demoMemory()} />);
     expect(screen.getByRole("tablist", { name: "Memory Explorer tabs" })).toBeInTheDocument();
+
+    const factsTab = screen.getByRole("tab", { name: /Facts/ });
+    expect(factsTab).toHaveAttribute("aria-controls", "panel-facts");
+    expect(screen.getByRole("tabpanel", { name: /Facts/ })).toHaveAttribute("id", "panel-facts");
   });
 
   it("shows facts by default", () => {
@@ -175,7 +179,10 @@ describe("MemoryExplorer", () => {
 
   it("switches to observations", () => {
     render(<MemoryExplorer memory={demoMemory()} />);
-    fireEvent.click(screen.getByRole("tab", { name: /Observations/ }));
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+    expect(obsTab).toHaveAttribute("aria-controls", "panel-observations");
+    fireEvent.click(obsTab);
+    expect(screen.getByRole("tabpanel", { name: /Observations/ })).toHaveAttribute("id", "panel-observations");
     expect(screen.getByText("Works late into the evening most days")).toBeInTheDocument();
   });
 
