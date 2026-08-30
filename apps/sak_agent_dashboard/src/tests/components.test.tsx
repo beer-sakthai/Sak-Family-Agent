@@ -266,6 +266,13 @@ describe("SessionExplorer", () => {
     expect(onSessionSelect).toHaveBeenCalledWith(sessions.sessions[0].id);
   });
 
+  it("provides descriptive aria-labels on action buttons for screen readers", () => {
+    renderExplorer();
+    const firstSession = sessions.sessions[0];
+    const expectedLabel = `View transcript for task "${firstSession.task}"`;
+    expect(screen.getByRole("button", { name: expectedLabel })).toBeInTheDocument();
+  });
+
   // The open transcript now lives in the URL, so the page owns it: the panel
   // renders the drawer when told to and reports a close upward rather than
   // opening and closing itself.

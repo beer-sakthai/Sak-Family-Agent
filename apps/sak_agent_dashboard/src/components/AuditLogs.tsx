@@ -21,19 +21,19 @@ const SEVERITIES = ["ALL", "critical", "high", "medium", "low"] as const;
 const BADGES: Record<string, { classes: string; icon: React.ReactNode }> = {
   critical: {
     classes: "bg-hue-rose/20 text-hue-rose border-hue-rose-line/40",
-    icon: <ShieldAlert className="h-3 w-3" />,
+    icon: <ShieldAlert className="h-3 w-3" aria-hidden />,
   },
   high: {
     classes: "bg-orange-500/20 text-orange-400 border-orange-500/40",
-    icon: <AlertTriangle className="h-3 w-3" />,
+    icon: <AlertTriangle className="h-3 w-3" aria-hidden />,
   },
   medium: {
     classes: "bg-hue-amber/20 text-hue-amber border-hue-amber-line/40",
-    icon: <AlertTriangle className="h-3 w-3" />,
+    icon: <AlertTriangle className="h-3 w-3" aria-hidden />,
   },
   low: {
     classes: "bg-raised-2/40 text-fg-2 border-line-strong/40",
-    icon: <Info className="h-3 w-3" />,
+    icon: <Info className="h-3 w-3" aria-hidden />,
   },
 };
 
@@ -151,7 +151,7 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
 
       {audit.total === 0 && severity === "ALL" && (
         <p className="text-xs text-fg-4 flex items-center gap-1.5">
-          <ShieldCheck className="h-3.5 w-3.5 text-hue-emerald" />
+          <ShieldCheck className="h-3.5 w-3.5 text-hue-emerald" aria-hidden />
           An empty audit log is a normal state — events are only written when a guardrail acts.
         </p>
       )}
