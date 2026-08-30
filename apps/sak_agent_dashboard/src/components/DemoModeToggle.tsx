@@ -16,17 +16,17 @@ const SOURCE_LABELS: Record<DataSource, { label: string; icon: React.ReactNode; 
   {
     local: {
       label: "Live · local ~/.sakthai",
-      icon: <Database className="h-3 w-3" />,
+      icon: <Database className="h-3 w-3" aria-hidden />,
       classes: "bg-hue-emerald/10 text-hue-emerald border-hue-emerald-line/30",
     },
     api: {
       label: "Live · SakThai API",
-      icon: <Cloud className="h-3 w-3" />,
+      icon: <Cloud className="h-3 w-3" aria-hidden />,
       classes: "bg-hue-cyan/10 text-hue-cyan border-hue-cyan-line/30",
     },
     demo: {
       label: "Sample data",
-      icon: <FlaskConical className="h-3 w-3" />,
+      icon: <FlaskConical className="h-3 w-3" aria-hidden />,
       classes: "bg-hue-amber/10 text-hue-amber border-hue-amber-line/30",
     },
   };

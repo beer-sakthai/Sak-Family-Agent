@@ -85,7 +85,7 @@ export function SessionExplorer({
       </div>
 
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-fg-4 pointer-events-none" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-fg-4 pointer-events-none" aria-hidden />
         <input
           type="text"
           value={search}
@@ -177,9 +177,9 @@ export function SessionExplorer({
                         }`}
                       >
                         {session.had_error ? (
-                          <AlertCircle className="h-3 w-3" />
+                          <AlertCircle className="h-3 w-3" aria-hidden />
                         ) : (
-                          <CheckCircle2 className="h-3 w-3" />
+                          <CheckCircle2 className="h-3 w-3" aria-hidden />
                         )}
                         {session.stop_reason || "—"}
                       </span>

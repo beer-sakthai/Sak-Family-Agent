@@ -21,19 +21,19 @@ const SEVERITIES = ["ALL", "critical", "high", "medium", "low"] as const;
 const BADGES: Record<string, { classes: string; icon: React.ReactNode }> = {
   critical: {
     classes: "bg-hue-rose/20 text-hue-rose border-hue-rose-line/40",
-    icon: <ShieldAlert className="h-3 w-3" />,
+    icon: <ShieldAlert className="h-3 w-3" aria-hidden />,
   },
   high: {
     classes: "bg-orange-500/20 text-orange-400 border-orange-500/40",
-    icon: <AlertTriangle className="h-3 w-3" />,
+    icon: <AlertTriangle className="h-3 w-3" aria-hidden />,
   },
   medium: {
     classes: "bg-hue-amber/20 text-hue-amber border-hue-amber-line/40",
-    icon: <AlertTriangle className="h-3 w-3" />,
+    icon: <AlertTriangle className="h-3 w-3" aria-hidden />,
   },
   low: {
     classes: "bg-raised-2/40 text-fg-2 border-line-strong/40",
-    icon: <Info className="h-3 w-3" />,
+    icon: <Info className="h-3 w-3" aria-hidden />,
   },
 };
 
@@ -66,7 +66,7 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="text-xl font-bold font-display text-fg tracking-tight flex items-center gap-2">
-            <Shield className="h-5 w-5 text-hue-rose" />
+            <Shield className="h-5 w-5 text-hue-rose" aria-hidden />
             Security Audit Log
           </h3>
           <p className="text-xs text-fg-3 mt-0.5">
