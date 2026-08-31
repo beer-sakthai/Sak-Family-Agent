@@ -68,6 +68,54 @@ describe("AgentCard", () => {
     expect(first).toBe(second);
   });
 
+  it("stays a single toggle button when there is no detail to open", () => {
+    // The overlay/details split only exists once a card has two things to do.
+    render(<AgentCard agent={active} onToggle={vi.fn()} selected={false} />);
+    expect(
+      screen.getByRole("button", { name: `Add ${active.display_name} to the persona filter` }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Open details/ })).not.toBeInTheDocument();
+  });
+
+  it("offers both the filter toggle and a details control without nesting them", () => {
+    const { container } = render(
+      <AgentCard agent={active} onToggle={vi.fn()} onOpenDetail={vi.fn()} selected={false} />,
+    );
+    expect(
+      screen.getByRole("button", { name: `Add ${active.display_name} to the persona filter` }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: `Open details for ${active.display_name}` }),
+    ).toBeInTheDocument();
+    // A <button> inside a <button> is invalid, and browsers resolve it by
+    // dropping one of the two controls.
+    expect(container.querySelector("button button")).toBeNull();
+  });
+
+  it("reports the two controls separately", () => {
+    const onToggle = vi.fn();
+    const onOpenDetail = vi.fn();
+    render(<AgentCard agent={active} onToggle={onToggle} onOpenDetail={onOpenDetail} />);
+
+    fireEvent.click(screen.getByRole("button", { name: `Open details for ${active.display_name}` }));
+    expect(onOpenDetail).toHaveBeenCalledTimes(1);
+    expect(onToggle).not.toHaveBeenCalled();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: `Add ${active.display_name} to the persona filter` }),
+    );
+    expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it("marks the overlay toggle pressed for a selected persona", () => {
+    render(<AgentCard agent={active} onToggle={vi.fn()} onOpenDetail={vi.fn()} selected />);
+    expect(
+      screen.getByRole("button", {
+        name: `Remove ${active.display_name} from the persona filter`,
+      }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("shows an error count only when there are errors", () => {
     const { rerender } = render(<AgentCard agent={{ ...active, errors: 0 }} />);
     expect(screen.queryByText(/error/)).not.toBeInTheDocument();
@@ -85,6 +133,21 @@ describe("AgentOverview", () => {
   it("surfaces unattributed runs rather than hiding them", () => {
     render(<AgentOverview personas={personas} />);
     expect(screen.getByText(`${personas.unattributed_runs} unattributed`)).toBeInTheDocument();
+  });
+
+  it("draws the activity calendar only once there is a trend series", () => {
+    const { queryByTestId } = render(<AgentOverview personas={personas} />);
+    expect(queryByTestId("activity-heatmap")).toBeNull();
+
+    render(<AgentOverview personas={personas} trends={demoMetrics().trends} />);
+    expect(screen.getByTestId("activity-heatmap")).toBeInTheDocument();
+  });
+
+  it("passes the persona name up when a card's details are opened", () => {
+    const onOpenDetail = vi.fn();
+    render(<AgentOverview personas={personas} onOpenDetail={onOpenDetail} />);
+    fireEvent.click(screen.getByRole("button", { name: `Open details for ${active.display_name}` }));
+    expect(onOpenDetail).toHaveBeenCalledWith(active.name);
   });
 
   it("omits the unattributed badge when there are none", () => {

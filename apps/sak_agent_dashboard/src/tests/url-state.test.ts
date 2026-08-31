@@ -126,10 +126,32 @@ describe("serializeView", () => {
       personas: ["sakthai", "saksee"],
       session: "1700000000_abc",
       run: "run-1",
+      agent: "sakking",
       demo: true,
       trend: 7 as const,
     };
     expect(parseView(serializeView(view))).toEqual(view);
+  });
+
+  it("carries the open persona drawer in the URL", () => {
+    expect(serializeView({ ...DEFAULT_VIEW, agent: "saksee" })).toBe("overview?agent=saksee");
+    expect(parseView("overview?agent=saksee").agent).toBe("saksee");
+  });
+
+  it("drops an unknown persona from the drawer field rather than opening nothing", () => {
+    // Same rule the filter follows: a name outside the six would open a drawer
+    // with no persona behind it, which renders as a blank panel rather than as
+    // the bad link it is.
+    expect(parseView("overview?agent=sakwho").agent).toBeNull();
+    expect(parseView("overview?agent=").agent).toBeNull();
+  });
+
+  it("normalises the drawer's persona name the way the filter is normalised", () => {
+    expect(parseView("overview?agent=%20SakSee%20").agent).toBe("saksee");
+  });
+
+  it("omits the drawer field when nothing is open", () => {
+    expect(serializeView({ ...DEFAULT_VIEW, agent: null })).toBe("overview");
   });
 
   it("round-trips search text containing a separator", () => {

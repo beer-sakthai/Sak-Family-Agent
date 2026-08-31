@@ -2,7 +2,8 @@
 
 import React from "react";
 
-import type { PersonasPayload } from "@/lib/contracts.generated";
+import type { PersonasPayload, TrendPoint } from "@/lib/contracts.generated";
+import ActivityHeatmap from "./ActivityHeatmap";
 import { AgentCard } from "./AgentCard";
 
 interface AgentOverviewProps {
@@ -11,9 +12,23 @@ interface AgentOverviewProps {
   selected?: string[];
   /** Clicking a card toggles it in the filter, when a handler is given. */
   onSelect?: (next: string[]) => void;
+  /** When given, each card offers a Details control that opens the drawer. */
+  onOpenDetail?: (name: string) => void;
+  /**
+   * The recorded run history, for the activity calendar under the grid. Absent
+   * until `/api/metrics` has answered, and the calendar is simply not drawn
+   * until then rather than drawn empty and then filled.
+   */
+  trends?: readonly TrendPoint[];
 }
 
-export function AgentOverview({ personas, selected = [], onSelect }: AgentOverviewProps) {
+export function AgentOverview({
+  personas,
+  selected = [],
+  onSelect,
+  onOpenDetail,
+  trends,
+}: AgentOverviewProps) {
   const { personas: agents, unattributed_runs: unattributed } = personas;
 
   // Every card renders; the filter dims the ones it excludes rather than
@@ -68,9 +83,15 @@ export function AgentOverview({ personas, selected = [], onSelect }: AgentOvervi
                 : undefined
             }
             selected={selected.includes(agent.name)}
+            onOpenDetail={onOpenDetail ? () => onOpenDetail(agent.name) : undefined}
           />
         ))}
       </div>
+
+      {/* Below the cards on purpose: the grid answers "who", the calendar
+          answers "when", and the cards are what someone opening the Overview
+          is looking for first. */}
+      {trends && trends.length > 0 && <ActivityHeatmap trends={trends} />}
     </div>
   );
 }
