@@ -85,7 +85,7 @@ export function SessionExplorer({
       </div>
 
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-fg-4 pointer-events-none" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-fg-4 pointer-events-none" aria-hidden />
         <input
           type="text"
           value={search}
@@ -177,9 +177,9 @@ export function SessionExplorer({
                         }`}
                       >
                         {session.had_error ? (
-                          <AlertCircle className="h-3 w-3" />
+                          <AlertCircle className="h-3 w-3" aria-hidden />
                         ) : (
-                          <CheckCircle2 className="h-3 w-3" />
+                          <CheckCircle2 className="h-3 w-3" aria-hidden />
                         )}
                         {session.stop_reason || "—"}
                       </span>
@@ -187,6 +187,7 @@ export function SessionExplorer({
                     <td className="px-5 py-3.5 text-right">
                       <button
                         onClick={() => openDetail(session)}
+                        aria-label={`View transcript for ${session.task ? `task "${session.task}"` : session.id}`}
                         className="text-[11px] px-2.5 py-1 rounded-lg bg-raised border border-line-strong text-hue-cyan hover:border-hue-cyan-line/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                       >
                         View
@@ -262,7 +263,7 @@ export function SessionExplorer({
                   </div>
                   <div>
                     <span className="text-[10px] uppercase text-fg-4 flex items-center gap-1">
-                      <Clock className="h-3 w-3" /> When
+                      <Clock className="h-3 w-3" aria-hidden /> When
                     </span>
                     <span className="font-bold text-fg-2">
                       {formatTimestamp(openSummary.timestamp)}
@@ -274,7 +275,7 @@ export function SessionExplorer({
               {openSummary?.task && (
                 <div className="p-3 rounded-xl bg-sunken/60 border border-line">
                   <span className="text-[10px] uppercase text-fg-4 flex items-center gap-1 mb-1">
-                    <FileText className="h-3 w-3" /> Task
+                    <FileText className="h-3 w-3" aria-hidden /> Task
                   </span>
                   <p className="text-fg font-sans">{openSummary.task}</p>
                 </div>

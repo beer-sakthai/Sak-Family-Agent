@@ -155,7 +155,11 @@ export function Sidebar({
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         className="mt-4 hidden w-full items-center justify-center gap-2 rounded-xl border border-line bg-panel/60 px-3 py-2 font-mono text-[11px] text-fg-3 transition-colors hover:border-line-strong hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:flex"
       >
-        {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+        {collapsed ? (
+          <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+        ) : (
+          <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
+        )}
         {!collapsed && "Collapse"}
       </button>
     </>
