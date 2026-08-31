@@ -66,7 +66,7 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="text-xl font-bold font-display text-fg tracking-tight flex items-center gap-2">
-            <Shield className="h-5 w-5 text-hue-rose" />
+            <Shield className="h-5 w-5 text-hue-rose" aria-hidden />
             Security Audit Log
           </h3>
           <p className="text-xs text-fg-3 mt-0.5">
