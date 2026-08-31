@@ -266,11 +266,22 @@ describe("SessionExplorer", () => {
     expect(onSearchChange).toHaveBeenCalledWith("deploy");
   });
 
-  it("requests a transcript when a row is opened", () => {
+  it("requests a transcript when a row is opened and has accessible aria-label", () => {
     const onSessionSelect = vi.fn();
     renderExplorer({ onSessionSelect });
-    fireEvent.click(screen.getAllByText("View")[0]);
+    const viewButton = screen.getByRole("button", {
+      name: `View transcript for task "${sessions.sessions[0].task}"`,
+    });
+    expect(viewButton).toBeInTheDocument();
+    fireEvent.click(viewButton);
     expect(onSessionSelect).toHaveBeenCalledWith(sessions.sessions[0].id);
+  });
+
+  it("provides descriptive aria-labels on action buttons for screen readers", () => {
+    renderExplorer();
+    const firstSession = sessions.sessions[0];
+    const expectedLabel = `View transcript for task "${firstSession.task}"`;
+    expect(screen.getByRole("button", { name: expectedLabel })).toBeInTheDocument();
   });
 
   // The open transcript now lives in the URL, so the page owns it: the panel
@@ -290,7 +301,7 @@ describe("SessionExplorer", () => {
   it("reports a close upward instead of closing itself", () => {
     const onSessionSelect = vi.fn();
     renderExplorer({ openSessionId: sessions.sessions[0].id, onSessionSelect });
-    fireEvent.click(screen.getByLabelText("Close"));
+    fireEvent.click(screen.getByLabelText("Close detail panel"));
     expect(onSessionSelect).toHaveBeenCalledWith(null);
   });
 

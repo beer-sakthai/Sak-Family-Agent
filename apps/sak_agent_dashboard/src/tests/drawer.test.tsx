@@ -29,7 +29,7 @@ describe("Drawer", () => {
 
   it("closes on the close button", () => {
     const { onClose } = renderDrawer();
-    fireEvent.click(screen.getByLabelText("Close"));
+    fireEvent.click(screen.getByLabelText("Close detail panel"));
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -54,7 +54,7 @@ describe("Drawer", () => {
 
   it("moves focus into the drawer on open", () => {
     renderDrawer();
-    expect(document.activeElement).toBe(screen.getByLabelText("Close"));
+    expect(document.activeElement).toBe(screen.getByLabelText("Close detail panel"));
   });
 
   it("returns focus to the opener on unmount", () => {
