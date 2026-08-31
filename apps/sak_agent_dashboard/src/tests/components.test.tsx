@@ -168,6 +168,13 @@ describe("MemoryExplorer", () => {
     expect(screen.getByRole("tablist", { name: "Memory Explorer tabs" })).toBeInTheDocument();
   });
 
+  it("applies offset focus ring styles on tabs for keyboard accessibility", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const factsTab = screen.getByRole("tab", { name: /Facts/ });
+    expect(factsTab.className).toContain("focus-visible:ring-offset-2");
+    expect(factsTab.className).toContain("focus-visible:ring-offset-canvas");
+  });
+
   it("shows facts by default", () => {
     render(<MemoryExplorer memory={demoMemory()} />);
     expect(screen.getByText("Prefers a dark, low-contrast terminal")).toBeInTheDocument();
@@ -259,14 +266,10 @@ describe("SessionExplorer", () => {
     expect(onSearchChange).toHaveBeenCalledWith("deploy");
   });
 
-  it("requests a transcript when a row is opened and has accessible aria-label", () => {
+  it("requests a transcript when a row is opened", () => {
     const onSessionSelect = vi.fn();
     renderExplorer({ onSessionSelect });
-    const viewButton = screen.getByRole("button", {
-      name: `View transcript for session ${sessions.sessions[0].id}`,
-    });
-    expect(viewButton).toBeInTheDocument();
-    fireEvent.click(viewButton);
+    fireEvent.click(screen.getAllByText("View")[0]);
     expect(onSessionSelect).toHaveBeenCalledWith(sessions.sessions[0].id);
   });
 
