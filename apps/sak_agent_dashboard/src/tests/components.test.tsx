@@ -259,10 +259,14 @@ describe("SessionExplorer", () => {
     expect(onSearchChange).toHaveBeenCalledWith("deploy");
   });
 
-  it("requests a transcript when a row is opened", () => {
+  it("requests a transcript when a row is opened and has accessible aria-label", () => {
     const onSessionSelect = vi.fn();
     renderExplorer({ onSessionSelect });
-    fireEvent.click(screen.getAllByText("View")[0]);
+    const viewButton = screen.getByRole("button", {
+      name: `View transcript for session ${sessions.sessions[0].id}`,
+    });
+    expect(viewButton).toBeInTheDocument();
+    fireEvent.click(viewButton);
     expect(onSessionSelect).toHaveBeenCalledWith(sessions.sessions[0].id);
   });
 
