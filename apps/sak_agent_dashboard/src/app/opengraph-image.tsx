@@ -3,13 +3,17 @@ import { ImageResponse } from "next/og";
 /**
  * The social card, rendered at request time by Next's OG image runtime.
  *
- * Deliberately plain and self-contained: no webfont fetch (the edge runtime
- * would have to load it over the network on every miss), no imported tokens
- * (this renders outside the browser, where CSS variables do not exist). The
- * two hex values here are the dark canvas and accent, which is the one place
- * in the app that duplicating them is unavoidable.
+ * Deliberately plain and self-contained: no webfont fetch (that would be a
+ * network round trip on every cache miss), no imported tokens (this renders
+ * outside the browser, where CSS variables do not exist). The two hex values
+ * here are the dark canvas and accent, which is the one place in the app that
+ * duplicating them is unavoidable.
+ *
+ * No `runtime` export: the edge runtime is deprecated, and pinning a route to
+ * it disables static generation for that route as well as emitting a build
+ * warning. `vercel.json` gives this path a day of shared-cache lifetime, which
+ * is what actually keeps it from re-rendering per crawl.
  */
-export const runtime = "edge";
 export const alt = "Sak-Agent-Family Dashboard";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";

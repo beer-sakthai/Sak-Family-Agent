@@ -1,7 +1,19 @@
 "use client";
 
 import React from "react";
-import { Activity, Award, Brain, Clock, Cpu, Eye, Shield, Sparkles, Terminal, Zap } from "lucide-react";
+import {
+  Activity,
+  ArrowUpRight,
+  Award,
+  Brain,
+  Clock,
+  Cpu,
+  Eye,
+  Shield,
+  Sparkles,
+  Terminal,
+  Zap,
+} from "lucide-react";
 
 import type { PersonaSummary } from "@/lib/contracts.generated";
 
@@ -13,6 +25,8 @@ interface AgentCardProps {
   selected?: boolean;
   /** When given, the card becomes a toggle for the global persona filter. */
   onToggle?: () => void;
+  /** When given, the card grows a Details control that opens the drawer. */
+  onOpenDetail?: () => void;
 }
 
 /** Keyed by the canonical lowercase persona name, all six of them. */
@@ -53,7 +67,13 @@ function deriveStatus(agent: PersonaSummary): Status {
   return "Ready";
 }
 
-export function AgentCard({ agent, dimmed = false, selected = false, onToggle }: AgentCardProps) {
+export function AgentCard({
+  agent,
+  dimmed = false,
+  selected = false,
+  onToggle,
+  onOpenDetail,
+}: AgentCardProps) {
   const status = deriveStatus(agent);
   const glowClass = personaGlows[agent.name] ?? "border-line hover:border-line-strong";
   const icon = personaIcons[agent.name] ?? <Cpu className="h-5 w-5 text-hue-cyan" />;
@@ -63,18 +83,27 @@ export function AgentCard({ agent, dimmed = false, selected = false, onToggle }:
   // shown as such.
   const successRate = agent.runs > 0 ? ((agent.runs - agent.errors) / agent.runs) * 100 : null;
 
-  // Interactive cards are <button>s so they are reachable by keyboard and
-  // announced as pressable; a plain card stays a <div> rather than becoming a
-  // button that does nothing.
-  const Root = onToggle ? "button" : "div";
-  const interactive = onToggle
-    ? {
-        type: "button" as const,
-        onClick: onToggle,
-        "aria-pressed": selected,
-        "aria-label": `${selected ? "Remove" : "Add"} ${agent.display_name} ${selected ? "from" : "to"} the persona filter`,
-      }
-    : {};
+  // Two controls, one card. The filter toggle covers the whole card as a
+  // stretched overlay button and the Details control sits above it, rather
+  // than the card itself being a <button> with a second <button> nested inside
+  // it — which is invalid HTML and which browsers resolve by dropping one of
+  // them. The overlay carries the label and the pressed state, so it is still
+  // one tab stop that announces what it does.
+  //
+  // Without `onOpenDetail` there is nothing to sit above the overlay, so the
+  // card stays the single <button> it has always been.
+  const overlayToggle = Boolean(onToggle && onOpenDetail);
+  const Root = onToggle && !onOpenDetail ? "button" : "div";
+  const toggleLabel = `${selected ? "Remove" : "Add"} ${agent.display_name} ${selected ? "from" : "to"} the persona filter`;
+  const interactive =
+    onToggle && !onOpenDetail
+      ? {
+          type: "button" as const,
+          onClick: onToggle,
+          "aria-pressed": selected,
+          "aria-label": toggleLabel,
+        }
+      : {};
 
   return (
     <Root
@@ -88,7 +117,17 @@ export function AgentCard({ agent, dimmed = false, selected = false, onToggle }:
     >
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-hue-cyan/5 rounded-full blur-2xl group-hover:bg-hue-cyan/10 transition-all duration-500 pointer-events-none" />
 
-      <div>
+      {overlayToggle && onToggle && (
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-pressed={selected}
+          aria-label={toggleLabel}
+          className="absolute inset-0 z-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+        />
+      )}
+
+      <div className={overlayToggle ? "pointer-events-none relative z-[1]" : undefined}>
         {/* items-start: the text column is three lines tall, so centring the
             icon and the status pill against it leaves the name floating alone
             above both. */}
@@ -151,7 +190,11 @@ export function AgentCard({ agent, dimmed = false, selected = false, onToggle }:
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 py-2 px-3 rounded-xl bg-sunken/60 border border-line/80 font-mono text-xs">
+      <div
+        className={`grid grid-cols-2 gap-2 py-2 px-3 rounded-xl bg-sunken/60 border border-line/80 font-mono text-xs ${
+          overlayToggle ? "pointer-events-none relative z-[1]" : ""
+        }`}
+      >
         <div>
           <span className="text-[10px] uppercase text-fg-3 mb-0.5 flex items-center gap-1">
             <Clock className="h-3 w-3 text-hue-cyan" /> Avg latency
@@ -170,7 +213,7 @@ export function AgentCard({ agent, dimmed = false, selected = false, onToggle }:
         </div>
       </div>
 
-      <div className="space-y-1.5">
+      <div className={`space-y-1.5 ${overlayToggle ? "pointer-events-none relative z-[1]" : ""}`}>
         <div className="flex items-center justify-between text-xs font-mono">
           <span className="text-fg-3 text-[11px] flex items-center gap-1">
             <Award className="h-3 w-3 text-hue-amber" /> Success rate
@@ -187,7 +230,11 @@ export function AgentCard({ agent, dimmed = false, selected = false, onToggle }:
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-1.5 pt-1 font-mono text-[10px]">
+      <div
+        className={`relative z-[2] flex flex-wrap items-center gap-1.5 pt-1 font-mono text-[10px] ${
+          overlayToggle ? "pointer-events-none" : ""
+        }`}
+      >
         <span className="px-2 py-0.5 rounded-full bg-hue-cyan-tint/40 text-hue-cyan border border-hue-cyan-line/30 inline-flex items-center gap-1">
           <Brain className="h-2.5 w-2.5" />
           {(agent.input_tokens + agent.output_tokens).toLocaleString()} tokens
@@ -196,6 +243,17 @@ export function AgentCard({ agent, dimmed = false, selected = false, onToggle }:
           <span className="px-2 py-0.5 rounded-full bg-hue-rose-tint/40 text-hue-rose border border-hue-rose-line/30">
             {agent.errors} {agent.errors === 1 ? "error" : "errors"}
           </span>
+        )}
+        {onOpenDetail && (
+          <button
+            type="button"
+            onClick={onOpenDetail}
+            aria-label={`Open details for ${agent.display_name}`}
+            className="pointer-events-auto ml-auto inline-flex items-center gap-1 rounded-full border border-line-strong bg-raised/90 px-2 py-0.5 text-[10px] text-fg-2 transition-colors hover:border-accent/50 hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            Details
+            <ArrowUpRight className="h-2.5 w-2.5" aria-hidden />
+          </button>
         )}
       </div>
     </Root>

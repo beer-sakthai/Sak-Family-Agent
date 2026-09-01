@@ -279,13 +279,24 @@ finding common to all three audits
 [28th](docs/test-coverage-audit-2026-08-28.md)). The command-line flag is what
 actually fails the build; keep the two numbers in step when changing either.
 
-**The figure is not deterministic.** Back-to-back runs on an identical tree
-have differed by one uncovered statement and one partial branch — roughly
-0.02pp (95.86% vs 95.88% at `8e6d785`). Don't read a move that size as a
-regression, and don't spend a session chasing the statement that flapped. It
-does not threaten the gate: 0.21pp of headroom is about ten times the observed
-flap. Headroom under ~0.05pp would be, so if it ever gets that thin, raise
-coverage rather than lowering the floor.
+**The figure depends on your home directory.** Back-to-back runs on an
+identical tree have differed by one uncovered statement and one partial branch —
+roughly 0.02pp. This is not nondeterminism: the suite writes outside its
+sandbox. `tests/conftest.py` has no autouse fixture, and
+`tests/test_agent_coordinator.py` calls `run_persona_task()` without patching
+`HOME`, so it creates `~/.sakthai/{sakking,saksee}/memory.db` — real persona
+shards, at the paths a deployed persona uses. `memory/store.py:211-217` then
+forks on whether the DB file already exists (create at `0600` vs `chmod`), so a
+pristine home measures one branch and a second run measures the other. The
+databases come out schema-migrated and empty, but the suite is taking a write
+lock on production paths, and nothing stops a future test inserting rows. Fix
+the fixture rather than chasing the statement — see finding 1 of
+[`docs/test-coverage-audit-2026-08-31.md`](docs/test-coverage-audit-2026-08-31.md).
+
+The flap does not threaten the gate today: 0.21pp of headroom is about ten times
+its size. In units that is 21 statements-or-branches, which is less than half of
+what the `client/` subsystem alone landed uncovered — so treat 21 as the working
+budget, and raise coverage rather than lowering the floor.
 
 Run the lint→pytest sequence locally before pushing — a drop below the floor now
 turns CI red rather than passing quietly.
@@ -934,7 +945,7 @@ A skill directory may also carry `commands/<name>.md` files, which become
 | `docs/SOUL.md` · `docs/USER.md` · `docs/OPERATING_CONTRACT.md` | Team identity · Beer's profile · agent operating rules |
 | `docs/SECURITY.md` · `docs/security-hardening.md` · `docs/SECURITY_HARDENING_IMPLEMENTATION.md` | Security policy/architecture · audit findings and the prevention pattern + regression test for each · implementation notes |
 | `docs/security_audit_2026-07-11.md` · `docs/security_audit_2026-07-12.md` | Point-in-time audit reports |
-| `docs/test-coverage-audit-2026-08-{26,27,28}.md` | The coverage-debt series; the 28th is current |
+| `docs/test-coverage-audit-2026-08-{26,27,28,31}.md` | The coverage-debt series; the 31st is current |
 | `docs/repo-audit-2026-08-08.md` | The cleanup that removed root `skills/` and `migrated-repos-archive/`, and left `assets/` untracked |
 | `docs/superpowers/plans/` · `docs/superpowers/specs/` | Dated feature plans and design specs |
 | `AGENTS.md` | Repo guidelines + the SakJules PR protocol |
