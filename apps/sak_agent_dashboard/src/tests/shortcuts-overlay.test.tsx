@@ -17,11 +17,11 @@ describe("ShortcutsOverlay", () => {
     expect(screen.getByRole("dialog")).toHaveAttribute("aria-modal", "true");
   });
 
-  it("renders specific accessible label on close button", () => {
+  it("renders specific accessible label and shortcut hint on close button", () => {
     renderShortcutsOverlay();
-    expect(
-      screen.getByRole("button", { name: "Close keyboard shortcuts overlay" }),
-    ).toBeInTheDocument();
+    const closeBtn = screen.getByRole("button", { name: "Close keyboard shortcuts overlay" });
+    expect(closeBtn).toBeInTheDocument();
+    expect(closeBtn).toHaveTextContent("Esc");
   });
 
   it("closes on close button click", () => {

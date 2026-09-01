@@ -118,8 +118,11 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
             ref={closeRef}
             onClick={onClose}
             aria-label="Close keyboard shortcuts overlay"
-            className="shrink-0 rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-raised/60 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="inline-flex items-center gap-1.5 shrink-0 rounded-lg px-2 py-1 text-fg-3 transition-colors hover:bg-raised/60 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
+            <kbd className="rounded border border-line-strong bg-sunken px-1.5 py-0.5 font-mono text-[10px] text-fg-3" aria-hidden>
+              Esc
+            </kbd>
             <X className="h-4 w-4" aria-hidden />
           </button>
         </div>
