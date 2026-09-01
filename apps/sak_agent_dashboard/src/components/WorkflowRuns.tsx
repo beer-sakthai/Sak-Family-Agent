@@ -25,23 +25,23 @@ interface WorkflowRunsProps {
 const STATUS_STYLES: Record<string, { classes: string; icon: React.ReactNode }> = {
   completed: {
     classes: "bg-hue-emerald/10 text-hue-emerald border-hue-emerald-line/30",
-    icon: <CheckCircle2 className="h-3 w-3" />,
+    icon: <CheckCircle2 className="h-3 w-3" aria-hidden />,
   },
   failed: {
     classes: "bg-hue-rose/10 text-hue-rose border-hue-rose-line/30",
-    icon: <XCircle className="h-3 w-3" />,
+    icon: <XCircle className="h-3 w-3" aria-hidden />,
   },
   running: {
     classes: "bg-hue-cyan/10 text-hue-cyan border-hue-cyan-line/30",
-    icon: <Loader2 className="h-3 w-3 animate-spin" />,
+    icon: <Loader2 className="h-3 w-3 animate-spin" aria-hidden />,
   },
   pending: {
     classes: "bg-raised/80 text-fg-3 border-line-strong",
-    icon: <CircleDashed className="h-3 w-3" />,
+    icon: <CircleDashed className="h-3 w-3" aria-hidden />,
   },
   skipped: {
     classes: "bg-panel/80 text-fg-4 border-line",
-    icon: <CircleDashed className="h-3 w-3" />,
+    icon: <CircleDashed className="h-3 w-3" aria-hidden />,
   },
 };
 
