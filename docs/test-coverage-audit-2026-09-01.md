@@ -83,6 +83,43 @@ blocked on the network — inside a full-suite run that takes about 7.5 minutes
 end to end. Both measurement runs stalled at the identical point (12%), so this
 is deterministic, not an unlucky day.
 
+**Confirmed independently on a GitHub runner.** The above was measured in a
+sandbox whose egress is proxied. CI reaches the network differently, so the
+`test (3.11)` job's StepSecurity Harden-Runner egress audit (`EgressPolicy:audit`
+— it records, it does not block) is the better witness. During that job:
+
+```
+00:35:28  domain resolved: registry.npmjs.org., ip address: 104.16.0.34
+00:35:29  endpoint called 104.16.0.34:443, registry.npmjs.org., pid 2963, process: node
+00:35:34  endpoint called 104.16.0.34:443, registry.npmjs.org., pid 2985, process: node
+00:35:36  endpoint called 104.16.0.34:443, registry.npmjs.org., pid 3012, process: node
+00:35:36  endpoint called 104.16.0.34:443, registry.npmjs.org., pid 3034, process: node
+00:35:37  endpoint called 104.16.0.34:443, registry.npmjs.org., pid 3056, process: node
+00:35:43  domain resolved: huggingface.co., ip address: 3.170.185.14
+00:35:43  domain resolved: black-forest-labs-flux-1-schnell.hf.space., ip 52.86.59.147
+00:35:43  endpoint called 3.170.185.14:443, huggingface.co., pid 3095, process: node
+00:35:43  endpoint called 52.86.59.147:443, black-forest-labs-flux-1-schnell.hf.space., pid 3095
+00:35:44  endpoint called 172.217.112.4:443, play.googleapis.com., pid 3018, process: node
+```
+
+Five `node` processes fetching from the npm registry inside the unit-test job,
+and it does not stop at the registry: the servers, once running, reach
+`huggingface.co` and `black-forest-labs-flux-1-schnell.hf.space` — the
+FLUX.1-schnell Space named in SakKing's `hf-media` spec — plus
+`play.googleapis.com`. So the suite's egress is not one package download; it is
+four MCP servers coming up and talking to their own backends, in CI, on every
+push.
+
+**Correction to the cost figure above.** That whole window is 00:35:28–00:35:44,
+about **16 seconds** on the runner, against 4m43s in the sandbox. The wall-time
+cost is therefore environment-specific — it is dominated by how fast `npx` can
+reach the registry — and the "~63% of suite wall time" figure holds for a
+proxied environment, not for CI, where the `test` jobs complete in 2m51s /
+3m06s total. The hermeticity and supply-chain points do not depend on the
+timing and are now demonstrated on CI rather than inferred: treat the runtime
+saving as a local-developer benefit, and the unpinned egress as the reason to
+fix it.
+
 **And the test gains nothing from any of it.** `connect_servers` fails soft
 (`mcp/manager.py:53-56` logs a warning and continues), so with the registry
 unreachable it yields `[]` and the test passes exactly as it does with the
@@ -96,7 +133,8 @@ Three separate problems fall out of one line:
 - **Supply chain** — `npx -y ...@latest` executes whatever the registry serves
   *today*, unpinned, on every contributor's machine and on every CI runner, as
   a side effect of running the tests.
-- **Cost** — roughly 63% of suite wall time for zero assertions.
+- **Cost** — roughly 63% of suite wall time in a proxied environment (~16s on a
+  GitHub runner) for zero assertions.
 
 **Proposal** — the fix is already written three times in the same file. The
 sibling tests at `test_cli.py:1460` and `1514` are the same shape and pass
@@ -342,9 +380,12 @@ Ranked by risk closed per hour, not by coverage points gained. The first two
 change no coverage number at all.
 
 1. **Add `--no-mcp` to `test_cli.py:1397`** (§1). One flag. Removes a live
-   npm-registry dependency and an unpinned remote-code path from the suite, and
-   returns ~63% of its wall time. Then add the `SAKTHAI_MCP_CONFIG` autouse
-   guard so it cannot regress.
+   npm-registry dependency and an unpinned remote-code path from the suite —
+   confirmed on CI by Harden-Runner's egress audit, which also caught the
+   servers reaching `huggingface.co` and a HF Space. Returns ~63% of wall time
+   in a proxied environment; on CI the saving is ~16s and the reason to do it is
+   the egress, not the clock. Then add the `SAKTHAI_MCP_CONFIG` autouse guard so
+   it cannot regress.
 2. **Autouse `HOME`/`SAKTHAI_HOME` fixture + escape guard test** (§3). One
    fixture and one test. Stops 42 fabricated sessions per run entering the
    `search_sessions` corpus, and makes the gate's input reproducible.
