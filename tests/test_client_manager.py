@@ -67,6 +67,31 @@ def test_client_config_mask_sensitive() -> None:
     assert masked["telegram_bot_token"] == "1234...cdef"
 
 
+def test_clients_base_dir_follows_sakthai_home(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """SAKTHAI_HOME scopes the clients dir, like every other sakthai path.
+
+    This used to resolve from Path.home() directly, so a persona running with
+    its own SAKTHAI_HOME still shared one global ~/.sakthai/clients with the
+    other five.
+    """
+    monkeypatch.delenv("SAKTHAI_CLIENTS_DIR", raising=False)
+    monkeypatch.setenv("SAKTHAI_HOME", str(tmp_path / "persona-home"))
+
+    assert get_clients_base_dir() == tmp_path / "persona-home" / "clients"
+
+
+def test_clients_dir_override_beats_sakthai_home(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An explicit SAKTHAI_CLIENTS_DIR still wins over SAKTHAI_HOME."""
+    monkeypatch.setenv("SAKTHAI_HOME", str(tmp_path / "ignored"))
+    monkeypatch.setenv("SAKTHAI_CLIENTS_DIR", str(tmp_path / "explicit"))
+
+    assert get_clients_base_dir() == tmp_path / "explicit"
+
+
 def test_client_save_load_list(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SAKTHAI_CLIENTS_DIR", str(tmp_path))
     assert get_clients_base_dir() == tmp_path

@@ -68,10 +68,11 @@ find personas/<persona>/skills -maxdepth 1 -mindepth 1 -type d | wc -l
 diff -rq personas/shared/sakthai personas/sakthai/sakthai
 # test files, then test count + real coverage
 ls tests/test_*.py | wc -l
-uv run pytest tests/ -q --cov=sakthai --cov-branch   # ~2,292 pass, 8 skip
+uv run pytest tests/ -q --cov=sakthai --cov-branch   # ~2,305 pass, 8 skip
 ```
 
-Everything quoted below was measured on 2026-08-28 at `8e6d785`.
+Everything quoted below was measured on 2026-08-28 at `8e6d785`, except the
+coverage figures, re-measured after the `team/engine.py` tests landed.
 
 ### The persona package copies (read this before editing `sakthai/`)
 
@@ -263,26 +264,42 @@ advanced run fails while default setup is on. See the header of `codeql.yml`.
 `.claude/skills/run-sakthai-agent-v2/driver.py` existing — treat that as
 available tooling, not an enforced gate.
 
-Coverage floor is **96%** (`fail_under = 96`, branch coverage on) over the
-`sakthai` package, with `telegram/bot.py` omitted from measurement. The suite
-sits at **95.86%** — *below* the floor — over 7,708 measured statements and
-2,610 branches. The figure is **not deterministic**: back-to-back runs at
-`8e6d785` gave 213 uncovered statements / 170 partial branches (95.86%) and
-212 / 169 (95.88%), so one statement and one partial branch flap between runs.
-Don't treat a 0.02pp move as a real change, and don't chase it.
+Coverage floor is **96%** (branch coverage on) over the `sakthai` package,
+with `telegram/bot.py` omitted from measurement. The suite sits at **96.21%**
+(191 uncovered statements and 156 partial branches out of 7,710 measured
+statements / 2,610 branches) — above the floor, with 0.21pp of headroom.
 
-pytest prints `FAIL Required test coverage of 96.0% not reached` and exits 1
-locally, but `ci.yml`'s test step still concludes success, so the floor
-does not actually gate the build. The one-line fix — adding
-`--cov-fail-under=96` to `ci.yml`'s pytest step — is known and simply not
-applied yet; see finding 1 of
-[`docs/test-coverage-audit-2026-08-28.md`](docs/test-coverage-audit-2026-08-28.md),
-the third in a series with the
-[26th](docs/test-coverage-audit-2026-08-26.md) and
-[27th](docs/test-coverage-audit-2026-08-27.md). The debt has been frozen at that
-figure across ~76 commits, because nothing pushes back on it.
-Run the lint→pytest sequence locally before pushing; green CI is the bar for
-`main`, but treat the coverage line in its output as the real signal.
+**The gate is `--cov-fail-under=96` on `ci.yml`'s pytest step, not
+`pyproject.toml`.** `[tool.coverage.report] fail_under` alone printed
+`FAIL Required test coverage of 96.0% not reached` while the step still
+concluded success, so the floor went unenforced across ~76 commits — the
+finding common to all three audits
+([26th](docs/test-coverage-audit-2026-08-26.md),
+[27th](docs/test-coverage-audit-2026-08-27.md),
+[28th](docs/test-coverage-audit-2026-08-28.md)). The command-line flag is what
+actually fails the build; keep the two numbers in step when changing either.
+
+**The figure depends on your home directory.** Back-to-back runs on an
+identical tree have differed by one uncovered statement and one partial branch —
+roughly 0.02pp. This is not nondeterminism: the suite writes outside its
+sandbox. `tests/conftest.py` has no autouse fixture, and
+`tests/test_agent_coordinator.py` calls `run_persona_task()` without patching
+`HOME`, so it creates `~/.sakthai/{sakking,saksee}/memory.db` — real persona
+shards, at the paths a deployed persona uses. `memory/store.py:211-217` then
+forks on whether the DB file already exists (create at `0600` vs `chmod`), so a
+pristine home measures one branch and a second run measures the other. The
+databases come out schema-migrated and empty, but the suite is taking a write
+lock on production paths, and nothing stops a future test inserting rows. Fix
+the fixture rather than chasing the statement — see finding 1 of
+[`docs/test-coverage-audit-2026-08-31.md`](docs/test-coverage-audit-2026-08-31.md).
+
+The flap does not threaten the gate today: 0.21pp of headroom is about ten times
+its size. In units that is 21 statements-or-branches, which is less than half of
+what the `client/` subsystem alone landed uncovered — so treat 21 as the working
+budget, and raise coverage rather than lowering the floor.
+
+Run the lint→pytest sequence locally before pushing — a drop below the floor now
+turns CI red rather than passing quietly.
 
 ---
 
@@ -662,9 +679,9 @@ There is no `dashboard.py` here — see the dashboard note below.
   dispatches each step through `agent/coordinator.run_persona_task`), and
   `builtin_pipelines.py` (the shipped pipeline definitions).
 - **`client/`** — ServiceQuoteBot client provisioning behind `sakthai client`:
-  `models.py`, `manager.py` (onboarding; `get_clients_base_dir()` resolves
-  `SAKTHAI_CLIENTS_DIR` or `~/.sakthai/clients` directly, bypassing `config.py`),
-  and `verifier.py` (the pre-flight checks behind `client test`, which also go
+  `models.py`, `manager.py` (onboarding; `get_clients_base_dir()` defers to
+  `config.clients_dir()`, so the workspace root follows `SAKTHAI_CLIENTS_DIR`
+  first and `SAKTHAI_HOME` otherwise), and `verifier.py` (the pre-flight checks behind `client test`, which also go
   through `run_persona_task`). `manager.py` writes `SAKTHAI_DEFAULT_MODEL` /
   `SAKTHAI_DEFAULT_PROVIDER` into each provisioned client's env file.
 - **`extensions/install.py`** — clones skill/MCP bundles from git into
@@ -691,7 +708,7 @@ There is no `dashboard.py` here — see the dashboard note below.
 
 ## Tests
 
-Tests live in `tests/` (106 `test_*.py` files, ~2,300 tests, 26,874 lines
+Tests live in `tests/` (106 `test_*.py` files, ~2,305 tests, ~26,900 lines
 against 17,128 lines of package). This is the only suite for the `sakthai`
 package — there is no per-persona test tree. Two files in `tests/` are not test
 modules: `conftest.py` and `security_audit.py` (a helper, not collected).
@@ -841,7 +858,7 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 | `SAKTHAI_WEB_CORS_ORIGIN` | The single origin the web API echoes in CORS headers; unset = CORS off (used by `make dashboard-dev`) |
 | `SAKTHAI_AGENT_ACTIVE` | Set by the loop itself; the `run_agent_loop` recursion guard reads it |
 | `SAKTHAI_DEFAULT_MODEL` / `SAKTHAI_DEFAULT_PROVIDER` | Written into a provisioned client's env file by `client/manager.py` — not read by the package itself |
-| `SAKTHAI_CLIENTS_DIR` | Override where `sakthai client` stores provisioned client workspaces (default `~/.sakthai/clients`, resolved in `client/manager.py` from `Path.home()` — it does **not** honour `SAKTHAI_HOME`, and is the one path not routed through `config.py`) |
+| `SAKTHAI_CLIENTS_DIR` | Override where `sakthai client` stores provisioned client workspaces (default `SAKTHAI_HOME/clients`, i.e. `~/.sakthai/clients` when `SAKTHAI_HOME` is unset) |
 | `SAKKING_HOME` | Override the SakKing data dir (default `~/.sakking`) for `skills sync-sakking` |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` / `TELEGRAM_ALLOWED_USER_IDS` | Telegram gateway and the `send_telegram_message` tool |
 | `MS_GRAPH_CLIENT_ID` / `MS_GRAPH_TENANT_ID` / `MS_GRAPH_REFRESH_TOKEN` | Microsoft Graph mail + calendar tools (seed via `scripts/graph_device_login.py`) |
@@ -928,7 +945,7 @@ A skill directory may also carry `commands/<name>.md` files, which become
 | `docs/SOUL.md` · `docs/USER.md` · `docs/OPERATING_CONTRACT.md` | Team identity · Beer's profile · agent operating rules |
 | `docs/SECURITY.md` · `docs/security-hardening.md` · `docs/SECURITY_HARDENING_IMPLEMENTATION.md` | Security policy/architecture · audit findings and the prevention pattern + regression test for each · implementation notes |
 | `docs/security_audit_2026-07-11.md` · `docs/security_audit_2026-07-12.md` | Point-in-time audit reports |
-| `docs/test-coverage-audit-2026-08-{26,27,28}.md` | The coverage-debt series; the 28th is current |
+| `docs/test-coverage-audit-2026-08-{26,27,28,31}.md` | The coverage-debt series; the 31st is current |
 | `docs/repo-audit-2026-08-08.md` | The cleanup that removed root `skills/` and `migrated-repos-archive/`, and left `assets/` untracked |
 | `docs/superpowers/plans/` · `docs/superpowers/specs/` | Dated feature plans and design specs |
 | `AGENTS.md` | Repo guidelines + the SakJules PR protocol |

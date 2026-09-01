@@ -31,6 +31,8 @@ clean checkout fails.
 | `src/tests/source.test.ts` | Path resolution, the source-selection rule, query-param clamping |
 | `src/tests/demo.test.ts` | The single demo dataset: determinism and coverage of all six personas |
 | `src/tests/components.test.tsx` | Rendering against contract-shaped data |
+| `src/tests/heatmap.test.tsx` | `buildHeatmap`/`longestStreak` against a pinned "today", plus what the calendar says in text |
+| `src/tests/persona-drawer.test.tsx` | The share figures, and the zero-denominator cases behind them |
 
 ## Two things this suite deliberately does
 

@@ -9,6 +9,7 @@ import CommandPalette, { type Command } from "@/components/CommandPalette";
 import HostedNotice from "@/components/HostedNotice";
 import KpiStrip from "@/components/KpiStrip";
 import MemoryExplorer from "@/components/MemoryExplorer";
+import PersonaDrawer from "@/components/PersonaDrawer";
 import SessionExplorer from "@/components/SessionExplorer";
 import Sidebar from "@/components/shell/Sidebar";
 import TopBar, { REFRESH_INTERVALS, type RefreshInterval } from "@/components/shell/TopBar";
@@ -85,6 +86,7 @@ export default function Home() {
     personas,
     session: sessionId,
     run: runId,
+    agent: agentName,
     trend,
   } = view;
   const isDemo = view.demo;
@@ -260,7 +262,7 @@ export default function Home() {
       // A section change clears the open detail: a transcript id means nothing
       // on the memory panel, and leaving it in the URL would reopen the drawer
       // on the way back.
-      patchView({ tab: nextTab, session: null, run: null });
+      patchView({ tab: nextTab, session: null, run: null, agent: null });
     },
     [patchView],
   );
@@ -291,6 +293,30 @@ export default function Home() {
       patchView({ personas: next, page: 1, session: null });
     },
     [patchView],
+  );
+
+  /**
+   * The persona whose drawer is open, resolved against the payload rather than
+   * trusted from the URL. `parseView` already narrows the name to the known
+   * six, but a name can be known and still absent from a payload that has not
+   * arrived yet — in which case there is simply no drawer, not an empty one.
+   */
+  const activePersona = useMemo(
+    () => personasPayload?.personas.find((item) => item.name === agentName) ?? null,
+    [personasPayload, agentName],
+  );
+
+  const openPersona = useCallback(
+    (name: string) => patchView({ agent: name }),
+    [patchView],
+  );
+
+  const togglePersona = useCallback(
+    (name: string) =>
+      setPersonas(
+        personas.includes(name) ? personas.filter((item) => item !== name) : [...personas, name],
+      ),
+    [personas, setPersonas],
   );
 
   /** What the active panel holds, as rows plus the columns a CSV should use. */
@@ -491,6 +517,60 @@ export default function Home() {
     presenting,
     setPresenting,
   ]);
+
+  /**
+   * The palette's data rows — the personas, the loaded sessions and the loaded
+   * memory facts, each as a command that opens the thing it names.
+   *
+   * This is what makes ⌘K a search rather than a menu. Before it, finding a
+   * transcript meant going to Sessions, typing into the search field and
+   * waiting for a round trip; the rows here are already in the browser, so the
+   * palette answers as you type and the Enter opens the drawer directly.
+   *
+   * Deliberately drawn from what is loaded rather than from a new query: a
+   * palette that fetched its own results could offer a session the list behind
+   * it does not contain, and picking one would land on a page that then has to
+   * explain itself. The cap keeps the unfiltered palette a menu — the fuzzy
+   * ranker reaches the rest as soon as there is a query.
+   */
+  const dataCommands = useMemo<Command[]>(() => {
+    const rows: Command[] = [];
+
+    for (const persona of personasPayload?.personas ?? []) {
+      rows.push({
+        id: `persona-${persona.name}`,
+        label: persona.display_name,
+        hint: `${persona.runs} run${persona.runs === 1 ? "" : "s"} · ${persona.model || "no configured model"}`,
+        group: "Personas",
+        run: () => {
+          goToTab("overview");
+          openPersona(persona.name);
+        },
+      });
+    }
+
+    for (const session of (sessions?.sessions ?? []).slice(0, 12)) {
+      rows.push({
+        id: `session-${session.id}`,
+        label: session.task || session.id,
+        hint: `${session.persona ?? "unattributed"} · ${session.model} · ${session.stop_reason}`,
+        group: "Sessions",
+        run: () => patchView({ tab: "sessions", session: session.id, run: null, agent: null }),
+      });
+    }
+
+    for (const fact of (memory?.facts ?? []).slice(0, 12)) {
+      rows.push({
+        id: `fact-${fact.id}`,
+        label: fact.key ?? fact.value.slice(0, 60),
+        hint: `${fact.persona} · ${fact.kind}`,
+        group: "Memory",
+        run: () => goToTab("memory"),
+      });
+    }
+
+    return rows;
+  }, [personasPayload, sessions, memory, goToTab, openPersona, patchView]);
 
   const paletteActions = useMemo<Command[]>(
     () => [
@@ -706,6 +786,8 @@ export default function Home() {
                   personas={personasPayload}
                   selected={personas}
                   onSelect={setPersonas}
+                  onOpenDetail={openPersona}
+                  trends={metrics?.trends}
                 />
               ) : (
                 <CardGridSkeleton />
@@ -799,7 +881,23 @@ export default function Home() {
         <CommandPalette
           onClose={() => setPaletteOpen(false)}
           onNavigate={goToTab}
-          actions={paletteActions}
+          actions={[...paletteActions, ...dataCommands]}
+        />
+      )}
+
+      {/* Rendered from the page rather than from inside AgentOverview: the
+          drawer states each figure as a share of the family, so it needs the
+          whole payload, and it stays open across a section change only if the
+          page owns it. `goToTab` closes it, which is what the drawer's own
+          navigation buttons rely on. */}
+      {activePersona && personasPayload && (
+        <PersonaDrawer
+          persona={activePersona}
+          family={personasPayload.personas}
+          filtered={personas.includes(activePersona.name)}
+          onToggleFilter={() => togglePersona(activePersona.name)}
+          onNavigate={goToTab}
+          onClose={() => patchView({ agent: null })}
         />
       )}
 

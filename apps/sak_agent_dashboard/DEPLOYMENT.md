@@ -51,6 +51,12 @@ For live data, set both in **Project Settings → Environment Variables**:
 | `SAKTHAI_API_URL` | Base URL of a reachable `sakthai web serve` |
 | `SAKTHAI_API_TOKEN` | Bearer token from `sakthai web setup` |
 
+And one more, only once a custom domain is in front of the deployment:
+
+| Variable | Value |
+|---|---|
+| `NEXT_PUBLIC_SITE_URL` | `https://your-domain` — the origin metadata URLs resolve against |
+
 See [`.env.example`](./.env.example) for the full list. Note that
 `sakthai web serve` refuses non-loopback binds unless `SAKTHAI_WEB_ALLOW_PUBLIC`
 is set, so exposing it to Vercel means a tunnel or a reverse proxy — not a
@@ -90,7 +96,28 @@ public bind on a whim.
 
 - `/manifest.webmanifest` makes the dashboard installable as a standalone
   app, which is the useful shape for a wall-mounted tab. `/opengraph-image`
-  renders the social card at request time on the edge runtime.
+  renders the social card at request time on the Node runtime — it used to pin
+  itself to the edge runtime, which is deprecated and which also disabled
+  static generation for that route. `vercel.json` gives the card, the icon,
+  the manifest and `robots.txt` a day of shared-cache lifetime, which is what
+  actually keeps them from re-rendering per crawl; nothing under `/api/` is
+  cached at all.
+
+- **Set `NEXT_PUBLIC_SITE_URL` on a custom domain.** Metadata URLs resolve
+  against `metadataBase`, and without one Next resolves them against
+  `http://localhost:3000` and says so at build time — which means every social
+  card the deployment serves points at the builder's machine. `layout.tsx`
+  falls back to `VERCEL_PROJECT_PRODUCTION_URL` (the stable production
+  hostname) and then `VERCEL_URL` (which names the individual deployment, so it
+  changes on every push), so a plain `*.vercel.app` deploy is already correct
+  and the variable is only needed once a custom domain is in front of it.
+
+- `next.config.mjs` turns off `X-Powered-By` — it names the framework on every
+  response and buys nothing, and it is the one header `vercel.json` cannot
+  remove. It also names `lucide-react` and `recharts` under
+  `experimental.optimizePackageImports`: both are barrel files, and an
+  unqualified import of one icon otherwise pulls the whole index into the
+  module graph.
 
 ## Verifying a deploy
 
