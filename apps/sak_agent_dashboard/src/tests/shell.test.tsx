@@ -374,6 +374,21 @@ describe("CommandPalette", () => {
     fireEvent.click(screen.getByLabelText("Close command palette"));
     expect(props.onClose).toHaveBeenCalledTimes(2);
   });
+
+  it("clears search query when clear button is clicked", () => {
+    renderPalette();
+    const input = screen.getByLabelText("Search commands");
+    expect(screen.queryByLabelText("Clear search query")).not.toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "guardrail" } });
+    expect(screen.getAllByRole("option")).toHaveLength(1);
+
+    const clearBtn = screen.getByLabelText("Clear search query");
+    fireEvent.click(clearBtn);
+
+    expect(input).toHaveValue("");
+    expect(screen.getAllByRole("option")).toHaveLength(NAV_ITEMS.length + actions.length);
+  });
 });
 
 describe("HostedNotice", () => {
