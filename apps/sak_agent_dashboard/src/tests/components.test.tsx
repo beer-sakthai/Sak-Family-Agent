@@ -245,9 +245,14 @@ describe("MemoryExplorer", () => {
 
   it("switches to observations and links tabpanel to tab", () => {
     render(<MemoryExplorer memory={demoMemory()} />);
-    expect(screen.getByRole("tabpanel", { name: /Facts/ })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: /Observations/ }));
-    expect(screen.getByRole("tabpanel", { name: /Observations/ })).toBeInTheDocument();
+    expect(screen.getByRole("tabpanel", { name: /Facts/ })).toHaveAttribute("id", "panel-facts");
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+    expect(obsTab).toHaveAttribute("aria-controls", "panel-observations");
+    fireEvent.click(obsTab);
+    expect(screen.getByRole("tabpanel", { name: /Observations/ })).toHaveAttribute(
+      "id",
+      "panel-observations",
+    );
     expect(screen.getByText("Works late into the evening most days")).toBeInTheDocument();
   });
 
