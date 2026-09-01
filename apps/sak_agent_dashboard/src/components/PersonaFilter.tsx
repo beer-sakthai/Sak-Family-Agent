@@ -87,6 +87,7 @@ export function PersonaFilter({ selected, onChange, counts }: PersonaFilterProps
             role="button"
             tabIndex={0}
             aria-label="Clear persona filter"
+            title="Clear persona filter"
             onClick={(event) => {
               event.stopPropagation();
               onChange([]);
