@@ -47,6 +47,15 @@ detail, demo flag — serialises into the URL fragment as
 is therefore linkable and survives a reload, and the back button walks it.
 Panels do not own their open detail id; the page passes it down.
 
+Three fields carry an open detail, and they are deliberately separate:
+`session` and `run` name a transcript and a workflow run, and `agent` names the
+persona whose drawer is open. `agent` is not the persona *filter* — that is
+`persona`, which narrows every panel — so `#overview?persona=sakthai&agent=saksee`
+is a coherent view: the family narrowed to SakThai, with SakSee's card open.
+Both are narrowed to the known six on parse; an unknown name in either is
+dropped rather than carried into a fetch or into a drawer with nothing behind
+it.
+
 ### Data layer
 
 One seam, `src/lib/source.ts`, with three implementations. `resolveSource()`
@@ -118,6 +127,7 @@ src/
 │   ├── Drawer.tsx · Toasts.tsx · Skeletons.tsx · HostedNotice.tsx
 │   ├── DisplayMenu.tsx · PersonaFilter.tsx · DemoModeToggle.tsx
 │   ├── AgentCard.tsx · AgentOverview.tsx · AnalyticsCharts.tsx
+│   ├── ActivityHeatmap.tsx · PersonaDrawer.tsx
 │   ├── SessionExplorer.tsx · MemoryExplorer.tsx · AuditLogs.tsx
 │   └── WorkflowRuns.tsx · StitchStudio.tsx
 ├── lib/
@@ -159,6 +169,45 @@ and description (`lib/fuzzy.ts`): "usd" finds *Use sample data*, "ovw" finds
 *Overview*. Consecutive and word-initial characters score highest, a label hit
 outranks a description hit, and the matched characters are underlined in the
 row so a non-obvious match explains itself rather than looking like a bug.
+
+It ranks **data as well as commands**. Alongside the sections and the actions,
+`page.tsx` passes the six personas, the loaded sessions and the loaded memory
+facts, each as a row that opens the thing it names — so ⌘K is a search over
+what is on screen rather than a menu of what the app can do. The rows come from
+the payloads already in the browser rather than from a query of their own: a
+palette that fetched its own results could offer a session the list behind it
+does not contain, and picking one would land on a page that then has to explain
+itself.
+
+### The Overview
+
+Two surfaces beyond the card grid:
+
+- **`ActivityHeatmap`** draws the recorded run history as a calendar of the
+  last ninety days — the one question the Analytics line charts answer badly,
+  which is *when* rather than *how much*. Plain `<div>`s rather than a chart
+  library: ninety 11px cells with no axes and no scales do not need one. The
+  grid is `aria-hidden` and the accessible content is the sentence beside it,
+  plus the four figures the picture implies but cannot state — active days,
+  longest streak, busiest day, runs per active day. A day the source never
+  reported and a day it reported as zero both draw empty, and the cell's title
+  distinguishes them ("no data" versus "0 runs") rather than asserting a
+  confident zero.
+
+- **`PersonaDrawer`** opens from a card's *Details* control and states each of
+  that persona's figures as a **share of the family**. That is the whole point
+  of it: "82 runs" on a card says nothing about whether that is most of the
+  family's work or a rounding error next to SakThai. Every share has a
+  denominator that can be zero — a family with no errors at all — and reads
+  "no family total" rather than `NaN`. It reads nothing the Overview did not
+  already have, so opening one cannot show a different refresh from the card
+  behind it.
+
+  The card carries two controls now, and they are **siblings, not nested**: the
+  filter toggle is a stretched overlay button covering the card, and *Details*
+  sits above it. A `<button>` inside a `<button>` is invalid, and browsers
+  resolve it by dropping one of the two. A card with no detail handler stays
+  the single button it always was.
 
 ### Presentation mode
 
@@ -224,8 +273,11 @@ deploy: [`DEPLOYMENT.md`](./DEPLOYMENT.md). Environment variables:
 ## Status
 
 M1–M3 (scaffold, data layer, UI) and M4 (testing and build) are complete: `npm
-run lint`, `npm run build`, `tsc --noEmit` and `npm test` all pass, and
-`.github/workflows/apps.yml` runs them on every change under `apps/`.
+run lint`, `npm run build`, `tsc --noEmit` and `npm test` (433 tests) all pass,
+and `.github/workflows/apps.yml` runs them on every change under `apps/`. The
+build is warning-free — both of the warnings it used to emit were real deploy
+faults, and both are fixed rather than silenced; see
+[DEPLOYMENT.md](./DEPLOYMENT.md).
 
 
 ## Keyboard

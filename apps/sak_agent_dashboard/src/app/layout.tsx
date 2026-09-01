@@ -27,7 +27,27 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+/**
+ * The origin relative metadata URLs resolve against.
+ *
+ * Without it Next resolves the OG image against `http://localhost:3000` and
+ * says so at build time — which means every social card a deployment serves
+ * points at the builder's own machine. `NEXT_PUBLIC_SITE_URL` is the explicit
+ * answer (a custom domain); `VERCEL_PROJECT_PRODUCTION_URL` is the stable
+ * production hostname Vercel injects, in preference to `VERCEL_URL`, which
+ * names the individual deployment and so changes on every push.
+ */
+function siteUrl(): URL {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL;
+  if (explicit) return new URL(explicit);
+  const vercel =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
+  if (vercel) return new URL(`https://${vercel}`);
+  return new URL("http://localhost:3000");
+}
+
 export const metadata: Metadata = {
+  metadataBase: siteUrl(),
   title: {
     default: "Sak-Agent-Family Dashboard",
     template: "%s · Sak-Agent-Family",

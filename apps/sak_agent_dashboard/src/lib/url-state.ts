@@ -48,6 +48,11 @@ export interface ViewState {
   session: string | null;
   /** Open workflow run, if any. */
   run: string | null;
+  /**
+   * Open persona detail, if any. Distinct from `personas`: that is the filter
+   * applied to every panel, this is the one card whose drawer is open.
+   */
+  agent: string | null;
   /** Whether sample data was explicitly requested. */
   demo: boolean;
   /** How many days of trend the analytics charts draw. */
@@ -62,6 +67,7 @@ export const DEFAULT_VIEW: ViewState = {
   personas: [],
   session: null,
   run: null,
+  agent: null,
   demo: false,
   trend: 30,
 };
@@ -93,6 +99,7 @@ export function parseView(hash: string): ViewState {
     .split(",")
     .map((part) => part.trim().toLowerCase())
     .filter((part) => known.has(part));
+  const agent = (params.get("agent") ?? "").trim().toLowerCase();
 
   return {
     tab: isTabId(rawTab) ? rawTab : DEFAULT_VIEW.tab,
@@ -103,6 +110,10 @@ export function parseView(hash: string): ViewState {
     personas: [...new Set(personas)],
     session: params.get("session") || null,
     run: params.get("run") || null,
+    // Narrowed the same way the filter is: an unknown name would open a drawer
+    // with no persona behind it, which renders as an empty panel rather than
+    // as the bad link it actually is.
+    agent: known.has(agent) ? agent : null,
     demo: params.get("demo") === "1",
     trend: (TREND_WINDOWS as readonly number[]).includes(trend)
       ? (trend as TrendWindow)
@@ -125,6 +136,7 @@ export function serializeView(view: ViewState): string {
   if (view.personas.length > 0) params.set("persona", view.personas.join(","));
   if (view.session) params.set("session", view.session);
   if (view.run) params.set("run", view.run);
+  if (view.agent) params.set("agent", view.agent);
   if (view.demo) params.set("demo", "1");
   if (view.trend !== DEFAULT_VIEW.trend) params.set("trend", String(view.trend));
 
