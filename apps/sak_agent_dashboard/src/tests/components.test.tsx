@@ -238,6 +238,37 @@ describe("MemoryExplorer", () => {
     expect(factsTab.className).toContain("focus-visible:ring-offset-canvas");
   });
 
+  it("uses roving tabIndex for active and inactive tabs", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const factsTab = screen.getByRole("tab", { name: /Facts/ });
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+    expect(factsTab).toHaveAttribute("tabIndex", "0");
+    expect(obsTab).toHaveAttribute("tabIndex", "-1");
+
+    fireEvent.click(obsTab);
+    expect(factsTab).toHaveAttribute("tabIndex", "-1");
+    expect(obsTab).toHaveAttribute("tabIndex", "0");
+  });
+
+  it("supports keyboard arrow and home/end navigation between tabs", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const tablist = screen.getByRole("tablist", { name: "Memory Explorer tabs" });
+    const factsTab = screen.getByRole("tab", { name: /Facts/ });
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(obsTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(tablist, { key: "ArrowLeft" });
+    expect(factsTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(tablist, { key: "End" });
+    expect(obsTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(tablist, { key: "Home" });
+    expect(factsTab).toHaveAttribute("aria-selected", "true");
+  });
+
   it("shows facts by default", () => {
     render(<MemoryExplorer memory={demoMemory()} />);
     expect(screen.getByText("Prefers a dark, low-contrast terminal")).toBeInTheDocument();

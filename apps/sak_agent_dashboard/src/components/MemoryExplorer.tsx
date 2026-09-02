@@ -20,21 +20,18 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
   const facts = memory.facts;
   const observations = memory.observations;
 
-  const handleTabKeyDown = (
-    event: React.KeyboardEvent,
-    currentTab: "facts" | "observations",
-  ) => {
-    if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-      event.preventDefault();
-      const nextTab = currentTab === "facts" ? "observations" : "facts";
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      const nextTab = activeTab === "facts" ? "observations" : "facts";
       setActiveTab(nextTab);
       document.getElementById(`tab-${nextTab}`)?.focus();
-    } else if (event.key === "Home") {
-      event.preventDefault();
+    } else if (e.key === "Home") {
+      e.preventDefault();
       setActiveTab("facts");
       document.getElementById("tab-facts")?.focus();
-    } else if (event.key === "End") {
-      event.preventDefault();
+    } else if (e.key === "End") {
+      e.preventDefault();
       setActiveTab("observations");
       document.getElementById("tab-observations")?.focus();
     }
@@ -67,13 +64,19 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
         </div>
       </div>
 
-      <div role="tablist" aria-label="Memory Explorer tabs" className="flex items-center gap-2">
+      <div
+        role="tablist"
+        aria-label="Memory Explorer tabs"
+        onKeyDown={handleKeyDown}
+        className="flex items-center gap-2"
+      >
         <button
           id="tab-facts"
           role="tab"
           tabIndex={activeTab === "facts" ? 0 : -1}
           aria-selected={activeTab === "facts"}
           aria-controls="panel-facts"
+          tabIndex={activeTab === "facts" ? 0 : -1}
           onClick={() => setActiveTab("facts")}
           onKeyDown={(e) => handleTabKeyDown(e, "facts")}
           className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
@@ -91,6 +94,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           tabIndex={activeTab === "observations" ? 0 : -1}
           aria-selected={activeTab === "observations"}
           aria-controls="panel-observations"
+          tabIndex={activeTab === "observations" ? 0 : -1}
           onClick={() => setActiveTab("observations")}
           onKeyDown={(e) => handleTabKeyDown(e, "observations")}
           className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
