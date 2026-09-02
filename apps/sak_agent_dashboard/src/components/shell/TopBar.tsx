@@ -210,8 +210,8 @@ export function TopBar({
               }
             }}
             aria-pressed={presenting}
-            aria-label="Toggle presentation mode"
-            title={presenting ? "Leave presentation mode" : "Presentation mode"}
+            aria-label={presenting ? "Exit presentation mode" : "Enter presentation mode"}
+            title={presenting ? "Exit presentation mode" : "Enter presentation mode"}
             className="rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             {presenting ? (
