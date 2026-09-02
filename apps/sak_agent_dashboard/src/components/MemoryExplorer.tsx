@@ -20,6 +20,23 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
   const facts = memory.facts;
   const observations = memory.observations;
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      const nextTab = activeTab === "facts" ? "observations" : "facts";
+      setActiveTab(nextTab);
+      document.getElementById(`tab-${nextTab}`)?.focus();
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      setActiveTab("facts");
+      document.getElementById("tab-facts")?.focus();
+    } else if (e.key === "End") {
+      e.preventDefault();
+      setActiveTab("observations");
+      document.getElementById("tab-observations")?.focus();
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -47,12 +64,18 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
         </div>
       </div>
 
-      <div role="tablist" aria-label="Memory Explorer tabs" className="flex items-center gap-2">
+      <div
+        role="tablist"
+        aria-label="Memory Explorer tabs"
+        onKeyDown={handleKeyDown}
+        className="flex items-center gap-2"
+      >
         <button
           id="tab-facts"
           role="tab"
           aria-selected={activeTab === "facts"}
           aria-controls="panel-facts"
+          tabIndex={activeTab === "facts" ? 0 : -1}
           onClick={() => setActiveTab("facts")}
           className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
             activeTab === "facts"
@@ -68,6 +91,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           role="tab"
           aria-selected={activeTab === "observations"}
           aria-controls="panel-observations"
+          tabIndex={activeTab === "observations" ? 0 : -1}
           onClick={() => setActiveTab("observations")}
           className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
             activeTab === "observations"
