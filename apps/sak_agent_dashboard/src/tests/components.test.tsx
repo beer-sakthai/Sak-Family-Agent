@@ -297,6 +297,38 @@ describe("MemoryExplorer", () => {
     render(<MemoryExplorer memory={empty} />);
     expect(screen.getByText("No memory facts found.")).toBeInTheDocument();
   });
+
+  it("sets tabIndex=0 on the active tab and tabIndex=-1 on inactive tabs", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const factsTab = screen.getByRole("tab", { name: /Facts/ });
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+
+    expect(factsTab).toHaveAttribute("tabindex", "0");
+    expect(obsTab).toHaveAttribute("tabindex", "-1");
+
+    fireEvent.click(obsTab);
+
+    expect(factsTab).toHaveAttribute("tabindex", "-1");
+    expect(obsTab).toHaveAttribute("tabindex", "0");
+  });
+
+  it("navigates tabs using Arrow keys and Home/End keys", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const factsTab = screen.getByRole("tab", { name: /Facts/ });
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+
+    fireEvent.keyDown(factsTab, { key: "ArrowRight" });
+    expect(obsTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(obsTab, { key: "ArrowLeft" });
+    expect(factsTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(factsTab, { key: "End" });
+    expect(obsTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(obsTab, { key: "Home" });
+    expect(factsTab).toHaveAttribute("aria-selected", "true");
+  });
 });
 
 describe("AuditLogs", () => {
