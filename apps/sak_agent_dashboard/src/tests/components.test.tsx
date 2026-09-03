@@ -16,6 +16,7 @@ import AgentOverview from "@/components/AgentOverview";
 import AnalyticsCharts from "@/components/AnalyticsCharts";
 import AuditLogs from "@/components/AuditLogs";
 import DemoModeToggle from "@/components/DemoModeToggle";
+import DisplayMenu from "@/components/DisplayMenu";
 import MemoryExplorer from "@/components/MemoryExplorer";
 import SessionExplorer from "@/components/SessionExplorer";
 import WorkflowRuns from "@/components/WorkflowRuns";
@@ -581,6 +582,49 @@ describe("WorkflowRuns", () => {
       <WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
     );
     expect(screen.queryByTestId("workflows-family-wide")).not.toBeInTheDocument();
+  });
+});
+
+describe("DisplayMenu", () => {
+  it("opens menu on trigger click and navigates radio items via Arrow keys and Home/End", () => {
+    const onThemeChange = vi.fn();
+    const onDensityChange = vi.fn();
+
+    render(
+      <DisplayMenu
+        theme="system"
+        onThemeChange={onThemeChange}
+        density="comfortable"
+        onDensityChange={onDensityChange}
+        prefersLight={false}
+      />
+    );
+
+    const trigger = screen.getByRole("button", { name: "Display settings" });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    fireEvent.click(trigger);
+    const menu = screen.getByRole("menu", { name: "Display settings" });
+    expect(menu).toBeInTheDocument();
+
+    const menuItems = screen.getAllByRole("menuitemradio");
+    expect(menuItems).toHaveLength(5); // 3 themes + 2 densities
+
+    // Initial focus can be set or driven by ArrowDown
+    fireEvent.keyDown(menu, { key: "ArrowDown" });
+    expect(menuItems[0]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[0], { key: "ArrowDown" });
+    expect(menuItems[1]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[1], { key: "ArrowUp" });
+    expect(menuItems[0]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[0], { key: "End" });
+    expect(menuItems[4]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[4], { key: "Home" });
+    expect(menuItems[0]).toHaveFocus();
   });
 });
 
