@@ -1,9 +1,10 @@
 import os
 from pathlib import Path
 
+
 def find_skills():
     skills = []
-    for root, dirs, files in os.walk("skills/sakthai"):
+    for root, _dirs, files in os.walk("skills/sakthai"):
         if "SKILL.md" in files:
             skills.append(Path(root) / "SKILL.md")
     return skills
