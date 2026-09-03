@@ -76,9 +76,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           tabIndex={activeTab === "facts" ? 0 : -1}
           aria-selected={activeTab === "facts"}
           aria-controls="panel-facts"
-          tabIndex={activeTab === "facts" ? 0 : -1}
           onClick={() => setActiveTab("facts")}
-          onKeyDown={(e) => handleTabKeyDown(e, "facts")}
           className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
             activeTab === "facts"
               ? "bg-hue-cyan-tint/50 text-hue-cyan border-hue-cyan-line/50"
@@ -94,9 +92,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           tabIndex={activeTab === "observations" ? 0 : -1}
           aria-selected={activeTab === "observations"}
           aria-controls="panel-observations"
-          tabIndex={activeTab === "observations" ? 0 : -1}
           onClick={() => setActiveTab("observations")}
-          onKeyDown={(e) => handleTabKeyDown(e, "observations")}
           className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
             activeTab === "observations"
               ? "bg-hue-violet-tint/50 text-hue-violet border-hue-violet-line/50"
