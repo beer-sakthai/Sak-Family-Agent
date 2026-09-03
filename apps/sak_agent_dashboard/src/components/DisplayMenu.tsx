@@ -43,16 +43,40 @@ export function DisplayMenu({
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  // Close on Escape or on a click outside. Both listeners are attached only
-  // while the menu is open, so a closed menu costs nothing.
+  // Close on Escape or on a click outside, and handle arrow key navigation.
+  // Both listeners are attached only while the menu is open.
   useEffect(() => {
     if (!open) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.stopPropagation();
-      setOpen(false);
-      triggerRef.current?.focus();
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        setOpen(false);
+        triggerRef.current?.focus();
+        return;
+      }
+
+      if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+        const items = containerRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]');
+        if (!items || items.length === 0) return;
+
+        const itemsArray = Array.from(items);
+        const currentIndex = itemsArray.indexOf(document.activeElement as HTMLButtonElement);
+
+        event.preventDefault();
+
+        if (event.key === "Home") {
+          itemsArray[0]?.focus();
+        } else if (event.key === "End") {
+          itemsArray[itemsArray.length - 1]?.focus();
+        } else if (event.key === "ArrowDown") {
+          const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % itemsArray.length;
+          itemsArray[nextIndex]?.focus();
+        } else if (event.key === "ArrowUp") {
+          const prevIndex = currentIndex <= 0 ? itemsArray.length - 1 : currentIndex - 1;
+          itemsArray[prevIndex]?.focus();
+        }
+      }
     };
     const onPointerDown = (event: PointerEvent) => {
       if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
