@@ -23,7 +23,7 @@ def finalize_skill(path):
     try:
         front = yaml.safe_load(frontmatter)
         name = front.get("name", "Skill")
-    except:
+    except Exception:
         name = "Skill"
 
     # Standardize H1: use the name if no H1 exists
