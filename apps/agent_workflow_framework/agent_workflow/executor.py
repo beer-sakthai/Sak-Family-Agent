@@ -5,29 +5,28 @@ state interpolation, step retries, downstream failure short-circuiting, and acti
 """
 
 import asyncio
-import copy
 import json
 import os
-import sys
-import time
+import shlex
 import urllib.parse
 import urllib.request
 import uuid
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Callable, Set
+from typing import Any
 
-from agent_workflow.dag import validate_workflow_dag, build_topological_batches
+from agent_workflow.dag import build_topological_batches, validate_workflow_dag
 from agent_workflow.models import (
-    WorkflowDefinition,
+    RunHistory,
+    RunStatus,
     StepDefinition,
     StepResult,
     StepStatus,
-    RunHistory,
-    RunStatus,
+    WorkflowDefinition,
 )
 from agent_workflow.persistence import RunHistoryStore
-from agent_workflow.state import StateContext, StateInterpolationError
+from agent_workflow.state import StateContext
 
 
 class ExecutionError(Exception):
@@ -60,7 +59,7 @@ def _validate_filepath(filepath: Any) -> Path:
     try:
         target = Path(path_str).resolve()
     except Exception as exc:
-        raise ValueError(f"Invalid file path '{path_str}': {exc}")
+        raise ValueError(f"Invalid file path '{path_str}': {exc}") from exc
 
     # Critical system roots (e.g., /etc, /bin, /var, /boot, /dev, /lib, /lib64, /proc, /sys, /sbin, /usr)
     parts = [p.lower() for p in target.parts]
@@ -184,14 +183,14 @@ def _validate_filepath(filepath: Any) -> Path:
 class WorkflowExecutor:
     """Asynchronous workflow execution engine."""
 
-    def __init__(self, storage_dir: Optional[Path] = None, max_workers: int = 4):
+    def __init__(self, storage_dir: Path | None = None, max_workers: int = 4):
         """Initialize WorkflowExecutor with optional custom history store directory."""
         self.store = RunHistoryStore(storage_dir)
         self.max_workers = max_workers
 
     async def _execute_action(
-        self, action: str, params: Dict[str, Any], step_id: str
-    ) -> Dict[str, Any]:
+        self, action: str, params: dict[str, Any], step_id: str
+    ) -> dict[str, Any]:
         """Dispatch step action to built-in action handlers."""
         act = (action or "").lower().strip()
 
@@ -205,8 +204,16 @@ class WorkflowExecutor:
                     f"Step '{step_id}' action '{action}' missing 'cmd' or 'command' parameter."
                 )
 
-            proc = await asyncio.create_subprocess_shell(
-                str(cmd),
+            try:
+                args = shlex.split(str(cmd))
+            except ValueError as e:
+                raise ValueError(f"Invalid command string: {e}") from e
+
+            if not args:
+                raise ValueError("Command string is empty after parsing")
+
+            proc = await asyncio.create_subprocess_exec(
+                *args,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -293,7 +300,7 @@ class WorkflowExecutor:
                 res = ast.literal_eval(str(code))
                 return {"result": res, "output": res}
             except (ValueError, SyntaxError) as exc:
-                raise ValueError(f"Invalid or unsafe expression in python action: {exc}")
+                raise ValueError(f"Invalid or unsafe expression in python action: {exc}") from exc
 
         elif act == "fail_then_succeed":
             if not hasattr(self, "_transient_attempts"):
@@ -320,7 +327,7 @@ class WorkflowExecutor:
             try:
                 parsed = urllib.parse.urlparse(url_str)
             except Exception as e:
-                raise ValueError(f"Invalid URL: {url_str}. Error: {e}")
+                raise ValueError(f"Invalid URL: {url_str}. Error: {e}") from e
 
             scheme = (parsed.scheme or "").lower()
             if scheme not in ("http", "https"):
@@ -337,8 +344,8 @@ class WorkflowExecutor:
                 port = 443 if scheme == "https" else 80
 
             try:
-                import socket
                 import ipaddress
+                import socket
 
                 addrinfos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
                 for _family, _type, _proto, _canon, sockaddr in addrinfos:
@@ -355,7 +362,7 @@ class WorkflowExecutor:
             except ValueError:
                 raise
             except Exception as e:
-                raise RuntimeError(f"DNS Resolution failed for host '{host}': {e}")
+                raise RuntimeError(f"DNS Resolution failed for host '{host}': {e}") from e
 
             req = urllib.request.Request(url_str, headers=params.get("headers", {}))
 
@@ -420,8 +427,8 @@ class WorkflowExecutor:
     async def execute_workflow(
         self,
         workflow: WorkflowDefinition,
-        run_id: Optional[str] = None,
-        status_callback: Optional[Callable[[str, StepResult], None]] = None,
+        run_id: str | None = None,
+        status_callback: Callable[[str, StepResult], None] | None = None,
     ) -> RunHistory:
         """Execute a WorkflowDefinition asynchronously."""
         # 1. Pre-flight DAG validation
@@ -443,16 +450,14 @@ class WorkflowExecutor:
         self.store.save_run_history(history)
 
         state_ctx = StateContext()
-        failed_step_ids: Set[str] = set()
-        skipped_step_ids: Set[str] = set()
+        failed_step_ids: set[str] = set()
+        skipped_step_ids: set[str] = set()
 
         # Build topological execution batches
         batches = build_topological_batches(workflow)
-        step_dict = {s.id: s for s in workflow.steps}
-
         for batch in batches:
             # Filter out skipped steps whose upstream dependencies failed
-            runnable_steps: List[StepDefinition] = []
+            runnable_steps: list[StepDefinition] = []
             for step in batch:
                 # Check if any dependency failed or was skipped
                 has_failed_dep = any(
@@ -464,7 +469,7 @@ class WorkflowExecutor:
                         step_id=step.id,
                         status=StepStatus.SKIPPED,
                         output={},
-                        error=f"Skipped due to upstream step failure.",
+                        error="Skipped due to upstream step failure.",
                         attempts=0,
                         start_time=datetime.now().isoformat(),
                         end_time=datetime.now().isoformat(),
@@ -482,7 +487,7 @@ class WorkflowExecutor:
             async def _run_single_step(step: StepDefinition) -> StepResult:
                 step_start = datetime.now().isoformat()
                 max_attempts = max(1, (step.retry or 0) + 1)
-                last_error: Optional[str] = None
+                last_error: str | None = None
 
                 for attempt in range(1, max_attempts + 1):
                     try:
@@ -518,7 +523,7 @@ class WorkflowExecutor:
                 )
 
             # Execute batch tasks concurrently
-            batch_results: List[StepResult] = await asyncio.gather(
+            batch_results: list[StepResult] = await asyncio.gather(
                 *[_run_single_step(step) for step in runnable_steps]
             )
 
