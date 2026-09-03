@@ -10,6 +10,7 @@ import json
 import os
 import sys
 import time
+import ast
 import urllib.parse
 import urllib.request
 import uuid
@@ -181,6 +182,14 @@ def _validate_filepath(filepath: Any) -> Path:
     return target
 
 
+def _safe_python_eval(source_code: str) -> Any:
+    """Evaluate a Python expression safely with length limits and AST literal parsing."""
+    if len(source_code) > 10000:
+        raise ValueError("Source code exceeds 10000 characters limit.")
+
+    return ast.literal_eval(source_code)
+
+
 class WorkflowExecutor:
     """Asynchronous workflow execution engine."""
 
@@ -287,10 +296,8 @@ class WorkflowExecutor:
             if not code:
                 return dict(params)
 
-            import ast
-
             try:
-                res = ast.literal_eval(str(code))
+                res = _safe_python_eval(str(code))
                 return {"result": res, "output": res}
             except (ValueError, SyntaxError) as exc:
                 raise ValueError(f"Invalid or unsafe expression in python action: {exc}")
