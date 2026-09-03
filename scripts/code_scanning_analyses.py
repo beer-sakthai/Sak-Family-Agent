@@ -76,14 +76,31 @@ class ApiError(RuntimeError):
     """An API call failed in a way the caller should see verbatim."""
 
 
+def _get_next_url(link_header: str | None) -> str | None:
+    """Extract the next URL from a Link header."""
+    if not link_header:
+        return None
+    for link in link_header.split(","):
+        parts = link.split(";")
+        if len(parts) >= 2:
+            url_part = parts[0].strip()
+            rel_part = parts[1].strip()
+            if url_part.startswith("<") and url_part.endswith(">") and rel_part == 'rel="next"':
+                return url_part[1:-1]
+    return None
+
+
 def _request(
     method: str,
     path: str,
     token: str,
     params: dict[str, Any] | None = None,
-) -> tuple[int, Any]:
-    """Perform one API call. Returns ``(status, parsed_body_or_None)``."""
-    url = f"{API_ROOT}{path}"
+) -> tuple[int, Any, str | None]:
+    """Perform one API call. Returns ``(status, parsed_body_or_None, next_url)``."""
+    if path.startswith("http://") or path.startswith("https://"):
+        url = path
+    else:
+        url = f"{API_ROOT}{path}"
     if params:
         url = f"{url}?{urllib.parse.urlencode(params)}"
     req = urllib.request.Request(url, method=method)
@@ -96,21 +113,24 @@ def _request(
         # carried the ruff equivalent (`noqa: S310`) but not the bandit one.
         with urllib.request.urlopen(req, timeout=60) as resp:  # noqa: S310 # nosec B310
             raw = resp.read().decode("utf-8")
-            return resp.status, (json.loads(raw) if raw.strip() else None)
+            next_url = _get_next_url(resp.headers.get("Link"))
+            return resp.status, (json.loads(raw) if raw.strip() else None), next_url
     except urllib.error.HTTPError as exc:
         raw = exc.read().decode("utf-8", "replace")
         try:
             body = json.loads(raw) if raw.strip() else None
         except json.JSONDecodeError:
             body = {"message": raw}
-        return exc.code, body
+        return exc.code, body, None
 
 
 def _paginate(path: str, token: str, params: dict[str, Any]) -> list[Any]:
     """Collect every page of a list endpoint."""
     out: list[Any] = []
-    for page in range(1, MAX_PAGES + 1):
-        status, body = _request("GET", path, token, {**params, "per_page": PER_PAGE, "page": page})
+    current_path = path
+    current_params: dict[str, Any] | None = {**params, "per_page": PER_PAGE}
+    for _ in range(MAX_PAGES):
+        status, body, next_url = _request("GET", current_path, token, current_params)
         if status == 403:
             raise ApiError(
                 f"403 from {path}: {_message(body)}\n"
@@ -122,12 +142,14 @@ def _paginate(path: str, token: str, params: dict[str, Any]) -> list[Any]:
             # No analyses/alerts at all, or the feature is off for this repo.
             return out
         if status >= 400:
-            raise ApiError(f"{status} from {path}: {_message(body)}")
+            raise ApiError(f"{status} from {current_path}: {_message(body)}")
         if not isinstance(body, list) or not body:
             return out
         out.extend(body)
-        if len(body) < PER_PAGE:
+        if not next_url:
             return out
+        current_path = next_url
+        current_params = None
     raise ApiError(f"Refusing to page past {MAX_PAGES} pages of {path}")
 
 
@@ -293,7 +315,7 @@ def cmd_delete(args: argparse.Namespace, token: str) -> int:
     deleted = 0
     for a in ordered:
         analysis_id = a.get("id")
-        status, body = _request(
+        status, body, _ = _request(
             "DELETE",
             f"/repos/{args.repo}/code-scanning/analyses/{analysis_id}",
             token,
