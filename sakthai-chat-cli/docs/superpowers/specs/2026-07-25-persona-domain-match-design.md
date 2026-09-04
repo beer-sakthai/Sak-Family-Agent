@@ -53,7 +53,7 @@ def match_persona(message: str) -> tuple[str, str] | None:
 
 **Revised post-review:** the original version scored every keyword equally
 and required 2+ raw hits regardless of specificity — which meant an
-unambiguous single phrase like "fix our CI/CD" never matched at all
+unambiguous single phrase like "repair our CI/CD" never matched at all
 (one hit on `"ci/cd"`, below the flat threshold), contradicting the
 motivating example for this feature. Splitting keywords into a strong tier
 (worth `STRONG_WEIGHT = 2`, clears the threshold alone) and a weak tier
