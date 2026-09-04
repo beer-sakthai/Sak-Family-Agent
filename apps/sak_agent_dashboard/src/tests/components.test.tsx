@@ -479,6 +479,14 @@ describe("SessionExplorer", () => {
     expect(onSearchChange).toHaveBeenCalledWith("");
   });
 
+  it("clears search query when Escape key is pressed in search input", () => {
+    const onSearchChange = vi.fn();
+    renderExplorer({ search: "deploy", onSearchChange });
+    const searchInput = screen.getByLabelText("Search sessions");
+    fireEvent.keyDown(searchInput, { key: "Escape" });
+    expect(onSearchChange).toHaveBeenCalledWith("");
+  });
+
   it("offers a reset action from the empty state", () => {
     const onSearchChange = vi.fn();
     renderExplorer({ sessions: [], total: 0, search: "nothing", onSearchChange });
