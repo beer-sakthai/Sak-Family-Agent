@@ -115,7 +115,7 @@ class TestWorkflowExecutor(unittest.TestCase):
             name="test_retry_fail",
             steps=[
                 StepDefinition(
-                    id="fail_step", action="shell", params={"cmd": "exit 1", "check": True}, retry=1
+                    id="fail_step", action="shell", params={"cmd": "bash -c 'exit 1'", "check": True}, retry=1
                 ),
                 StepDefinition(
                     id="blocked_step",
