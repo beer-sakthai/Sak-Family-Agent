@@ -16,7 +16,9 @@ import AgentOverview from "@/components/AgentOverview";
 import AnalyticsCharts from "@/components/AnalyticsCharts";
 import AuditLogs from "@/components/AuditLogs";
 import DemoModeToggle from "@/components/DemoModeToggle";
+import DisplayMenu from "@/components/DisplayMenu";
 import MemoryExplorer from "@/components/MemoryExplorer";
+import PersonaFilter from "@/components/PersonaFilter";
 import SessionExplorer from "@/components/SessionExplorer";
 import WorkflowRuns from "@/components/WorkflowRuns";
 import type { PersonaSummary } from "@/lib/contracts.generated";
@@ -238,6 +240,37 @@ describe("MemoryExplorer", () => {
     expect(factsTab.className).toContain("focus-visible:ring-offset-canvas");
   });
 
+  it("uses roving tabIndex for active and inactive tabs", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const factsTab = screen.getByRole("tab", { name: /Facts/ });
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+    expect(factsTab).toHaveAttribute("tabIndex", "0");
+    expect(obsTab).toHaveAttribute("tabIndex", "-1");
+
+    fireEvent.click(obsTab);
+    expect(factsTab).toHaveAttribute("tabIndex", "-1");
+    expect(obsTab).toHaveAttribute("tabIndex", "0");
+  });
+
+  it("supports keyboard arrow and home/end navigation between tabs", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const tablist = screen.getByRole("tablist", { name: "Memory Explorer tabs" });
+    const factsTab = screen.getByRole("tab", { name: /Facts/ });
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(obsTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(tablist, { key: "ArrowLeft" });
+    expect(factsTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(tablist, { key: "End" });
+    expect(obsTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(tablist, { key: "Home" });
+    expect(factsTab).toHaveAttribute("aria-selected", "true");
+  });
+
   it("shows facts by default", () => {
     render(<MemoryExplorer memory={demoMemory()} />);
     expect(screen.getByText("Prefers a dark, low-contrast terminal")).toBeInTheDocument();
@@ -265,6 +298,38 @@ describe("MemoryExplorer", () => {
     const empty = { ...demoMemory(), facts: [] };
     render(<MemoryExplorer memory={empty} />);
     expect(screen.getByText("No memory facts found.")).toBeInTheDocument();
+  });
+
+  it("sets tabIndex=0 on the active tab and tabIndex=-1 on inactive tabs", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const factsTab = screen.getByRole("tab", { name: /Facts/ });
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+
+    expect(factsTab).toHaveAttribute("tabindex", "0");
+    expect(obsTab).toHaveAttribute("tabindex", "-1");
+
+    fireEvent.click(obsTab);
+
+    expect(factsTab).toHaveAttribute("tabindex", "-1");
+    expect(obsTab).toHaveAttribute("tabindex", "0");
+  });
+
+  it("navigates tabs using Arrow keys and Home/End keys", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const factsTab = screen.getByRole("tab", { name: /Facts/ });
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+
+    fireEvent.keyDown(factsTab, { key: "ArrowRight" });
+    expect(obsTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(obsTab, { key: "ArrowLeft" });
+    expect(factsTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(factsTab, { key: "End" });
+    expect(obsTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(obsTab, { key: "Home" });
+    expect(factsTab).toHaveAttribute("aria-selected", "true");
   });
 });
 
@@ -415,6 +480,14 @@ describe("SessionExplorer", () => {
     expect(onSearchChange).toHaveBeenCalledWith("");
   });
 
+  it("clears search query when Escape key is pressed in search input", () => {
+    const onSearchChange = vi.fn();
+    renderExplorer({ search: "deploy", onSearchChange });
+    const searchInput = screen.getByLabelText("Search sessions");
+    fireEvent.keyDown(searchInput, { key: "Escape" });
+    expect(onSearchChange).toHaveBeenCalledWith("");
+  });
+
   it("offers a reset action from the empty state", () => {
     const onSearchChange = vi.fn();
     renderExplorer({ sessions: [], total: 0, search: "nothing", onSearchChange });
@@ -518,6 +591,85 @@ describe("WorkflowRuns", () => {
       <WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
     );
     expect(screen.queryByTestId("workflows-family-wide")).not.toBeInTheDocument();
+  });
+});
+
+describe("PersonaFilter", () => {
+  it("opens menu on trigger click and navigates items via Arrow keys and Home/End", () => {
+    const onChange = vi.fn();
+
+    render(<PersonaFilter selected={[]} onChange={onChange} />);
+
+    const trigger = screen.getByTestId("persona-filter");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    fireEvent.click(trigger);
+    const menu = screen.getByRole("menu", { name: "Filter by persona" });
+    expect(menu).toBeInTheDocument();
+
+    const menuItems = [
+      ...screen.getAllByRole("menuitem"),
+      ...screen.getAllByRole("menuitemcheckbox"),
+    ];
+    expect(menuItems.length).toBeGreaterThan(1);
+
+    fireEvent.keyDown(menu, { key: "ArrowDown" });
+    expect(menuItems[0]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[0], { key: "ArrowDown" });
+    expect(menuItems[1]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[1], { key: "ArrowUp" });
+    expect(menuItems[0]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[0], { key: "End" });
+    expect(menuItems[menuItems.length - 1]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[menuItems.length - 1], { key: "Home" });
+    expect(menuItems[0]).toHaveFocus();
+  });
+});
+
+describe("DisplayMenu", () => {
+  it("opens menu on trigger click and navigates radio items via Arrow keys and Home/End", () => {
+    const onThemeChange = vi.fn();
+    const onDensityChange = vi.fn();
+
+    render(
+      <DisplayMenu
+        theme="system"
+        onThemeChange={onThemeChange}
+        density="comfortable"
+        onDensityChange={onDensityChange}
+        prefersLight={false}
+      />
+    );
+
+    const trigger = screen.getByRole("button", { name: "Display settings" });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    fireEvent.click(trigger);
+    const menu = screen.getByRole("menu", { name: "Display settings" });
+    expect(menu).toBeInTheDocument();
+
+    const menuItems = screen.getAllByRole("menuitemradio");
+    expect(menuItems).toHaveLength(5); // 3 themes + 2 densities
+
+    // Initial focus can be set or driven by ArrowDown
+    fireEvent.keyDown(menu, { key: "ArrowDown" });
+    expect(menuItems[0]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[0], { key: "ArrowDown" });
+    expect(menuItems[1]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[1], { key: "ArrowUp" });
+    expect(menuItems[0]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[0], { key: "End" });
+    expect(menuItems[4]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[4], { key: "Home" });
+    expect(menuItems[0]).toHaveFocus();
   });
 });
 

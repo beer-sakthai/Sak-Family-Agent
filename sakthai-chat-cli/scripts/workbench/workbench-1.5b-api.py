@@ -2,7 +2,10 @@
 """Test the 1.5B merged model on HF Inference API and record results."""
 import os, json, time, sys
 
-TOKEN_PATH = "/opt/data/profiles/sakthai/home/.cache/huggingface/token"
+# nosec B105 — this is the filesystem *path* to the HF token file on the
+# training box, not a credential. The secret is the file's contents, read
+# below and never committed.
+TOKEN_PATH = "/opt/data/profiles/sakthai/home/.cache/huggingface/token"  # nosec B105
 with open(TOKEN_PATH) as f:
     hf_token = f.read().strip()
 
@@ -134,7 +137,10 @@ for i, test in enumerate(tests):
                 parsed = json.loads(content)
                 if "frameworks" in parsed:
                     checks.append("valid_json")
-            except:
+            except (json.JSONDecodeError, TypeError):
+                # Not valid JSON — that is the check failing, not an error
+                # to hide. A bare `except` here also swallowed
+                # KeyboardInterrupt/SystemExit (bandit B110).
                 pass
         if test["name"] == "general_knowledge" and "paris" in content.lower():
             checks.append("correct_answer")

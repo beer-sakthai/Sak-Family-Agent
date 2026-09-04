@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 
+import { useFocusTrap } from "@/lib/focus";
 import { NAV_ITEMS } from "@/lib/nav";
 
 interface ShortcutsOverlayProps {
@@ -55,35 +56,19 @@ function Row({ shortcut }: { shortcut: Shortcut }) {
  * whose shortcuts are only discoverable by reading its source has none.
  */
 export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useFocusTrap<HTMLDivElement>();
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     closeRef.current?.focus();
   }, []);
 
-  // Escape closes; Tab is trapped inside the dialog so focus cannot wander
-  // back onto the page behind it while it is modal.
+  // Escape closes overlay
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
         onClose();
-        return;
-      }
-      if (event.key !== "Tab" || !dialogRef.current) return;
-      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
       }
     };
     document.addEventListener("keydown", onKeyDown);
@@ -118,8 +103,11 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
             ref={closeRef}
             onClick={onClose}
             aria-label="Close keyboard shortcuts overlay"
-            className="shrink-0 rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-raised/60 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="inline-flex items-center gap-1.5 shrink-0 rounded-lg px-2 py-1 text-fg-3 transition-colors hover:bg-raised/60 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
+            <kbd className="rounded border border-line-strong bg-sunken px-1.5 py-0.5 font-mono text-[10px] text-fg-3" aria-hidden>
+              Esc
+            </kbd>
             <X className="h-4 w-4" aria-hidden />
           </button>
         </div>
