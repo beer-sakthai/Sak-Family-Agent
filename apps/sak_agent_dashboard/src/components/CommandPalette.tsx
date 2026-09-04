@@ -110,6 +110,12 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
       setHighlight((current) =>
         results.length === 0 ? 0 : (current - 1 + results.length) % results.length,
       );
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      setHighlight(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      setHighlight(results.length === 0 ? 0 : results.length - 1);
     } else if (event.key === "Enter") {
       event.preventDefault();
       runAt(clampedHighlight);
