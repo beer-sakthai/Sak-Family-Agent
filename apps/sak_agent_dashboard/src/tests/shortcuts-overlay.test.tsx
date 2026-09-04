@@ -19,7 +19,7 @@ describe("ShortcutsOverlay", () => {
 
   it("renders specific accessible label and shortcut hint on close button", () => {
     renderShortcutsOverlay();
-    const closeBtn = screen.getByRole("button", { name: "Close keyboard shortcuts overlay" });
+    const closeBtn = screen.getByRole("button", { name: "Close keyboard shortcuts" });
     expect(closeBtn).toBeInTheDocument();
     expect(closeBtn).toHaveTextContent("Esc");
   });
@@ -27,7 +27,7 @@ describe("ShortcutsOverlay", () => {
   it("closes on close button click", () => {
     const { onClose } = renderShortcutsOverlay();
     const headerCloseButton = screen.getByRole("button", {
-      name: "Close keyboard shortcuts overlay",
+      name: "Close keyboard shortcuts",
     });
     fireEvent.click(headerCloseButton);
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -42,7 +42,7 @@ describe("ShortcutsOverlay", () => {
   it("focuses the close button on open", () => {
     renderShortcutsOverlay();
     const headerCloseButton = screen.getByRole("button", {
-      name: "Close keyboard shortcuts overlay",
+      name: "Close keyboard shortcuts",
     });
     expect(document.activeElement).toBe(headerCloseButton);
   });
