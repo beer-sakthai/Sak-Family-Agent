@@ -77,6 +77,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           aria-selected={activeTab === "facts"}
           aria-controls="panel-facts"
           onClick={() => setActiveTab("facts")}
+          onKeyDown={handleKeyDown}
           className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
             activeTab === "facts"
               ? "bg-hue-cyan-tint/50 text-hue-cyan border-hue-cyan-line/50"
@@ -93,6 +94,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           aria-selected={activeTab === "observations"}
           aria-controls="panel-observations"
           onClick={() => setActiveTab("observations")}
+          onKeyDown={handleKeyDown}
           className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
             activeTab === "observations"
               ? "bg-hue-violet-tint/50 text-hue-violet border-hue-violet-line/50"
@@ -109,7 +111,8 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           role="tabpanel"
           id="panel-facts"
           aria-labelledby="tab-facts"
-          className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl"
+          tabIndex={0}
+          className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <div className="overflow-x-auto">
             <table className="w-full text-left font-mono text-xs">
@@ -167,7 +170,8 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           role="tabpanel"
           id="panel-observations"
           aria-labelledby="tab-observations"
-          className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl"
+          tabIndex={0}
+          className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <div className="overflow-x-auto">
             <table className="w-full text-left font-mono text-xs">
