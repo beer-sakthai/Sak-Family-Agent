@@ -18,6 +18,7 @@ import AuditLogs from "@/components/AuditLogs";
 import DemoModeToggle from "@/components/DemoModeToggle";
 import DisplayMenu from "@/components/DisplayMenu";
 import MemoryExplorer from "@/components/MemoryExplorer";
+import PersonaFilter from "@/components/PersonaFilter";
 import SessionExplorer from "@/components/SessionExplorer";
 import WorkflowRuns from "@/components/WorkflowRuns";
 import type { PersonaSummary } from "@/lib/contracts.generated";
@@ -479,6 +480,14 @@ describe("SessionExplorer", () => {
     expect(onSearchChange).toHaveBeenCalledWith("");
   });
 
+  it("clears search query when Escape key is pressed in search input", () => {
+    const onSearchChange = vi.fn();
+    renderExplorer({ search: "deploy", onSearchChange });
+    const searchInput = screen.getByLabelText("Search sessions");
+    fireEvent.keyDown(searchInput, { key: "Escape" });
+    expect(onSearchChange).toHaveBeenCalledWith("");
+  });
+
   it("offers a reset action from the empty state", () => {
     const onSearchChange = vi.fn();
     renderExplorer({ sessions: [], total: 0, search: "nothing", onSearchChange });
@@ -582,6 +591,42 @@ describe("WorkflowRuns", () => {
       <WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
     );
     expect(screen.queryByTestId("workflows-family-wide")).not.toBeInTheDocument();
+  });
+});
+
+describe("PersonaFilter", () => {
+  it("opens menu on trigger click and navigates items via Arrow keys and Home/End", () => {
+    const onChange = vi.fn();
+
+    render(<PersonaFilter selected={[]} onChange={onChange} />);
+
+    const trigger = screen.getByTestId("persona-filter");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    fireEvent.click(trigger);
+    const menu = screen.getByRole("menu", { name: "Filter by persona" });
+    expect(menu).toBeInTheDocument();
+
+    const menuItems = [
+      ...screen.getAllByRole("menuitem"),
+      ...screen.getAllByRole("menuitemcheckbox"),
+    ];
+    expect(menuItems.length).toBeGreaterThan(1);
+
+    fireEvent.keyDown(menu, { key: "ArrowDown" });
+    expect(menuItems[0]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[0], { key: "ArrowDown" });
+    expect(menuItems[1]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[1], { key: "ArrowUp" });
+    expect(menuItems[0]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[0], { key: "End" });
+    expect(menuItems[menuItems.length - 1]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[menuItems.length - 1], { key: "Home" });
+    expect(menuItems[0]).toHaveFocus();
   });
 });
 
