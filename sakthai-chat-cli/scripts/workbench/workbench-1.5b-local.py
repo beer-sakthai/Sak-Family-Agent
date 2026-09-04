@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Workbench test — load merged 1.5B model, run 6 test prompts, record results."""
-import json, time, os, sys
+import json
+import sys
+import time
+
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -78,16 +81,16 @@ tests = [
 results = []
 for i, test in enumerate(tests):
     print(f"\n--- TEST {i+1}: {test['name']} ---", flush=True)
-    
+
     try:
         prompt = tokenizer.apply_chat_template(
             test["messages"],
             tokenize=False,
             add_generation_prompt=True
         )
-        
+
         inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-        
+
         t0 = time.time()
         with torch.no_grad():
             outputs = model.generate(
@@ -98,13 +101,13 @@ for i, test in enumerate(tests):
                 pad_token_id=tokenizer.eos_token_id
             )
         elapsed = time.time() - t0
-        
+
         input_len = inputs.input_ids.shape[1]
         response = tokenizer.decode(outputs[0][input_len:], skip_special_tokens=True).strip()
-        
+
         prompt_tokens = input_len
         completion_tokens = outputs.shape[1] - input_len
-        
+
         checks = []
         if len(response) > 0:
             checks.append("non_empty")
@@ -118,9 +121,12 @@ for i, test in enumerate(tests):
             try:
                 json.loads(response)
                 checks.append("valid_json")
-            except:
+            except (json.JSONDecodeError, TypeError):
+                # Not valid JSON — that is the check failing, not an error
+                # to hide. A bare `except` here also swallowed
+                # KeyboardInterrupt/SystemExit (bandit B110).
                 pass
-        
+
         result = {
             "name": test["name"],
             "passed": len(checks) > 0,
@@ -131,14 +137,14 @@ for i, test in enumerate(tests):
             "completion_tokens": completion_tokens,
             "checks": checks
         }
-        
+
         print(f"  ✅ {response[:150]}", flush=True)
         print(f"  ⏱ {elapsed:.2f}s | 📝 {prompt_tokens}→{completion_tokens} | ✅ {checks}", flush=True)
-        
+
     except Exception as e:
         result = {"name": test["name"], "passed": False, "error": str(e)[:300]}
         print(f"  ❌ {e}", flush=True)
-    
+
     results.append(result)
     sys.stdout.flush()
 

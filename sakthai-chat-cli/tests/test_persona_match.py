@@ -41,7 +41,7 @@ def test_persona_domains_excludes_sakthai_and_saktan() -> None:
 
 def test_match_persona_matches_sakjules_on_a_single_strong_keyword() -> None:
     # "ci/cd" alone is unambiguous enough to match without a second hit.
-    result = match_persona("Can you fix our CI/CD?")
+    result = match_persona("Can you repair our CI/CD?")
     assert result == ("sakjules", "CI/CD & automation")
 
 
