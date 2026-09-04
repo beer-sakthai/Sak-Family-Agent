@@ -37,6 +37,8 @@ coverage.xml
 apps/*/node_modules
 apps/*/.next
 apps/*/.vercel
+# Stray `next start`/`next build` console captures (one was committed in #1255).
+apps/*/next_output.log
 *.tsbuildinfo
 .github/aw/
 

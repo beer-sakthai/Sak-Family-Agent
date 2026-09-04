@@ -136,6 +136,7 @@ export function TopBar({
 
           <label
             data-chrome="secondary"
+            title="Set auto-refresh interval"
             className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-2.5 py-1.5 font-mono text-[11px] text-fg-3 focus-within:ring-2 focus-within:ring-hue-cyan"
           >
             <span className="text-fg-4">Auto</span>
@@ -145,7 +146,7 @@ export function TopBar({
               onChange={(event) =>
                 onRefreshIntervalChange(Number(event.target.value) as RefreshInterval)
               }
-              className="bg-transparent text-fg outline-none"
+              className="rounded bg-transparent text-fg outline-none focus-visible:ring-2 focus-visible:ring-hue-cyan"
             >
               {REFRESH_INTERVALS.map((seconds) => (
                 <option key={seconds} value={seconds} className="bg-panel">
@@ -210,8 +211,8 @@ export function TopBar({
               }
             }}
             aria-pressed={presenting}
-            aria-label="Toggle presentation mode"
-            title={presenting ? "Leave presentation mode" : "Presentation mode"}
+            aria-label={presenting ? "Exit presentation mode" : "Enter presentation mode"}
+            title={presenting ? "Exit presentation mode" : "Enter presentation mode"}
             className="rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             {presenting ? (

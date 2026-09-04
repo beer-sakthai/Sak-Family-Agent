@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { CornerDownLeft, Search } from "lucide-react";
+import { CornerDownLeft, Search, X } from "lucide-react";
 
 import { useFocusTrap } from "@/lib/focus";
 import { highlightSegments, rankBy, type FuzzyMatch } from "@/lib/fuzzy";
@@ -110,6 +110,12 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
       setHighlight((current) =>
         results.length === 0 ? 0 : (current - 1 + results.length) % results.length,
       );
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      setHighlight(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      setHighlight(results.length === 0 ? 0 : results.length - 1);
     } else if (event.key === "Enter") {
       event.preventDefault();
       runAt(clampedHighlight);
@@ -149,6 +155,20 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
             aria-label="Search commands"
             className="w-full bg-transparent text-sm text-fg placeholder:text-fg-5 outline-none"
           />
+          {query && (
+            <button
+              type="button"
+              aria-label="Clear search query"
+              title="Clear search query"
+              onClick={() => {
+                setQuery("");
+                setHighlight(0);
+              }}
+              className="rounded-lg p-1 text-fg-4 transition-colors hover:bg-raised/80 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          )}
           <kbd className="hidden rounded border border-line-strong bg-sunken px-1.5 py-0.5 font-mono text-[10px] text-fg-4 sm:block">
             esc
           </kbd>
