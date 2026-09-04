@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 
+import { useFocusTrap } from "@/lib/focus";
 import { NAV_ITEMS } from "@/lib/nav";
 
 interface ShortcutsOverlayProps {
@@ -55,35 +56,19 @@ function Row({ shortcut }: { shortcut: Shortcut }) {
  * whose shortcuts are only discoverable by reading its source has none.
  */
 export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useFocusTrap<HTMLDivElement>();
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     closeRef.current?.focus();
   }, []);
 
-  // Escape closes; Tab is trapped inside the dialog so focus cannot wander
-  // back onto the page behind it while it is modal.
+  // Escape closes overlay
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
         onClose();
-        return;
-      }
-      if (event.key !== "Tab" || !dialogRef.current) return;
-      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
       }
     };
     document.addEventListener("keydown", onKeyDown);
