@@ -92,6 +92,20 @@ describe("CommandPalette focus", () => {
     unmount();
     expect(document.activeElement).toBe(opener);
   });
+
+  it("jumps option highlighting to start and end with Home and End", () => {
+    renderPalette();
+    const dialog = screen.getByRole("dialog");
+    const options = screen.getAllByRole("option");
+
+    expect(options[0]).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(dialog, { key: "End" });
+    expect(options[options.length - 1]).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(dialog, { key: "Home" });
+    expect(options[0]).toHaveAttribute("aria-selected", "true");
+  });
 });
 
 describe("CommandPalette matching", () => {
