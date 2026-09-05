@@ -89,6 +89,30 @@ export function StitchStudio() {
   const [activeTab, setActiveTab] = useState<"preview" | "code" | "spec">("preview");
   const [copied, setCopied] = useState(false);
 
+  const tabs = ["preview", "code", "spec"] as const;
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      const currentIndex = tabs.indexOf(activeTab);
+      const nextIndex =
+        e.key === "ArrowRight"
+          ? (currentIndex + 1) % tabs.length
+          : (currentIndex - 1 + tabs.length) % tabs.length;
+      const nextTab = tabs[nextIndex];
+      setActiveTab(nextTab);
+      document.getElementById(`stitch-tab-${nextTab}`)?.focus();
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      setActiveTab("preview");
+      document.getElementById("stitch-tab-preview")?.focus();
+    } else if (e.key === "End") {
+      e.preventDefault();
+      setActiveTab("spec");
+      document.getElementById("stitch-tab-spec")?.focus();
+    }
+  };
+
   const jsonSpec = JSON.stringify(
     {
       serverUrl: "https://stitch.googleapis.com/mcp",
@@ -176,11 +200,19 @@ export function StitchStudio() {
       <div className="bg-panel/80 backdrop-blur-xl border border-line/80 rounded-2xl overflow-hidden shadow-2xl">
         {/* Workspace Toolbar */}
         <div className="flex items-center justify-between border-b border-line px-5 py-3 bg-sunken/50">
-          <div role="tablist" aria-label="Stitch Studio view options" className="flex items-center gap-2">
+          <div
+            role="tablist"
+            aria-label="Stitch Studio view options"
+            onKeyDown={handleKeyDown}
+            className="flex items-center gap-2"
+          >
             <button
+              id="stitch-tab-preview"
               type="button"
               role="tab"
+              tabIndex={activeTab === "preview" ? 0 : -1}
               aria-selected={activeTab === "preview"}
+              aria-controls="stitch-panel-preview"
               onClick={() => setActiveTab("preview")}
               className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 activeTab === "preview"
@@ -192,9 +224,12 @@ export function StitchStudio() {
               Live Preview
             </button>
             <button
+              id="stitch-tab-code"
               type="button"
               role="tab"
+              tabIndex={activeTab === "code" ? 0 : -1}
               aria-selected={activeTab === "code"}
+              aria-controls="stitch-panel-code"
               onClick={() => setActiveTab("code")}
               className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 activeTab === "code"
@@ -206,9 +241,12 @@ export function StitchStudio() {
               TSX Code
             </button>
             <button
+              id="stitch-tab-spec"
               type="button"
               role="tab"
+              tabIndex={activeTab === "spec" ? 0 : -1}
               aria-selected={activeTab === "spec"}
+              aria-controls="stitch-panel-spec"
               onClick={() => setActiveTab("spec")}
               className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 activeTab === "spec"
@@ -234,7 +272,13 @@ export function StitchStudio() {
         </div>
 
         {/* Tab Body Content */}
-        <div className="p-6">
+        <div
+          id={`stitch-panel-${activeTab}`}
+          role="tabpanel"
+          aria-labelledby={`stitch-tab-${activeTab}`}
+          tabIndex={0}
+          className="p-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-xl"
+        >
           {activeTab === "preview" && (
             <div className="min-h-[240px] flex flex-col items-center justify-center p-8 rounded-xl bg-sunken/80 border border-line/60">
               {activePreset.displayMode === "HTML" && (
