@@ -72,7 +72,7 @@ export function SessionExplorer({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="text-xl font-bold font-display text-fg tracking-tight flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-hue-cyan" />
+            <MessageSquare className="h-5 w-5 text-hue-cyan" aria-hidden />
             Session Explorer
           </h3>
           <p className="text-xs text-fg-3 mt-0.5">

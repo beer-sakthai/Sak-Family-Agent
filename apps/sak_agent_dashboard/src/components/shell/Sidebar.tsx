@@ -193,7 +193,7 @@ export function Sidebar({
               aria-label="Close navigation menu"
               className="absolute right-3 top-3 rounded-lg p-1.5 text-fg-3 hover:bg-raised/60 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4" aria-hidden />
             </button>
             {content(false)}
           </aside>
