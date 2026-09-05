@@ -27,6 +27,7 @@ export function HostedNotice({ activeSource, isDemo }: HostedNoticeProps) {
     <div
       data-testid="hosted-notice"
       role="status"
+      aria-live="polite"
       aria-label="Hosted deployment notice"
       className="flex flex-wrap items-start gap-3 rounded-2xl border border-hue-amber-line/40 bg-hue-amber-tint/20 p-4 text-hue-amber"
     >
