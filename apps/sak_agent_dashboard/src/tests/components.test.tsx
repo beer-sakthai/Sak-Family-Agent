@@ -20,6 +20,7 @@ import DisplayMenu from "@/components/DisplayMenu";
 import MemoryExplorer from "@/components/MemoryExplorer";
 import PersonaFilter from "@/components/PersonaFilter";
 import SessionExplorer from "@/components/SessionExplorer";
+import StitchStudio from "@/components/StitchStudio";
 import WorkflowRuns from "@/components/WorkflowRuns";
 import type { PersonaSummary } from "@/lib/contracts.generated";
 import {
@@ -627,6 +628,47 @@ describe("PersonaFilter", () => {
 
     fireEvent.keyDown(menuItems[menuItems.length - 1], { key: "Home" });
     expect(menuItems[0]).toHaveFocus();
+  });
+});
+
+describe("StitchStudio", () => {
+  it("uses roving tabIndex for active and inactive tabs", () => {
+    render(<StitchStudio />);
+    const previewTab = screen.getByRole("tab", { name: /Live Preview/ });
+    const codeTab = screen.getByRole("tab", { name: /TSX Code/ });
+    const specTab = screen.getByRole("tab", { name: /Stitch JSON Spec/ });
+
+    expect(previewTab).toHaveAttribute("tabIndex", "0");
+    expect(codeTab).toHaveAttribute("tabIndex", "-1");
+    expect(specTab).toHaveAttribute("tabIndex", "-1");
+
+    fireEvent.click(codeTab);
+    expect(previewTab).toHaveAttribute("tabIndex", "-1");
+    expect(codeTab).toHaveAttribute("tabIndex", "0");
+    expect(specTab).toHaveAttribute("tabIndex", "-1");
+  });
+
+  it("navigates tabs using Arrow keys and Home/End keys", () => {
+    render(<StitchStudio />);
+    const tablist = screen.getByRole("tablist", { name: "Stitch Studio view options" });
+    const previewTab = screen.getByRole("tab", { name: /Live Preview/ });
+    const codeTab = screen.getByRole("tab", { name: /TSX Code/ });
+    const specTab = screen.getByRole("tab", { name: /Stitch JSON Spec/ });
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(codeTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(specTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(tablist, { key: "ArrowLeft" });
+    expect(codeTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(tablist, { key: "Home" });
+    expect(previewTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(tablist, { key: "End" });
+    expect(specTab).toHaveAttribute("aria-selected", "true");
   });
 });
 
