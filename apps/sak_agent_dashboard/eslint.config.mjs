@@ -6,10 +6,24 @@ import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 import nextTypescript from "eslint-config-next/typescript";
 
 const config = [
-  { ignores: [".next/**", "node_modules/**", "src/lib/contracts.generated.ts"] },
+  {
+    ignores: [".next/**", "node_modules/**", "src/lib/contracts.generated.ts"],
+    settings: {
+      react: {
+        version: "19.0",
+      },
+    },
+  },
   ...next,
   ...nextCoreWebVitals,
   ...nextTypescript,
+  {
+    settings: {
+      react: {
+        version: "19.0",
+      },
+    },
+  },
 ];
 
 export default config;
