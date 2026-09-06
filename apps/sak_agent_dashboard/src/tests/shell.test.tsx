@@ -184,10 +184,12 @@ describe("TopBar", () => {
     expect(screen.getByText("Refresh")).toBeInTheDocument();
   });
 
-  it("refuses a second refresh while one is in flight", () => {
+  it("refuses a second refresh while one is in flight and indicates loading status", () => {
     const { props } = renderTopBar({ isLoading: true });
-    const button = screen.getByLabelText("Refresh dashboard data");
+    const button = screen.getByLabelText("Refreshing dashboard data…");
     expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("title", "Refreshing dashboard data…");
+    expect(button).toHaveClass("disabled:cursor-not-allowed");
     fireEvent.click(button);
     expect(props.onRefresh).not.toHaveBeenCalled();
   });
