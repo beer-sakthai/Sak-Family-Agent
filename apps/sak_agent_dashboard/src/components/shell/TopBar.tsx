@@ -136,10 +136,29 @@ export function TopBar({
 
           <label
             data-chrome="secondary"
-            title="Set auto-refresh interval"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-2.5 py-1.5 font-mono text-[11px] text-fg-3 focus-within:ring-2 focus-within:ring-hue-cyan"
+            title={
+              refreshInterval > 0
+                ? `Auto-refresh active (${intervalLabel(refreshInterval)})`
+                : "Set auto-refresh interval"
+            }
+            className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 font-mono text-[11px] transition-colors focus-within:ring-2 focus-within:ring-hue-cyan ${
+              refreshInterval > 0
+                ? "border-hue-cyan-line/50 bg-hue-cyan-tint/40 text-hue-cyan"
+                : "border-line bg-panel/60 text-fg-3"
+            }`}
           >
-            <span className="text-fg-4">Auto</span>
+            <span
+              data-testid="auto-refresh-indicator"
+              className={`h-1.5 w-1.5 rounded-full transition-all ${
+                refreshInterval > 0
+                  ? "bg-hue-cyan animate-pulse shadow-[0_0_6px_rgba(6,182,212,0.8)]"
+                  : "bg-fg-5"
+              }`}
+              aria-hidden
+            />
+            <span className={refreshInterval > 0 ? "text-hue-cyan font-medium" : "text-fg-4"}>
+              Auto
+            </span>
             <select
               aria-label="Auto-refresh interval"
               value={refreshInterval}
@@ -149,7 +168,7 @@ export function TopBar({
               className="rounded bg-transparent text-fg outline-none focus-visible:ring-2 focus-visible:ring-hue-cyan"
             >
               {REFRESH_INTERVALS.map((seconds) => (
-                <option key={seconds} value={seconds} className="bg-panel">
+                <option key={seconds} value={seconds} className="bg-panel text-fg">
                   {intervalLabel(seconds)}
                 </option>
               ))}
