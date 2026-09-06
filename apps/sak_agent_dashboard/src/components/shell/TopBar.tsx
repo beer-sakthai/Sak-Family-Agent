@@ -170,7 +170,10 @@ export function TopBar({
               two more buttons in this row would crowd the ones used often. */}
           <label
             data-chrome="secondary"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-2.5 py-1.5 font-mono text-[11px] text-fg-3 focus-within:ring-2 focus-within:ring-accent"
+            title={canExport ? "Export current panel data" : "No rows available to export"}
+            className={`inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-2.5 py-1.5 font-mono text-[11px] text-fg-3 focus-within:ring-2 focus-within:ring-accent ${
+              !canExport ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
             <Download className="h-3 w-3" aria-hidden />
             <select
@@ -184,7 +187,7 @@ export function TopBar({
                 // in a row still fires a change event.
                 event.target.value = "";
               }}
-              className="bg-transparent text-fg-2 outline-none disabled:opacity-50"
+              className="bg-transparent text-fg-2 outline-none disabled:cursor-not-allowed"
             >
               <option value="" className="bg-panel">
                 {canExport ? "Export" : "No rows"}

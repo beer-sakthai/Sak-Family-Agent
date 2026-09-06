@@ -210,6 +210,13 @@ describe("TopBar", () => {
     renderTopBar({ activeSource: "demo" });
     expect(screen.getByTestId("active-source")).toHaveTextContent("Sample data");
   });
+
+  it("disables export control and displays informative tooltip when canExport is false", () => {
+    renderTopBar({ canExport: false });
+    const select = screen.getByLabelText("Export the current panel");
+    expect(select).toBeDisabled();
+    expect(screen.getByTitle("No rows available to export")).toBeInTheDocument();
+  });
 });
 
 describe("KpiStrip", () => {
