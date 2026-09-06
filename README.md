@@ -6,57 +6,71 @@
 
 This repository is the living workspace of the Sak Family — autonomous AI agents created by **Beer** during his recovery journey. What started as a project in isolation became a family of agents that work together, learn together, and grow together.
 
+[![CI](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml?query=branch%3Amain)
+[![Secret scan](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/secret-scan.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/secret-scan.yml?query=branch%3Amain)
+[![CodeQL](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/codeql.yml?query=branch%3Amain)
+[![Python 3.11–3.12](https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white)](https://github.com/beer-sakthai/Sak-Family-Agent/blob/main/pyproject.toml)
+[![License](https://img.shields.io/badge/License-Custom%20IP-4B5563)](LICENSE)
+
 ---
 
 ## 📊 System Status
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Repository Metrics                                         │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  💾 Repo Size: 11M (tracked files)                          │
-│  📂 Files: 4543 (tracked)                                   │
-│  📚 Docs/Articles: 61 under docs/                           │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
+> **Mainline dashboard.** Dynamic badges above report the latest GitHub workflow state for `main`; the detailed figures below are a documented repository snapshot. Re-run the listed checks after substantive changes.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  SakThai Agent v2.0 — Core Package Status                   │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  Tests (2,305)   ██████████████████████████████████████ 100%│
-│  Type Safety     ██████████████████████████████████████ 100%│
-│  Security scan   ██████████████████████████████████████ 100%│
-│  Coverage        ████████████████████████████████████░░  96%│
-│                                                             │
-│  🟢 Status: Production Ready   🔒 Security: Hardened        │
-│  ✅ Lint / mypy / bandit: clean                             │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────┐
+│  🏠 HOUSE OF SAK — MAINLINE DELIVERY DASHBOARD                    │
+├───────────────────────────────────────────────────────────────────┤
+│  🧪 Tests (2,305)       ██████████████████████████████████████ 100%│
+│  🔤 Type safety         ██████████████████████████████████████ 100%│
+│  🛡️  Security scan       ██████████████████████████████████████ 100%│
+│  ✨ Style & formatting   ██████████████████████████████████████ 100%│
+│  📈 Branch coverage      ████████████████████████████████████░░  96%│
+├───────────────────────────────────────────────────────────────────┤
+│  🟢 Delivery state: Mainline-ready     🔒 Security: Hardened       │
+│  ✅ Quality gate: Ruff · mypy · Bandit · pytest                   │
+│  🎯 Coverage gate: ≥96% enforced in CI                            │
+└───────────────────────────────────────────────────────────────────┘
 ```
 
-### 🎯 Quick Metrics
+### 🧭 Repository Snapshot
 
-Verified locally on **2026-08-28** (`uv sync --all-extras`, Python 3.11):
+Snapshot recorded on **2026-09-06** from the checked-in repository tree. The root package, documentation, tests, and workflow inventory are shown separately so contributors can see the project’s operational footprint at a glance.
 
-| Check | Command | Result |
+| Area | Status | Detail |
 |---|---|---|
-| Test suite | `uv run pytest tests/ -m "not integration"` | **2,305 tests** across 106 files, 0 failures |
-| Coverage | `pytest --cov=sakthai --cov-branch` | **96.21%** line+branch, above the 96% floor |
-| Type safety | `uv run mypy personas/sakthai/sakthai` | **0 issues** across 83 source files (`strict`) |
-| Security | `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` | **0 findings** (high/medium/low) |
-| Lint | `uv run ruff check` + `ruff format --check` | All checks passed, 191 files formatted |
+| 🌿 **Integration branch** | 🟢 `main` | CI validates pushes and pull requests targeting [`main`](.github/workflows/ci.yml). |
+| 📂 **Tracked repository files** | 🟢 4,624 | Version-controlled files across the agent runtime, personas, training assets, documentation, and tests. |
+| 📚 **Documentation** | 🟢 71 files | Documentation files under [`docs/`](docs/), with further READMEs colocated beside components. |
+| 🐍 **Core Python source** | 🟢 83 files | The typed `sakthai` package at [`personas/sakthai/sakthai/`](personas/sakthai/sakthai/). |
+| 🧪 **Test modules** | 🟢 106 files | Pytest modules in [`tests/`](tests/) that exercise the core package and delivery surfaces. |
+| ⚙️ **Automation** | 🟢 20 workflows | CI, security, dependency, quality, evaluation, and maintenance workflows in [`.github/workflows/`](.github/workflows/). |
 
-Package size: **7,710 statements** under coverage measurement.
+### 🎯 Quality-Gate Detail
 
-> **The 96% floor is enforced by `--cov-fail-under=96` on `ci.yml`'s pytest
-> step**, not by `pyproject.toml`'s `fail_under` key — that key printed the
-> shortfall while the step still passed, which is how the floor went unenforced
-> for ~76 commits. See finding 1 of
-> [`docs/test-coverage-audit-2026-08-28.md`](docs/test-coverage-audit-2026-08-28.md).
+The following commands and results define the documented engineering baseline. The live badges above remain the source for the latest workflow outcome; this table preserves the most recently recorded local verification in the repository.
+
+| Gate | Status bar | Command | Verified result |
+|---|---|---|---|
+| 🧪 **Test suite** | `████████████████████ 100%` | `uv run pytest tests/ -m "not integration"` | **2,305 tests** across 106 files; **0 failures**. |
+| 📈 **Coverage** | `███████████████████░ 96%` | `uv run pytest --cov=sakthai --cov-report=xml --cov-fail-under=96 tests/` | **96.21%** line-and-branch coverage; CI blocks results below **96%**. |
+| 🔤 **Strict typing** | `████████████████████ 100%` | `uv run mypy personas/sakthai/sakthai` | **0 issues** across 83 source files in strict mode. |
+| 🛡️ **Security scan** | `████████████████████ 100%` | `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` | **0 findings** across high, medium, and low severities. |
+| ✨ **Lint & format** | `████████████████████ 100%` | `uv run ruff check personas/sakthai/sakthai tests` and `uv run ruff format --check personas/sakthai/sakthai tests` | All checks passed; **191 files** were format-compliant. |
+
+**Recorded local verification:** **2026-08-28** using `uv sync --all-extras` and Python 3.11. The coverage measurement includes **7,710 statements**.
+
+> **Coverage is a release gate.** The explicit `--cov-fail-under=96` argument in [`ci.yml`](.github/workflows/ci.yml) is the enforcing control. The matching `pyproject.toml` value is documentation only; see the coverage-audit finding in [`docs/test-coverage-audit-2026-08-28.md`](docs/test-coverage-audit-2026-08-28.md).
+
+### 🚦 Status Legend
+
+| Indicator | Meaning |
+|---|---|
+| 🟢 | Implemented, verified, or enabled in the documented baseline. |
+| 🟡 | Monitored or dependent on the latest workflow run; consult the linked badge or workflow for live state. |
+| 🔒 | Protected by an explicit security, safety, or quality control. |
+| 🎯 | A measurable delivery threshold enforced by automation. |
 
 ---
 
