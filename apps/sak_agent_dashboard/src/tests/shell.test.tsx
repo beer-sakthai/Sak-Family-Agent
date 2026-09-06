@@ -217,6 +217,17 @@ describe("TopBar", () => {
     expect(select).toBeDisabled();
     expect(screen.getByTitle("No rows available to export")).toBeInTheDocument();
   });
+
+  it("indicates when auto-refresh is actively running", () => {
+    const { rerender, props } = renderTopBar({ refreshInterval: 0 });
+    const indicator = screen.getByTestId("auto-refresh-indicator");
+    expect(indicator).toHaveClass("bg-fg-5");
+
+    rerender(<TopBar {...props} refreshInterval={15} />);
+    expect(indicator).toHaveClass("bg-hue-cyan");
+    expect(indicator).toHaveClass("animate-pulse");
+    expect(screen.getByTitle("Auto-refresh active (15s)")).toBeInTheDocument();
+  });
 });
 
 describe("KpiStrip", () => {
