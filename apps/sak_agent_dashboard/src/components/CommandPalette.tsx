@@ -159,7 +159,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
             <button
               type="button"
               aria-label="Clear search query"
-              title="Clear search query"
+              title="Clear search query (Esc)"
               onClick={() => {
                 setQuery("");
                 setHighlight(0);
