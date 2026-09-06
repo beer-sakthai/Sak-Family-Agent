@@ -306,6 +306,22 @@ describe("KpiStrip", () => {
     );
     expect(screen.getByText("3 high/critical events")).toBeInTheDocument();
   });
+
+  it("marks decorative tile icons aria-hidden for screen readers", () => {
+    const { container } = render(
+      <KpiStrip
+        metrics={metrics}
+        memory={demoMemory()}
+        sessions={demoSessions()}
+        audit={demoAudit()}
+      />,
+    );
+    const svgs = container.querySelectorAll("svg");
+    expect(svgs.length).toBeGreaterThan(0);
+    svgs.forEach((svg) => {
+      expect(svg).toHaveAttribute("aria-hidden", "true");
+    });
+  });
 });
 
 describe("CommandPalette", () => {

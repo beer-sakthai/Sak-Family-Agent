@@ -184,7 +184,7 @@ export function AgentCard({
 
         <div className="mt-3 flex items-center gap-2">
           <span className="text-[11px] font-mono text-fg-2 px-2.5 py-1 rounded-md bg-raised/90 border border-line-strong/60 inline-flex items-center gap-1.5 max-w-full">
-            <Cpu className="h-3 w-3 text-hue-cyan shrink-0" />
+            <Cpu className="h-3 w-3 text-hue-cyan shrink-0" aria-hidden />
             <span className="truncate">{agent.model || "no configured model"}</span>
           </span>
         </div>
@@ -197,7 +197,7 @@ export function AgentCard({
       >
         <div>
           <span className="text-[10px] uppercase text-fg-3 mb-0.5 flex items-center gap-1">
-            <Clock className="h-3 w-3 text-hue-cyan" /> Avg latency
+            <Clock className="h-3 w-3 text-hue-cyan" aria-hidden /> Avg latency
           </span>
           <span className="font-bold text-hue-cyan">
             {agent.runs > 0 ? `${Math.round(agent.avg_latency_ms)}ms` : "—"}
@@ -205,7 +205,7 @@ export function AgentCard({
         </div>
         <div>
           <span className="text-[10px] uppercase text-fg-3 mb-0.5 flex items-center gap-1">
-            <Activity className="h-3 w-3 text-hue-emerald" /> Executions
+            <Activity className="h-3 w-3 text-hue-emerald" aria-hidden /> Executions
           </span>
           <span className="font-bold text-hue-emerald">
             {agent.runs} {agent.runs === 1 ? "run" : "runs"}
@@ -216,7 +216,7 @@ export function AgentCard({
       <div className={`space-y-1.5 ${overlayToggle ? "pointer-events-none relative z-[1]" : ""}`}>
         <div className="flex items-center justify-between text-xs font-mono">
           <span className="text-fg-3 text-[11px] flex items-center gap-1">
-            <Award className="h-3 w-3 text-hue-amber" /> Success rate
+            <Award className="h-3 w-3 text-hue-amber" aria-hidden /> Success rate
           </span>
           <span className="font-bold text-hue-emerald">
             {successRate === null ? "no runs yet" : `${successRate.toFixed(1)}%`}
@@ -236,7 +236,7 @@ export function AgentCard({
         }`}
       >
         <span className="px-2 py-0.5 rounded-full bg-hue-cyan-tint/40 text-hue-cyan border border-hue-cyan-line/30 inline-flex items-center gap-1">
-          <Brain className="h-2.5 w-2.5" />
+          <Brain className="h-2.5 w-2.5" aria-hidden />
           {(agent.input_tokens + agent.output_tokens).toLocaleString()} tokens
         </span>
         {agent.errors > 0 && (
