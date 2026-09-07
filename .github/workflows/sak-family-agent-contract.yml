@@ -63,6 +63,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Python
@@ -80,7 +81,7 @@ jobs:
         run: python scripts/validate_agent_definition.py .claude/agents/sak-family-agent-developer.md
 
       - name: Check commit whitespace
-        run: git show --check --oneline --no-renames HEAD
+        run: git diff --check "${{ github.event.pull_request.base.sha }}...HEAD"
 
       - name: Compose all persona skill trees
         run: make compose-personas
