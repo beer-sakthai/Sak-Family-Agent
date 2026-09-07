@@ -1,9 +1,6 @@
 ---
 name: SakThai-hf-spaces-dev-mode
-description: ">-   Complete reference for Hugging Face Spaces Dev Mode \u2014 enabling live development,\
-  \   SSH/VS Code debugging, and fast iteration on Spaces by skipping Docker image\
-  \ rebuilds.   Covers the architecture, REST API, Python SDK (huggingface_hub), CLI,\
-  \ Doc"
+description: ">-   Complete reference for Hugging Face Spaces Dev Mode — enabling live development,   SSH/VS Code debugging, and fast iteration on Spaces by skipping Docker image rebuilds.   Covers the architecture, REST API, Python SDK (huggingface_hub), CLI, Doc"
 ---
 
 # Hugging Face Spaces Dev Mode

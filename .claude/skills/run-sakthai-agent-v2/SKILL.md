@@ -1,9 +1,6 @@
 ---
 name: run-sakthai-agent-v2
-description: "Build, run, drive, and test sakthai-agent-v2 \u2014 the `sakthai` CLI, its agent\
-  \ loop, its MCP stdio server, and the web API. Use when asked to run sakthai, start\
-  \ the sakthai agent, smoke-test it, drive the MCP server, serve the web API, or\
-  \ verify the CLI works."
+description: Build, run, drive, and test sakthai-agent-v2 — the `sakthai` CLI, its agent loop, its MCP stdio server, and the web API. Use when asked to run sakthai, start the sakthai agent, smoke-test it, drive the MCP server, serve the web API, or verify the CLI works.
 ---
 
 `sakthai-agent-v2` is a Python CLI (`sakthai`) — a personal agent with a

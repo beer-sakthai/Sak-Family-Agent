@@ -1,8 +1,6 @@
 ---
 name: SakJules-imsg
-description: Use the imsg CLI from OpenClaw agents for iMessage/SMS DMs, groups, replies, reactions,
-  polls, watching, and private-API actions.
-...
+description: "Use the imsg CLI from OpenClaw agents for iMessage/SMS DMs, groups, replies, reactions, polls, watching, and private-API actions."
 ---
 
 # imsg

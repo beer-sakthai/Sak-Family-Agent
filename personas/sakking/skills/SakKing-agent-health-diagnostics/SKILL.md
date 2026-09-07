@@ -1,7 +1,13 @@
 ---
 name: SakThai-agent-health-diagnostics
-description: "Diagnose why a Hermes agent isn't responding \u2014 gateway status, provider health,\
-  \ Telegram connectivity, log analysis"
+author: SakThai
+license: MIT
+description: "Diagnose why a Hermes agent isn't responding — gateway status, provider health, Telegram connectivity, log analysis"
+version: 1.0.0
+metadata:
+  hermes:
+    tags: [diagnostics, health-check, gateway, telegram, provider, sibling-agents, troubleshooting]
+    category: environment-automation
 ---
 
 # Agent Health Diagnostics

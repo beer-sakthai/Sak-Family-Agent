@@ -1,7 +1,6 @@
 ---
 name: SakThai-hf-papers
-description: Daily snapshot of featured papers on Hugging Face
-...
+description: "Daily snapshot of featured papers on Hugging Face"
 ---
 
 # HF Papers of the Day — 23 Jul 2026 (Snap #4)

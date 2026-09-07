@@ -1,8 +1,11 @@
 ---
 name: SakThai-hf-trusted-publishers
-description: 'Hugging Face Trusted Publishers: OIDC-based CI/CD authentication that exchanges short-lived
-  CI tokens for temporary Hub access tokens, enabling keyless publishing from GitHub
-  Actions, GitLab CI, CircleCI, Bitbucket, and other providers.'
+description: "Hugging Face Trusted Publishers: OIDC-based CI/CD authentication that exchanges short-lived CI tokens for temporary Hub access tokens, enabling keyless publishing from GitHub Actions, GitLab CI, CircleCI, Bitbucket, and other providers."
+version: 1.0.0
+author: SakThai
+license: MIT
+tags: [huggingface, ci-cd, oidc, trusted-publishers, github-actions, gitlab, authentication]
+platforms: [linux, macos, windows]
 ---
 
 # Hugging Face Trusted Publishers

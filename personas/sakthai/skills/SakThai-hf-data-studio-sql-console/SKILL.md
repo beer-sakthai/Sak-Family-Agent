@@ -1,7 +1,6 @@
 ---
 name: SakThai-hf-data-studio-sql-console
-description: HuggingFace Data Studio SQL console for dataset queries
-...
+description: "HuggingFace Data Studio SQL console for dataset queries"
 ---
 
 # SakThai HF Data Studio SQL Console Skill

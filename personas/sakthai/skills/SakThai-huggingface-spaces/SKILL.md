@@ -1,9 +1,6 @@
 ---
 name: SakThai-huggingface-spaces
-description: "Build, deploy, and maintain applications on Hugging Face Spaces \u2014 Gradio / Docker\
-  \ / Static SDKs, ZeroGPU and dedicated hardware, model loading, debugging, buckets,\
-  \ inference providers, community grants. Use whenever the user asks to create or\
-  \ host an"
+description: "Build, deploy, and maintain applications on Hugging Face Spaces — Gradio / Docker / Static SDKs, ZeroGPU and dedicated hardware, model loading, debugging, buckets, inference providers, community grants. Use whenever the user asks to create or host an"
 ---
 
 # Hugging Face Spaces

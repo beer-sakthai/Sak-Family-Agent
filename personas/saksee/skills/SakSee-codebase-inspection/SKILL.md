@@ -1,6 +1,6 @@
 ---
 name: SakSee-codebase-inspection
-description: 'Inspect codebases w/ pygount: LOC, languages, ratios.'
+description: "Inspect codebases w/ pygount: LOC, languages, ratios."
 ---
 
 # Codebase Inspection

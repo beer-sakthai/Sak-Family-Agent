@@ -1,6 +1,6 @@
 ---
 name: SakSee-manim-video
-description: 'Manim CE animations: 3Blue1Brown math/algo videos.'
+description: "Manim CE animations: 3Blue1Brown math/algo videos."
 ---
 
 # Manim Video Production Pipeline

@@ -1,6 +1,6 @@
 ---
 name: SakThai-hf-setfit
-description: 'SetFit: prompt-free, efficient few-shot text classification using Sentence Transformers'
+description: "SetFit: prompt-free, efficient few-shot text classification using Sentence Transformers"
 ---
 
 # SetFit — Efficient Few-Shot Text Classification

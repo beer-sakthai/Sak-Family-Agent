@@ -1,6 +1,6 @@
 ---
 name: SakSee-baoyu-infographic
-description: "Infographics: 21 layouts x 21 styles (\u4FE1\u606F\u56FE, \u53EF\u89C6\u5316)."
+description: "Infographics: 21 layouts x 21 styles (信息图, 可视化)."
 ---
 
 # Infographic Generator

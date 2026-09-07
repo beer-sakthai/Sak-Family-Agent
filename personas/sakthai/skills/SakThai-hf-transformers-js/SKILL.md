@@ -1,8 +1,11 @@
 ---
 name: SakThai-hf-transformers-js
-description: "Hugging Face Transformers.js \u2014 run LLMs, vision, speech, and diffusion models\
-  \ directly in the browser via ONNX Runtime Web (WASM / WebGPU). Covers pipeline\
-  \ API, quantization, model caching, and deployment patterns."
+description: "Hugging Face Transformers.js — run LLMs, vision, speech, and diffusion models directly in the browser via ONNX Runtime Web (WASM / WebGPU). Covers pipeline API, quantization, model caching, and deployment patterns."
+version: 1.0.0
+author: SakThai
+license: MIT
+tags: [huggingface, transformers.js, onnx, webgpu, wasm, browser, client-side, inference]
+platforms: [linux, macos, windows]
 ---
 
 # Hugging Face Transformers.js

@@ -1,6 +1,6 @@
 ---
 name: SakSee-segment-anything-model
-description: 'SAM: zero-shot image segmentation via points, boxes, masks.'
+description: "SAM: zero-shot image segmentation via points, boxes, masks."
 ---
 
 # Segment Anything Model (SAM)

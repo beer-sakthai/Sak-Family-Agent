@@ -1,10 +1,11 @@
-import json, sys, tempfile
+import json, os, tempfile
 
-# The dump path is caller-supplied; a hardcoded /tmp path is predictable on a
-# shared machine and wrong whenever the dump lives elsewhere. TMPDIR is honoured.
-SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(tempfile.gettempdir(), "models.json")
-
-d = json.load(open(SRC))
+# Read the dump from the system temp dir rather than a hardcoded /tmp path
+# (bandit B108): a fixed, predictable name in a world-writable directory can
+# be pre-created or symlinked by another user before this runs. Override with HF_MODELS_DUMP.
+DUMP = os.environ.get("HF_MODELS_DUMP") or os.path.join(tempfile.gettempdir(), "models.json")
+with open(DUMP) as f:
+    d = json.load(f)
 print(f"Total from API: {len(d)}")
 # Check combined-v6 and profile
 for m in d:

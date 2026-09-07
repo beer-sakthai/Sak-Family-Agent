@@ -1,8 +1,6 @@
 ---
 name: SakJules-SakKing-github-content-audit
-description: "Read GitHub repository files, audit directory structures, and extract file contents\
-  \ via the GitHub Contents API \u2014 especially useful when CLI/terminal tools are\
-  \ unavailable and youre operating through an API gateway (Composio, MCP, etc.)."
+description: "Read GitHub repository files, audit directory structures, and extract file contents via the GitHub Contents API — especially useful when CLI/terminal tools are unavailable and youre operating through an API gateway (Composio, MCP, etc.)."
 ---
 
 # GitHub Content Audit

@@ -1,9 +1,6 @@
 ---
 name: SakThai-hf-videococo-code-cot
-description: "Complete reference on VideoCoCo (arXiv:2607.27380) \u2014 code-as-CoT physically-consistent\
-  \ video generation via an agentic dual-engine system (coding agent \u2192 Blender\
-  \ simulation draft \u2192 generative video editor). Covers the pipeline, agent skills,\
-  \ OmniWeav"
+description: "Complete reference on VideoCoCo (arXiv:2607.27380) — code-as-CoT physically-consistent video generation via an agentic dual-engine system (coding agent → Blender simulation draft → generative video editor). Covers the pipeline, agent skills, OmniWeav"
 ---
 
 # VideoCoCo — Code-as-CoT Video Generation (Agentic Dual-Engine)

@@ -9,6 +9,14 @@ from datetime import UTC, datetime
 import click
 
 from ..config import sessions_dir
+from ..memory.session_search import search_sessions
+
+
+def _fmt_dt(ts: float | None) -> str:
+    """Format a session timestamp for table output, or empty string."""
+    if not ts:
+        return ""
+    return datetime.fromtimestamp(ts, tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def parse_duration(val: str) -> float:
@@ -66,10 +74,7 @@ def sessions_list(limit: int) -> None:
         except (json.JSONDecodeError, OSError):
             continue
 
-        ts = data.get("timestamp")
-        dt_str = ""
-        if ts:
-            dt_str = datetime.fromtimestamp(ts, tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
+        dt_str = _fmt_dt(data.get("timestamp"))
 
         session_id = f.stem
         task = data.get("task", "")
@@ -102,10 +107,7 @@ def sessions_show(session_id: str) -> None:
     except Exception as exc:
         raise click.ClickException(f"Failed to read session file: {exc}") from exc
 
-    ts = data.get("timestamp")
-    dt_str = ""
-    if ts:
-        dt_str = datetime.fromtimestamp(ts, tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
+    dt_str = _fmt_dt(data.get("timestamp"))
 
     click.secho("=== Session Summary ===", bold=True, fg="cyan")
     click.echo(f"ID:         {session_id}")
@@ -156,6 +158,26 @@ def sessions_show(session_id: str) -> None:
                     click.echo(f"    {result_text}")
         else:
             click.echo(content)
+
+
+@sessions.command("search")
+@click.argument("query")
+@click.option("--limit", default=20, show_default=True, help="Maximum sessions to show.")
+def sessions_search(query: str, limit: int) -> None:
+    """Search past sessions by content (task, final answer, and tool calls)."""
+    try:
+        matches = search_sessions(query, limit=limit)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if not matches:
+        click.echo("No matching sessions found.")
+        return
+
+    click.secho(f"{'Session ID':<45} {'Date/Time':<19} {'Snippet':<70}", bold=True)
+    click.echo("-" * 140)
+    for m in matches:
+        click.echo(f"{m.session_id:<45} {_fmt_dt(m.timestamp):<19} {m.matched_snippet:<70}")
 
 
 @sessions.command("clean")

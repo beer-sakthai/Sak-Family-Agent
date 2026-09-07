@@ -1,9 +1,14 @@
 ---
 name: SakThai-hf-hub-storage-regions-deep-dive
-description: "Complete deep-dive on Hugging Face Hub Storage Regions \u2014 data residency controls\
-  \ for Team & Enterprise organizations, region selection (US/EU/coming Asia-Pacific),\
-  \ GDPR compliance, performance optimization, Repository tags, Spaces region binding,\
-  \ and practical workflows for multi-region ML teams."
+author: SakThai
+category: hf-hub
+description: >-
+  Complete deep-dive on Hugging Face Hub Storage Regions — data residency
+  controls for Team & Enterprise organizations, region selection (US/EU/coming
+  Asia-Pacific), GDPR compliance, performance optimization, Repository tags,
+  Spaces region binding, and practical workflows for multi-region ML teams.
+version: 1.0.0
+tags: [huggingface, hub, storage, regions, data-residency, gdpr, compliance, performance, teams, enterprise]
 ---
 
 # Hugging Face Hub — Storage Regions Deep Dive

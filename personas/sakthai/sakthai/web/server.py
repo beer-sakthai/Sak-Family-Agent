@@ -14,12 +14,11 @@ import ipaddress
 import json
 import logging
 import os
-import re
 import secrets
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -66,17 +65,18 @@ def _get_or_create_bearer_token() -> str:
 _DEFAULT_PORT = 3001
 _LOOPBACK_NAMES = frozenset({"localhost"})
 
-# The bearer token may be supplied as a ``?token=``/``?bearer_token=`` query
-# value (a convenience for loading static assets), which means it appears in the
-# request line. That line reaches the access log, so the live credential would
-# otherwise be written to logs in cleartext. Mask the value — by parameter name,
-# so a *wrong* token guessed by an attacker is masked too — before logging.
-_QUERY_TOKEN_RE = re.compile(r"((?:token|bearer_token)=)[^&\s\"']+", re.IGNORECASE)
-
-
-def _redact_query_token(text: str) -> str:
-    """Replace any ``token=``/``bearer_token=`` query value with a placeholder."""
-    return _QUERY_TOKEN_RE.sub(r"\1[REDACTED]", text)
+#: The endpoints backing apps/sak_agent_dashboard. Kept separate from the
+#: legacy /api/stages and /api/ecosystem, which stay as they were.
+_DASHBOARD_ROUTES = frozenset(
+    {
+        "/api/personas",
+        "/api/metrics",
+        "/api/sessions",
+        "/api/memory",
+        "/api/audit",
+        "/api/workflows",
+    }
+)
 
 
 def _is_loopback_host(host: str) -> bool:
@@ -132,6 +132,45 @@ def _dashboard_data(days: int = 30) -> dict[str, Any]:
     }
 
 
+def _load_api() -> Any:
+    """Import the payload builders, working both as a package and standalone.
+
+    ``server.py`` is also runnable directly (``python .../web/server.py``),
+    where there is no parent package for a relative import to resolve against —
+    the same reason ``_dashboard_data`` below does its own sys.path insertion.
+    """
+    try:
+        from . import api
+
+        return api
+    except ImportError:  # pragma: no cover — only hit when run as a script
+        import sys
+
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+        from sakthai.web import api as api_mod
+
+        return api_mod
+
+
+def _cors_origin() -> str | None:
+    """The single allowed cross-origin, or None (the default) for no CORS."""
+    origin = os.environ.get("SAKTHAI_WEB_CORS_ORIGIN", "").strip()
+    return origin or None
+
+
+def _query_params(query: str) -> dict[str, str]:
+    """Parse a query string, keeping the first value for each key."""
+    return {key: values[0] for key, values in parse_qs(query, keep_blank_values=True).items()}
+
+
+def _int_param(params: dict[str, str], name: str, default: int) -> int:
+    """Read an int query param, falling back rather than 500-ing on garbage."""
+    try:
+        return int(params[name])
+    except (KeyError, ValueError):
+        return default
+
+
 def _ecosystem_status() -> dict[str, Any]:
     composio_host = os.environ.get("COMPOSIO_API_KEY") is not None
     hf_user = os.environ.get("HUGGINGFACE_USERNAME")
@@ -152,48 +191,6 @@ def _ecosystem_status() -> dict[str, Any]:
     return status
 
 
-def _find_repo_root(start: Path | None = None) -> Path:
-    curr = (start or Path(__file__)).resolve().parent
-    for parent in [curr] + list(curr.parents):
-        candidate = parent / "docs"
-        if candidate.is_dir() and (parent / "pyproject.toml").is_file():
-            return parent.resolve()
-    return (Path(__file__).resolve().parents[4]).resolve()
-
-
-def _list_doc_slugs() -> list[str]:
-    repo_root = _find_repo_root()
-    docs_dir = (repo_root / "docs").resolve()
-    if not docs_dir.is_dir():
-        return []
-    return sorted(p.stem for p in docs_dir.glob("*.md") if p.is_file())
-
-
-def _get_doc_data(slug: str) -> dict[str, Any] | None:
-    if not slug or not re.match(r"^[a-zA-Z0-9_\-]+$", slug):
-        return None
-    repo_root = _find_repo_root()
-    docs_dir = (repo_root / "docs").resolve()
-    target_file = (docs_dir / f"{slug}.md").resolve()
-    if not str(target_file).startswith(str(docs_dir) + os.sep) or not target_file.is_file():
-        return None
-    try:
-        content = target_file.read_text(encoding="utf-8")
-        first_line = next(
-            (line.strip() for line in content.splitlines() if line.startswith("# ")), slug
-        )
-        title = first_line.lstrip("# ").strip()
-        return {
-            "slug": slug,
-            "title": title,
-            "content": content,
-            "relativePath": f"docs/{slug}.md",
-        }
-    except Exception as exc:
-        logger.warning("Failed to read doc %s: %s", slug, exc)
-        return None
-
-
 class _Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         # Secure fallback: explicitly bind the static files directory to _STATIC_ROOT
@@ -204,13 +201,7 @@ class _Handler(SimpleHTTPRequestHandler):
         return self.client_address[0]
 
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
-        # Expand the record ourselves so we can strip any bearer token from the
-        # request line before it is written — never hand a token to the logger.
-        try:
-            message = format % args if args else format
-        except (TypeError, ValueError):  # pragma: no cover - defensive
-            message = format
-        logger.info("%s", _redact_query_token(message))
+        logger.info(format, *args)
 
     def _has_auth_attempt(self) -> bool:
         """True if the request contains any authentication credentials."""
@@ -270,10 +261,31 @@ class _Handler(SimpleHTTPRequestHandler):
 
         return False
 
+    def _send_cors_headers(self) -> None:
+        """Echo the one configured origin, and only when the request matches it.
+
+        Off unless ``SAKTHAI_WEB_CORS_ORIGIN`` is set; it exists so ``next dev``
+        on :3000 can call this server on :3001 in local development.
+
+        Never ``*``, and ``Allow-Credentials`` is deliberately never sent: the
+        bearer token travels in the ``Authorization`` header, so credentialed
+        CORS buys nothing and would expose the cookie auth path cross-origin.
+        """
+        allowed = _cors_origin()
+        if not allowed:
+            return
+        if self.headers.get("Origin") != allowed:
+            return
+        self.send_header("Access-Control-Allow-Origin", allowed)
+        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+        self.send_header("Vary", "Origin")
+
     def end_headers(self) -> None:
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+        self._send_cors_headers()
         self.send_header(
             "Content-Security-Policy",
             "default-src 'self'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';",
@@ -289,9 +301,6 @@ class _Handler(SimpleHTTPRequestHandler):
                     if k in ("token", "bearer_token"):
                         val = unquote(v)
                         if secrets.compare_digest(val, expected_token):
-                            # Use the server-known token, not the attacker-influenced
-                            # query value, so the cookie is never built from tainted
-                            # input (CodeQL py/http-response-splitting, py/cookie-injection).
                             self.send_header(
                                 "Set-Cookie",
                                 f"token={expected_token}; Path=/; HttpOnly; SameSite=Strict",
@@ -309,22 +318,76 @@ class _Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        if self.command != "HEAD":
-            self.wfile.write(body)
+        self.wfile.write(body)
 
-    def do_HEAD(self) -> None:  # noqa: N802
-        """Serve HEAD through the exact same gate as GET.
+    def _dispatch_dashboard_api(self, path: str, query: str) -> bool:
+        """Serve the dashboard endpoints. Returns True if the path was handled.
 
-        ``SimpleHTTPRequestHandler`` supplies its own ``do_HEAD``. Inheriting it
-        unchanged left HEAD served straight out of ``send_head()``, skipping both
-        the bearer-token check and the static-root containment check that
-        ``do_GET`` performs -- an unauthenticated HEAD disclosed the existence,
-        size and mtime of any file under the static root, and followed symlinks
-        out of it that an *authenticated* GET rejects with 403. Delegating keeps
-        the two verbs on one code path so they cannot drift apart again; the body
-        writes are suppressed by the ``self.command`` guards.
+        Payloads come from :mod:`sakthai.web.api`, which reuses the package's
+        existing parsers; this method only maps a URL onto a call. A payload
+        builder that raises returns 500 with a generic message rather than
+        leaking a traceback or a filesystem path to the client.
         """
-        self.do_GET()
+        if path not in _DASHBOARD_ROUTES:
+            return False
+
+        _api = _load_api()
+        params = _query_params(query)
+        try:
+            if path == "/api/personas":
+                payload: Any = _api.personas_payload()
+            elif path == "/api/metrics":
+                payload = _api.metrics_payload(
+                    limit=_int_param(params, "limit", _api.EVAL_WINDOW),
+                    personas=_api.parse_personas(params.get("persona")),
+                )
+            elif path == "/api/sessions":
+                payload = _api.sessions_payload(
+                    search=params.get("search") or params.get("query"),
+                    limit=_int_param(params, "limit", 20),
+                    offset=_int_param(params, "offset", 0),
+                    session_id=params.get("id"),
+                    personas=_api.parse_personas(params.get("persona")),
+                )
+            elif path == "/api/memory":
+                payload = _api.memory_payload(
+                    query=params.get("query"),
+                    limit=_int_param(params, "limit", 100),
+                    personas=_api.parse_personas(params.get("persona")),
+                )
+            elif path == "/api/workflows":
+                run_id = params.get("id")
+                payload = (
+                    _api.workflow_detail(run_id)
+                    if run_id
+                    else _api.workflows_payload(limit=_int_param(params, "limit", 100))
+                )
+            else:  # /api/audit
+                payload = _api.audit_payload(
+                    severity=params.get("severity"),
+                    limit=_int_param(params, "limit", 200),
+                    personas=_api.parse_personas(params.get("persona")),
+                )
+        except Exception:
+            logger.warning("Dashboard API call failed for %s", path, exc_info=True)
+            self._send_json(500, {"error": "InternalError", "message": "Failed to build payload"})
+            return True
+
+        self._send_json(200, dict(_api.envelope(payload)))
+        return True
+
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        """Answer CORS preflight. No body, and no auth — a preflight carries none.
+
+        Returns 204 only when CORS is configured; otherwise 405, so a
+        default-configured server does not advertise cross-origin support.
+        """
+        if _cors_origin() is None:
+            self.send_error(405, "Method Not Allowed")
+            return
+        self.send_response(204)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
@@ -335,8 +398,7 @@ class _Handler(SimpleHTTPRequestHandler):
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", "16")
             self.end_headers()
-            if self.command != "HEAD":
-                self.wfile.write(b'{"status": "ok"}')
+            self.wfile.write(b'{"status": "ok"}')
             return
 
         if path.startswith("/api/"):
@@ -364,8 +426,7 @@ class _Handler(SimpleHTTPRequestHandler):
                 self.send_response(401)
                 self.send_header("Content-Type", "text/plain; charset=utf-8")
                 self.end_headers()
-                if self.command != "HEAD":
-                    self.wfile.write(b"Unauthorized: Missing or invalid bearer token")
+                self.wfile.write(b"Unauthorized: Missing or invalid bearer token")
                 return
 
         if path == "/api/stages":
@@ -381,17 +442,7 @@ class _Handler(SimpleHTTPRequestHandler):
             self._send_json(200, _ecosystem_status())
             return
 
-        if path in ("/api/docs", "/api/docs/"):
-            self._send_json(200, {"success": True, "docs": _list_doc_slugs()})
-            return
-
-        if path.startswith("/api/docs/"):
-            slug = path[len("/api/docs/") :].strip("/")
-            doc = _get_doc_data(slug)
-            if doc is None:
-                self._send_json(404, {"success": False, "error": f"Doc '{slug}' not found"})
-            else:
-                self._send_json(200, {"success": True, "doc": doc})
+        if self._dispatch_dashboard_api(path, parsed.query):
             return
 
         if path.startswith("/api/"):
@@ -418,8 +469,6 @@ class _Handler(SimpleHTTPRequestHandler):
             self.send_error(404, "File not found")
             return
 
-        if self.command == "HEAD":
-            return super().do_HEAD()
         return super().do_GET()
 
 

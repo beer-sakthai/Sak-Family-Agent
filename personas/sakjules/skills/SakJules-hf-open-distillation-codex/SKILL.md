@@ -1,9 +1,6 @@
 ---
 name: SakJules-SakThai-hf-open-distillation-codex
-description: "Complete reference on Manusagents Open Distillation Codex \u2014 the 73-source /\
-  \ 18M+ sample multi-frontier distillation collection with cybersecurity SFT data\
-  \ and 7,090 GitHub repo archives. Covers schema, verified numbers vs README claims,\
-  \ per-source pr"
+description: "Complete reference on Manusagents Open Distillation Codex — the 73-source / 18M+ sample multi-frontier distillation collection with cybersecurity SFT data and 7,090 GitHub repo archives. Covers schema, verified numbers vs README claims, per-source pr"
 ---
 
 # The Open Distillation Codex (Manusagents)

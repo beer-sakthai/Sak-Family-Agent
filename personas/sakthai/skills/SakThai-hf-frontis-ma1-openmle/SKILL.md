@@ -1,9 +1,12 @@
 ---
 name: SakThai-hf-frontis-ma1-openmle
-description: "Complete reference on Frontis-MA1 + OpenMLE \u2014 the AI4AI / recursive-self-improvement\
-  \ (RSI) release for machine learning engineering (MLE). Meta-evolution agent trained\
-  \ on four atomic program-evolution operators (Draft/Improve/Debug/Crossover), execution-grounded\
-  \ SFT+RL, OpenMLE-Evo search harness."
+author: SakThai
+license: MIT
+description: "Complete reference on Frontis-MA1 + OpenMLE — the AI4AI / recursive-self-improvement (RSI) release for machine learning engineering (MLE). Meta-evolution agent trained on four atomic program-evolution operators (Draft/Improve/Debug/Crossover), execution-grounded SFT+RL, OpenMLE-Evo search harness."
+version: 1.0.0
+category: mlops
+tags: [huggingface, ai4ai, rsi, mle, agents, openmle, frontis]
+platforms: [linux]
 ---
 
 # Frontis-MA1 + OpenMLE — AI4AI / Recursive Self-Improvement for MLE

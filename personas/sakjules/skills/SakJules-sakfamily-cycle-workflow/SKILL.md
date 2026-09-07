@@ -1,8 +1,6 @@
 ---
 name: SakJules-sakfamily-cycle-workflow
-description: Enforces the 6-stage Sak-Family-Agent cycle workflow (Dream -> Hope -> Care -> Joy
-  -> Trust -> Growth) for task execution and model evolution.
-...
+description: "Enforces the 6-stage Sak-Family-Agent cycle workflow (Dream -> Hope -> Care -> Joy -> Trust -> Growth) for task execution and model evolution."
 ---
 
 # Sak-Family-Agent 6-Stage Cycle Workflow

@@ -1,9 +1,7 @@
 ---
 name: SakKing-ai-coding-agent-delegate
-description: Delegate tasks to Claude, Codex, or Gemini coding agents.
-...
+description: "Delegate tasks to Claude, Codex, or Gemini coding agents."
 ---
-
 # AI Coding Agent Delegate
 
 This skill facilitates the delegation of coding tasks to specialized AI coding agents, including Claude Code, OpenAI Codex, and Google Gemini Code Assist.

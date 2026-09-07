@@ -1,10 +1,15 @@
 ---
 name: SakThai-hf-on-google-cloud-deep-dive
-description: "Complete deep-dive on deploying and training Hugging Face models on Google Cloud\
-  \ Platform \u2014 Deep Learning Containers (DLCs), Vertex AI, Google Kubernetes\
-  \ Engine (GKE), Cloud Run, and Google TPU integration via Optimum. Covers available\
-  \ container images, deployment patterns, gcloud commands, huggingface-inference-toolkit,\
-  \ and zero-cost evaluation options."
+author: SakThai
+category: mlops
+description: >-
+  Complete deep-dive on deploying and training Hugging Face models on Google
+  Cloud Platform — Deep Learning Containers (DLCs), Vertex AI, Google Kubernetes
+  Engine (GKE), Cloud Run, and Google TPU integration via Optimum.
+  Covers available container images, deployment patterns, gcloud commands,
+  huggingface-inference-toolkit, and zero-cost evaluation options.
+version: 1.0.0
+tags: [huggingface, google-cloud, gcp, vertex-ai, gke, cloud-run, tpu, dlc, inference, training, optimum]
 ---
 
 # Hugging Face on Google Cloud — Deep Dive

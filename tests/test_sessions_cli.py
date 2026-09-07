@@ -348,3 +348,54 @@ def test_sessions_clean_unlink_failure(
     res = runner.invoke(main, ["sessions", "clean", "--older-than", "1d", "--yes"])
     assert res.exit_code == 0
     assert "Failed to delete" in res.output
+
+
+def test_sessions_search_finds_match(sakthai_home: Path, runner: CliRunner) -> None:
+    s_dir = sessions_dir()
+    s_dir.mkdir(parents=True, exist_ok=True)
+    now = int(time.time())
+    sess_id = f"{now}_quantum-sess"
+    payload = {
+        "timestamp": now,
+        "task": "Explain quantum physics",
+        "model": "claude-opus-4-8",
+        "usage": {"total_tokens": 10},
+        "result": {"text": "done", "iterations": 1, "stop_reason": "end_turn", "tool_calls": []},
+        "messages": [],
+    }
+    (s_dir / f"{sess_id}.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    res = runner.invoke(main, ["sessions", "search", "quantum"])
+    assert res.exit_code == 0
+    assert sess_id in res.output
+
+
+def test_sessions_search_no_matches(sakthai_home: Path, runner: CliRunner) -> None:
+    res = runner.invoke(main, ["sessions", "search", "nonexistent-term"])
+    assert res.exit_code == 0
+    assert "No matching sessions found." in res.output
+
+
+def test_sessions_search_empty_query_reports_error(sakthai_home: Path, runner: CliRunner) -> None:
+    res = runner.invoke(main, ["sessions", "search", ""])
+    assert res.exit_code != 0
+    assert "`query` is required" in res.output
+
+
+def test_sessions_search_respects_limit(sakthai_home: Path, runner: CliRunner) -> None:
+    s_dir = sessions_dir()
+    s_dir.mkdir(parents=True, exist_ok=True)
+    now = int(time.time())
+    for i in range(5):
+        payload = {
+            "timestamp": now - i,
+            "task": "quantum topic",
+            "result": {"text": "", "iterations": 1, "stop_reason": "end_turn", "tool_calls": []},
+            "messages": [],
+        }
+        (s_dir / f"{now - i}_sess-{i}.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    res = runner.invoke(main, ["sessions", "search", "quantum", "--limit", "2"])
+    assert res.exit_code == 0
+    match_lines = [line for line in res.output.splitlines() if "_sess-" in line]
+    assert len(match_lines) == 2

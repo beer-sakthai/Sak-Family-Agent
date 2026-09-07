@@ -1,6 +1,6 @@
 ---
 name: SakThai-hf-hub-docker-registry
-description: "# hf-hub-docker-registry \u2014 Hugging Face Hub Docker Registry"
+description: "# hf-hub-docker-registry — Hugging Face Hub Docker Registry"
 ---
 
 # hf-hub-docker-registry — Hugging Face Hub Docker Registry

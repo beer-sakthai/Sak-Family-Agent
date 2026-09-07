@@ -1,9 +1,6 @@
 ---
 name: SakJules-cloudflare-email-service
-description: "Send and receive transactional emails with Cloudflare Email Service (Email Sending\
-  \ + Email Routing). Use when building email sending (Workers binding or REST API),\
-  \ email routing, Agents SDK email handling, or integrating email into any app \u2014\
-  \ Workers,"
+description: "Send and receive transactional emails with Cloudflare Email Service (Email Sending + Email Routing). Use when building email sending (Workers binding or REST API), email routing, Agents SDK email handling, or integrating email into any app — Workers,"
 ---
 
 # Cloudflare Email Service

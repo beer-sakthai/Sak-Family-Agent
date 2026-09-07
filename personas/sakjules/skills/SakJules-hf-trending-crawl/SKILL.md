@@ -1,7 +1,6 @@
 ---
 name: SakJules-SakThai-hf-trending-crawl
-description: 'Scheduled crawl of HF Hub trending models: fetch, select uncovered model, deep-dive,
-  report, update tracker, sync to GitHub.'
+description: "Scheduled crawl of HF Hub trending models: fetch, select uncovered model, deep-dive, report, update tracker, sync to GitHub."
 ---
 
 # HF Trending Model Crawl

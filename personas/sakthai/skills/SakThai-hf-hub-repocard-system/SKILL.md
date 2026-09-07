@@ -1,8 +1,6 @@
 ---
 name: SakThai-hf-hub-repocard-system
-description: Programmatic creation, loading, validation, and management of repository cards on
-  the Hugging Face Hub
-...
+description: "Programmatic creation, loading, validation, and management of repository cards on the Hugging Face Hub"
 ---
 
 # HF Hub RepoCard System (huggingface_hub)

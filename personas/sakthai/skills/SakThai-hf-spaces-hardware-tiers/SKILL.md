@@ -1,6 +1,6 @@
 ---
 name: SakThai-hf-spaces-hardware-tiers
-description: 'HuggingFace Spaces hardware tiers: CPU, GPU, and accelerators'
+description: "HuggingFace Spaces hardware tiers: CPU, GPU, and accelerators"
 ---
 
 # HF Spaces Hardware Tiers

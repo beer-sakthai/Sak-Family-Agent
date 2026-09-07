@@ -1,7 +1,6 @@
 ---
 name: SakKing-cycle-care
-description: Audit correctness, safety, and performance before shipping.
-...
+description: "Audit correctness, safety, and performance before shipping."
 ---
 
 # Sak-cycle-care

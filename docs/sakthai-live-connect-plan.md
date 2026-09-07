@@ -1,7 +1,7 @@
 # SakThai-Agent v2 — Plan: Live Connect + Robust Agent Runtime
 Owner: Beer (via Hermes-SakThai)  
 Status: Completed  
-Scope: Phases 5–8, aligned with existing todo.md
+Scope: Phases 5–8, aligned with existing TODO.md
 
 ## Current state (from v2 repo)
 - Phases 0–4 complete
@@ -47,7 +47,7 @@ Acceptance: new tests pass; no regressions in Phase 0–4 tests.
 
 ## Phase 5–8 definition of done
 - Green CI on Python 3.11 and 3.12
-- `todo.md` updated with completion dates
+- `TODO.md` updated with completion dates
 - This plan archived in `docs/` and linked from README
 
 ## Execution rules

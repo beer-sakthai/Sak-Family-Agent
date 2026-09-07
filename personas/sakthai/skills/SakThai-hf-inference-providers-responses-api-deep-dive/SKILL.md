@@ -1,6 +1,6 @@
 ---
 name: SakThai-hf-inference-providers-responses-api-deep-dive
-description: 'name: SakThai-hf-inference-providers-responses-api-deep-dive'
+description: "name: SakThai-hf-inference-providers-responses-api-deep-dive"
 ---
 
 # HF Inference Providers — Responses API & Remote MCP (Deep Dive)

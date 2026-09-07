@@ -1,10 +1,18 @@
 ---
 name: SakThai-hf-spaces-lifecycle
-description: "Complete reference for Hugging Face Spaces lifecycle management \u2014 auto-sleep\
-  \ behavior on free vs paid hardware, custom sleep time configuration, manual pause/resume\
-  \ workflow, billing model (per-minute billing, no-cost build phase, no billing during\
-  \ pause/sleep), ZeroGPU dynamic GPU allocation and daily quota tiers, and wake-from-sleep\
-  \ mechanisms.\n"
+author: SakThai
+license: MIT
+description: >
+  Complete reference for Hugging Face Spaces lifecycle management — auto-sleep
+  behavior on free vs paid hardware, custom sleep time configuration, manual
+  pause/resume workflow, billing model (per-minute billing, no-cost build phase,
+  no billing during pause/sleep), ZeroGPU dynamic GPU allocation and daily quota
+  tiers, and wake-from-sleep mechanisms.
+version: 1.0.0
+metadata:
+  hermes:
+    tags: [huggingface, hub, spaces, lifecycle, sleep, pause, billing, zerogpu, free-tier]
+    category: mlops
 ---
 
 # HF Spaces Lifecycle Management — Sleep, Pause, Billing & Duration

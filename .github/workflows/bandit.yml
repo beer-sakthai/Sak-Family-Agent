@@ -38,27 +38,26 @@ on:
 permissions:
   contents: read
 
-# `cancel-in-progress` only on a pull request, never on `main`: a cancelled
-# analysis uploads no SARIF, and a code-scanning alert is only ever closed by a
-# newer analysis from the same tool — so cancelling a `main` run would leave
-# stale alerts open with nothing scheduled to retire them.
+# Supersede in-flight runs for the same ref, but never cancel a run on main:
+# a code-scanning alert only closes when a newer analysis from the same tool
+# stops reporting it, so main's producers must always finish.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: bandit-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   bandit:
     name: Bandit
-    timeout-minutes: 15
     permissions:
       contents: read          # actions/checkout
       security-events: write  # upload-sarif writes to the code-scanning API
       actions: read           # upload-sarif reads the run status on a private repo
 
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Harden the runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           use-policy-store: true
           api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
@@ -114,6 +113,6 @@ jobs:
             --exit-zero
 
       - name: Upload results to the code-scanning dashboard
-        uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
         with:
           sarif_file: bandit-results.sarif

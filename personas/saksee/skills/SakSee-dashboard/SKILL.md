@@ -1,7 +1,6 @@
 ---
 name: SakSee-dashboard
-description: Set up and run the SakThai Agent dashboard.
-...
+description: "Set up and run the SakThai Agent dashboard."
 ---
 
 > **⚠️ Distinction:** This skill covers the **SakThai-Agent Mission Control dashboard** (React + Vite analytics app). Beer's "dashboard" on GitHub refers to the **House of Sak landing page** at `beer-sakthai/house-of-sak` (static HTML/CSS site). These are separate projects — use this skill for the analytics dashboard, and the `vercel-deploy` + `github-repo-management` skills for the House of Sak site.

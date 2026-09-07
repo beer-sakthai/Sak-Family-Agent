@@ -1,7 +1,13 @@
 ---
 name: SakThai-ci-fixer-master-debug
+author: Hermes
+license: MIT
 description: Diagnose and fix GitHub Actions CI failures.
-...
+version: 0.1.0
+platforms: [linux]
+metadata:
+  hermes:
+    tags: [CI, Debugging, GitHub, Automation]
 ---
 
 ## ⚠️ Cardinal Rule — Diagnose First, Fix Second

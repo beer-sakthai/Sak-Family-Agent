@@ -1,7 +1,6 @@
 ---
 name: SakKing-cli-workflow-pitfalls
-description: CLI-specific pitfalls and workarounds for SakKing Agent workflows.
-...
+description: "CLI-specific pitfalls and workarounds for SakKing Agent workflows."
 ---
 
 # SakKing CLI Workflow Pitfalls

@@ -1,7 +1,6 @@
 ---
 name: SakJules-teams-meeting-pipeline
-description: "Operate the Teams meeting summary pipeline via Hermes CLI \u2014 summarize meetings,\
-  \ inspect pipeline status, replay jobs, manage Microsoft Graph subscriptions."
+description: "Operate the Teams meeting summary pipeline via Hermes CLI — summarize meetings, inspect pipeline status, replay jobs, manage Microsoft Graph subscriptions."
 ---
 
 # Teams Meeting Pipeline

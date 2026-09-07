@@ -1,8 +1,7 @@
 ---
 name: SakThai-hf-ml-games
-description: "Integrate AI into games \u2014 NPCs, tools, Unity, Cubzh."
+description: "Integrate AI into games — NPCs, tools, Unity, Cubzh."
 ---
-
 # Machine Learning for Games
 
 Based on the [HF ML for Games Course](https://huggingface.co/learn/ml-games-course). Covers building smart NPCs with LLMs, using AI tools in game dev pipelines, integrating models with Unity Sentis, and creating AI-powered game demos.

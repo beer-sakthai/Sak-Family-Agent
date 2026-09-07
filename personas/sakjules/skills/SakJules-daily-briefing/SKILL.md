@@ -1,7 +1,6 @@
 ---
 name: SakJules-SakTan-daily-briefing
-description: "Generate Beers day-start briefing \u2014 todays calendar, open tasks, and one clear\
-  \ next action \u2014 from stored memory and connected tools."
+description: "Generate Beers day-start briefing — todays calendar, open tasks, and one clear next action — from stored memory and connected tools."
 ---
 
 # Daily Briefing

@@ -1,0 +1,68 @@
+{
+  "expectations": [
+    {
+      "text": "Dispatches all six personas",
+      "passed": true,
+      "evidence": "7 `sakthai run` invocations; 6/6 personas addressed"
+    },
+    {
+      "text": "Passes --persona for each of the six personas",
+      "passed": false,
+      "evidence": "distinct --persona values in commands: 0/6 (none)"
+    },
+    {
+      "text": "Leaves --provider/--model unset so each persona's own config applies",
+      "passed": false,
+      "evidence": "in commands \u2014 --provider: ['--provider anthropic']; --model: none"
+    },
+    {
+      "text": "Injects Sak-auto-cycle-loop on every dispatch",
+      "passed": true,
+      "evidence": "6/6 commands carry the flag"
+    },
+    {
+      "text": "Defaults to --dry-run on every dispatch",
+      "passed": true,
+      "evidence": "7/6 commands carry --dry-run"
+    },
+    {
+      "text": "Uses a throwaway SAKTHAI_HOME on every dispatch",
+      "passed": true,
+      "evidence": "6/6 commands set SAKTHAI_HOME=$(mktemp -d)"
+    },
+    {
+      "text": "Targets no /opt/data memory home",
+      "passed": true,
+      "evidence": "/opt/data in commands: none"
+    },
+    {
+      "text": "Avoids the SAKTHAI_HOME + --persona double-append trap",
+      "passed": true,
+      "evidence": "persona-home SAKTHAI_HOME in commands: none"
+    },
+    {
+      "text": "Fans out in a single message rather than serially",
+      "passed": true,
+      "evidence": "parallel marker: ONE message; unnegated serial claim: none"
+    },
+    {
+      "text": "Dispatches the safe default without stalling to ask test-or-live",
+      "passed": true,
+      "evidence": "stall phrase: none"
+    },
+    {
+      "text": "Final report carries a row per persona with status",
+      "passed": true,
+      "evidence": "6/6 personas named in report.md; status vocabulary present=True"
+    }
+  ],
+  "passed": 9,
+  "total": 11,
+  "pass_rate": 0.818,
+  "summary": {
+    "pass_rate": 0.818,
+    "passed": 9,
+    "failed": 2,
+    "total": 11
+  }
+}

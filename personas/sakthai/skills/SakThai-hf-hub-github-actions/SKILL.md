@@ -1,8 +1,10 @@
 ---
 name: SakThai-hf-hub-github-actions
-description: "Hugging Face Hub GitHub Actions integration \u2014 sync repos, Trusted Publishers\
-  \ (OIDC keyless auth), hub-sync action parameters, Spaces CI/CD, and custom workflow\
-  \ patterns"
+author: SakThai
+license: MIT
+description: Hugging Face Hub GitHub Actions integration — sync repos, Trusted Publishers (OIDC keyless auth), hub-sync action parameters, Spaces CI/CD, and custom workflow patterns
+category: mlops
+version: 1.0.0
 ---
 
 # HF Hub GitHub Actions & Trusted Publishers

@@ -1,6 +1,7 @@
 ---
 name: SakThai-hf-hub-webhooks-practical-patterns-deep-dive
-description: "# HF Hub Webhooks \u2014 Practical Patterns"
+version: 1.0.0
+description: # HF Hub Webhooks — Practical Patterns
 ---
 
 # HF Hub Webhooks — Practical Patterns

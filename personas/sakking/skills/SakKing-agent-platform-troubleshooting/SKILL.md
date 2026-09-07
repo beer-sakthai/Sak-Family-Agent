@@ -1,8 +1,6 @@
 ---
 name: SakKing-agent-platform-troubleshooting
-description: '>-   Troubleshoots Google Cloud Gemini Enterprise Agent Platform issues (Agent Gateway,
-  Registry, Identity, Policies, Model Armor, Identity-Aware Proxy (IAP)).   Use when
-  agent requests fail with 403 (especially unauthorized egress), Agent Runtime qu'
+description: ">-   Troubleshoots Google Cloud Gemini Enterprise Agent Platform issues (Agent Gateway, Registry, Identity, Policies, Model Armor, Identity-Aware Proxy (IAP)).   Use when agent requests fail with 403 (especially unauthorized egress), Agent Runtime qu"
 ---
 
 # Agent Platform Troubleshooting

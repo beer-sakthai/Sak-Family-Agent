@@ -1,8 +1,6 @@
 ---
 name: SakThai-hf-agent-traces-datasets
-description: "How to consume, convert, and inspect HF Agent Traces datasets in the wild \u2014\
-  \ Pi-format trace corpora, row-level merged JSONL, and conversion mapping. Case\
-  \ study: Glint-Research/Fable-5-traces."
+description: "How to consume, convert, and inspect HF Agent Traces datasets in the wild — Pi-format trace corpora, row-level merged JSONL, and conversion mapping. Case study: Glint-Research/Fable-5-traces."
 ---
 
 # HF Agent Traces Datasets (Pi format) — consumption & conversion

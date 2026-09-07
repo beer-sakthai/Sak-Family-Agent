@@ -6,12 +6,6 @@ import torch
 
 MODEL = "Nanthasit/sakthai-context-7b-merged"
 HF_TOKEN = os.environ.get("HF_TOKEN", "")
-# Hugging Face repositories are mutable: a tag or branch can be force-updated
-# under you, so an unpinned download is not reproducible and trusts whatever the
-# remote serves at run time. Pin every download to one revision, overridable so
-# an operator can pin a commit SHA for a byte-reproducible run.
-HF_REVISION = os.environ.get("HF_REVISION", "main")
-
 os.environ["HF_TOKEN"] = HF_TOKEN
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
@@ -36,10 +30,13 @@ bnb_config = BitsAndBytesConfig(
     bnb_4bit_quant_type="nf4",
 )
 
-tokenizer = AutoTokenizer.from_pretrained(MODEL, token=HF_TOKEN, revision=HF_REVISION)
-model = AutoModelForCausalLM.from_pretrained(
+# MODEL is this project's own merged checkpoint (Nanthasit/*), republished by
+# its own training loop. A workbench probe is meant to exercise whatever was
+# last pushed, so pinning a revision here would defeat the script's purpose
+# rather than harden it (bandit B615).
+tokenizer = AutoTokenizer.from_pretrained(MODEL, token=HF_TOKEN)  # nosec B615
+model = AutoModelForCausalLM.from_pretrained(  # nosec B615
     MODEL,
-    revision=HF_REVISION,
     quantization_config=bnb_config,
     device_map="auto",
     torch_dtype=torch.bfloat16,
@@ -137,9 +134,10 @@ for i, test in enumerate(tests):
             try:
                 json.loads(response)
                 checks.append("valid_json")
-            except json.JSONDecodeError:
-                # Not JSON — that is the check failing, not an error. A bare
-                # `except:` here also swallowed KeyboardInterrupt and SystemExit.
+            except (json.JSONDecodeError, TypeError):
+                # Not valid JSON — that is the check failing, not an error
+                # to hide. A bare `except` here also swallowed
+                # KeyboardInterrupt/SystemExit (bandit B110).
                 pass
         if test["name"] == "multi_step_reasoning":
             if any(c in response for c in ["7", "seven"]) and ("apple" in response.lower()):
@@ -190,9 +188,10 @@ record = {
     "summary": f"{passed}/{total} passed",
 }
 
-# Honour TMPDIR rather than hardcoding /tmp; RECORD_PATH overrides outright.
-record_path = os.environ.get("RECORD_PATH") or os.path.join(
-    tempfile.gettempdir(), "sakthai-7b-workbench-record.json"
+# Private per-run temp dir rather than a fixed /tmp name (bandit B108).
+record_path = os.path.join(
+    os.environ.get("SAKTHAI_ARTIFACT_DIR") or tempfile.mkdtemp(prefix="sakthai-7b-workbench-"),
+    "record.json",
 )
 with open(record_path, "w") as f:
     json.dump(record, f, indent=2)

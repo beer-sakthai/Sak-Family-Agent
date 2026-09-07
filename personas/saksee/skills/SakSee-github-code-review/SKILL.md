@@ -1,6 +1,6 @@
 ---
 name: SakSee-github-code-review
-description: 'Review PRs: diffs, inline comments via gh or REST.'
+description: "Review PRs: diffs, inline comments via gh or REST."
 ---
 
 # GitHub Code Review

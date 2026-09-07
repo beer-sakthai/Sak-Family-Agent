@@ -1,8 +1,6 @@
 ---
 name: SakThai-learning-loop
-description: 'Use when the user mentions learning loop, iterative improvement, feedback loop, continuous
-  improvement, multi-cycle training, or wants to run multiple training iterations
-  to progressively improve model performance. Phase: ITERATE.'
+description: "Use when the user mentions learning loop, iterative improvement, feedback loop, continuous improvement, multi-cycle training, or wants to run multiple training iterations to progressively improve model performance. Phase: ITERATE."
 ---
 
 # SakThai Learning Improvement Loop

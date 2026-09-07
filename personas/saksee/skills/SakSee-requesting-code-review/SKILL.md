@@ -1,6 +1,6 @@
 ---
 name: SakSee-requesting-code-review
-description: 'Pre-commit review: security scan, quality gates, auto-fix.'
+description: "Pre-commit review: security scan, quality gates, auto-fix."
 ---
 
 # Pre-Commit Code Verification

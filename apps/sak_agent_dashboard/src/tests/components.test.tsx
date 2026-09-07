@@ -1,185 +1,772 @@
+/**
+ * Component rendering against contract-shaped data.
+ *
+ * Every fixture here comes from `lib/demo.ts` — the one demo dataset — so a
+ * component that renders in a test renders the same shapes it gets at runtime.
+ * Imports are direct: a broken component fails the suite rather than falling
+ * through to an inline literal.
+ */
+
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
-import { AgentCard } from "../components/AgentCard";
-import { AgentOverview } from "../components/AgentOverview";
-import { AnalyticsCharts } from "../components/AnalyticsCharts";
-import { SessionExplorer } from "../components/SessionExplorer";
-import { MemoryExplorer } from "../components/MemoryExplorer";
-import { AuditLogs } from "../components/AuditLogs";
-import { DemoModeToggle } from "../components/DemoModeToggle";
-import { StitchStudio } from "../components/StitchStudio";
-import { LiveTelemetryFeed } from "../components/LiveTelemetryFeed";
+import AgentCard from "@/components/AgentCard";
+import AgentOverview from "@/components/AgentOverview";
+import AnalyticsCharts from "@/components/AnalyticsCharts";
+import AuditLogs from "@/components/AuditLogs";
+import DemoModeToggle from "@/components/DemoModeToggle";
+import DisplayMenu from "@/components/DisplayMenu";
+import MemoryExplorer from "@/components/MemoryExplorer";
+import PersonaFilter from "@/components/PersonaFilter";
+import SessionExplorer from "@/components/SessionExplorer";
+import StitchStudio from "@/components/StitchStudio";
+import ToastStack from "@/components/Toasts";
+import WorkflowRuns from "@/components/WorkflowRuns";
+import type { PersonaSummary } from "@/lib/contracts.generated";
+import {
+  demoAudit,
+  demoMemory,
+  demoMetrics,
+  demoPersonas,
+  demoSessions,
+  demoWorkflows,
+} from "@/lib/demo";
+import { TREND_WINDOWS, trendWindowLabel } from "@/lib/url-state";
 
-describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
+const personas = demoPersonas();
+const active = personas.personas.find((p) => p.runs > 0)!;
+const idle = personas.personas.find((p) => p.runs === 0)!;
 
-  describe("AgentCard & AgentOverview Components", () => {
-    it("renders agent card details when AgentCard is invoked", () => {
-      const sampleAgent = {
-        name: "SakThai",
-        role: "Primary Orchestrator & Fine-Tuned Agent",
-        status: "Active" as const,
-        model: "sakthai-v2-qlora",
-        latencyMs: 320,
-        runs: 300,
-        skills: ["routing", "planning", "tool-call"],
-      };
-
-      render(<AgentCard agent={sampleAgent} />);
-      expect(screen.getByText("SakThai")).toBeInTheDocument();
-      expect(screen.getByText("Primary Orchestrator & Fine-Tuned Agent")).toBeInTheDocument();
-      expect(screen.getByText("Active")).toBeInTheDocument();
-      expect(screen.getByText(/320ms/)).toBeInTheDocument();
-    });
-
-    it("renders overview grid with all 5 Sak-Agent-Family personas", () => {
-      const mockAgents = [
-        { name: "SakThai", role: "Primary Orchestrator", status: "Active" as const, model: "m1", latencyMs: 300, runs: 100, skills: [] },
-        { name: "SakKing", role: "Reasoning Specialist", status: "Ready" as const, model: "m2", latencyMs: 500, runs: 80, skills: [] },
-        { name: "SakSee", role: "Multimodal Specialist", status: "Ready" as const, model: "m3", latencyMs: 400, runs: 60, skills: [] },
-        { name: "SakSit", role: "Security Auditor", status: "Ready" as const, model: "m4", latencyMs: 280, runs: 50, skills: [] },
-        { name: "SakJules", role: "Async Execution", status: "Ready" as const, model: "m5", latencyMs: 350, runs: 70, skills: [] },
-      ];
-
-      render(<AgentOverview agents={mockAgents} />);
-      expect(screen.getByText("SakThai")).toBeInTheDocument();
-      expect(screen.getByText("SakKing")).toBeInTheDocument();
-      expect(screen.getByText("SakSee")).toBeInTheDocument();
-      expect(screen.getByText("SakSit")).toBeInTheDocument();
-      expect(screen.getByText("SakJules")).toBeInTheDocument();
-    });
+describe("AgentCard", () => {
+  it("renders the persona's display name", () => {
+    render(<AgentCard agent={active} />);
+    expect(screen.getByText(active.display_name)).toBeInTheDocument();
   });
 
-  describe("AnalyticsCharts Component", () => {
-    it("renders token usage and benchmark analytics sections", () => {
-      const mockMetrics = {
-        totalRuns: 761,
-        avgLatencyMs: 388,
-        successRate: 0.985,
-        tokenStats: { totalTokens: 1450000, promptTokens: 950000, completionTokens: 500000 },
-        stopReasons: { end_turn: 740, max_tokens: 21 },
-        trends: [{ date: "2026-08-01", runs: 350, latencyMs: 380 }],
-      };
-
-      render(<AnalyticsCharts metrics={mockMetrics} />);
-      expect(screen.getByText(/Token Usage/i)).toBeInTheDocument();
-    });
+  it("shows a computed success rate, not a hardcoded score", () => {
+    const agent: PersonaSummary = { ...active, runs: 10, errors: 2 };
+    render(<AgentCard agent={agent} />);
+    expect(screen.getByText("80.0%")).toBeInTheDocument();
   });
 
-  describe("SessionExplorer Component Accessibility & Interactions", () => {
-    it("allows interactive search query input, filters persona/status, and exposes ARIA attributes and modal dialog", () => {
-      const mockSessions = [
-        { sessionId: "sess-1", persona: "SakThai", timestamp: "2026-08-02", messageCount: 5, tokenUsage: 1200, status: "completed" as const },
-        { sessionId: "sess-2", persona: "SakKing", timestamp: "2026-08-02", messageCount: 10, tokenUsage: 3400, status: "completed" as const },
-      ];
-
-      render(<SessionExplorer sessions={mockSessions} />);
-      const searchInput = screen.getByRole("textbox", { name: "Search sessions or personas" });
-      expect(searchInput).toBeInTheDocument();
-
-      fireEvent.change(searchInput, { target: { value: "SakThai" } });
-      expect(searchInput).toHaveValue("SakThai");
-
-      const clearBtn = screen.getByRole("button", { name: "Clear search" });
-      expect(clearBtn).toBeInTheDocument();
-      fireEvent.click(clearBtn);
-      expect(searchInput).toHaveValue("");
-
-      const personaSelect = screen.getByRole("combobox", { name: "Filter sessions by persona" });
-      const statusSelect = screen.getByRole("combobox", { name: "Filter sessions by status" });
-      expect(personaSelect).toBeInTheDocument();
-      expect(statusSelect).toBeInTheDocument();
-
-      const inspectBtn = screen.getByRole("button", { name: "Inspect details for session sess-1" });
-      expect(inspectBtn).toBeInTheDocument();
-      fireEvent.click(inspectBtn);
-
-      const dialog = screen.getByRole("dialog");
-      expect(dialog).toBeInTheDocument();
-      expect(dialog).toHaveAttribute("aria-modal", "true");
-
-      const closeDialogBtn = screen.getByRole("button", { name: "Close transcript inspector" });
-      expect(closeDialogBtn).toBeInTheDocument();
-      fireEvent.click(closeDialogBtn);
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    });
+  it("says so when a persona has no runs instead of inventing a score", () => {
+    render(<AgentCard agent={idle} />);
+    expect(screen.getByText("no runs yet")).toBeInTheDocument();
   });
 
-  describe("MemoryExplorer & AuditLogs Components", () => {
-    it("renders MemoryExplorer with facts and observations, verifying tab accessibility attributes and live region updates", () => {
-      const mockMemory = {
-        facts: [{ id: 1, entity: "SakThai", fact: "Primary model initialized", persona: "SakThai" }],
-        observations: [{ id: 1, category: "eval", observation: "Benchmark 95% passed" }],
-      };
-
-      render(<MemoryExplorer memory={mockMemory} />);
-      expect(screen.getByText("Primary model initialized")).toBeInTheDocument();
-
-      const factsTab = screen.getByRole("button", { name: "Filter memory by facts" });
-      const obsTab = screen.getByRole("button", { name: "Filter memory by observations" });
-
-      expect(factsTab).toHaveAttribute("aria-pressed", "true");
-      expect(obsTab).toHaveAttribute("aria-pressed", "false");
-
-      fireEvent.click(obsTab);
-
-      expect(factsTab).toHaveAttribute("aria-pressed", "false");
-      expect(obsTab).toHaveAttribute("aria-pressed", "true");
-      expect(screen.getByText("Benchmark 95% passed")).toBeInTheDocument();
-    });
-
-    it("renders security audit log entries with severity badges and accessible filter controls", () => {
-      const mockLogs = [
-        { id: 1, timestamp: "2026-08-02T12:00:00Z", persona: "SakSit", severity: "critical" as const, event: "Unauthorized access blocked", details: "Blocked IP 10.0.0.1" },
-        { id: 2, timestamp: "2026-08-02T12:05:00Z", persona: "SakThai", severity: "info" as const, event: "Session initialized", details: "OK" },
-      ];
-
-      render(<AuditLogs logs={mockLogs} />);
-      expect(screen.getByText("Unauthorized access blocked")).toBeInTheDocument();
-      expect(screen.getByText("critical")).toBeInTheDocument();
-
-      const criticalBtn = screen.getByRole("button", { name: "Filter audit logs by CRITICAL severity" });
-      expect(criticalBtn).toHaveAttribute("aria-pressed", "false");
-
-      fireEvent.click(criticalBtn);
-      expect(criticalBtn).toHaveAttribute("aria-pressed", "true");
-      expect(screen.getByText("Unauthorized access blocked")).toBeInTheDocument();
-      expect(screen.queryByText("Session initialized")).not.toBeInTheDocument();
-    });
+  it("labels a persona with no shard as Idle", () => {
+    render(<AgentCard agent={idle} />);
+    expect(screen.getByText("Idle")).toBeInTheDocument();
   });
 
-  describe("Demo Mode Toggle Component", () => {
-    it("renders demo mode toggle button with aria-pressed state and handles click state toggle", () => {
-      const handleToggle = vi.fn();
-
-      render(<DemoModeToggle isDemo={false} onToggle={handleToggle} />);
-      const btn = screen.getByRole("button", { name: /demo mode/i });
-      expect(btn.getAttribute("aria-pressed")).toBe("false");
-      fireEvent.click(btn);
-      expect(handleToggle).toHaveBeenCalled();
-    });
+  it("reports a missing memory shard plainly", () => {
+    render(<AgentCard agent={idle} />);
+    expect(screen.getByText("no memory shard yet")).toBeInTheDocument();
   });
 
-  describe("StitchStudio Component", () => {
-    it("renders Stitch Studio header, preset controls, and tab switching", () => {
-      render(<StitchStudio />);
-      expect(screen.getByText(/Google Stitch Design & Component Workbench/i)).toBeInTheDocument();
-      expect(screen.getByText(/SakThai Interactive Agent Drawer/i)).toBeInTheDocument();
-      const codeTab = screen.getByRole("button", { name: /tsx code/i });
-      fireEvent.click(codeTab);
-      expect(screen.getByText(/SakThaiAgentCard/i)).toBeInTheDocument();
-    });
+  it("renders identically across repeated renders", () => {
+    // The previous card filled a missing score with Math.random().
+    const first = render(<AgentCard agent={active} />).container.innerHTML;
+    const second = render(<AgentCard agent={active} />).container.innerHTML;
+    expect(first).toBe(second);
   });
-  describe("LiveTelemetryFeed Component Accessibility", () => {
-    it("renders control buttons and select input with appropriate ARIA labels", () => {
-      render(<LiveTelemetryFeed />);
-      const clearBtn = screen.getByRole("button", { name: "Clear stream events" });
-      expect(clearBtn).toBeInTheDocument();
-      expect(clearBtn).toBeDisabled();
-      expect(clearBtn).toHaveAttribute("title", "Stream is empty");
-      expect(screen.getByRole("button", { name: "Pause stream" })).toBeInTheDocument();
-      expect(screen.getByRole("combobox", { name: "Filter by Persona" })).toBeInTheDocument();
+
+  it("stays a single toggle button when there is no detail to open", () => {
+    // The overlay/details split only exists once a card has two things to do.
+    render(<AgentCard agent={active} onToggle={vi.fn()} selected={false} />);
+    expect(
+      screen.getByRole("button", { name: `Add ${active.display_name} to the persona filter` }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Open details/ })).not.toBeInTheDocument();
+  });
+
+  it("offers both the filter toggle and a details control without nesting them", () => {
+    const { container } = render(
+      <AgentCard agent={active} onToggle={vi.fn()} onOpenDetail={vi.fn()} selected={false} />,
+    );
+    expect(
+      screen.getByRole("button", { name: `Add ${active.display_name} to the persona filter` }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: `Open details for ${active.display_name}` }),
+    ).toBeInTheDocument();
+    // A <button> inside a <button> is invalid, and browsers resolve it by
+    // dropping one of the two controls.
+    expect(container.querySelector("button button")).toBeNull();
+  });
+
+  it("reports the two controls separately", () => {
+    const onToggle = vi.fn();
+    const onOpenDetail = vi.fn();
+    render(<AgentCard agent={active} onToggle={onToggle} onOpenDetail={onOpenDetail} />);
+
+    fireEvent.click(screen.getByRole("button", { name: `Open details for ${active.display_name}` }));
+    expect(onOpenDetail).toHaveBeenCalledTimes(1);
+    expect(onToggle).not.toHaveBeenCalled();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: `Add ${active.display_name} to the persona filter` }),
+    );
+    expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it("marks the overlay toggle pressed for a selected persona", () => {
+    render(<AgentCard agent={active} onToggle={vi.fn()} onOpenDetail={vi.fn()} selected />);
+    expect(
+      screen.getByRole("button", {
+        name: `Remove ${active.display_name} from the persona filter`,
+      }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("shows an error count only when there are errors", () => {
+    const { rerender } = render(<AgentCard agent={{ ...active, errors: 0 }} />);
+    expect(screen.queryByText(/error/)).not.toBeInTheDocument();
+    rerender(<AgentCard agent={{ ...active, errors: 3 }} />);
+    expect(screen.getByText("3 errors")).toBeInTheDocument();
+  });
+});
+
+describe("AgentOverview", () => {
+  it("renders a card for all six personas", () => {
+    render(<AgentOverview personas={personas} />);
+    expect(screen.getByText("6 Personas Registered")).toBeInTheDocument();
+  });
+
+  it("surfaces unattributed runs rather than hiding them", () => {
+    render(<AgentOverview personas={personas} />);
+    expect(screen.getByText(`${personas.unattributed_runs} unattributed`)).toBeInTheDocument();
+  });
+
+  it("draws the activity calendar only once there is a trend series", () => {
+    const { queryByTestId } = render(<AgentOverview personas={personas} />);
+    expect(queryByTestId("activity-heatmap")).toBeNull();
+
+    render(<AgentOverview personas={personas} trends={demoMetrics().trends} />);
+    expect(screen.getByTestId("activity-heatmap")).toBeInTheDocument();
+  });
+
+  it("passes the persona name up when a card's details are opened", () => {
+    const onOpenDetail = vi.fn();
+    render(<AgentOverview personas={personas} onOpenDetail={onOpenDetail} />);
+    fireEvent.click(screen.getByRole("button", { name: `Open details for ${active.display_name}` }));
+    expect(onOpenDetail).toHaveBeenCalledWith(active.name);
+  });
+
+  it("omits the unattributed badge when there are none", () => {
+    render(<AgentOverview personas={{ ...personas, unattributed_runs: 0 }} />);
+    expect(screen.queryByText(/unattributed/)).not.toBeInTheDocument();
+  });
+});
+
+describe("AnalyticsCharts", () => {
+  // The scope pill now carries the trend length as well as the persona count,
+  // so it is asked for by test id rather than by its full sentence.
+  function renderCharts(props: Partial<React.ComponentProps<typeof AnalyticsCharts>> = {}) {
+    return render(
+      <AnalyticsCharts
+        metrics={demoMetrics()}
+        trend={30}
+        onTrendChange={vi.fn()}
+        {...props}
+      />,
+    );
+  }
+
+  // The headline run/success/latency figures moved to the KPI strip, which is
+  // on screen above these charts; see `shell.test.tsx`. What is left here is
+  // how much of the family the per-persona charts actually speak for.
+  it("says how many personas the per-persona charts are drawn from", () => {
+    const attributed = personas.personas.filter((p) => p.runs > 0).length;
+    renderCharts({ personas });
+    expect(screen.getByTestId("analytics-scope")).toHaveTextContent(
+      `${attributed} of ${personas.personas.length} personas have attributed runs`,
+    );
+  });
+
+  it("counts nothing rather than guessing without a personas payload", () => {
+    renderCharts();
+    expect(screen.getByTestId("analytics-scope")).toHaveTextContent(
+      "0 of 0 personas have attributed runs",
+    );
+  });
+
+  it("renders without a personas payload", () => {
+    expect(() => renderCharts()).not.toThrow();
+  });
+
+  it("draws only the last N days for a narrowed window", () => {
+    renderCharts({ trend: 7 });
+    const expected = Math.min(7, demoMetrics().trends.length);
+    expect(screen.getByTestId("analytics-scope")).toHaveTextContent(`${expected} days of trend`);
+  });
+
+  it("draws every recorded day for the all-history window", () => {
+    renderCharts({ trend: 0 });
+    expect(screen.getByTestId("analytics-scope")).toHaveTextContent(
+      `${demoMetrics().trends.length} days of trend`,
+    );
+  });
+
+  it("marks the active window and reports a change upward", () => {
+    const onTrendChange = vi.fn();
+    renderCharts({ trend: 30, onTrendChange });
+    expect(
+      screen.getByRole("button", { name: "Set trend window to 30d" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Set trend window to 7d" }));
+    expect(onTrendChange).toHaveBeenCalledWith(7);
+  });
+
+  it("offers every window the URL can carry", () => {
+    renderCharts();
+    for (const days of TREND_WINDOWS) {
+      expect(
+        screen.getByRole("button", { name: `Set trend window to ${trendWindowLabel(days)}` }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: `Set trend window to ${trendWindowLabel(days)}` }),
+      ).toHaveAttribute("title", `Set trend window to ${trendWindowLabel(days)}`);
+    }
+  });
+});
+
+describe("MemoryExplorer", () => {
+  // Two tablists can share a page, so the role alone does not identify this
+  // one to a screen reader.
+  it("names its tablist for assistive tech", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    expect(screen.getByRole("tablist", { name: "Memory Explorer tabs" })).toBeInTheDocument();
+  });
+
+  it("applies offset focus ring styles on tabs for keyboard accessibility", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const factsTab = screen.getByRole("tab", { name: /Facts/ });
+    expect(factsTab.className).toContain("focus-visible:ring-offset-2");
+    expect(factsTab.className).toContain("focus-visible:ring-offset-canvas");
+  });
+
+  it("uses roving tabIndex for active and inactive tabs", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const factsTab = screen.getByRole("tab", { name: /Facts/ });
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+    expect(factsTab).toHaveAttribute("tabIndex", "0");
+    expect(obsTab).toHaveAttribute("tabIndex", "-1");
+
+    fireEvent.click(obsTab);
+    expect(factsTab).toHaveAttribute("tabIndex", "-1");
+    expect(obsTab).toHaveAttribute("tabIndex", "0");
+  });
+
+  it("supports keyboard arrow and home/end navigation between tabs", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const tablist = screen.getByRole("tablist", { name: "Memory Explorer tabs" });
+    const factsTab = screen.getByRole("tab", { name: /Facts/ });
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(obsTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(tablist, { key: "ArrowLeft" });
+    expect(factsTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(tablist, { key: "End" });
+    expect(obsTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(tablist, { key: "Home" });
+    expect(factsTab).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("shows facts by default", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    expect(screen.getByText("Prefers a dark, low-contrast terminal")).toBeInTheDocument();
+  });
+
+  it("switches to observations and links tabpanel to tab", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    expect(screen.getByRole("tabpanel", { name: /Facts/ })).toHaveAttribute("id", "panel-facts");
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+    expect(obsTab).toHaveAttribute("aria-controls", "panel-observations");
+    fireEvent.click(obsTab);
+    expect(screen.getByRole("tabpanel", { name: /Observations/ })).toHaveAttribute(
+      "id",
+      "panel-observations",
+    );
+    expect(screen.getByText("Works late into the evening most days")).toBeInTheDocument();
+  });
+
+  it("tags each fact with its shard", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    expect(screen.getAllByText("sakthai").length).toBeGreaterThan(0);
+  });
+
+  it("renders an empty state", () => {
+    const empty = { ...demoMemory(), facts: [] };
+    render(<MemoryExplorer memory={empty} />);
+    expect(screen.getByText("No memory facts found.")).toBeInTheDocument();
+  });
+
+  it("sets tabIndex=0 on the active tab and tabIndex=-1 on inactive tabs", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const factsTab = screen.getByRole("tab", { name: /Facts/ });
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+
+    expect(factsTab).toHaveAttribute("tabindex", "0");
+    expect(obsTab).toHaveAttribute("tabindex", "-1");
+
+    fireEvent.click(obsTab);
+
+    expect(factsTab).toHaveAttribute("tabindex", "-1");
+    expect(obsTab).toHaveAttribute("tabindex", "0");
+  });
+
+  it("navigates tabs using Arrow keys and Home/End keys", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const factsTab = screen.getByRole("tab", { name: /Facts/ });
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+
+    fireEvent.keyDown(factsTab, { key: "ArrowRight" });
+    expect(obsTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(obsTab, { key: "ArrowLeft" });
+    expect(factsTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(factsTab, { key: "End" });
+    expect(obsTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(obsTab, { key: "Home" });
+    expect(factsTab).toHaveAttribute("aria-selected", "true");
+  });
+});
+
+describe("AuditLogs", () => {
+  it("renders events", () => {
+    render(<AuditLogs audit={demoAudit()} severity="ALL" onSeverityChange={vi.fn()} />);
+    expect(screen.getByText("Blocked a destructive shell command")).toBeInTheDocument();
+  });
+
+  it("reports the filter upward instead of filtering locally", () => {
+    const onChange = vi.fn();
+    render(<AuditLogs audit={demoAudit()} severity="ALL" onSeverityChange={onChange} />);
+    fireEvent.click(screen.getByRole("button", { name: /critical severity/ }));
+    expect(onChange).toHaveBeenCalledWith("critical");
+  });
+
+  it("marks the active severity", () => {
+    render(<AuditLogs audit={demoAudit()} severity="high" onSeverityChange={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /high severity/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("explains an empty log rather than looking broken", () => {
+    const empty = { events: [], severity_counts: {}, total: 0 };
+    render(<AuditLogs audit={empty} severity="ALL" onSeverityChange={vi.fn()} />);
+    expect(screen.getByText(/An empty audit log is a normal state/)).toBeInTheDocument();
+  });
+});
+
+describe("SessionExplorer", () => {
+  const sessions = demoSessions();
+
+  function renderExplorer(overrides = {}) {
+    return render(
+      <SessionExplorer
+        sessions={sessions.sessions}
+        total={sessions.total}
+        search=""
+        onSearchChange={vi.fn()}
+        page={1}
+        pageSize={10}
+        onPageChange={vi.fn()}
+        onSessionSelect={vi.fn()}
+        openSessionId={null}
+        detail={null}
+        {...overrides}
+      />,
+    );
+  }
+
+  it("lists sessions", () => {
+    renderExplorer();
+    expect(screen.getByText("Draft the release notes for v2.1")).toBeInTheDocument();
+  });
+
+  it("labels an unattributed session as such", () => {
+    renderExplorer();
+    expect(screen.getAllByText("unattributed").length).toBeGreaterThan(0);
+  });
+
+  it("sends search upward for a server-side query", () => {
+    const onSearchChange = vi.fn();
+    renderExplorer({ onSearchChange });
+    fireEvent.change(screen.getByLabelText("Search sessions"), { target: { value: "deploy" } });
+    expect(onSearchChange).toHaveBeenCalledWith("deploy");
+  });
+
+  it("requests a transcript when a row is opened and has accessible aria-label", () => {
+    const onSessionSelect = vi.fn();
+    renderExplorer({ onSessionSelect });
+    const viewButton = screen.getByRole("button", {
+      name: `View transcript for task "${sessions.sessions[0].task}"`,
     });
+    expect(viewButton).toBeInTheDocument();
+    fireEvent.click(viewButton);
+    expect(onSessionSelect).toHaveBeenCalledWith(sessions.sessions[0].id);
+  });
+
+  it("provides descriptive aria-labels on action buttons for screen readers", () => {
+    renderExplorer();
+    const firstSession = sessions.sessions[0];
+    const expectedLabel = `View transcript for task "${firstSession.task}"`;
+    expect(screen.getByRole("button", { name: expectedLabel })).toBeInTheDocument();
+  });
+
+  // The open transcript now lives in the URL, so the page owns it: the panel
+  // renders the drawer when told to and reports a close upward rather than
+  // opening and closing itself.
+  it("renders no drawer when nothing is open", () => {
+    renderExplorer({ openSessionId: null });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("renders the drawer for the open session id", () => {
+    renderExplorer({ openSessionId: sessions.sessions[0].id });
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByTestId("session-drawer")).toBeInTheDocument();
+  });
+
+  it("reports a close upward instead of closing itself", () => {
+    const onSessionSelect = vi.fn();
+    renderExplorer({ openSessionId: sessions.sessions[0].id, onSessionSelect });
+    fireEvent.click(screen.getByLabelText("Close detail panel"));
+    expect(onSessionSelect).toHaveBeenCalledWith(null);
+  });
+
+  it("closes the drawer on Escape", () => {
+    const onSessionSelect = vi.fn();
+    renderExplorer({ openSessionId: sessions.sessions[0].id, onSessionSelect });
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onSessionSelect).toHaveBeenCalledWith(null);
+  });
+
+  it("renders an empty state naming the search term", () => {
+    renderExplorer({ sessions: [], total: 0, search: "nothing" });
+    expect(screen.getByText(/No sessions match/)).toBeInTheDocument();
+  });
+
+  // Ported from main (6f6ef8d, f2b0d71): a clear-search affordance and an
+  // empty-state reset. Adapted because search is server-driven here, so both
+  // report upward rather than mutating local state.
+  it("offers a clear-search button only once there is a query", () => {
+    const { rerender } = renderExplorer({ search: "" });
+    expect(screen.queryByLabelText("Clear search query")).not.toBeInTheDocument();
+    rerender(
+      <SessionExplorer
+        sessions={sessions.sessions}
+        total={sessions.total}
+        search="deploy"
+        onSearchChange={vi.fn()}
+        page={1}
+        pageSize={10}
+        onPageChange={vi.fn()}
+        onSessionSelect={vi.fn()}
+        openSessionId={null}
+        detail={null}
+      />,
+    );
+    expect(screen.getByLabelText("Clear search query")).toBeInTheDocument();
+  });
+
+  it("clears the query through the parent when the button is used", () => {
+    const onSearchChange = vi.fn();
+    renderExplorer({ search: "deploy", onSearchChange });
+    fireEvent.click(screen.getByLabelText("Clear search query"));
+    expect(onSearchChange).toHaveBeenCalledWith("");
+  });
+
+  it("clears search query when Escape key is pressed in search input", () => {
+    const onSearchChange = vi.fn();
+    renderExplorer({ search: "deploy", onSearchChange });
+    const searchInput = screen.getByLabelText("Search sessions");
+    fireEvent.keyDown(searchInput, { key: "Escape" });
+    expect(onSearchChange).toHaveBeenCalledWith("");
+  });
+
+  it("offers a reset action from the empty state", () => {
+    const onSearchChange = vi.fn();
+    renderExplorer({ sessions: [], total: 0, search: "nothing", onSearchChange });
+    fireEvent.click(screen.getByRole("button", { name: /Clear search and filters/i }));
+    expect(onSearchChange).toHaveBeenCalledWith("");
+  });
+
+  // Ported from PR #1180, rewritten against the server-driven props: the
+  // original asserted on a `currentPage` state this component no longer owns.
+  it("says which end of the list a disabled pagination button is at", () => {
+    renderExplorer({ total: 25, page: 1 });
+    expect(screen.getByLabelText("Previous page")).toHaveAttribute("title", "First page reached");
+    expect(screen.getByLabelText("Next page")).toHaveAttribute("title", "Next page");
+  });
+
+  it("names the action on a pagination button that is still usable", () => {
+    renderExplorer({ total: 25, page: 3 });
+    expect(screen.getByLabelText("Previous page")).toHaveAttribute("title", "Previous page");
+    expect(screen.getByLabelText("Next page")).toHaveAttribute("title", "Last page reached");
+  });
+
+  it("shows no reset action when the list is empty for lack of data", () => {
+    renderExplorer({ sessions: [], total: 0, search: "" });
+    expect(screen.getByText("No sessions recorded yet.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Clear search/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("WorkflowRuns", () => {
+  const workflows = demoWorkflows();
+
+  it("lists runs with their status", () => {
+    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
+    expect(screen.getByText("nightly-consolidation")).toBeInTheDocument();
+    expect(screen.getAllByText("completed").length).toBeGreaterThan(0);
+  });
+
+  it("marks failed steps", () => {
+    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
+    expect(screen.getByText("(1 failed)")).toBeInTheDocument();
+  });
+
+  it("requests detail when a run is opened", () => {
+    const onRunSelect = vi.fn();
+    render(<WorkflowRuns runs={workflows.runs} onRunSelect={onRunSelect} openRunId={null} detail={null} />);
+    const expectedLabel = `View steps for ${workflows.runs[0].workflow_name || workflows.runs[0].run_id}`;
+    fireEvent.click(screen.getByRole("button", { name: expectedLabel }));
+    expect(onRunSelect).toHaveBeenCalledWith(workflows.runs[0].run_id);
+  });
+
+  it("shows step detail in the drawer", () => {
+    const detail = {
+      summary: workflows.runs[0],
+      steps: [
+        {
+          step_id: "fetch",
+          status: "failed",
+          attempts: 3,
+          error: "boom",
+          started_at: null,
+          finished_at: null,
+          duration_seconds: null,
+        },
+      ],
+    };
+    render(
+      <WorkflowRuns
+        runs={workflows.runs}
+        onRunSelect={vi.fn()}
+        openRunId={workflows.runs[0].run_id}
+        detail={detail}
+      />,
+    );
+    expect(screen.getByText("fetch")).toBeInTheDocument();
+    expect(screen.getByText("boom")).toBeInTheDocument();
+    expect(screen.getByText("3 attempts")).toBeInTheDocument();
+  });
+
+  it("renders an empty state", () => {
+    render(<WorkflowRuns runs={[]} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
+    expect(screen.getByText("No workflow runs recorded yet.")).toBeInTheDocument();
+  });
+
+  // Workflow runs record no persona, so this panel cannot honour the global
+  // filter — and must not let the topbar's filter imply that it did.
+  it("says so when a persona filter it cannot honour is active", () => {
+    render(
+      <WorkflowRuns
+        runs={workflows.runs}
+        onRunSelect={vi.fn()}
+        openRunId={null}
+        familyWide
+        detail={null}
+      />,
+    );
+    expect(screen.getByTestId("workflows-family-wide")).toBeInTheDocument();
+  });
+
+  it("stays quiet when no filter is active", () => {
+    render(
+      <WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
+    );
+    expect(screen.queryByTestId("workflows-family-wide")).not.toBeInTheDocument();
+  });
+});
+
+describe("PersonaFilter", () => {
+  it("opens menu on trigger click and navigates items via Arrow keys and Home/End", () => {
+    const onChange = vi.fn();
+
+    render(<PersonaFilter selected={[]} onChange={onChange} />);
+
+    const trigger = screen.getByTestId("persona-filter");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    fireEvent.click(trigger);
+    const menu = screen.getByRole("menu", { name: "Filter by persona" });
+    expect(menu).toBeInTheDocument();
+
+    const menuItems = [
+      ...screen.getAllByRole("menuitem"),
+      ...screen.getAllByRole("menuitemcheckbox"),
+    ];
+    expect(menuItems.length).toBeGreaterThan(1);
+
+    fireEvent.keyDown(menu, { key: "ArrowDown" });
+    expect(menuItems[0]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[0], { key: "ArrowDown" });
+    expect(menuItems[1]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[1], { key: "ArrowUp" });
+    expect(menuItems[0]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[0], { key: "End" });
+    expect(menuItems[menuItems.length - 1]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[menuItems.length - 1], { key: "Home" });
+    expect(menuItems[0]).toHaveFocus();
+  });
+});
+
+describe("StitchStudio", () => {
+  it("uses roving tabIndex for active and inactive tabs", () => {
+    render(<StitchStudio />);
+    const previewTab = screen.getByRole("tab", { name: /Live Preview/ });
+    const codeTab = screen.getByRole("tab", { name: /TSX Code/ });
+    const specTab = screen.getByRole("tab", { name: /Stitch JSON Spec/ });
+
+    expect(previewTab).toHaveAttribute("tabIndex", "0");
+    expect(codeTab).toHaveAttribute("tabIndex", "-1");
+    expect(specTab).toHaveAttribute("tabIndex", "-1");
+
+    fireEvent.click(codeTab);
+    expect(previewTab).toHaveAttribute("tabIndex", "-1");
+    expect(codeTab).toHaveAttribute("tabIndex", "0");
+    expect(specTab).toHaveAttribute("tabIndex", "-1");
+  });
+
+  it("navigates tabs using Arrow keys and Home/End keys", () => {
+    render(<StitchStudio />);
+    const tablist = screen.getByRole("tablist", { name: "Stitch Studio view options" });
+    const previewTab = screen.getByRole("tab", { name: /Live Preview/ });
+    const codeTab = screen.getByRole("tab", { name: /TSX Code/ });
+    const specTab = screen.getByRole("tab", { name: /Stitch JSON Spec/ });
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(codeTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(specTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(tablist, { key: "ArrowLeft" });
+    expect(codeTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(tablist, { key: "Home" });
+    expect(previewTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(tablist, { key: "End" });
+    expect(specTab).toHaveAttribute("aria-selected", "true");
+  });
+});
+
+describe("DisplayMenu", () => {
+  it("opens menu on trigger click and navigates radio items via Arrow keys and Home/End", () => {
+    const onThemeChange = vi.fn();
+    const onDensityChange = vi.fn();
+
+    render(
+      <DisplayMenu
+        theme="system"
+        onThemeChange={onThemeChange}
+        density="comfortable"
+        onDensityChange={onDensityChange}
+        prefersLight={false}
+      />
+    );
+
+    const trigger = screen.getByRole("button", { name: "Display settings" });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    fireEvent.click(trigger);
+    const menu = screen.getByRole("menu", { name: "Display settings" });
+    expect(menu).toBeInTheDocument();
+
+    const menuItems = screen.getAllByRole("menuitemradio");
+    expect(menuItems).toHaveLength(5); // 3 themes + 2 densities
+
+    // Initial focus can be set or driven by ArrowDown
+    fireEvent.keyDown(menu, { key: "ArrowDown" });
+    expect(menuItems[0]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[0], { key: "ArrowDown" });
+    expect(menuItems[1]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[1], { key: "ArrowUp" });
+    expect(menuItems[0]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[0], { key: "End" });
+    expect(menuItems[4]).toHaveFocus();
+
+    fireEvent.keyDown(menuItems[4], { key: "Home" });
+    expect(menuItems[0]).toHaveFocus();
+  });
+});
+
+describe("ToastStack", () => {
+  it("renders toasts with accessible dismiss buttons containing title attributes", () => {
+    const onDismiss = vi.fn();
+    render(
+      <ToastStack
+        toasts={[{ id: 1, tone: "info", message: "Export complete" }]}
+        onDismiss={onDismiss}
+      />,
+    );
+    const dismissButton = screen.getByRole("button", { name: "Dismiss notification" });
+    expect(dismissButton).toHaveAttribute("title", "Dismiss notification");
+    fireEvent.click(dismissButton);
+    expect(onDismiss).toHaveBeenCalledWith(1);
+  });
+});
+
+describe("DemoModeToggle", () => {
+  it("reports the source actually in use", () => {
+    render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="local" />);
+    expect(screen.getByTestId("active-source")).toHaveTextContent("Live · local ~/.sakthai");
+  });
+
+  it("can report demo even while the toggle is off", () => {
+    // The honest case: live data was requested but no runtime exists.
+    render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="demo" />);
+    expect(screen.getByTestId("active-source")).toHaveTextContent("Sample data");
+    expect(screen.getByRole("button", { name: /Toggle sample data/ })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  it("distinguishes the API source", () => {
+    render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="api" />);
+    expect(screen.getByTestId("active-source")).toHaveTextContent("Live · SakThai API");
+  });
+
+  it("toggles", () => {
+    const onToggle = vi.fn();
+    render(<DemoModeToggle isDemo={false} onToggle={onToggle} activeSource="local" />);
+    fireEvent.click(screen.getByRole("button", { name: /Toggle sample data/ }));
+    expect(onToggle).toHaveBeenCalledWith(true);
+  });
+
+  it("omits the badge before the first response", () => {
+    render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource={null} />);
+    expect(screen.queryByTestId("active-source")).not.toBeInTheDocument();
   });
 });

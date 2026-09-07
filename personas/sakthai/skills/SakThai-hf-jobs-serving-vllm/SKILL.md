@@ -1,6 +1,6 @@
 ---
 name: SakThai-hf-jobs-serving-vllm
-description: 'name: SakThai-hf-jobs-serving-vllm'
+description: "name: SakThai-hf-jobs-serving-vllm"
 ---
 
 # Run a vLLM Server on HF Jobs — One-Command Serving Patterns

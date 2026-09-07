@@ -1,7 +1,6 @@
 ---
 name: SakJules-superpowers
-description: 'Superpowers development methodology: plan execution, subagent-driven-development,
-  and programmatic verification (TDD).'
+description: "Superpowers development methodology: plan execution, subagent-driven-development, and programmatic verification (TDD)."
 ---
 
 # Superpowers Workflow

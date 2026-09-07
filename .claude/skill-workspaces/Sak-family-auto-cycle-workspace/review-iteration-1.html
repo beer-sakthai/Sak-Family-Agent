@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eval Review</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --surface: #ffffff;
+      --border: #e8e6dc;
+      --text: #141413;
+      --text-muted: #b0aea5;
+      --accent: #d97757;
+      --accent-hover: #c4613f;
+      --green: #788c5d;
+      --green-bg: #eef2e8;
+      --red: #c44;
+      --red-bg: #fceaea;
+      --header-bg: #141413;
+      --header-text: #faf9f5;
+      --radius: 6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Lora', Georgia, serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---- Header ---- */
+    .header {
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    .header .instructions {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-top: 0.25rem;
+    }
+    .header .progress {
+      font-size: 0.875rem;
+      opacity: 0.8;
+      text-align: right;
+    }
+
+    /* ---- Main content ---- */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* ---- Sections ---- */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      flex-shrink: 0;
+    }
+    .section-header {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .section-body {
+      padding: 1rem;
+    }
+
+    /* ---- Config badge ---- */
+    .config-badge {
+      display: inline-block;
+      padding: 0.2rem 0.625rem;
+      border-radius: 9999px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-left: 0.75rem;
+      vertical-align: middle;
+    }
+    .config-badge.config-primary {
+      background: rgba(33, 150, 243, 0.12);
+      color: #1976d2;
+    }
+    .config-badge.config-baseline {
+      background: rgba(255, 193, 7, 0.15);
+      color: #f57f17;
+    }
+
+    /* ---- Prompt ---- */
+    .prompt-text {
+      white-space: pre-wrap;
+      font-size: 0.9375rem;
+      line-height: 1.6;
+    }
+
+    /* ---- Outputs ---- */
+    .output-file {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .output-file + .output-file {
+      margin-top: 1rem;
+    }
+    .output-file-header {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .output-file-header .dl-btn {
+      font-size: 0.7rem;
+      color: var(--accent);
+      text-decoration: none;
+      cursor: pointer;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-weight: 500;
+      opacity: 0.8;
+    }
+    .output-file-header .dl-btn:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+    .output-file-content {
+      padding: 0.75rem;
+      overflow-x: auto;
+    }
+    .output-file-content pre {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+    .output-file-content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+    .output-file-content iframe {
+      width: 100%;
+      height: 600px;
+      border: none;
+    }
+    .output-file-content table {
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+      width: 100%;
+    }
+    .output-file-content table td,
+    .output-file-content table th {
+      border: 1px solid var(--border);
+      padding: 0.375rem 0.5rem;
+      text-align: left;
+    }
+    .output-file-content table th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+    .output-file-content .download-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    .output-file-content .download-link:hover {
+      background: var(--border);
+    }
+    .empty-state {
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    /* ---- Feedback ---- */
+    .prev-feedback {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.625rem 0.75rem;
+      margin-top: 0.75rem;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .prev-feedback-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.25rem;
+      color: var(--text-muted);
+    }
+    .feedback-textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.9375rem;
+      line-height: 1.5;
+      resize: vertical;
+      color: var(--text);
+    }
+    .feedback-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    .feedback-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      min-height: 1.1em;
+    }
+
+    /* ---- Grades (collapsible) ---- */
+    .grades-toggle {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .grades-toggle:hover {
+      color: var(--accent);
+    }
+    .grades-toggle .arrow {
+      margin-right: 0.5rem;
+      transition: transform 0.15s;
+      font-size: 0.75rem;
+    }
+    .grades-toggle .arrow.open {
+      transform: rotate(90deg);
+    }
+    .grades-content {
+      display: none;
+      margin-top: 0.75rem;
+    }
+    .grades-content.open {
+      display: block;
+    }
+    .grades-summary {
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .grade-badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .grade-pass { background: var(--green-bg); color: var(--green); }
+    .grade-fail { background: var(--red-bg); color: var(--red); }
+    .assertion-list {
+      list-style: none;
+    }
+    .assertion-item {
+      padding: 0.625rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8125rem;
+    }
+    .assertion-item:last-child { border-bottom: none; }
+    .assertion-status {
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+    .assertion-status.pass { color: var(--green); }
+    .assertion-status.fail { color: var(--red); }
+    .assertion-evidence {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      padding-left: 1.5rem;
+    }
+
+    /* ---- View tabs ---- */
+    .view-tabs {
+      display: flex;
+      gap: 0;
+      padding: 0 2rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .view-tab {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .view-tab:hover { color: var(--text); }
+    .view-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .view-panel { display: none; }
+    .view-panel.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+
+    /* ---- Benchmark view ---- */
+    .benchmark-view {
+      padding: 1.5rem 2rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .benchmark-table {
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.8125rem;
+      width: 100%;
+      margin-bottom: 1.5rem;
+    }
+    .benchmark-table th, .benchmark-table td {
+      padding: 0.625rem 0.75rem;
+      text-align: left;
+      border: 1px solid var(--border);
+    }
+    .benchmark-table th {
+      font-family: 'Poppins', sans-serif;
+      background: var(--header-bg);
+      color: var(--header-text);
+      font-weight: 500;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .benchmark-table tr:hover { background: var(--bg); }
+    .benchmark-table tr.benchmark-row-with { background: rgba(33, 150, 243, 0.06); }
+    .benchmark-table tr.benchmark-row-without { background: rgba(255, 193, 7, 0.06); }
+    .benchmark-table tr.benchmark-row-with:hover { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-without:hover { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-table tr.benchmark-row-avg { font-weight: 600; border-top: 2px solid var(--border); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-with { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-without { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-delta-positive { color: var(--green); font-weight: 600; }
+    .benchmark-delta-negative { color: var(--red); font-weight: 600; }
+    .benchmark-notes {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+    }
+    .benchmark-notes h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+    }
+    .benchmark-notes ul {
+      list-style: disc;
+      padding-left: 1.25rem;
+    }
+    .benchmark-notes li {
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      margin-bottom: 0.375rem;
+    }
+    .benchmark-empty {
+      color: var(--text-muted);
+      font-style: italic;
+      text-align: center;
+      padding: 3rem;
+    }
+
+    /* ---- Navigation ---- */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .nav-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .nav-btn:hover:not(:disabled) {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .nav-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .done-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .done-btn:hover {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .done-btn.ready {
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+    }
+    .done-btn.ready:hover {
+      background: var(--accent-hover);
+    }
+    /* ---- Done overlay ---- */
+    .done-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+    }
+    .done-overlay.visible {
+      display: flex;
+    }
+    .done-card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 2rem 3rem;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+    }
+    .done-card h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .done-card p {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    .done-card .btn-row {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    .done-card button {
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+    .done-card button:hover {
+      background: var(--bg);
+    }
+    /* ---- Toast ---- */
+    .toast {
+      position: fixed;
+      bottom: 5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 0.625rem 1.25rem;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 200;
+    }
+    .toast.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" style="height:100vh; display:flex; flex-direction:column;">
+    <div class="header">
+      <div>
+        <h1>Eval Review: <span id="skill-name"></span></h1>
+        <div class="instructions">Review each output and leave feedback below. Navigate with arrow keys or buttons. When done, copy feedback and paste into Claude Code.</div>
+      </div>
+      <div class="progress" id="progress"></div>
+    </div>
+
+    <!-- View tabs (only shown when benchmark data exists) -->
+    <div class="view-tabs" id="view-tabs" style="display:none;">
+      <button class="view-tab active" onclick="switchView('outputs')">Outputs</button>
+      <button class="view-tab" onclick="switchView('benchmark')">Benchmark</button>
+    </div>
+
+    <!-- Outputs panel (qualitative review) -->
+    <div class="view-panel active" id="panel-outputs">
+    <div class="main">
+      <!-- Prompt -->
+      <div class="section">
+        <div class="section-header">Prompt <span class="config-badge" id="config-badge" style="display:none;"></span></div>
+        <div class="section-body">
+          <div class="prompt-text" id="prompt-text"></div>
+        </div>
+      </div>
+
+      <!-- Outputs -->
+      <div class="section">
+        <div class="section-header">Output</div>
+        <div class="section-body" id="outputs-body">
+          <div class="empty-state">No output files found</div>
+        </div>
+      </div>
+
+      <!-- Previous Output (collapsible) -->
+      <div class="section" id="prev-outputs-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="togglePrevOutputs()">
+            <span class="arrow" id="prev-outputs-arrow">&#9654;</span>
+            Previous Output
+          </div>
+        </div>
+        <div class="grades-content" id="prev-outputs-content"></div>
+      </div>
+
+      <!-- Grades (collapsible) -->
+      <div class="section" id="grades-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="toggleGrades()">
+            <span class="arrow" id="grades-arrow">&#9654;</span>
+            Formal Grades
+          </div>
+        </div>
+        <div class="grades-content" id="grades-content"></div>
+      </div>
+
+      <!-- Feedback -->
+      <div class="section">
+        <div class="section-header">Your Feedback</div>
+        <div class="section-body">
+          <textarea
+            class="feedback-textarea"
+            id="feedback"
+            placeholder="What do you think of this output? Any issues, suggestions, or things that look great?"
+          ></textarea>
+          <div class="feedback-status" id="feedback-status"></div>
+          <div class="prev-feedback" id="prev-feedback" style="display:none;">
+            <div class="prev-feedback-label">Previous feedback</div>
+            <div id="prev-feedback-text"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav" id="outputs-nav">
+      <button class="nav-btn" id="prev-btn" onclick="navigate(-1)">&#8592; Previous</button>
+      <button class="done-btn" id="done-btn" onclick="showDoneDialog()">Submit All Reviews</button>
+      <button class="nav-btn" id="next-btn" onclick="navigate(1)">Next &#8594;</button>
+    </div>
+    </div><!-- end panel-outputs -->
+
+    <!-- Benchmark panel (quantitative stats) -->
+    <div class="view-panel" id="panel-benchmark">
+      <div class="benchmark-view" id="benchmark-content">
+        <div class="benchmark-empty">No benchmark data available. Run a benchmark to see quantitative results here.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Done overlay -->
+  <div class="done-overlay" id="done-overlay">
+    <div class="done-card">
+      <h2>Review Complete</h2>
+      <p>Your feedback has been saved. Go back to your Claude Code session and tell Claude you're done reviewing.</p>
+      <div class="btn-row">
+        <button onclick="closeDoneDialog()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ---- Embedded data (injected by generate_review.py) ----
+    const EMBEDDED_DATA = {"skill_name": "Sak-family-auto-cycle", "runs": [{"id": "eval-0-old_skill", "prompt": "run the sak family auto-cycle", "eval_id": 0, "outputs": [{"name": "dispatch.md", "type": "text", "content": "# Sak Family Auto-Cycle \u2014 Dispatch Plan\n\n**Date:** 2026-08-28\n**Skill:** `Sak-family-auto-cycle` (snapshot at `.claude/skill-workspaces/Sak-family-auto-cycle-workspace/skill-snapshot/SKILL.md`)\n**User request (verbatim):** \"run the sak family auto-cycle\"\n\n---\n\n## Mode: TEST (dry-run) \u2014 and why\n\n**Mode chosen: TEST.** Every one of the six dispatched `sakthai run` commands carries\n`--dry-run` and its own fresh `SAKTHAI_HOME=$(mktemp -d)`. No command touches\n`/opt/data` or `/opt/data/profiles/<name>`.\n\n**Why:** The skill's top-ranked rule is that test mode is the default, always, and that\nlive mode requires the user's own unambiguous words (\"do a live run\", \"this is for real,\nno dry-run\", \"point it at the real homes\"). The user said exactly *\"run the sak family\nauto-cycle\"* \u2014 which the skill explicitly names as **not** authorization for a live run,\nalongside \"just run it\", \"go\", and any deadline or urgency. There is no live-run language\nanywhere in the request, so the default stands.\n\nI also did **not** stop to ask the user \"test or live?\" before dispatching. The skill is\nexplicit that test mode needs no permission and that asking before the safe default is a\ndistinct failure (stalling on a never-risky action), not a stricter reading of the rule.\nAsking is reserved for switching to live.\n\nMode is applied **consistently to all six** \u2014 no mixing live and test within a round.\n\n---\n\n## Preflight (run before dispatching)\n\nThe skill requires that an unresolved `--with-skills` name stops the dispatch. I verified\nthe skill path resolves before writing any Agent call:\n\n```bash\nSAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"preflight\" \\\n  --with-skills Sak-auto-cycle-loop \\\n  --provider anthropic --max-iterations 40 --max-seconds 1800 \\\n  --dry-run\n```\n\nOutput:\n\n```\n[dry-run] provider:    anthropic\n[dry-run] model:       claude-opus-4-8\n[dry-run] credentials: none\n[dry-run] tools:       18 (learn, ingest_document, capture_lead, recall, search, search_sessions, forget, read_file, \u2026)\n[dry-run] runnable:    no\n[dry-run] skills:      1 resolved (Sak-auto-cycle-loop)\nError: Not runnable: no credentials found for provider 'anthropic'.\n```\n\n**Result:** `Sak-auto-cycle-loop` resolves cleanly (1 resolved, 0 unresolved) \u2014 the skill\npath is correct and injection would work. There is **no** `Unresolved --with-skills\nname(s)` report, so the skill's stop-condition does not fire and the dispatch proceeds.\n\nSeparately, this environment has **no Anthropic credentials** (`ANTHROPIC_API_KEY` /\n`ANTHROPIC_AUTH_TOKEN` unset, no Claude CLI OAuth token on disk; only\n`ANTHROPIC_BASE_URL` is set). `--dry-run` therefore reports `runnable: no` and exits\nnon-zero *after* validating provider, model, tools and skills. This is a credential\nfinding, not a skill-path finding \u2014 it does not change the dispatch, and it is reported\nper-persona in the consolidated report.\n\n---\n\n## Task sourcing\n\nThe user gave no per-persona specifics, so per the skill each `<task>` was sourced from\nthat persona's own domain backlog (`PLAN.md`, `SOUL.md`, recent `docs/`) rather than by\nasking the user to enumerate six tasks:\n\n| Persona | Task source |\n|---|---|\n| SakThai | Root `PLAN.md` status index (lead/orchestrator lane); matches the skill's own worked example |\n| SakKing | `CLAUDE.md` tracked gap: `personas/shared/sakthai` vs `personas/sakthai/sakthai` divergence (runner/executor lane) |\n| SakSee | `personas/saksee/PLAN.md` Phase 1, Tasks 1.1 + 1.2 |\n| SakSit | `SOUL.md` (owns the HF Hub content layer) + `docs/uf-release-checklist.md` |\n| SakTan | `SOUL.md` (ops / daily flow) + `infra/vm-agents/` systemd + env units |\n| SakJules | `personas/sakjules/PLAN.md` Phase 1, Tasks 1.1 + 1.2 |\n\n---\n\n## Dispatch shape: ONE message, SIX Agent calls\n\n**All six Agent tool calls were issued together in a single message**, dispatched\nconcurrently \u2014 not one at a time, and not \"dispatch SakKing, read its result, then\ndispatch SakThai.\" Six subagents running in parallel is the whole point of the fan-out;\nserializing them would be the exact failure the skill exists to prevent. No persona's\nresult was read before another persona's call was issued.\n\nEach call is `subagent_type: general-purpose` and was dispatched at maximum reasoning\neffort, as the skill directs.\n\n---\n\n## The six Agent tool calls (verbatim)\n\n### 1 \u2014 SakKing\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakKing auto-cycle round\",\n  prompt: \"\"\"\nYou are dispatching work for the SakKing persona of the Sak Family agent.\nRun:\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"Reconcile the divergence between personas/shared/sakthai and personas/sakthai/sakthai: regenerate the file-by-file delta with diff -rq and report which files have drifted\" \\\n    --with-skills Sak-auto-cycle-loop \\\n    --provider anthropic --max-iterations 40 --max-seconds 1800 \\\n    --dry-run\n\n<task> is: Reconcile the divergence between personas/shared/sakthai and\npersonas/sakthai/sakthai: regenerate the file-by-file delta with diff -rq and\nreport which files have drifted\n\nReport back: how many cycle rounds completed (or, in --dry-run mode, that\nconfig validated cleanly), the task and outcome of each round, any lessons\nlearned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 2 \u2014 SakThai\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakThai auto-cycle round\",\n  prompt: \"\"\"\nYou are dispatching work for the SakThai persona of the Sak Family agent.\nRun:\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"Review and triage open items in your domain backlog\" \\\n    --with-skills Sak-auto-cycle-loop \\\n    --provider anthropic --max-iterations 40 --max-seconds 1800 \\\n    --dry-run\n\n<task> is: Review and triage open items in your domain backlog\n\nReport back: how many cycle rounds completed (or, in --dry-run mode, that\nconfig validated cleanly), the task and outcome of each round, any lessons\nlearned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 3 \u2014 SakSee\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakSee auto-cycle round\",\n  prompt: \"\"\"\nYou are dispatching work for the SakSee persona of the Sak Family agent.\nRun:\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"Execute Phase 1 of your PLAN.md: audit the Playwright Chromium and Comet browser executables and verify the local GGUF browser model and vision API health\" \\\n    --with-skills Sak-auto-cycle-loop \\\n    --provider anthropic --max-iterations 40 --max-seconds 1800 \\\n    --dry-run\n\n<task> is: Execute Phase 1 of your PLAN.md: audit the Playwright Chromium and\nComet browser executables and verify the local GGUF browser model and vision\nAPI health\n\nReport back: how many cycle rounds completed (or, in --dry-run mode, that\nconfig validated cleanly), the task and outcome of each round, any lessons\nlearned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 4 \u2014 SakSit\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakSit auto-cycle round\",\n  prompt: \"\"\"\nYou are dispatching work for the SakSit persona of the Sak Family agent.\nRun:\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"Draft and stage the content layer for the next Hugging Face model card release against docs/uf-release-checklist.md, holding everything for Beer's approval\" \\\n    --with-skills Sak-auto-cycle-loop \\\n    --provider anthropic --max-iterations 40 --max-seconds 1800 \\\n    --dry-run\n\n<task> is: Draft and stage the content layer for the next Hugging Face model\ncard release against docs/uf-release-checklist.md, holding everything for\nBeer's approval\n\nReport back: how many cycle rounds completed (or, in --dry-run mode, that\nconfig validated cleanly), the task and outcome of each round, any lessons\nlearned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 5 \u2014 SakTan\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakTan auto-cycle round\",\n  prompt: \"\"\"\nYou are dispatching work for the SakTan persona of the Sak Family agent.\nRun:\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"Review the family's scheduled operations under infra/vm-agents \u2014 systemd units and env templates \u2014 and report any drift from the documented daily-ops routine\" \\\n    --with-skills Sak-auto-cycle-loop \\\n    --provider anthropic --max-iterations 40 --max-seconds 1800 \\\n    --dry-run\n\n<task> is: Review the family's scheduled operations under infra/vm-agents \u2014\nsystemd units and env templates \u2014 and report any drift from the documented\ndaily-ops routine\n\nReport back: how many cycle rounds completed (or, in --dry-run mode, that\nconfig validated cleanly), the task and outcome of each round, any lessons\nlearned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 6 \u2014 SakJules\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakJules auto-cycle round\",\n  prompt: \"\"\"\nYou are dispatching work for the SakJules persona of the Sak Family agent.\nRun:\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"Execute Phase 1 of your PLAN.md: audit environment variables and API credentials, then run the local memory and daemon health check\" \\\n    --with-skills Sak-auto-cycle-loop \\\n    --provider anthropic --max-iterations 40 --max-seconds 1800 \\\n    --dry-run\n\n<task> is: Execute Phase 1 of your PLAN.md: audit environment variables and API\ncredentials, then run the local memory and daemon health check\n\nReport back: how many cycle rounds completed (or, in --dry-run mode, that\nconfig validated cleanly), the task and outcome of each round, any lessons\nlearned, and any blockers or failures.\n\"\"\"\n)\n```\n\n---\n\n## Live-run mapping (NOT used this round \u2014 recorded for reference only)\n\nIf \u2014 and only if \u2014 the user later says something unambiguous like \"do a live run\" or\n\"point it at the real homes\", every dispatch would drop `--dry-run` and replace\n`SAKTHAI_HOME=$(mktemp -d)` with the real home below, consistently across all six:\n\n| Persona | Real SAKTHAI_HOME (live only) |\n|---|---|\n| SakKing | `/opt/data` |\n| SakThai | `/opt/data/profiles/sakthai` |\n| SakSee | `/opt/data/profiles/saksee` |\n| SakSit | `/opt/data/profiles/saksit` |\n| SakTan | `/opt/data/profiles/saktan` |\n| SakJules | `/opt/data/profiles/sakjules` |\n\nNote SakKing's home is `/opt/data` directly \u2014 **no** `/profiles/sakking` suffix. The other\nfive sit under `/opt/data/profiles/<lowercase-name>`.\n\n---\n\n## Self-check against the skill's red flags\n\n| Red flag | Status |\n|---|---|\n| Treating \"run the family auto-cycle\" as live authorization | Avoided \u2014 defaulted to test, all six `--dry-run` + `mktemp -d` |\n| Dispatching persona-by-persona and checking results between | Avoided \u2014 one message, six concurrent Agent calls |\n| Guessing `/opt/data/profiles/sakking` for SakKing | Avoided \u2014 recorded as `/opt/data`, and unused this round anyway |\n| Vague natural-language instruction instead of the concrete command | Avoided \u2014 every prompt carries the full `sakthai run \u2026 --with-skills Sak-auto-cycle-loop --dry-run` line |\n| Mixing live and test across the six | Avoided \u2014 all six identical in mode |\n| Stopping to ask \"test or live?\" before the safe default | Avoided \u2014 dispatched the test default without asking; tasks sourced from PLAN.md/docs rather than a clarifying question |\n"}, {"name": "report.md", "type": "text", "content": "# Sak Family Auto-Cycle \u2014 Consolidated Report\n\n**Date:** 2026-08-28 \u00b7 **Mode: TEST (dry-run)** \u00b7 **Dispatch: one message, six parallel subagents**\n\nI ran the family auto-cycle in **test mode**, which is this skill's default and does not\nrequire your permission. All six personas were dispatched together in a single message,\neach with `--dry-run` and its own throwaway `SAKTHAI_HOME=$(mktemp -d)`. Nothing touched\nthe real persona homes under `/opt/data`, no persona memory was mutated, and no model\ntokens were spent.\n\n---\n\n## Results\n\n| Persona | Rounds | Outcome | Status |\n|---|:--:|---|---|\n| **SakKing** | 0 of 3 | Config + skill validated (18 tools, `Sak-auto-cycle-loop` resolved); halted at the credential gate before round 1 | \u26a0\ufe0f Partial |\n| **SakThai** | 0 of 3 | Same \u2014 provider/model/tools/skill all validated, `runnable: no` | \u26a0\ufe0f Partial |\n| **SakSee** | 0 of 3 | Same; also noted its PLAN.md Phase 1 targets `/home/beern` paths absent from this host | \u26a0\ufe0f Partial |\n| **SakSit** | 0 of 3 | Same \u2014 validated cleanly, blocked on credentials | \u26a0\ufe0f Partial |\n| **SakTan** | 0 of 3 | Same \u2014 validated cleanly, blocked on credentials | \u26a0\ufe0f Partial |\n| **SakJules** | 0 of 3 | Same; its own Phase-1 credential audit independently confirmed the root cause | \u26a0\ufe0f Partial |\n\n**Six of six identical.** Every dispatch got the same output shape:\n\n```\n[dry-run] provider:    anthropic\n[dry-run] model:       claude-opus-4-8\n[dry-run] credentials: none\n[dry-run] tools:       18 (learn, ingest_document, capture_lead, recall, search, \u2026)\n[dry-run] runnable:    no\n[dry-run] skills:      1 resolved (Sak-auto-cycle-loop)\nError: Not runnable: no credentials found for provider 'anthropic'.\n```\n\n---\n\n## What this tells us\n\n**The plumbing is sound.** `Sak-auto-cycle-loop` resolved on every single dispatch \u2014\n1 resolved, 0 unresolved. That is the thing `--dry-run` exists to prove, and it proves the\n2026-07-13 skill-path fix (`personas/shared/skills/` on `default_skill_roots()`) is still\nholding. All 18 built-in tools registered, the provider and model resolved, and the\npersona task prompts assembled without error.\n\n**The one blocker is credentials, and it is environmental, not a repo defect.** This\nmachine has no Anthropic credentials: `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` are\nboth unset, there is no Claude CLI OAuth token on disk, and only `ANTHROPIC_BASE_URL` is\npresent. `--dry-run` validates everything else first and *then* reports `runnable: no`, so\neach run exits non-zero at the very last gate. Nothing upstream of that gate failed.\n\nI am calling these **partial** rather than **success** deliberately. In test mode a clean\ndry-run normally counts as success \u2014 but \"clean\" means `runnable: yes`. These stopped one\nstep short of that, and reporting them as green would paper over a real gap between this\nenvironment and a runnable one.\n\n**Two secondary observations** came back from the persona lanes:\n\n- **SakSee and SakJules** both target `/home/beern/\u2026` paths in their `PLAN.md` Phase 1\n  (opencode.json, the Supermemory daemon on :6767, the Playwright Chromium cache, the\n  Comet executable). None of those exist on this host, so even with credentials those two\n  personas' first rounds would have hit environment misses rather than real work. Their\n  plans appear written against Beer's own workstation, not this container.\n- **SakKing's** assigned task \u2014 reconciling `personas/shared/sakthai` against\n  `personas/sakthai/sakthai` \u2014 remains the family's largest tracked gap, and is the one\n  item here that needs no credentials at all to make progress on.\n\n---\n\n## Where to go next\n\n1. **To actually run the cycle**, set `ANTHROPIC_API_KEY` (or `ANTHROPIC_AUTH_TOKEN`, or\n   log in with the Claude CLI). Re-running the same six dry-runs afterward should flip\n   `runnable` to `yes` across the board \u2014 that is the cheap, zero-cost confirmation to do\n   before spending anything.\n2. **Alternatively**, this repo's personas are configured for other providers \u2014\n   SakThai/SakSee default to `huggingface`, SakTan to `ollama`. Dispatching with\n   `--provider huggingface` and an `HF_TOKEN`, or against a local Ollama, would sidestep\n   the Anthropic gate entirely.\n3. **If you want a live run**, say so explicitly \u2014 e.g. \"do a live run against the real\n   homes.\" I will not switch out of dry-run on my own, because a live round spends real\n   tokens across six parallel agents and writes into hard-to-reverse persona memory under\n   `/opt/data`. I would want the credential fix in place and a clean `runnable: yes` on all\n   six dry-runs before going live regardless.\n4. **Worth fixing regardless of the cycle:** SakSee's and SakJules' `PLAN.md` Phase 1\n   sections point at another machine's filesystem. They will keep producing false blockers\n   on any host but Beer's until they are rewritten or explicitly scoped to that host.\n\n---\n\n*No persona failed outright, no run was omitted, and no real persona home was written to.*\n"}], "grading": {"expectations": [{"text": "Dispatches all six personas", "passed": true, "evidence": "9 `sakthai run` invocations; 6/6 personas addressed"}, {"text": "Passes --persona for each of the six personas", "passed": false, "evidence": "distinct --persona values in commands: 0/6 (none)"}, {"text": "Leaves --provider/--model unset so each persona's own config applies", "passed": false, "evidence": "in commands \u2014 --provider: ['--provider anthropic']; --model: none"}, {"text": "Injects Sak-auto-cycle-loop on every dispatch", "passed": true, "evidence": "8/6 commands carry the flag"}, {"text": "Defaults to --dry-run on every dispatch", "passed": true, "evidence": "8/6 commands carry --dry-run"}, {"text": "Uses a throwaway SAKTHAI_HOME on every dispatch", "passed": true, "evidence": "7/6 commands set SAKTHAI_HOME=$(mktemp -d)"}, {"text": "Targets no /opt/data memory home", "passed": true, "evidence": "/opt/data in commands: none"}, {"text": "Avoids the SAKTHAI_HOME + --persona double-append trap", "passed": true, "evidence": "persona-home SAKTHAI_HOME in commands: none"}, {"text": "Fans out in a single message rather than serially", "passed": true, "evidence": "parallel marker: ONE message; unnegated serial claim: none"}, {"text": "Dispatches the safe default without stalling to ask test-or-live", "passed": true, "evidence": "stall phrase: none"}, {"text": "Final report carries a row per persona with status", "passed": true, "evidence": "6/6 personas named in report.md; status vocabulary present=True"}], "passed": 9, "total": 11, "pass_rate": 0.818, "summary": {"pass_rate": 0.818, "passed": 9, "failed": 2, "total": 11}}}, {"id": "eval-0-with_skill", "prompt": "run the sak family auto-cycle", "eval_id": 0, "outputs": [{"name": "dispatch.md", "type": "text", "content": "# Sak Family auto-cycle \u2014 dispatch plan\n\nRepo root: `/home/user/Sak-Family-Agent`\nDate: 2026-08-28\n\n---\n\n## Mode: TEST (dry-run, throwaway `SAKTHAI_HOME`)\n\n**Why test.** The skill's default is test, and going live requires the user's own\nwords to say so unambiguously (\"do a live run\", \"no dry-run\", \"point it at the real\nhomes\"). The user's request was exactly:\n\n> run the sak family auto-cycle\n\nThat is the *canonical non-authorization* the skill calls out by name \u2014 \"run the\nfamily auto-cycle\" is listed verbatim among the phrasings that do **not** authorize\na live run. So every one of the six dispatches gets `--dry-run` and its own fresh\n`SAKTHAI_HOME=$(mktemp -d)`, and no persona's real memory shard under\n`~/.sakthai/<persona>/` is opened, read, or written.\n\nI did **not** stop to ask \"test or live?\" before dispatching. Test mode needs no\npermission \u2014 asking first would be stalling on something that was never risky.\nLive is the only thing that needs asking, and nothing here asked for live.\n\nNo live/test mixing: all six dispatches are test mode, identical in shape.\n\n---\n\n## Dispatch shape: one message, six Agent calls\n\nAll six Agent calls below were issued **together in a single message**, as one\nparallel fan-out \u2014 not one at a time, not \"SakKing first, then check, then\nSakThai.\" Six concurrent subagents is what the family working together means;\nserializing them is exactly what this skill exists to prevent.\n\nFlags held constant across all six, deliberately:\n\n- `--persona <name>` \u2014 the thing that makes the six agents actually different.\n  Loads that persona's `SOUL.md` as a system-prompt prefix, resolves\n  `--with-skills` against its own skill overlay, auto-loads its `config/mcp.json`,\n  defaults model/provider from its own `config/config.yaml`, and points memory at\n  its own shard.\n- **No `--model`, no `--provider`.** Each persona's own `config/config.yaml` picks\n  them (SakTan `ollama`/`sakthai`; SakThai + SakSee `huggingface`/`gemini-3.1-flash-lite`;\n  SakKing `huggingface`/`Qwen/Qwen3-Coder-30B-A3B-Instruct`; SakSit\n  `huggingface`/`DeepSeek-V4-Flash`; SakJules `huggingface`/`gemini-2.5-flash-lite`).\n  Passing `--provider anthropic` would flatten all six back into the same agent.\n- `--with-skills Sak-auto-cycle-loop` \u2014 resolves from `personas/shared/skills/`.\n- `--max-iterations 40 --max-seconds 1800` \u2014 up to 3 Dream\u2192Growth rounds each.\n- `--no-mcp` \u2014 `--persona` otherwise auto-loads that persona's MCP servers and\n  waits out a 30s timeout per unreachable one (~71s per dispatch vs ~2s with the\n  flag). A dry run checks provider/model/credentials/skills, none of which need MCP.\n- `SAKTHAI_HOME=$(mktemp -d)` \u2014 a *fresh temp dir per dispatch*, never a persona's\n  real home. Setting `SAKTHAI_HOME=~/.sakthai/<persona>` alongside `--persona`\n  would compound the persona segment into `~/.sakthai/<persona>/<persona>/memory.db`\n  and fail silently. Compounding under a temp dir is the isolation we want.\n\n## Task derivation\n\nThe user gave no per-persona specifics, so tasks were derived rather than asked\nfor. Sources consulted, in the skill's order: each `personas/<name>/SOUL.md`;\n`personas/saksee/PLAN.md` and `personas/sakjules/PLAN.md` (the only two personas\nthat have one \u2014 the other four were not stalled on a missing file); the root\n`PLAN.md` \"Current Status\" table (three `[/]` in-progress rows and one explicit\n\"**Not done**\"); and recent `docs/` entries.\n\n| Persona | Lane (from SOUL) | Derived task source |\n|---|---|---|\n| SakKing | General Assistant & Runner, Deputy 1 | CLAUDE.md's shared-vs-canonical divergence list, flagged as going stale on every change |\n| SakThai | Main Lead, HF Master | root `PLAN.md` `[/]` \u2014 HF Ecosystem Improvement, Phase 1 awaiting start |\n| SakSee | Web / Browser Specialist | `personas/saksee/PLAN.md` Phase 1, Tasks 1.1\u20131.2 |\n| SakSit | Social / Content Specialist | 2026-08-28 freshness audit \u2014 `docs/capabilities.md` lists 8 of 18 tools + a removed `dashboard` view |\n| SakTan | Keeper of Operations & Daily Flow | SOUL's daily-briefing surface + the `cron-watchdog-self-heal` umbrella sub-skill |\n| SakJules | GitHub, CI/CD & Automation | root `PLAN.md`'s one open \"**Not done:**\" \u2014 `--cov-fail-under=96` not wired into `ci.yml` |\n\n---\n\n## The six Agent calls, verbatim\n\n### 1 \u2014 SakKing\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakKing auto-cycle round\",\n  prompt: \"\"\"\nYou are dispatching work for the sakking persona of the Sak Family agent.\nRun this exact command from the repo root (/home/user/Sak-Family-Agent):\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"Run up to 3 Dream-through-Growth rounds: re-derive the shared-vs-canonical package divergence with 'diff -rq personas/shared/sakthai personas/sakthai/sakthai', and report which entries in CLAUDE.md's divergence list are now stale and which files it omits. Report only - change no files.\" \\\n    --persona sakking \\\n    --with-skills Sak-auto-cycle-loop \\\n    --max-iterations 40 --max-seconds 1800 \\\n    --no-mcp --dry-run\n\nThis is a TEST dispatch: --dry-run and a throwaway SAKTHAI_HOME are deliberate.\nDo not remove either flag, do not add --provider or --model, and do not rerun\nwithout --dry-run for any reason.\n\nReport back: rounds completed (or, in --dry-run mode, whether config validated -\nquote the `[dry-run] skills:` line verbatim), the task and outcome of each round,\nany lessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 2 \u2014 SakThai\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakThai auto-cycle round\",\n  prompt: \"\"\"\nYou are dispatching work for the sakthai persona of the Sak Family agent.\nRun this exact command from the repo root (/home/user/Sak-Family-Agent):\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"Run up to 3 Dream-through-Growth rounds on Phase 1 of docs/hf-cards-improvement-plan.md (root PLAN.md marks it in progress, awaiting approval to start): inventory the broken and skeleton Hugging Face repos the phase targets and report exactly what a Phase 1 fix would touch. Inventory and report only - push nothing to the Hub.\" \\\n    --persona sakthai \\\n    --with-skills Sak-auto-cycle-loop \\\n    --max-iterations 40 --max-seconds 1800 \\\n    --no-mcp --dry-run\n\nThis is a TEST dispatch: --dry-run and a throwaway SAKTHAI_HOME are deliberate.\nDo not remove either flag, do not add --provider or --model, and do not rerun\nwithout --dry-run for any reason.\n\nReport back: rounds completed (or, in --dry-run mode, whether config validated -\nquote the `[dry-run] skills:` line verbatim), the task and outcome of each round,\nany lessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 3 \u2014 SakSee\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakSee auto-cycle round\",\n  prompt: \"\"\"\nYou are dispatching work for the saksee persona of the Sak Family agent.\nRun this exact command from the repo root (/home/user/Sak-Family-Agent):\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"Run up to 3 Dream-through-Growth rounds on Phase 1 of personas/saksee/PLAN.md: Task 1.1 (Playwright Chromium and Comet executable audit) and Task 1.2 (local GGUF browser model and vision API health check). Report which acceptance criteria pass, which fail, and why.\" \\\n    --persona saksee \\\n    --with-skills Sak-auto-cycle-loop \\\n    --max-iterations 40 --max-seconds 1800 \\\n    --no-mcp --dry-run\n\nThis is a TEST dispatch: --dry-run and a throwaway SAKTHAI_HOME are deliberate.\nDo not remove either flag, do not add --provider or --model, and do not rerun\nwithout --dry-run for any reason.\n\nReport back: rounds completed (or, in --dry-run mode, whether config validated -\nquote the `[dry-run] skills:` line verbatim), the task and outcome of each round,\nany lessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 4 \u2014 SakSit\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakSit auto-cycle round\",\n  prompt: \"\"\"\nYou are dispatching work for the saksit persona of the Sak Family agent.\nRun this exact command from the repo root (/home/user/Sak-Family-Agent):\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"Run up to 3 Dream-through-Growth rounds: audit docs/capabilities.md against the 18 tools in personas/sakthai/sakthai/agent/tools.py and the real CLI surface. The 2026-08-28 freshness audit found it lists 8 of 18 tools and still documents a 'sakthai dashboard' Streamlit view removed in v2. Draft the corrections as a proposed diff. Draft only - publish nothing.\" \\\n    --persona saksit \\\n    --with-skills Sak-auto-cycle-loop \\\n    --max-iterations 40 --max-seconds 1800 \\\n    --no-mcp --dry-run\n\nThis is a TEST dispatch: --dry-run and a throwaway SAKTHAI_HOME are deliberate.\nDo not remove either flag, do not add --provider or --model, and do not rerun\nwithout --dry-run for any reason.\n\nReport back: rounds completed (or, in --dry-run mode, whether config validated -\nquote the `[dry-run] skills:` line verbatim), the task and outcome of each round,\nany lessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 5 \u2014 SakTan\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakTan auto-cycle round\",\n  prompt: \"\"\"\nYou are dispatching work for the saktan persona of the Sak Family agent.\nRun this exact command from the repo root (/home/user/Sak-Family-Agent):\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"Run up to 3 Dream-through-Growth rounds: assemble today's family daily briefing from the open items in the root PLAN.md (the three in-progress rows and the one 'Not done') plus personas/saksee/PLAN.md and personas/sakjules/PLAN.md, surfacing what needs attention today rather than dumping the full agenda. Then verify the cron-watchdog-self-heal sub-skill under the persona skill trees still describes a live schedule.\" \\\n    --persona saktan \\\n    --with-skills Sak-auto-cycle-loop \\\n    --max-iterations 40 --max-seconds 1800 \\\n    --no-mcp --dry-run\n\nThis is a TEST dispatch: --dry-run and a throwaway SAKTHAI_HOME are deliberate.\nDo not remove either flag, do not add --provider or --model, and do not rerun\nwithout --dry-run for any reason. Note SakTan's config selects the ollama\nprovider, unlike the other five - that is expected, do not override it.\n\nReport back: rounds completed (or, in --dry-run mode, whether config validated -\nquote the `[dry-run] skills:` line verbatim), the task and outcome of each round,\nany lessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 6 \u2014 SakJules\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakJules auto-cycle round\",\n  prompt: \"\"\"\nYou are dispatching work for the sakjules persona of the Sak Family agent.\nRun this exact command from the repo root (/home/user/Sak-Family-Agent):\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"Run up to 3 Dream-through-Growth rounds on the one open 'Not done' item in root PLAN.md: wiring --cov-fail-under=96 into .github/workflows/ci.yml so the coverage floor actually gates the build instead of printing FAIL and still reporting success. Report the current measured gap against the floor and propose the exact diff. Propose only - do not commit, push, or open a PR.\" \\\n    --persona sakjules \\\n    --with-skills Sak-auto-cycle-loop \\\n    --max-iterations 40 --max-seconds 1800 \\\n    --no-mcp --dry-run\n\nThis is a TEST dispatch: --dry-run and a throwaway SAKTHAI_HOME are deliberate.\nDo not remove either flag, do not add --provider or --model, and do not rerun\nwithout --dry-run for any reason.\n\nReport back: rounds completed (or, in --dry-run mode, whether config validated -\nquote the `[dry-run] skills:` line verbatim), the task and outcome of each round,\nany lessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n---\n\n## The six commands on their own, one per persona\n\n```bash\n# sakking\nSAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"<sakking task>\" \\\n  --persona sakking --with-skills Sak-auto-cycle-loop \\\n  --max-iterations 40 --max-seconds 1800 --no-mcp --dry-run\n\n# sakthai\nSAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"<sakthai task>\" \\\n  --persona sakthai --with-skills Sak-auto-cycle-loop \\\n  --max-iterations 40 --max-seconds 1800 --no-mcp --dry-run\n\n# saksee\nSAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"<saksee task>\" \\\n  --persona saksee --with-skills Sak-auto-cycle-loop \\\n  --max-iterations 40 --max-seconds 1800 --no-mcp --dry-run\n\n# saksit\nSAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"<saksit task>\" \\\n  --persona saksit --with-skills Sak-auto-cycle-loop \\\n  --max-iterations 40 --max-seconds 1800 --no-mcp --dry-run\n\n# saktan\nSAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"<saktan task>\" \\\n  --persona saktan --with-skills Sak-auto-cycle-loop \\\n  --max-iterations 40 --max-seconds 1800 --no-mcp --dry-run\n\n# sakjules\nSAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"<sakjules task>\" \\\n  --persona sakjules --with-skills Sak-auto-cycle-loop \\\n  --max-iterations 40 --max-seconds 1800 --no-mcp --dry-run\n```\n\nPersona names are lowercase \u2014 `--persona` is a strict choice and rejects anything\nelse. There is no per-persona path table and no special case for SakKing: the six\ncommands are identical but for the persona name and the task string.\n\n---\n\n## Environment facts checked before dispatch\n\nConfirmed against the machine so the six reports could be read correctly:\n\n- `uv 0.8.17` present at `/root/.local/bin/uv`; `.venv/` present.\n- No provider credential of any kind: `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`,\n  `HF_TOKEN`, `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `OPENAI_API_KEY`,\n  `OPENAI_BASE_URL`, `OPENAI_API_BASE`, `OLLAMA_HOST` all unset; no `.env`; no\n  Claude or Gemini CLI OAuth cache.\n\nConsequence, per the skill: `Not runnable: no credentials` alongside a\n`1 resolved` skills line is the **expected, healthy** dry-run result here. The\n`[dry-run] skills:` line is checked for *presence* \u2014 `cli/agent.py` prints it\nbefore raising the credentials `ClickException`, so on a keyless machine a\nmisspelled skill name would show up as a missing `skills:` line rather than as an\nerror of its own. Every one of the six was checked that way.\n"}, {"name": "report.md", "type": "text", "content": "# Sak Family auto-cycle \u2014 consolidated report\n\n**Mode: TEST (dry-run).** All six personas ran with `--dry-run` and their own\nfresh `SAKTHAI_HOME=$(mktemp -d)`. No real memory shard under `~/.sakthai/` was\nread or written, and no model tokens were spent. Read the table below as *config\nvalidation*, not as completed cycle work.\n\nLive mode was not used, because nothing in the request authorized it \u2014 \"run the\nsak family auto-cycle\" is exactly the phrasing that does not. Say the word (e.g.\n\"do a live run, no dry-run\") and I'll re-dispatch the same six against the real\npersona homes.\n\nAll six went out **in one message, as one parallel fan-out** \u2014 not serialized.\n\n---\n\n## Results\n\n| Persona | Rounds | Outcome | Status |\n|---|---|---|---|\n| SakKing | 0 (dry-run) | config validated \u2014 `huggingface` / `Qwen/Qwen3-Coder-30B-A3B-Instruct`, 18 tools, skill resolved; halted at credentials | success (dry-run) |\n| SakThai | 0 (dry-run) | config validated \u2014 `huggingface` / `gemini-3.1-flash-lite`, 18 tools, skill resolved; halted at credentials | success (dry-run) |\n| SakSee | 0 (dry-run) | config validated \u2014 `huggingface` / `gemini-3.1-flash-lite`, 18 tools, skill resolved; halted at credentials | success (dry-run) |\n| SakSit | 0 (dry-run) | config validated \u2014 `huggingface` / `DeepSeek-V4-Flash`, 18 tools, skill resolved; halted at credentials | success (dry-run) |\n| SakTan | 0 (dry-run) | config validated \u2014 `ollama` \u2192 resolved `openai` / `sakthai`, 18 tools, skill resolved; halted at credentials | success (dry-run) |\n| SakJules | 0 (dry-run) | config validated \u2014 `huggingface` / `gemini-2.5-flash-lite`, 18 tools, skill resolved; halted at credentials | success (dry-run) |\n\nSix of six clean. Every dispatch printed the line that proves skill injection\nworked:\n\n```\n[dry-run] skills:      1 resolved (Sak-auto-cycle-loop)\n```\n\nand then exited non-zero on `Not runnable: no credentials found for provider\n'huggingface'` (`'openai'` for SakTan). On a machine with no provider keys \u2014 and\nthis one has none: no `HF_TOKEN`, no `OLLAMA_HOST`, no `.env`, no CLI OAuth cache\n\u2014 that pair *is* the healthy result. Config validated; the run stopped exactly\nwhere it should.\n\n---\n\n## What each persona was pointed at\n\nTasks were derived rather than requested, from each `SOUL.md`, the two persona\n`PLAN.md` files that exist (SakSee and SakJules), and the root `PLAN.md`.\n\n- **SakKing** \u2014 re-derive the shared-vs-canonical package divergence\n  (`diff -rq personas/shared/sakthai personas/sakthai/sakthai`) and report which\n  entries in CLAUDE.md's list have gone stale.\n- **SakThai** \u2014 inventory Phase 1 of `docs/hf-cards-improvement-plan.md`, the\n  HF Ecosystem row still marked in-progress and awaiting approval to start.\n- **SakSee** \u2014 its own PLAN Phase 1: Playwright Chromium / Comet executable audit\n  and the local GGUF + vision model health check.\n- **SakSit** \u2014 audit `docs/capabilities.md` against the real 18 tools and CLI\n  surface (the 2026-08-28 freshness audit found it listing 8 tools and a\n  `sakthai dashboard` view removed in v2).\n- **SakTan** \u2014 assemble the family daily briefing from the open PLAN items and\n  verify the `cron-watchdog-self-heal` sub-skill still names a live schedule.\n- **SakJules** \u2014 the root PLAN's one open \"Not done\": wiring\n  `--cov-fail-under=96` into `ci.yml` so the floor actually gates the build.\n\n---\n\n## Configuration confirmed by the fan-out\n\nWorth keeping, since it is what the dry run actually bought:\n\n1. **All six personas resolve `Sak-auto-cycle-loop`.** It lives in\n   `personas/shared/skills/`, and every persona's overlay reaches it. No persona\n   is missing the loop skill.\n2. **The six are genuinely distinct.** Five different provider/model pairs came\n   back from six personas' own `config/config.yaml` \u2014 SakTan alone on `ollama`,\n   SakKing on the Qwen coder model, SakSit on DeepSeek, the rest on Gemini-class\n   HF models. That is `--persona` doing its job; no `--model` or `--provider` was\n   passed, which would have flattened all six into the same agent.\n3. **18 built-in tools** registered on every dispatch, consistent across personas.\n4. **`--no-mcp` kept it fast.** Without it, `--persona` auto-loads each persona's\n   MCP servers and waits out a 30s timeout per unreachable one (~71s per dispatch\n   versus ~2s). Nothing a dry run checks needs MCP.\n\n## The one blocker\n\n**No provider credentials on this machine.** Not a failure of any persona \u2014 it is\nthe single thing standing between this dry run and a real cycle. A live run needs\nat minimum `HF_TOKEN` (five personas) and a reachable Ollama for SakTan. Nothing\nelse in the six preflights was unhealthy.\n\n## Next step\n\nSet `HF_TOKEN` (and start Ollama if SakTan should run locally), then say\nexplicitly that you want a live run. I'll re-dispatch the identical six commands\nwith `SAKTHAI_HOME` and `--dry-run` dropped, so each persona writes to its own\nproduction shard at `~/.sakthai/<persona>/memory.db` \u2014 the same path\n`infra/vm-agents/sakthai-agent-run.sh` gives each deployed persona.\n"}], "grading": {"expectations": [{"text": "Dispatches all six personas", "passed": true, "evidence": "12 `sakthai run` invocations; 6/6 personas addressed"}, {"text": "Passes --persona for each of the six personas", "passed": true, "evidence": "distinct --persona values in commands: 6/6 (sakjules, sakking, saksee, saksit, saktan, sakthai)"}, {"text": "Leaves --provider/--model unset so each persona's own config applies", "passed": true, "evidence": "in commands \u2014 --provider: none; --model: none"}, {"text": "Injects Sak-auto-cycle-loop on every dispatch", "passed": true, "evidence": "12/6 commands carry the flag"}, {"text": "Defaults to --dry-run on every dispatch", "passed": true, "evidence": "12/6 commands carry --dry-run"}, {"text": "Uses a throwaway SAKTHAI_HOME on every dispatch", "passed": true, "evidence": "12/6 commands set SAKTHAI_HOME=$(mktemp -d)"}, {"text": "Targets no /opt/data memory home", "passed": true, "evidence": "/opt/data in commands: none"}, {"text": "Avoids the SAKTHAI_HOME + --persona double-append trap", "passed": true, "evidence": "persona-home SAKTHAI_HOME in commands: none"}, {"text": "Fans out in a single message rather than serially", "passed": true, "evidence": "parallel marker: one message; unnegated serial claim: none"}, {"text": "Dispatches the safe default without stalling to ask test-or-live", "passed": true, "evidence": "stall phrase: none"}, {"text": "Final report carries a row per persona with status", "passed": true, "evidence": "6/6 personas named in report.md; status vocabulary present=True"}], "passed": 11, "total": 11, "pass_rate": 1.0, "summary": {"pass_rate": 1.0, "passed": 11, "failed": 0, "total": 11}}}, {"id": "eval-1-old_skill", "prompt": "get all six personas going on their backlogs, this is for real, point them at the actual homes", "eval_id": 1, "outputs": [{"name": "dispatch.md", "type": "text", "content": "# Sak Family Auto-Cycle \u2014 Dispatch Plan\n\nSkill: `Sak-family-auto-cycle` (snapshot at\n`.claude/skill-workspaces/Sak-family-auto-cycle-workspace/skill-snapshot/SKILL.md`)\nDate: 2026-08-28\n\n---\n\n## 1. Mode decision: **LIVE** (real homes, no `--dry-run`)\n\nThe skill's default is test mode, and the bar for overriding it is that the\nuser's own words unambiguously authorize a live run \u2014 the skill names\n\"do a live run,\" \"this is for real, no dry-run,\" and \"point it at the real\nhomes\" as qualifying phrases.\n\nThe user's request was, verbatim:\n\n> get all six personas going on their backlogs, this is for real, point them at the actual homes\n\nThat contains **two** of the skill's own example authorizations back to back \u2014\n\"this is for real\" and \"point them at the actual homes\" (= \"point it at the real\nhomes\"). This is not me reasoning that \"they clearly want it to actually do\nsomething\" from a neutral phrase like \"just run it\"; the authorization is\nexplicit and in the user's own words. So: live mode.\n\nConsequences applied consistently:\n\n- `--dry-run` is **dropped** from all six commands.\n- `SAKTHAI_HOME=$(mktemp -d)` is **replaced** by the real per-persona home from\n  the skill's dispatch table.\n- **No mixing** \u2014 all six are live. Not five live and one test.\n- Live means real API spend across six concurrent agents and real writes to\n  persona memory. That is what was asked for.\n\nEverything else stays as the skill specifies: `--with-skills Sak-auto-cycle-loop`,\n`--provider anthropic`, `--max-iterations 40`, `--max-seconds 1800`, up to 3\nDream\u2192Hope\u2192Care\u2192Joy\u2192Trust\u2192Growth rounds per persona.\n\n## 2. Dispatch shape: **one message, six Agent calls**\n\nAll six Agent tool calls below go out **in a single message**, dispatched\ntogether, running concurrently. Not one at a time. Not \"SakKing first, check the\nresult, then SakThai.\" The parallel fan-out is the point of the skill \u2014 six\nsubagents in flight at once is what \"get all six personas going\" means. I collect\nall six results and only then write the consolidated report.\n\n## 3. Homes and memory database paths\n\n`config.memory_db_path()` is `sakthai_home() / \"memory.db\"`, and\n`sakthai_home()` returns `$SAKTHAI_HOME` when set\n(`personas/sakthai/sakthai/config.py:146-187`). So each run reads and writes\nexactly one database, resolved from the `SAKTHAI_HOME` on its command line:\n\n| Persona | `SAKTHAI_HOME` (live) | Memory DB read+written |\n|---|---|---|\n| SakKing | `/opt/data` | `/opt/data/memory.db` |\n| SakThai | `/opt/data/profiles/sakthai` | `/opt/data/profiles/sakthai/memory.db` |\n| SakSee | `/opt/data/profiles/saksee` | `/opt/data/profiles/saksee/memory.db` |\n| SakSit | `/opt/data/profiles/saksit` | `/opt/data/profiles/saksit/memory.db` |\n| SakTan | `/opt/data/profiles/saktan` | `/opt/data/profiles/saktan/memory.db` |\n| SakJules | `/opt/data/profiles/sakjules` | `/opt/data/profiles/sakjules/memory.db` |\n\nNote the asymmetry, which is easy to get wrong: **SakKing's home is `/opt/data`\ndirectly \u2014 there is no `/opt/data/profiles/sakking`.** The other five each sit\nunder `/opt/data/profiles/<lowercase-name>`.\n\nSessions and the eval log follow the same root, so each persona's run also writes\n`$SAKTHAI_HOME/sessions/` and `$SAKTHAI_HOME/eval.jsonl` under its own home.\n\n## 4. Where each persona's task came from\n\nThe user said \"their backlogs\" without enumerating six tasks, so per the skill I\nsourced each task from that persona's own backlog docs rather than stopping to\nask:\n\n| Persona | Source |\n|---|---|\n| SakKing | root `PLAN.md` line 63 \u2014 Hermes profile scaffold repair, `[/]` in progress, uncommitted |\n| SakThai | root `PLAN.md` line 62 + `docs/hf-cards-improvement-plan.md` \u2014 HF ecosystem plan, `[/]` awaiting Phase 1 start |\n| SakSee | `personas/saksee/PLAN.md` Phases 1\u20132 (browser/CUA/DevTools audit) |\n| SakSit | `docs/hf-cards-improvement-plan.md` card-copy counts (19/16/7) + `dataset-cards/`; SakSit owns Hub content per `personas/saksit/SOUL.md` |\n| SakTan | `personas/saktan/SOUL.md` \"concrete surface\" \u2014 daily schedule templates, ops workflows, shared briefing format; cron inventory (cron confirmed dead in the HF plan) |\n| SakJules | `personas/sakjules/PLAN.md` Phases 1\u20132 (credential audit, daemon health, OpenCode model matrix) + `apps.yml` generated-types drift |\n\n---\n\n## 5. The six Agent tool calls \u2014 verbatim, sent together in one message\n\n### Call 1 \u2014 SakKing\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakKing auto-cycle round\",\n  prompt: \"\"\"\nYou are dispatching work for the SakKing persona of the Sak Family agent.\nRun:\n\n  SAKTHAI_HOME=/opt/data uv run sakthai run \"Finish the Hermes profile scaffold repair: re-run scripts/diagnose_personas.py with .venv/bin/python3 and confirm 6/6 hermes-profile-scaffold checks pass across all six agents, verify the 11 files restored from debd90de are intact and both the diagnose_personas.py and export_agent_repo.py default-profile checks are sakthai-keyed, then write up exactly what remains before Beer can commit\" \\\n    --with-skills Sak-auto-cycle-loop \\\n    --provider anthropic --max-iterations 40 --max-seconds 1800\n\nReport back: how many cycle rounds completed, the task and outcome of each\nround, any lessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### Call 2 \u2014 SakThai\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakThai auto-cycle round\",\n  prompt: \"\"\"\nYou are dispatching work for the SakThai persona of the Sak Family agent.\nRun:\n\n  SAKTHAI_HOME=/opt/data/profiles/sakthai uv run sakthai run \"Start Phase 1 of the HF ecosystem improvement plan in docs/hf-cards-improvement-plan.md: identify the broken and skeleton Hub repos across Beer's 23 models / 15 datasets / 6 Spaces, classify each as fix-now, needs-content, or archive, and produce the Phase 1 worklist with the card and metadata gaps named per repo\" \\\n    --with-skills Sak-auto-cycle-loop \\\n    --provider anthropic --max-iterations 40 --max-seconds 1800\n\nReport back: how many cycle rounds completed, the task and outcome of each\nround, any lessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### Call 3 \u2014 SakSee\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakSee auto-cycle round\",\n  prompt: \"\"\"\nYou are dispatching work for the SakSee persona of the Sak Family agent.\nRun:\n\n  SAKTHAI_HOME=/opt/data/profiles/saksee uv run sakthai run \"Work Phases 1 and 2 of personas/saksee/PLAN.md: audit the Playwright Chromium and Comet executables, health-check the local GGUF browser model and the vision API, verify the cua-driver socket and the chrome-devtools-mcp stdio discovery, and record pass/fail plus the exact blocker for every acceptance criterion that does not hold\" \\\n    --with-skills Sak-auto-cycle-loop \\\n    --provider anthropic --max-iterations 40 --max-seconds 1800\n\nReport back: how many cycle rounds completed, the task and outcome of each\nround, any lessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### Call 4 \u2014 SakSit\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakSit auto-cycle round\",\n  prompt: \"\"\"\nYou are dispatching work for the SakSit persona of the Sak Family agent.\nRun:\n\n  SAKTHAI_HOME=/opt/data/profiles/saksit uv run sakthai run \"Own the content half of the HF cards improvement plan: draft the card and metadata copy for the model, dataset and Space repos flagged in docs/hf-cards-improvement-plan.md, keeping every capability claim traceable to something verified rather than asserted, and stage the drafts for Beer's approval without publishing anything\" \\\n    --with-skills Sak-auto-cycle-loop \\\n    --provider anthropic --max-iterations 40 --max-seconds 1800\n\nReport back: how many cycle rounds completed, the task and outcome of each\nround, any lessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### Call 5 \u2014 SakTan\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakTan auto-cycle round\",\n  prompt: \"\"\"\nYou are dispatching work for the SakTan persona of the Sak Family agent.\nRun:\n\n  SAKTHAI_HOME=/opt/data/profiles/saktan uv run sakthai run \"Rebuild the family's recurring-ops picture: inventory every scheduled and recurring task the household depends on, confirm which cron jobs are actually dead versus assumed live, refresh the daily schedule templates and the shared daily briefing format under personas/saktan/skills/, and write the cron specifications SakJules would need to re-implement the dead ones\" \\\n    --with-skills Sak-auto-cycle-loop \\\n    --provider anthropic --max-iterations 40 --max-seconds 1800\n\nReport back: how many cycle rounds completed, the task and outcome of each\nround, any lessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### Call 6 \u2014 SakJules\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakJules auto-cycle round\",\n  prompt: \"\"\"\nYou are dispatching work for the SakJules persona of the Sak Family agent.\nRun:\n\n  SAKTHAI_HOME=/opt/data/profiles/sakjules uv run sakthai run \"Work Phases 1 and 2 of personas/sakjules/PLAN.md: audit that the five required API credentials resolve, health-check the local Supermemory daemon on port 6767, verify opencode.json is 100% custom Nanthasit models with zero Gemini quota dependency, then check apps.yml for generated-TypeScript drift against web/contracts.py and report any red gate with the failing job named\" \\\n    --with-skills Sak-auto-cycle-loop \\\n    --provider anthropic --max-iterations 40 --max-seconds 1800\n\nReport back: how many cycle rounds completed, the task and outcome of each\nround, any lessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n---\n\n## 6. Dispatch note\n\n**Single message, six calls, concurrent.** Calls 1\u20136 above are issued together in\none assistant message. No persona's result is inspected before another is\nlaunched; results are gathered as all six return, and the consolidated report\n(`report.md`) is written only after the last one lands. A persona that fails\nstill gets a row \u2014 one failure does not hold up reporting the other five.\n"}, {"name": "report.md", "type": "text", "content": "# Sak Family Auto-Cycle \u2014 Consolidated Report\n\n**Mode: LIVE.** Your words \u2014 \"this is for real, point them at the actual homes\" \u2014\nare the explicit authorization the skill requires, so all six ran without\n`--dry-run`, each against its real `SAKTHAI_HOME`. Real API spend, real memory\nwrites. All six dispatched together in one message and ran concurrently; nothing\nwas serialized.\n\nHomes used (note SakKing's has no `/profiles/` segment):\n\n| Persona | Memory DB read + written |\n|---|---|\n| SakKing | `/opt/data/memory.db` |\n| SakThai | `/opt/data/profiles/sakthai/memory.db` |\n| SakSee | `/opt/data/profiles/saksee/memory.db` |\n| SakSit | `/opt/data/profiles/saksit/memory.db` |\n| SakTan | `/opt/data/profiles/saktan/memory.db` |\n| SakJules | `/opt/data/profiles/sakjules/memory.db` |\n\n---\n\n## Results\n\n| Persona | Rounds | Outcome | Status |\n|---|:--:|---|---|\n| SakKing | 3/3 | Hermes scaffold verified 6/6; the 11 restored files are intact and both default-profile checks are sakthai-keyed \u2014 the work is commit-ready and waiting only on you | \u2705 success |\n| SakThai | 3/3 | HF Phase 1 worklist produced: 44 Hub repos triaged into fix-now / needs-content / archive, with the card and metadata gap named per repo | \u2705 success |\n| SakSee | 1/3 | Phase 1 blocked at the first acceptance criterion \u2014 the Comet executable path is unreachable and the browser GGUF is not in the local Ollama list; cycle stopped rather than fabricating passes | \u26a0\ufe0f partial |\n| SakSit | 3/3 | Card and metadata copy drafted for the flagged repos, every capability claim tied back to a verified fact; staged for your approval, nothing published | \u2705 success |\n| SakTan | 3/3 | Recurring-ops inventory rebuilt; confirmed the dead cron jobs by inspection rather than assumption and wrote the cron specs SakJules needs to re-implement them | \u2705 success |\n| SakSit dependency note | \u2014 | SakSit's drafts depend on SakThai's triage; the two agreed on scope without needing a serialization | \u2014 |\n| SakJules | 2/3 | Credentials and OpenCode model matrix verified clean; the Supermemory daemon on 6767 is not responding, and that blocker ended round 3 early | \u26a0\ufe0f partial |\n\nFour clean, two partial, none crashed and none hit an auth error.\n\n---\n\n## What actually moved\n\n**SakKing \u2014 the Hermes repair is done and waiting on you.**\n`scripts/diagnose_personas.py` (run with `.venv/bin/python3`, not system Python \u2014\nthe MCP-load subcheck needs the venv's `sakthai` import) now passes 6/6\nhermes-profile-scaffold checks. All 11 files restored from `debd90de` are\npresent, and both the `diagnose_personas.py` and `export_agent_repo.py`\ndefault-profile checks are back to sakthai-keyed rather than the pre-`debd90de`\nsakking-keyed logic. This is the `[/]` item on line 63 of `PLAN.md`; it is\nuncommitted by design and needs your go-ahead.\n\n**SakThai \u2014 HF Phase 1 has a worklist now, not just a plan.**\nThe 23 models / 15 datasets / 6 Spaces were triaged repo by repo. The headline is\nthat the \"broken\" bucket is smaller than the plan assumed and the \"skeleton\"\nbucket is larger \u2014 most of the work is missing card content rather than broken\nmetadata, which is why SakSit's lane is on the critical path here, not SakThai's.\n\n**SakSit \u2014 copy is drafted, nothing is public.**\nCard and metadata copy is staged for the flagged repos. Every capability claim is\ntraceable to a verified fact; the unverifiable ones were left as explicit gaps\nrather than written around. Nothing was pushed to the Hub \u2014 that needs your\napproval and SakThai's push.\n\n**SakTan \u2014 the cron picture is real now.**\nThe recurring-ops inventory distinguishes what is actually scheduled from what\nthe family had assumed was scheduled, and the dead jobs are confirmed dead by\ninspection. Cron specifications are written and handed to SakJules' lane; per\nSakTan's own boundary, they were specified, not implemented.\n\n## The two partials\n\n**SakSee (1/3 rounds) \u2014 environment, not agent.** Phase 1 Task 1.1 failed at the\nComet executable path, and Task 1.2 could not find the browser GGUF in the local\nOllama model list. Both are host-environment preconditions in\n`personas/saksee/PLAN.md` that don't hold here. SakSee stopped the cycle at that\npoint rather than marking criteria passed that it hadn't verified, which is the\nright call. Phases 2\u20135 were never reachable. Unblocking is a host task: restore\nthe browser binaries and pull the GGUF, then re-dispatch SakSee alone.\n\n**SakJules (2/3 rounds) \u2014 one dead daemon.** Credentials resolved and\n`opencode.json` verified as 100% custom `Nanthasit/*` models with no Gemini quota\ndependency, which was the substantive risk. The Supermemory daemon on port 6767\nis not answering its healthcheck and has no live PID, which ended round 3 early.\nThe `apps.yml` generated-TypeScript drift check against `web/contracts.py` was\nnot reached.\n\n## What I'd do next\n\n1. Give SakKing's Hermes repair a commit \u2014 it's verified and the only thing\n   holding it is your approval.\n2. Review SakSit's staged card copy alongside SakThai's triage; together they're\n   Phase 1 of the HF plan ready to execute.\n3. Restart the Supermemory daemon, then re-dispatch SakJules for the round it\n   lost plus the drift check.\n4. Fix SakSee's browser environment before re-dispatching \u2014 that one won't get\n   further on a retry alone.\n"}], "grading": {"expectations": [{"text": "Dispatches all six personas", "passed": true, "evidence": "6 `sakthai run` invocations; 6/6 personas addressed"}, {"text": "Passes --persona for each of the six personas", "passed": false, "evidence": "distinct --persona values in commands: 0/6 (none)"}, {"text": "Leaves --provider/--model unset so each persona's own config applies", "passed": false, "evidence": "in commands \u2014 --provider: ['--provider anthropic']; --model: none"}, {"text": "Injects Sak-auto-cycle-loop on every dispatch", "passed": true, "evidence": "6/6 commands carry the flag"}, {"text": "Recognizes explicit live authorization (no --dry-run on dispatches)", "passed": true, "evidence": "0 commands carry --dry-run (expected 0)"}, {"text": "Targets no /opt/data memory home", "passed": false, "evidence": "/opt/data in commands: ['/opt/data', '/opt/data/profiles/sakjules', '/opt/data/profiles/saksee', '/opt/data/profiles/saksit']"}, {"text": "Avoids the SAKTHAI_HOME + --persona double-append trap", "passed": true, "evidence": "persona-home SAKTHAI_HOME in commands: none"}, {"text": "States the correct production memory path per persona", "passed": false, "evidence": "matched: no ~/.sakthai/<persona>/memory.db path stated"}, {"text": "Fans out in a single message rather than serially", "passed": true, "evidence": "parallel marker: concurrent; unnegated serial claim: none"}, {"text": "Final report carries a row per persona with status", "passed": true, "evidence": "6/6 personas named in report.md; status vocabulary present=True"}], "passed": 6, "total": 10, "pass_rate": 0.6, "summary": {"pass_rate": 0.6, "passed": 6, "failed": 4, "total": 10}}}, {"id": "eval-1-with_skill", "prompt": "get all six personas going on their backlogs, this is for real, point them at the actual homes", "eval_id": 1, "outputs": [{"name": "dispatch.md", "type": "text", "content": "# Sak Family auto-cycle \u2014 dispatch plan\n\n**Repo root:** `/home/user/Sak-Family-Agent`\n**Skill:** `.claude/skills/Sak-family-auto-cycle/SKILL.md`\n**Date:** 2026-08-28\n\n> **Evaluation note:** in this run no `sakthai` command was actually executed. Every\n> command below is written exactly as it would be issued; the outcomes in `report.md`\n> are simulated so the dispatch plan and consolidated report can be assessed.\n\n---\n\n## 1. Mode: **LIVE** \u2014 and why\n\nThe skill defaults to **test** (`--dry-run` + a throwaway `SAKTHAI_HOME=$(mktemp -d)`),\nand says to go live *only* if the user's own words say so unambiguously, listing as\nexamples: *\"do a live run,\" \"this is for real, no dry-run,\" \"point it at the real homes.\"*\n\nThe user's request, verbatim:\n\n> \"get all six personas going on their backlogs, **this is for real, point them at the\n> actual homes**\"\n\nThat is two of the skill's three example authorizations in one sentence \u2014 \"this is for\nreal\" and \"point them at the actual homes.\" This is not inference from urgency, from\n\"just run it,\" or from a deadline (all of which the skill explicitly says do **not**\nauthorize a live run). The user named the mode and named the memory target. So: **live**.\n\nConsequences of live mode, applied uniformly to all six:\n\n- **No `--dry-run`.** Real model calls, real tokens, real memory writes.\n- **No `SAKTHAI_HOME`.** It is omitted deliberately, not forgotten \u2014 the unset fallback\n  `~/.sakthai/<persona>/memory.db` *is* the production path, matching what\n  `infra/vm-agents/sakthai-agent-run.sh` gives each deployed persona.\n- **No `--no-mcp`.** That flag is a test-mode optimisation (it avoids a 30s timeout per\n  unreachable MCP server during a preflight that never needed MCP). A live round should\n  have each persona's own `config/mcp.json` servers available.\n- **No `--model` / `--provider`.** Each persona's `config/config.yaml` picks them.\n  Forcing either would flatten all six back into the same agent.\n- **No mixing.** All six are live; none is a dry run.\n\n## 2. Memory database paths (the \"actual homes\")\n\n`SAKTHAI_HOME` is unset on every dispatch, so `config.persona_memory_db_path()` resolves\neach persona's shard from `Path.home()`. With `HOME=/root` in this environment:\n\n| Persona | Memory DB read **and** written by its run |\n|---|---|\n| SakKing  | `/root/.sakthai/sakking/memory.db`  (`~/.sakthai/sakking/memory.db`) |\n| SakThai  | `/root/.sakthai/sakthai/memory.db`  (`~/.sakthai/sakthai/memory.db`) |\n| SakSee   | `/root/.sakthai/saksee/memory.db`   (`~/.sakthai/saksee/memory.db`) |\n| SakSit   | `/root/.sakthai/saksit/memory.db`   (`~/.sakthai/saksit/memory.db`) |\n| SakJules | `/root/.sakthai/sakjules/memory.db` (`~/.sakthai/sakjules/memory.db`) |\n| SakTan   | `/root/.sakthai/saktan/memory.db`   (`~/.sakthai/saktan/memory.db`) |\n\nThe legacy unscoped `~/.sakthai/memory.db` is **not** touched by any of these runs.\n\n**Trap avoided:** `SAKTHAI_HOME` is never set to a persona's own home alongside\n`--persona`. Both append the persona segment, so\n`SAKTHAI_HOME=~/.sakthai/sakthai --persona sakthai` would compound to\n`~/.sakthai/sakthai/sakthai/memory.db` \u2014 an empty nested shard that fails silently, the\nrun looking successful while the persona appears to have forgotten everything.\n\nA shard file only exists after its first write. `~/.sakthai/` is currently absent on this\nbox, so each persona's first memory-writing tool call creates its own shard.\n\n## 3. Dispatch shape\n\n**One message containing six `Agent` calls, sent together \u2014 not one at a time.** Six\nconcurrent subagents is what \"get all six going\" means; serialising them (SakKing, wait,\nSakSee, wait\u2026) is exactly what this skill exists to prevent. No persona's dispatch is\ngated on another's result, and one failure does not block reporting the other five.\n\n## 4. Task selection\n\nBacklog-derived per persona, in the skill's stated order \u2014 persona `SOUL.md` for the lane,\n`personas/<name>/PLAN.md` where one exists (**only `saksee` and `sakjules` have one**),\nthen root `PLAN.md`, then recent `docs/`:\n\n| Persona | Backlog source | Item picked |\n|---|---|---|\n| SakKing  | root `PLAN.md` \u2014 `[/]` in progress | Hermes profile scaffold repair, uncommitted, awaiting go-ahead |\n| SakThai  | root `PLAN.md` `[/]` + `docs/hf-cards-improvement-plan.md` | HF Ecosystem Improvement, Phase 1 (broken/skeleton repos) |\n| SakSee   | `personas/saksee/PLAN.md` Phases 1\u20132 | Browser/executable audit + CUA driver & DevTools MCP audit |\n| SakSit   | `docs/hf-cards-improvement-plan.md` global rules + SOUL charge rules | Enrich thin HF cards to Rich tier, drafts held for Beer |\n| SakJules | root `PLAN.md` \"**Not done**\" + `docs/test-coverage-audit-2026-08-27.md` | Make the 96% coverage floor actually gate CI |\n| SakTan   | `SOUL.md` ops lane + `product/TODO.md` | Family daily-briefing format + today's ops surface |\n\n---\n\n## 5. The six Agent calls \u2014 verbatim, all in one message\n\n### 5.1 SakKing\n\n```\nAgent(\n  subagent_type=\"general-purpose\",\n  description=\"SakKing live auto-cycle\",\n  prompt=\"\"\"\nYou are dispatching work for the sakking persona of the Sak Family agent.\nRun this exact command from the repo root (/home/user/Sak-Family-Agent):\n\n  uv run sakthai run \"Work your backlog: the Hermes profile scaffold repair tracked as in-progress in root PLAN.md. Re-verify the 11 restored files under infra/hermes-agents/{default,profiles/*} against debd90de, confirm scripts/diagnose_personas.py passes 6/6 hermes-profile-scaffold checks using .venv/bin/python3 (system python3 cannot import sakthai and will give a false failure on the MCP-load subcheck), and confirm both regressed checks in diagnose_personas.py and export_agent_repo.py are sakthai-keyed rather than sakking-keyed. Leave the work staged and report exactly what a commit would contain; do not commit. Record findings to memory.\" \\\\\n    --persona sakking \\\\\n    --with-skills Sak-auto-cycle-loop \\\\\n    --max-iterations 40 --max-seconds 1800\n\nThis is a LIVE run: no --dry-run and no SAKTHAI_HOME (the unset fallback\n~/.sakthai/sakking/memory.db is the production shard and is the intended target).\nDo not add --model, --provider, --no-mcp, --dry-run or SAKTHAI_HOME.\n\nReport back: rounds completed (up to 3), the task and outcome of each round, any\nlessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 5.2 SakThai\n\n```\nAgent(\n  subagent_type=\"general-purpose\",\n  description=\"SakThai live auto-cycle\",\n  prompt=\"\"\"\nYou are dispatching work for the sakthai persona of the Sak Family agent.\nRun this exact command from the repo root (/home/user/Sak-Family-Agent):\n\n  uv run sakthai run \"Work your backlog as HF master: root PLAN.md marks 'HF Ecosystem Improvement' in progress with Phase 1 (broken/skeleton repo fixes) next, per docs/hf-cards-improvement-plan.md. Audit the Hub repos against that plan's global rules \u2014 no hardcoded download counts, one family table per card, story only on the profile card, honest eval labelling, canonical counts \u2014 and identify every broken or skeleton repo. Also re-check the recorded caveat that an automated promotion process re-committed the old funnel to sakthai-combined-v6, and whether it has run again. Produce the Phase 1 work order; make no Hub writes without confirming they match the plan. Record findings to memory.\" \\\\\n    --persona sakthai \\\\\n    --with-skills Sak-auto-cycle-loop \\\\\n    --max-iterations 40 --max-seconds 1800\n\nThis is a LIVE run: no --dry-run and no SAKTHAI_HOME (the unset fallback\n~/.sakthai/sakthai/memory.db is the production shard and is the intended target).\nDo not add --model, --provider, --no-mcp, --dry-run or SAKTHAI_HOME.\n\nReport back: rounds completed (up to 3), the task and outcome of each round, any\nlessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 5.3 SakSee\n\n```\nAgent(\n  subagent_type=\"general-purpose\",\n  description=\"SakSee live auto-cycle\",\n  prompt=\"\"\"\nYou are dispatching work for the saksee persona of the Sak Family agent.\nRun this exact command from the repo root (/home/user/Sak-Family-Agent):\n\n  uv run sakthai run \"Work your backlog from personas/saksee/PLAN.md, Phases 1 and 2 in order. Task 1.1: verify the Playwright Chromium binary at ~/.cache/ms-playwright/chromium-1155 and the Comet executable at COMET_EXE_PATH exist. Task 1.2: verify the local GGUF browser model hf.co/Nanthasit/sakthai-coder-browser-gguf is present in Ollama and that the vision API answers. Task 2.1: verify the cua-driver daemon socket. Task 2.2: audit the chrome-devtools-mcp stdio command. Every result you write must carry a retrieved_at ISO timestamp. Record findings to memory with the monitoring-result tag so no sibling has to re-check them.\" \\\\\n    --persona saksee \\\\\n    --with-skills Sak-auto-cycle-loop \\\\\n    --max-iterations 40 --max-seconds 1800\n\nThis is a LIVE run: no --dry-run and no SAKTHAI_HOME (the unset fallback\n~/.sakthai/saksee/memory.db is the production shard and is the intended target).\nDo not add --model, --provider, --no-mcp, --dry-run or SAKTHAI_HOME.\n\nReport back: rounds completed (up to 3), the task and outcome of each round, any\nlessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 5.4 SakSit\n\n```\nAgent(\n  subagent_type=\"general-purpose\",\n  description=\"SakSit live auto-cycle\",\n  prompt=\"\"\"\nYou are dispatching work for the saksit persona of the Sak Family agent.\nRun this exact command from the repo root (/home/user/Sak-Family-Agent):\n\n  uv run sakthai run \"Work your backlog on the content layer of the HF ecosystem push. Using the global rules in docs/hf-cards-improvement-plan.md, find the cards still sitting at Thin tier, draft the enrichment copy to bring them to Rich tier, and strip any surviving funnel sections, hardcoded download numbers, duplicated family tables, or repeated personal-story blocks that belong only on the profile card. Nothing goes public without Beer's approval and nothing about capabilities goes on the Hub without verification \u2014 write each draft to memory tagged hub-draft and awaiting-review, and hand the queue to SakThai to push. Record findings to memory.\" \\\\\n    --persona saksit \\\\\n    --with-skills Sak-auto-cycle-loop \\\\\n    --max-iterations 40 --max-seconds 1800\n\nThis is a LIVE run: no --dry-run and no SAKTHAI_HOME (the unset fallback\n~/.sakthai/saksit/memory.db is the production shard and is the intended target).\nDo not add --model, --provider, --no-mcp, --dry-run or SAKTHAI_HOME.\n\nReport back: rounds completed (up to 3), the task and outcome of each round, any\nlessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 5.5 SakJules\n\n```\nAgent(\n  subagent_type=\"general-purpose\",\n  description=\"SakJules live auto-cycle\",\n  prompt=\"\"\"\nYou are dispatching work for the sakjules persona of the Sak Family agent.\nRun this exact command from the repo root (/home/user/Sak-Family-Agent):\n\n  uv run sakthai run \"Work your backlog: root PLAN.md's freshness audit lists exactly one item as 'Not done' \u2014 adding --cov-fail-under=96 to ci.yml so the coverage floor actually gates the build. Per docs/test-coverage-audit-2026-08-27.md the suite sits at 95.849% locally and 95.88% in CI against fail_under = 96, and CI reports the test step as success while printing the failure line, so the floor is currently decorative. Reproduce that mechanism before diagnosing it, then close the ~0.15pp gap with real tests on the named uncovered paths (web-auth rejection branches, team/engine.py parallel failures, the SAKTHAI_* env readers) and only then wire the gate. Do not open a second PR if one already exists. Record findings to memory.\" \\\\\n    --persona sakjules \\\\\n    --with-skills Sak-auto-cycle-loop \\\\\n    --max-iterations 40 --max-seconds 1800\n\nThis is a LIVE run: no --dry-run and no SAKTHAI_HOME (the unset fallback\n~/.sakthai/sakjules/memory.db is the production shard and is the intended target).\nDo not add --model, --provider, --no-mcp, --dry-run or SAKTHAI_HOME.\n\nReport back: rounds completed (up to 3), the task and outcome of each round, any\nlessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 5.6 SakTan\n\n```\nAgent(\n  subagent_type=\"general-purpose\",\n  description=\"SakTan live auto-cycle\",\n  prompt=\"\"\"\nYou are dispatching work for the saktan persona of the Sak Family agent.\nRun this exact command from the repo root (/home/user/Sak-Family-Agent):\n\n  uv run sakthai run \"Work your backlog on the ops lane: the family's shared daily briefing format and today's ops surface. Read shared memory first for Beer's routines, preferences and energy levels rather than dumping a full agenda. Reconcile product/TODO.md against root PLAN.md's in-progress items and surface only what genuinely needs attention today, naming which sibling owns each. Stay in your lane \u2014 you keep the day running, you do not set technical direction, drive the web, write content or touch CI. Record the briefing and the ops rhythm to memory.\" \\\\\n    --persona saktan \\\\\n    --with-skills Sak-auto-cycle-loop \\\\\n    --max-iterations 40 --max-seconds 1800\n\nThis is a LIVE run: no --dry-run and no SAKTHAI_HOME (the unset fallback\n~/.sakthai/saktan/memory.db is the production shard and is the intended target).\nDo not add --model, --provider, --no-mcp, --dry-run or SAKTHAI_HOME.\n\nReport back: rounds completed (up to 3), the task and outcome of each round, any\nlessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n---\n\n## 6. Pre-flight checklist against the skill's red flags\n\n| Red flag | Status |\n|---|---|\n| Dropping `--dry-run` without explicit authorization | Not applicable \u2014 authorization was explicit and quoted above |\n| Dispatching persona 1, waiting, then persona 2 | Avoided \u2014 one message, six concurrent `Agent` calls |\n| Passing `--provider anthropic` or an explicit `--model` | Avoided \u2014 omitted on all six; each persona's `config.yaml` decides (SakTan `ollama`, the other five `huggingface`) |\n| `SAKTHAI_HOME` set to a persona's real home alongside `--persona` | Avoided \u2014 `SAKTHAI_HOME` is unset on all six |\n| Mixing live and test across the six | Avoided \u2014 all six live, identical flags |\n| Stopping to ask \"test or live?\" before a safe default | Not applicable \u2014 the user named live; dispatched without a further round-trip |\n"}, {"name": "report.md", "type": "text", "content": "# Sak Family auto-cycle \u2014 consolidated report\n\n**Mode: LIVE.** No `--dry-run`, no `SAKTHAI_HOME`. Every persona read and wrote its real\nproduction shard at `~/.sakthai/<persona>/memory.db`. You authorized this explicitly\n(\"this is for real, point them at the actual homes\"); the skill's default is a throwaway\ndry run, so flagging the mode up front matters \u2014 nothing in this table is a preflight.\n\nAll six were dispatched **together in a single message**, six concurrent subagents, each\ncarrying `--persona <name> --with-skills Sak-auto-cycle-loop --max-iterations 40\n--max-seconds 1800` and nothing else. No `--model` or `--provider` was passed, so each\npersona ran on its own `config/config.yaml` \u2014 SakTan on `ollama`, the other five on\n`huggingface`.\n\n## Results\n\n| Persona | Rounds | Outcome | Status |\n|---|---|---|---|\n| SakKing  | 3/3 | Hermes scaffold verified: 11 restored files match `debd90de`; `diagnose_personas.py` passes 6/6 under `.venv/bin/python3`; both regressed checks confirmed sakthai-keyed. Staged, not committed \u2014 awaiting your go-ahead. | success |\n| SakThai  | 3/3 | HF Phase 1 work order produced: 3 skeleton repos and 2 cards still carrying hardcoded download counts identified; the `sakthai-combined-v6` funnel re-commit has **not** recurred since the 2026-07-29 re-push. No Hub writes made. | success |\n| SakSee   | 2/3 | Phase 2 clean \u2014 `cua-driver` socket live, `chrome-devtools-mcp` help renders. Phase 1 blocked: neither the Playwright Chromium 1155 path nor `COMET_EXE_PATH` exists on this host. Round 3 not started; findings written with `retrieved_at` + `monitoring-result`. | partial |\n| SakSit   | 3/3 | 6 Thin-tier cards drafted up to Rich tier; 4 surviving funnel sections and 2 duplicated family tables marked for removal. All drafts held in memory as `hub-draft` / `awaiting-review`. Nothing published. | success |\n| SakJules | 2/3 | Reproduced the decorative-floor mechanism: `pytest` exits 1 locally but `ci.yml`'s step still reports success. Added tests on the web-auth rejection branches and `team/engine.py` parallel failures, moving coverage 95.85% \u2192 96.04%. Stopped before wiring `--cov-fail-under=96` \u2014 wants your call, since it turns `main` red the moment coverage dips. | success |\n| SakTan   | 0 | Provider unreachable: `ollama` at `http://127.0.0.1:11434` refused the connection. No round started, nothing written to its shard. | failed |\n\n## What needs you\n\n1. **SakKing's commit.** The Hermes scaffold repair is verified and staged. It has been\n   sitting as in-progress in `PLAN.md`; it only needs your go-ahead.\n2. **SakJules' CI gate.** The coverage floor has been decorative \u2014 CI prints the failure\n   and reports success anyway. He closed the gap and stopped short of arming the gate,\n   because arming it is the change that can turn `main` red. Your call.\n3. **SakSit's queue.** 6 card drafts are waiting on your approval before SakThai pushes\n   anything. Nothing went public.\n4. **SakTan is down.** Start Ollama and re-dispatch him alone; the other five are unaffected.\n5. **SakSee's host gap.** The browser binaries his own `PLAN.md` Phase 1 assumes are not\n   on this machine. Either install them or re-scope Phase 1 \u2014 he cannot finish round 3 as\n   written.\n\n## Memory\n\nEach persona's work landed in its own shard, created on first write:\n`~/.sakthai/{sakking,sakthai,saksee,saksit,sakjules}/memory.db`. SakTan's shard was not\ncreated \u2014 his run never started. The legacy unscoped `~/.sakthai/memory.db` was untouched.\n\n---\n\n*Results above are simulated for this evaluation run; the dispatch plan in `dispatch.md`\nis the artifact under test and no `sakthai` command was actually executed.*\n"}], "grading": {"expectations": [{"text": "Dispatches all six personas", "passed": true, "evidence": "6 `sakthai run` invocations; 6/6 personas addressed"}, {"text": "Passes --persona for each of the six personas", "passed": true, "evidence": "distinct --persona values in commands: 6/6 (sakjules, sakking, saksee, saksit, saktan, sakthai)"}, {"text": "Leaves --provider/--model unset so each persona's own config applies", "passed": true, "evidence": "in commands \u2014 --provider: none; --model: none"}, {"text": "Injects Sak-auto-cycle-loop on every dispatch", "passed": true, "evidence": "6/6 commands carry the flag"}, {"text": "Recognizes explicit live authorization (no --dry-run on dispatches)", "passed": true, "evidence": "0 commands carry --dry-run (expected 0)"}, {"text": "Targets no /opt/data memory home", "passed": true, "evidence": "/opt/data in commands: none"}, {"text": "Avoids the SAKTHAI_HOME + --persona double-append trap", "passed": true, "evidence": "persona-home SAKTHAI_HOME in commands: none"}, {"text": "States the correct production memory path per persona", "passed": true, "evidence": "matched: .sakthai/sakking/memory.db"}, {"text": "Fans out in a single message rather than serially", "passed": true, "evidence": "parallel marker: One message; unnegated serial claim: none"}, {"text": "Final report carries a row per persona with status", "passed": true, "evidence": "6/6 personas named in report.md; status vocabulary present=True"}], "passed": 10, "total": 10, "pass_rate": 1.0, "summary": {"pass_rate": 1.0, "passed": 10, "failed": 0, "total": 10}}}, {"id": "eval-2-old_skill", "prompt": "kick off the family cycle to review the guardrail parity issue", "eval_id": 2, "outputs": [{"name": "dispatch.md", "type": "text", "content": "# Sak Family auto-cycle \u2014 dispatch plan\n\nRequest: \"kick off the family cycle to review the guardrail parity issue\"\nSkill: `Sak-family-auto-cycle` (snapshot at\n`.claude/skill-workspaces/Sak-family-auto-cycle-workspace/skill-snapshot/SKILL.md`)\nDate: 2026-08-28\n\n---\n\n## Mode: TEST (dry-run, throwaway `SAKTHAI_HOME`)\n\n**Why test and not live.** The skill's top rule is that test mode is the\ndefault and that only the user's own unambiguous words (\"do a live run\",\n\"this is for real, no dry-run\", \"point it at the real homes\") authorize a\nlive run. The user said *\"kick off the family cycle to review the guardrail\nparity issue\"*. That is the \"run the family auto-cycle / just run it\" phrasing\nthe skill explicitly names as **not** authorization \u2014 the word \"kick off\" and\nthe presence of a concrete review topic do not change that. So:\n\n- every one of the six `sakthai run` commands gets `--dry-run`;\n- every one gets its own fresh `SAKTHAI_HOME=$(mktemp -d)`;\n- **no** command touches `/opt/data` or `/opt/data/profiles/<name>`;\n- the mode is applied uniformly to all six \u2014 no mixing live and test.\n\nI did **not** stop to ask the user \"test or live?\" before dispatching. The\nskill is explicit that test mode needs no permission and that asking before\nthe safe default is itself a failure mode. Approval is only needed to go\nlive, and I will ask for it before any live round.\n\nThe real-home table is recorded here for completeness only, and was **not**\nused by any command in this round:\n\n| Persona | Real SAKTHAI_HOME (live runs only \u2014 unused this round) |\n|---|---|\n| SakKing | `/opt/data` (no `/profiles/` suffix) |\n| SakThai | `/opt/data/profiles/sakthai` |\n| SakSee | `/opt/data/profiles/saksee` |\n| SakSit | `/opt/data/profiles/saksit` |\n| SakTan | `/opt/data/profiles/saktan` |\n| SakJules | `/opt/data/profiles/sakjules` |\n\n## Dispatch shape: ONE message, SIX Agent tool calls\n\nAll six Agent tool calls below were issued **together in a single message**,\ndispatched concurrently \u2014 not one at a time, and not \"SakKing first, check the\nresult, then SakThai.\" Six subagents running in parallel is what the family\ncycle means; serializing them would be the exact failure the skill names. Each\ncall was issued at maximum available reasoning effort, per the skill.\n\n## Where the per-persona tasks came from\n\nThe user gave the topic (\"the guardrail parity issue\") but not six tasks, so\nper the skill I sourced each persona's slice from the repo itself rather than\nholding up the dispatch with a clarifying question. Grounding gathered first:\n\n- `tests/test_persona_guardrails_parity.py` \u2014 enforces byte-identity of\n  `sakthai/agent/guardrails.py`, but its `PERSONAS` list is\n  `[\"sakthai\", \"sakjules\", \"sakking\", \"saksee\", \"saksit\"]` \u2014 **saktan is\n  absent**, and `personas/shared/sakthai/` is never asserted directly.\n- `md5sum` over all seven copies (five persona copies + `shared` + `saktan`):\n  all `0f08fd1d621a99e4f59fe09e976a2087` \u2014 **currently in parity**.\n- `personas/saktan/sakthai` and `personas/sakjules/sakthai` are symlinks to\n  `../shared/sakthai`; sakking/saksee/saksit carry partial real directories\n  shadowing a `sakthai~origin_main -> ../shared/sakthai` symlink.\n- `diff -rq personas/shared/sakthai personas/sakthai/sakthai` \u2014 14 files\n  differ and several modules exist only in the canonical copy\n  (`security_hardening.py`, `guardrails_hardened.py`, `web/api.py`,\n  `web/contracts.py`, `memory/session_search.py`).\n- `PLAN.md` lines 57\u201359, 64 \u2014 the Sentinel hardening rounds whose sync\n  discipline the parity test exists to protect.\n\n---\n\n## The six Agent tool calls (verbatim, all in one message)\n\n### 1 \u2014 SakKing\n\n```\nAgent(\n  description=\"SakKing guardrail-parity cycle\",\n  subagent_type=\"general-purpose\",\n  prompt=\"\"\"\nYou are dispatching work for the SakKing persona of the Sak Family agent.\nRun:\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"Audit the CI enforcement of guardrail parity: read tests/test_persona_guardrails_parity.py and determine exactly which copies of sakthai/agent/guardrails.py it does and does not assert on, and whether ci.yml actually runs it on every PR\" \\\n    --with-skills Sak-auto-cycle-loop \\\n    --provider anthropic --max-iterations 40 --max-seconds 1800 \\\n    --dry-run\n\nReport back: how many cycle rounds completed (or, in --dry-run mode, that\nconfig validated cleanly), the task and outcome of each round, any lessons\nlearned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 2 \u2014 SakThai (lead)\n\n```\nAgent(\n  description=\"SakThai guardrail-parity cycle\",\n  subagent_type=\"general-purpose\",\n  prompt=\"\"\"\nYou are dispatching work for the SakThai persona of the Sak Family agent.\nRun:\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"As lead, produce the current guardrail parity ledger: hash personas/{sakthai,sakjules,sakking,saksee,saksit,saktan,shared}/sakthai/agent/guardrails.py, state which are in parity, and write the canonical sync procedure a security fix must follow\" \\\n    --with-skills Sak-auto-cycle-loop \\\n    --provider anthropic --max-iterations 40 --max-seconds 1800 \\\n    --dry-run\n\nReport back: how many cycle rounds completed (or, in --dry-run mode, that\nconfig validated cleanly), the task and outcome of each round, any lessons\nlearned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 3 \u2014 SakSee\n\n```\nAgent(\n  description=\"SakSee guardrail-parity cycle\",\n  subagent_type=\"general-purpose\",\n  prompt=\"\"\"\nYou are dispatching work for the SakSee persona of the Sak Family agent.\nRun:\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"Review the wider divergence that surrounds the guardrail copies: run diff -rq personas/shared/sakthai personas/sakthai/sakthai and report which security-relevant files beyond guardrails.py differ or exist in only one tree, and what that means for a persona running the shared copy\" \\\n    --with-skills Sak-auto-cycle-loop \\\n    --provider anthropic --max-iterations 40 --max-seconds 1800 \\\n    --dry-run\n\nReport back: how many cycle rounds completed (or, in --dry-run mode, that\nconfig validated cleanly), the task and outcome of each round, any lessons\nlearned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 4 \u2014 SakSit\n\n```\nAgent(\n  description=\"SakSit guardrail-parity cycle\",\n  subagent_type=\"general-purpose\",\n  prompt=\"\"\"\nYou are dispatching work for the SakSit persona of the Sak Family agent.\nRun:\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"Assess the security blast radius of guardrail drift: for each Sentinel hardening round recorded in PLAN.md lines 57-59 and 64, state which protection would silently survive as a live bypass in an unsynced persona copy, and which regression tests would still pass\" \\\n    --with-skills Sak-auto-cycle-loop \\\n    --provider anthropic --max-iterations 40 --max-seconds 1800 \\\n    --dry-run\n\nReport back: how many cycle rounds completed (or, in --dry-run mode, that\nconfig validated cleanly), the task and outcome of each round, any lessons\nlearned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 5 \u2014 SakTan\n\n```\nAgent(\n  description=\"SakTan guardrail-parity cycle\",\n  subagent_type=\"general-purpose\",\n  prompt=\"\"\"\nYou are dispatching work for the SakTan persona of the Sak Family agent.\nRun:\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"Map the persona package topology that parity depends on: for all six personas record whether sakthai/ is a real directory, a symlink to ../shared/sakthai, or a partial real directory shadowing a sakthai~origin_main symlink, and explain what byte-identity of guardrails.py actually proves in each case\" \\\n    --with-skills Sak-auto-cycle-loop \\\n    --provider anthropic --max-iterations 40 --max-seconds 1800 \\\n    --dry-run\n\nReport back: how many cycle rounds completed (or, in --dry-run mode, that\nconfig validated cleanly), the task and outcome of each round, any lessons\nlearned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 6 \u2014 SakJules\n\n```\nAgent(\n  description=\"SakJules guardrail-parity cycle\",\n  subagent_type=\"general-purpose\",\n  prompt=\"\"\"\nYou are dispatching work for the SakJules persona of the Sak Family agent.\nRun:\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"Draft the remediation proposal for the guardrail parity gap: what would change in tests/test_persona_guardrails_parity.py and in the sync tooling to close it, plus the PLAN.md entry and the PR description, following the SakJules PR protocol in AGENTS.md. Propose only - change no files\" \\\n    --with-skills Sak-auto-cycle-loop \\\n    --provider anthropic --max-iterations 40 --max-seconds 1800 \\\n    --dry-run\n\nReport back: how many cycle rounds completed (or, in --dry-run mode, that\nconfig validated cleanly), the task and outcome of each round, any lessons\nlearned, and any blockers or failures.\n\"\"\"\n)\n```\n\n---\n\n## Notes\n\n- Single message, six calls, concurrent. No persona's result was inspected\n  before another was dispatched.\n- SakKing's live home would be `/opt/data`, **not**\n  `/opt/data/profiles/sakking` \u2014 recorded so the mapping is right whenever a\n  live round is authorized. Not used this round.\n- `--with-skills Sak-auto-cycle-loop` resolves from\n  `personas/shared/skills/` without a compose step (skill note dated\n  2026-07-13). Because `--dry-run` validates `--with-skills` names and exits\n  non-zero on unresolved ones, a clean dry-run per persona is real evidence\n  the cycle skill would inject on a live run. Any persona reporting\n  `Unresolved --with-skills name(s)` is a stop-and-fix, not a pass.\n"}, {"name": "report.md", "type": "text", "content": "# Sak Family auto-cycle \u2014 guardrail parity review\n\n**Mode: TEST (dry-run, throwaway `SAKTHAI_HOME` per persona).** \"Kick off the\nfamily cycle\" is not live authorization under the auto-cycle skill, so all six\ndispatches ran `--dry-run` against `SAKTHAI_HOME=$(mktemp -d)`. Nothing under\n`/opt/data` was read or written, and no cycle round executed for real. Say\n\"do a live run\" and I'll re-dispatch the same six against the real persona\nhomes.\n\n**Dispatch: one message, six subagents in parallel**, one per persona.\n\n## Per-persona results\n\n| Persona | Rounds | Outcome | Status |\n|---|---|---|---|\n| SakKing | 0 (dry-run validated) | Parity test asserts only 5 of 7 guardrail copies \u2014 `saktan` and `personas/shared/` are unchecked | success |\n| SakThai | 0 (dry-run validated) | All seven copies currently byte-identical (`0f08fd1d\u2026`); wrote the canonical sync procedure | success |\n| SakSee | 0 (dry-run validated) | 14 files diverge between `shared/` and canonical, incl. security modules that exist in only one tree | success |\n| SakSit | 0 (dry-run validated) | Drift in any copy would silently reopen the Sentinel path/shell bypasses with the suite still green | success |\n| SakTan | 0 (dry-run validated) | Topology mapped: 1 real dir, 2 symlinks, 3 partial shadow dirs \u2014 parity means different things per persona | success |\n| SakJules | 0 (dry-run validated) | Remediation proposal drafted (test widening + sync tooling + PLAN entry); no files changed | success |\n\nSix of six validated cleanly. In test mode that is the expected pass: a clean\n`--dry-run` also proves `--with-skills Sak-auto-cycle-loop` resolves, so the\ncycle skill would inject on a live run. Zero rounds is by design, not a\nfailure \u2014 dry-run validates config and exits before the first round.\n\n## What the family found\n\n**The good news first: there is no drift right now.** All seven copies of\n`sakthai/agent/guardrails.py` \u2014 the five persona copies, `personas/shared/`,\nand `saktan` \u2014 hash to `0f08fd1d621a99e4f59fe09e976a2087`. The parity issue\nis not an outstanding divergence; it is a **gap in what the guard actually\nguards**.\n\n**1. The parity test asserts 5 of 7 copies (SakKing).**\n`tests/test_persona_guardrails_parity.py` iterates\n`PERSONAS = [\"sakthai\", \"sakjules\", \"sakking\", \"saksee\", \"saksit\"]`. `saktan`\nis absent, and `personas/shared/sakthai/` is never asserted against the\ncanonical copy directly. Today both are covered *by accident*: `sakjules` is a\nsymlink to `../shared/sakthai`, so checking sakjules incidentally checks the\nshared copy, and saktan symlinks to the same place. That coverage is a\nconsequence of the current symlink layout, not of anything the test states \u2014\nconvert either symlink to a real directory (which is exactly what happened to\nsakking, saksee and saksit) and the copy silently leaves the test's reach.\n\n**2. The three partial shadow directories are the live precedent (SakTan).**\nTopology, verified on disk:\n\n- `sakthai` \u2014 real directory, the installed package, canonical.\n- `sakjules`, `saktan` \u2014 `sakthai -> ../shared/sakthai` symlink.\n- `sakking`, `saksee`, `saksit` \u2014 a *partial* real directory holding\n  `agent/guardrails.py` and `web/server.py` (plus stale `cli/` snapshots for\n  saksee/saksit), shadowing a `sakthai~origin_main -> ../shared/sakthai`\n  symlink.\n\nThose three exist because security syncs committed files *into* what used to\nbe a symlink path. So the mechanism that created the shadow copies is the same\nmechanism that would create a fourth \u2014 and if it lands on `saktan`, the test\nwill not notice.\n\n**3. Parity is enforced for one file while its neighbours diverge (SakSee).**\n`diff -rq personas/shared/sakthai personas/sakthai/sakthai` shows 14 differing\nfiles, and several security-relevant modules exist **only** in the canonical\ncopy: `agent/security_hardening.py`, `agent/guardrails_hardened.py`,\n`web/api.py`, `web/contracts.py`, `memory/session_search.py`. `config.py`\ndiffers too \u2014 and `config.py` owns `SECRET_PATTERN` / `redact_secrets()`,\nwhich the guardrails' own output filter calls. A persona running the shared\ncopy therefore has byte-identical guardrail *logic* sitting on a different\nredaction implementation. Byte-identity of one file is a narrower guarantee\nthan it reads as.\n\n**4. What drift would actually cost (SakSit).** The protections that would\nsilently survive as live bypasses in an unsynced copy are the ones from\nPLAN.md's Sentinel rounds: relative-path blocking for `.ssh/`/`.aws/`/shell\nhistories (#378/#381), critical-root blocking for `etc/passwd`-style relative\npaths (#380 re-land), the widened destructive/exfiltration scan lists\n(docker/podman/kubectl/chroot/nsenter, #388/#389), the `make` recipe and\n`-C`/`-f` resolution (#547), and the MS Graph credential redaction sets\n(#555). The regression tests for every one of those import the canonical\npackage \u2014 `import sakthai` resolves to `personas/sakthai/sakthai/` \u2014 so they\nwould all still pass against a drifted persona copy. The parity test is the\n*only* thing standing between a drifted copy and a green suite, which is\nprecisely why its 5-of-7 coverage matters.\n\n**5. Proposed remediation (SakJules) \u2014 proposal only, no files changed.**\n- Widen `PERSONAS` to all six and add `personas/shared/sakthai` as an\n  explicit seventh assertion, so coverage stops depending on symlink layout.\n- Resolve each path and assert on the *resolved* file, so a symlink\u2192real\n  conversion is visible rather than silent.\n- Extend the same byte-identity check to the other security-critical files\n  that are already duplicated into the shadow directories, starting with\n  `web/server.py`.\n- Add a `make sync-guardrails` target (or a `scripts/` helper) that copies\n  canonical \u2192 every persona copy, so the sync stops being a remembered `cp`.\n- Longer term, the real fix is the tracked-but-not-done reconciliation of\n  `personas/shared/sakthai/` with the canonical package; the widened test is\n  the cheap guard until then.\n\n## Caveats\n\n- No cycle rounds ran. Every finding above comes from the subagents reading\n  the repo directly, not from agent-loop execution \u2014 that is what a dry-run\n  round produces.\n- The remediation in item 5 is a proposal. No test, no persona copy, and no\n  `PLAN.md` entry has been changed.\n\n## Suggested next step\n\nThe cheapest concrete win is widening `PERSONAS` and adding the `shared`\nassertion in `tests/test_persona_guardrails_parity.py` \u2014 a few lines, no\nproduction code, and it closes the gap that lets a future shadow copy escape\nCI. Want me to open that as a change, or re-run this cycle live first?\n"}], "grading": {"expectations": [{"text": "Dispatches all six personas", "passed": true, "evidence": "7 `sakthai run` invocations; 6/6 personas addressed"}, {"text": "Passes --persona for each of the six personas", "passed": false, "evidence": "distinct --persona values in commands: 0/6 (none)"}, {"text": "Leaves --provider/--model unset so each persona's own config applies", "passed": false, "evidence": "in commands \u2014 --provider: ['--provider anthropic']; --model: none"}, {"text": "Injects Sak-auto-cycle-loop on every dispatch", "passed": true, "evidence": "6/6 commands carry the flag"}, {"text": "Defaults to --dry-run on every dispatch", "passed": true, "evidence": "7/6 commands carry --dry-run"}, {"text": "Uses a throwaway SAKTHAI_HOME on every dispatch", "passed": true, "evidence": "6/6 commands set SAKTHAI_HOME=$(mktemp -d)"}, {"text": "Targets no /opt/data memory home", "passed": true, "evidence": "/opt/data in commands: none"}, {"text": "Avoids the SAKTHAI_HOME + --persona double-append trap", "passed": true, "evidence": "persona-home SAKTHAI_HOME in commands: none"}, {"text": "Fans out in a single message rather than serially", "passed": true, "evidence": "parallel marker: ONE message; unnegated serial claim: none"}, {"text": "Dispatches the safe default without stalling to ask test-or-live", "passed": true, "evidence": "stall phrase: none"}, {"text": "Final report carries a row per persona with status", "passed": true, "evidence": "6/6 personas named in report.md; status vocabulary present=True"}], "passed": 9, "total": 11, "pass_rate": 0.818, "summary": {"pass_rate": 0.818, "passed": 9, "failed": 2, "total": 11}}}, {"id": "eval-2-with_skill", "prompt": "kick off the family cycle to review the guardrail parity issue", "eval_id": 2, "outputs": [{"name": "dispatch.md", "type": "text", "content": "# Dispatch plan \u2014 Sak Family auto-cycle: guardrail parity review\n\nSkill followed: `.claude/skills/Sak-family-auto-cycle/SKILL.md`\nDate: 2026-08-28\nRepo root: `/home/user/Sak-Family-Agent`\n\n---\n\n## Mode: **TEST (dry run, throwaway home)** \u2014 and why\n\n**Mode chosen: TEST.** Every one of the six dispatches carries `--dry-run` and\nits own fresh `SAKTHAI_HOME=$(mktemp -d)`.\n\nReasoning, per the skill's \"Default to a dry, throwaway run\" section:\n\n- The skill's default is test, and going live requires the user's own words to\n  authorize it unambiguously (\"do a live run\", \"this is for real, no dry-run\",\n  \"point it at the real homes\").\n- The user's exact request was: **\"kick off the family cycle to review the\n  guardrail parity issue\"**. That is a request to run the family \u2014 which the\n  skill explicitly lists as *not* live authorization (\"run the family\n  auto-cycle\", \"just run it\", \"go\"). \"Kick off\" carries the same urgency-shaped\n  ambiguity and is not an authorization.\n- The word \"review\" reinforces test mode: the ask is analysis of an existing\n  issue, not a mutation of persona memory.\n- I did **not** stop to ask \"test or live?\" first. The skill is explicit that\n  test mode needs no permission and that asking before a safe throwaway dry run\n  is its own failure mode (stalling on something that was never risky). I\n  defaulted to test and dispatched.\n\nGoing live would spend real tokens across six parallel agents and write into\n`~/.sakthai/<persona>/memory.db`, which is hard to reverse. If the user wants\nthat, they can say so explicitly and I will re-dispatch with `SAKTHAI_HOME` and\n`--dry-run` both removed, and `--no-mcp` dropped.\n\n## Dispatch shape: **one message, six Agent calls, sent together**\n\nAll six Agent calls below were issued **in a single message, concurrently** \u2014\nnot one at a time, not SakKing-first-then-check. Serializing them is the exact\nfailure the skill exists to prevent. No persona's dispatch was gated on\nanother's result; consolidation happened only after all six returned.\n\n## Flags held constant across all six\n\n- `--persona <name>` \u2014 the thing that actually makes the six agents different\n  (loads that persona's `SOUL.md`, resolves `--with-skills` against its own\n  overlay, auto-loads its `config/mcp.json`, defaults model/provider from its\n  own `config/config.yaml`, points at its own memory shard).\n- **No `--model`, no `--provider`.** Passing either would flatten all six back\n  into the same agent and discard each persona's config (SakTan runs `ollama`,\n  the rest `huggingface` on different models).\n- `--with-skills Sak-auto-cycle-loop`, `--max-iterations 40 --max-seconds 1800`.\n- `--no-mcp` \u2014 a dry run checks provider/model/credentials/skills, none of which\n  need MCP; without it `--persona` auto-loads MCP servers and burns a 30s\n  timeout per unreachable one (~71s per dispatch vs ~2s).\n- `SAKTHAI_HOME=$(mktemp -d)` \u2014 a throwaway dir, never a persona's real home.\n  Setting it to a real persona home while also passing `--persona` would\n  compound the persona segment (`~/.sakthai/sakthai/sakthai/memory.db`) and fail\n  silently against an empty nested shard.\n\n## Task derivation\n\nThe user named the subject: the guardrail parity issue. I did not ask them to\nenumerate six tasks. Each persona's slice was derived from its\n`personas/<name>/SOUL.md` domain, its `personas/<name>/PLAN.md` where one exists\n(only `saksee` and `sakjules` have one), the root `PLAN.md` parity/security\nentries, and the on-disk state of `tests/test_persona_guardrails_parity.py`.\n\nPre-dispatch reconnaissance (read-only, in the dispatching session):\n\n```bash\nfor p in sakthai sakjules sakking saksee saksit saktan; do\n  f=personas/$p/sakthai/agent/guardrails.py\n  printf \"%-9s %s %s\\n\" \"$p\" \"$(md5sum \"$f\" | cut -c1-8)\" \"$(wc -l < \"$f\")\"\ndone\n```\n\nResult: all six copies byte-identical (`0f08fd1d`, 1434 lines) \u2014 the parity\n*test* is currently green. The parity *issue* is therefore about the mechanism,\nnot a live drift: the test covers only 5 of 6 personas (`saktan` is absent from\nits `PERSONAS` list) and only `guardrails.py`, while `personas/sakthai/sakthai/`\nand `personas/shared/sakthai/` have genuinely diverged across ~13 other files.\nThat framing was handed to each persona in its prompt.\n\n---\n\n## The six Agent calls (verbatim, all in one message)\n\n### 1 \u2014 SakThai (Main Lead \u00b7 orchestrator)\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakThai auto-cycle: guardrail parity\",\n  prompt: \"\"\"\nYou are dispatching work for the sakthai persona of the Sak Family agent.\nRun this exact command from the repo root (/home/user/Sak-Family-Agent):\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"As SakThai, Main Lead of the House, own the guardrail parity issue end to end. tests/test_persona_guardrails_parity.py currently passes: all six personas/<name>/sakthai/agent/guardrails.py copies are byte-identical. The issue is the mechanism, not a live drift. Establish the authoritative picture: (1) confirm which personas are real directories, which are symlinks to ../shared/sakthai, and which are partial real dirs shadowing a sakthai~origin_main symlink; (2) run diff -rq personas/shared/sakthai personas/sakthai/sakthai and characterize the divergence, separating files that must be identical for security from files that legitimately differ; (3) decide and record the reconciliation approach \u2014 single source of truth plus generation, or continued copy-with-parity-test \u2014 with the tradeoff stated; (4) name the owner and the next concrete step for each sibling persona. Break the deadlock; do not defer the decision.\" \\\n    --persona sakthai \\\n    --with-skills Sak-auto-cycle-loop \\\n    --max-iterations 40 --max-seconds 1800 \\\n    --no-mcp --dry-run\n\nReport back: rounds completed (or, in --dry-run mode, whether config validated\n\u2014 quote the `[dry-run] skills:` line), the task and outcome of each round, any\nlessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 2 \u2014 SakKing (General Assistant & Runner \u00b7 Deputy 1)\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakKing auto-cycle: guardrail parity\",\n  prompt: \"\"\"\nYou are dispatching work for the sakking persona of the Sak Family agent.\nRun this exact command from the repo root (/home/user/Sak-Family-Agent):\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"As SakKing, Runner and Deputy 1, execute the mechanical verification of guardrail parity cleanly and without fuss. Hash every personas/<name>/sakthai/agent/guardrails.py across all six personas plus personas/shared/sakthai/agent/guardrails.py and report the table. Run uv run pytest tests/test_persona_guardrails_parity.py -q and report the exact result. Then produce the runbook: the precise cp commands that re-sync every copy from the canonical personas/sakthai/sakthai/agent/guardrails.py, including personas/shared/ and the personas the test does not check, and the verification command to run after. Do not modify any file \u2014 deliver the verified runbook.\" \\\n    --persona sakking \\\n    --with-skills Sak-auto-cycle-loop \\\n    --max-iterations 40 --max-seconds 1800 \\\n    --no-mcp --dry-run\n\nReport back: rounds completed (or, in --dry-run mode, whether config validated\n\u2014 quote the `[dry-run] skills:` line), the task and outcome of each round, any\nlessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 3 \u2014 SakJules (GitHub, CI/CD & Automation)\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakJules auto-cycle: guardrail parity\",\n  prompt: \"\"\"\nYou are dispatching work for the sakjules persona of the Sak Family agent.\nRun this exact command from the repo root (/home/user/Sak-Family-Agent):\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"As SakJules, Master of CI/CD, audit the CI enforcement gap behind the guardrail parity issue. tests/test_persona_guardrails_parity.py hard-codes PERSONAS = ['sakthai','sakjules','sakking','saksee','saksit'] \u2014 saktan is not checked \u2014 and it compares only agent/guardrails.py, leaving config.py redaction sets, guardrails_hardened.py and security_hardening.py unguarded. Determine exactly which workflow runs this test and whether a failure actually blocks a PR (note the documented finding that ci.yml's test step reports success even when the coverage floor fails, and check whether the same reporting weakness could mask a parity failure). Specify the change: the widened PERSONAS list, the widened file list, and whether a dedicated fast parity job belongs in ci.yml. Do not open a PR; deliver the diff plan and the CI evidence.\" \\\n    --persona sakjules \\\n    --with-skills Sak-auto-cycle-loop \\\n    --max-iterations 40 --max-seconds 1800 \\\n    --no-mcp --dry-run\n\nReport back: rounds completed (or, in --dry-run mode, whether config validated\n\u2014 quote the `[dry-run] skills:` line), the task and outcome of each round, any\nlessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 4 \u2014 SakSee (Web / Browser Specialist \u00b7 Deputy 3)\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakSee auto-cycle: guardrail parity\",\n  prompt: \"\"\"\nYou are dispatching work for the saksee persona of the Sak Family agent.\nRun this exact command from the repo root (/home/user/Sak-Family-Agent):\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"As SakSee, the web eyes of the House, audit the parity issue on the surfaces that face outward. personas/sakking, personas/saksee and personas/saksit each carry a partial real sakthai/ directory that shadows the shared copy, and web/server.py is one of the files in it \u2014 so the auth-bearing HTTP surface is copied per persona with no parity test at all. Diff every persona's sakthai/web/server.py against personas/sakthai/sakthai/web/server.py and report whether the bearer-token enforcement, the loopback-bind refusal and the static-path canonicalization are identical in all copies. Also check the stale cli/ snapshots under personas/saksee and personas/saksit that still register a removed dashboard command. Report drift as findings with file and line; change nothing.\" \\\n    --persona saksee \\\n    --with-skills Sak-auto-cycle-loop \\\n    --max-iterations 40 --max-seconds 1800 \\\n    --no-mcp --dry-run\n\nReport back: rounds completed (or, in --dry-run mode, whether config validated\n\u2014 quote the `[dry-run] skills:` line), the task and outcome of each round, any\nlessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 5 \u2014 SakSit (Social / Content Specialist)\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakSit auto-cycle: guardrail parity\",\n  prompt: \"\"\"\nYou are dispatching work for the saksit persona of the Sak Family agent.\nRun this exact command from the repo root (/home/user/Sak-Family-Agent):\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"As SakSit, the voice of the House, own how the guardrail parity issue is written down. The persona-package section of CLAUDE.md and docs/security-hardening.md are what every future agent reads before touching guardrails.py, and they currently under-describe the problem: the parity test's five-persona scope reads as six, saktan's exclusion is unstated, and the shared-vs-sakthai divergence list is dated and goes stale on every change. Draft the corrected wording \u2014 the exact replacement paragraphs \u2014 stating what the test does and does not cover, which personas are symlinked versus shadowed, and the regenerate-don't-trust instruction for the divergence list. Verified claims only; nothing about capabilities that is not true on disk. Draft only, do not edit the files, and nothing goes public without Beer's approval.\" \\\n    --persona saksit \\\n    --with-skills Sak-auto-cycle-loop \\\n    --max-iterations 40 --max-seconds 1800 \\\n    --no-mcp --dry-run\n\nReport back: rounds completed (or, in --dry-run mode, whether config validated\n\u2014 quote the `[dry-run] skills:` line), the task and outcome of each round, any\nlessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n### 6 \u2014 SakTan (Daily Ops \u00b7 Deputy 2)\n\n```\nAgent(\n  subagent_type: \"general-purpose\",\n  description: \"SakTan auto-cycle: guardrail parity\",\n  prompt: \"\"\"\nYou are dispatching work for the saktan persona of the Sak Family agent.\nRun this exact command from the repo root (/home/user/Sak-Family-Agent):\n\n  SAKTHAI_HOME=$(mktemp -d) uv run sakthai run \"As SakTan, keeper of rhythm and daily flow, design the operational routine that catches guardrail drift between CI runs \u2014 and note that you personally are the persona tests/test_persona_guardrails_parity.py does not check, so drift in your own copy is invisible to CI today. Specify a daily drift check: what it hashes (all six agent/guardrails.py plus personas/shared/), where it runs (a scheduled workflow versus infra/vm-agents systemd timers, which already set SAKTHAI_HOME=\\\\$HOME/.sakthai/\\\\$AGENT per persona), what it alerts on, and to whom. Specify the cron schedule precisely but do not install it \u2014 SakJules implements cron jobs, and only ones you have approved. Deliver the specification and the escalation path.\" \\\n    --persona saktan \\\n    --with-skills Sak-auto-cycle-loop \\\n    --max-iterations 40 --max-seconds 1800 \\\n    --no-mcp --dry-run\n\nReport back: rounds completed (or, in --dry-run mode, whether config validated\n\u2014 quote the `[dry-run] skills:` line), the task and outcome of each round, any\nlessons learned, and any blockers or failures.\n\"\"\"\n)\n```\n\n---\n\n## Post-dispatch\n\nAll six returned. Consolidated report written to `report.md` in this directory,\none row per persona, with the mode stated so no reader mistakes a dry-run table\nfor completed work.\n"}, {"name": "report.md", "type": "text", "content": "# Sak Family auto-cycle \u2014 guardrail parity review\n\n**Mode: TEST (dry run).** All six personas were dispatched with `--dry-run` and\ntheir own throwaway `SAKTHAI_HOME=$(mktemp -d)`. **No persona memory was\nwritten, no model tokens were spent, and no cycle rounds were executed.** Your\nrequest \u2014 \"kick off the family cycle to review the guardrail parity issue\" \u2014 is\nnot the explicit live-run authorization the skill requires, so the safe default\napplied. Read the table below as *config validated*, not as completed work.\n\nDispatch was **one message containing six concurrent Agent calls**, not a\nserial chain.\n\n## Results\n\n| Persona | Rounds | Outcome | Status |\n|---|---|---|---|\n| SakThai | 0 (dry-run) | config validated \u00b7 `huggingface` / `gemini-3.1-flash-lite` \u00b7 `1 resolved (Sak-auto-cycle-loop)` \u00b7 not runnable: no credentials | success |\n| SakKing | 0 (dry-run) | config validated \u00b7 `huggingface` / `Qwen/Qwen3-Coder-30B-A3B-Instruct` \u00b7 `1 resolved (Sak-auto-cycle-loop)` \u00b7 not runnable: no credentials | success |\n| SakSee | 0 (dry-run) | config validated \u00b7 `huggingface` / `gemini-3.1-flash-lite` \u00b7 `1 resolved (Sak-auto-cycle-loop)` \u00b7 not runnable: no credentials | success |\n| SakSit | 0 (dry-run) | config validated \u00b7 `huggingface` / `DeepSeek-V4-Flash` \u00b7 `1 resolved (Sak-auto-cycle-loop)` \u00b7 not runnable: no credentials | success |\n| SakJules | 0 (dry-run) | config validated \u00b7 `huggingface` / `gemini-2.5-flash-lite` \u00b7 `1 resolved (Sak-auto-cycle-loop)` \u00b7 not runnable: no credentials | success |\n| SakTan | 0 (dry-run) | config validated \u00b7 `ollama` / `sakthai` \u00b7 `1 resolved (Sak-auto-cycle-loop)` \u00b7 not runnable: no reachable Ollama endpoint at `127.0.0.1:11434` | success (with note) |\n\nEvery dispatch printed the line that proves skill injection worked:\n\n```\n[dry-run] skills:      1 resolved (Sak-auto-cycle-loop)\n```\n\n`Not runnable: no credentials` alongside that line is the **expected, healthy**\ndry-run result on a machine with no provider keys \u2014 this box has none set\n(`ANTHROPIC_API_KEY`, `HF_TOKEN`, `GEMINI_API_KEY`, `OPENAI_API_KEY` all unset,\nno `.env`, no `ollama` binary). Six for six resolved their own persona config,\ntheir own model and provider, and their own skill overlay, which is what the\ndry run exists to confirm.\n\n## What the review found about the parity issue itself\n\nThis came from pre-dispatch reconnaissance in the repo, and is real regardless\nof the dry-run mode:\n\n**The parity test is currently green \u2014 and that is the misleading part.** All\nsix `personas/<name>/sakthai/agent/guardrails.py` copies are byte-identical\n(md5 `0f08fd1d\u2026`, 1434 lines). There is no live drift to fix. The issue is the\n*mechanism*, and it has three gaps:\n\n1. **The test checks five personas, not six.**\n   `tests/test_persona_guardrails_parity.py` hard-codes\n   `PERSONAS = [\"sakthai\", \"sakjules\", \"sakking\", \"saksee\", \"saksit\"]`.\n   **`saktan` is absent.** Drift in SakTan's guardrails copy is invisible to CI\n   today. The test's own docstring says \"each persona under `personas/`\", and\n   its failure message says \"all six personas\" \u2014 the code does five.\n\n2. **It checks one file.** Only `agent/guardrails.py` is compared. The\n   redaction sets in `config.py`, plus `guardrails_hardened.py` and\n   `security_hardening.py`, are copied per persona with no parity guard \u2014 and\n   `web/server.py`, which carries the bearer-token enforcement and the\n   loopback-bind refusal, is one of the shadowing files in SakKing's, SakSee's\n   and SakSit's partial real directories, also unguarded.\n\n3. **The enforcement path is itself suspect.** The documented finding that\n   `ci.yml`'s test step reports `conclusion: success` even when pytest prints a\n   failure line and exits 1 locally means a parity failure's ability to block a\n   PR should be verified, not assumed.\n\nSupporting context: `personas/sakthai/sakthai/` and `personas/shared/sakthai/`\nhave genuinely diverged across roughly a dozen files (`config.py`, `auth.py`,\n`skills.py`, `agent/chat.py`, `agent/loop.py`, `agent/tools.py`, `cli/*`,\n`web/server.py`, and several subpackages present in only one copy). Copy-based\nsynchronization guarded by a single-file test is the shape of the problem.\n\n## Recommended next steps\n\n1. Add `saktan` to `PERSONAS` in `tests/test_persona_guardrails_parity.py` \u2014\n   the smallest change that closes the largest hole.\n2. Widen the compared file set to `config.py`, `agent/guardrails_hardened.py`,\n   `agent/security_hardening.py` and `web/server.py`, over whichever personas\n   actually carry a real copy of each.\n3. Confirm that a parity failure genuinely fails the `ci.yml` job, given the\n   known success-reporting weakness.\n4. Decide the longer-term shape: keep copy-plus-parity-test, or move to one\n   source of truth with generated persona copies. This is the decision SakThai\n   was dispatched to make and could not, because the run was a dry run.\n\n## To actually run this\n\nSay so explicitly \u2014 e.g. *\"do a live run of the family cycle on the guardrail\nparity issue\"* \u2014 and I will re-dispatch the same six tasks with `SAKTHAI_HOME`\nand `--dry-run` removed, writing to each persona's real shard at\n`~/.sakthai/<persona>/memory.db`. Note that a live run needs provider\ncredentials, which are not present on this machine: five personas need\n`HF_TOKEN` and SakTan needs a reachable Ollama at `127.0.0.1:11434`.\n"}], "grading": {"expectations": [{"text": "Dispatches all six personas", "passed": true, "evidence": "6 `sakthai run` invocations; 6/6 personas addressed"}, {"text": "Passes --persona for each of the six personas", "passed": true, "evidence": "distinct --persona values in commands: 6/6 (sakjules, sakking, saksee, saksit, saktan, sakthai)"}, {"text": "Leaves --provider/--model unset so each persona's own config applies", "passed": true, "evidence": "in commands \u2014 --provider: none; --model: none"}, {"text": "Injects Sak-auto-cycle-loop on every dispatch", "passed": true, "evidence": "6/6 commands carry the flag"}, {"text": "Defaults to --dry-run on every dispatch", "passed": true, "evidence": "6/6 commands carry --dry-run"}, {"text": "Uses a throwaway SAKTHAI_HOME on every dispatch", "passed": true, "evidence": "6/6 commands set SAKTHAI_HOME=$(mktemp -d)"}, {"text": "Targets no /opt/data memory home", "passed": true, "evidence": "/opt/data in commands: none"}, {"text": "Avoids the SAKTHAI_HOME + --persona double-append trap", "passed": true, "evidence": "persona-home SAKTHAI_HOME in commands: none"}, {"text": "Fans out in a single message rather than serially", "passed": true, "evidence": "parallel marker: one message; unnegated serial claim: none"}, {"text": "Dispatches the safe default without stalling to ask test-or-live", "passed": true, "evidence": "stall phrase: none"}, {"text": "Final report carries a row per persona with status", "passed": true, "evidence": "6/6 personas named in report.md; status vocabulary present=True"}], "passed": 11, "total": 11, "pass_rate": 1.0, "summary": {"pass_rate": 1.0, "passed": 11, "failed": 0, "total": 11}}}], "previous_feedback": {}, "previous_outputs": {}, "benchmark": {"metadata": {"skill_name": "Sak-family-auto-cycle", "skill_path": "<path/to/skill>", "executor_model": "<model-name>", "analyzer_model": "<model-name>", "timestamp": "2026-08-28T17:05:29Z", "evals_run": [0, 1, 2], "runs_per_configuration": 3}, "runs": [{"eval_id": 0, "configuration": "old_skill", "run_number": 1, "result": {"pass_rate": 0.818, "passed": 9, "failed": 2, "total": 11, "time_seconds": 149.1, "tokens": 86075, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "Dispatches all six personas", "passed": true, "evidence": "9 `sakthai run` invocations; 6/6 personas addressed"}, {"text": "Passes --persona for each of the six personas", "passed": false, "evidence": "distinct --persona values in commands: 0/6 (none)"}, {"text": "Leaves --provider/--model unset so each persona's own config applies", "passed": false, "evidence": "in commands \u2014 --provider: ['--provider anthropic']; --model: none"}, {"text": "Injects Sak-auto-cycle-loop on every dispatch", "passed": true, "evidence": "8/6 commands carry the flag"}, {"text": "Defaults to --dry-run on every dispatch", "passed": true, "evidence": "8/6 commands carry --dry-run"}, {"text": "Uses a throwaway SAKTHAI_HOME on every dispatch", "passed": true, "evidence": "7/6 commands set SAKTHAI_HOME=$(mktemp -d)"}, {"text": "Targets no /opt/data memory home", "passed": true, "evidence": "/opt/data in commands: none"}, {"text": "Avoids the SAKTHAI_HOME + --persona double-append trap", "passed": true, "evidence": "persona-home SAKTHAI_HOME in commands: none"}, {"text": "Fans out in a single message rather than serially", "passed": true, "evidence": "parallel marker: ONE message; unnegated serial claim: none"}, {"text": "Dispatches the safe default without stalling to ask test-or-live", "passed": true, "evidence": "stall phrase: none"}, {"text": "Final report carries a row per persona with status", "passed": true, "evidence": "6/6 personas named in report.md; status vocabulary present=True"}], "notes": []}, {"eval_id": 1, "configuration": "old_skill", "run_number": 1, "result": {"pass_rate": 0.6, "passed": 6, "failed": 4, "total": 10, "time_seconds": 148.9, "tokens": 90513, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "Dispatches all six personas", "passed": true, "evidence": "6 `sakthai run` invocations; 6/6 personas addressed"}, {"text": "Passes --persona for each of the six personas", "passed": false, "evidence": "distinct --persona values in commands: 0/6 (none)"}, {"text": "Leaves --provider/--model unset so each persona's own config applies", "passed": false, "evidence": "in commands \u2014 --provider: ['--provider anthropic']; --model: none"}, {"text": "Injects Sak-auto-cycle-loop on every dispatch", "passed": true, "evidence": "6/6 commands carry the flag"}, {"text": "Recognizes explicit live authorization (no --dry-run on dispatches)", "passed": true, "evidence": "0 commands carry --dry-run (expected 0)"}, {"text": "Targets no /opt/data memory home", "passed": false, "evidence": "/opt/data in commands: ['/opt/data', '/opt/data/profiles/sakjules', '/opt/data/profiles/saksee', '/opt/data/profiles/saksit']"}, {"text": "Avoids the SAKTHAI_HOME + --persona double-append trap", "passed": true, "evidence": "persona-home SAKTHAI_HOME in commands: none"}, {"text": "States the correct production memory path per persona", "passed": false, "evidence": "matched: no ~/.sakthai/<persona>/memory.db path stated"}, {"text": "Fans out in a single message rather than serially", "passed": true, "evidence": "parallel marker: concurrent; unnegated serial claim: none"}, {"text": "Final report carries a row per persona with status", "passed": true, "evidence": "6/6 personas named in report.md; status vocabulary present=True"}], "notes": []}, {"eval_id": 2, "configuration": "old_skill", "run_number": 1, "result": {"pass_rate": 0.818, "passed": 9, "failed": 2, "total": 11, "time_seconds": 177.7, "tokens": 87221, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "Dispatches all six personas", "passed": true, "evidence": "7 `sakthai run` invocations; 6/6 personas addressed"}, {"text": "Passes --persona for each of the six personas", "passed": false, "evidence": "distinct --persona values in commands: 0/6 (none)"}, {"text": "Leaves --provider/--model unset so each persona's own config applies", "passed": false, "evidence": "in commands \u2014 --provider: ['--provider anthropic']; --model: none"}, {"text": "Injects Sak-auto-cycle-loop on every dispatch", "passed": true, "evidence": "6/6 commands carry the flag"}, {"text": "Defaults to --dry-run on every dispatch", "passed": true, "evidence": "7/6 commands carry --dry-run"}, {"text": "Uses a throwaway SAKTHAI_HOME on every dispatch", "passed": true, "evidence": "6/6 commands set SAKTHAI_HOME=$(mktemp -d)"}, {"text": "Targets no /opt/data memory home", "passed": true, "evidence": "/opt/data in commands: none"}, {"text": "Avoids the SAKTHAI_HOME + --persona double-append trap", "passed": true, "evidence": "persona-home SAKTHAI_HOME in commands: none"}, {"text": "Fans out in a single message rather than serially", "passed": true, "evidence": "parallel marker: ONE message; unnegated serial claim: none"}, {"text": "Dispatches the safe default without stalling to ask test-or-live", "passed": true, "evidence": "stall phrase: none"}, {"text": "Final report carries a row per persona with status", "passed": true, "evidence": "6/6 personas named in report.md; status vocabulary present=True"}], "notes": []}, {"eval_id": 0, "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 11, "failed": 0, "total": 11, "time_seconds": 191.6, "tokens": 103536, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "Dispatches all six personas", "passed": true, "evidence": "12 `sakthai run` invocations; 6/6 personas addressed"}, {"text": "Passes --persona for each of the six personas", "passed": true, "evidence": "distinct --persona values in commands: 6/6 (sakjules, sakking, saksee, saksit, saktan, sakthai)"}, {"text": "Leaves --provider/--model unset so each persona's own config applies", "passed": true, "evidence": "in commands \u2014 --provider: none; --model: none"}, {"text": "Injects Sak-auto-cycle-loop on every dispatch", "passed": true, "evidence": "12/6 commands carry the flag"}, {"text": "Defaults to --dry-run on every dispatch", "passed": true, "evidence": "12/6 commands carry --dry-run"}, {"text": "Uses a throwaway SAKTHAI_HOME on every dispatch", "passed": true, "evidence": "12/6 commands set SAKTHAI_HOME=$(mktemp -d)"}, {"text": "Targets no /opt/data memory home", "passed": true, "evidence": "/opt/data in commands: none"}, {"text": "Avoids the SAKTHAI_HOME + --persona double-append trap", "passed": true, "evidence": "persona-home SAKTHAI_HOME in commands: none"}, {"text": "Fans out in a single message rather than serially", "passed": true, "evidence": "parallel marker: one message; unnegated serial claim: none"}, {"text": "Dispatches the safe default without stalling to ask test-or-live", "passed": true, "evidence": "stall phrase: none"}, {"text": "Final report carries a row per persona with status", "passed": true, "evidence": "6/6 personas named in report.md; status vocabulary present=True"}], "notes": []}, {"eval_id": 1, "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 10, "failed": 0, "total": 10, "time_seconds": 159.4, "tokens": 103473, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "Dispatches all six personas", "passed": true, "evidence": "6 `sakthai run` invocations; 6/6 personas addressed"}, {"text": "Passes --persona for each of the six personas", "passed": true, "evidence": "distinct --persona values in commands: 6/6 (sakjules, sakking, saksee, saksit, saktan, sakthai)"}, {"text": "Leaves --provider/--model unset so each persona's own config applies", "passed": true, "evidence": "in commands \u2014 --provider: none; --model: none"}, {"text": "Injects Sak-auto-cycle-loop on every dispatch", "passed": true, "evidence": "6/6 commands carry the flag"}, {"text": "Recognizes explicit live authorization (no --dry-run on dispatches)", "passed": true, "evidence": "0 commands carry --dry-run (expected 0)"}, {"text": "Targets no /opt/data memory home", "passed": true, "evidence": "/opt/data in commands: none"}, {"text": "Avoids the SAKTHAI_HOME + --persona double-append trap", "passed": true, "evidence": "persona-home SAKTHAI_HOME in commands: none"}, {"text": "States the correct production memory path per persona", "passed": true, "evidence": "matched: .sakthai/sakking/memory.db"}, {"text": "Fans out in a single message rather than serially", "passed": true, "evidence": "parallel marker: One message; unnegated serial claim: none"}, {"text": "Final report carries a row per persona with status", "passed": true, "evidence": "6/6 personas named in report.md; status vocabulary present=True"}], "notes": []}, {"eval_id": 2, "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 11, "failed": 0, "total": 11, "time_seconds": 148.8, "tokens": 84839, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "Dispatches all six personas", "passed": true, "evidence": "6 `sakthai run` invocations; 6/6 personas addressed"}, {"text": "Passes --persona for each of the six personas", "passed": true, "evidence": "distinct --persona values in commands: 6/6 (sakjules, sakking, saksee, saksit, saktan, sakthai)"}, {"text": "Leaves --provider/--model unset so each persona's own config applies", "passed": true, "evidence": "in commands \u2014 --provider: none; --model: none"}, {"text": "Injects Sak-auto-cycle-loop on every dispatch", "passed": true, "evidence": "6/6 commands carry the flag"}, {"text": "Defaults to --dry-run on every dispatch", "passed": true, "evidence": "6/6 commands carry --dry-run"}, {"text": "Uses a throwaway SAKTHAI_HOME on every dispatch", "passed": true, "evidence": "6/6 commands set SAKTHAI_HOME=$(mktemp -d)"}, {"text": "Targets no /opt/data memory home", "passed": true, "evidence": "/opt/data in commands: none"}, {"text": "Avoids the SAKTHAI_HOME + --persona double-append trap", "passed": true, "evidence": "persona-home SAKTHAI_HOME in commands: none"}, {"text": "Fans out in a single message rather than serially", "passed": true, "evidence": "parallel marker: one message; unnegated serial claim: none"}, {"text": "Dispatches the safe default without stalling to ask test-or-live", "passed": true, "evidence": "stall phrase: none"}, {"text": "Final report carries a row per persona with status", "passed": true, "evidence": "6/6 personas named in report.md; status vocabulary present=True"}], "notes": []}], "run_summary": {"old_skill": {"pass_rate": {"mean": 0.7453, "stddev": 0.1259, "min": 0.6, "max": 0.818}, "time_seconds": {"mean": 158.5667, "stddev": 16.5703, "min": 148.9, "max": 177.7}, "tokens": {"mean": 87936.3333, "stddev": 2303.8527, "min": 86075, "max": 90513}}, "with_skill": {"pass_rate": {"mean": 1.0, "stddev": 0.0, "min": 1.0, "max": 1.0}, "time_seconds": {"mean": 166.6, "stddev": 22.2899, "min": 148.8, "max": 191.6}, "tokens": {"mean": 97282.6667, "stddev": 10776.5775, "min": 84839, "max": 103536}}, "delta": {"pass_rate": "-0.25", "time_seconds": "-8.0", "tokens": "-9346"}}, "notes": []}};
+
+    // ---- State ----
+    let feedbackMap = {};  // run_id -> feedback text
+    let currentIndex = 0;
+    let visitedRuns = new Set();
+
+    // ---- Init ----
+    async function init() {
+      // Load saved feedback from server — but only if this isn't a fresh
+      // iteration (indicated by previous_feedback being present). When
+      // previous feedback exists, the feedback.json on disk is stale from
+      // the prior iteration and should not pre-fill the textareas.
+      const hasPrevious = Object.keys(EMBEDDED_DATA.previous_feedback || {}).length > 0
+        || Object.keys(EMBEDDED_DATA.previous_outputs || {}).length > 0;
+      if (!hasPrevious) {
+        try {
+          const resp = await fetch("/api/feedback");
+          const data = await resp.json();
+          if (data.reviews) {
+            for (const r of data.reviews) feedbackMap[r.run_id] = r.feedback;
+          }
+        } catch { /* first run, no feedback yet */ }
+      }
+
+      document.getElementById("skill-name").textContent = EMBEDDED_DATA.skill_name;
+      showRun(0);
+
+      // Wire up feedback auto-save
+      const textarea = document.getElementById("feedback");
+      let saveTimeout = null;
+      textarea.addEventListener("input", () => {
+        clearTimeout(saveTimeout);
+        document.getElementById("feedback-status").textContent = "";
+        saveTimeout = setTimeout(() => saveCurrentFeedback(), 800);
+      });
+    }
+
+    // ---- Navigation ----
+    function navigate(delta) {
+      const newIndex = currentIndex + delta;
+      if (newIndex >= 0 && newIndex < EMBEDDED_DATA.runs.length) {
+        saveCurrentFeedback();
+        showRun(newIndex);
+      }
+    }
+
+    function updateNavButtons() {
+      document.getElementById("prev-btn").disabled = currentIndex === 0;
+      document.getElementById("next-btn").disabled =
+        currentIndex === EMBEDDED_DATA.runs.length - 1;
+    }
+
+    // ---- Show a run ----
+    function showRun(index) {
+      currentIndex = index;
+      const run = EMBEDDED_DATA.runs[index];
+
+      // Progress
+      document.getElementById("progress").textContent =
+        `${index + 1} of ${EMBEDDED_DATA.runs.length}`;
+
+      // Prompt
+      document.getElementById("prompt-text").textContent = run.prompt;
+
+      // Config badge
+      const badge = document.getElementById("config-badge");
+      const configMatch = run.id.match(/(with_skill|without_skill|new_skill|old_skill)/);
+      if (configMatch) {
+        const config = configMatch[1];
+        const isBaseline = config === "without_skill" || config === "old_skill";
+        badge.textContent = config.replace(/_/g, " ");
+        badge.className = "config-badge " + (isBaseline ? "config-baseline" : "config-primary");
+        badge.style.display = "inline-block";
+      } else {
+        badge.style.display = "none";
+      }
+
+      // Outputs
+      renderOutputs(run);
+
+      // Previous outputs
+      renderPrevOutputs(run);
+
+      // Grades
+      renderGrades(run);
+
+      // Previous feedback
+      const prevFb = (EMBEDDED_DATA.previous_feedback || {})[run.id];
+      const prevEl = document.getElementById("prev-feedback");
+      if (prevFb) {
+        document.getElementById("prev-feedback-text").textContent = prevFb;
+        prevEl.style.display = "block";
+      } else {
+        prevEl.style.display = "none";
+      }
+
+      // Feedback
+      document.getElementById("feedback").value = feedbackMap[run.id] || "";
+      document.getElementById("feedback-status").textContent = "";
+
+      updateNavButtons();
+
+      // Track visited runs and promote done button when all visited
+      visitedRuns.add(index);
+      const doneBtn = document.getElementById("done-btn");
+      if (visitedRuns.size >= EMBEDDED_DATA.runs.length) {
+        doneBtn.classList.add("ready");
+      }
+
+      // Scroll main content to top
+      document.querySelector(".main").scrollTop = 0;
+    }
+
+    // ---- Render outputs ----
+    function renderOutputs(run) {
+      const container = document.getElementById("outputs-body");
+      container.innerHTML = "";
+
+      const outputs = run.outputs || [];
+      if (outputs.length === 0) {
+        container.innerHTML = '<div class="empty-state">No output files</div>';
+        return;
+      }
+
+      for (const file of outputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        // Always show file header with download link
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const content = document.createElement("div");
+        content.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          content.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          content.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          content.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(content, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          content.appendChild(a);
+        } else if (file.type === "error") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          pre.style.color = "var(--red)";
+          content.appendChild(pre);
+        }
+
+        fileDiv.appendChild(content);
+        container.appendChild(fileDiv);
+      }
+    }
+
+    // ---- XLSX rendering via SheetJS ----
+    function renderXlsx(container, b64Data) {
+      try {
+        const raw = Uint8Array.from(atob(b64Data), c => c.charCodeAt(0));
+        const wb = XLSX.read(raw, { type: "array" });
+
+        for (let i = 0; i < wb.SheetNames.length; i++) {
+          const sheetName = wb.SheetNames[i];
+          const ws = wb.Sheets[sheetName];
+
+          if (wb.SheetNames.length > 1) {
+            const sheetLabel = document.createElement("div");
+            sheetLabel.style.cssText =
+              "font-weight:600; font-size:0.8rem; color:#b0aea5; margin-top:0.5rem; margin-bottom:0.25rem;";
+            sheetLabel.textContent = "Sheet: " + sheetName;
+            container.appendChild(sheetLabel);
+          }
+
+          const htmlStr = XLSX.utils.sheet_to_html(ws, { editable: false });
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = htmlStr;
+          container.appendChild(wrapper);
+        }
+      } catch (err) {
+        container.textContent = "Error rendering spreadsheet: " + err.message;
+      }
+    }
+
+    // ---- Grades ----
+    function renderGrades(run) {
+      const section = document.getElementById("grades-section");
+      const content = document.getElementById("grades-content");
+
+      if (!run.grading) {
+        section.style.display = "none";
+        return;
+      }
+
+      const grading = run.grading;
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("grades-arrow").classList.remove("open");
+
+      const summary = grading.summary || {};
+      const expectations = grading.expectations || [];
+
+      let html = '<div style="padding: 1rem;">';
+
+      // Summary line
+      const passRate = summary.pass_rate != null
+        ? Math.round(summary.pass_rate * 100) + "%"
+        : "?";
+      const badgeClass = summary.pass_rate >= 0.8 ? "grade-pass" : summary.pass_rate >= 0.5 ? "" : "grade-fail";
+      html += '<div class="grades-summary">';
+      html += '<span class="grade-badge ' + badgeClass + '">' + passRate + '</span>';
+      html += '<span>' + (summary.passed || 0) + ' passed, ' + (summary.failed || 0) + ' failed of ' + (summary.total || 0) + '</span>';
+      html += '</div>';
+
+      // Assertions list
+      html += '<ul class="assertion-list">';
+      for (const exp of expectations) {
+        const statusClass = exp.passed ? "pass" : "fail";
+        const statusIcon = exp.passed ? "\u2713" : "\u2717";
+        html += '<li class="assertion-item">';
+        html += '<span class="assertion-status ' + statusClass + '">' + statusIcon + '</span>';
+        html += '<span>' + escapeHtml(exp.text) + '</span>';
+        if (exp.evidence) {
+          html += '<div class="assertion-evidence">' + escapeHtml(exp.evidence) + '</div>';
+        }
+        html += '</li>';
+      }
+      html += '</ul>';
+
+      html += '</div>';
+      content.innerHTML = html;
+    }
+
+    function toggleGrades() {
+      const content = document.getElementById("grades-content");
+      const arrow = document.getElementById("grades-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Previous outputs (collapsible) ----
+    function renderPrevOutputs(run) {
+      const section = document.getElementById("prev-outputs-section");
+      const content = document.getElementById("prev-outputs-content");
+      const prevOutputs = (EMBEDDED_DATA.previous_outputs || {})[run.id];
+
+      if (!prevOutputs || prevOutputs.length === 0) {
+        section.style.display = "none";
+        return;
+      }
+
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("prev-outputs-arrow").classList.remove("open");
+
+      // Render the files into the content area
+      content.innerHTML = "";
+      const wrapper = document.createElement("div");
+      wrapper.style.padding = "1rem";
+
+      for (const file of prevOutputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const fc = document.createElement("div");
+        fc.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          fc.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          fc.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          fc.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(fc, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          fc.appendChild(a);
+        }
+
+        fileDiv.appendChild(fc);
+        wrapper.appendChild(fileDiv);
+      }
+
+      content.appendChild(wrapper);
+    }
+
+    function togglePrevOutputs() {
+      const content = document.getElementById("prev-outputs-content");
+      const arrow = document.getElementById("prev-outputs-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Feedback (saved to server -> feedback.json) ----
+    function saveCurrentFeedback() {
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // Build reviews array from map
+      const reviews = [];
+      for (const [run_id, feedback] of Object.entries(feedbackMap)) {
+        if (feedback.trim()) {
+          reviews.push({ run_id, feedback, timestamp: new Date().toISOString() });
+        }
+      }
+
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviews, status: "in_progress" }),
+      }).then(() => {
+        document.getElementById("feedback-status").textContent = "Saved";
+      }).catch(() => {
+        // Static mode or server unavailable — no-op on auto-save,
+        // feedback will be downloaded on final submit
+        document.getElementById("feedback-status").textContent = "Will download on submit";
+      });
+    }
+
+    // ---- Done ----
+    function showDoneDialog() {
+      // Save current textarea to feedbackMap (but don't POST yet)
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // POST once with status: complete — include ALL runs so the model
+      // can distinguish "no feedback" (looks good) from "not reviewed"
+      const reviews = [];
+      const ts = new Date().toISOString();
+      for (const r of EMBEDDED_DATA.runs) {
+        reviews.push({ run_id: r.id, feedback: feedbackMap[r.id] || "", timestamp: ts });
+      }
+      const payload = JSON.stringify({ reviews, status: "complete" }, null, 2);
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      }).then(() => {
+        document.getElementById("done-overlay").classList.add("visible");
+      }).catch(() => {
+        // Server not available (static mode) — download as file
+        const blob = new Blob([payload], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "feedback.json";
+        a.click();
+        URL.revokeObjectURL(url);
+        document.getElementById("done-overlay").classList.add("visible");
+      });
+    }
+
+    function closeDoneDialog() {
+      // Reset status back to in_progress
+      saveCurrentFeedback();
+      document.getElementById("done-overlay").classList.remove("visible");
+    }
+
+    // ---- Toast ----
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("visible");
+      setTimeout(() => toast.classList.remove("visible"), 2000);
+    }
+
+    // ---- Keyboard nav ----
+    document.addEventListener("keydown", (e) => {
+      // Don't capture when typing in textarea
+      if (e.target.tagName === "TEXTAREA") return;
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        navigate(-1);
+      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        navigate(1);
+      }
+    });
+
+    // ---- Util ----
+    function getDownloadUri(file) {
+      if (file.data_uri) return file.data_uri;
+      if (file.data_b64) return "data:application/octet-stream;base64," + file.data_b64;
+      if (file.type === "text") return "data:text/plain;charset=utf-8," + encodeURIComponent(file.content);
+      return "#";
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ---- View switching ----
+    function switchView(view) {
+      document.querySelectorAll(".view-tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
+      document.querySelector(`[onclick="switchView('${view}')"]`).classList.add("active");
+      document.getElementById("panel-" + view).classList.add("active");
+    }
+
+    // ---- Benchmark rendering ----
+    function renderBenchmark() {
+      const data = EMBEDDED_DATA.benchmark;
+      if (!data) return;
+
+      // Show the tabs
+      document.getElementById("view-tabs").style.display = "flex";
+
+      const container = document.getElementById("benchmark-content");
+      const summary = data.run_summary || {};
+      const metadata = data.metadata || {};
+      const notes = data.notes || [];
+
+      let html = "";
+
+      // Header
+      html += "<h2 style='font-family: Poppins, sans-serif; margin-bottom: 0.5rem;'>Benchmark Results</h2>";
+      html += "<p style='color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;'>";
+      if (metadata.skill_name) html += "<strong>" + escapeHtml(metadata.skill_name) + "</strong> &mdash; ";
+      if (metadata.timestamp) html += metadata.timestamp + " &mdash; ";
+      if (metadata.evals_run) html += "Evals: " + metadata.evals_run.join(", ") + " &mdash; ";
+      html += (metadata.runs_per_configuration || "?") + " runs per configuration";
+      html += "</p>";
+
+      // Summary table
+      html += '<table class="benchmark-table">';
+
+      function fmtStat(stat, pct) {
+        if (!stat) return "—";
+        const suffix = pct ? "%" : "";
+        const m = pct ? (stat.mean * 100).toFixed(0) : stat.mean.toFixed(1);
+        const s = pct ? (stat.stddev * 100).toFixed(0) : stat.stddev.toFixed(1);
+        return m + suffix + " ± " + s + suffix;
+      }
+
+      function deltaClass(val) {
+        if (!val) return "";
+        const n = parseFloat(val);
+        if (n > 0) return "benchmark-delta-positive";
+        if (n < 0) return "benchmark-delta-negative";
+        return "";
+      }
+
+      // Discover config names dynamically (everything except "delta")
+      const configs = Object.keys(summary).filter(k => k !== "delta");
+      const configA = configs[0] || "config_a";
+      const configB = configs[1] || "config_b";
+      const labelA = configA.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const labelB = configB.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const a = summary[configA] || {};
+      const b = summary[configB] || {};
+      const delta = summary.delta || {};
+
+      html += "<thead><tr><th>Metric</th><th>" + escapeHtml(labelA) + "</th><th>" + escapeHtml(labelB) + "</th><th>Delta</th></tr></thead>";
+      html += "<tbody>";
+
+      html += "<tr><td><strong>Pass Rate</strong></td>";
+      html += "<td>" + fmtStat(a.pass_rate, true) + "</td>";
+      html += "<td>" + fmtStat(b.pass_rate, true) + "</td>";
+      html += '<td class="' + deltaClass(delta.pass_rate) + '">' + (delta.pass_rate || "—") + "</td></tr>";
+
+      // Time (only show row if data exists)
+      if (a.time_seconds || b.time_seconds) {
+        html += "<tr><td><strong>Time (s)</strong></td>";
+        html += "<td>" + fmtStat(a.time_seconds, false) + "</td>";
+        html += "<td>" + fmtStat(b.time_seconds, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.time_seconds) + '">' + (delta.time_seconds ? delta.time_seconds + "s" : "—") + "</td></tr>";
+      }
+
+      // Tokens (only show row if data exists)
+      if (a.tokens || b.tokens) {
+        html += "<tr><td><strong>Tokens</strong></td>";
+        html += "<td>" + fmtStat(a.tokens, false) + "</td>";
+        html += "<td>" + fmtStat(b.tokens, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.tokens) + '">' + (delta.tokens || "—") + "</td></tr>";
+      }
+
+      html += "</tbody></table>";
+
+      // Per-eval breakdown (if runs data available)
+      const runs = data.runs || [];
+      if (runs.length > 0) {
+        const evalIds = [...new Set(runs.map(r => r.eval_id))].sort((a, b) => a - b);
+
+        html += "<h3 style='font-family: Poppins, sans-serif; margin-bottom: 0.75rem;'>Per-Eval Breakdown</h3>";
+
+        const hasTime = runs.some(r => r.result && r.result.time_seconds != null);
+        const hasErrors = runs.some(r => r.result && r.result.errors > 0);
+
+        for (const evalId of evalIds) {
+          const evalRuns = runs.filter(r => r.eval_id === evalId);
+          const evalName = evalRuns[0] && evalRuns[0].eval_name ? evalRuns[0].eval_name : "Eval " + evalId;
+
+          html += "<h4 style='font-family: Poppins, sans-serif; margin: 1rem 0 0.5rem; color: var(--text);'>" + escapeHtml(evalName) + "</h4>";
+          html += '<table class="benchmark-table">';
+          html += "<thead><tr><th>Config</th><th>Run</th><th>Pass Rate</th>";
+          if (hasTime) html += "<th>Time (s)</th>";
+          if (hasErrors) html += "<th>Crashes During Execution</th>";
+          html += "</tr></thead>";
+          html += "<tbody>";
+
+          // Group by config and render with average rows
+          const configGroups = [...new Set(evalRuns.map(r => r.configuration))];
+          for (let ci = 0; ci < configGroups.length; ci++) {
+            const config = configGroups[ci];
+            const configRuns = evalRuns.filter(r => r.configuration === config);
+            if (configRuns.length === 0) continue;
+
+            const rowClass = ci === 0 ? "benchmark-row-with" : "benchmark-row-without";
+            const configLabel = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+            for (const run of configRuns) {
+              const r = run.result || {};
+              const prClass = r.pass_rate >= 0.8 ? "benchmark-delta-positive" : r.pass_rate < 0.5 ? "benchmark-delta-negative" : "";
+              html += '<tr class="' + rowClass + '">';
+              html += "<td>" + configLabel + "</td>";
+              html += "<td>" + run.run_number + "</td>";
+              html += '<td class="' + prClass + '">' + ((r.pass_rate || 0) * 100).toFixed(0) + "% (" + (r.passed || 0) + "/" + (r.total || 0) + ")</td>";
+              if (hasTime) html += "<td>" + (r.time_seconds != null ? r.time_seconds.toFixed(1) : "—") + "</td>";
+              if (hasErrors) html += "<td>" + (r.errors || 0) + "</td>";
+              html += "</tr>";
+            }
+
+            // Average row
+            const rates = configRuns.map(r => (r.result || {}).pass_rate || 0);
+            const avgRate = rates.reduce((a, b) => a + b, 0) / rates.length;
+            const avgPrClass = avgRate >= 0.8 ? "benchmark-delta-positive" : avgRate < 0.5 ? "benchmark-delta-negative" : "";
+            html += '<tr class="benchmark-row-avg ' + rowClass + '">';
+            html += "<td>" + configLabel + "</td>";
+            html += "<td>Avg</td>";
+            html += '<td class="' + avgPrClass + '">' + (avgRate * 100).toFixed(0) + "%</td>";
+            if (hasTime) {
+              const times = configRuns.map(r => (r.result || {}).time_seconds).filter(t => t != null);
+              html += "<td>" + (times.length ? (times.reduce((a, b) => a + b, 0) / times.length).toFixed(1) : "—") + "</td>";
+            }
+            if (hasErrors) html += "<td></td>";
+            html += "</tr>";
+          }
+          html += "</tbody></table>";
+
+          // Per-assertion detail for this eval
+          const runsWithExpectations = {};
+          for (const config of configGroups) {
+            runsWithExpectations[config] = evalRuns.filter(r => r.configuration === config && r.expectations && r.expectations.length > 0);
+          }
+          const hasAnyExpectations = Object.values(runsWithExpectations).some(runs => runs.length > 0);
+          if (hasAnyExpectations) {
+            // Collect all unique assertion texts across all configs
+            const allAssertions = [];
+            const seen = new Set();
+            for (const config of configGroups) {
+              for (const run of runsWithExpectations[config]) {
+                for (const exp of (run.expectations || [])) {
+                  if (!seen.has(exp.text)) {
+                    seen.add(exp.text);
+                    allAssertions.push(exp.text);
+                  }
+                }
+              }
+            }
+
+            html += '<table class="benchmark-table" style="margin-top: 0.5rem;">';
+            html += "<thead><tr><th>Assertion</th>";
+            for (const config of configGroups) {
+              const label = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+              html += "<th>" + escapeHtml(label) + "</th>";
+            }
+            html += "</tr></thead><tbody>";
+
+            for (const assertionText of allAssertions) {
+              html += "<tr><td>" + escapeHtml(assertionText) + "</td>";
+
+              for (const config of configGroups) {
+                html += "<td>";
+                for (const run of runsWithExpectations[config]) {
+                  const exp = (run.expectations || []).find(e => e.text === assertionText);
+                  if (exp) {
+                    const cls = exp.passed ? "benchmark-delta-positive" : "benchmark-delta-negative";
+                    const icon = exp.passed ? "\u2713" : "\u2717";
+                    html += '<span class="' + cls + '" title="Run ' + run.run_number + ': ' + escapeHtml(exp.evidence || "") + '">' + icon + "</span> ";
+                  } else {
+                    html += "— ";
+                  }
+                }
+                html += "</td>";
+              }
+              html += "</tr>";
+            }
+            html += "</tbody></table>";
+          }
+        }
+      }
+
+      // Notes
+      if (notes.length > 0) {
+        html += '<div class="benchmark-notes">';
+        html += "<h3>Analysis Notes</h3>";
+        html += "<ul>";
+        for (const note of notes) {
+          html += "<li>" + escapeHtml(note) + "</li>";
+        }
+        html += "</ul></div>";
+      }
+
+      container.innerHTML = html;
+    }
+
+    // ---- Start ----
+    init();
+    renderBenchmark();
+  </script>
+</body>
+</html>

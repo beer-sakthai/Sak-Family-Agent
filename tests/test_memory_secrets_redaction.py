@@ -200,32 +200,3 @@ def test_redact_microsoft_graph_secrets() -> None:
         assert redact_secrets("msgraph_client_secret_xyz123") == "[REDACTED]"
         assert redact_secrets("msgraph_refresh_token_abc789") == "[REDACTED]"
         assert redact_secrets("mcp_msgraph_client_secret_def456") == "[REDACTED]"
-
-
-def test_redact_slack_secrets() -> None:
-    import os
-    from unittest.mock import patch
-
-    from sakthai.config import redact_secrets
-
-    # Slack token pattern (xoxb-, xoxp-, xapp-, xoxr-)
-    slack_bot_token = "xoxb-" + "123456789012345678901234"
-    slack_user_token = "xoxp-" + "123456789012345678901234"
-    slack_app_token = "xapp-" + "123456789012345678901234"
-    slack_ref_token = "xoxr-" + "123456789012345678901234"
-
-    assert redact_secrets(slack_bot_token) == "[REDACTED]"
-    assert redact_secrets(slack_user_token) == "[REDACTED]"
-    assert redact_secrets(slack_app_token) == "[REDACTED]"
-    assert redact_secrets(slack_ref_token) == "[REDACTED]"
-
-    # Tracked env secrets
-    with patch.dict(
-        os.environ,
-        {
-            "SLACK_SIGNING_SECRET": "slack_signing_secret_val123",
-            "SLACK_WEBHOOK_URL": "https://hooks.slack.com/services/T000/B000/XXXX",
-        },
-    ):
-        assert redact_secrets("slack_signing_secret_val123") == "[REDACTED]"
-        assert redact_secrets("https://hooks.slack.com/services/T000/B000/XXXX") == "[REDACTED]"

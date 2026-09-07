@@ -1,7 +1,6 @@
 ---
 name: SakThai-training
-description: 'Use when the user mentions training, fine-tuning, QLoRA, LoRA, rsLoRA, HF Jobs, Kaggle
-  training, SFTTrainer, TRL, mergekit, or running train-*.py scripts. Phase: TRAIN.'
+description: "Use when the user mentions training, fine-tuning, QLoRA, LoRA, rsLoRA, HF Jobs, Kaggle training, SFTTrainer, TRL, mergekit, or running train-*.py scripts. Phase: TRAIN."
 ---
 
 # SakThai Training

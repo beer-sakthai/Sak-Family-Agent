@@ -1,7 +1,6 @@
 ---
 name: SakThai-hf-inference-client-openai
-description: "Deep reference on HF InferenceClients OpenAI API compatibility \u2014 chat.completions.create,\
-  \ structured outputs (JSON Schema / regex), function calling, and streaming."
+description: "Deep reference on HF InferenceClients OpenAI API compatibility — chat.completions.create, structured outputs (JSON Schema / regex), function calling, and streaming."
 ---
 
 # HF Inference Client — OpenAI Compatibility & Structured Outputs

@@ -1,8 +1,6 @@
 ---
 name: SakKing-beer-cycle-signals
-description: How Beer advances me through the Sak Family cycle u2014 reading his    stage signals
-  so I never hold a stage open or miss his release.
-...
+description: "How Beer advances me through the Sak Family cycle u2014 reading his    stage signals so I never hold a stage open or miss his release."
 ---
 
 # Beer's Cycle Signals

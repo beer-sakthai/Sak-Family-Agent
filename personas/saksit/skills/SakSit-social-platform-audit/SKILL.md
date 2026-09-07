@@ -1,7 +1,6 @@
 ---
 name: SakSit-social-platform-audit
-description: Audit all connected social platforms before posting.
-...
+description: "Audit all connected social platforms before posting."
 ---
 
 # Social Platform Audit — Pre-Posting

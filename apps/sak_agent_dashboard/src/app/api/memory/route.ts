@@ -1,16 +1,17 @@
-import { createApiHandler } from "@/lib/api/handler";
-import { getMemoryData } from "@/lib/db";
-import { getAuditLogs } from "@/lib/sakthai";
+/** `GET /api/memory` — facts and observations merged across persona shards. */
 
-export const GET = createApiHandler("/api/memory", async (ctx) => {
-  const query = ctx.params.query || undefined;
-  const severity = ctx.params.severity || undefined;
+import { intParam, parsePersonas, respond } from "@/lib/source";
 
-  const { memory, dataSource } = await getMemoryData(ctx.demo, query);
-  const { logs: auditLogs, dataSource: auditDataSource } = await getAuditLogs(
-    ctx.demo,
-    severity
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET(request: Request): Promise<Response> {
+  const params = new URL(request.url).searchParams;
+  return respond(request, (source) =>
+    source.getMemory({
+      query: params.get("query"),
+      limit: intParam(params.get("limit"), 100, 1, 500),
+      personas: parsePersonas(params.get("persona")),
+    }),
   );
-
-  return { memory, auditLogs, dataSource, auditDataSource };
-});
+}

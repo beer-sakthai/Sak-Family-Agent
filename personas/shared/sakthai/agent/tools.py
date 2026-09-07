@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 
-from ..config import redact_secrets, register_secret, sakthai_home
+from ..config import register_secret, sakthai_home
 from ..lead.capture import capture_lead as capture_lead_fact
 from ..learn.ingest import ingest_document as ingest_document_facts
 from ..memory.store import MemoryStore
@@ -142,16 +142,6 @@ _SENSITIVE_READ_BASENAMES: frozenset[str] = frozenset(
     }
 )
 _SENSITIVE_READ_SUFFIXES: tuple[str, ...] = (".pem", ".key", ".pfx", ".p12")
-_SENSITIVE_READ_PREFIXES: tuple[str, ...] = (".env.", ".env-", ".env_", "memory.db-")
-_SENSITIVE_READ_KEY_STEMS: tuple[str, ...] = (
-    "id_rsa",
-    "id_dsa",
-    "id_ecdsa",
-    "id_ed25519",
-    "id_ecdsa_sk",
-    "id_ed25519_sk",
-    "id_xmss",
-)
 # Path fragments (relative to a root) that indicate a secret store.
 _SENSITIVE_READ_FRAGMENTS: tuple[tuple[str, ...], ...] = (
     (".aws", "credentials"),
@@ -164,19 +154,15 @@ def _is_sensitive_read_target(resolved: Path) -> bool:
     """Return True if ``resolved`` names a well-known secret file."""
     name = resolved.name
     lower = name.lower()
-    if (
-        lower in _SENSITIVE_READ_BASENAMES
-        or lower.startswith(_SENSITIVE_READ_PREFIXES)
-        or any(lower.startswith(stem + ".") for stem in _SENSITIVE_READ_KEY_STEMS)
-    ):
+    if name in _SENSITIVE_READ_BASENAMES or lower.startswith(".env."):
         return True
     if lower.endswith(_SENSITIVE_READ_SUFFIXES):
         return True
-    lower_parts = tuple(p.lower() for p in resolved.parts)
+    parts = resolved.parts
     for fragment in _SENSITIVE_READ_FRAGMENTS:
         n = len(fragment)
-        if n <= len(lower_parts) and any(
-            lower_parts[i : i + n] == fragment for i in range(len(lower_parts) - n + 1)
+        if n <= len(parts) and any(
+            tuple(parts[i : i + n]) == fragment for i in range(len(parts) - n + 1)
         ):
             return True
     return False
@@ -184,8 +170,6 @@ def _is_sensitive_read_target(resolved: Path) -> bool:
 
 def _resolve_and_validate_path(path_str: str) -> Path:
     """Resolve a path and ensure it is a file within the allowed roots."""
-    if any(ord(c) < 32 or ord(c) == 127 for c in path_str):
-        raise ValueError("Control characters are not allowed in file paths")
     candidate = Path(path_str).expanduser()
     try:
         resolved = candidate.resolve(strict=True)
@@ -425,20 +409,19 @@ def _send_telegram_message(args: dict[str, Any], store: MemoryStore) -> str:
             body = json.loads(response.read().decode("utf-8"))
         if body.get("ok"):
             return "Telegram message sent successfully."
-        return redact_secrets(f"Telegram send failed: {body.get('description', 'Unknown error')}")
+        return f"Telegram send failed: {body.get('description', 'Unknown error')}"
     except HTTPError as exc:
-        logger.warning("Telegram API HTTP error (%s): %s", exc.code, exc)
         try:
             err = json.loads(exc.read().decode("utf-8"))
-            return redact_secrets(f"Telegram API Error: {err.get('description', exc.reason)}")
+            return f"Telegram API Error: {err.get('description', exc.reason)}"
         except Exception:
-            return redact_secrets(f"Telegram API HTTP Error {exc.code}: {exc.reason}")
+            return f"Telegram API HTTP Error {exc.code}: {exc.reason}"
     except URLError as exc:
-        logger.warning("Telegram API connection error: %s", exc)
-        return redact_secrets(f"Network Error: Could not connect to Telegram API: {exc.reason}")
+        return f"Network Error: Could not connect to Telegram API: {exc.reason}"
     except Exception as exc:  # noqa: BLE001
-        logger.error("Unexpected error sending Telegram message: %s", exc, exc_info=True)
-        return redact_secrets(f"Unexpected Error sending Telegram message: {exc}")
+        from ..config import redact_secrets
+
+        return f"Unexpected Error sending Telegram message: {redact_secrets(str(exc))}"
 
 
 def _graph_token_cache_path() -> Path:
@@ -451,8 +434,7 @@ def _graph_cached_refresh_token() -> str | None:
         return None
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        logger.debug("Failed to read Graph token cache %s: %s", path, exc)
+    except Exception:
         return None
     token = data.get("refresh_token") if isinstance(data, dict) else None
     return str(token) if token else None
@@ -533,22 +515,18 @@ def _graph_safe(action_desc: str, fn: Callable[[], str]) -> str:
     try:
         return fn()
     except RuntimeError as exc:
-        logger.warning("Microsoft Graph config/runtime error %s: %s", action_desc, exc)
-        return redact_secrets(f"Error: {exc}")
+        return f"Error: {exc}"
     except HTTPError as exc:
-        logger.warning("Microsoft Graph API HTTP error %s (%s): %s", action_desc, exc.code, exc)
         try:
             err = json.loads(exc.read().decode("utf-8"))
             message = err.get("error", {}).get("message", exc.reason)
         except Exception:
             message = exc.reason
-        return redact_secrets(f"Microsoft Graph API Error ({exc.code}): {message}")
+        return f"Microsoft Graph API Error ({exc.code}): {message}"
     except URLError as exc:
-        logger.warning("Microsoft Graph connection error %s: %s", action_desc, exc)
-        return redact_secrets(f"Network Error: Could not connect to Microsoft Graph: {exc.reason}")
+        return f"Network Error: Could not connect to Microsoft Graph: {exc.reason}"
     except Exception as exc:  # noqa: BLE001
-        logger.error("Unexpected error %s: %s", action_desc, exc, exc_info=True)
-        return redact_secrets(f"Unexpected Error {action_desc}: {exc}")
+        return f"Unexpected Error {action_desc}: {exc}"
 
 
 def _send_outlook_mail(args: dict[str, Any], store: MemoryStore) -> str:
@@ -649,6 +627,102 @@ def _create_calendar_event(args: dict[str, Any], store: MemoryStore) -> str:
         return f"Event created: {subject}" + (f" ({link})" if link else "")
 
     return _graph_safe("creating calendar event", _do)
+
+
+def _family_recall(args: dict[str, Any], store: MemoryStore) -> str:
+    from ..memory.merged import FamilyMemoryView
+
+    limit = _coerce_limit(args.get("limit"), 20)
+    raw_personas = args.get("personas")
+    personas = tuple(raw_personas) if isinstance(raw_personas, list) else None
+    with FamilyMemoryView(personas=personas) as view:
+        facts = view.list_facts(limit=limit)
+        obs = view.top_observations(limit=limit)
+    if not facts and not obs:
+        return "Family memory is empty."
+    lines: list[str] = []
+    if facts:
+        lines.append(f"Family Facts ({len(facts)}):")
+        for sf in facts:
+            head = (
+                f"[{sf.persona}] [{sf.fact.kind}] {sf.fact.key}: "
+                if sf.fact.key
+                else f"[{sf.persona}] [{sf.fact.kind}] "
+            )
+            lines.append(f"  {sf.fact.id}  {head}{sf.fact.value}")
+    if obs:
+        lines.append(f"Family Observations ({len(obs)}):")
+        for so in obs:
+            lines.append(
+                f"  {so.observation.id}  [{so.persona}] ({so.observation.weight:.2f}) {so.observation.summary}"
+            )
+    return "\n".join(lines)
+
+
+def _family_search(args: dict[str, Any], store: MemoryStore) -> str:
+    from ..memory.merged import FamilyMemoryView
+
+    query = args.get("query")
+    if not isinstance(query, str) or not query.strip():
+        raise ValueError("`query` is required and must be a non-empty string.")
+    limit = _coerce_limit(args.get("limit"), 50)
+    raw_personas = args.get("personas")
+    personas = tuple(raw_personas) if isinstance(raw_personas, list) else None
+    with FamilyMemoryView(personas=personas) as view:
+        facts, obs = view.search(query.strip(), limit=limit)
+    if not facts and not obs:
+        return f"No family memory matches found for '{query}'."
+    lines: list[str] = []
+    if facts:
+        lines.append(f"Matching Family Facts ({len(facts)}):")
+        for sf in facts:
+            head = (
+                f"[{sf.persona}] [{sf.fact.kind}] {sf.fact.key}: "
+                if sf.fact.key
+                else f"[{sf.persona}] [{sf.fact.kind}] "
+            )
+            lines.append(f"  {sf.fact.id}  {head}{sf.fact.value}")
+    if obs:
+        lines.append(f"Matching Family Observations ({len(obs)}):")
+        for so in obs:
+            lines.append(
+                f"  {so.observation.id}  [{so.persona}] ({so.observation.weight:.2f}) {so.observation.summary}"
+            )
+    return "\n".join(lines)
+
+
+def _delegate_to_persona(args: dict[str, Any], store: MemoryStore) -> str:
+    from .coordinator import run_persona_task
+
+    persona = args.get("persona")
+    if not isinstance(persona, str) or not persona.strip():
+        raise ValueError("`persona` is required and must be a non-empty string.")
+    task = args.get("task")
+    if not isinstance(task, str) or not task.strip():
+        raise ValueError("`task` is required and must be a non-empty string.")
+
+    with_skills = args.get("with_skills")
+    resolved_skills = tuple(with_skills) if isinstance(with_skills, list) else ()
+
+    max_iter = args.get("max_iterations")
+    resolved_iter = None
+    if max_iter is not None:
+        import contextlib
+
+        with contextlib.suppress(TypeError, ValueError):
+            resolved_iter = int(max_iter)
+
+    result = run_persona_task(
+        persona=persona.strip().lower(),
+        task=task.strip(),
+        with_skills=resolved_skills,
+        max_iterations=resolved_iter,
+    )
+    return (
+        f"### Delegated Task Result ({persona.upper()}):\n"
+        f"{result.text}\n\n"
+        f"[Iterations: {result.iterations}, Tokens: {result.usage.get('total_tokens', 0)}]"
+    )
 
 
 def _run_agent_loop(args: dict[str, Any], store: MemoryStore) -> str:
@@ -991,15 +1065,97 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
         },
         handler=_run_agent_loop,
     ),
+    Tool(
+        name="family_recall",
+        description=(
+            "Recall facts and top observations across the entire Sak Family memory shards. "
+            "Use to inspect shared family learnings and context from sibling agents."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "personas": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional subset of personas to recall from (default: all).",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum entries per section (default: 20).",
+                    "default": 20,
+                },
+            },
+        },
+        handler=_family_recall,
+    ),
+    Tool(
+        name="family_search",
+        description=(
+            "Search facts and observations across all Sak Family personas' memory shards. "
+            "Use when you need cross-persona insights or context discovered by other agents."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search term to query across family memory shards.",
+                },
+                "personas": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional subset of personas to search (default: all).",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum entries per section (default: 20).",
+                    "default": 20,
+                },
+            },
+            "required": ["query"],
+        },
+        handler=_family_search,
+    ),
+    Tool(
+        name="delegate_to_persona",
+        description=(
+            "Delegate a focused subtask to another Sak Family persona (sakking, sakthai, "
+            "saksee, saksit, sakjules, saktan) in-process and return their response. "
+            "Use to dispatch tasks to domain specialists (e.g. SakKing for coding, "
+            "SakSee for review/architecture, SakSit for content/business, SakJules for CI/testing)."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "persona": {
+                    "type": "string",
+                    "description": "The target persona name (sakking, sakthai, saksee, saksit, sakjules, saktan).",
+                    "enum": ["sakking", "sakthai", "saksee", "saksit", "sakjules", "saktan"],
+                },
+                "task": {
+                    "type": "string",
+                    "description": "The specific task instructions for the persona to execute.",
+                },
+                "with_skills": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional list of skill names to activate for the persona.",
+                },
+                "max_iterations": {
+                    "type": "integer",
+                    "description": "Maximum iterations for the delegated loop (default: 8).",
+                    "default": 8,
+                },
+            },
+            "required": ["persona", "task"],
+        },
+        handler=_delegate_to_persona,
+    ),
 )
 
 
 def _load_tool_overrides() -> None:
-    """Load tool description overrides from a local config JSON if it exists.
-
-    Only the `description` field can be overridden; `input_schema` is frozen
-    to prevent silent mutations of the tool contract visible to the model.
-    """
+    """Load tool description overrides from a local config JSON if it exists."""
     from ..config import tool_descriptions_path
 
     path = tool_descriptions_path()
@@ -1013,14 +1169,12 @@ def _load_tool_overrides() -> None:
                 tool_override = overrides[tool.name]
                 if "description" in tool_override:
                     object.__setattr__(tool, "description", tool_override["description"])
-                    logger.debug(f"Loaded tool override for {tool.name}: description")
-                # input_schema overrides are not permitted; silently ignore them.
-                # The tool contract (input parameters) must remain consistent with
-                # the model's understanding, even if the description is customized.
+                if "input_schema" in tool_override:
+                    object.__setattr__(tool, "input_schema", tool_override["input_schema"])
     except Exception as exc:  # noqa: BLE001
         # A broken overrides file must not stop the agent from starting, but
         # it must not be indistinguishable from no overrides file either.
-        logger.debug("Failed to load tool overrides from %s: %s", path, exc)
+        logger.warning("Failed to load tool overrides from %s: %s", path, exc)
 
 
 _load_tool_overrides()

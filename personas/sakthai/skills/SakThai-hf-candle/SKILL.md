@@ -1,7 +1,6 @@
 ---
 name: SakThai-hf-candle
-description: "Complete reference for Candle \u2014 Hugging Faces minimalist ML framework for Rust,\
-  \ focused on serverless inference, CPU/GPU inference, and lightweight deployments"
+description: "Complete reference for Candle — Hugging Faces minimalist ML framework for Rust, focused on serverless inference, CPU/GPU inference, and lightweight deployments"
 ---
 
 # HF Candle — Rust ML Framework

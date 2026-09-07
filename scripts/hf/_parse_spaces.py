@@ -1,10 +1,10 @@
-import json, os, sys, tempfile
+import json, os, tempfile
 
-# The dump path is caller-supplied; a hardcoded /tmp path is predictable on a
-# shared machine and wrong whenever the dump lives elsewhere. TMPDIR is honoured.
-SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(tempfile.gettempdir(), "spaces.json")
-
-with open(SRC) as f:
+# Read the dump from the system temp dir rather than a hardcoded /tmp path
+# (bandit B108): a fixed, predictable name in a world-writable directory can
+# be pre-created or symlinked by another user before this runs. Override with HF_SPACES_DUMP.
+DUMP = os.environ.get("HF_SPACES_DUMP") or os.path.join(tempfile.gettempdir(), "spaces.json")
+with open(DUMP) as f:
     data = json.load(f)
 print(f'Total spaces: {len(data)}')
 total_dl = 0

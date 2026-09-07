@@ -1,7 +1,6 @@
 ---
 name: SakThai-smolagents
-description: 'Use when the user mentions agents, smolagents, tool use, code agents, or using any
-  SakThai model for agentic tasks. Phase: DEPLOY.'
+description: "Use when the user mentions agents, smolagents, tool use, code agents, or using any SakThai model for agentic tasks. Phase: DEPLOY."
 ---
 
 # smolagents — SakThai Agent

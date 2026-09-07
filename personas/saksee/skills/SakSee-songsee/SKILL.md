@@ -1,7 +1,6 @@
 ---
 name: SakSee-songsee
-description: Audio spectrograms/features (mel, chroma, MFCC) via CLI.
-...
+description: "Audio spectrograms/features (mel, chroma, MFCC) via CLI."
 ---
 
 # songsee

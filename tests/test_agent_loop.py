@@ -363,10 +363,11 @@ def test_detect_provider_openai(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
-    # Credential detection prefers Ollama/gateway when these are set on the
+    # Credential detection prefers Ollama/gateway/huggingface when these are set on the
     # host, which would shadow the openai fallback this test asserts.
     monkeypatch.delenv("OLLAMA_HOST", raising=False)
     monkeypatch.delenv("SAKTHAI_GATEWAY_URL", raising=False)
+    monkeypatch.delenv("HF_TOKEN", raising=False)
 
     import sakthai.auth
 
@@ -2296,29 +2297,72 @@ class TestUntrustedDataWrapping:
         assert "test fact from untrusted source" in block
 
 
-def test_execute_tool_logs_warning_on_exception(caplog, tmp_path) -> None:
-    """_execute_tool logs a warning with exc_info when tool execution raises an exception."""
-    import logging
+# -- persona attribution --------------------------------------------------
 
-    from sakthai.agent.loop import Tool, _execute_tool
-    from sakthai.memory.store import MemoryStore
 
-    def failing_handler(args, store):
-        raise ValueError("Simulated tool crash")
+def test_session_log_records_the_persona(sakthai_home: Path, store: MemoryStore) -> None:
+    """`--persona X` must reach the session log, so readers need not guess."""
+    import json
 
-    tool = Tool(
-        name="failing_tool",
-        description="A tool that fails",
-        input_schema={"type": "object", "properties": {}},
-        handler=failing_handler,
+    client = FakeClient([_Resp("end_turn", [_Block(type="text", text="ok")])])
+    run_agent(
+        "scoped task",
+        client=client,
+        store=store,
+        provider="anthropic",
+        persona="saksee",
     )
-
-    with MemoryStore(tmp_path / "test.db") as store, caplog.at_level(logging.WARNING):
-        out, is_error = _execute_tool(tool, {}, store)
-
-    assert is_error is True
-    assert "ValueError: Simulated tool crash" in out
-    assert any(
-        "Tool 'failing_tool' execution failed with ValueError" in record.message
-        for record in caplog.records
+    payload = json.loads(
+        next((sakthai_home / "sessions").glob("*.json")).read_text(encoding="utf-8")
     )
+    assert payload["persona"] == "saksee"
+
+
+def test_session_log_persona_is_none_for_unscoped_run(
+    sakthai_home: Path, store: MemoryStore
+) -> None:
+    import json
+
+    client = FakeClient([_Resp("end_turn", [_Block(type="text", text="ok")])])
+    run_agent("unscoped task", client=client, store=store, provider="anthropic")
+    payload = json.loads(
+        next((sakthai_home / "sessions").glob("*.json")).read_text(encoding="utf-8")
+    )
+    assert payload["persona"] is None
+
+
+def test_eval_log_records_the_persona(sakthai_home: Path, store: MemoryStore) -> None:
+    """The same run must attribute itself in eval.jsonl too."""
+    import json
+
+    client = FakeClient([_Resp("end_turn", [_Block(type="text", text="ok")])])
+    run_agent(
+        "scoped task",
+        client=client,
+        store=store,
+        provider="anthropic",
+        persona="sakjules",
+    )
+    line = json.loads((sakthai_home / "eval.jsonl").read_text(encoding="utf-8").strip())
+    assert line["persona"] == "sakjules"
+
+
+def test_persona_recorded_on_the_non_terminal_stop_path(
+    sakthai_home: Path, store: MemoryStore
+) -> None:
+    """The second _save_session_log call site must pass persona too."""
+    import json
+
+    # An unexpected stop_reason takes the other return branch in run_agent.
+    client = FakeClient([_Resp("some_other_reason", [_Block(type="text", text="ok")])])
+    run_agent(
+        "odd task",
+        client=client,
+        store=store,
+        provider="anthropic",
+        persona="sakking",
+    )
+    payload = json.loads(
+        next((sakthai_home / "sessions").glob("*.json")).read_text(encoding="utf-8")
+    )
+    assert payload["persona"] == "sakking"

@@ -1,7 +1,6 @@
 ---
 name: SakThai-hf-datasets-faiss
-description: A skill for Hf Datasets Faiss.
-...
+description: "A skill for Hf Datasets Faiss."
 ---
 
 # SKILL.md — hf-datasets-faiss

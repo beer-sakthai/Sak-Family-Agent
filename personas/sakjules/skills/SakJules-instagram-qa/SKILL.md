@@ -1,8 +1,6 @@
 ---
 name: SakJules-SakThai-instagram-qa
-description: Provide a verified, repeatable workflow for checking Instagram content   quality before
-  publishing
-...
+description: "Provide a verified, repeatable workflow for checking Instagram content   quality before publishing"
 ---
 
 # Instagram Business Content QA

@@ -1,0 +1,18 @@
+{
+  "eval_id": 0,
+  "eval_name": "bare-request-defaults-to-dry-run",
+  "prompt": "run the sak family auto-cycle",
+  "assertions": [
+    "Avoids the SAKTHAI_HOME + --persona double-append trap",
+    "Defaults to --dry-run on every dispatch",
+    "Dispatches all six personas",
+    "Dispatches the safe default without stalling to ask test-or-live",
+    "Fans out in a single message rather than serially",
+    "Final report carries a row per persona with status",
+    "Injects Sak-auto-cycle-loop on every dispatch",
+    "Leaves --provider/--model unset so each persona's own config applies",
+    "Passes --persona for each of the six personas",
+    "Targets no /opt/data memory home",
+    "Uses a throwaway SAKTHAI_HOME on every dispatch"
+  ]
+}

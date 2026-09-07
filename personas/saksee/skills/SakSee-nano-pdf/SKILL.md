@@ -1,7 +1,6 @@
 ---
 name: SakSee-nano-pdf
-description: Edit PDF text/typos/titles via nano-pdf CLI (NL prompts).
-...
+description: "Edit PDF text/typos/titles via nano-pdf CLI (NL prompts)."
 ---
 
 # nano-pdf

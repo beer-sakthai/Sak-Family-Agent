@@ -35,6 +35,11 @@ class EvalRecord:
     output_tokens: int
     tool_call_count: int
     had_error: bool
+    #: Which persona ran this, when the run was scoped to one. Trailing and
+    #: defaulted on purpose: the log is append-only, so records written before
+    #: this field existed simply lack the key and read back as ``None``. Do not
+    #: infer a persona for those — the dashboard shows them as "unattributed".
+    persona: str | None = None
 
 
 def task_preview(task: str, limit: int = _TASK_PREVIEW_LIMIT) -> str:
@@ -70,6 +75,17 @@ def _read_records(path: Path | None = None) -> list[dict[str, Any]]:
         except json.JSONDecodeError:
             continue
     return records
+
+
+def read_records(path: Path | None = None, limit: int | None = None) -> list[dict[str, Any]]:
+    """The parsed eval log, oldest first; the most recent ``limit`` when given.
+
+    Records are plain dicts rather than :class:`EvalRecord`s on purpose: the log
+    is append-only and older lines predate fields the dataclass now has, so
+    callers read with ``.get()`` and treat a missing key as unknown.
+    """
+    records = _read_records(path)
+    return records[-limit:] if limit is not None else records
 
 
 def summarize_evals(path: Path | None = None, limit: int = 50) -> dict[str, Any]:

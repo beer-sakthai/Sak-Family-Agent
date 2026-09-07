@@ -1,9 +1,6 @@
 ---
 name: SakThai-huggingface-tool-builder
-description: Use this skill when the user wants to build tool/scripts or achieve a task where using
-  data from the Hugging Face API would help. This is especially useful when chaining
-  or combining API calls or the task will be repeated/automated. This Skill create
-...
+description: "Use this skill when the user wants to build tool/scripts or achieve a task where using data from the Hugging Face API would help. This is especially useful when chaining or combining API calls or the task will be repeated/automated. This Skill create"
 ---
 
 # Hugging Face API Tool Builder

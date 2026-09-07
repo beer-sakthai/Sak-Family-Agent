@@ -399,7 +399,6 @@ def test_setup_interactive_create_env(
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "claude"))
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
 
     # Run setup with interactive=True and say 'y' to creating .env
     # We also need to handle the API key prompt that follows
@@ -419,7 +418,6 @@ def test_setup_interactive_set_api_key(
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "claude"))
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
 
     result = runner.invoke(main, ["setup", "--interactive"], input="sk-test-key-123\n")
 
@@ -438,7 +436,6 @@ def test_setup_interactive_empty_key_records_issue(
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "claude"))
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
 
     # Empty line at the hidden API-key prompt -> the "not set" issue path.
     result = runner.invoke(main, ["setup", "--interactive"], input="\n")
@@ -496,7 +493,6 @@ def test_setup_interactive_append_api_key(
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "claude"))
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
 
     result = runner.invoke(main, ["setup", "--interactive"], input="sk-test-key-456\n")
 

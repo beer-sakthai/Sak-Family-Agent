@@ -1,9 +1,6 @@
 ---
 name: SakJules-SakThai-hf-hub-storage-regions-deep-dive
-description: ">-   Complete deep-dive on Hugging Face Hub Storage Regions \u2014 data residency\
-  \   controls for Team & Enterprise organizations, region selection (US/EU/coming\
-  \   Asia-Pacific), GDPR compliance, performance optimization, Repository tags, \
-  \  Spaces region b"
+description: ">-   Complete deep-dive on Hugging Face Hub Storage Regions — data residency   controls for Team & Enterprise organizations, region selection (US/EU/coming   Asia-Pacific), GDPR compliance, performance optimization, Repository tags,   Spaces region b"
 ---
 
 # Hugging Face Hub — Storage Regions Deep Dive

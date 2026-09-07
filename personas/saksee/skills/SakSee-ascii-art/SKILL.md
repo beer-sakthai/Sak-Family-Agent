@@ -1,6 +1,6 @@
 ---
 name: SakSee-ascii-art
-description: 'ASCII art: pyfiglet, cowsay, boxes, image-to-ascii.'
+description: "ASCII art: pyfiglet, cowsay, boxes, image-to-ascii."
 ---
 
 # ASCII Art Skill

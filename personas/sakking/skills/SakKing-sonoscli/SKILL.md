@@ -1,7 +1,6 @@
 ---
 name: SakKing-sonoscli
-description: Control Sonos speakers (discover/status/play/volume/group).
-...
+description: "Control Sonos speakers (discover/status/play/volume/group)."
 ---
 
 # Sonos CLI

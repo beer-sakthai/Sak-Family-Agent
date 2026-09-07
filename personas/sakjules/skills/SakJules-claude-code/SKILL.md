@@ -1,7 +1,6 @@
 ---
 name: SakJules-claude-code
-description: Delegate coding to Claude Code CLI (features, PRs).
-...
+description: "Delegate coding to Claude Code CLI (features, PRs)."
 ---
 
 # Claude Code — Hermes Orchestration Guide

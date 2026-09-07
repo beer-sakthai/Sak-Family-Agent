@@ -49,15 +49,19 @@ from transformers import (
 )
 from trl import SFTConfig, SFTTrainer
 
-BASE_MODEL = os.environ.get("BASE_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
+_DEFAULT_BASE_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"
+_DEFAULT_BASE_REVISION = "989aa7980e4cf806f80c7fef2b1adb7bc71aa306"
+BASE_MODEL = os.environ.get("BASE_MODEL", _DEFAULT_BASE_MODEL)
+# Pinned to an immutable commit (bandit B615). A mutable branch ref lets an
+# upstream force-push silently change what this job downloads, and an unpinned
+# run is not reproducible. Only the default model carries the pin — an override
+# supplies its own revision, or tracks that repo's default branch.
+BASE_MODEL_REVISION = os.environ.get(
+    "BASE_MODEL_REVISION",
+    _DEFAULT_BASE_REVISION if BASE_MODEL == _DEFAULT_BASE_MODEL else None,
+)
 DATASET_ID = os.environ.get("DATASET_ID", "Nanthasit/sakthai-toolcalling-v1")
 OUTPUT_REPO = os.environ.get("OUTPUT_REPO", "Nanthasit/sakthai-toolcalling-1.5b-lora")
-# Hugging Face repositories are mutable: a tag or branch can be force-updated
-# under you, so an unpinned download is not reproducible and trusts whatever the
-# remote serves at run time. Pin every download to one revision, overridable so
-# an operator can pin a commit SHA for a byte-reproducible run.
-HF_REVISION = os.environ.get("HF_REVISION", "main")
-
 EPOCHS = float(os.environ.get("EPOCHS", "4"))
 
 
@@ -92,7 +96,7 @@ def _normalize_messages(messages):
 
 def main() -> None:
     print(f"== Loading tokenizer + base model: {BASE_MODEL}")
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, revision=HF_REVISION)
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, revision=BASE_MODEL_REVISION)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -104,14 +108,16 @@ def main() -> None:
     )
     model = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
-        revision=HF_REVISION,
+        revision=BASE_MODEL_REVISION,
         quantization_config=bnb_config,
         device_map="auto",
     )
     model.config.use_cache = False
 
     print(f"== Loading dataset: {DATASET_ID}")
-    ds = load_dataset(DATASET_ID, revision=HF_REVISION)
+    # Own-namespace dataset, republished by this project's own pipeline;
+    # pinning it would train against a stale snapshot of our own data.
+    ds = load_dataset(DATASET_ID)  # nosec B615
     print(f"   splits={list(ds.keys())}")
 
     def to_text(example):

@@ -1,6 +1,6 @@
 ---
 name: SakSee-research-paper-writing
-description: "Write ML papers for NeurIPS/ICML/ICLR: design\u2192submit."
+description: "Write ML papers for NeurIPS/ICML/ICLR: design→submit."
 ---
 
 # Research Paper Writing Pipeline

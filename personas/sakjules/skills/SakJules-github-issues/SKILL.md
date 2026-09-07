@@ -1,7 +1,6 @@
 ---
 name: SakJules-SakSee-github-issues
-description: Create, triage, label, assign GitHub issues via gh or REST.
-...
+description: "Create, triage, label, assign GitHub issues via gh or REST."
 ---
 
 # GitHub Issues Management

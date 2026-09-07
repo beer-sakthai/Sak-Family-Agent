@@ -1,7 +1,6 @@
 ---
 name: SakSee-llama-cpp
-description: llama.cpp local GGUF inference + HF Hub model discovery.
-...
+description: "llama.cpp local GGUF inference + HF Hub model discovery."
 ---
 
 # llama.cpp + GGUF

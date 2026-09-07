@@ -1,0 +1,56 @@
+name: Hugging Face integration
+
+on:
+  # Provider availability and billing are account-specific; keep this live
+  # integration check explicit so it cannot block repository CI unexpectedly.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: huggingface-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live-inference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      SAKTHAI_HF_API_BASE: https://router.huggingface.co/v1
+      # The SakThai merged checkpoint remains the application default, but may
+      # not be enabled for every account's Inference Provider subscription.
+      SAKTHAI_HF_SMOKE_MODEL: Qwen/Qwen2.5-7B-Instruct:together
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Require Hugging Face secret
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "HF_TOKEN repository secret is required for the live integration test." >&2
+            exit 1
+          fi
+
+      - name: Run custom-tool live inference
+        run: uv run python scripts/hf_integration_smoke.py

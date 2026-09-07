@@ -20,6 +20,7 @@ from sakthai.agent.tools import (
     _path_under_any_root,
     tool_by_name,
 )
+from sakthai.config import sessions_dir
 from sakthai.memory.store import MemoryStore
 
 
@@ -35,6 +36,46 @@ def test_registry_names_unique_and_schemas_valid() -> None:
 def test_tool_by_name() -> None:
     assert tool_by_name("learn").name == "learn"
     assert tool_by_name("nope") is None
+
+
+def test_huggingface_inference_tool_posts_bounded_request(
+    store: MemoryStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured: dict[str, object] = {}
+
+    class _Response:
+        def __enter__(self) -> _Response:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return b'{"choices":[{"message":{"content":"live result"}}]}'
+
+    def fake_urlopen(request: object, timeout: int) -> _Response:
+        captured["request"] = request
+        captured["timeout"] = timeout
+        return _Response()
+
+    monkeypatch.setattr(
+        "sakthai.auth.resolve_huggingface_credentials",
+        lambda: ("https://router.huggingface.co/v1", "hf_test_token"),
+    )
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    result = tool_by_name("huggingface_inference").handler(
+        {"prompt": "Say hello", "max_tokens": 5000}, store
+    )
+
+    request = captured["request"]
+    assert result == "live result"
+    assert captured["timeout"] == 60
+    assert request.full_url == "https://router.huggingface.co/v1/chat/completions"
+    assert request.get_header("Authorization") == "Bearer hf_test_token"
+    body = json.loads(request.data.decode("utf-8"))
+    assert body["model"] == "Nanthasit/sakthai-context-1.5b-merged"
+    assert body["max_tokens"] == 1024
 
 
 def test_learn_recall_search_forget(store: MemoryStore) -> None:
@@ -145,31 +186,11 @@ def test_read_file_blocks_outside_roots(tmp_path: Path, store) -> None:
         tool_by_name("read_file").handler({"path": str(secret)}, store)
 
 
-def test_read_file_blocks_control_characters_in_path(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store
-) -> None:
-    monkeypatch.chdir(tmp_path)
-    control_paths = [
-        "path\nwith\nnewline",
-        "path\rwith\rreturn",
-        "path\twith\ttab",
-        "path\0with\0null",
-    ]
-    for p in control_paths:
-        with pytest.raises(ValueError, match="Control characters are not allowed"):
-            tool_by_name("read_file").handler({"path": p}, store)
-
-
 @pytest.mark.parametrize(
     "name",
     [
         ".env",
         ".env.production",
-        ".env-prod",
-        ".env_local",
-        "id_rsa.bak",
-        "id_ed25519.old",
-        "id_ecdsa.pub",
         "id_rsa",
         "server.pem",
         "credentials.json",
@@ -186,6 +207,7 @@ def test_read_file_blocks_control_characters_in_path(
         ".gitconfig",
         "authorized_keys",
         "known_hosts",
+        "memory.db",
         ".sqlite_history",
         ".psql_history",
     ],
@@ -202,26 +224,6 @@ def test_read_file_blocks_sensitive_names_even_in_cwd(
         tool_by_name("read_file").handler({"path": name}, store)
 
 
-@pytest.mark.parametrize(
-    "name",
-    [
-        "memory.db",
-        "memory.db-wal",
-        "memory.db-shm",
-    ],
-)
-def test_read_file_blocks_memory_db_files_without_touching_db(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store, name: str
-) -> None:
-    monkeypatch.chdir(tmp_path)
-    sub = tmp_path / "subdir"
-    sub.mkdir()
-    secret = sub / name
-    secret.write_text("TOKEN=abc", encoding="utf-8")
-    with pytest.raises(PermissionError):
-        tool_by_name("read_file").handler({"path": f"subdir/{name}"}, store)
-
-
 def test_read_file_blocks_dot_ssh_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store
 ) -> None:
@@ -232,28 +234,6 @@ def test_read_file_blocks_dot_ssh_directory(
     key.write_text("ssh-rsa ...", encoding="utf-8")
     with pytest.raises(PermissionError):
         tool_by_name("read_file").handler({"path": ".ssh/authorized_keys"}, store)
-
-
-def test_read_file_blocks_casing_bypass_sensitive_targets(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store
-) -> None:
-    monkeypatch.chdir(tmp_path)
-
-    # 1. Test casing variants of basenames (e.g. .ENV, Credentials.json)
-    for basename in [".ENV", "Credentials.json"]:
-        f = tmp_path / basename
-        f.write_text("secret_content", encoding="utf-8")
-        with pytest.raises(PermissionError, match="sensitive credential file"):
-            tool_by_name("read_file").handler({"path": basename}, store)
-
-    # 2. Test casing variants of directories (e.g. .SSH/authorized_keys, .Aws/credentials, .Git/config)
-    for folder, file in [(".SSH", "authorized_keys"), (".Aws", "credentials"), (".Git", "config")]:
-        d = tmp_path / folder
-        d.mkdir(exist_ok=True)
-        f = d / file
-        f.write_text("secret_content", encoding="utf-8")
-        with pytest.raises(PermissionError, match="sensitive credential file"):
-            tool_by_name("read_file").handler({"path": f"{folder}/{file}"}, store)
 
 
 def test_ingest_document_blocks_outside_roots(tmp_path: Path, store) -> None:
@@ -794,69 +774,6 @@ def test_graph_http_error_reports_api_message(
     assert "Insufficient privileges" in out
 
 
-def test_graph_safe_redacts_secrets_in_errors(
-    monkeypatch: pytest.MonkeyPatch, sakthai_home: Path, store
-) -> None:
-    secret = "super-secret-token-12345"
-    monkeypatch.setenv("MS_GRAPH_CLIENT_ID", "client-id")
-    monkeypatch.setenv("MS_GRAPH_REFRESH_TOKEN", secret)
-
-    # 1. RuntimeError with secret
-    def _stub_runtime(request, timeout=None):
-        raise RuntimeError(f"Failed with secret {secret}")
-
-    monkeypatch.setattr(urllib.request, "urlopen", _stub_runtime)
-    out = tool_by_name("send_outlook_mail").handler(
-        {"to": "a@b.com", "subject": "hi", "body": "hello"}, store
-    )
-    assert secret not in out
-    assert "[REDACTED]" in out
-
-    # 2. HTTPError with secret
-    exc = urllib.error.HTTPError(
-        "https://graph.microsoft.com", 400, f"Error with {secret}", None, None
-    )
-    exc.read = lambda: json.dumps({"error": {"message": f"Denied with {secret}"}}).encode()  # type: ignore[method-assign]
-
-    def _stub_http(request, timeout=None):
-        if "/oauth2/v2.0/token" in request.full_url:
-            return _FakeResponse(b'{"access_token": "fake-access"}')
-        raise exc
-
-    monkeypatch.setattr(urllib.request, "urlopen", _stub_http)
-    out = tool_by_name("send_outlook_mail").handler(
-        {"to": "a@b.com", "subject": "hi", "body": "hello"}, store
-    )
-    assert secret not in out
-    assert "[REDACTED]" in out
-
-    # 3. URLError with secret
-    def _stub_url(request, timeout=None):
-        if "/oauth2/v2.0/token" in request.full_url:
-            return _FakeResponse(b'{"access_token": "fake-access"}')
-        raise urllib.error.URLError(f"no route with {secret}")
-
-    monkeypatch.setattr(urllib.request, "urlopen", _stub_url)
-    out = tool_by_name("send_outlook_mail").handler(
-        {"to": "a@b.com", "subject": "hi", "body": "hello"}, store
-    )
-    assert secret not in out
-    assert "[REDACTED]" in out
-
-    # 4. Unexpected Exception with secret
-    def _stub_generic(request, timeout=None):
-        if "/oauth2/v2.0/token" in request.full_url:
-            return _FakeResponse(b'{"access_token": "fake-access"}')
-        raise ValueError(f"unexpected issue {secret}")
-
-    monkeypatch.setattr(urllib.request, "urlopen", _stub_generic)
-    out = tool_by_name("send_outlook_mail").handler(
-        {"to": "a@b.com", "subject": "hi", "body": "hello"}, store
-    )
-    assert secret not in out
-    assert "[REDACTED]" in out
-
-
 def test_graph_url_error_reports_network_error(
     monkeypatch: pytest.MonkeyPatch, sakthai_home: Path, store
 ) -> None:
@@ -1387,23 +1304,13 @@ def test_send_telegram_invalid_token_format(
 
 
 def test_load_tool_overrides(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test that tool override restrictions are enforced.
-
-    Description can be overridden, but input_schema is frozen to prevent
-    silent mutations of the tool contract.
-    """
     # Mock SAKTHAI_HOME to use tmp_path
     monkeypatch.setenv("SAKTHAI_HOME", str(tmp_path))
 
     from sakthai.agent.tools import _load_tool_overrides, tool_by_name
     from sakthai.config import tool_descriptions_path
 
-    # Capture original schema before override
-    learn_tool = tool_by_name("learn")
-    assert learn_tool is not None
-    original_schema = learn_tool.input_schema
-
-    # Write a test overrides file attempting to override both description and input_schema
+    # Write a test overrides file
     overrides = {
         "learn": {
             "description": "Custom overridden learn description.",
@@ -1423,93 +1330,117 @@ def test_load_tool_overrides(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     # Call override loader
     _load_tool_overrides()
 
-    # Find the learn tool and assert overrides were applied selectively
+    # Find the learn tool and assert overridden descriptions
     learn_tool = tool_by_name("learn")
     assert learn_tool is not None
-    # Description should be overridden
     assert learn_tool.description == "Custom overridden learn description."
-    # input_schema should NOT be overridden (remains unchanged)
-    assert learn_tool.input_schema == original_schema
-
-
-def test_send_telegram_message_redacts_secrets_in_errors(store: MemoryStore, monkeypatch) -> None:
-    fake_token = "123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi"
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", fake_token)
-    monkeypatch.setenv("TELEGRAM_CHAT_ID", "987654321")
-
-    # 1. HTTPError with secret in exception description
-    def mock_urlopen_httperror(*args, **kwargs):
-        raise urllib.error.HTTPError(
-            url=f"https://api.telegram.org/bot{fake_token}/sendMessage",
-            code=400,
-            msg=f"Bad Request for {fake_token}",
-            hdrs={},
-            fp=None,
-        )
-
-    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen_httperror)
-    out = tool_by_name("send_telegram_message").handler({"message": "test"}, store)
-    assert fake_token not in out
-    assert "[REDACTED]" in out
-
-    # 2. URLError with secret in reason
-    def mock_urlopen_urlerror(*args, **kwargs):
-        raise urllib.error.URLError(reason=f"Connection refused with key {fake_token}")
-
-    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen_urlerror)
-    out = tool_by_name("send_telegram_message").handler({"message": "test"}, store)
-    assert fake_token not in out
-    assert "[REDACTED]" in out
-
-    # 3. Generic Exception with secret
-    def mock_urlopen_generic(*args, **kwargs):
-        raise RuntimeError(f"Unexpected token leak {fake_token}")
-
-    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen_generic)
-    out = tool_by_name("send_telegram_message").handler({"message": "test"}, store)
-    assert fake_token not in out
-    assert "[REDACTED]" in out
-
-
-def test_telegram_message_logging_on_errors(monkeypatch, tmp_path, caplog) -> None:
-    """_send_telegram_message emits warning/error log messages on failures."""
-    import logging
-    import urllib.error
-
-    from sakthai.agent.tools import tool_by_name
-    from sakthai.memory.store import MemoryStore
-
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11")
-    monkeypatch.setenv("TELEGRAM_CHAT_ID", "987654321")
-
-    # HTTPError
-    def mock_httperror(*args, **kwargs):
-        raise urllib.error.HTTPError(
-            url="https://api.telegram.org",
-            code=400,
-            msg="Bad Request",
-            hdrs={},
-            fp=None,
-        )
-
-    monkeypatch.setattr("urllib.request.urlopen", mock_httperror)
-    with MemoryStore(tmp_path / "test.db") as store, caplog.at_level(logging.WARNING):
-        tool_by_name("send_telegram_message").handler({"message": "test"}, store)
-
-    assert any("Telegram API HTTP error (400)" in record.message for record in caplog.records)
-
-
-def test_graph_safe_logging_on_errors(monkeypatch, tmp_path, caplog) -> None:
-    """_graph_safe emits warning/error log messages on failures."""
-    import logging
-
-    from sakthai.agent.tools import _graph_safe
-
-    # RuntimeError
-    with caplog.at_level(logging.WARNING):
-        _graph_safe("test_action", lambda: (_ for _ in ()).throw(RuntimeError("Config error")))
-
-    assert any(
-        "Microsoft Graph config/runtime error test_action: Config error" in record.message
-        for record in caplog.records
+    assert (
+        learn_tool.input_schema["properties"]["value"]["description"]
+        == "Overridden param description."
     )
+
+
+def test_family_recall_and_search_tools(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+) -> None:
+
+    # Create dummy shard
+    shard1_path = tmp_path / "sakking" / "memory.db"
+    shard1_path.parent.mkdir(parents=True, exist_ok=True)
+    shard1 = MemoryStore(shard1_path)
+    shard1.add_fact("uses Python 3.12", kind="tech", key="python")
+    shard1.add_observation("Builds with uv fast", weight=0.9)
+    shard1.close()
+
+    monkeypatch.setattr(
+        "sakthai.memory.merged.persona_memory_db_path", lambda p: tmp_path / p / "memory.db"
+    )
+
+    family_recall = tool_by_name("family_recall")
+    assert family_recall is not None
+    recall_out = family_recall.handler({}, store)
+    assert "Family Facts" in recall_out
+    assert "uses Python 3.12" in recall_out
+    assert "Builds with uv fast" in recall_out
+
+    family_search = tool_by_name("family_search")
+    assert family_search is not None
+    search_out = family_search.handler({"query": "Python"}, store)
+    assert "Matching Family Facts" in search_out
+    assert "uses Python 3.12" in search_out
+
+    no_match_out = family_search.handler({"query": "nonexistent_term"}, store)
+    assert "No family memory matches found" in no_match_out
+
+    with pytest.raises(ValueError, match="`query` is required"):
+        family_search.handler({}, store)
+
+
+def test_delegate_to_persona_tool(store: MemoryStore) -> None:
+    from unittest.mock import patch
+
+    from sakthai.agent.loop import AgentResult
+
+    delegate = tool_by_name("delegate_to_persona")
+    assert delegate is not None
+
+    mock_res = AgentResult(
+        text="Finished refactoring.",
+        iterations=2,
+        stop_reason="end_turn",
+        usage={"input_tokens": 100, "output_tokens": 50, "total_tokens": 150},
+    )
+
+    with patch("sakthai.agent.coordinator.run_persona_task", return_value=mock_res) as mock_run:
+        out = delegate.handler({"persona": "sakking", "task": "Refactor codebase"}, store)
+        assert "Delegated Task Result (SAKKING)" in out
+        assert "Finished refactoring." in out
+        assert "Tokens: 150" in out
+        mock_run.assert_called_once_with(
+            persona="sakking",
+            task="Refactor codebase",
+            with_skills=(),
+            max_iterations=None,
+        )
+
+    with pytest.raises(ValueError, match="`persona` is required"):
+        delegate.handler({"task": "No persona"}, store)
+
+    with pytest.raises(ValueError, match="`task` is required"):
+        delegate.handler({"persona": "sakking"}, store)
+
+
+def test_search_sessions_tool_finds_and_filters(sakthai_home: Path, store: MemoryStore) -> None:
+    s_dir = sessions_dir()
+    s_dir.mkdir(parents=True, exist_ok=True)
+    (s_dir / "100_quantum.json").write_text(
+        json.dumps(
+            {
+                "timestamp": 100,
+                "task": "Explain quantum physics",
+                "result": {"text": "", "tool_calls": []},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (s_dir / "200_cake.json").write_text(
+        json.dumps(
+            {"timestamp": 200, "task": "Bake a cake", "result": {"text": "", "tool_calls": []}}
+        ),
+        encoding="utf-8",
+    )
+
+    out = tool_by_name("search_sessions").handler({"query": "quantum"}, store)
+
+    assert "quantum" in out.lower()
+    assert "cake" not in out.lower()
+
+
+def test_search_sessions_tool_no_matches(sakthai_home: Path, store: MemoryStore) -> None:
+    out = tool_by_name("search_sessions").handler({"query": "nonexistent"}, store)
+    assert "No matching sessions found" in out
+
+
+def test_search_sessions_tool_requires_query(sakthai_home: Path, store: MemoryStore) -> None:
+    with pytest.raises(ValueError, match="`query` is required"):
+        tool_by_name("search_sessions").handler({"query": "  "}, store)

@@ -1,7 +1,11 @@
 ---
 name: SakThai-hf-trending-crawl
-description: 'Scheduled crawl of HF Hub trending models: fetch, select uncovered model, deep-dive,
-  report, update tracker, sync to GitHub.'
+author: SakThai
+license: MIT
+description: "Scheduled crawl of HF Hub trending models: fetch, select uncovered model, deep-dive, report, update tracker, sync to GitHub."
+version: 1.2.0
+tags: [huggingface, trending, crawl, cron, mlops]
+platforms: [linux]
 ---
 
 # HF Trending Model Crawl

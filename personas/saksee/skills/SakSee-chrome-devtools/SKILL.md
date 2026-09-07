@@ -1,8 +1,6 @@
 ---
 name: SakSee-chrome-devtools
-description: 'Chrome DevTools Protocol (CDP) with Playwright: network interception, tracing, performance
-  profiling, browser introspection. Uses Playwrights CDPSession for protocol-level
-  control.'
+description: "Chrome DevTools Protocol (CDP) with Playwright: network interception, tracing, performance profiling, browser introspection. Uses Playwrights CDPSession for protocol-level control."
 ---
 
 # Chrome DevTools Protocol (CDP)

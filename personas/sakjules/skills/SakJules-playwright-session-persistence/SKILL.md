@@ -1,8 +1,6 @@
 ---
 name: SakJules-SakKing-playwright-session-persistence
-description: Reuse authenticated Playwright browser sessions across cron/CI runs using   storage
-  state, context cookies, and controlled session handoffs.
-...
+description: "Reuse authenticated Playwright browser sessions across cron/CI runs using   storage state, context cookies, and controlled session handoffs."
 ---
 
 # Playwright Session Persistence for Scheduled Browser Workflows

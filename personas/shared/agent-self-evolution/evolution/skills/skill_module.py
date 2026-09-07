@@ -76,8 +76,9 @@ def find_skill(skill_name: str, hermes_agent_path: Path | None) -> Path | None:
             if f"name: {skill_name}" in content or f'name: "{skill_name}"' in content:
                 return skill_md
         except (OSError, UnicodeDecodeError):
-            # Unreadable or undecodable SKILL.md — skip it. Anything else is a bug
-            # in this loop and propagates rather than silently shrinking the search.
+            # Unreadable or non-UTF-8 SKILL.md: skip it and keep scanning.
+            # Catching bare Exception here also hid bugs in the match
+            # itself (bandit B112).
             continue
 
     return None

@@ -1,106 +1,160 @@
 "use client";
 
 import React, { useState } from "react";
-import { Database, Lightbulb, BookOpen, Layers } from "lucide-react";
-import { MemoryData } from "@/lib/types";
+import { BookOpen, Database, Layers, Lightbulb } from "lucide-react";
+
+import type { MemoryPayload } from "@/lib/contracts.generated";
 
 interface MemoryExplorerProps {
-  memory: MemoryData;
+  memory: MemoryPayload;
+}
+
+function timestamp(epochSeconds: number): string {
+  if (!epochSeconds) return "—";
+  return new Date(epochSeconds * 1000).toISOString().replace("T", " ").slice(0, 16);
 }
 
 export function MemoryExplorer({ memory }: MemoryExplorerProps) {
   const [activeTab, setActiveTab] = useState<"facts" | "observations">("facts");
 
-  const facts = memory?.facts || [];
-  const observations = memory?.observations || [];
+  const facts = memory.facts;
+  const observations = memory.observations;
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      const nextTab = activeTab === "facts" ? "observations" : "facts";
+      setActiveTab(nextTab);
+      document.getElementById(`tab-${nextTab}`)?.focus();
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      setActiveTab("facts");
+      document.getElementById("tab-facts")?.focus();
+    } else if (e.key === "End") {
+      e.preventDefault();
+      setActiveTab("observations");
+      document.getElementById("tab-observations")?.focus();
+    }
+  };
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-xl font-bold font-display text-white tracking-tight flex items-center gap-2">
-            <Database className="h-5 w-5 text-emerald-400" />
-            SQLite Memory Store Explorer (`memory.db`)
+          <h3 className="text-xl font-bold font-display text-fg tracking-tight flex items-center gap-2">
+            <Database className="h-5 w-5 text-hue-emerald" aria-hidden />
+            Memory Store Explorer
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Inspect persistent agent memory facts and synthesis observations loaded from runtime database
+          <p className="text-xs text-fg-3 mt-0.5">
+            Facts and observations merged across every persona&apos;s{" "}
+            <code className="text-fg-2">memory.db</code> shard
           </p>
         </div>
 
-        {/* Tab Selector */}
-        <div className="flex items-center p-1 rounded-xl bg-slate-950/80 border border-slate-800/80 font-mono text-xs w-fit">
-          <button
-            type="button"
-            onClick={() => setActiveTab("facts")}
-            aria-pressed={activeTab === "facts"}
-            aria-label="Filter memory by facts"
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-              activeTab === "facts"
-                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-950/50"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <BookOpen className="h-3.5 w-3.5" />
-            Facts ({facts.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("observations")}
-            aria-pressed={activeTab === "observations"}
-            aria-label="Filter memory by observations"
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-              activeTab === "observations"
-                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-950/50"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Lightbulb className="h-3.5 w-3.5" />
-            Observations ({observations.length})
-          </button>
+        <div className="flex items-center gap-2 font-mono text-xs">
+          <span className="px-3 py-1 rounded-full bg-panel border border-line text-hue-cyan">
+            {memory.total_facts.toLocaleString()} facts
+            {memory.facts_this_week > 0 && (
+              <span className="text-hue-emerald"> (+{memory.facts_this_week} this week)</span>
+            )}
+          </span>
+          <span className="px-3 py-1 rounded-full bg-panel border border-line text-hue-violet">
+            {memory.total_observations.toLocaleString()} observations
+          </span>
         </div>
       </div>
 
-      <div className="sr-only" aria-live="polite" aria-atomic="true">
-        Showing {activeTab === "facts" ? `${facts.length} memory facts` : `${observations.length} synthesis observations`}.
+      <div
+        role="tablist"
+        aria-label="Memory Explorer tabs"
+        onKeyDown={handleKeyDown}
+        className="flex items-center gap-2"
+      >
+        <button
+          id="tab-facts"
+          role="tab"
+          tabIndex={activeTab === "facts" ? 0 : -1}
+          aria-selected={activeTab === "facts"}
+          aria-controls="panel-facts"
+          onClick={() => setActiveTab("facts")}
+          onKeyDown={handleKeyDown}
+          className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
+            activeTab === "facts"
+              ? "bg-hue-cyan-tint/50 text-hue-cyan border-hue-cyan-line/50"
+              : "bg-panel/60 text-fg-3 border-line hover:border-line-strong"
+          }`}
+        >
+          <BookOpen className="h-3.5 w-3.5 inline mr-1.5" aria-hidden />
+          Facts ({facts.length})
+        </button>
+        <button
+          id="tab-observations"
+          role="tab"
+          tabIndex={activeTab === "observations" ? 0 : -1}
+          aria-selected={activeTab === "observations"}
+          aria-controls="panel-observations"
+          onClick={() => setActiveTab("observations")}
+          onKeyDown={handleKeyDown}
+          className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
+            activeTab === "observations"
+              ? "bg-hue-violet-tint/50 text-hue-violet border-hue-violet-line/50"
+              : "bg-panel/60 text-fg-3 border-line hover:border-line-strong"
+          }`}
+        >
+          <Lightbulb className="h-3.5 w-3.5 inline mr-1.5" aria-hidden />
+          Observations ({observations.length})
+        </button>
       </div>
 
-      {/* Facts View */}
       {activeTab === "facts" && (
-        <div className="glass-panel rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl overflow-hidden shadow-xl">
+        <div
+          role="tabpanel"
+          id="panel-facts"
+          aria-labelledby="tab-facts"
+          tabIndex={0}
+          className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
           <div className="overflow-x-auto">
             <table className="w-full text-left font-mono text-xs">
-              <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800/80 uppercase text-[10px] tracking-wider">
+              <thead className="bg-sunken/80 text-fg-3 border-b border-line/80 uppercase text-[10px] tracking-wider">
                 <tr>
                   <th className="px-5 py-3">ID</th>
-                  <th className="px-5 py-3">Entity / Key</th>
-                  <th className="px-5 py-3">Fact Statement</th>
-                  <th className="px-5 py-3">Persona / Source</th>
-                  <th className="px-5 py-3 text-right">Created At</th>
+                  <th className="px-5 py-3">Kind / Key</th>
+                  <th className="px-5 py-3">Value</th>
+                  <th className="px-5 py-3">Shard</th>
+                  <th className="px-5 py-3 text-right">Updated</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-slate-300">
+              <tbody className="divide-y divide-line/60 text-fg-2">
                 {facts.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-5 py-8 text-center text-slate-500 italic">
-                      No memory facts found in database.
+                    <td colSpan={5} className="px-5 py-8 text-center text-fg-4 italic">
+                      No memory facts found.
                     </td>
                   </tr>
                 ) : (
                   facts.map((f) => (
-                    <tr key={f.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="px-5 py-3.5 text-slate-500">{f.id}</td>
-                      <td className="px-5 py-3.5 font-bold text-cyan-300">{f.entity}</td>
-                      <td className="px-5 py-3.5 font-sans text-xs text-slate-200 leading-relaxed">
-                        {f.fact}
+                    <tr key={`${f.persona}-${f.id}`} className="hover:bg-raised/40 transition-colors">
+                      <td className="px-5 py-3.5 text-fg-4">{f.id}</td>
+                      <td className="px-5 py-3.5 font-bold text-hue-cyan">
+                        {f.kind}
+                        {f.key && <span className="text-fg-4 font-normal"> / {f.key}</span>}
+                      </td>
+                      <td className="px-5 py-3.5 font-sans text-xs text-fg leading-relaxed">
+                        {f.value}
+                        {f.tags.length > 0 && (
+                          <span className="ml-2 text-[10px] font-mono text-fg-4">
+                            {f.tags.map((t) => `#${t}`).join(" ")}
+                          </span>
+                        )}
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-emerald-500/20 text-[11px]">
-                          {f.persona || "System"}
+                        <span className="px-2 py-0.5 rounded bg-raised text-hue-emerald border border-hue-emerald-line/20 text-[11px]">
+                          {f.persona}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-right text-slate-500 text-[11px]">
-                        {f.createdAt || "N/A"}
+                      <td className="px-5 py-3.5 text-right text-fg-4 text-[11px]">
+                        {timestamp(f.updated_at)}
                       </td>
                     </tr>
                   ))
@@ -111,40 +165,49 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
         </div>
       )}
 
-      {/* Observations View */}
       {activeTab === "observations" && (
-        <div className="glass-panel rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl overflow-hidden shadow-xl">
+        <div
+          role="tabpanel"
+          id="panel-observations"
+          aria-labelledby="tab-observations"
+          tabIndex={0}
+          className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
           <div className="overflow-x-auto">
             <table className="w-full text-left font-mono text-xs">
-              <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800/80 uppercase text-[10px] tracking-wider">
+              <thead className="bg-sunken/80 text-fg-3 border-b border-line/80 uppercase text-[10px] tracking-wider">
                 <tr>
                   <th className="px-5 py-3">ID</th>
-                  <th className="px-5 py-3">Category</th>
-                  <th className="px-5 py-3">Observation Summary</th>
-                  <th className="px-5 py-3 text-right">Timestamp</th>
+                  <th className="px-5 py-3">Shard</th>
+                  <th className="px-5 py-3">Observation</th>
+                  <th className="px-5 py-3 text-right">Weight</th>
+                  <th className="px-5 py-3 text-right">Confidence</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-slate-300">
+              <tbody className="divide-y divide-line/60 text-fg-2">
                 {observations.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-5 py-8 text-center text-slate-500 italic">
-                      No synthesis observations found in database.
+                    <td colSpan={5} className="px-5 py-8 text-center text-fg-4 italic">
+                      No observations recorded.
                     </td>
                   </tr>
                 ) : (
                   observations.map((o) => (
-                    <tr key={o.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="px-5 py-3.5 text-slate-500">{o.id}</td>
+                    <tr key={`${o.persona}-${o.id}`} className="hover:bg-raised/40 transition-colors">
+                      <td className="px-5 py-3.5 text-fg-4">{o.id}</td>
                       <td className="px-5 py-3.5">
-                        <span className="px-2 py-0.5 rounded bg-purple-950/50 text-purple-300 border border-purple-800/30 text-[11px]">
-                          {o.category}
+                        <span className="px-2 py-0.5 rounded bg-raised text-hue-violet border border-hue-violet-line/20 text-[11px]">
+                          {o.persona}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 font-sans text-xs text-slate-200 leading-relaxed">
-                        {o.observation}
+                      <td className="px-5 py-3.5 font-sans text-xs text-fg leading-relaxed">
+                        {o.summary}
                       </td>
-                      <td className="px-5 py-3.5 text-right text-slate-500 text-[11px]">
-                        {o.timestamp || "N/A"}
+                      <td className="px-5 py-3.5 text-right text-hue-amber">
+                        {o.weight.toFixed(2)}
+                      </td>
+                      <td className="px-5 py-3.5 text-right text-hue-emerald">
+                        {(o.confidence * 100).toFixed(0)}%
                       </td>
                     </tr>
                   ))
@@ -152,6 +215,24 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {Object.keys(memory.kind_counts).length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
+          <span className="text-fg-4 flex items-center gap-1">
+            <Layers className="h-3 w-3" aria-hidden /> by kind:
+          </span>
+          {Object.entries(memory.kind_counts)
+            .sort((a, b) => b[1] - a[1])
+            .map(([kind, count]) => (
+              <span
+                key={kind}
+                className="px-2 py-0.5 rounded-full bg-panel border border-line text-fg-2"
+              >
+                {kind} <span className="text-hue-cyan">{count}</span>
+              </span>
+            ))}
         </div>
       )}
     </div>

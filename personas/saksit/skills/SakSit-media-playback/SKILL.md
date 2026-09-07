@@ -1,8 +1,6 @@
 ---
 name: SakSit-SakThai-media-playback
-description: Find and deliver playable media links for requested tracks, playlists,   or sleep/relaxation
-  content across desktop and mobile.
-...
+description: "Find and deliver playable media links for requested tracks, playlists,   or sleep/relaxation content across desktop and mobile."
 ---
 
 # Media playback: links and device delivery

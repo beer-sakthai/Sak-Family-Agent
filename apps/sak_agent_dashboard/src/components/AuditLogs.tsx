@@ -1,142 +1,145 @@
 "use client";
 
-import React, { useState } from "react";
-import { Shield, ShieldAlert, Filter, AlertTriangle, Info } from "lucide-react";
-import { AuditLog, AuditSeverity } from "@/lib/types";
+import React from "react";
+import { AlertTriangle, Info, Shield, ShieldAlert, ShieldCheck } from "lucide-react";
+
+import type { AuditEvent, AuditPayload } from "@/lib/contracts.generated";
 
 interface AuditLogsProps {
-  logs: AuditLog[];
-  onSeverityChange?: (severity: string) => void;
+  audit: AuditPayload;
+  /** The active severity filter, owned by the page and sent to the API. */
+  severity: string;
+  onSeverityChange: (severity: string) => void;
 }
 
-export function AuditLogs({ logs, onSeverityChange }: AuditLogsProps) {
-  const [selectedSeverity, setSelectedSeverity] = useState<string>("ALL");
+/**
+ * The severities the AuditLogger actually writes
+ * (`agent/security_hardening.py:SecurityEvent`), plus ALL.
+ */
+const SEVERITIES = ["ALL", "critical", "high", "medium", "low"] as const;
 
-  const handleSeveritySelect = (sev: string) => {
-    setSelectedSeverity(sev);
-    if (onSeverityChange) {
-      onSeverityChange(sev);
-    }
-  };
+const BADGES: Record<string, { classes: string; icon: React.ReactNode }> = {
+  critical: {
+    classes: "bg-hue-rose/20 text-hue-rose border-hue-rose-line/40",
+    icon: <ShieldAlert className="h-3 w-3" aria-hidden />,
+  },
+  high: {
+    classes: "bg-orange-500/20 text-orange-400 border-orange-500/40",
+    icon: <AlertTriangle className="h-3 w-3" aria-hidden />,
+  },
+  medium: {
+    classes: "bg-hue-amber/20 text-hue-amber border-hue-amber-line/40",
+    icon: <AlertTriangle className="h-3 w-3" aria-hidden />,
+  },
+  low: {
+    classes: "bg-raised-2/40 text-fg-2 border-line-strong/40",
+    icon: <Info className="h-3 w-3" aria-hidden />,
+  },
+};
 
-  const filteredLogs = logs.filter((log) => {
-    if (selectedSeverity === "ALL") return true;
-    return log.severity.toLowerCase() === selectedSeverity.toLowerCase();
-  });
+function SeverityBadge({ severity }: { severity: string }) {
+  const badge = BADGES[severity.toLowerCase()] ?? BADGES.low;
+  return (
+    <span
+      className={`px-2.5 py-0.5 rounded-full font-mono text-[10px] uppercase font-bold border inline-flex items-center gap-1 ${badge.classes}`}
+    >
+      {badge.icon}
+      {severity}
+    </span>
+  );
+}
 
-  const getSeverityBadge = (severity: AuditSeverity | string) => {
-    const sev = severity.toLowerCase();
-    if (sev === "critical") {
-      return (
-        <span className="px-2.5 py-0.5 rounded-full font-mono text-[10px] uppercase font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center gap-1">
-          <ShieldAlert className="h-3 w-3" />
-          critical
-        </span>
-      );
-    }
-    if (sev === "warning" || sev === "warn") {
-      return (
-        <span className="px-2.5 py-0.5 rounded-full font-mono text-[10px] uppercase font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center gap-1">
-          <AlertTriangle className="h-3 w-3" />
-          warning
-        </span>
-      );
-    }
-    if (sev === "error") {
-      return (
-        <span className="px-2.5 py-0.5 rounded-full font-mono text-[10px] uppercase font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-1">
-          <ShieldAlert className="h-3 w-3" />
-          error
-        </span>
-      );
-    }
-    return (
-      <span className="px-2.5 py-0.5 rounded-full font-mono text-[10px] uppercase font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 flex items-center gap-1">
-        <Info className="h-3 w-3" />
-        info
-      </span>
-    );
-  };
+function formatDetails(details: AuditEvent["details"]): string {
+  const entries = Object.entries(details);
+  if (entries.length === 0) return "—";
+  return entries.map(([key, value]) => `${key}=${String(value)}`).join(" ");
+}
+
+export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps) {
+  // Filtering happens server-side now: the page passes `severity` down to the
+  // API. Previously this filtered a client-side copy while the API's own
+  // severity parameter went unused, so the two could disagree.
+  const events = audit.events;
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-xl font-bold font-display text-white tracking-tight flex items-center gap-2">
-            <Shield className="h-5 w-5 text-rose-400" />
-            Security Audit Log Inspector (`audit.log`)
+          <h3 className="text-xl font-bold font-display text-fg tracking-tight flex items-center gap-2">
+            <Shield className="h-5 w-5 text-hue-rose" aria-hidden />
+            Security Audit Log
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Real-time security event log inspector tracking persona actions, boundary validations, and security events
+          <p className="text-xs text-fg-3 mt-0.5">
+            Guardrail and hardening events from <code className="text-fg-2">audit.log</code>
           </p>
         </div>
+        <span className="text-xs font-mono px-3 py-1 rounded-full bg-panel border border-line text-fg-2">
+          {audit.total.toLocaleString()} shown
+        </span>
+      </div>
 
-        {/* Severity Filter Tabs */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-950/80 border border-slate-800/80 font-mono text-xs w-fit">
-          <span className="text-slate-500 px-2 text-[10px] uppercase flex items-center gap-1">
-            <Filter className="h-3 w-3 text-cyan-400" /> Severity:
-          </span>
-          {["ALL", "INFO", "WARNING", "CRITICAL"].map((sev) => (
+      <div className="flex flex-wrap items-center gap-2">
+        {SEVERITIES.map((sev) => {
+          const count = sev === "ALL" ? null : (audit.severity_counts[sev] ?? 0);
+          const active = severity === sev;
+          return (
             <button
               key={sev}
-              type="button"
-              onClick={() => handleSeveritySelect(sev)}
-              aria-pressed={selectedSeverity === sev}
-              aria-label={`Filter audit logs by ${sev} severity`}
-              className={`px-3 py-1 rounded-lg text-[11px] uppercase font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
-                selectedSeverity === sev
-                  ? "bg-slate-800 text-cyan-400 border border-cyan-500/30 shadow"
-                  : "text-slate-400 hover:text-slate-200"
+              onClick={() => onSeverityChange(sev)}
+              aria-pressed={active}
+              aria-label={`Filter audit log by ${sev} severity`}
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                active
+                  ? "bg-hue-cyan-tint/50 text-hue-cyan border-hue-cyan-line/50"
+                  : "bg-panel/60 text-fg-3 border-line hover:border-line-strong"
               }`}
             >
               {sev}
+              {count !== null && <span className="ml-1.5 text-fg-4">{count}</span>}
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
-      <div className="sr-only" aria-live="polite" aria-atomic="true">
-        Showing {filteredLogs.length} security audit log {filteredLogs.length === 1 ? "entry" : "entries"} matching severity level {selectedSeverity}.
-      </div>
-
-      {/* Audit Log Table */}
-      <div className="glass-panel rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl overflow-hidden shadow-xl">
+      <div className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left font-mono text-xs">
-            <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800/80 uppercase text-[10px] tracking-wider">
+            <thead className="bg-sunken/80 text-fg-3 border-b border-line/80 uppercase text-[10px] tracking-wider">
               <tr>
                 <th className="px-5 py-3">Timestamp</th>
                 <th className="px-5 py-3">Severity</th>
-                <th className="px-5 py-3">Persona</th>
-                <th className="px-5 py-3">Event Summary</th>
-                <th className="px-5 py-3">Details / Context</th>
+                <th className="px-5 py-3">Type</th>
+                <th className="px-5 py-3">Message</th>
+                <th className="px-5 py-3">Details</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 text-slate-300">
-              {filteredLogs.length === 0 ? (
+            <tbody className="divide-y divide-line/60 text-fg-2">
+              {events.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-slate-500 italic">
-                    No security audit events recorded matching severity level &quot;{selectedSeverity}&quot;.
+                  <td colSpan={5} className="px-5 py-8 text-center text-fg-4 italic">
+                    {severity === "ALL"
+                      ? "No security audit events recorded."
+                      : `No ${severity} severity events recorded.`}
                   </td>
                 </tr>
               ) : (
-                filteredLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="px-5 py-3.5 text-slate-400 whitespace-nowrap text-[11px]">
-                      {log.timestamp}
+                events.map((event, index) => (
+                  <tr
+                    key={`${event.timestamp}-${event.type}-${index}`}
+                    className="hover:bg-raised/40 transition-colors"
+                  >
+                    <td className="px-5 py-3.5 text-fg-3 whitespace-nowrap text-[11px]">
+                      {new Date(event.timestamp * 1000).toISOString().replace("T", " ").slice(0, 19)}
                     </td>
                     <td className="px-5 py-3.5">
-                      {getSeverityBadge(log.severity)}
+                      <SeverityBadge severity={event.severity} />
                     </td>
-                    <td className="px-5 py-3.5 font-bold text-slate-200">
-                      {log.persona}
+                    <td className="px-5 py-3.5 font-bold text-fg">{event.type || "—"}</td>
+                    <td className="px-5 py-3.5 font-sans font-medium text-fg">
+                      {event.message}
                     </td>
-                    <td className="px-5 py-3.5 font-sans font-medium text-slate-100">
-                      {log.event}
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-400 text-[11px] font-mono">
-                      {log.details}
+                    <td className="px-5 py-3.5 text-fg-3 text-[11px] font-mono">
+                      {formatDetails(event.details)}
                     </td>
                   </tr>
                 ))
@@ -145,6 +148,13 @@ export function AuditLogs({ logs, onSeverityChange }: AuditLogsProps) {
           </table>
         </div>
       </div>
+
+      {audit.total === 0 && severity === "ALL" && (
+        <p className="text-xs text-fg-4 flex items-center gap-1.5">
+          <ShieldCheck className="h-3.5 w-3.5 text-hue-emerald" aria-hidden />
+          An empty audit log is a normal state — events are only written when a guardrail acts.
+        </p>
+      )}
     </div>
   );
 }

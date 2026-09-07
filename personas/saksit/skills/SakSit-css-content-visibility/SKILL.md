@@ -1,7 +1,6 @@
 ---
 name: SakSit-css-content-visibility
-description: Use CSS content-visibility to skip off-screen rendering and improve page performance.
-...
+description: "Use CSS content-visibility to skip off-screen rendering and improve page performance."
 ---
 
 # CSS Content-Visibility

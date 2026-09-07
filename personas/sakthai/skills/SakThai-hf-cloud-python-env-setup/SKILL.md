@@ -1,9 +1,6 @@
 ---
 name: SakThai-hf-cloud-python-env-setup
-description: "Set up an isolated Python environment for SageMaker / AWS work, with the right Python\
-  \ version and current boto3. Use this skill whenever Python code will be executed\
-  \ for a SageMaker deployment, training job, or any AWS automation \u2014 including\
-  \ when abo"
+description: "Set up an isolated Python environment for SageMaker / AWS work, with the right Python version and current boto3. Use this skill whenever Python code will be executed for a SageMaker deployment, training job, or any AWS automation — including when abo"
 ---
 
 # Python Environment Setup for SageMaker

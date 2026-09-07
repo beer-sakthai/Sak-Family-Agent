@@ -41,7 +41,7 @@ The current state is:
 | Workspace guidance | `README.md`, `CLAUDE.md` |
 | Shared identity docs | `docs/SOUL.md`, `docs/USER.md`, `docs/OPERATING_CONTRACT.md` |
 | Runtime notes | `infra/hermes-agents/README.md` |
-| Product delivery | `product/PLAN.md`, `product/todo.md` |
+| Product delivery | `product/PLAN.md`, `product/TODO.md` |
 
 ## Standalone Run Checklist
 

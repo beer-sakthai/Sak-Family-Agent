@@ -1,7 +1,6 @@
 ---
 name: SakJules-SakSit-kanban-worker
-description: Execute tasks in a kanban workflow pattern.
-...
+description: "Execute tasks in a kanban workflow pattern."
 ---
 
 # Kanban Worker — Pitfalls and Examples

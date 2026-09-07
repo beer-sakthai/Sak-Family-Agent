@@ -617,16 +617,16 @@ git commit -m "feat: expose search_sessions as a built-in agent/MCP tool"
 
 ---
 
-### Task 5: Add the Phase 4 checklist to `product/todo.md`
+### Task 5: Add the Phase 4 checklist to `product/TODO.md`
 
 **Files:**
-- Modify: `product/todo.md`
+- Modify: `product/TODO.md`
 
 **Interfaces:** none — documentation only.
 
 - [ ] **Step 1: Add the Phase 4 section**
 
-In `product/todo.md`, add a new section after the existing `## Phase 3: Hermes-free runtime migration` section (i.e. at the end of the file), matching the `[x]`/checklist style of Phases 1–3:
+In `product/TODO.md`, add a new section after the existing `## Phase 3: Hermes-free runtime migration` section (i.e. at the end of the file), matching the `[x]`/checklist style of Phases 1–3:
 
 ```markdown
 ## Phase 4: Memory architecture and session search
@@ -662,15 +662,15 @@ In `product/todo.md`, add a new section after the existing `## Phase 3: Hermes-f
 - [ ] **Step 2: Commit**
 
 ```bash
-git add product/todo.md
-git commit -m "docs: add Phase 4 checklist to product/todo.md"
+git add product/TODO.md
+git commit -m "docs: add Phase 4 checklist to product/TODO.md"
 ```
 
 ---
 
 ### Task 6: Full verification suite + Cycle Care/Trust checkpoint
 
-**Files:** none (verification only; the Phase 4 checklist items in `product/todo.md` get checked off here, see Step 5).
+**Files:** none (verification only; the Phase 4 checklist items in `product/TODO.md` get checked off here, see Step 5).
 
 **Interfaces:** none.
 
@@ -717,14 +717,14 @@ uv run sakthai doctor
 ```
 Expected: `cycle next` prints `Stage 5/6  [TRUST]  Secure the foundation`; `doctor` reports no new failures relative to a pre-Phase-4 baseline run (pre-existing unrelated warnings, e.g. missing optional API keys, are not blockers for this phase).
 
-- [ ] **Step 6: Check off the Phase 4 items in `product/todo.md`**
+- [ ] **Step 6: Check off the Phase 4 items in `product/TODO.md`**
 
-Edit `product/todo.md`: change every `- [ ]` added in Task 5 to `- [x] YYYY-MM-DD` (using today's actual date), for the items verified in Steps 1–5 above (Architecture audit, `search_sessions()`, CLI command, Agent tool, Test coverage, Local verification). Leave **GitHub delivery** as `- [ ]` — that is checked off in Task 7, after the PR is actually merged.
+Edit `product/TODO.md`: change every `- [ ]` added in Task 5 to `- [x] YYYY-MM-DD` (using today's actual date), for the items verified in Steps 1–5 above (Architecture audit, `search_sessions()`, CLI command, Agent tool, Test coverage, Local verification). Leave **GitHub delivery** as `- [ ]` — that is checked off in Task 7, after the PR is actually merged.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add product/todo.md
+git add product/TODO.md
 git commit -m "docs: check off Phase 4 items verified locally"
 ```
 
@@ -733,7 +733,7 @@ git commit -m "docs: check off Phase 4 items verified locally"
 ### Task 7: Push, green CI, merge, Cycle Growth checkpoint
 
 **Files:**
-- Modify: `product/todo.md` (final checkbox only)
+- Modify: `product/TODO.md` (final checkbox only)
 
 **Interfaces:** none.
 
@@ -764,10 +764,10 @@ Expected: first `cycle next` prints `Stage 6/6  [GROWTH]  Learn and grow`; `memo
 
 - [ ] **Step 5: Check off GitHub delivery and commit**
 
-Edit `product/todo.md`: change the Phase 4 **GitHub delivery** item from `- [ ]` to `- [x] YYYY-MM-DD` (today's date).
+Edit `product/TODO.md`: change the Phase 4 **GitHub delivery** item from `- [ ]` to `- [x] YYYY-MM-DD` (today's date).
 
 ```bash
-git add product/todo.md
+git add product/TODO.md
 git commit -m "docs: mark Phase 4 GitHub delivery complete"
 git push
 ```

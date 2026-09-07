@@ -1,28 +1,21 @@
-import { createApiHandler } from "@/lib/api/handler";
-import { getSessionTranscripts } from "@/lib/sakthai";
+/** `GET /api/sessions` — session summaries, and one transcript via `?id=`. */
 
-export const GET = createApiHandler("/api/sessions", async (ctx) => {
-  const search = ctx.params.search || ctx.params.query || undefined;
-  const id = ctx.params.id || undefined;
+import { intParam, parsePersonas, respond } from "@/lib/source";
 
-  const rawLimit = ctx.params.limit;
-  const rawOffset = ctx.params.offset;
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-  const limit = rawLimit !== undefined ? parseInt(rawLimit, 10) : 20;
-  const offset = rawOffset !== undefined ? parseInt(rawOffset, 10) : 0;
-
-  const result = await getSessionTranscripts({
-    demo: ctx.demo,
-    search,
-    limit,
-    offset,
-    id,
-  });
-
-  return {
-    sessions: result.sessions,
-    total: result.total,
-    dataSource: result.dataSource,
-    ...(result.detail ? { detail: result.detail } : {}),
-  };
-});
+export async function GET(request: Request): Promise<Response> {
+  const params = new URL(request.url).searchParams;
+  return respond(request, (source) =>
+    source.getSessions({
+      // `search` is the documented name; `query` stays accepted since the
+      // existing frontend sends it.
+      search: params.get("search") ?? params.get("query"),
+      limit: intParam(params.get("limit"), 20, 1, 100),
+      offset: intParam(params.get("offset"), 0, 0, 1_000_000),
+      id: params.get("id"),
+      personas: parsePersonas(params.get("persona")),
+    }),
+  );
+}

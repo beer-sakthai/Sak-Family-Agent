@@ -1,9 +1,6 @@
 ---
 name: SakJules-SakThai-hf-distillalign-video-distillation
-description: "Class-level reference on autoregressive video distillation \u2014 DMD mode-seeking\
-  \ vs Consistency-Distillation mode-covering, distributional precision/coverage evaluation\
-  \ in V-JEPA2 latent space, and the DistillAlign release (Wan2.1-1.3B students, 25K\
-  \ cle"
+description: "Class-level reference on autoregressive video distillation — DMD mode-seeking vs Consistency-Distillation mode-covering, distributional precision/coverage evaluation in V-JEPA2 latent space, and the DistillAlign release (Wan2.1-1.3B students, 25K cle"
 ---
 
 # Autoregressive Video Distillation — DistillAlign (mode-covering × mode-seeking)

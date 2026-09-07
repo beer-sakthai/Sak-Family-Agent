@@ -1,8 +1,7 @@
 ---
 name: SakThai-hf-computer-vision-course
-description: "Computer vision with HF \u2014 classification, detection, more."
+description: "Computer vision with HF — classification, detection, more."
 ---
-
 # Computer Vision with Hugging Face
 
 Based on the [Community HF Computer Vision Course](https://huggingface.co/learn/computer-vision-course). Covers CNNs, Vision Transformers (ViT), multimodal models, generative CV, object detection, segmentation, video processing, 3D vision, optimization, and synthetic data.

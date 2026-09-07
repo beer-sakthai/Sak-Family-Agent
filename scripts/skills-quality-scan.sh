@@ -6,15 +6,7 @@
 # Usage: skills-quality-scan.sh [--fix]
 #   --fix  Auto-add missing version: 1.0.0 to affected skill SKILL.md files
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-if [[ -z "$SFA" ]]; then
-  SFA="/opt/data/Sak-Family-Agent/personas"
-  if [[ ! -d "$SFA" ]] && [[ -d "$REPO_ROOT/personas" ]]; then
-    SFA="$REPO_ROOT/personas"
-  fi
-fi
-
+SFA="/opt/data/Sak-Family-Agent/personas"
 FIX_MODE=false
 [[ "$1" == "--fix" ]] && FIX_MODE=true
 ISSUES=0
@@ -58,7 +50,7 @@ check_skill() {
   fi
 }
 
-for p in sakthai sakking saksee saksit saktan sakjules; do
+for p in sakthai sakking saksee saksit sakjules; do
   dir="$SFA/$p/skills"
   [[ -d "$dir" ]] || continue
   while IFS= read -r -d '' skill; do

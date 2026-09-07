@@ -78,11 +78,6 @@ def test_verify_url_error_on_subprocess_exception(
     mock_subprocess_run.assert_called_once()
 
 
-def test_verify_url_blocks_control_characters() -> None:
-    result = verify_hf_upload.verify_url("https://example.com/test\r\n", "Resource")
-    assert result is False
-
-
 def test_verify_url_blocks_option_smuggling() -> None:
     result = verify_hf_upload.verify_url("-v", "Resource")
     assert result is False

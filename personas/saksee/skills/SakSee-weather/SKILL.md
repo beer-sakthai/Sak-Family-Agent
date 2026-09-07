@@ -1,8 +1,6 @@
 ---
 name: SakSee-weather
-description: Current weather and forecasts with web_fetch, falling back to wttr.in curl for locations,
-  rain, temperature, travel planning.
-...
+description: "Current weather and forecasts with web_fetch, falling back to wttr.in curl for locations, rain, temperature, travel planning."
 ---
 
 # Weather

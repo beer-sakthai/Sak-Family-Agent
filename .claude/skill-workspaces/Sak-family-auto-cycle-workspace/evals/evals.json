@@ -1,0 +1,64 @@
+{
+  "skill_name": "Sak-family-auto-cycle",
+  "evals": [
+    {
+      "id": 0,
+      "name": "bare-request-defaults-to-dry-run",
+      "prompt": "run the sak family auto-cycle",
+      "expected_output": "Six Agent calls in one message, each with --dry-run, a throwaway SAKTHAI_HOME, and --persona <name>; tasks sourced from repo docs without stopping to ask; one consolidated per-persona report.",
+      "files": [],
+      "assertions": [
+        "Avoids the SAKTHAI_HOME + --persona double-append trap",
+        "Defaults to --dry-run on every dispatch",
+        "Dispatches all six personas",
+        "Dispatches the safe default without stalling to ask test-or-live",
+        "Fans out in a single message rather than serially",
+        "Final report carries a row per persona with status",
+        "Injects Sak-auto-cycle-loop on every dispatch",
+        "Leaves --provider/--model unset so each persona's own config applies",
+        "Passes --persona for each of the six personas",
+        "Targets no /opt/data memory home",
+        "Uses a throwaway SAKTHAI_HOME on every dispatch"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "explicit-live-request",
+      "prompt": "get all six personas going on their backlogs, this is for real, point them at the actual homes",
+      "expected_output": "Recognizes explicit live authorization. Six parallel dispatches with --persona and NO SAKTHAI_HOME override (production path), no --dry-run, no /opt/data paths, no SAKTHAI_HOME+--persona double-append.",
+      "files": [],
+      "assertions": [
+        "Avoids the SAKTHAI_HOME + --persona double-append trap",
+        "Dispatches all six personas",
+        "Fans out in a single message rather than serially",
+        "Final report carries a row per persona with status",
+        "Injects Sak-auto-cycle-loop on every dispatch",
+        "Leaves --provider/--model unset so each persona's own config applies",
+        "Passes --persona for each of the six personas",
+        "Recognizes explicit live authorization (no --dry-run on dispatches)",
+        "States the correct production memory path per persona",
+        "Targets no /opt/data memory home"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "specified-task-dispatch",
+      "prompt": "kick off the family cycle to review the guardrail parity issue",
+      "expected_output": "Uses the given task for all six rather than inventing six unrelated ones or asking for more detail. Still defaults to dry-run + throwaway home + --persona, dispatched in one message.",
+      "files": [],
+      "assertions": [
+        "Avoids the SAKTHAI_HOME + --persona double-append trap",
+        "Defaults to --dry-run on every dispatch",
+        "Dispatches all six personas",
+        "Dispatches the safe default without stalling to ask test-or-live",
+        "Fans out in a single message rather than serially",
+        "Final report carries a row per persona with status",
+        "Injects Sak-auto-cycle-loop on every dispatch",
+        "Leaves --provider/--model unset so each persona's own config applies",
+        "Passes --persona for each of the six personas",
+        "Targets no /opt/data memory home",
+        "Uses a throwaway SAKTHAI_HOME on every dispatch"
+      ]
+    }
+  ]
+}

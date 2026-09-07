@@ -128,3 +128,70 @@ class TestSummarizeEvals:
 
         summary = summarize_evals(path=log_path)
         assert summary["count"] == 1
+
+
+class TestPersonaAttribution:
+    """The persona field exists so the dashboard need not guess who ran what.
+
+    It is a trailing defaulted field because the log is append-only: records
+    written before it existed simply lack the key, and must stay readable.
+    """
+
+    def test_persona_defaults_to_none(self) -> None:
+        assert _record().persona is None
+
+    def test_persona_round_trips_through_the_log(self, tmp_path: Path) -> None:
+        log_path = tmp_path / "eval.jsonl"
+        record_eval(_record(persona="saksee"), path=log_path)
+
+        line = json.loads(log_path.read_text(encoding="utf-8").strip())
+        assert line["persona"] == "saksee"
+
+    def test_legacy_record_without_the_key_still_parses(self, tmp_path: Path) -> None:
+        """A line written before this field existed must not break the reader."""
+        log_path = tmp_path / "eval.jsonl"
+        legacy = {
+            "timestamp": 1_700_000_000,
+            "task_preview": "old run",
+            "model": "claude-opus-4-8",
+            "provider": "anthropic",
+            "iterations": 1,
+            "stop_reason": "end_turn",
+            "latency_s": 1.0,
+            "input_tokens": 10,
+            "output_tokens": 5,
+            "tool_call_count": 0,
+            "had_error": False,
+        }
+        log_path.write_text(json.dumps(legacy) + "\n", encoding="utf-8")
+
+        summary = summarize_evals(path=log_path)
+        assert summary["count"] == 1
+
+    def test_mixed_legacy_and_attributed_lines_coexist(self, tmp_path: Path) -> None:
+        """The expected steady state: some lines attributed, some not."""
+        log_path = tmp_path / "eval.jsonl"
+        log_path.write_text(
+            json.dumps(
+                {
+                    "timestamp": 1_700_000_000,
+                    "task_preview": "old run",
+                    "model": "m",
+                    "provider": "anthropic",
+                    "iterations": 1,
+                    "stop_reason": "end_turn",
+                    "latency_s": 1.0,
+                    "input_tokens": 10,
+                    "output_tokens": 5,
+                    "tool_call_count": 0,
+                    "had_error": False,
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        record_eval(_record(model="m", persona="sakthai"), path=log_path)
+
+        summary = summarize_evals(path=log_path)
+        assert summary["count"] == 2
+        assert summary["per_model"]["m"]["count"] == 2

@@ -1,10 +1,6 @@
 ---
 name: SakJules-wrangler
-description: Cloudflare Workers CLI for deploying, developing, and managing Workers, KV, R2, D1,
-  Vectorize, Hyperdrive, Workers AI, Containers, Queues, Workflows, Pipelines, and
-  Secrets Store. Load before running wrangler commands to ensure correct syntax and
-  bes
-...
+description: "Cloudflare Workers CLI for deploying, developing, and managing Workers, KV, R2, D1, Vectorize, Hyperdrive, Workers AI, Containers, Queues, Workflows, Pipelines, and Secrets Store. Load before running wrangler commands to ensure correct syntax and bes"
 ---
 
 # Wrangler CLI

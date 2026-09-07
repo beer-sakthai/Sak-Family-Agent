@@ -1,8 +1,6 @@
 ---
 name: SakThai-hf-spaces-sign-in-oauth-deep-dive
-description: '>-   Complete deep-dive on the Hugging Face Spaces Sign-In with HF button (OAuth/OpenID
-  Connect).   Covers enabling OAuth in Space metadata, environment variables, scopes
-  system, authorization   and token endpoints, Gradio built-in integration, huggi'
+description: ">-   Complete deep-dive on the Hugging Face Spaces Sign-In with HF button (OAuth/OpenID Connect).   Covers enabling OAuth in Space metadata, environment variables, scopes system, authorization   and token endpoints, Gradio built-in integration, huggi"
 ---
 
 # Hugging Face Spaces Sign-In with HF OAuth — Deep Dive

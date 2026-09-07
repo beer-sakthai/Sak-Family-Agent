@@ -1,7 +1,6 @@
 ---
 name: SakKing-sakthai-cycle-joy
-description: Package and ship through CI without breaking the loop.
-...
+description: "Package and ship through CI without breaking the loop."
 ---
 
 # sakthai-cycle-joy

@@ -249,37 +249,6 @@ def resolve_gateway_credentials() -> tuple[str, str]:
     return base_url.rstrip("/"), api_key
 
 
-def resolve_huggingface_credentials() -> tuple[str, str]:
-    """Resolve the base URL and API key for the Hugging Face Inference Providers router.
-
-    Returns:
-        (base_url, api_key)
-
-    The router (https://router.huggingface.co/v1, overridable via
-    ``SAKTHAI_HF_API_BASE``) is OpenAI-compatible, so it reuses the same
-    ``call_openai_compat`` request path as the ``openai``/``ollama``/``gateway``
-    providers. Unlike Ollama, the router requires authentication, so this raises
-    :class:`AuthError` when ``HF_TOKEN`` is not set rather than falling back to a
-    placeholder key.
-    """
-    from .config import huggingface_api_base
-
-    token = os.environ.get("HF_TOKEN")
-    if not token:
-        raise AuthError(
-            "No Hugging Face credentials found. Set HF_TOKEN to a Hugging Face "
-            "access token (https://huggingface.co/settings/tokens)."
-        )
-    return huggingface_api_base(), token
-
-
-def huggingface_credential_source() -> str | None:
-    """Return a short label for the active Hugging Face credential, or None."""
-    if os.environ.get("HF_TOKEN"):
-        return "hf_token"
-    return None
-
-
 def local_credential_source() -> str | None:
     """Return a label for a distinct local-model credential, or None.
 
@@ -306,8 +275,6 @@ def get_credential_source(provider: str) -> str | None:
         return openai_credential_source()
     if provider == "gateway":
         return gateway_credential_source()
-    if provider == "huggingface":
-        return huggingface_credential_source()
     if provider == "anthropic":
         return anthropic_credential_source()
     return None

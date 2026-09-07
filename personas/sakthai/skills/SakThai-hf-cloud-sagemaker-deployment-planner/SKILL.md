@@ -1,9 +1,6 @@
 ---
 name: SakThai-hf-cloud-sagemaker-deployment-planner
-description: "Plan and coordinate the deployment of a model to Amazon SageMaker AI. Use this skill\
-  \ whenever the user wants to deploy, host, serve, or expose a model on SageMaker\
-  \ or AWS \u2014 including phrases like deploy a model, host this LLM on AWS, serve\
-  \ this embed"
+description: "Plan and coordinate the deployment of a model to Amazon SageMaker AI. Use this skill whenever the user wants to deploy, host, serve, or expose a model on SageMaker or AWS — including phrases like deploy a model, host this LLM on AWS, serve this embed"
 ---
 
 # SageMaker Deployment Planner

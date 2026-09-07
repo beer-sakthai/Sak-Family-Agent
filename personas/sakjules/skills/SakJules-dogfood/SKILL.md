@@ -1,6 +1,6 @@
 ---
 name: SakJules-dogfood
-description: 'Exploratory QA of web apps: find bugs, evidence, reports.'
+description: "Exploratory QA of web apps: find bugs, evidence, reports."
 ---
 
 # Dogfood: Systematic Web Application QA Testing

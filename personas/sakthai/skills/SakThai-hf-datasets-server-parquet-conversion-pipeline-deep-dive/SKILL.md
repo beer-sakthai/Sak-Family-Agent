@@ -1,11 +1,21 @@
 ---
 name: SakThai-hf-datasets-server-parquet-conversion-pipeline-deep-dive
-description: "Deep dive into the Hugging Face Datasets Server Parquet Conversion Pipeline \u2014\
-  \ the automated system that converts every dataset on the Hub to Parquet format.\
-  \ Covers streaming conversion, partial export for large datasets, copy-optimized\
-  \ path for Parquet-native datasets, byte-level read/write tracking, writer batch\
-  \ size tuning by modality, file naming conventions, sharding rules, the config-parquet-and-info\
-  \ job runner, and how libviewer's Rust engine enables page-pruned queries.\n"
+author: SakThai
+license: MIT
+description: >
+  Deep dive into the Hugging Face Datasets Server Parquet Conversion
+  Pipeline — the automated system that converts every dataset on the Hub
+  to Parquet format. Covers streaming conversion, partial export for
+  large datasets, copy-optimized path for Parquet-native datasets,
+  byte-level read/write tracking, writer batch size tuning by modality,
+  file naming conventions, sharding rules, the config-parquet-and-info job
+  runner, and how libviewer's Rust engine enables page-pruned queries.
+version: 1.0.0
+metadata:
+  hermes:
+    tags: [huggingface, datasets, server, parquet, conversion, pipeline, streaming, rust, pyarrow]
+    category: mlops
+category: mlops
 ---
 
 # HF Datasets Server Parquet Conversion Pipeline — Complete Architecture

@@ -1,7 +1,6 @@
 ---
 name: SakSit-b2b-saas-community-building-2026
-description: Saksit B2B Saas Community Building 2026
-...
+description: "Saksit B2B Saas Community Building 2026"
 ---
 
 # B2B SaaS Community-Led Growth Strategy 2026

@@ -1,0 +1,8 @@
+**SakJules · Master of Automation & CI/CD.**
+
+🧹 [code health improvement] Fix bare except in workbench-1.5b-local.py
+
+🎯 **What:** The code health issue addressed is a bare `except` in `sakthai-chat-cli/scripts/workbench/workbench-1.5b-local.py` when decoding JSON. It has been replaced with `except (json.JSONDecodeError, TypeError):`. The fix is applied to keep parity with `scripts/workbench/workbench-1.5b-local.py`. In addition, linting errors were fixed by `ruff` (split imports, remove unused variables, empty space removal).
+💡 **Why:** A bare `except` swallows critical system exceptions such as `KeyboardInterrupt` and `SystemExit` (Bandit B110). Narrowing down the exceptions caught prevents this.
+✅ **Verification:** I've run `uv run --extra dev ruff check` which confirmed all 14 fixed errors were fixed, and then `uv run --extra dev pytest tests/` which completed successfully and didn't result in any failing tests (2306 passing tests).
+✨ **Result:** Better code health by removing an anti-pattern (and other lint errors), keeping code parity with another similar file and avoiding hiding systemic errors.

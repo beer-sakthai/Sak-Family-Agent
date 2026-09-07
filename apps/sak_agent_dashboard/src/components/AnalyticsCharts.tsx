@@ -1,256 +1,329 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useSyncExternalStore } from "react";
 import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  AreaChart,
   Area,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
   Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
 } from "recharts";
-import { MetricsData, AgentPersona } from "@/lib/types";
-import { BarChart3, TrendingUp, Zap, PieChart as PieIcon } from "lucide-react";
+import { BarChart3, PieChart as PieIcon, TrendingUp, Zap } from "lucide-react";
+
+import { useChartTokens } from "@/lib/chart-theme";
+import type { MetricsPayload, PersonasPayload } from "@/lib/contracts.generated";
+import { TREND_WINDOWS, trendWindowLabel, type TrendWindow } from "@/lib/url-state";
 
 interface AnalyticsChartsProps {
-  metrics: MetricsData;
-  agents?: AgentPersona[];
+  metrics: MetricsPayload;
+  /** Days of trend to draw; 0 is everything the source returned. */
+  trend: TrendWindow;
+  onTrendChange: (days: TrendWindow) => void;
+  personas?: PersonasPayload;
+  /** The global persona filter; empty means the whole family. */
+  selectedPersonas?: string[];
 }
 
-const COLORS = ["#06b6d4", "#10b981", "#8b5cf6", "#f59e0b", "#f43f5e"];
+/** Rendered in place of a chart that has nothing real to show. */
+function EmptyChart({ label }: { label: string }) {
+  return (
+    <div className="h-64 w-full flex items-center justify-center text-xs font-mono text-fg-4 border border-dashed border-line rounded-xl">
+      {label}
+    </div>
+  );
+}
 
-export function AnalyticsCharts({ metrics, agents }: AnalyticsChartsProps) {
-  const [isMounted, setIsMounted] = useState(false);
+function Panel({
+  title,
+  source,
+  icon,
+  accent,
+  children,
+}: {
+  title: string;
+  source: string;
+  icon: React.ReactNode;
+  accent: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="glass-panel p-5 rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className={`p-2 rounded-lg border ${accent}`}>{icon}</div>
+          <h4 className="text-sm font-bold font-display text-fg">{title}</h4>
+        </div>
+        <span className="text-[10px] font-mono text-fg-4 uppercase tracking-wider">
+          {source}
+        </span>
+      </div>
+      <div className="h-64 w-full">{children}</div>
+    </div>
+  );
+}
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot client-mount flag to gate SSR-unsafe Recharts
-    setIsMounted(true);
-  }, []);
+/**
+ * True once hydrated, false during SSR.
+ *
+ * Recharts measures its container, so it can only render client-side. This is
+ * the `useSyncExternalStore` form of that gate rather than
+ * `useEffect(() => setMounted(true))`, which schedules a second render pass on
+ * every mount (and which `react-hooks/set-state-in-effect` rightly flags).
+ * The store never changes, so `subscribe` has nothing to unsubscribe.
+ */
+function useHydrated(): boolean {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
 
-  // Benchmark data for personas
-  const benchmarkData = (agents && agents.length > 0)
-    ? agents.map((a) => ({
-        name: a.name,
-        score: a.benchmarkScore ?? 90,
-        latency: a.latencyMs,
-      }))
-    : [
-        { name: "SakThai", score: 96.5, latency: 320 },
-        { name: "SakKing", score: 94.2, latency: 540 },
-        { name: "SakSee", score: 91.8, latency: 410 },
-        { name: "SakSit", score: 98.0, latency: 290 },
-        { name: "SakJules", score: 93.5, latency: 380 },
-      ];
+export function AnalyticsCharts({
+  metrics,
+  trend,
+  onTrendChange,
+  personas,
+  selectedPersonas = [],
+}: AnalyticsChartsProps) {
+  const isMounted = useHydrated();
+  // Colours come from the same CSS variables as the rest of the UI; Recharts
+  // takes them as props, so they are read rather than applied as classes.
+  const chart = useChartTokens();
 
-  // Token Stats Breakdown
-  const tokenBreakdown = [
-    { name: "Prompt Tokens", value: metrics?.tokenStats?.promptTokens || 950000 },
-    { name: "Completion Tokens", value: metrics?.tokenStats?.completionTokens || 500000 },
-  ];
+  const tooltipStyle = {
+    backgroundColor: chart.tooltipBackground,
+    borderColor: chart.tooltipBorder,
+    borderRadius: "0.5rem",
+    color: chart.tooltipText,
+  };
 
-  // Stop Reasons Breakdown for Pie Chart
-  const stopReasonData = metrics?.stopReasons
-    ? Object.entries(metrics.stopReasons).map(([key, val]) => ({
-        name: key,
-        value: val,
-      }))
-    : [
-        { name: "end_turn", value: 740 },
-        { name: "max_tokens", value: 21 },
-      ];
+  // Every series below is derived from real data or omitted. The previous
+  // version filled gaps with hardcoded numbers and, for a persona with no
+  // score, `Math.floor(Math.random() * 15 + 85)` -- which made the render
+  // non-deterministic and the chart fiction.
+  // A persona with no runs has nothing to plot; the global filter narrows
+  // further, so the per-persona charts describe the same set the rest of the
+  // page does rather than quietly showing all six.
+  const activePersonas = (personas?.personas ?? []).filter(
+    (p) => p.runs > 0 && (selectedPersonas.length === 0 || selectedPersonas.includes(p.name)),
+  );
 
-  // Trend lines data
-  const trendData = (metrics?.trends && metrics.trends.length > 0)
-    ? metrics.trends
-    : [
-        { date: "Day 1", runs: 120, latencyMs: 340 },
-        { date: "Day 2", runs: 180, latencyMs: 390 },
-        { date: "Day 3", runs: 210, latencyMs: 370 },
-        { date: "Day 4", runs: 250, latencyMs: 410 },
-        { date: "Day 5", runs: 300, latencyMs: 388 },
-      ];
+  const successData = activePersonas.map((p) => ({
+    name: p.display_name,
+    success: Number((((p.runs - p.errors) / p.runs) * 100).toFixed(1)),
+    latency: Math.round(p.avg_latency_ms),
+  }));
+
+  const tokenData = activePersonas.map((p) => ({
+    name: p.display_name,
+    input: p.input_tokens,
+    output: p.output_tokens,
+  }));
+
+  const stopReasonData = Object.entries(metrics.stop_reasons).map(([name, value]) => ({
+    name,
+    value,
+  }));
+
+  // The window is a lens on the series the payload already carries, not a
+  // second request: a re-fetch could return a different set from the one the
+  // KPI strip above was drawn from, and the two would silently disagree.
+  const windowed = trend === 0 ? metrics.trends : metrics.trends.slice(-trend);
+
+  const trendData = windowed.map((point) => ({
+    date: point.date.slice(5), // MM-DD is enough on a crowded axis
+    runs: point.runs,
+    errors: point.errors,
+    latency: Math.round(point.avg_latency_ms),
+  }));
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-xl font-bold font-display text-white tracking-tight">
-            Performance & Benchmark Analytics
-          </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Interactive performance charts, token distribution, latency trends, and execution metrics
-          </p>
+      {/* The title, the description and the three headline figures that used to
+          sit here are all on screen already — in the topbar and the KPI strip
+          above. What only this view can say is how many personas its per-persona
+          charts are actually drawn from. */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {/* The window belongs beside the charts it scopes, not in the topbar:
+            it is the only control that means anything on this section alone. */}
+        <div
+          role="group"
+          aria-label="Trend window"
+          className="inline-flex overflow-hidden rounded-full border border-line bg-panel"
+        >
+          {TREND_WINDOWS.map((days) => (
+            <button
+              key={days}
+              onClick={() => onTrendChange(days)}
+              aria-pressed={trend === days}
+              aria-label={`Set trend window to ${trendWindowLabel(days)}`}
+              title={`Set trend window to ${trendWindowLabel(days)}`}
+              className={`px-2.5 py-1 font-mono text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                trend === days ? "bg-raised/80 text-fg" : "text-fg-3 hover:text-fg"
+              }`}
+            >
+              {trendWindowLabel(days)}
+            </button>
+          ))}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-mono px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-cyan-400">
-            Total Runs: <strong className="text-white">{metrics?.totalRuns ?? 761} total</strong>
-          </span>
-          <span className="text-xs font-mono px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-emerald-400">
-            Success Rate: <strong className="text-white">{((metrics?.successRate ?? 0.985) * 100).toFixed(1)}%</strong>
-          </span>
-        </div>
+
+        <span
+          data-testid="analytics-scope"
+          className="rounded-full border border-line bg-panel px-3 py-1 font-mono text-xs text-fg-3"
+        >
+          {selectedPersonas.length > 0
+            ? `${activePersonas.length} of ${selectedPersonas.length} filtered personas have attributed runs`
+            : `${activePersonas.length} of ${personas?.personas.length ?? 0} personas have attributed runs`}
+          {" · "}
+          {windowed.length} {windowed.length === 1 ? "day" : "days"} of trend
+        </span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 1. Benchmark Scores per Persona (Bar Chart) */}
-        <div className="glass-panel p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                <BarChart3 className="h-4 w-4" />
-              </div>
-              <h4 className="text-sm font-bold font-display text-slate-200">
-                Persona Benchmark Scores (%)
-              </h4>
-            </div>
-            <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider">
-              eval.jsonl
-            </span>
-          </div>
+        <Panel
+          title="Success Rate by Persona (%)"
+          source="eval.jsonl"
+          accent="bg-hue-cyan/10 text-hue-cyan border-hue-cyan-line/20"
+          icon={<BarChart3 className="h-4 w-4" />}
+        >
+          {!isMounted ? null : successData.length === 0 ? (
+            <EmptyChart label="No attributed runs yet" />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+              <BarChart data={successData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+                <XAxis dataKey="name" stroke={chart.axis} fontSize={11} tickLine={false} />
+                <YAxis stroke={chart.axis} fontSize={11} domain={[0, 100]} tickLine={false} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Bar dataKey="success" fill={chart.series[0]} radius={[6, 6, 0, 0]} name="Success %" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </Panel>
 
-          <div className="h-64 w-full">
-            {isMounted && (
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                <BarChart data={benchmarkData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                  <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#64748b" fontSize={11} domain={[70, 100]} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", borderRadius: "0.5rem", color: "#f8fafc" }}
-                  />
-                  <Bar dataKey="score" fill="#06b6d4" radius={[6, 6, 0, 0]} name="Score %" />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
+        <Panel
+          title="Token Usage by Persona"
+          source="eval.jsonl"
+          accent="bg-hue-emerald/10 text-hue-emerald border-hue-emerald-line/20"
+          icon={<Zap className="h-4 w-4" />}
+        >
+          {!isMounted ? null : tokenData.length === 0 ? (
+            <EmptyChart label="No attributed runs yet" />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+              <AreaChart data={tokenData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+                <XAxis dataKey="name" stroke={chart.axis} fontSize={11} tickLine={false} />
+                <YAxis stroke={chart.axis} fontSize={11} tickLine={false} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Area
+                  type="monotone"
+                  dataKey="input"
+                  stackId="1"
+                  stroke={chart.series[0]}
+                  fill={chart.series[0]}
+                  fillOpacity={0.3}
+                  name="Input"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="output"
+                  stackId="1"
+                  stroke={chart.series[1]}
+                  fill={chart.series[1]}
+                  fillOpacity={0.3}
+                  name="Output"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </Panel>
 
-        {/* 2. Token Usage Distribution (Area Chart) */}
-        <div className="glass-panel p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                <Zap className="h-4 w-4" />
-              </div>
-              <h4 className="text-sm font-bold font-display text-slate-200">
-                Token Usage & Consumption
-              </h4>
-            </div>
-            <span className="text-xs font-mono text-emerald-400">
-              Total: {(metrics?.tokenStats?.totalTokens ?? 1450000).toLocaleString()} tokens
-            </span>
-          </div>
+        <Panel
+          title="Runs & Latency Over Time"
+          source="eval.jsonl"
+          accent="bg-hue-violet/10 text-hue-violet border-hue-violet-line/20"
+          icon={<TrendingUp className="h-4 w-4" />}
+        >
+          {!isMounted ? null : trendData.length === 0 ? (
+            <EmptyChart label="No runs recorded yet" />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+              <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+                <XAxis dataKey="date" stroke={chart.axis} fontSize={11} tickLine={false} />
+                <YAxis stroke={chart.axis} fontSize={11} tickLine={false} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Line type="monotone" dataKey="runs" stroke={chart.series[0]} strokeWidth={2} dot={false} name="Runs" />
+                <Line
+                  type="monotone"
+                  dataKey="latency"
+                  stroke={chart.series[3]}
+                  strokeWidth={2}
+                  dot={false}
+                  name="Latency (ms)"
+                />
+                {/* `errors` was computed into trendData and never drawn. It is
+                    the one series here that says whether the runs beside it
+                    actually worked. */}
+                <Line
+                  type="monotone"
+                  dataKey="errors"
+                  stroke={chart.series[4]}
+                  strokeWidth={2}
+                  strokeDasharray="4 3"
+                  dot={false}
+                  name="Errors"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </Panel>
 
-          <div className="h-64 w-full">
-            {isMounted && (
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                <AreaChart data={tokenBreakdown} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="tokenGlow" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                  <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#64748b" fontSize={11} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", borderRadius: "0.5rem", color: "#f8fafc" }}
-                  />
-                  <Area type="monotone" dataKey="value" stroke="#10b981" fillOpacity={1} fill="url(#tokenGlow)" name="Tokens" />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-
-        {/* 3. Latency Trends (Line Chart) */}
-        <div className="glass-panel p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                <TrendingUp className="h-4 w-4" />
-              </div>
-              <h4 className="text-sm font-bold font-display text-slate-200">
-                Latency Trends (ms)
-              </h4>
-            </div>
-            <span className="text-xs font-mono text-cyan-300">
-              Avg: {metrics?.avgLatencyMs ?? 388}ms
-            </span>
-          </div>
-
-          <div className="h-64 w-full">
-            {isMounted && (
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                  <XAxis dataKey="date" stroke="#64748b" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#64748b" fontSize={11} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", borderRadius: "0.5rem", color: "#f8fafc" }}
-                  />
-                  <Line type="monotone" dataKey="latencyMs" stroke="#06b6d4" strokeWidth={3} dot={{ r: 4, fill: "#06b6d4" }} name="Latency (ms)" />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-
-        {/* 4. Stop Reason Breakdown (Pie Chart) */}
-        <div className="glass-panel p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                <PieIcon className="h-4 w-4" />
-              </div>
-              <h4 className="text-sm font-bold font-display text-slate-200">
-                Stop Reason Breakdown
-              </h4>
-            </div>
-            <span className="text-xs font-mono text-purple-400">
-              {stopReasonData.length} Reasons Captured
-            </span>
-          </div>
-
-          <div className="h-64 w-full flex items-center justify-center">
-            {isMounted && (
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                <PieChart>
-                  <Pie
-                    data={stopReasonData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={85}
-                    paddingAngle={4}
-                    dataKey="value"
-                    nameKey="name"
-                  >
-                    {stopReasonData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", borderRadius: "0.5rem", color: "#f8fafc" }}
-                  />
-                  <Legend
-                    formatter={(value) => <span className="text-xs font-mono text-slate-300">{value}</span>}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
+        <Panel
+          title="Stop Reason Breakdown"
+          source="eval.jsonl"
+          accent="bg-hue-amber/10 text-hue-amber border-hue-amber-line/20"
+          icon={<PieIcon className="h-4 w-4" />}
+        >
+          {!isMounted ? null : stopReasonData.length === 0 ? (
+            <EmptyChart label="No runs recorded yet" />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+              <PieChart>
+                <Pie
+                  data={stopReasonData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={90}
+                  innerRadius={45}
+                  paddingAngle={2}
+                >
+                  {stopReasonData.map((entry, index) => (
+                    <Cell key={entry.name} fill={chart.series[index % chart.series.length]} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={tooltipStyle} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </Panel>
       </div>
     </div>
   );

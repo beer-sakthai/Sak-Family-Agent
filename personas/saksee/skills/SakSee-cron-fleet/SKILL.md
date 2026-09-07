@@ -1,8 +1,6 @@
 ---
 name: SakSee-cron-fleet
-description: Manage a Hermes cron fleet across multiple profiles u2014 list, audit,    re-enable,
-  and remediate scheduled jobs.
-...
+description: "Manage a Hermes cron fleet across multiple profiles u2014 list, audit,    re-enable, and remediate scheduled jobs."
 ---
 
 # Cron Fleet — Multi-Profile Scheduled Jobs

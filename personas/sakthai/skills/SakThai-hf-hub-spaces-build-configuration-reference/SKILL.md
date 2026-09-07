@@ -1,8 +1,6 @@
 ---
 name: SakThai-hf-hub-spaces-build-configuration-reference
-description: "Complete reference for Hugging Face Spaces build configuration \u2014 all YAML metadata\
-  \ parameters in README.md, SDK types, hardware tiers, OAuth setup, custom headers,\
-  \ preloading, and advanced configuration patterns"
+description: "Complete reference for Hugging Face Spaces build configuration — all YAML metadata parameters in README.md, SDK types, hardware tiers, OAuth setup, custom headers, preloading, and advanced configuration patterns"
 ---
 
 # HF Hub Spaces Build Configuration Reference

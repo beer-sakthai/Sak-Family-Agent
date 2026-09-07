@@ -1,10 +1,16 @@
 ---
 name: SakThai-hf-model-release-checklist
-description: "Complete reference on the Hugging Face Hub Model Release Checklist \u2014 a structured\
-  \ workflow for releasing ML models to the Hub with proper metadata, model cards,\
-  \ library integration, discoverability optimization, access control, and post-release\
-  \ maintenance. Covers YAML metadata, pipeline tags, base_model relations, gated\
-  \ access, collections, Spaces demos, quantized variants, and carbon emissions reporting."
+author: SakThai
+category: hf-hub
+description: >-
+  Complete reference on the Hugging Face Hub Model Release Checklist — a
+  structured workflow for releasing ML models to the Hub with proper metadata,
+  model cards, library integration, discoverability optimization, access
+  control, and post-release maintenance. Covers YAML metadata, pipeline tags,
+  base_model relations, gated access, collections, Spaces demos, quantized
+  variants, and carbon emissions reporting.
+version: 1.0.0
+tags: [huggingface, hub, models, release, checklist, model-cards, metadata, discoverability]
 ---
 
 # Hugging Face Hub — Model Release Checklist

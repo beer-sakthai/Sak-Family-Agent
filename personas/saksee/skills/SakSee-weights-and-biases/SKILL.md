@@ -1,6 +1,6 @@
 ---
 name: SakSee-weights-and-biases
-description: 'W&B: log ML experiments, sweeps, model registry, dashboards.'
+description: "W&B: log ML experiments, sweeps, model registry, dashboards."
 ---
 
 # Weights & Biases: ML Experiment Tracking & MLOps

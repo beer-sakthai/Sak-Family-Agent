@@ -1,6 +1,6 @@
 ---
 name: SakThai-hf-distilabel-deep-dive
-description: '# Skill: hf-distilabel-deep-dive'
+description: "# Skill: hf-distilabel-deep-dive"
 ---
 
 # Skill: hf-distilabel-deep-dive

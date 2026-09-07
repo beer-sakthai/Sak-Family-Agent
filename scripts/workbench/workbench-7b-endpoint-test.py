@@ -16,7 +16,10 @@ else:
     print("Or set ENDPOINT_URL env var")
     sys.exit(1)
 
-TOKEN_PATH = "/opt/data/profiles/sakthai/home/.cache/huggingface/token"  # nosec B105 — filesystem path, not a credential
+# nosec B105 — this is the filesystem *path* to the HF token file on the
+# training box, not a credential. The secret is the file's contents, read
+# below and never committed.
+TOKEN_PATH = "/opt/data/profiles/sakthai/home/.cache/huggingface/token"  # nosec B105
 with open(TOKEN_PATH) as f:
     HF_TOKEN = f.read().strip()
 
@@ -155,9 +158,10 @@ for i, test in enumerate(tests):
             try:
                 json.loads(content)
                 checks.append("valid_json")
-            except json.JSONDecodeError:
-                # Not JSON — that is the check failing, not an error. A bare
-                # `except:` here also swallowed KeyboardInterrupt and SystemExit.
+            except (json.JSONDecodeError, TypeError):
+                # Not valid JSON — that is the check failing, not an error
+                # to hide. A bare `except` here also swallowed
+                # KeyboardInterrupt/SystemExit (bandit B110).
                 pass
 
         result = {

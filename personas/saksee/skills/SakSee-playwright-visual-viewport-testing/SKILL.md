@@ -1,8 +1,6 @@
 ---
 name: SakSee-SakThai-playwright-visual-viewport-testing
-description: Validates and correlates physical, layout, and visual viewport metrics   in real mobile/desktop
-  contexts.
-...
+description: "Validates and correlates physical, layout, and visual viewport metrics   in real mobile/desktop contexts."
 ---
 
 # Playwright Visual Viewport Testing

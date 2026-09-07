@@ -1,8 +1,19 @@
 ---
 name: SakThai-hf-xet-storage-backend
-description: "Complete reference on the Xet storage backend \u2014 Hugging Face's content-addressable\
-  \ storage system replacing Git LFS for scalable, deduplicated model and dataset\
-  \ storage on the Hub"
+author: SakThai
+license: MIT
+description: Complete reference on the Xet storage backend — Hugging Face's content-addressable storage system replacing Git LFS for scalable, deduplicated model and dataset storage on the Hub
+version: 1.0.0
+tags: [huggingface, storage, xet, git-lfs, deduplication, content-addressed-store, cas, hf-xet, hf-hub, infrastructure]
+category: mlops
+trigger: >
+  When asked about Xet storage, the Hugging Face storage backend,
+  content-addressable storage (CAS), content-defined chunking (CDC),
+  Git LFS replacement, storage deduplication on the Hub,
+  hf-xet / xet-core / huggingface_hub storage integration,
+  migrating repos from LFS to Xet, chunk-based file transfer,
+  streaming datasets powered by Xet, or how the Hub stores
+  large models and datasets efficiently.
 ---
 
 # Xet Storage Backend — Hugging Face Hub

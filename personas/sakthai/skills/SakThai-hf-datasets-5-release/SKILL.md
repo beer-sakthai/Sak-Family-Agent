@@ -1,7 +1,6 @@
 ---
 name: SakThai-hf-datasets-5-release
-description: Specialized skill providing operational procedures and tool capabilities for SakThai-hf-datasets-5-release.
-...
+description: |---
 ---
 
 |---

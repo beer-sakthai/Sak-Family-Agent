@@ -1,7 +1,6 @@
 ---
 name: SakTan-github-security-compliance-program
-description: 'GitHub security compliance: dependabot, code scanning, secret scanning,   branch
-  rules, SSLL certs, and force push.'
+description: "GitHub security compliance: dependabot, code scanning, secret scanning,   branch rules, SSLL certs, and force push."
 ---
 
 # GitHub Security & Compliance Program

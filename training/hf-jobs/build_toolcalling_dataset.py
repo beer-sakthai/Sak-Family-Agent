@@ -177,7 +177,7 @@ FILES = [
     "~/notes.md",
     "./README.md",
     "/home/sakthai/income-plan.md",
-    "todo.md",
+    "TODO.md",
     "~/.config/sakthai/config.toml",
     "report.md",
     "SOUL.md",

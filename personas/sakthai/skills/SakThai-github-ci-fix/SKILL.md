@@ -1,7 +1,13 @@
 ---
 name: SakThai-github-ci-fix
+author: Hermes
 description: Diagnose and repair GitHub Actions CI failures.
-...
+version: 0.1.0
+tags:
+  - CI/CD
+  - GitHub
+  - Debugging
+  - Python
 ---
 
 # GitHub CI Fix

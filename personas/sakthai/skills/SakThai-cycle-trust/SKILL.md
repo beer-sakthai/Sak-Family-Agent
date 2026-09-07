@@ -1,7 +1,6 @@
 ---
 name: SakThai-cycle-trust
-description: Verify the shipped work is safe to rely on.
-...
+description: "Verify the shipped work is safe to rely on."
 ---
 
 # Sak-cycle-trust

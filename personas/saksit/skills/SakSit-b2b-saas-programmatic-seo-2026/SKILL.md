@@ -1,7 +1,6 @@
 ---
 name: SakSit-b2b-saas-programmatic-seo-2026
-description: Saksit B2B Saas Programmatic Seo 2026
-...
+description: "Saksit B2B Saas Programmatic Seo 2026"
 ---
 
 # B2B SaaS Programmatic SEO Strategy 2026

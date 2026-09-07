@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  servicequotebot-demo:
+    build:
+      context: ../../../
+      dockerfile: infra/servicequotebot/docker/Dockerfile
+    container_name: servicequotebot-demo
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - SAKTHAI_HOME=/app/data
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "python", "/app/infra/servicequotebot/docker/healthcheck.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

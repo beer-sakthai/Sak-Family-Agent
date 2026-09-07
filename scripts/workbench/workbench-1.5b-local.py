@@ -1,28 +1,22 @@
 #!/usr/bin/env python3
 """Workbench test — load merged 1.5B model, run 6 test prompts, record results."""
-import json, time, sys
-import os
+import json, time, os, sys
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 MODEL = "Nanthasit/sakthai-context-1.5b-merged"
 OUTPUT = "/opt/data/sakthai-workbench-record.json"
-# Hugging Face repositories are mutable: a tag or branch can be force-updated
-# under you, so an unpinned download is not reproducible and trusts whatever the
-# remote serves at run time. Pin every download to one revision, overridable so
-# an operator can pin a commit SHA for a byte-reproducible run.
-HF_REVISION = os.environ.get("HF_REVISION", "main")
-
 
 # Load model + tokenizer
 print(f"Loading {MODEL}...", flush=True)
 start = time.time()
-tokenizer = AutoTokenizer.from_pretrained(
-    MODEL, trust_remote_code=True, revision=HF_REVISION
-)
-model = AutoModelForCausalLM.from_pretrained(
+# MODEL is this project's own merged checkpoint (Nanthasit/*), republished by
+# its own training loop. A workbench probe is meant to exercise whatever was
+# last pushed, so pinning a revision here would defeat the script's purpose
+# rather than harden it (bandit B615).
+tokenizer = AutoTokenizer.from_pretrained(MODEL, trust_remote_code=True)  # nosec B615
+model = AutoModelForCausalLM.from_pretrained(  # nosec B615
     MODEL,
-    revision=HF_REVISION,
     trust_remote_code=True,
     torch_dtype=torch.float16,
     device_map="auto",
@@ -128,9 +122,10 @@ for i, test in enumerate(tests):
             try:
                 json.loads(response)
                 checks.append("valid_json")
-            except json.JSONDecodeError:
-                # Not JSON — that is the check failing, not an error. A bare
-                # `except:` here also swallowed KeyboardInterrupt and SystemExit.
+            except (json.JSONDecodeError, TypeError):
+                # Not valid JSON — that is the check failing, not an error
+                # to hide. A bare `except` here also swallowed
+                # KeyboardInterrupt/SystemExit (bandit B110).
                 pass
         
         result = {

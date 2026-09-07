@@ -1,371 +1,262 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import {
-  Cpu,
-  Zap,
   Activity,
+  ArrowUpRight,
   Award,
-  Shield,
-  Eye,
-  Terminal,
+  Brain,
   Clock,
-  Play,
-  Send,
-  CheckCircle2,
-  AlertCircle,
-  X,
-  Loader2,
+  Cpu,
+  Eye,
+  Shield,
+  Sparkles,
+  Terminal,
+  Zap,
 } from "lucide-react";
-import { AgentPersona } from "@/lib/types";
+
+import type { PersonaSummary } from "@/lib/contracts.generated";
 
 interface AgentCardProps {
-  agent: AgentPersona;
+  agent: PersonaSummary;
+  /** Excluded by the persona filter: still rendered, but pushed back. */
+  dimmed?: boolean;
+  /** Included by the persona filter. */
+  selected?: boolean;
+  /** When given, the card becomes a toggle for the global persona filter. */
+  onToggle?: () => void;
+  /** When given, the card grows a Details control that opens the drawer. */
+  onOpenDetail?: () => void;
 }
 
+/** Keyed by the canonical lowercase persona name, all six of them. */
 const personaIcons: Record<string, React.ReactNode> = {
-  SakThai: <Terminal className="h-5 w-5 text-cyan-400" />,
-  SakKing: <Zap className="h-5 w-5 text-purple-400" />,
-  SakSee: <Eye className="h-5 w-5 text-amber-400" />,
-  SakSit: <Shield className="h-5 w-5 text-emerald-400" />,
-  SakJules: <Activity className="h-5 w-5 text-rose-400" />,
-  SakTan: <Cpu className="h-5 w-5 text-indigo-400" />,
+  sakthai: <Terminal className="h-5 w-5 text-hue-cyan" />,
+  sakking: <Zap className="h-5 w-5 text-hue-purple" />,
+  saksee: <Eye className="h-5 w-5 text-hue-amber" />,
+  saksit: <Shield className="h-5 w-5 text-hue-emerald" />,
+  sakjules: <Activity className="h-5 w-5 text-hue-rose" />,
+  saktan: <Sparkles className="h-5 w-5 text-hue-sky" />,
 };
 
 const personaGlows: Record<string, string> = {
-  SakThai: "border-cyan-500/30 hover:border-cyan-500/60 shadow-cyan-950/40",
-  SakKing: "border-purple-500/30 hover:border-purple-500/60 shadow-purple-950/40",
-  SakSee: "border-amber-500/30 hover:border-amber-500/60 shadow-amber-950/40",
-  SakSit: "border-emerald-500/30 hover:border-emerald-500/60 shadow-emerald-950/40",
-  SakJules: "border-rose-500/30 hover:border-rose-500/60 shadow-rose-950/40",
-  SakTan: "border-indigo-500/30 hover:border-indigo-500/60 shadow-indigo-950/40",
-  Unattributed: "border-slate-600/40 hover:border-slate-500/60 shadow-slate-950/40",
+  sakthai: "border-hue-cyan-line/30 hover:border-hue-cyan-line/60 shadow-hue-cyan-tint/40",
+  sakking: "border-hue-purple-line/30 hover:border-hue-purple-line/60 shadow-hue-purple-tint/40",
+  saksee: "border-hue-amber-line/30 hover:border-hue-amber-line/60 shadow-hue-amber-tint/40",
+  saksit: "border-hue-emerald-line/30 hover:border-hue-emerald-line/60 shadow-hue-emerald-tint/40",
+  sakjules: "border-hue-rose-line/30 hover:border-hue-rose-line/60 shadow-hue-rose-tint/40",
+  saktan: "border-hue-sky-line/30 hover:border-hue-sky-line/60 shadow-hue-sky-tint/40",
 };
 
-const DEFAULT_PRESETS: Record<string, string[]> = {
-  SakThai: [
-    "Run cycle health check and tool guardrail audit",
-    "Analyze memory store knowledge graph",
-  ],
-  SakJules: [
-    "Run automated CI/CD gate and test battery",
-    "Verify repo package parity and drift",
-  ],
-  SakKing: [
-    "Generate executive product and monetization brief",
-    "Prioritize active conductor roadmap tracks",
-  ],
-  SakSee: [
-    "Review media assets and aesthetic UI themes",
-    "Audit marketing conversion funnel copy",
-  ],
-  SakSit: [
-    "Ingest technical documentation and index vector RAG",
-    "Evaluate dataset schema and benchmark cards",
-  ],
-  SakTan: [
-    "Record daily session memories and standup digest",
-    "Sync personal voice notes to Telegram bridge",
-  ],
-};
+const DAY_SECONDS = 86_400;
 
-export function AgentCard({ agent }: AgentCardProps) {
-  const [isDispatchOpen, setIsDispatchOpen] = useState(false);
-  const [taskInput, setTaskInput] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [dispatchResult, setDispatchResult] = useState<{
-    success: boolean;
-    dispatchId?: string;
-    message?: string;
-    error?: string;
-  } | null>(null);
+type Status = "Active" | "Ready" | "Idle";
 
-  const isOnline = agent.status === "Active" || agent.status === "Ready";
-  const glowClass = personaGlows[agent.name] || "border-slate-800 hover:border-slate-700";
-  const icon = personaIcons[agent.name] || <Cpu className="h-5 w-5 text-cyan-400" />;
+/**
+ * Status derived from what we actually recorded, not asserted.
+ *
+ * A persona with no runs and no memory shard has genuinely never been used —
+ * "Idle" is the truthful label, and the card renders it rather than being
+ * hidden or given a plausible-looking "Ready".
+ */
+function deriveStatus(agent: PersonaSummary): Status {
+  if (agent.runs === 0 && !agent.has_shard) return "Idle";
+  if (agent.last_run_at !== null && Date.now() / 1000 - agent.last_run_at < DAY_SECONDS) {
+    return "Active";
+  }
+  return "Ready";
+}
 
-  const score = agent.benchmarkScore;
-  const hasScore = typeof score === "number" && Number.isFinite(score);
-  const presets = DEFAULT_PRESETS[agent.name] || [
-    "Execute system telemetry scan",
-    "Verify tool permissions",
-  ];
+export function AgentCard({
+  agent,
+  dimmed = false,
+  selected = false,
+  onToggle,
+  onOpenDetail,
+}: AgentCardProps) {
+  const status = deriveStatus(agent);
+  const glowClass = personaGlows[agent.name] ?? "border-line hover:border-line-strong";
+  const icon = personaIcons[agent.name] ?? <Cpu className="h-5 w-5 text-hue-cyan" />;
 
-  const handleDispatch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!taskInput.trim() || isSubmitting) return;
+  // Real, derived from recorded runs and errors -- not the `?? 92.5` default
+  // and `Math.random()` fallback this replaces. Undefined with no runs, and
+  // shown as such.
+  const successRate = agent.runs > 0 ? ((agent.runs - agent.errors) / agent.runs) * 100 : null;
 
-    setIsSubmitting(true);
-    setDispatchResult(null);
-
-    try {
-      const res = await fetch("/api/dispatch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          persona: agent.name,
-          task: taskInput.trim(),
-        }),
-      });
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        setDispatchResult({
-          success: true,
-          dispatchId: data.dispatchId,
-          message: data.message || `Dispatched to ${agent.name}`,
-        });
-        setTaskInput("");
-      } else {
-        setDispatchResult({
-          success: false,
-          error: data.error || "Dispatch request failed",
-        });
-      }
-    } catch (err) {
-      setDispatchResult({
-        success: false,
-        error: err instanceof Error ? err.message : "Network error during dispatch",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  // Two controls, one card. The filter toggle covers the whole card as a
+  // stretched overlay button and the Details control sits above it, rather
+  // than the card itself being a <button> with a second <button> nested inside
+  // it — which is invalid HTML and which browsers resolve by dropping one of
+  // them. The overlay carries the label and the pressed state, so it is still
+  // one tab stop that announces what it does.
+  //
+  // Without `onOpenDetail` there is nothing to sit above the overlay, so the
+  // card stays the single <button> it has always been.
+  const overlayToggle = Boolean(onToggle && onOpenDetail);
+  const Root = onToggle && !onOpenDetail ? "button" : "div";
+  const toggleLabel = `${selected ? "Remove" : "Add"} ${agent.display_name} ${selected ? "from" : "to"} the persona filter`;
+  const interactive =
+    onToggle && !onOpenDetail
+      ? {
+          type: "button" as const,
+          onClick: onToggle,
+          "aria-pressed": selected,
+          "aria-label": toggleLabel,
+        }
+      : {};
 
   return (
-    <div
-      className={`glass-card p-5 rounded-2xl bg-slate-900/80 border backdrop-blur-xl shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4 relative overflow-hidden group ${glowClass}`}
+    <Root
+      {...interactive}
+      className={`glass-card p-5 rounded-2xl bg-panel/80 border backdrop-blur-xl shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4 relative overflow-hidden group text-left w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${glowClass} ${
+        status === "Idle" ? "opacity-70" : ""
+      } ${dimmed ? "opacity-40 saturate-50" : ""} ${
+        selected ? "ring-2 ring-accent ring-offset-2 ring-offset-canvas" : ""
+      }`}
+      data-testid={`agent-card-${agent.name}`}
     >
-      {/* Background ambient glow */}
-      <div className="absolute -top-10 -right-10 w-32 h-32 bg-cyan-500/5 rounded-full blur-2xl group-hover:bg-cyan-500/10 transition-all duration-500 pointer-events-none" />
+      <div className="absolute -top-10 -right-10 w-32 h-32 bg-hue-cyan/5 rounded-full blur-2xl group-hover:bg-hue-cyan/10 transition-all duration-500 pointer-events-none" />
 
-      {/* Card Header: Persona Icon, Name & Status Pulse */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center space-x-2.5">
-            <div className="p-2 rounded-xl bg-slate-800/80 border border-slate-700/50">
+      {overlayToggle && onToggle && (
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-pressed={selected}
+          aria-label={toggleLabel}
+          className="absolute inset-0 z-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+        />
+      )}
+
+      <div className={overlayToggle ? "pointer-events-none relative z-[1]" : undefined}>
+        {/* items-start: the text column is three lines tall, so centring the
+            icon and the status pill against it leaves the name floating alone
+            above both. */}
+        <div className="mb-3 flex items-start justify-between gap-2">
+          {/* The name owns the first line alone. Sharing it with the provider
+              badge meant the two competed for the same shrinking row, and the
+              name — the one thing that identifies the card — is what a
+              `truncate` gave up first. min-w-0 on every level so the card can
+              still narrow to whatever column the auto-fill grid gives it. */}
+          <div className="flex min-w-0 flex-1 items-start space-x-2.5">
+            <div className="p-2 rounded-xl bg-raised/80 border border-line-strong/50 shrink-0">
               {icon}
             </div>
-            <div>
-              <h4 className="text-lg font-bold font-display text-white tracking-tight flex items-center gap-2">
-                {agent.name}
-                {agent.badge && (
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800/50">
-                    {agent.badge}
+            <div className="min-w-0 flex-1">
+              <h4 className="truncate text-lg font-bold font-display text-fg tracking-tight">
+                {agent.display_name}
+              </h4>
+              <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 font-mono text-xs leading-snug text-fg-3">
+                {agent.provider && (
+                  <span className="rounded bg-hue-cyan-tint px-1.5 py-0.5 text-[10px] text-hue-cyan border border-hue-cyan-line/50">
+                    {agent.provider}
                   </span>
                 )}
-              </h4>
-              <p className="text-xs text-slate-400 line-clamp-2 mt-0.5 leading-snug">
-                {agent.role}
+                <span className="min-w-0">
+                  {agent.has_shard
+                    ? `${agent.fact_count} facts · ${agent.observation_count} observations`
+                    : "no memory shard yet"}
+                </span>
               </p>
             </div>
           </div>
 
           <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold font-mono border ${
-              isOnline
-                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                : agent.status === "Warning" || agent.status === "Alert"
-                ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
-                : "bg-slate-800/80 text-slate-400 border-slate-700"
+            className={`inline-flex shrink-0 items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold font-mono border ${
+              status === "Active"
+                ? "bg-hue-emerald/10 text-hue-emerald border-hue-emerald-line/30"
+                : status === "Ready"
+                  ? "bg-raised/80 text-fg-2 border-line-strong"
+                  : "bg-panel/80 text-fg-4 border-line"
             }`}
           >
             <span
               className={`h-2 w-2 rounded-full ${
-                isOnline
-                  ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"
-                  : agent.status === "Warning" || agent.status === "Alert"
-                  ? "bg-amber-400 animate-pulse"
-                  : "bg-slate-500"
+                status === "Active"
+                  ? "bg-hue-emerald animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"
+                  : status === "Ready"
+                    ? "bg-fg-3"
+                    : "bg-fg-5"
               }`}
             />
-            {agent.status}
+            {status}
           </span>
         </div>
 
-        {/* Model Badge */}
         <div className="mt-3 flex items-center gap-2">
-          <span className="text-[11px] font-mono text-slate-300 px-2.5 py-1 rounded-md bg-slate-800/90 border border-slate-700/60 inline-flex items-center gap-1.5">
-            <Cpu className="h-3 w-3 text-cyan-400" />
-            {agent.model}
+          <span className="text-[11px] font-mono text-fg-2 px-2.5 py-1 rounded-md bg-raised/90 border border-line-strong/60 inline-flex items-center gap-1.5 max-w-full">
+            <Cpu className="h-3 w-3 text-hue-cyan shrink-0" aria-hidden />
+            <span className="truncate">{agent.model || "no configured model"}</span>
           </span>
         </div>
       </div>
 
-      {/* Metrics Row: Latency & Total Runs */}
-      <div className="grid grid-cols-2 gap-2 py-2 px-3 rounded-xl bg-slate-950/60 border border-slate-800/80 font-mono text-xs">
+      <div
+        className={`grid grid-cols-2 gap-2 py-2 px-3 rounded-xl bg-sunken/60 border border-line/80 font-mono text-xs ${
+          overlayToggle ? "pointer-events-none relative z-[1]" : ""
+        }`}
+      >
         <div>
-          <span className="text-[10px] uppercase text-slate-400 block mb-0.5 flex items-center gap-1">
-            <Clock className="h-3 w-3 text-cyan-400" /> Latency
+          <span className="text-[10px] uppercase text-fg-3 mb-0.5 flex items-center gap-1">
+            <Clock className="h-3 w-3 text-hue-cyan" aria-hidden /> Avg latency
           </span>
-          <span className="font-bold text-cyan-300">{agent.latencyMs}ms</span>
+          <span className="font-bold text-hue-cyan">
+            {agent.runs > 0 ? `${Math.round(agent.avg_latency_ms)}ms` : "—"}
+          </span>
         </div>
         <div>
-          <span className="text-[10px] uppercase text-slate-400 block mb-0.5 flex items-center gap-1">
-            <Activity className="h-3 w-3 text-emerald-400" /> Executions
+          <span className="text-[10px] uppercase text-fg-3 mb-0.5 flex items-center gap-1">
+            <Activity className="h-3 w-3 text-hue-emerald" aria-hidden /> Executions
           </span>
-          <span className="font-bold text-emerald-300">{agent.runs} runs</span>
+          <span className="font-bold text-hue-emerald">
+            {agent.runs} {agent.runs === 1 ? "run" : "runs"}
+          </span>
         </div>
       </div>
 
-      {/* Benchmark Score Progress Bar */}
-      <div className="space-y-1.5">
+      <div className={`space-y-1.5 ${overlayToggle ? "pointer-events-none relative z-[1]" : ""}`}>
         <div className="flex items-center justify-between text-xs font-mono">
-          <span className="text-slate-400 text-[11px] flex items-center gap-1">
-            <Award className="h-3 w-3 text-amber-400" /> Benchmark Score
+          <span className="text-fg-3 text-[11px] flex items-center gap-1">
+            <Award className="h-3 w-3 text-hue-amber" aria-hidden /> Success rate
           </span>
-          {hasScore ? (
-            <span className="font-bold text-emerald-400">{score!.toFixed(1)}%</span>
-          ) : (
-            <span className="text-slate-500" title="No benchmark recorded for this persona">
-              not measured
-            </span>
-          )}
+          <span className="font-bold text-hue-emerald">
+            {successRate === null ? "no runs yet" : `${successRate.toFixed(1)}%`}
+          </span>
         </div>
-        <div className="h-2 w-full bg-slate-800/90 rounded-full overflow-hidden p-0.5 border border-slate-700/50">
-          {hasScore ? (
-            <div
-              className="h-full bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]"
-              style={{ width: `${Math.min(100, Math.max(0, score!))}%` }}
-            />
-          ) : (
-            <div className="h-full w-full rounded-full bg-[repeating-linear-gradient(45deg,rgba(100,116,139,0.25)_0_6px,transparent_6px_12px)]" />
-          )}
+        <div className="h-2 w-full bg-raised/90 rounded-full overflow-hidden p-0.5 border border-line-strong/50">
+          <div
+            className="h-full bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]"
+            style={{ width: `${successRate ?? 0}%` }}
+          />
         </div>
       </div>
 
-      {/* Skills Tags */}
-      {agent.skills && agent.skills.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 pt-1">
-          {agent.skills.map((skill) => (
-            <span
-              key={skill}
-              className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950/40 text-cyan-300 border border-cyan-800/30"
-            >
-              #{skill}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Interactive Dispatch Trigger & Expandable Console */}
-      <div className="pt-2 border-t border-slate-800/80">
-        {!isDispatchOpen ? (
+      <div
+        className={`relative z-[2] flex flex-wrap items-center gap-1.5 pt-1 font-mono text-[10px] ${
+          overlayToggle ? "pointer-events-none" : ""
+        }`}
+      >
+        <span className="px-2 py-0.5 rounded-full bg-hue-cyan-tint/40 text-hue-cyan border border-hue-cyan-line/30 inline-flex items-center gap-1">
+          <Brain className="h-2.5 w-2.5" aria-hidden />
+          {(agent.input_tokens + agent.output_tokens).toLocaleString()} tokens
+        </span>
+        {agent.errors > 0 && (
+          <span className="px-2 py-0.5 rounded-full bg-hue-rose-tint/40 text-hue-rose border border-hue-rose-line/30">
+            {agent.errors} {agent.errors === 1 ? "error" : "errors"}
+          </span>
+        )}
+        {onOpenDetail && (
           <button
             type="button"
-            onClick={() => setIsDispatchOpen(true)}
-            aria-label={`Dispatch ${agent.name}`}
-            aria-expanded={isDispatchOpen}
-            title={`Open live task dispatch console for ${agent.name}`}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-cyan-600/20 to-teal-600/20 hover:from-cyan-600/30 hover:to-teal-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-semibold font-mono transition-all duration-200 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+            onClick={onOpenDetail}
+            aria-label={`Open details for ${agent.display_name}`}
+            className="pointer-events-auto ml-auto inline-flex items-center gap-1 rounded-full border border-line-strong bg-raised/90 px-2 py-0.5 text-[10px] text-fg-2 transition-colors hover:border-accent/50 hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
-            <Play className="h-3.5 w-3.5 fill-cyan-400 text-cyan-400" />
-            Dispatch {agent.name}
+            Details
+            <ArrowUpRight className="h-2.5 w-2.5" aria-hidden />
           </button>
-        ) : (
-          <div className="space-y-2.5 p-3 rounded-xl bg-slate-950/90 border border-cyan-500/40 animate-in fade-in slide-in-from-top-1 duration-200">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-mono font-semibold text-cyan-300 flex items-center gap-1.5">
-                <Zap className="h-3.5 w-3.5 text-cyan-400" />
-                Live Task Dispatch
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsDispatchOpen(false);
-                  setDispatchResult(null);
-                }}
-                className="text-slate-400 hover:text-slate-200 p-0.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
-                aria-label="Close dispatch console"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-
-            {/* Quick Prompt Presets */}
-            <div className="flex flex-wrap gap-1">
-              {presets.map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setTaskInput(preset)}
-                  className="text-[10px] font-mono text-left px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-cyan-300 hover:border-cyan-800/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
-                >
-                  {preset}
-                </button>
-              ))}
-            </div>
-
-            {/* Task Form */}
-            <form onSubmit={handleDispatch} className="space-y-2">
-              <textarea
-                value={taskInput}
-                onChange={(e) => setTaskInput(e.target.value)}
-                placeholder={`Instruct ${agent.name}...`}
-                aria-label={`Instruct ${agent.name}`}
-                rows={2}
-                disabled={isSubmitting}
-                className="w-full text-xs bg-slate-900 border border-slate-700/80 rounded-lg p-2 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 focus-visible:ring-2 focus-visible:ring-cyan-500 font-mono resize-none"
-              />
-
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-mono text-slate-500">
-                  Streams to SSE Bus
-                </span>
-                <button
-                  type="submit"
-                  aria-label="Submit task dispatch"
-                  disabled={!taskInput.trim() || isSubmitting}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 text-white text-xs font-mono font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-3 w-3 animate-spin" /> Dispatching...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-3 w-3" /> Run Task
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-
-            {/* Dispatch Receipt Feedback */}
-            {dispatchResult && (
-              <div
-                className={`p-2 rounded-lg text-[11px] font-mono flex items-start gap-1.5 border ${
-                  dispatchResult.success
-                    ? "bg-emerald-950/40 text-emerald-300 border-emerald-800/50"
-                    : "bg-rose-950/40 text-rose-300 border-rose-800/50"
-                }`}
-              >
-                {dispatchResult.success ? (
-                  <>
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-bold">{dispatchResult.message}</span>
-                      {dispatchResult.dispatchId && (
-                        <span className="block text-[10px] text-emerald-400/80">
-                          Receipt ID: {dispatchResult.dispatchId}
-                        </span>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle className="h-3.5 w-3.5 text-rose-400 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-bold">Error:</span> {dispatchResult.error}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
         )}
       </div>
-    </div>
+    </Root>
   );
 }
 

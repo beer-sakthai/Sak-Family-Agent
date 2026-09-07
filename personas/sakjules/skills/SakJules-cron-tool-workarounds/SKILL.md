@@ -1,7 +1,6 @@
 ---
 name: SakJules-SakThai-cron-tool-workarounds
-description: "Approved terminal patterns for cron-mode execution \u2014 avoids tirith security\
-  \ blocks and execute_code restrictions."
+description: "Approved terminal patterns for cron-mode execution — avoids tirith security blocks and execute_code restrictions."
 ---
 
 > **Support files:** `verification-scripts.md`, `ld-linker-workaround.md`, `hf-download-tracker.md`, `hf-sdk-in-cron.md`, `file-operations-in-cron.md`, `verify-by-tempfile-python-pattern.md`

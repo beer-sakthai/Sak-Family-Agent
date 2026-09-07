@@ -1,11 +1,17 @@
 ---
 name: SakThai-hf-spaces-agents
-description: 'Complete reference on using AI coding agents (Claude Code, Codex, OpenCode, etc.)
+author: SakThai
+license: MIT
+description: >
+  Complete reference on using AI coding agents (Claude Code, Codex, OpenCode, etc.)
   to create Hugging Face Spaces directly from model pages. Covers the "Deploy -> Spaces"
-  workflow, the AI prompt generation system, agent-compatible Space templates, and
-  how to build, iterate, and publish Spaces programmatically through AI agents.
-
-  '
+  workflow, the AI prompt generation system, agent-compatible Space templates, and how
+  to build, iterate, and publish Spaces programmatically through AI agents.
+version: 1.0.0
+metadata:
+  hermes:
+    tags: [huggingface, spaces, agents, ai-agents, gradio, claude-code, codex, deployment]
+    category: productivity
 ---
 
 # Hugging Face Spaces + AI Agents

@@ -1,6 +1,6 @@
 ---
 name: SakThai-hf-cli-agent-mode
-description: 'HF hf CLI agent-optimized mode: auto-detection, dual-rendering, skill system, benchmarking.'
+description: "HF hf CLI agent-optimized mode: auto-detection, dual-rendering, skill system, benchmarking."
 ---
 
 # HF hf CLI Agent-Optimized Mode

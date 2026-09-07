@@ -1,8 +1,6 @@
 ---
 name: SakThai-hf-inference-endpoints-advanced-operations
-description: "Deep-dive into advanced operational features of Hugging Face Inference Endpoints\
-  \ \u2014 autoscaling strategies, OpenMetrics monitoring, and custom router for bespoke\
-  \ load balancing."
+description: "Deep-dive into advanced operational features of Hugging Face Inference Endpoints — autoscaling strategies, OpenMetrics monitoring, and custom router for bespoke load balancing."
 ---
 
 # hf-inference-endpoints-advanced-operations

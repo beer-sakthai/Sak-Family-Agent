@@ -1,10 +1,7 @@
 ---
 name: SakThai-hf-model-card-yaml-widgets
-description: "Master Hugging Face model card YAML metadata \u2014 schema, pipeline_tag, widget\
-  \ config, programmatic creation via huggingface_hub, ModelCard components (Gallery),\
-  \ and metadata validation patterns."
+description: "Master Hugging Face model card YAML metadata — schema, pipeline_tag, widget config, programmatic creation via huggingface_hub, ModelCard components (Gallery), and metadata validation patterns."
 ---
-
 # HF Model Card YAML Metadata & Widget Configuration
 
 ## Overview

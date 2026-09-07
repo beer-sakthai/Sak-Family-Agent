@@ -1,9 +1,6 @@
 ---
 name: SakSee-kanban-worker
-description: Pitfalls, examples, and edge cases for Hermes Kanban workers. The lifecycle itself
-  is auto-injected into every workers system prompt as KANBAN_GUIDANCE (from agent/prompt_builder.py);
-  this skill is what you load when you want deeper detail on specifi
-...
+description: "Pitfalls, examples, and edge cases for Hermes Kanban workers. The lifecycle itself is auto-injected into every workers system prompt as KANBAN_GUIDANCE (from agent/prompt_builder.py); this skill is what you load when you want deeper detail on specifi"
 ---
 
 # Kanban Worker — Pitfalls and Examples

@@ -1,7 +1,6 @@
 ---
 name: SakTan-sakthai-cycle-growth
-description: Fold the cycles lessons back into memory and skills.
-...
+description: "Fold the cycles lessons back into memory and skills."
 ---
 
 # sakthai-cycle-growth

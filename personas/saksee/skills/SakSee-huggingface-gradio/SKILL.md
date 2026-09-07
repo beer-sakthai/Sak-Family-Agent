@@ -1,8 +1,6 @@
 ---
 name: SakSee-huggingface-gradio
-description: Build Gradio web UIs and demos in Python. Use when creating or editing Gradio apps,
-  components, event listeners, layouts, or chatbots.
-...
+description: "Build Gradio web UIs and demos in Python. Use when creating or editing Gradio apps, components, event listeners, layouts, or chatbots."
 ---
 
 # Gradio

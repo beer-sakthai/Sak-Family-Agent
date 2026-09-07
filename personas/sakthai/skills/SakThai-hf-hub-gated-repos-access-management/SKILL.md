@@ -1,9 +1,6 @@
 ---
 name: SakThai-hf-hub-gated-repos-access-management
-description: "Complete reference on Hugging Face Hub gated repository access management \u2014\
-  \ enabling and configuring gating, managing access requests via UI and API, using\
-  \ the huggingface_hub Python client, and understanding gating group collections\
-  \ for Team & Enter"
+description: "Complete reference on Hugging Face Hub gated repository access management — enabling and configuring gating, managing access requests via UI and API, using the huggingface_hub Python client, and understanding gating group collections for Team & Enter"
 ---
 
 # HF Hub Gated Repos & Access Management

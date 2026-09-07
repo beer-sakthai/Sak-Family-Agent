@@ -1,6 +1,6 @@
 ---
 name: SakThai-hf-hub-search-discovery-api
-description: 'name: SakThai-hf-hub-search-discovery-api'
+description: "name: SakThai-hf-hub-search-discovery-api"
 ---
 
 # Hugging Face Hub Search & Discovery API

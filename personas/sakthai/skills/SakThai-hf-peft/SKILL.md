@@ -1,8 +1,10 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-hf-peft
-description: 'Hugging Face PEFT (Parameter-Efficient Fine-Tuning): library overview, method taxonomy
-  (LoRA, QLoRA, adapters, soft prompts, selective), training/inference workflow, and
-  ecosystem integration with Transformers/Accelerate.'
+description: "Hugging Face PEFT (Parameter-Efficient Fine-Tuning): library overview, method taxonomy (LoRA, QLoRA, adapters, soft prompts, selective), training/inference workflow, and ecosystem integration with Transformers/Accelerate."
+tags: [huggingface, peft, lora, qlora, adapters, fine-tuning, efficient, mlops]
+version: 1.0.0
 ---
 
 # Hugging Face PEFT — Parameter-Efficient Fine-Tuning
