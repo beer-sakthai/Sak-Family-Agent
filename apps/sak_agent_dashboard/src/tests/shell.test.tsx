@@ -215,7 +215,10 @@ describe("TopBar", () => {
     renderTopBar({ canExport: false });
     const select = screen.getByLabelText("Export the current panel");
     expect(select).toBeDisabled();
-    expect(screen.getByTitle("No rows available to export")).toBeInTheDocument();
+    const labelContainer = screen.getByTitle("No rows available to export");
+    expect(labelContainer).toBeInTheDocument();
+    expect(labelContainer).toHaveClass("opacity-50");
+    expect(labelContainer).toHaveClass("cursor-not-allowed");
   });
 
   it("indicates when auto-refresh is actively running", () => {
