@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pull-requests: read
+  contents: write
+  pull-requests: write
 
 concurrency:
   group: daily-workspace-status
@@ -16,9 +16,9 @@ concurrency:
 
 jobs:
   workspace-status:
-    name: Report branches and monitor PR conflicts
+    name: Report branches and reconcile PR conflicts
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -32,7 +32,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Collect workspace and PR status
+      - name: Report workspace and reconcile safe PR conflicts
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -58,40 +58,52 @@ jobs:
               | while IFS=$'\t' read -r branch tip tracking; do
                   printf '| `%s` | `%s` | `%s` |\n' "$branch" "$tip" "${tracking:-—}"
                 done
-            echo
-            echo "## Open pull requests"
-            echo
           } >> "$GITHUB_STEP_SUMMARY"
 
           prs_json="$(mktemp)"
-          gh pr list --repo "$REPO" --state open --limit 100 \
-            --json number,title,headRefName,baseRefName,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,updatedAt,url \
-            > "$prs_json"
+          gh api "repos/${REPO}/pulls?state=open&per_page=100" > "$prs_json"
+          unresolved=0
+          attempted=0
 
-          if [ "$(jq 'length' "$prs_json")" -eq 0 ]; then
-            echo "No open pull requests." >> "$GITHUB_STEP_SUMMARY"
-          else
-            {
-              echo '| PR | Title | Head → Base | Merge state | Review | Checks |'
-              echo '|---:|---|---|---|---|---|'
-              jq -r '.[] |
-                ([.statusCheckRollup[]? | select(.status != "COMPLETED" or .conclusion != "SUCCESS")] | length) as $pending_or_failed |
-                "| [#\(.number)](\(.url)) | \(.title | gsub("\\|"; "\\\\|")) | `\(.headRefName)` → `\(.baseRefName)` | \(.mergeStateStatus // "UNKNOWN") | \(.reviewDecision // "PENDING") | \($pending_or_failed) pending/failed |"' "$prs_json"
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
+          {
+            echo
+            echo "## PR monitoring and automatic conflict reconciliation"
+            echo
+            echo '| PR | Head → Base | Merge state | Action |'
+            echo '|---:|---|---|---|'
+          } >> "$GITHUB_STEP_SUMMARY"
 
-          conflict_count="$(jq '[.[] | select(.mergeStateStatus == "DIRTY" or .mergeStateStatus == "CONFLICTING")] | length' "$prs_json")"
-          blocked_count="$(jq '[.[] | select(.mergeStateStatus == "BLOCKED")] | length' "$prs_json")"
-          if [ "$conflict_count" -gt 0 ]; then
-            {
-              echo
-              echo "**Conflict alert:** ${conflict_count} open pull request(s) have a dirty/conflicting merge state."
-              echo "Resolve conflicts or update the affected branches before merging."
-            } >> "$GITHUB_STEP_SUMMARY"
+          while IFS=$'\t' read -r number head_ref base_ref head_repo mergeable_state html_url; do
+            [ -n "$number" ] || continue
+            action="no update needed"
+
+            if [ "$base_ref" = "$default_branch" ] && [ "$head_repo" = "$REPO" ] \
+              && { [ "$mergeable_state" = "dirty" ] || [ "$mergeable_state" = "conflicting" ]; }; then
+              attempted=$((attempted + 1))
+              if gh api --method PUT "repos/${REPO}/pulls/${number}/update-branch" \
+                -f update_method=merge >/tmp/update-branch-${number}.json 2>/tmp/update-branch-${number}.err; then
+                action="requested automatic merge of ${default_branch} into head"
+              else
+                action="manual resolution required"
+                unresolved=$((unresolved + 1))
+              fi
+            elif [ "$head_repo" != "$REPO" ]; then
+              action="kept — fork branch; no automatic write"
+            elif [ "$mergeable_state" = "blocked" ]; then
+              action="kept — blocked by checks or policy, not a merge conflict"
+            fi
+
+            printf '| [#%s](%s) | `%s` → `%s` | `%s` | %s |\n' \
+              "$number" "$html_url" "$head_ref" "$base_ref" "$mergeable_state" "$action" >> "$GITHUB_STEP_SUMMARY"
+          done < <(jq -r '.[] | [.number, .head.ref, .base.ref, .head.repo.full_name, (.mergeable_state // "unknown"), .html_url] | @tsv' "$prs_json")
+
+          echo >> "$GITHUB_STEP_SUMMARY"
+          echo "Attempted safe branch updates: ${attempted}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Manual conflict cases: ${unresolved}" >> "$GITHUB_STEP_SUMMARY"
+
+          # Automatic reconciliation is limited to GitHub's clean merge operation.
+          # Any unresolved conflict remains visible and fails the daily monitor.
+          if [ "$unresolved" -gt 0 ]; then
+            echo "One or more PRs still require manual conflict resolution." >&2
             exit 1
-          fi
-
-          if [ "$blocked_count" -gt 0 ]; then
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "**Notice:** ${blocked_count} open pull request(s) are blocked by policy or required checks; this is not necessarily a conflict." >> "$GITHUB_STEP_SUMMARY"
           fi
