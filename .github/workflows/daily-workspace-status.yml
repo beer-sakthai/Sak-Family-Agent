@@ -1,0 +1,97 @@
+name: Daily workspace status and PR conflict monitor
+
+on:
+  schedule:
+    # Run after the daily PR review/cleanup workflow.
+    - cron: "15 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: daily-workspace-status
+  cancel-in-progress: false
+
+jobs:
+  workspace-status:
+    name: Report branches and monitor PR conflicts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Check out all branches
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Collect workspace and PR status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          default_branch="$(gh api "repos/${REPO}" --jq '.default_branch')"
+          git fetch --prune origin
+
+          {
+            echo "# Daily workspace status"
+            echo
+            echo "Repository: \\`${REPO}\\`"
+            echo "Default branch: \\`${default_branch}\\`"
+            echo "Run: [${GITHUB_RUN_ID}](https://github.com/${REPO}/actions/runs/${GITHUB_RUN_ID})"
+            echo
+            echo "## Branches"
+            echo
+            echo '| Branch | Tip | Tracking |'
+            echo '|---|---|---|'
+            git for-each-ref --format='%(refname:short)\t%(objectname:short)\t%(upstream:short)' refs/heads refs/remotes/origin \
+              | grep -Ev '^origin$|^origin/HEAD' \
+              | while IFS=$'\t' read -r branch tip tracking; do
+                  printf '| `%s` | `%s` | `%s` |\n' "$branch" "$tip" "${tracking:-—}"
+                done
+            echo
+            echo "## Open pull requests"
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          prs_json="$(mktemp)"
+          gh pr list --repo "$REPO" --state open --limit 100 \
+            --json number,title,headRefName,baseRefName,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,updatedAt,url \
+            > "$prs_json"
+
+          if [ "$(jq 'length' "$prs_json")" -eq 0 ]; then
+            echo "No open pull requests." >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo '| PR | Title | Head → Base | Merge state | Review | Checks |'
+              echo '|---:|---|---|---|---|---|'
+              jq -r '.[] |
+                ([.statusCheckRollup[]? | select(.status != "COMPLETED" or .conclusion != "SUCCESS")] | length) as $pending_or_failed |
+                "| [#\(.number)](\(.url)) | \(.title | gsub("\\|"; "\\\\|")) | `\(.headRefName)` → `\(.baseRefName)` | \(.mergeStateStatus // "UNKNOWN") | \(.reviewDecision // "PENDING") | \($pending_or_failed) pending/failed |"' "$prs_json"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          conflict_count="$(jq '[.[] | select(.mergeStateStatus == "DIRTY" or .mergeStateStatus == "CONFLICTING")] | length' "$prs_json")"
+          blocked_count="$(jq '[.[] | select(.mergeStateStatus == "BLOCKED")] | length' "$prs_json")"
+          if [ "$conflict_count" -gt 0 ]; then
+            {
+              echo
+              echo "**Conflict alert:** ${conflict_count} open pull request(s) have a dirty/conflicting merge state."
+              echo "Resolve conflicts or update the affected branches before merging."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          if [ "$blocked_count" -gt 0 ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Notice:** ${blocked_count} open pull request(s) are blocked by policy or required checks; this is not necessarily a conflict." >> "$GITHUB_STEP_SUMMARY"
+          fi
