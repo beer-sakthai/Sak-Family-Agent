@@ -1,0 +1,1 @@
+Learned that `scripts/auto_heal_skills.py` requires standard library imports to be correctly sorted (`import glob` removed, `import re` and `import yaml` separated by a blank line). Additionally, fixed unused variables (`modified`) as reported by ruff. Tests in `sakthai-chat-cli` might have pre-existing collection errors related to config constants, but root tests passed.
