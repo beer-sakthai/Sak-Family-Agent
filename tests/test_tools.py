@@ -38,6 +38,46 @@ def test_tool_by_name() -> None:
     assert tool_by_name("nope") is None
 
 
+def test_huggingface_inference_tool_posts_bounded_request(
+    store: MemoryStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured: dict[str, object] = {}
+
+    class _Response:
+        def __enter__(self) -> _Response:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return b'{"choices":[{"message":{"content":"live result"}}]}'
+
+    def fake_urlopen(request: object, timeout: int) -> _Response:
+        captured["request"] = request
+        captured["timeout"] = timeout
+        return _Response()
+
+    monkeypatch.setattr(
+        "sakthai.auth.resolve_huggingface_credentials",
+        lambda: ("https://router.huggingface.co/v1", "hf_test_token"),
+    )
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    result = tool_by_name("huggingface_inference").handler(
+        {"prompt": "Say hello", "max_tokens": 5000}, store
+    )
+
+    request = captured["request"]
+    assert result == "live result"
+    assert captured["timeout"] == 60
+    assert request.full_url == "https://router.huggingface.co/v1/chat/completions"
+    assert request.get_header("Authorization") == "Bearer hf_test_token"
+    body = json.loads(request.data.decode("utf-8"))
+    assert body["model"] == "Nanthasit/sakthai-context-1.5b-merged"
+    assert body["max_tokens"] == 1024
+
+
 def test_learn_recall_search_forget(store: MemoryStore) -> None:
     learn = tool_by_name("learn").handler
     recall = tool_by_name("recall").handler
