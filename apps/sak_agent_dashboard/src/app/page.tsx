@@ -9,6 +9,7 @@ import CommandPalette, { type Command } from "@/components/CommandPalette";
 import HostedNotice from "@/components/HostedNotice";
 import KpiStrip from "@/components/KpiStrip";
 import MemoryExplorer from "@/components/MemoryExplorer";
+import OperationsPulse from "@/components/OperationsPulse";
 import PersonaDrawer from "@/components/PersonaDrawer";
 import SessionExplorer from "@/components/SessionExplorer";
 import Sidebar from "@/components/shell/Sidebar";
@@ -775,6 +776,18 @@ export default function Home() {
               memory={memory}
               sessions={sessions}
               audit={audit}
+              onNavigate={goToTab}
+            />
+          )}
+
+          {awaitingFirstLoad ? (
+            <PanelSkeleton label="Loading operational signals" />
+          ) : (
+            <OperationsPulse
+              personas={personasPayload}
+              metrics={metrics}
+              audit={audit}
+              workflows={workflows}
               onNavigate={goToTab}
             />
           )}
