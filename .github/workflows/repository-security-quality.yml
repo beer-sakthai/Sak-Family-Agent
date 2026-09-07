@@ -1,0 +1,129 @@
+# Enforce the repository security and quality skills on every pull request.
+name: Repository Security and Quality
+
+on:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: repository-security-quality-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  skill-validation:
+    name: Validate repository skills
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Validate shared skill frontmatter
+        run: uv run sakthai skills validate --source library
+
+      - name: Compose persona skill trees
+        run: make compose-personas
+
+      - name: Remove generated composition output
+        if: always()
+        run: rm -rf build
+
+  quality:
+    name: Quality gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run Ruff checks
+        run: |
+          uv run ruff check personas/sakthai/sakthai tests
+          uv run ruff format --check personas/sakthai/sakthai tests
+
+      - name: Run strict type checking
+        run: uv run mypy personas/sakthai/sakthai
+
+      - name: Run focused quality tests
+        run: uv run pytest tests/test_skills.py -q
+
+  security:
+    name: Security gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run Bandit
+        run: uv run bandit -c pyproject.toml -r personas/sakthai/sakthai
+
+      - name: Check for tracked secret-like files
+        run: |
+          # Documented .env.example files are safe templates; reject actual
+          # dotenv files and common private-key/credential filenames.
+          forbidden='(^|/)(\.env$|.*\.(pem|key)$|id_rsa$|credentials\.json$)'
+          if git ls-files | grep -E "$forbidden"; then
+            echo "Tracked secret-like files are not allowed."
+            exit 1
+          fi
