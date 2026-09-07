@@ -53,6 +53,7 @@ export function DemoModeToggle({ isDemo, onToggle, activeSource }: DemoModeToggl
         onClick={() => onToggle(!isDemo)}
         aria-pressed={isDemo}
         aria-label="Toggle sample data"
+        title={isDemo ? "Switch to live agent data" : "Switch to sample dataset"}
         className={`px-3 py-1.5 rounded-xl text-[11px] font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
           isDemo
             ? "bg-hue-amber-tint/40 text-hue-amber border-hue-amber-line/50"
