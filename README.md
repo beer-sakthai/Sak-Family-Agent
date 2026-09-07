@@ -216,11 +216,26 @@ Adding a `Tool(...)` to `BUILTIN_TOOLS` surfaces it in **both** `sakthai run` an
 |----------|--------|-------------------|
 | **Anthropic** | ✅ Default | `ANTHROPIC_API_KEY` → `ANTHROPIC_AUTH_TOKEN` → Claude CLI OAuth. Default model: `claude-opus-4-8` |
 | **Google** | ✅ Active | `GEMINI_API_KEY` / `GOOGLE_API_KEY`, or Gemini CLI OAuth token |
-| **Hugging Face** | ✅ Active | `HF_TOKEN` via the Inference Providers router (`SAKTHAI_HF_API_BASE`) — the configured default for most personas |
+| **Hugging Face** | ✅ Active | `HF_TOKEN` via the Inference Providers router (`SAKTHAI_HF_API_BASE`). With `--provider huggingface` and no explicit model, the runtime uses [`Nanthasit/sakthai-context-1.5b-merged`](https://huggingface.co/Nanthasit/sakthai-context-1.5b-merged). |
 | **Ollama** | ✅ Active | `OLLAMA_HOST` (default `http://127.0.0.1:11434` — IPv4 on purpose) |
 | **OpenAI-compatible** | ✅ Supported | `OPENAI_API_KEY` + `OPENAI_API_BASE` / `OPENAI_BASE_URL` |
 | **Gateway** | ✅ Supported | `SAKTHAI_GATEWAY_URL` + `SAKTHAI_GATEWAY_API_KEY` (OpenRouter / LiteLLM / Vercel / Cloudflare) |
-| **Nanthasit (custom)** | ✅ Active | Open-weights models trained in-house: `sakthai-context-7b-tools`, `sakthai-context-1.5b-tools-v2`, `sakthai-embedding-multilingual` |
+| **Nanthasit (custom)** | ✅ Active | Open-weights models trained in-house: `sakthai-context-7b-tools`, `sakthai-context-1.5b-tools-v2`, `sakthai-context-1.5b-merged`, `sakthai-plus-1.5b`, `sakthai-embedding-multilingual` |
+
+To run the shared agent ecosystem through Hugging Face, set `HF_TOKEN` and
+select the provider explicitly:
+
+```shell
+export HF_TOKEN="hf_..."
+sakthai run "summarize the current project status" --provider huggingface
+```
+
+The default checkpoint is a merged Apache-2.0 SakThai/Qwen2.5 1.5B model with
+tool-calling metadata and a live Hugging Face Inference Provider route. Pass
+`--model` or set `SAKTHAI_MODEL` to override it. The older
+`Nanthasit/sakthai-context-1.5b-tools` repository is a LoRA adapter and is not
+the default hosted-inference artifact; use the merged checkpoint for runtime
+inference or the v2 adapter for explicit local PEFT workflows.
 
 ---
 
