@@ -103,7 +103,7 @@ jobs:
           retention-days: 14
 
       - name: Publish coverage to Codecov
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v5
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           files: coverage.xml
           flags: repository-security-quality
@@ -134,6 +134,9 @@ jobs:
 
       - name: Set up uv
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+
+      - name: Scan workflow action pins
+        run: uvx zizmor --pedantic .github/workflows/repository-security-quality.yml
 
       - name: Install dependencies
         run: uv sync --all-extras
