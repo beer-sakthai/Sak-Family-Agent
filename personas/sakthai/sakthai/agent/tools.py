@@ -827,9 +827,12 @@ def _huggingface_inference(args: dict[str, Any], store: MemoryStore) -> str:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=60) as response:
+        with urllib.request.urlopen(request, timeout=60) as response:  # nosec B310 - configured HF endpoint
             result = json.loads(response.read().decode("utf-8"))
-    except (HTTPError, URLError, TimeoutError) as exc:
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:500]
+        raise RuntimeError(f"Hugging Face inference request failed: HTTP {exc.code}: {detail}") from exc
+    except (URLError, TimeoutError) as exc:
         raise RuntimeError(f"Hugging Face inference request failed: {exc}") from exc
     choices = result.get("choices", [])
     if not choices or not isinstance(choices[0], dict):
