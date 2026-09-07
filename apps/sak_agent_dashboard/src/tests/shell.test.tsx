@@ -184,7 +184,7 @@ describe("TopBar", () => {
     expect(screen.getByText("Refresh")).toBeInTheDocument();
   });
 
-  it("refuses a second refresh while one is in flight and indicates loading status", () => {
+  it("refuses a second refresh while one is in flight and shows loading tooltip and disabled cursor", () => {
     const { props } = renderTopBar({ isLoading: true });
     const button = screen.getByLabelText("Refreshing dashboard data…");
     expect(button).toBeDisabled();
@@ -192,6 +192,12 @@ describe("TopBar", () => {
     expect(button).toHaveClass("disabled:cursor-not-allowed");
     fireEvent.click(button);
     expect(props.onRefresh).not.toHaveBeenCalled();
+  });
+
+  it("provides informative tooltip on sample data toggle button", () => {
+    renderTopBar({ isDemo: false });
+    const toggle = screen.getByLabelText("Toggle sample data");
+    expect(toggle).toHaveAttribute("title", "Switch to sample dataset");
   });
 
   it("reports an auto-refresh choice as a number", () => {
@@ -217,7 +223,10 @@ describe("TopBar", () => {
     renderTopBar({ canExport: false });
     const select = screen.getByLabelText("Export the current panel");
     expect(select).toBeDisabled();
-    expect(screen.getByTitle("No rows available to export")).toBeInTheDocument();
+    const labelContainer = screen.getByTitle("No rows available to export");
+    expect(labelContainer).toBeInTheDocument();
+    expect(labelContainer).toHaveClass("opacity-50");
+    expect(labelContainer).toHaveClass("cursor-not-allowed");
   });
 
   it("indicates when auto-refresh is actively running", () => {
