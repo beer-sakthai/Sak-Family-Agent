@@ -23,7 +23,7 @@ jobs:
       SAKTHAI_HF_API_BASE: https://router.huggingface.co/v1
       # The SakThai merged checkpoint remains the application default, but may
       # not be enabled for every account's Inference Provider subscription.
-      SAKTHAI_HF_SMOKE_MODEL: Qwen/Qwen2.5-7B-Instruct
+      SAKTHAI_HF_SMOKE_MODEL: Nanthasit/sakthai-context-1.5b-merged:featherless-ai
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
