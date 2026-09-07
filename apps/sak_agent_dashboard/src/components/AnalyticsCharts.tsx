@@ -167,6 +167,8 @@ export function AnalyticsCharts({
               key={days}
               onClick={() => onTrendChange(days)}
               aria-pressed={trend === days}
+              aria-label={`Set trend window to ${trendWindowLabel(days)}`}
+              title={`Set trend window to ${trendWindowLabel(days)}`}
               className={`px-2.5 py-1 font-mono text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 trend === days ? "bg-raised/80 text-fg" : "text-fg-3 hover:text-fg"
               }`}
