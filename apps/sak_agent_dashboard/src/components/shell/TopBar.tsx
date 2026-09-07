@@ -248,7 +248,8 @@ export function TopBar({
             onClick={onRefresh}
             disabled={isLoading}
             aria-label="Refresh dashboard data"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-3 py-1.5 font-mono text-[11px] text-fg-2 transition-colors hover:border-line-strong disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            title={isLoading ? "Refreshing dashboard data…" : "Refresh dashboard data"}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-3 py-1.5 font-mono text-[11px] text-fg-2 transition-colors hover:border-line-strong disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <RefreshCw className={`h-3 w-3 ${isLoading ? "animate-spin" : ""}`} aria-hidden />
             <span className="hidden sm:inline">
