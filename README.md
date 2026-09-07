@@ -19,6 +19,8 @@ This repository is the living workspace of the Sak Family — autonomous AI agen
 ## 📊 System Status
 
 > **Mainline dashboard.** Dynamic badges above report the latest GitHub workflow state for `main`; the detailed figures below are a documented repository snapshot. Re-run the listed checks after substantive changes.
+>
+> **Live snapshot — 2026-09-07:** 🟢 CI, security, secret scanning, CodeQL, and Scorecard checks are passing on `main`; 🔒 the repository is operating from the protected mainline; 📊 the status badges above remain the source of truth for subsequent runs.
 
 ```
 ┌───────────────────────────────────────────────────────────────────┐
@@ -38,7 +40,7 @@ This repository is the living workspace of the Sak Family — autonomous AI agen
 
 ### 🧭 Repository Snapshot
 
-Snapshot recorded on **2026-09-06** from the checked-in repository tree. The root package, documentation, tests, and workflow inventory are shown separately so contributors can see the project’s operational footprint at a glance.
+Snapshot recorded on **2026-09-07** from the checked-in repository tree. The root package, documentation, tests, and workflow inventory are shown separately so contributors can see the project’s operational footprint at a glance.
 
 | Area | Status | Detail |
 |---|---|---|
