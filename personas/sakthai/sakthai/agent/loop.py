@@ -37,6 +37,7 @@ from .usage import UsageTracker, extract_usage
 logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "claude-opus-4-8"
+DEFAULT_HUGGINGFACE_MODEL = "Nanthasit/sakthai-context-1.5b-merged"
 DEFAULT_MAX_TOKENS = 16000
 DEFAULT_MAX_ITERATIONS = 12
 DEFAULT_MAX_SECONDS: float | None = None  # opt-in wall-clock budget
@@ -211,6 +212,8 @@ def _resolve_model_name(model: str, provider: str) -> str:
         return "qwen2.5-coder:7b" if os.environ.get("OLLAMA_HOST") else "gpt-4o"
     if provider == "google":
         return "gemini-2.5-flash"
+    if provider == "huggingface":
+        return DEFAULT_HUGGINGFACE_MODEL
     return model
 
 
@@ -444,13 +447,7 @@ def run_agent(
     if provider == "ollama":
         provider = "openai"
 
-    if provider == "openai" and model == DEFAULT_MODEL:
-        if os.environ.get("OLLAMA_HOST"):
-            model = "qwen2.5-coder:7b"
-        else:
-            model = "gpt-4o"
-    elif provider == "google" and model == DEFAULT_MODEL:
-        model = "gemini-2.5-flash"
+    model = _resolve_model_name(model, provider)
 
     client = _build_client(provider, client)
 
