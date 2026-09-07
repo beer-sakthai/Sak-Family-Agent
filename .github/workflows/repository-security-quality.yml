@@ -85,8 +85,31 @@ jobs:
       - name: Run strict type checking
         run: uv run mypy personas/sakthai/sakthai
 
-      - name: Run focused quality tests
-        run: uv run pytest tests/test_skills.py -q
+      - name: Run tests with coverage
+        run: >-
+          uv run pytest --cov=sakthai --cov-report=term-missing
+          --cov-report=xml:coverage.xml --cov-fail-under=96 tests/
+        env:
+          OPENAI_API_KEY: ""
+          OPENAI_API_BASE: ""
+          OPENAI_BASE_URL: ""
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-python-3.11
+          path: coverage.xml
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish coverage to Codecov
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v5
+        with:
+          files: coverage.xml
+          flags: repository-security-quality
+          name: repository-security-quality-python-3.11
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
 
   security:
     name: Security gates
