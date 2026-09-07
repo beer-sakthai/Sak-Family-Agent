@@ -102,6 +102,7 @@ export function ToastStack({
             <button
               onClick={() => onDismiss(toast.id)}
               aria-label="Dismiss notification"
+              title="Dismiss notification"
               className="shrink-0 rounded p-0.5 opacity-60 transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               <X className="h-3 w-3" aria-hidden />
