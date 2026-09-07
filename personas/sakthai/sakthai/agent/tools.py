@@ -831,7 +831,9 @@ def _huggingface_inference(args: dict[str, Any], store: MemoryStore) -> str:
             result = json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")[:500]
-        raise RuntimeError(f"Hugging Face inference request failed: HTTP {exc.code}: {detail}") from exc
+        raise RuntimeError(
+            f"Hugging Face inference request failed: HTTP {exc.code}: {detail}"
+        ) from exc
     except (URLError, TimeoutError) as exc:
         raise RuntimeError(f"Hugging Face inference request failed: {exc}") from exc
     choices = result.get("choices", [])

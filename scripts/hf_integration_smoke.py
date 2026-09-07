@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 from sakthai.agent.tools import tool_by_name
 from sakthai.memory.store import MemoryStore
 
@@ -14,6 +16,7 @@ def main() -> None:
         result = tool.handler(
             {
                 "prompt": "Reply with exactly: Sak Family HF integration is working.",
+                "model": os.environ.get("SAKTHAI_HF_SMOKE_MODEL", "google/gemma-2-2b-it"),
                 "max_tokens": 32,
             },
             store,
