@@ -346,17 +346,11 @@ describe("AuditLogs", () => {
     expect(screen.getByText("Blocked a destructive shell command")).toBeInTheDocument();
   });
 
-  it("provides informative title tooltips on severity filter buttons", () => {
+  it("wraps severity filter buttons in a group with an accessible label", () => {
     render(<AuditLogs audit={demoAudit()} severity="ALL" onSeverityChange={vi.fn()} />);
-    const allBtn = screen.getByRole("button", { name: /ALL severity/ });
-    expect(allBtn).toHaveAttribute("title", "Show all audit log events");
-
-    const criticalBtn = screen.getByRole("button", { name: /critical severity/ });
-    const count = demoAudit().severity_counts.critical ?? 0;
-    expect(criticalBtn).toHaveAttribute(
-      "title",
-      `Filter audit log to critical severity (${count} ${count === 1 ? "event" : "events"})`,
-    );
+    expect(
+      screen.getByRole("group", { name: "Filter audit log by severity" }),
+    ).toBeInTheDocument();
   });
 
   it("reports the filter upward instead of filtering locally", () => {
