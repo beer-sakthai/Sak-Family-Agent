@@ -1,0 +1,63 @@
+name: Daily PR review and branch cleanup
+
+on:
+  schedule:
+    # 06:00 UTC every day.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      apply_delete:
+        description: "Delete only branches classified as no-op and not protected/open PR heads"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: daily-pr-review
+  cancel-in-progress: false
+
+jobs:
+  review-and-clean:
+    name: Review PRs and clean no-op branches
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Check out all branches
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Review pull requests and clean branches
+        id: review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          # Scheduled runs are the explicit daily cleanup authorization; manual
+          # runs stay dry-run unless the operator checks the delete input.
+          APPLY_DELETE: ${{ github.event_name == 'schedule' && 'true' || inputs.apply_delete || 'false' }}
+        run: |
+          set -euo pipefail
+          .manus/skills/sak-family-daily-pr-review/scripts/daily_pr_review.sh | tee /tmp/daily-pr-review.txt
+
+      - name: Publish daily report
+        if: always()
+        run: |
+          {
+            echo "## Daily PR review and branch cleanup"
+            echo
+            echo "Repository: \\`${GITHUB_REPOSITORY}\\`"
+            echo "Run: [${GITHUB_RUN_ID}](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
+            echo
+            sed -e 's/^## /### /' /tmp/daily-pr-review.txt 2>/dev/null || echo "The review step did not produce a report."
+          } >> "$GITHUB_STEP_SUMMARY"

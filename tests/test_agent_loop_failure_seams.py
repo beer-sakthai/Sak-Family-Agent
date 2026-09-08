@@ -77,6 +77,12 @@ def test_resolve_model_name_keeps_default_for_anthropic() -> None:
     assert _resolve_model_name(DEFAULT_MODEL, "anthropic") == DEFAULT_MODEL
 
 
+def test_resolve_model_name_uses_sakthai_huggingface_checkpoint() -> None:
+    assert _resolve_model_name(DEFAULT_MODEL, "huggingface") == (
+        "Nanthasit/sakthai-context-1.5b-merged"
+    )
+
+
 def test_preview_truncates_long_text_with_ellipsis() -> None:
     text = "word " * 100
     preview = _preview(text, limit=20)

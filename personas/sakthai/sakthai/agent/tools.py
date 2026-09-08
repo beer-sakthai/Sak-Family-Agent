@@ -36,6 +36,8 @@ MAX_CMD_OUTPUT_CHARS = 20_000  # run_command output cap
 _RECALL_LIMIT_MAX = 200  # cap on recall/search limit
 _CMD_TIMEOUT_DEFAULT = 30.0
 _CMD_TIMEOUT_MAX = 120.0
+_HF_DEFAULT_MODEL = "Nanthasit/sakthai-context-1.5b-merged"
+_HF_API_BASE_DEFAULT = "https://router.huggingface.co/v1"
 
 _GRAPH_API_BASE = "https://graph.microsoft.com/v1.0"
 _GRAPH_TOKEN_URL_TMPL = "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token"  # nosec B105 - URL template, not a password
@@ -788,6 +790,62 @@ def _run_agent_loop(args: dict[str, Any], store: MemoryStore) -> str:
     return "\n".join(lines)
 
 
+def _huggingface_inference(args: dict[str, Any], store: MemoryStore) -> str:
+    """Run one bounded text-generation request through Hugging Face Router."""
+    del store
+    prompt = args.get("prompt")
+    if not isinstance(prompt, str) or not prompt.strip():
+        raise ValueError("`prompt` is required and must be a non-empty string.")
+
+    import contextlib
+
+    from ..auth import resolve_huggingface_credentials
+
+    model = args.get("model") or _HF_DEFAULT_MODEL
+    if not isinstance(model, str) or not model.strip():
+        raise ValueError("`model` must be a non-empty string when provided.")
+    max_tokens = 256
+    with contextlib.suppress(TypeError, ValueError):
+        max_tokens = max(1, min(int(args.get("max_tokens", 256)), 1024))
+
+    base_url, token = resolve_huggingface_credentials()
+    endpoint = base_url.rstrip("/") + "/chat/completions"
+    payload = json.dumps(
+        {
+            "model": model.strip(),
+            "messages": [{"role": "user", "content": prompt.strip()}],
+            "max_tokens": max_tokens,
+        }
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        endpoint,
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:  # nosec B310 - configured HF endpoint
+            result = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:500]
+        raise RuntimeError(
+            f"Hugging Face inference request failed: HTTP {exc.code}: {detail}"
+        ) from exc
+    except (URLError, TimeoutError) as exc:
+        raise RuntimeError(f"Hugging Face inference request failed: {exc}") from exc
+    choices = result.get("choices", [])
+    if not choices or not isinstance(choices[0], dict):
+        raise RuntimeError("Hugging Face returned no completion choices.")
+    message = choices[0].get("message", {})
+    content = message.get("content") if isinstance(message, dict) else None
+    if not isinstance(content, str) or not content.strip():
+        raise RuntimeError("Hugging Face returned an empty completion.")
+    return content.strip()
+
+
 # -- registry ------------------------------------------------------------
 
 BUILTIN_TOOLS: tuple[Tool, ...] = (
@@ -812,6 +870,31 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["value"],
         },
         handler=_learn,
+    ),
+    Tool(
+        name="huggingface_inference",
+        description=(
+            "Run a bounded text-generation request through the configured Hugging Face "
+            "Inference Providers router. Requires HF_TOKEN; never include secrets in the prompt."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "prompt": {"type": "string", "description": "The user-safe prompt to send."},
+                "model": {
+                    "type": "string",
+                    "description": "Optional Hugging Face model ID.",
+                    "default": _HF_DEFAULT_MODEL,
+                },
+                "max_tokens": {
+                    "type": "integer",
+                    "description": "Maximum generated tokens, clamped to 1–1024.",
+                    "default": 256,
+                },
+            },
+            "required": ["prompt"],
+        },
+        handler=_huggingface_inference,
     ),
     Tool(
         name="ingest_document",

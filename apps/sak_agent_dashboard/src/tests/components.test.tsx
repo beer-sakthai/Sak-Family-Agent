@@ -21,6 +21,7 @@ import MemoryExplorer from "@/components/MemoryExplorer";
 import PersonaFilter from "@/components/PersonaFilter";
 import SessionExplorer from "@/components/SessionExplorer";
 import StitchStudio from "@/components/StitchStudio";
+import ToastStack from "@/components/Toasts";
 import WorkflowRuns from "@/components/WorkflowRuns";
 import type { PersonaSummary } from "@/lib/contracts.generated";
 import {
@@ -211,8 +212,10 @@ describe("AnalyticsCharts", () => {
   it("marks the active window and reports a change upward", () => {
     const onTrendChange = vi.fn();
     renderCharts({ trend: 30, onTrendChange });
-    expect(screen.getByRole("button", { name: "30d" })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(screen.getByRole("button", { name: "7d" }));
+    expect(
+      screen.getByRole("button", { name: "Set trend window to 30d" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Set trend window to 7d" }));
     expect(onTrendChange).toHaveBeenCalledWith(7);
   });
 
@@ -220,8 +223,11 @@ describe("AnalyticsCharts", () => {
     renderCharts();
     for (const days of TREND_WINDOWS) {
       expect(
-        screen.getByRole("button", { name: trendWindowLabel(days) }),
+        screen.getByRole("button", { name: `Set trend window to ${trendWindowLabel(days)}` }),
       ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: `Set trend window to ${trendWindowLabel(days)}` }),
+      ).toHaveAttribute("title", `Set trend window to ${trendWindowLabel(days)}`);
     }
   });
 });
@@ -338,6 +344,19 @@ describe("AuditLogs", () => {
   it("renders events", () => {
     render(<AuditLogs audit={demoAudit()} severity="ALL" onSeverityChange={vi.fn()} />);
     expect(screen.getByText("Blocked a destructive shell command")).toBeInTheDocument();
+  });
+
+  it("provides informative title tooltips on severity filter buttons", () => {
+    render(<AuditLogs audit={demoAudit()} severity="ALL" onSeverityChange={vi.fn()} />);
+    const allBtn = screen.getByRole("button", { name: /ALL severity/ });
+    expect(allBtn).toHaveAttribute("title", "Show all audit log events");
+
+    const criticalBtn = screen.getByRole("button", { name: /critical severity/ });
+    const count = demoAudit().severity_counts.critical ?? 0;
+    expect(criticalBtn).toHaveAttribute(
+      "title",
+      `Filter audit log to critical severity (${count} ${count === 1 ? "event" : "events"})`,
+    );
   });
 
   it("reports the filter upward instead of filtering locally", () => {
@@ -712,6 +731,22 @@ describe("DisplayMenu", () => {
 
     fireEvent.keyDown(menuItems[4], { key: "Home" });
     expect(menuItems[0]).toHaveFocus();
+  });
+});
+
+describe("ToastStack", () => {
+  it("renders toasts with accessible dismiss buttons containing title attributes", () => {
+    const onDismiss = vi.fn();
+    render(
+      <ToastStack
+        toasts={[{ id: 1, tone: "info", message: "Export complete" }]}
+        onDismiss={onDismiss}
+      />,
+    );
+    const dismissButton = screen.getByRole("button", { name: "Dismiss notification" });
+    expect(dismissButton).toHaveAttribute("title", "Dismiss notification");
+    fireEvent.click(dismissButton);
+    expect(onDismiss).toHaveBeenCalledWith(1);
   });
 });
 

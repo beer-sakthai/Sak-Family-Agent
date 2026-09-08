@@ -1,0 +1,105 @@
+name: Sak Family agent contract
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".claude/agents/**"
+      - "docs/sak-family-agent-github-actions-guide.md"
+      - "personas/**/SOUL.md"
+      - "personas/**/config/**"
+      - "personas/**/skills/**"
+      - "personas/shared/**"
+      - "infra/hermes-agents/**"
+      - "scripts/compose_persona.py"
+      - "scripts/diagnose_personas.py"
+      - "scripts/export_agent_repo.py"
+      - "scripts/validate_agent_definition.py"
+      - "tests/test_soul_consistency.py"
+      - "tests/test_compose_persona.py"
+      - "tests/test_export_agent_repo.py"
+      - "tests/test_persona_guardrails_parity.py"
+      - ".github/workflows/sak-family-agent-contract.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - ".claude/agents/**"
+      - "docs/sak-family-agent-github-actions-guide.md"
+      - "personas/**/SOUL.md"
+      - "personas/**/config/**"
+      - "personas/**/skills/**"
+      - "personas/shared/**"
+      - "infra/hermes-agents/**"
+      - "scripts/compose_persona.py"
+      - "scripts/diagnose_personas.py"
+      - "scripts/export_agent_repo.py"
+      - "scripts/validate_agent_definition.py"
+      - "tests/test_soul_consistency.py"
+      - "tests/test_compose_persona.py"
+      - "tests/test_export_agent_repo.py"
+      - "tests/test_persona_guardrails_parity.py"
+      - ".github/workflows/sak-family-agent-contract.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sak-family-agent-contract-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Validate agent and persona contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Validate Claude agent definition
+        run: python scripts/validate_agent_definition.py .claude/agents/sak-family-agent-developer.md
+
+      - name: Check commit whitespace
+        run: git diff --check "${{ github.event.pull_request.base.sha }}...HEAD"
+
+      - name: Compose all persona skill trees
+        run: make compose-personas
+
+      - name: Export all standalone persona snapshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          for persona in sakking sakthai saksee saksit saktan sakjules; do
+            python scripts/export_agent_repo.py "$persona" --out "build/agent-repos/$persona"
+            test -s "build/agent-repos/$persona/README.md"
+            test -s "build/agent-repos/$persona/AGENTS.md"
+          done
+
+      - name: Run persona contract tests
+        run: >-
+          uv run pytest -q
+          tests/test_soul_consistency.py
+          tests/test_compose_persona.py
+          tests/test_export_agent_repo.py
+          tests/test_persona_guardrails_parity.py
