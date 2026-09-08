@@ -110,6 +110,7 @@ export default function Home() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [failedEndpoints, setFailedEndpoints] = useState<string[]>([]);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
@@ -187,6 +188,20 @@ export default function Home() {
         fetchEnvelope<WorkflowsPayload>(`/api/workflows${qsFamilyWide()}`),
       ]);
 
+    const failed: string[] = (
+      [
+        ["agent inventory", personasRes],
+        ["metrics", metricsRes],
+        ["memory", memoryRes],
+        ["audit log", auditRes],
+        ["sessions", sessionsRes],
+        ["workflow runs", workflowsRes],
+      ] as const
+    )
+      .filter(([, result]) => result === null)
+      .map(([label]) => label);
+    setFailedEndpoints(failed);
+
     if (personasRes) {
       setPersonasPayload(personasRes.data);
       setActiveSource(personasRes.source);
@@ -198,7 +213,7 @@ export default function Home() {
     if (workflowsRes) setWorkflows(workflowsRes.data);
 
     setError(
-      !personasRes && !metricsRes
+      failed.length === 6
         ? "Could not reach the dashboard API. Check the server and try again."
         : null,
     );
@@ -762,6 +777,25 @@ export default function Home() {
                 className="shrink-0 rounded-lg border border-hue-rose-line px-2 py-0.5 font-mono text-[11px] text-hue-rose hover:bg-hue-rose-tint focus:outline-none focus-visible:ring-2 focus-visible:ring-hue-rose"
               >
                 Dismiss
+              </button>
+            </div>
+          )}
+
+          {!error && failedEndpoints.length > 0 && (
+            <div
+              role="status"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-hue-amber-line bg-hue-amber-tint/50 p-4 text-sm text-hue-amber"
+            >
+              <span>
+                <strong>Some live data is unavailable.</strong>{" "}
+                Showing the last successful values while {failedEndpoints.join(", ")} recover.
+              </span>
+              <button
+                onClick={handleRefresh}
+                disabled={isLoading}
+                className="shrink-0 rounded-lg border border-hue-amber-line px-2.5 py-1 font-mono text-[11px] text-hue-amber transition-colors hover:bg-hue-amber-tint disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-hue-amber"
+              >
+                Retry now
               </button>
             </div>
           )}
