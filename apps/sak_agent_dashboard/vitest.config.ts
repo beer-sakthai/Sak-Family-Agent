@@ -8,6 +8,11 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: "./vitest.setup.ts",
+    // better-sqlite3 is a native addon. Serializing files avoids concurrent
+    // native handles crashing intermittently while keeping CI deterministic.
+    pool: "threads",
+    maxWorkers: 1,
+    fileParallelism: false,
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },

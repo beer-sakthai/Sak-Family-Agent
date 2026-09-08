@@ -78,7 +78,11 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
         </span>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div
+        role="group"
+        aria-label="Filter audit log by severity"
+        className="flex flex-wrap items-center gap-2"
+      >
         {SEVERITIES.map((sev) => {
           const count = sev === "ALL" ? null : (audit.severity_counts[sev] ?? 0);
           const active = severity === sev;

@@ -346,6 +346,13 @@ describe("AuditLogs", () => {
     expect(screen.getByText("Blocked a destructive shell command")).toBeInTheDocument();
   });
 
+  it("wraps severity filter buttons in a group with an accessible label", () => {
+    render(<AuditLogs audit={demoAudit()} severity="ALL" onSeverityChange={vi.fn()} />);
+    expect(
+      screen.getByRole("group", { name: "Filter audit log by severity" }),
+    ).toBeInTheDocument();
+  });
+
   it("reports the filter upward instead of filtering locally", () => {
     const onChange = vi.fn();
     render(<AuditLogs audit={demoAudit()} severity="ALL" onSeverityChange={onChange} />);
