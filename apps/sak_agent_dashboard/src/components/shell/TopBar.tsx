@@ -141,10 +141,10 @@ export function TopBar({
                 ? `Auto-refresh active (${intervalLabel(refreshInterval)})`
                 : "Set auto-refresh interval"
             }
-            className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 font-mono text-[11px] transition-colors focus-within:ring-2 focus-within:ring-hue-cyan ${
+            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-xl border px-2.5 py-1.5 font-mono text-[11px] transition-colors focus-within:ring-2 focus-within:ring-hue-cyan ${
               refreshInterval > 0
                 ? "border-hue-cyan-line/50 bg-hue-cyan-tint/40 text-hue-cyan"
-                : "border-line bg-panel/60 text-fg-3"
+                : "border-line bg-panel/60 text-fg-3 hover:border-line-strong hover:text-fg-2"
             }`}
           >
             <span
@@ -165,7 +165,7 @@ export function TopBar({
               onChange={(event) =>
                 onRefreshIntervalChange(Number(event.target.value) as RefreshInterval)
               }
-              className="rounded bg-transparent text-fg outline-none focus-visible:ring-2 focus-visible:ring-hue-cyan"
+              className="cursor-pointer rounded bg-transparent text-fg outline-none focus-visible:ring-2 focus-visible:ring-hue-cyan"
             >
               {REFRESH_INTERVALS.map((seconds) => (
                 <option key={seconds} value={seconds} className="bg-panel text-fg">
@@ -190,8 +190,10 @@ export function TopBar({
           <label
             data-chrome="secondary"
             title={canExport ? "Export current panel data" : "No rows available to export"}
-            className={`inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-2.5 py-1.5 font-mono text-[11px] text-fg-3 focus-within:ring-2 focus-within:ring-accent ${
-              !canExport ? "opacity-50 cursor-not-allowed" : ""
+            className={`inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-2.5 py-1.5 font-mono text-[11px] text-fg-3 transition-colors focus-within:ring-2 focus-within:ring-accent ${
+              canExport
+                ? "cursor-pointer hover:border-line-strong hover:text-fg-2"
+                : "opacity-50 cursor-not-allowed"
             }`}
           >
             <Download className="h-3 w-3" aria-hidden />
@@ -206,7 +208,7 @@ export function TopBar({
                 // in a row still fires a change event.
                 event.target.value = "";
               }}
-              className="bg-transparent text-fg-2 outline-none disabled:cursor-not-allowed"
+              className="bg-transparent text-fg-2 outline-none disabled:cursor-not-allowed enabled:cursor-pointer"
             >
               <option value="" className="bg-panel">
                 {canExport ? "Export" : "No rows"}
