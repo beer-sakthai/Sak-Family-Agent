@@ -209,3 +209,17 @@ class TestConnectServersMocked:
         ):
             assert tools == []
         MockClient.assert_not_called()
+
+    def test_unsafe_server_is_rejected_before_start(self) -> None:
+        spec = MCPServerSpec(name="unsafe", command="configured-server", args=[])
+        with (
+            patch("sakthai.mcp.manager.StdioMCPClient") as MockClient,
+            patch(
+                "sakthai.mcp.manager.MCPServerValidator.validate_server_config",
+                return_value=(False, "blocked by policy"),
+            ) as validate,
+            connect_servers([spec]) as tools,
+        ):
+            assert tools == []
+        validate.assert_called_once()
+        MockClient.assert_not_called()

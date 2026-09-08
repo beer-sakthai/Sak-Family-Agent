@@ -16,6 +16,7 @@ import contextlib
 import logging
 from collections.abc import Iterator, Sequence
 
+from ..agent.security_hardening import MCPServerValidator, SecurityLevel
 from ..agent.tools import Tool
 from .client import MCPClientError, StdioMCPClient
 from .servers import MCPServerSpec, load_server_specs
@@ -40,6 +41,19 @@ def connect_servers(
     tools: list[Tool] = []
     try:
         for spec in specs:
+            is_valid, reason = MCPServerValidator.validate_server_config(
+                {
+                    "name": spec.name,
+                    "command": spec.command,
+                    "args": spec.args,
+                    "env": spec.env,
+                    "cwd": spec.cwd,
+                },
+                SecurityLevel.BALANCED,
+            )
+            if not is_valid:
+                logger.warning("skipping unsafe MCP server %r: %s", spec.name, reason)
+                continue
             client = StdioMCPClient(
                 spec.command,
                 spec.args,
