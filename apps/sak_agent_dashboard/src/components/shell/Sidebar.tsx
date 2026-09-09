@@ -184,13 +184,15 @@ export function Sidebar({
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
             aria-label="Close navigation"
+            title="Close navigation menu"
             onClick={onMobileClose}
-            className="absolute inset-0 h-full w-full bg-sunken/80 backdrop-blur-sm"
+            className="absolute inset-0 h-full w-full bg-sunken/80 backdrop-blur-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
           />
           <aside className="absolute left-0 top-0 flex h-full w-[260px] flex-col border-r border-line/70 bg-sunken/95 p-4">
             <button
               onClick={onMobileClose}
               aria-label="Close navigation menu"
+              title="Close navigation menu"
               className="absolute right-3 top-3 rounded-lg p-1.5 text-fg-3 hover:bg-raised/60 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               <X className="h-4 w-4" aria-hidden />
