@@ -94,8 +94,9 @@ export function Drawer({
     <div className="fixed inset-0 z-50 flex justify-end" data-testid={testId}>
       <button
         aria-label="Close detail"
+        title="Close detail panel"
         onClick={onClose}
-        className="absolute inset-0 h-full w-full animate-scrim-in bg-canvas/70 backdrop-blur-sm"
+        className="absolute inset-0 h-full w-full animate-scrim-in bg-canvas/70 backdrop-blur-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
       />
 
       <div

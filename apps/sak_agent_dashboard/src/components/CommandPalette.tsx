@@ -138,8 +138,9 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
     <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[12vh]">
       <button
         aria-label="Close command palette"
+        title="Close command palette"
         onClick={onClose}
-        className="absolute inset-0 h-full w-full bg-sunken/80 backdrop-blur-sm"
+        className="absolute inset-0 h-full w-full bg-sunken/80 backdrop-blur-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
       />
       <div
         ref={dialogRef}
