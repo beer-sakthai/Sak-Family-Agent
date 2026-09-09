@@ -17,6 +17,7 @@ import AnalyticsCharts from "@/components/AnalyticsCharts";
 import AuditLogs from "@/components/AuditLogs";
 import DemoModeToggle from "@/components/DemoModeToggle";
 import DisplayMenu from "@/components/DisplayMenu";
+import { HostedNotice } from "@/components/HostedNotice";
 import MemoryExplorer from "@/components/MemoryExplorer";
 import PersonaFilter from "@/components/PersonaFilter";
 import SessionExplorer from "@/components/SessionExplorer";
@@ -741,6 +742,31 @@ describe("ToastStack", () => {
     expect(dismissButton).toHaveAttribute("title", "Dismiss notification");
     fireEvent.click(dismissButton);
     expect(onDismiss).toHaveBeenCalledWith(1);
+  });
+});
+
+describe("HostedNotice", () => {
+  it("renders when activeSource is demo and isDemo is false", () => {
+    render(<HostedNotice activeSource="demo" isDemo={false} />);
+    expect(screen.getByTestId("hosted-notice")).toBeInTheDocument();
+  });
+
+  it("does not render when activeSource is not demo or isDemo is true", () => {
+    const { rerender } = render(<HostedNotice activeSource="local" isDemo={false} />);
+    expect(screen.queryByTestId("hosted-notice")).not.toBeInTheDocument();
+
+    rerender(<HostedNotice activeSource="demo" isDemo={true} />);
+    expect(screen.queryByTestId("hosted-notice")).not.toBeInTheDocument();
+  });
+
+  it("can be dismissed by clicking the dismiss button", () => {
+    render(<HostedNotice activeSource="demo" isDemo={false} />);
+    const dismissBtn = screen.getByRole("button", { name: "Dismiss hosted deployment notice" });
+    expect(dismissBtn).toBeInTheDocument();
+    expect(dismissBtn).toHaveAttribute("title", "Dismiss notice");
+
+    fireEvent.click(dismissBtn);
+    expect(screen.queryByTestId("hosted-notice")).not.toBeInTheDocument();
   });
 });
 
