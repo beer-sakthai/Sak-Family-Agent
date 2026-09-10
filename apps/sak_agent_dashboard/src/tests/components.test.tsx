@@ -773,13 +773,31 @@ describe("HostedNotice", () => {
 describe("DemoModeToggle", () => {
   it("reports the source actually in use", () => {
     render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="local" />);
-    expect(screen.getByTestId("active-source")).toHaveTextContent("Live · local ~/.sakthai");
+    const activeSource = screen.getByTestId("active-source");
+    expect(activeSource).toHaveTextContent("Live · local ~/.sakthai");
+    expect(activeSource).toHaveAttribute(
+      "title",
+      "Data source: Local runtime directory (~/.sakthai)",
+    );
+    expect(activeSource).toHaveAttribute(
+      "aria-label",
+      "Data source: Local runtime directory (~/.sakthai)",
+    );
   });
 
   it("can report demo even while the toggle is off", () => {
     // The honest case: live data was requested but no runtime exists.
     render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="demo" />);
-    expect(screen.getByTestId("active-source")).toHaveTextContent("Sample data");
+    const activeSource = screen.getByTestId("active-source");
+    expect(activeSource).toHaveTextContent("Sample data");
+    expect(activeSource).toHaveAttribute(
+      "title",
+      "Data source: Demonstration sample dataset",
+    );
+    expect(activeSource).toHaveAttribute(
+      "aria-label",
+      "Data source: Demonstration sample dataset",
+    );
     expect(screen.getByRole("button", { name: /Toggle sample data/ })).toHaveAttribute(
       "aria-pressed",
       "false",
@@ -788,7 +806,13 @@ describe("DemoModeToggle", () => {
 
   it("distinguishes the API source", () => {
     render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="api" />);
-    expect(screen.getByTestId("active-source")).toHaveTextContent("Live · SakThai API");
+    const activeSource = screen.getByTestId("active-source");
+    expect(activeSource).toHaveTextContent("Live · SakThai API");
+    expect(activeSource).toHaveAttribute("title", "Data source: Remote SakThai API endpoint");
+    expect(activeSource).toHaveAttribute(
+      "aria-label",
+      "Data source: Remote SakThai API endpoint",
+    );
   });
 
   it("toggles", () => {
