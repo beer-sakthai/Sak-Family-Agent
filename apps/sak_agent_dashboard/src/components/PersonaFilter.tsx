@@ -97,6 +97,7 @@ export function PersonaFilter({ selected, onChange, counts }: PersonaFilterProps
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-haspopup="menu"
+        aria-label="Filter by persona"
         title="Filter by persona"
         data-testid="persona-filter"
         className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 font-mono text-[11px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
