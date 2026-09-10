@@ -1,6 +1,13 @@
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
-from scripts.auto_heal_skills import discover_skill_files, heal_skill_file
+_SCRIPT = Path(__file__).parents[1] / "scripts" / "auto_heal_skills.py"
+_SPEC = spec_from_file_location("auto_heal_skills", _SCRIPT)
+assert _SPEC is not None and _SPEC.loader is not None
+_MODULE = module_from_spec(_SPEC)
+_SPEC.loader.exec_module(_MODULE)
+discover_skill_files = _MODULE.discover_skill_files
+heal_skill_file = _MODULE.heal_skill_file
 
 
 def test_heal_preserves_existing_metadata_and_repairs_short_content(tmp_path: Path) -> None:
