@@ -102,6 +102,7 @@ export function AgentCard({
           onClick: onToggle,
           "aria-pressed": selected,
           "aria-label": toggleLabel,
+          title: toggleLabel,
         }
       : {};
 
@@ -123,6 +124,7 @@ export function AgentCard({
           onClick={onToggle}
           aria-pressed={selected}
           aria-label={toggleLabel}
+          title={toggleLabel}
           className="absolute inset-0 z-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
         />
       )}
@@ -249,6 +251,7 @@ export function AgentCard({
             type="button"
             onClick={onOpenDetail}
             aria-label={`Open details for ${agent.display_name}`}
+            title={`Open details for ${agent.display_name}`}
             className="pointer-events-auto ml-auto inline-flex items-center gap-1 rounded-full border border-line-strong bg-raised/90 px-2 py-0.5 text-[10px] text-fg-2 transition-colors hover:border-accent/50 hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             Details
