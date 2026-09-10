@@ -646,6 +646,14 @@ describe("PersonaFilter", () => {
 });
 
 describe("StitchStudio", () => {
+  it("renders preset buttons with title tooltip attributes", () => {
+    render(<StitchStudio />);
+    const presetButton = screen.getByRole("button", {
+      name: "Select preset SakThai Interactive Agent Drawer",
+    });
+    expect(presetButton).toHaveAttribute("title", "Select preset SakThai Interactive Agent Drawer");
+  });
+
   it("uses roving tabIndex for active and inactive tabs", () => {
     render(<StitchStudio />);
     const previewTab = screen.getByRole("tab", { name: /Live Preview/ });
