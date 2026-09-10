@@ -88,6 +88,7 @@ export function TopBar({
         <button
           onClick={onOpenMobileNav}
           aria-label="Open navigation menu"
+          title="Open navigation menu"
           className="rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:hidden"
         >
           <Menu className="h-4 w-4" aria-hidden />
@@ -106,6 +107,7 @@ export function TopBar({
           <button
             onClick={onOpenPalette}
             aria-label="Open command palette"
+            title="Open command palette (⌘K)"
             data-chrome="secondary"
             className="hidden items-center gap-2 rounded-xl border border-line bg-panel/60 px-3 py-1.5 text-[11px] text-fg-4 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:flex"
           >
