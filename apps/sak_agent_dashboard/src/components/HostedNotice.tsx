@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { Cloud, Info } from "lucide-react";
+import React, { useState } from "react";
+import { Cloud, Info, X } from "lucide-react";
 
 import type { DataSource } from "@/lib/contracts.generated";
 
@@ -21,7 +21,9 @@ interface HostedNoticeProps {
  * running agent" is not obvious from a badge.
  */
 export function HostedNotice({ activeSource, isDemo }: HostedNoticeProps) {
-  if (activeSource !== "demo" || isDemo) return null;
+  const [dismissed, setDismissed] = useState(false);
+
+  if (dismissed || activeSource !== "demo" || isDemo) return null;
 
   return (
     <div
@@ -52,6 +54,14 @@ export function HostedNotice({ activeSource, isDemo }: HostedNoticeProps) {
         </p>
       </div>
       <Cloud className="hidden h-4 w-4 shrink-0 text-hue-amber/60 sm:block" aria-hidden />
+      <button
+        onClick={() => setDismissed(true)}
+        aria-label="Dismiss hosted deployment notice"
+        title="Dismiss notice"
+        className="shrink-0 rounded-lg p-1 text-hue-amber/80 transition-colors hover:bg-hue-amber-tint/60 hover:text-hue-amber focus:outline-none focus-visible:ring-2 focus-visible:ring-hue-amber"
+      >
+        <X className="h-4 w-4" aria-hidden />
+      </button>
     </div>
   );
 }

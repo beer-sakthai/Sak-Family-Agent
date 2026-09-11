@@ -45,13 +45,22 @@ def _validate_filepath(filepath: Any) -> Path:
 
     path_str = str(filepath).strip()
 
+    # Recursively decode URL-encoded path segments up to 5 levels to prevent multi-layered encoding bypasses.
+    current_path = path_str
+    for _ in range(5):
+        unquoted = urllib.parse.unquote(current_path)
+        if unquoted == current_path:
+            break
+        current_path = unquoted
+
     # Block path traversal segments like '..' or leading '~'. Backslashes are
     # normalized first so Windows-style separators can't smuggle a '..' segment
     # past a POSIX-only split.
-    normalized_str = path_str.replace("\\", "/")
+    normalized_str = current_path.replace("\\", "/")
     if (
-        ".." in path_str.split(os.sep)
+        ".." in current_path.split(os.sep)
         or ".." in normalized_str.split("/")
+        or current_path.startswith("~")
         or path_str.startswith("~")
     ):
         raise PermissionError(

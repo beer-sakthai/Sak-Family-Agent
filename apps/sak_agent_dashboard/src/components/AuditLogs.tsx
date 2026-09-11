@@ -78,7 +78,11 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
         </span>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div
+        role="group"
+        aria-label="Filter audit log by severity"
+        className="flex flex-wrap items-center gap-2"
+      >
         {SEVERITIES.map((sev) => {
           const count = sev === "ALL" ? null : (audit.severity_counts[sev] ?? 0);
           const active = severity === sev;
@@ -88,11 +92,7 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
               onClick={() => onSeverityChange(sev)}
               aria-pressed={active}
               aria-label={`Filter audit log by ${sev} severity`}
-              title={
-                sev === "ALL"
-                  ? "Show all audit log events"
-                  : `Filter audit log to ${sev} severity (${count} ${count === 1 ? "event" : "events"})`
-              }
+              title={active ? `Showing ${sev} severity events` : `Filter audit log by ${sev} severity`}
               className={`px-3 py-1.5 rounded-xl text-[11px] font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 active
                   ? "bg-hue-cyan-tint/50 text-hue-cyan border-hue-cyan-line/50"

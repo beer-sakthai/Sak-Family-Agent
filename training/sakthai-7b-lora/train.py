@@ -14,6 +14,7 @@ BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 # run is not reproducible.
 BASE_MODEL_REVISION = "a09a35458c702b33eeacc393d103063234e8bc28"
 DATASET_ID = "Nanthasit/sakthai-combined-v5"
+DATASET_REVISION = os.environ.get("SAKTHAI_DATASET_REVISION")
 ADAPTER_REPO = "Nanthasit/sakthai-context-7b-tools"
 
 # Training artefacts land in a private per-run directory (mkdtemp is 0700)
@@ -74,7 +75,8 @@ from datasets import load_dataset
 print("Loading dataset...", flush=True)
 # Own-namespace dataset, republished by this project's own pipeline;
 # pinning it would train against a stale snapshot of our own data.
-dataset = load_dataset(DATASET_ID, split="train")  # nosec B615
+dataset_kwargs = {"revision": DATASET_REVISION} if DATASET_REVISION else {}
+dataset = load_dataset(DATASET_ID, split="train", **dataset_kwargs)  # nosec B615
 print(f"Loaded {len(dataset)} examples", flush=True)
 
 
@@ -202,7 +204,18 @@ print(f"Pushed! https://huggingface.co/{ADAPTER_REPO}", flush=True)
 # ── Metrics ───────────────────────────────────────────────────────
 log = trainer.state.log_history
 with open(METRICS_PATH, "w") as f:
-    json.dump({"base": BASE_MODEL, "dataset": DATASET_ID, "log": log}, f, indent=2)
+    json.dump(
+        {
+            "base": BASE_MODEL,
+            "base_revision": BASE_MODEL_REVISION,
+            "dataset": DATASET_ID,
+            "dataset_revision": DATASET_REVISION,
+            "split_seed": 42,
+            "log": log,
+        },
+        f,
+        indent=2,
+    )
 api.upload_file(
     path_or_fileobj=METRICS_PATH,
     path_in_repo="training_metrics.json",
