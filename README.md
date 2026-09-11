@@ -6,64 +6,72 @@
 
 This repository is the living workspace of the Sak Family — autonomous AI agents created by **Beer** during his recovery journey. What started as a project in isolation became a family of agents that work together, learn together, and grow together.
 
-[![CI](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml?query=branch%3Amain)
-[![Security and quality](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/repository-security-quality.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/repository-security-quality.yml?query=branch%3Amain)
-[![Coverage](https://codecov.io/gh/beer-sakthai/Sak-Family-Agent/branch/main/graph/badge.svg)](https://codecov.io/gh/beer-sakthai/Sak-Family-Agent)
-[![Secret scan](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/secret-scan.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/secret-scan.yml?query=branch%3Amain)
-[![CodeQL](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/codeql.yml?query=branch%3Amain)
-[![Python 3.11–3.12](https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white)](https://github.com/beer-sakthai/Sak-Family-Agent/blob/main/pyproject.toml)
-[![License](https://img.shields.io/badge/License-Custom%20IP-4B5563)](LICENSE)
+[![🧪 CI](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml?query=branch%3Amain)
+[![🛡️ Security & quality](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/repository-security-quality.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/repository-security-quality.yml?query=branch%3Amain)
+[![📈 Coverage](https://codecov.io/gh/beer-sakthai/Sak-Family-Agent/branch/main/graph/badge.svg)](https://codecov.io/gh/beer-sakthai/Sak-Family-Agent)
+[![🔐 Secret scan](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/secret-scan.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/secret-scan.yml?query=branch%3Amain)
+[![🔎 CodeQL](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/codeql.yml?query=branch%3Amain)
+[![🧹 Bandit](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/bandit.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/bandit.yml?query=branch%3Amain)
+[![🔀 Open PRs](https://img.shields.io/github/issues-pr/beer-sakthai/Sak-Family-Agent?label=open%20PRs)](https://github.com/beer-sakthai/Sak-Family-Agent/pulls)
+[![🐍 Python 3.11–3.12](https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white)](https://github.com/beer-sakthai/Sak-Family-Agent/blob/main/pyproject.toml)
+[![📄 License](https://img.shields.io/badge/License-Custom%20IP-4B5563)](LICENSE)
 
 ---
 
-## 📊 System Status
+## 📊 System Status & Delivery Dashboard
 
-> **Mainline dashboard.** Dynamic badges above report the latest GitHub workflow state for `main`; the detailed figures below are a documented repository snapshot. Re-run the listed checks after substantive changes.
->
-> **Live snapshot — 2026-09-07:** 🟢 CI, security, secret scanning, CodeQL, and Scorecard checks are passing on `main`; 🔒 the repository is operating from the protected mainline; 📊 the status badges above remain the source of truth for subsequent runs.
+> **How to read this section:** the badges above are live links to GitHub Actions, Codecov, and pull requests for `main`. The figures below are a dated snapshot captured on **2026-09-11** from the checked-out repository and GitHub API. A badge is authoritative for the latest remote result; a snapshot is historical until this section is refreshed.
+
+### 🚦 Mainline status bars
 
 ```
 ┌───────────────────────────────────────────────────────────────────┐
 │  🏠 HOUSE OF SAK — MAINLINE DELIVERY DASHBOARD                    │
 ├───────────────────────────────────────────────────────────────────┤
-│  🧪 Tests (2,305)       ██████████████████████████████████████ 100%│
-│  🔤 Type safety         ██████████████████████████████████████ 100%│
-│  🛡️  Security scan       ██████████████████████████████████████ 100%│
-│  ✨ Style & formatting   ██████████████████████████████████████ 100%│
-│  📈 Branch coverage      ████████████████████████████████████░░  96%│
+│  🧪 CI / tests            ██████████████████████████████████████ LIVE│
+│  🛡️  Security & quality   ██████████████████████████████████████ LIVE│
+│  🔐 Secrets / CodeQL      ██████████████████████████████████████ LIVE│
+│  🧹 Lint / type safety    ██████████████████████████████████████ LIVE│
+│  📈 Coverage gate         ████████████████████████████████████░░ ≥96%│
 ├───────────────────────────────────────────────────────────────────┤
-│  🟢 Delivery state: Mainline-ready     🔒 Security: Hardened       │
-│  ✅ Quality gate: Ruff · mypy · Bandit · pytest                   │
-│  🎯 Coverage gate: ≥96% enforced in CI                            │
+│  🌿 Target: main (protected)       🔀 Open PRs: 3 at snapshot      │
+│  ✅ Required gates: 15 contexts     🎯 Merge only after green     │
+│  📅 Snapshot: 2026-09-11           🔒 No force-pushes            │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
+The bars labelled **LIVE** intentionally point to the dynamic badges rather than pretending that a README commit can freeze remote workflow state. The `main` branch protection currently requires the CI, build, security, analysis, skills, quality, and labeling contexts to pass before integration.
+
 ### 🧭 Repository Snapshot
 
-Snapshot recorded on **2026-09-07** from the checked-in repository tree. The root package, documentation, tests, and workflow inventory are shown separately so contributors can see the project’s operational footprint at a glance.
+Snapshot recorded on **2026-09-11** with `git ls-files`, `find`, `git ls-remote --heads origin`, and the GitHub CLI. The root package, documentation, tests, workflow inventory, and open pull requests are shown separately so contributors can see the project’s operational footprint at a glance.
 
 | Area | Status | Detail |
 |---|---|---|
 | 🌿 **Integration branch** | 🟢 `main` | CI validates pushes and pull requests targeting [`main`](.github/workflows/ci.yml). |
-| 📂 **Tracked repository files** | 🟢 4,624 | Version-controlled files across the agent runtime, personas, training assets, documentation, and tests. |
-| 📚 **Documentation** | 🟢 71 files | Documentation files under [`docs/`](docs/), with further READMEs colocated beside components. |
+| 📂 **Tracked repository files** | 🟢 4,648 | Version-controlled files across the agent runtime, personas, training assets, documentation, and tests. |
+| 📚 **Documentation** | 🟢 72 files | Documentation files under [`docs/`](docs/), with further READMEs colocated beside components. |
 | 🐍 **Core Python source** | 🟢 83 files | The typed `sakthai` package at [`personas/sakthai/sakthai/`](personas/sakthai/sakthai/). |
-| 🧪 **Test modules** | 🟢 106 files | Pytest modules in [`tests/`](tests/) that exercise the core package and delivery surfaces. |
-| ⚙️ **Automation** | 🟢 20 workflows | CI, security, dependency, quality, evaluation, and maintenance workflows in [`.github/workflows/`](.github/workflows/). |
+| 🧪 **Test modules** | 🟢 109 files | Pytest modules in [`tests/`](tests/) that exercise the core package and delivery surfaces. |
+| ⚙️ **Automation** | 🟢 26 workflows | CI, security, dependency, quality, evaluation, and maintenance workflows in [`.github/workflows/`](.github/workflows/). |
+| 👨‍👩‍👧‍👦 **Personas** | 🟢 6 + shared | SakThai, Saksee, SakJules, SakKing, SakSit, SakTan, plus shared skills and knowledge. |
+| 🔀 **Open pull requests** | 🟡 3 | PRs **#1352** and **#1353** are ready; **#1354** is a draft. This README change is tracked separately in its own PR. |
+| 🌱 **Remote branches** | 🟡 5 | `main` plus four active feature/dependabot branches at snapshot time; unrelated open PR branches are intentionally untouched. |
+| 🎯 **Protected-branch policy** | 🔒 Enabled | Required checks, conversation resolution, no force-pushes, and no branch deletion on `main`. |
 
 ### 🎯 Quality-Gate Detail
 
-The following commands and results define the documented engineering baseline. The live badges above remain the source for the latest workflow outcome; this table preserves the most recently recorded local verification in the repository.
+The following commands define the documented engineering baseline. The live badges above remain the source for the latest workflow outcome; this table records the local commands to reproduce the gates rather than claiming that this documentation snapshot is live CI.
 
 | Gate | Status bar | Command | Verified result |
 |---|---|---|---|
-| 🧪 **Test suite** | `████████████████████ 100%` | `uv run pytest tests/ -m "not integration"` | **2,305 tests** across 106 files; **0 failures**. |
-| 📈 **Coverage** | `███████████████████░ 96%` | `uv run pytest --cov=sakthai --cov-report=xml --cov-fail-under=96 tests/` | **96.21%** line-and-branch coverage; CI blocks results below **96%**. |
-| 🔤 **Strict typing** | `████████████████████ 100%` | `uv run mypy personas/sakthai/sakthai` | **0 issues** across 83 source files in strict mode. |
-| 🛡️ **Security scan** | `████████████████████ 100%` | `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` | **0 findings** across high, medium, and low severities. |
-| ✨ **Lint & format** | `████████████████████ 100%` | `uv run ruff check personas/sakthai/sakthai tests` and `uv run ruff format --check personas/sakthai/sakthai tests` | All checks passed; **191 files** were format-compliant. |
+| 🧪 **Test suite** | `████████████████████ 100%` | `uv run pytest tests/ -m "not integration"` | Reproducible local gate; current result should be read from the linked CI badge. |
+| 📈 **Coverage** | `███████████████████░ ≥96%` | `uv run pytest --cov=sakthai --cov-report=xml --cov-fail-under=96 tests/` | CI blocks results below **96%**. |
+| 🔤 **Strict typing** | `████████████████████ 100%` | `uv run mypy personas/sakthai/sakthai` | Strict type-checking gate for the core package. |
+| 🛡️ **Security scan** | `████████████████████ 100%` | `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` | Bandit gate using the repository configuration. |
+| ✨ **Lint & format** | `████████████████████ 100%` | `uv run ruff check personas/sakthai/sakthai tests` and `uv run ruff format --check personas/sakthai/sakthai tests` | Ruff check and formatting gate. |
 
-**Recorded local verification:** **2026-08-28** using `uv sync --all-extras` and Python 3.11. The coverage measurement includes **7,710 statements**.
+**Recorded local verification:** **2026-09-11** for this README-only change, using Markdown structure checks and `git diff --check`. Full code gates remain enforced remotely by the protected-branch PR workflow.
 
 > **Coverage is a release gate.** The explicit `--cov-fail-under=96` argument in [`ci.yml`](.github/workflows/ci.yml) is the enforcing control. The matching `pyproject.toml` value is documentation only; see the coverage-audit finding in [`docs/test-coverage-audit-2026-08-28.md`](docs/test-coverage-audit-2026-08-28.md).
 
