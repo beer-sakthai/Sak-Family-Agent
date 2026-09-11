@@ -244,6 +244,14 @@ class TestStaticFilePathTraversal:
         code, _ = _get(f"{api_base}/../../etc/passwd")
         assert code == 401
 
+    def test_double_url_encoded_traversal_blocked(self, api_base: str) -> None:
+        code, _ = _get(f"{api_base}/%252e%252e/%252e%252e/etc/passwd", force_auth=True)
+        assert code == 403
+
+    def test_multi_layered_url_encoded_traversal_blocked(self, api_base: str) -> None:
+        code, _ = _get(f"{api_base}/%25252e%25252e/%25252e%25252e/etc/passwd", force_auth=True)
+        assert code == 403
+
 
 class TestApiEdgeCases:
     """Boundary values and structural checks not covered by the main endpoint tests."""
