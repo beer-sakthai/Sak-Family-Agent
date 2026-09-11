@@ -92,6 +92,7 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
               onClick={() => onSeverityChange(sev)}
               aria-pressed={active}
               aria-label={`Filter audit log by ${sev} severity`}
+              title={active ? `Showing ${sev} severity events` : `Filter audit log by ${sev} severity`}
               className={`px-3 py-1.5 rounded-xl text-[11px] font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 active
                   ? "bg-hue-cyan-tint/50 text-hue-cyan border-hue-cyan-line/50"

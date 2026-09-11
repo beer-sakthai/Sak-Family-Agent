@@ -357,6 +357,7 @@ describe("KpiStrip", () => {
   });
 
   it("provides hover title tooltips on interactive tile buttons when onNavigate is provided", () => {
+  it("provides hover title tooltips on interactive KPI tiles when onNavigate is passed", () => {
     const onNavigate = vi.fn();
     render(
       <KpiStrip
