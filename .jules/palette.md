@@ -27,3 +27,9 @@
 **Learning:** Interactive KPI tile cards that act as shortcut buttons navigating to background dashboard panels can confuse desktop users if hover tooltips (`title`) indicating the destination panel are missing alongside screen reader `aria-label` attributes.
 
 **Action:** Always provide explicit `title` attributes (`title={`Open the ${target} panel`}`) on interactive tile cards in `KpiStrip` to give instant hover guidance for desktop mouse users.
+
+## 2026-09-12 - Informative Title Tooltips on OperationsPulse Signal Cards
+
+**Learning:** Interactive signal summary cards in operational pulse panels (such as `OperationsPulse`) act as navigation buttons opening detailed sub-panels, but desktop mouse users lack instant visual target feedback upon hovering unless explicit `title` attributes are provided alongside `aria-label` screen reader text.
+
+**Action:** Always complement `aria-label` attributes on interactive signal cards in `OperationsPulse` with explicit `title` tooltips (`title={`Open ${signal.label} details`}`) for desktop hover guidance.

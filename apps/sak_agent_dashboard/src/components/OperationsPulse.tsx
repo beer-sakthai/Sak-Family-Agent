@@ -90,6 +90,7 @@ function SignalCard({ signal, onNavigate }: { signal: Signal; onNavigate?: (tab:
             type: "button" as const,
             onClick: () => onNavigate?.(signal.tab),
             "aria-label": `${signal.label}: ${signal.value}. ${signal.detail}. Open ${signal.label} details.`,
+            title: `Open ${signal.label} details`,
           }
         : {})}
       className={`group relative overflow-hidden rounded-2xl border p-4 text-left transition-all ${style.panel} ${
