@@ -355,6 +355,22 @@ describe("KpiStrip", () => {
       expect(svg).toHaveAttribute("aria-hidden", "true");
     });
   });
+
+  it("provides hover title tooltips on interactive KPI tiles when onNavigate is passed", () => {
+    render(
+      <KpiStrip
+        metrics={metrics}
+        memory={demoMemory()}
+        sessions={demoSessions()}
+        audit={demoAudit()}
+        onNavigate={vi.fn()}
+      />,
+    );
+    const analyticsBtn = screen.getByRole("button", {
+      name: /Total runs: .* Open the analytics panel\./,
+    });
+    expect(analyticsBtn).toHaveAttribute("title", "Open the analytics panel");
+  });
 });
 
 describe("CommandPalette", () => {

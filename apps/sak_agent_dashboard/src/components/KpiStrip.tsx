@@ -91,6 +91,7 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
           type: "button" as const,
           onClick: () => onNavigate(target),
           "aria-label": `${tile.label}: ${tile.value}. Open the ${target} panel.`,
+          title: `Open the ${target} panel`,
         }
       : {};
 
