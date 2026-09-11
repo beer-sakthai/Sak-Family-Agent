@@ -762,7 +762,9 @@ export default function Home() {
               ? "Loading dashboard data"
               : lastUpdatedAt === null
                 ? ""
-                : `${navItem(activeTab).label} updated`}
+                : failedEndpoints.length > 0
+                  ? `${failedEndpoints.length} dashboard data source${failedEndpoints.length === 1 ? "" : "s"} unavailable: ${failedEndpoints.join(", ")}`
+                  : `${navItem(activeTab).label} updated`}
           </p>
 
           {error && (
@@ -784,6 +786,8 @@ export default function Home() {
           {!error && failedEndpoints.length > 0 && (
             <div
               role="status"
+              aria-live="polite"
+              data-testid="partial-data-warning"
               className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-hue-amber-line bg-hue-amber-tint/50 p-4 text-sm text-hue-amber"
             >
               <span>
