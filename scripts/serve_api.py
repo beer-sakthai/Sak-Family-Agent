@@ -129,6 +129,17 @@ def _ecosystem_status() -> dict[str, Any]:
     }
 
 
+def _recursive_unquote(path: str, max_depth: int = 5) -> str:
+    """Recursively decode URL-encoded path segments up to max_depth."""
+    current = path
+    for _ in range(max_depth):
+        unquoted = unquote(current)
+        if unquoted == current:
+            break
+        current = unquoted
+    return current
+
+
 class _Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         # Secure fallback: explicitly bind the static files directory to WEB_DIR
@@ -307,7 +318,7 @@ class _Handler(SimpleHTTPRequestHandler):
         # realpath + startswith form is the sanitizer CodeQL recognizes.
         try:
             root = os.path.realpath(str(WEB_DIR))
-            requested = unquote(parsed.path).lstrip("/\\")
+            requested = _recursive_unquote(parsed.path).lstrip("/\\")
             candidate = os.path.realpath(os.path.join(root, requested))
             if candidate != root and not candidate.startswith(root + os.sep):
                 self.send_error(403, "Forbidden")
