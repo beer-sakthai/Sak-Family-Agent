@@ -210,6 +210,10 @@ class TestWorkflowExecutor(unittest.TestCase):
             "id_rsa.bak",
             "id_ed25519.pub",
             "ID_ECDSA.old",
+            # Encoded path traversal vectors.
+            "%252e%252e/etc/passwd",
+            "%252e%252e/%252e%252e/secret.txt",
+            "%25252e%25252e/etc/passwd",
         ]
         for path in malicious_paths:
             for action in ("file_read", "file_write"):
