@@ -361,12 +361,15 @@ describe("AuditLogs", () => {
     expect(onChange).toHaveBeenCalledWith("critical");
   });
 
-  it("marks the active severity", () => {
+  it("marks the active severity and provides title tooltips describing selection state", () => {
     render(<AuditLogs audit={demoAudit()} severity="high" onSeverityChange={vi.fn()} />);
-    expect(screen.getByRole("button", { name: /high severity/ })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    const highBtn = screen.getByRole("button", { name: /high severity/ });
+    expect(highBtn).toHaveAttribute("aria-pressed", "true");
+    expect(highBtn).toHaveAttribute("title", "Showing high severity events");
+
+    const criticalBtn = screen.getByRole("button", { name: /critical severity/ });
+    expect(criticalBtn).toHaveAttribute("aria-pressed", "false");
+    expect(criticalBtn).toHaveAttribute("title", "Filter audit log by critical severity");
   });
 
   it("explains an empty log rather than looking broken", () => {
