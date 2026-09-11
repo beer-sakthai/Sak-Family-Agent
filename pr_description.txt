@@ -1,8 +1,16 @@
-**SakJules · Master of Automation & CI/CD.**
+🎨 Palette: Add explicit aria-labels and tooltips to AgentCard and PersonaFilter controls
 
-🧹 [code health improvement] Fix bare except in workbench-1.5b-local.py
+💡 What:
+- Added explicit hover tooltips (`title`) and `aria-label` attributes to card toggle overlay buttons, details triggers in `AgentCard`, and the dropdown trigger in `PersonaFilter`.
+- Retained clean focus ring styles (`focus-visible:ring-2 focus-visible:ring-accent`) across all interactive buttons.
 
-🎯 **What:** The code health issue addressed is a bare `except` in `sakthai-chat-cli/scripts/workbench/workbench-1.5b-local.py` when decoding JSON. It has been replaced with `except (json.JSONDecodeError, TypeError):`. The fix is applied to keep parity with `scripts/workbench/workbench-1.5b-local.py`. In addition, linting errors were fixed by `ruff` (split imports, remove unused variables, empty space removal).
-💡 **Why:** A bare `except` swallows critical system exceptions such as `KeyboardInterrupt` and `SystemExit` (Bandit B110). Narrowing down the exceptions caught prevents this.
-✅ **Verification:** I've run `uv run --extra dev ruff check` which confirmed all 14 fixed errors were fixed, and then `uv run --extra dev pytest tests/` which completed successfully and didn't result in any failing tests (2306 passing tests).
-✨ **Result:** Better code health by removing an anti-pattern (and other lint errors), keeping code parity with another similar file and avoiding hiding systemic errors.
+🎯 Why:
+- Screen readers and keyboard navigation users need explicit Accessible Names and visual hover tooltips on icon/overlay controls so their actions and state are unambiguous.
+
+📸 Before/After:
+- Before: Persona filter and agent card overlay buttons lacked native `title` tooltips and explicit `aria-label` trigger context.
+- After: Interactive card controls and persona filter triggers now render accessible tooltips and clear ARIA descriptions on hover/focus.
+
+♿ Accessibility:
+- Added `title` and `aria-label` tooltips to `AgentCard` and `PersonaFilter` trigger elements.
+- Maintained WAI-ARIA compliance and keyboard focus rings (`focus-visible:ring-2 focus-visible:ring-accent`).

@@ -118,11 +118,15 @@ describe("Sidebar", () => {
     expect(props.onCollapsedChange).toHaveBeenCalledWith(true);
   });
 
-  it("keeps the mobile drawer unmounted until it is opened", () => {
+  it("keeps the mobile drawer unmounted until it is opened and includes accessible backdrop attributes", () => {
     const { rerender, props } = renderSidebar({ mobileOpen: false });
     expect(screen.queryByLabelText("Close navigation menu")).not.toBeInTheDocument();
     rerender(<Sidebar {...props} mobileOpen />);
     expect(screen.getByLabelText("Close navigation menu")).toBeInTheDocument();
+    const backdrop = screen.getByLabelText("Close navigation");
+    expect(backdrop).toHaveAttribute("title", "Close navigation menu");
+    expect(backdrop).toHaveClass("focus-visible:ring-2");
+    expect(backdrop).toHaveClass("focus-visible:ring-inset");
   });
 
   it("closes the drawer when a section is chosen inside it", () => {
@@ -350,6 +354,22 @@ describe("KpiStrip", () => {
     svgs.forEach((svg) => {
       expect(svg).toHaveAttribute("aria-hidden", "true");
     });
+  });
+
+  it("provides hover title tooltips on interactive KPI tiles when onNavigate is passed", () => {
+    render(
+      <KpiStrip
+        metrics={metrics}
+        memory={demoMemory()}
+        sessions={demoSessions()}
+        audit={demoAudit()}
+        onNavigate={vi.fn()}
+      />,
+    );
+    const analyticsBtn = screen.getByRole("button", {
+      name: /Total runs: .* Open the analytics panel\./,
+    });
+    expect(analyticsBtn).toHaveAttribute("title", "Open the analytics panel");
   });
 });
 

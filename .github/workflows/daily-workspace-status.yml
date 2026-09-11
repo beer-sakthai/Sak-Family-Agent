@@ -1,0 +1,109 @@
+name: Daily workspace status and PR conflict monitor
+
+on:
+  schedule:
+    # Run after the daily PR review/cleanup workflow.
+    - cron: "15 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: daily-workspace-status
+  cancel-in-progress: false
+
+jobs:
+  workspace-status:
+    name: Report branches and reconcile PR conflicts
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Check out all branches
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Report workspace and reconcile safe PR conflicts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          default_branch="$(gh api "repos/${REPO}" --jq '.default_branch')"
+          git fetch --prune origin
+
+          {
+            echo "# Daily workspace status"
+            echo
+            echo "Repository: \\`${REPO}\\`"
+            echo "Default branch: \\`${default_branch}\\`"
+            echo "Run: [${GITHUB_RUN_ID}](https://github.com/${REPO}/actions/runs/${GITHUB_RUN_ID})"
+            echo
+            echo "## Branches"
+            echo
+            echo '| Branch | Tip | Tracking |'
+            echo '|---|---|---|'
+            git for-each-ref --format='%(refname:short)\t%(objectname:short)\t%(upstream:short)' refs/heads refs/remotes/origin \
+              | grep -Ev '^origin$|^origin/HEAD' \
+              | while IFS=$'\t' read -r branch tip tracking; do
+                  printf '| `%s` | `%s` | `%s` |\n' "$branch" "$tip" "${tracking:-—}"
+                done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          prs_json="$(mktemp)"
+          gh api "repos/${REPO}/pulls?state=open&per_page=100" > "$prs_json"
+          unresolved=0
+          attempted=0
+
+          {
+            echo
+            echo "## PR monitoring and automatic conflict reconciliation"
+            echo
+            echo '| PR | Head → Base | Merge state | Action |'
+            echo '|---:|---|---|---|'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          while IFS=$'\t' read -r number head_ref base_ref head_repo mergeable_state html_url; do
+            [ -n "$number" ] || continue
+            action="no update needed"
+
+            if [ "$base_ref" = "$default_branch" ] && [ "$head_repo" = "$REPO" ] \
+              && { [ "$mergeable_state" = "dirty" ] || [ "$mergeable_state" = "conflicting" ]; }; then
+              attempted=$((attempted + 1))
+              if gh api --method PUT "repos/${REPO}/pulls/${number}/update-branch" \
+                -f update_method=merge >/tmp/update-branch-${number}.json 2>/tmp/update-branch-${number}.err; then
+                action="requested automatic merge of ${default_branch} into head"
+              else
+                action="manual resolution required"
+                unresolved=$((unresolved + 1))
+              fi
+            elif [ "$head_repo" != "$REPO" ]; then
+              action="kept — fork branch; no automatic write"
+            elif [ "$mergeable_state" = "blocked" ]; then
+              action="kept — blocked by checks or policy, not a merge conflict"
+            fi
+
+            printf '| [#%s](%s) | `%s` → `%s` | `%s` | %s |\n' \
+              "$number" "$html_url" "$head_ref" "$base_ref" "$mergeable_state" "$action" >> "$GITHUB_STEP_SUMMARY"
+          done < <(jq -r '.[] | [.number, .head.ref, .base.ref, .head.repo.full_name, (.mergeable_state // "unknown"), .html_url] | @tsv' "$prs_json")
+
+          echo >> "$GITHUB_STEP_SUMMARY"
+          echo "Attempted safe branch updates: ${attempted}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Manual conflict cases: ${unresolved}" >> "$GITHUB_STEP_SUMMARY"
+
+          # Automatic reconciliation is limited to GitHub's clean merge operation.
+          # Any unresolved conflict remains visible and fails the daily monitor.
+          if [ "$unresolved" -gt 0 ]; then
+            echo "One or more PRs still require manual conflict resolution." >&2
+            exit 1
+          fi

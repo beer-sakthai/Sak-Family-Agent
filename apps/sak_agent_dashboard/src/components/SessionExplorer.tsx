@@ -223,7 +223,7 @@ export function SessionExplorer({
               disabled={page <= 1}
               aria-label="Previous page"
               title={page <= 1 ? "First page reached" : "Previous page"}
-              className="px-3 py-1.5 rounded-lg bg-panel border border-line disabled:opacity-40 hover:border-line-strong transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="px-3 py-1.5 rounded-lg bg-panel border border-line disabled:opacity-40 disabled:cursor-not-allowed hover:border-line-strong transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
             </button>
@@ -232,7 +232,7 @@ export function SessionExplorer({
               disabled={page >= totalPages}
               aria-label="Next page"
               title={page >= totalPages ? "Last page reached" : "Next page"}
-              className="px-3 py-1.5 rounded-lg bg-panel border border-line disabled:opacity-40 hover:border-line-strong transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="px-3 py-1.5 rounded-lg bg-panel border border-line disabled:opacity-40 disabled:cursor-not-allowed hover:border-line-strong transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               <ChevronRight className="h-3.5 w-3.5" aria-hidden />
             </button>

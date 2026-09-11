@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CornerDownLeft, Search, X } from "lucide-react";
 
 import { useFocusTrap } from "@/lib/focus";
@@ -49,6 +49,7 @@ interface CommandPaletteProps {
 export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
+  const listRef = useRef<HTMLUListElement>(null);
   // The drawer has trapped and returned focus since it landed; the palette,
   // the other modal on this page, did neither.
   const dialogRef = useFocusTrap<HTMLDivElement>();
@@ -94,6 +95,14 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
 
   const clampedHighlight = results.length === 0 ? 0 : Math.min(highlight, results.length - 1);
 
+  useEffect(() => {
+    if (!listRef.current) return;
+    const selectedOption = listRef.current.querySelector<HTMLElement>(
+      '[aria-selected="true"]',
+    );
+    selectedOption?.scrollIntoView?.({ block: "nearest" });
+  }, [clampedHighlight]);
+
   const runAt = (index: number) => {
     const result = results[index];
     if (!result) return;
@@ -129,8 +138,9 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
     <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[12vh]">
       <button
         aria-label="Close command palette"
+        title="Close command palette"
         onClick={onClose}
-        className="absolute inset-0 h-full w-full bg-sunken/80 backdrop-blur-sm"
+        className="absolute inset-0 h-full w-full bg-sunken/80 backdrop-blur-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
       />
       <div
         ref={dialogRef}
@@ -174,7 +184,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
           </kbd>
         </div>
 
-        <ul className="max-h-[50vh] overflow-y-auto p-2" role="listbox" aria-label="Commands">
+        <ul ref={listRef} className="max-h-[50vh] overflow-y-auto p-2" role="listbox" aria-label="Commands">
           {results.length === 0 && (
             <li className="px-3 py-6 text-center font-mono text-xs text-fg-4">
               Nothing matches “{query}”.

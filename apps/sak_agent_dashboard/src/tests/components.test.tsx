@@ -17,6 +17,7 @@ import AnalyticsCharts from "@/components/AnalyticsCharts";
 import AuditLogs from "@/components/AuditLogs";
 import DemoModeToggle from "@/components/DemoModeToggle";
 import DisplayMenu from "@/components/DisplayMenu";
+import { HostedNotice } from "@/components/HostedNotice";
 import MemoryExplorer from "@/components/MemoryExplorer";
 import PersonaFilter from "@/components/PersonaFilter";
 import SessionExplorer from "@/components/SessionExplorer";
@@ -346,6 +347,13 @@ describe("AuditLogs", () => {
     expect(screen.getByText("Blocked a destructive shell command")).toBeInTheDocument();
   });
 
+  it("wraps severity filter buttons in a group with an accessible label", () => {
+    render(<AuditLogs audit={demoAudit()} severity="ALL" onSeverityChange={vi.fn()} />);
+    expect(
+      screen.getByRole("group", { name: "Filter audit log by severity" }),
+    ).toBeInTheDocument();
+  });
+
   it("reports the filter upward instead of filtering locally", () => {
     const onChange = vi.fn();
     render(<AuditLogs audit={demoAudit()} severity="ALL" onSeverityChange={onChange} />);
@@ -638,6 +646,14 @@ describe("PersonaFilter", () => {
 });
 
 describe("StitchStudio", () => {
+  it("renders preset buttons with title tooltip attributes", () => {
+    render(<StitchStudio />);
+    const presetButton = screen.getByRole("button", {
+      name: "Select preset SakThai Interactive Agent Drawer",
+    });
+    expect(presetButton).toHaveAttribute("title", "Select preset SakThai Interactive Agent Drawer");
+  });
+
   it("uses roving tabIndex for active and inactive tabs", () => {
     render(<StitchStudio />);
     const previewTab = screen.getByRole("tab", { name: /Live Preview/ });
@@ -737,16 +753,59 @@ describe("ToastStack", () => {
   });
 });
 
+describe("HostedNotice", () => {
+  it("renders when activeSource is demo and isDemo is false", () => {
+    render(<HostedNotice activeSource="demo" isDemo={false} />);
+    expect(screen.getByTestId("hosted-notice")).toBeInTheDocument();
+  });
+
+  it("does not render when activeSource is not demo or isDemo is true", () => {
+    const { rerender } = render(<HostedNotice activeSource="local" isDemo={false} />);
+    expect(screen.queryByTestId("hosted-notice")).not.toBeInTheDocument();
+
+    rerender(<HostedNotice activeSource="demo" isDemo={true} />);
+    expect(screen.queryByTestId("hosted-notice")).not.toBeInTheDocument();
+  });
+
+  it("can be dismissed by clicking the dismiss button", () => {
+    render(<HostedNotice activeSource="demo" isDemo={false} />);
+    const dismissBtn = screen.getByRole("button", { name: "Dismiss hosted deployment notice" });
+    expect(dismissBtn).toBeInTheDocument();
+    expect(dismissBtn).toHaveAttribute("title", "Dismiss notice");
+
+    fireEvent.click(dismissBtn);
+    expect(screen.queryByTestId("hosted-notice")).not.toBeInTheDocument();
+  });
+});
+
 describe("DemoModeToggle", () => {
   it("reports the source actually in use", () => {
     render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="local" />);
-    expect(screen.getByTestId("active-source")).toHaveTextContent("Live · local ~/.sakthai");
+    const activeSource = screen.getByTestId("active-source");
+    expect(activeSource).toHaveTextContent("Live · local ~/.sakthai");
+    expect(activeSource).toHaveAttribute(
+      "title",
+      "Data source: Local runtime directory (~/.sakthai)",
+    );
+    expect(activeSource).toHaveAttribute(
+      "aria-label",
+      "Data source: Local runtime directory (~/.sakthai)",
+    );
   });
 
   it("can report demo even while the toggle is off", () => {
     // The honest case: live data was requested but no runtime exists.
     render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="demo" />);
-    expect(screen.getByTestId("active-source")).toHaveTextContent("Sample data");
+    const activeSource = screen.getByTestId("active-source");
+    expect(activeSource).toHaveTextContent("Sample data");
+    expect(activeSource).toHaveAttribute(
+      "title",
+      "Data source: Demonstration sample dataset",
+    );
+    expect(activeSource).toHaveAttribute(
+      "aria-label",
+      "Data source: Demonstration sample dataset",
+    );
     expect(screen.getByRole("button", { name: /Toggle sample data/ })).toHaveAttribute(
       "aria-pressed",
       "false",
@@ -755,7 +814,13 @@ describe("DemoModeToggle", () => {
 
   it("distinguishes the API source", () => {
     render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="api" />);
-    expect(screen.getByTestId("active-source")).toHaveTextContent("Live · SakThai API");
+    const activeSource = screen.getByTestId("active-source");
+    expect(activeSource).toHaveTextContent("Live · SakThai API");
+    expect(activeSource).toHaveAttribute("title", "Data source: Remote SakThai API endpoint");
+    expect(activeSource).toHaveAttribute(
+      "aria-label",
+      "Data source: Remote SakThai API endpoint",
+    );
   });
 
   it("toggles", () => {

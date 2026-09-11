@@ -161,6 +161,9 @@ def _clear_host_credential_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("OLLAMA_HOST", raising=False)
     monkeypatch.delenv("SAKTHAI_GATEWAY_URL", raising=False)
     monkeypatch.delenv("HF_TOKEN", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENAI_API_BASE", raising=False)
 
 
 def test_detect_fallback_anthropic_key(

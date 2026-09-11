@@ -106,6 +106,20 @@ describe("CommandPalette focus", () => {
     fireEvent.keyDown(dialog, { key: "Home" });
     expect(options[0]).toHaveAttribute("aria-selected", "true");
   });
+
+  it("scrolls the highlighted option into view during keyboard navigation", () => {
+    renderPalette();
+    const dialog = screen.getByRole("dialog");
+    const options = screen.getAllByRole("option");
+
+    const scrollIntoViewMock = vi.fn();
+    options.forEach((opt) => {
+      opt.scrollIntoView = scrollIntoViewMock;
+    });
+
+    fireEvent.keyDown(dialog, { key: "ArrowDown" });
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({ block: "nearest" });
+  });
 });
 
 describe("CommandPalette matching", () => {
