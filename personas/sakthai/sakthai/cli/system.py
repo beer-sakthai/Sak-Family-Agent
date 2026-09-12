@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from pathlib import Path
@@ -38,10 +39,31 @@ def _flag(ok: bool, *, optional: bool = False) -> str:
     return _warn() if optional else _err()
 
 
+def _emit_json_report(report: dict[str, object]) -> None:
+    """Write a deterministic, secret-free environment report for automation."""
+    click.echo(json.dumps(report, sort_keys=True))
+
+
+def _exit_if_not_ready(report: dict[str, object]) -> None:
+    """Return success only when the core components are usable."""
+    if not report["ready"]:
+        click.get_current_context().exit(1)
+
+
 @click.command()
-def doctor() -> None:
+@click.option(
+    "--json",
+    "json_output",
+    is_flag=True,
+    help="Emit a deterministic JSON report instead of formatted output.",
+)
+def doctor(json_output: bool) -> None:
     """Report environment, paths, memory, and credential status."""
     env = check_env()
+    if json_output:
+        _emit_json_report(env)
+        _exit_if_not_ready(env)
+        return
     click.echo(click.style("\n── SakThai Doctor ──", bold=True))
 
     paths = env["paths"]
@@ -194,9 +216,19 @@ def setup(interactive: bool) -> None:
 
 
 @click.command()
-def status() -> None:
+@click.option(
+    "--json",
+    "json_output",
+    is_flag=True,
+    help="Emit a deterministic JSON report instead of formatted output.",
+)
+def status(json_output: bool) -> None:
     """A high-level health summary of everything needed to start."""
     env = check_env()
+    if json_output:
+        _emit_json_report(env)
+        _exit_if_not_ready(env)
+        return
     click.echo(click.style("\n── SakThai Status ──", bold=True))
 
     mem = env["memory"]

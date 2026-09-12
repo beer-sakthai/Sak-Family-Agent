@@ -24,6 +24,8 @@ carried forward here.
   `pyproject.toml` currently declares no `license` field at all.
 
 ### Added
+- Machine-readable `sakthai doctor --json` and `sakthai status --json` reports
+  with deterministic, secret-free diagnostics and readiness exit codes.
 - Built-in tools beyond the original set: `ingest_document`, `capture_lead`,
   `search_sessions`, the four Microsoft Graph mail/calendar tools,
   `run_agent_loop`, `family_recall`, `family_search`, and
