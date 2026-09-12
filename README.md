@@ -110,6 +110,7 @@ make mutation      # local mutation testing for the core seams (slow, not in CI)
 ### Run an agent
 ```bash
 sakthai status                       # health summary — paths, memory, credentials
+sakthai doctor --json | jq .         # machine-readable, secret-free diagnostics
 sakthai run "summarize docs/architecture.md"      # one-shot agent task
 sakthai run "..." --persona sakking               # use a persona's memory + SOUL
 sakthai chat                                       # interactive multi-turn session
@@ -119,6 +120,13 @@ sakthai mcp                                        # serve the tools over MCP st
 `sakthai run` takes the task as its argument — see `sakthai run --help` for the
 full flag set (`--provider`, `--model`, `--with-skills`, `--fast`, `--stateless`,
 `--sandbox`, `--dry-run`, `--stream`). Full CLI surface:
+
+`sakthai doctor --json` and `sakthai status --json` emit the same structured,
+deterministic environment report for scripts and CI. The report includes paths,
+memory health, skill availability, and credential presence/source metadata, but
+never credential values. In JSON mode, both commands exit with status `1` when
+the core components are not ready; the default human-readable mode preserves its
+existing output and exit-code behavior.
 
 ```
 chat  cycle  doctor  eval  extensions  hf  learn  mcp  memory
