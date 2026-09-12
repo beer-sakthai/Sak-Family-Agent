@@ -28,6 +28,11 @@
 
 **Action:** Always provide explicit `title` attributes (`title={`Open the ${target} panel`}`) on interactive tile cards in `KpiStrip` to give instant hover guidance for desktop mouse users.
 
+## 2026-09-12 - Informative Title Tooltips on OperationsPulse Signal Cards
+
+**Learning:** Interactive signal summary cards in operational pulse panels (such as `OperationsPulse`) act as navigation buttons opening detailed sub-panels, but desktop mouse users lack instant visual target feedback upon hovering unless explicit `title` attributes are provided alongside `aria-label` screen reader text.
+
+**Action:** Always complement `aria-label` attributes on interactive signal cards in `OperationsPulse` with explicit `title` tooltips (`title={`Open ${signal.label} details`}`) for desktop hover guidance.
 ## 2026-09-14 - Hover Tooltips for Activity Heatmap Legend Level Swatches
 
 **Learning:** Decorative color swatches in dataset/heatmap legends can leave desktop users guessing what specific intensity or run count range each color level represents unless descriptive `title` tooltips are applied to each swatch element.
