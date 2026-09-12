@@ -253,6 +253,7 @@ export function ActivityHeatmap({ trends, days = 90, today }: ActivityHeatmapPro
           <span
             key={level}
             aria-hidden
+            title={level === 0 ? "No activity" : `Activity level ${level} of 4`}
             className={`h-[11px] w-[11px] rounded-[2px] border border-line-soft/60 ${className}`}
           />
         ))}
