@@ -36,7 +36,10 @@ describe("OperationsPulse", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Run quality: 97\.9%/ }));
+    const runQualityButton = screen.getByRole("button", { name: /Run quality: 97\.9%/ });
+    expect(runQualityButton).toHaveAttribute("title", "Open Run quality details");
+
+    fireEvent.click(runQualityButton);
     fireEvent.click(screen.getByRole("button", { name: /Security queue: 2/ }));
     fireEvent.click(screen.getByRole("button", { name: /Workflow health: 2 \/ 4/ }));
 
