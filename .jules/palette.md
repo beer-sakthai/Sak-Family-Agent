@@ -27,3 +27,9 @@
 **Learning:** Interactive KPI tile cards that act as shortcut buttons navigating to background dashboard panels can confuse desktop users if hover tooltips (`title`) indicating the destination panel are missing alongside screen reader `aria-label` attributes.
 
 **Action:** Always provide explicit `title` attributes (`title={`Open the ${target} panel`}`) on interactive tile cards in `KpiStrip` to give instant hover guidance for desktop mouse users.
+
+## 2026-09-14 - Hover Tooltips for Activity Heatmap Legend Level Swatches
+
+**Learning:** Decorative color swatches in dataset/heatmap legends can leave desktop users guessing what specific intensity or run count range each color level represents unless descriptive `title` tooltips are applied to each swatch element.
+
+**Action:** Add explicit `title` attributes (e.g. `title={level === 0 ? "No activity" : \`Activity level ${level} of 4\`}`) on heatmap legend level swatches to provide clear visual hover feedback.

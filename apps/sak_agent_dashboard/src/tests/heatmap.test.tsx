@@ -165,6 +165,15 @@ describe("ActivityHeatmap", () => {
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
 
+  it("provides title tooltips on legend level swatches", () => {
+    const { container } = render(<ActivityHeatmap trends={trends} days={7} today={TODAY} />);
+    const legendSwatches = container.querySelectorAll(".mt-3 span[title]");
+    expect(legendSwatches).toHaveLength(5);
+    expect(legendSwatches[0].getAttribute("title")).toBe("No activity");
+    expect(legendSwatches[1].getAttribute("title")).toBe("Activity level 1 of 4");
+    expect(legendSwatches[4].getAttribute("title")).toBe("Activity level 4 of 4");
+  });
+
   it("renders identically across repeated renders", () => {
     const first = render(<ActivityHeatmap trends={trends} days={30} today={TODAY} />).container
       .innerHTML;
