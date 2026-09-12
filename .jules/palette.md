@@ -38,3 +38,9 @@
 **Learning:** Decorative color swatches in dataset/heatmap legends can leave desktop users guessing what specific intensity or run count range each color level represents unless descriptive `title` tooltips are applied to each swatch element.
 
 **Action:** Add explicit `title` attributes (e.g. `title={level === 0 ? "No activity" : \`Activity level ${level} of 4\`}`) on heatmap legend level swatches to provide clear visual hover feedback.
+
+## 2026-09-14 - Explicit Type Attributes and Hover Tooltips on Table Row Action Buttons
+
+**Learning:** Row-level action buttons in data tables (such as "Steps" in `WorkflowRuns` and "View" in `SessionExplorer`) that open detail drawers often carry `aria-label` screen reader text but omit `title` attributes and `type="button"`. Desktop mouse users benefit from instant hover tooltips describing the action target.
+
+**Action:** Always provide explicit `type="button"` and `title` tooltips matching `aria-label` text on table row action trigger buttons.

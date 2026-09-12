@@ -55,6 +55,7 @@ export function HostedNotice({ activeSource, isDemo }: HostedNoticeProps) {
       </div>
       <Cloud className="hidden h-4 w-4 shrink-0 text-hue-amber/60 sm:block" aria-hidden />
       <button
+        type="button"
         onClick={() => setDismissed(true)}
         aria-label="Dismiss hosted deployment notice"
         title="Dismiss notice"
