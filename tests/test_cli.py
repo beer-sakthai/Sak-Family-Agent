@@ -21,6 +21,7 @@ from click.testing import CliRunner
 
 import sakthai.cli.agent as agent_mod
 import sakthai.cli.skills as skills_mod
+import sakthai.cli.system as system_mod
 from sakthai.cli import main
 from sakthai.config import memory_db_path
 from sakthai.memory.store import MemoryStore
@@ -531,6 +532,39 @@ def test_system_commands_run(runner: CliRunner, args: list[str], needle: str) ->
     result = runner.invoke(main, args)
     assert result.exit_code == 0
     assert needle in result.output
+
+
+@pytest.mark.parametrize("command", ["doctor", "status"])
+def test_system_commands_json_is_deterministic_and_secret_free(
+    runner: CliRunner, command: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "do-not-print-this-secret")
+    result = runner.invoke(main, [command, "--json"])
+    assert result.exit_code == 0
+    report = json.loads(result.output)
+    assert report["ready"] is True
+    assert report["auth"]["anthropic_ok"] is True
+    assert "do-not-print-this-secret" not in result.output
+    assert result.output == json.dumps(report, sort_keys=True) + "\n"
+
+
+@pytest.mark.parametrize("command", ["doctor", "status"])
+def test_system_commands_json_exit_nonzero_when_not_ready(
+    runner: CliRunner, command: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report = system_mod.check_env()
+    report["memory"] = {
+        "db_exists": True,
+        "db_writable": False,
+        "fact_count": None,
+        "observation_count": None,
+        "error": "database is locked",
+    }
+    report["ready"] = False
+    monkeypatch.setattr(system_mod, "check_env", lambda: report)
+    result = runner.invoke(main, [command, "--json"])
+    assert result.exit_code == 1
+    assert json.loads(result.output)["ready"] is False
 
 
 # -- cycle ---------------------------------------------------------------
