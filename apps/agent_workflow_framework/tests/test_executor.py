@@ -166,6 +166,57 @@ class TestWorkflowExecutor(unittest.TestCase):
                     f"Unexpected error message for URL '{url}': {step_res.error}",
                 )
 
+    def test_ssrf_url_fragment_stripping(self):
+        """Verify that URL fragments are stripped before DNS resolution."""
+        # The URL has a fragment that might confuse a naive parser or SSRF filter,
+        # but because we strip it, it correctly resolves the base hostname
+        # (which is localhost/127.0.0.1) and thus is blocked by the IP validator.
+        url = "http://127.0.0.1#@example.com"
+        wf = WorkflowDefinition(
+            name="ssrf_fragment_test",
+            steps=[
+                StepDefinition(id="fetch_step", action="fetch", params={"url": url}),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf))
+        self.assertEqual(history.status, RunStatus.FAILED)
+        step_res = history.step_results["fetch_step"]
+        self.assertEqual(step_res.status, StepStatus.FAILED)
+        self.assertIsNotNone(step_res.error)
+        self.assertIn("ssrf", step_res.error.lower())
+
+    def test_ssrf_backslash_authority_confusion(self):
+        """Verify that backslashes in the netloc are blocked to prevent authority confusion bypasses."""
+        url = "http://example.com\\@127.0.0.1"
+        wf = WorkflowDefinition(
+            name="ssrf_backslash_test",
+            steps=[
+                StepDefinition(id="fetch_step", action="fetch", params={"url": url}),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf))
+        self.assertEqual(history.status, RunStatus.FAILED)
+        step_res = history.step_results["fetch_step"]
+        self.assertEqual(step_res.status, StepStatus.FAILED)
+        self.assertIsNotNone(step_res.error)
+        self.assertIn("backslash", step_res.error.lower())
+
+    def test_ssrf_ipv4_mapped_ipv6(self):
+        """Verify that IPv4-mapped IPv6 addresses are unwrapped and blocked by SSRF protection."""
+        url = "http://[::ffff:127.0.0.1]"
+        wf = WorkflowDefinition(
+            name="ssrf_ipv6_mapped_test",
+            steps=[
+                StepDefinition(id="fetch_step", action="fetch", params={"url": url}),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf))
+        self.assertEqual(history.status, RunStatus.FAILED)
+        step_res = history.step_results["fetch_step"]
+        self.assertEqual(step_res.status, StepStatus.FAILED)
+        self.assertIsNotNone(step_res.error)
+        self.assertIn("ssrf", step_res.error.lower())
+
     def test_file_path_validation_protection(self):
         """Verify that the file actions reject path traversal, system roots, and sensitive files/directories."""
         malicious_paths = [
