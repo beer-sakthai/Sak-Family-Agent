@@ -112,10 +112,16 @@ describe("Sidebar", () => {
     expect(screen.queryByText("42")).not.toBeInTheDocument();
   });
 
-  it("toggles collapse through the parent", () => {
-    const { props } = renderSidebar({ collapsed: false });
-    fireEvent.click(screen.getByLabelText("Collapse sidebar"));
+  it("toggles collapse through the parent and provides title tooltip", () => {
+    const { props, rerender } = renderSidebar({ collapsed: false });
+    const collapseButton = screen.getByLabelText("Collapse sidebar");
+    expect(collapseButton).toHaveAttribute("title", "Collapse sidebar");
+    fireEvent.click(collapseButton);
     expect(props.onCollapsedChange).toHaveBeenCalledWith(true);
+
+    rerender(<Sidebar {...props} collapsed={true} />);
+    const expandButton = screen.getByLabelText("Expand sidebar");
+    expect(expandButton).toHaveAttribute("title", "Expand sidebar");
   });
 
   it("keeps the mobile drawer unmounted until it is opened and includes accessible backdrop attributes", () => {

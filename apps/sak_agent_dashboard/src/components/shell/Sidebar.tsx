@@ -153,6 +153,7 @@ export function Sidebar({
       <button
         onClick={() => onCollapsedChange(!collapsed)}
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         className="mt-4 hidden w-full items-center justify-center gap-2 rounded-xl border border-line bg-panel/60 px-3 py-2 font-mono text-[11px] text-fg-3 transition-colors hover:border-line-strong hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:flex"
       >
         {collapsed ? (
