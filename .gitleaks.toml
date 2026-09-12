@@ -3,6 +3,10 @@ useDefault = true
 
 [allowlist]
 description = "Test fixtures, example configs, and instructional docs"
+# The generic-api-key detector misclassifies this instructional tool-list sentence
+# as a credential. Match the exact line only; do not suppress other findings in
+# docs/reference/hf-learnings.md.
+regexTarget = "line"
 paths = [
   # Anchored to a real ``tests/`` path segment so it can't allowlist an
   # unrelated path that merely contains the substring "tests".
@@ -20,6 +24,8 @@ paths = [
   '''\.curator_backups/''',
 ]
 regexes = [
+  # Exact instructional sentence falsely detected as a generic API key.
+  '''Access via: Hub web UI, `hf` CLI, `huggingface_hub` Python API, S3-compatible API \(AWS CLI, boto3, s5cmd\)$''',
   # Documentation placeholders like `sk-xxxxxxxxxxxxxxxx`.
   '''sk-x{8,}''',
   # Skill-bundle integrity hash (`github-auth:<md5>` in `.bundled_manifest`) —
