@@ -38,3 +38,9 @@
 **Learning:** Decorative color swatches in dataset/heatmap legends can leave desktop users guessing what specific intensity or run count range each color level represents unless descriptive `title` tooltips are applied to each swatch element.
 
 **Action:** Add explicit `title` attributes (e.g. `title={level === 0 ? "No activity" : \`Activity level ${level} of 4\`}`) on heatmap legend level swatches to provide clear visual hover feedback.
+
+## 2026-09-15 - Screen Reader Announcement Status for KPI Skeleton Placeholders
+
+**Learning:** Skeleton loading containers (such as `KpiSkeleton`) with animated shimmer blocks can cause screen readers to ignore or silently bypass loading states if proper ARIA live regions and labels are missing.
+
+**Action:** Always add `role="status"`, `aria-label="Loading..."`, and visually hidden screen reader text (`<span className="sr-only">Loading...</span>`) to root skeleton container components.
