@@ -779,7 +779,7 @@ describe("HostedNotice", () => {
     render(<HostedNotice activeSource="demo" isDemo={false} />);
     const dismissBtn = screen.getByRole("button", { name: "Dismiss hosted deployment notice" });
     expect(dismissBtn).toBeInTheDocument();
-    expect(dismissBtn).toHaveAttribute("title", "Dismiss notice");
+    expect(dismissBtn).toHaveAttribute("title", "Dismiss hosted deployment notice");
 
     fireEvent.click(dismissBtn);
     expect(screen.queryByTestId("hosted-notice")).not.toBeInTheDocument();
