@@ -39,6 +39,11 @@
 
 **Action:** Add explicit `title` attributes (e.g. `title={level === 0 ? "No activity" : \`Activity level ${level} of 4\`}`) on heatmap legend level swatches to provide clear visual hover feedback.
 
+## 2026-09-15 - Screen Reader Announcement Status for KPI Skeleton Placeholders
+
+**Learning:** Skeleton loading containers (such as `KpiSkeleton`) with animated shimmer blocks can cause screen readers to ignore or silently bypass loading states if proper ARIA live regions and labels are missing.
+
+**Action:** Always add `role="status"`, `aria-label="Loading..."`, and visually hidden screen reader text (`<span className="sr-only">Loading...</span>`) to root skeleton container components.
 ## 2026-09-14 - Explicit Type Attributes and Hover Tooltips on Table Row Action Buttons
 
 **Learning:** Row-level action buttons in data tables (such as "Steps" in `WorkflowRuns` and "View" in `SessionExplorer`) that open detail drawers often carry `aria-label` screen reader text but omit `title` attributes and `type="button"`. Desktop mouse users benefit from instant hover tooltips describing the action target.
