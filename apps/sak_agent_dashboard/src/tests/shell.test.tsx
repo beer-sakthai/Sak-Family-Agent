@@ -487,9 +487,11 @@ describe("HostedNotice", () => {
 });
 
 describe("Skeletons", () => {
-  it("holds the KPI layout with one placeholder per tile", () => {
+  it("holds the KPI layout with one placeholder per tile and status accessibility", () => {
     const { container } = render(<KpiSkeleton />);
-    expect(screen.getByTestId("kpi-skeleton").children).toHaveLength(6);
+    expect(screen.getByRole("status", { name: "Loading KPI metrics" })).toBeInTheDocument();
+    // 6 tile cards + 1 sr-only text node = 7 children under root grid container
+    expect(screen.getByTestId("kpi-skeleton").children).toHaveLength(7);
     expect(container.querySelectorAll(".animate-pulse").length).toBe(18);
   });
 

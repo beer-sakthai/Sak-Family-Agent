@@ -16,7 +16,12 @@ function Shimmer({ className }: { className: string }) {
 
 export function KpiSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6" data-testid="kpi-skeleton">
+    <div
+      role="status"
+      aria-label="Loading KPI metrics"
+      className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6"
+      data-testid="kpi-skeleton"
+    >
       {Array.from({ length: 6 }).map((_, index) => (
         <div
           key={index}
@@ -27,6 +32,7 @@ export function KpiSkeleton() {
           <Shimmer className="mt-2 h-2.5 w-24" />
         </div>
       ))}
+      <span className="sr-only">Loading KPI metrics</span>
     </div>
   );
 }
