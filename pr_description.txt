@@ -1,16 +1,10 @@
-🎨 Palette: Add explicit aria-labels and tooltips to AgentCard and PersonaFilter controls
+🎨 Palette: Add informative hover title tooltips to PersonaDrawer action buttons
 
 💡 What:
-- Added explicit hover tooltips (`title`) and `aria-label` attributes to card toggle overlay buttons, details triggers in `AgentCard`, and the dropdown trigger in `PersonaFilter`.
-- Retained clean focus ring styles (`focus-visible:ring-2 focus-visible:ring-accent`) across all interactive buttons.
+Added explicit `title` attributes (`title={`View sessions for ${persona.display_name}`}`, `title={`View memory for ${persona.display_name}`}`, etc.) to the quick-action filter and navigation buttons inside `PersonaDrawer`.
 
 🎯 Why:
-- Screen readers and keyboard navigation users need explicit Accessible Names and visual hover tooltips on icon/overlay controls so their actions and state are unambiguous.
-
-📸 Before/After:
-- Before: Persona filter and agent card overlay buttons lacked native `title` tooltips and explicit `aria-label` trigger context.
-- After: Interactive card controls and persona filter triggers now render accessible tooltips and clear ARIA descriptions on hover/focus.
+Desktop users hovering over the quick action buttons in the persona details drawer now receive instant visual feedback clarifying what action will be taken for the specific persona.
 
 ♿ Accessibility:
-- Added `title` and `aria-label` tooltips to `AgentCard` and `PersonaFilter` trigger elements.
-- Maintained WAI-ARIA compliance and keyboard focus rings (`focus-visible:ring-2 focus-visible:ring-accent`).
+Provides supplementary hover information while retaining explicit visible text labels and existing keyboard focus state rings.

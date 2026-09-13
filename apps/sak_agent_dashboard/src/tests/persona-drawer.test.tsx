@@ -103,6 +103,22 @@ describe("PersonaDrawer", () => {
     );
   });
 
+  it("provides informative title tooltips on quick action navigation buttons", () => {
+    renderDrawer(busiest);
+    expect(screen.getByRole("button", { name: "Sessions" })).toHaveAttribute(
+      "title",
+      `View sessions for ${busiest.display_name}`,
+    );
+    expect(screen.getByRole("button", { name: "Memory" })).toHaveAttribute(
+      "title",
+      `View memory for ${busiest.display_name}`,
+    );
+    expect(screen.getByRole("button", { name: "Analytics" })).toHaveAttribute(
+      "title",
+      `View analytics for ${busiest.display_name}`,
+    );
+  });
+
   it("navigates to a panel rather than fetching anything itself", () => {
     const onNavigate = vi.fn();
     renderDrawer(busiest, { onNavigate });

@@ -238,6 +238,7 @@ export function PersonaDrawer({
             type="button"
             onClick={onToggleFilter}
             aria-pressed={filtered}
+            title={filtered ? `Clear filter for ${persona.display_name}` : `Filter dashboard to ${persona.display_name}`}
             className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 font-mono text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               filtered
                 ? "border-accent/50 bg-accent/10 text-accent"
@@ -250,6 +251,7 @@ export function PersonaDrawer({
           <button
             type="button"
             onClick={() => onNavigate("sessions")}
+            title={`View sessions for ${persona.display_name}`}
             className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-raised/80 px-3 py-1.5 font-mono text-xs text-fg-2 transition-colors hover:bg-raised-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <MessageSquare className="h-3 w-3" aria-hidden />
@@ -258,6 +260,7 @@ export function PersonaDrawer({
           <button
             type="button"
             onClick={() => onNavigate("memory")}
+            title={`View memory for ${persona.display_name}`}
             className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-raised/80 px-3 py-1.5 font-mono text-xs text-fg-2 transition-colors hover:bg-raised-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <Database className="h-3 w-3" aria-hidden />
@@ -266,6 +269,7 @@ export function PersonaDrawer({
           <button
             type="button"
             onClick={() => onNavigate("analytics")}
+            title={`View analytics for ${persona.display_name}`}
             className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-raised/80 px-3 py-1.5 font-mono text-xs text-fg-2 transition-colors hover:bg-raised-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <Clock className="h-3 w-3" aria-hidden />

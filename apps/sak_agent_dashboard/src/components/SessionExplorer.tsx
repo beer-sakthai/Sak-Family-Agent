@@ -192,8 +192,10 @@ export function SessionExplorer({
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <button
+                        type="button"
                         onClick={() => openDetail(session)}
                         aria-label={`View transcript for ${session.task ? `task "${session.task}"` : session.id}`}
+                        title={`View transcript for ${session.task ? `task "${session.task}"` : session.id}`}
                         className="text-[11px] px-2.5 py-1 rounded-lg bg-raised border border-line-strong text-hue-cyan hover:border-hue-cyan-line/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                       >
                         View
