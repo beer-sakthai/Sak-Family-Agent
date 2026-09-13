@@ -56,9 +56,14 @@ describe("AgentCard", () => {
     expect(screen.getByText("no runs yet")).toBeInTheDocument();
   });
 
-  it("labels a persona with no shard as Idle", () => {
+  it("labels a persona with no shard as Idle and provides status title tooltip and aria-label", () => {
     render(<AgentCard agent={idle} />);
-    expect(screen.getByText("Idle")).toBeInTheDocument();
+    const badge = screen.getByLabelText("Status: Idle");
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveAttribute(
+      "title",
+      `${idle.display_name} has no recorded runs or memory shard`,
+    );
   });
 
   it("reports a missing memory shard plainly", () => {
