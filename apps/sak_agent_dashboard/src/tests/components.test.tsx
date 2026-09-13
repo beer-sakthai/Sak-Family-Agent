@@ -424,6 +424,8 @@ describe("SessionExplorer", () => {
       name: `View transcript for task "${sessions.sessions[0].task}"`,
     });
     expect(viewButton).toBeInTheDocument();
+    expect(viewButton).toHaveAttribute("title", `View transcript for task "${sessions.sessions[0].task}"`);
+    expect(viewButton).toHaveAttribute("type", "button");
     fireEvent.click(viewButton);
     expect(onSessionSelect).toHaveBeenCalledWith(sessions.sessions[0].id);
   });
@@ -552,7 +554,10 @@ describe("WorkflowRuns", () => {
     const onRunSelect = vi.fn();
     render(<WorkflowRuns runs={workflows.runs} onRunSelect={onRunSelect} openRunId={null} detail={null} />);
     const expectedLabel = `View steps for ${workflows.runs[0].workflow_name || workflows.runs[0].run_id}`;
-    fireEvent.click(screen.getByRole("button", { name: expectedLabel }));
+    const stepsButton = screen.getByRole("button", { name: expectedLabel });
+    expect(stepsButton).toHaveAttribute("title", expectedLabel);
+    expect(stepsButton).toHaveAttribute("type", "button");
+    fireEvent.click(stepsButton);
     expect(onRunSelect).toHaveBeenCalledWith(workflows.runs[0].run_id);
   });
 
