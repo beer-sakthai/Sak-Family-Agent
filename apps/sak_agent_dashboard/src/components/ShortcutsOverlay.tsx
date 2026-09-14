@@ -78,6 +78,7 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[10vh]">
       <button
+        type="button"
         aria-label="Dismiss keyboard shortcuts overlay backdrop"
         title="Dismiss keyboard shortcuts overlay"
         onClick={onClose}
@@ -102,6 +103,7 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
           </div>
           <button
             ref={closeRef}
+            type="button"
             onClick={onClose}
             aria-label="Close keyboard shortcuts"
             title="Close keyboard shortcuts (Esc)"
