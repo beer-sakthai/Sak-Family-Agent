@@ -72,10 +72,12 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
       >
         <button
           id="tab-facts"
+          type="button"
           role="tab"
           tabIndex={activeTab === "facts" ? 0 : -1}
           aria-selected={activeTab === "facts"}
           aria-controls="panel-facts"
+          title={activeTab === "facts" ? "Viewing recorded memory facts" : "Switch to memory facts view"}
           onClick={() => setActiveTab("facts")}
           onKeyDown={handleKeyDown}
           className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
@@ -89,10 +91,12 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
         </button>
         <button
           id="tab-observations"
+          type="button"
           role="tab"
           tabIndex={activeTab === "observations" ? 0 : -1}
           aria-selected={activeTab === "observations"}
           aria-controls="panel-observations"
+          title={activeTab === "observations" ? "Viewing recorded observations" : "Switch to observations view"}
           onClick={() => setActiveTab("observations")}
           onKeyDown={handleKeyDown}
           className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
