@@ -137,6 +137,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[12vh]">
       <button
+        type="button"
         aria-label="Close command palette"
         title="Close command palette"
         onClick={onClose}
