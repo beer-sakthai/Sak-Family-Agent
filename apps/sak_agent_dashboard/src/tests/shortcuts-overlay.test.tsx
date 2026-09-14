@@ -21,8 +21,11 @@ describe("ShortcutsOverlay", () => {
     renderShortcutsOverlay();
     const closeBtn = screen.getByRole("button", { name: "Close keyboard shortcuts" });
     expect(closeBtn).toBeInTheDocument();
+    expect(closeBtn).toHaveAttribute("type", "button");
     expect(closeBtn).toHaveAttribute("title", "Close keyboard shortcuts (Esc)");
     expect(closeBtn).toHaveTextContent("Esc");
+    const backdropBtn = screen.getByRole("button", { name: "Dismiss keyboard shortcuts overlay backdrop" });
+    expect(backdropBtn).toHaveAttribute("type", "button");
   });
 
   it("closes on close button click", () => {
