@@ -7,3 +7,17 @@
 📸 Before/After: Visual badge is unchanged, but now shows helpful native hover tooltips on mouseover and clean accessible names for screen reader users.
 
 ♿ Accessibility: Added `aria-label="Status: <status>"` to the container badge and `aria-hidden="true"` to the decorative pulsing status dot.
+🎨 Palette: Add title hover tooltips and accessible labels to AgentOverview persona count badge
+
+💡 What:
+Added explicit `title` hover tooltips and `aria-label` attributes to the registered/filtered persona count badge in `AgentOverview.tsx` in `apps/sak_agent_dashboard`. Updated corresponding unit tests in `components.test.tsx`.
+
+🎯 Why:
+Desktop mouse users hovering over the count pill in `AgentOverview` were missing context on whether the count represented total registered personas or a subset filtered by persona selection. The tooltip clarifies active vs total count states.
+
+📸 Before/After:
+- Before: `<div className="...">6 Personas Registered</div>` (No tooltip or ARIA description)
+- After: `<div title="6 total agent personas registered" aria-label="6 total agent personas registered">6 Personas Registered</div>` (Full hover tooltip and accessible ARIA description)
+
+♿ Accessibility:
+Provides screen readers and desktop users with unambiguous context regarding total vs filtered persona counts.

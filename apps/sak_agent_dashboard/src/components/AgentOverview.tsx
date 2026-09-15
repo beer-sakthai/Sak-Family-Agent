@@ -57,15 +57,16 @@ export function AgentOverview({
             className="text-xs font-mono text-hue-cyan bg-hue-cyan-tint/40 border border-hue-cyan-line/40 px-3 py-1 rounded-full"
             title={
               filtering
-                ? `Filtering ${selected.length} of ${agents.length} registered personas`
-                : `Showing all ${agents.length} registered personas`
+                ? `Showing ${selected.length} of ${agents.length} registered personas in filter`
+                : `${agents.length} total agent personas registered`
             }
             aria-label={
               filtering
-                ? `Filtering ${selected.length} of ${agents.length} registered personas`
-                : `Showing all ${agents.length} registered personas`
+                ? `Showing ${selected.length} of ${agents.length} registered personas in filter`
+                : `${agents.length} total agent personas registered`
             }
           >
+          <div className="text-xs font-mono text-hue-cyan bg-hue-cyan-tint/40 border border-hue-cyan-line/40 px-3 py-1 rounded-full">
             {filtering
               ? `${selected.length} of ${agents.length} personas`
               : `${agents.length} Personas Registered`}
