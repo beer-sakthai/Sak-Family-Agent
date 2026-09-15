@@ -163,6 +163,14 @@ export function AgentCard({
           </div>
 
           <span
+            title={
+              status === "Active"
+                ? `${agent.display_name} executed within the last 24 hours`
+                : status === "Ready"
+                  ? `${agent.display_name} has active history or memory shard`
+                  : `${agent.display_name} has no recorded runs or memory shard`
+            }
+            aria-label={`Status: ${status}`}
             className={`inline-flex shrink-0 items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold font-mono border ${
               status === "Active"
                 ? "bg-hue-emerald/10 text-hue-emerald border-hue-emerald-line/30"
@@ -179,6 +187,7 @@ export function AgentCard({
                     ? "bg-fg-3"
                     : "bg-fg-5"
               }`}
+              aria-hidden="true"
             />
             {status}
           </span>
