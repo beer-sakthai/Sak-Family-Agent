@@ -362,6 +362,22 @@ describe("MemoryExplorer", () => {
     fireEvent.keyDown(obsTab, { key: "Home" });
     expect(factsTab).toHaveAttribute("aria-selected", "true");
   });
+
+  it("provides explicit type='button' and dynamic title tooltips on tab buttons", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const factsTab = screen.getByRole("tab", { name: /Facts/ });
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+
+    expect(factsTab).toHaveAttribute("type", "button");
+    expect(factsTab).toHaveAttribute("title", "Showing facts memory tab");
+    expect(obsTab).toHaveAttribute("type", "button");
+    expect(obsTab).toHaveAttribute("title", "Switch to observations memory tab");
+
+    fireEvent.click(obsTab);
+
+    expect(factsTab).toHaveAttribute("title", "Switch to facts memory tab");
+    expect(obsTab).toHaveAttribute("title", "Showing observations memory tab");
+  });
 });
 
 describe("AuditLogs", () => {
