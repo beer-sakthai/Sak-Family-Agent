@@ -1,3 +1,12 @@
+🎨 Palette: Add status tooltips and ARIA attributes to agent cards
+
+💡 What: Added dynamic `title` hover tooltips explaining the status logic (`Active`, `Ready`, `Idle`) and explicit `aria-label` attributes to the persona status badges in `AgentCard.tsx`. Hided the inner status indicator dot from screen readers using `aria-hidden="true"`.
+
+🎯 Why: Desktop users hovering over persona status badges were unable to discern why a persona was marked as "Active" (executed in last 24h), "Ready" (has memory/history), or "Idle" (no history or shard). Screen readers now also receive a dedicated accessible name ("Status: Idle") without redundant text.
+
+📸 Before/After: Visual badge is unchanged, but now shows helpful native hover tooltips on mouseover and clean accessible names for screen reader users.
+
+♿ Accessibility: Added `aria-label="Status: <status>"` to the container badge and `aria-hidden="true"` to the decorative pulsing status dot.
 🎨 Palette: Add title hover tooltips and accessible labels to AgentOverview persona count badge
 
 💡 What:

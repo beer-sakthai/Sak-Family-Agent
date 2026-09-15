@@ -56,9 +56,14 @@ describe("AgentCard", () => {
     expect(screen.getByText("no runs yet")).toBeInTheDocument();
   });
 
-  it("labels a persona with no shard as Idle", () => {
+  it("labels a persona with no shard as Idle and provides status title tooltip and aria-label", () => {
     render(<AgentCard agent={idle} />);
-    expect(screen.getByText("Idle")).toBeInTheDocument();
+    const badge = screen.getByLabelText("Status: Idle");
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveAttribute(
+      "title",
+      `${idle.display_name} has no recorded runs or memory shard`,
+    );
   });
 
   it("reports a missing memory shard plainly", () => {
@@ -144,6 +149,8 @@ describe("AgentOverview", () => {
     expect(badge).toBeInTheDocument();
     expect(badge).toHaveAttribute("title", "Showing 2 of 6 registered personas in filter");
     expect(badge).toHaveAttribute("aria-label", "Showing 2 of 6 registered personas in filter");
+  });
+
   it("renders a card for all six personas", () => {
     render(<AgentOverview personas={personas} />);
     expect(screen.getByText("6 Personas Registered")).toBeInTheDocument();
