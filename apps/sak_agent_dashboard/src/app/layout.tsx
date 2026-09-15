@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Outfit } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 import { THEME_BOOTSTRAP } from "@/lib/theme";
@@ -129,6 +130,7 @@ export default function RootLayout({
           <div className="absolute inset-0 bg-grid" />
         </div>
         {children}
+        <SpeedInsights />
       </body>
     </html>
   );
