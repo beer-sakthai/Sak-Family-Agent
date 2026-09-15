@@ -130,6 +130,20 @@ describe("AgentCard", () => {
 });
 
 describe("AgentOverview", () => {
+  it("renders a card for all six personas with title and aria-label tooltips on count badge", () => {
+    render(<AgentOverview personas={personas} />);
+    const badge = screen.getByText("6 Personas Registered");
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveAttribute("title", "6 total agent personas registered");
+    expect(badge).toHaveAttribute("aria-label", "6 total agent personas registered");
+  });
+
+  it("updates count badge title and aria-label tooltips when persona filtering is active", () => {
+    render(<AgentOverview personas={personas} selected={["sakthai", "sakjules"]} />);
+    const badge = screen.getByText("2 of 6 personas");
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveAttribute("title", "Showing 2 of 6 registered personas in filter");
+    expect(badge).toHaveAttribute("aria-label", "Showing 2 of 6 registered personas in filter");
   it("renders a card for all six personas", () => {
     render(<AgentOverview personas={personas} />);
     expect(screen.getByText("6 Personas Registered")).toBeInTheDocument();
