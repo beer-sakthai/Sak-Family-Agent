@@ -64,13 +64,6 @@ export function AgentOverview({
               filtering
                 ? `Showing ${selected.length} of ${agents.length} registered personas in filter`
                 : `${agents.length} total agent personas registered`
-                ? `Filtering ${selected.length} of ${agents.length} registered personas`
-                : `Showing all ${agents.length} registered personas`
-            }
-            aria-label={
-              filtering
-                ? `Filtering ${selected.length} of ${agents.length} registered personas`
-                : `Showing all ${agents.length} registered personas`
             }
           >
             {filtering

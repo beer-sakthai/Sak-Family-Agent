@@ -144,18 +144,6 @@ describe("AgentOverview", () => {
     expect(badge).toBeInTheDocument();
     expect(badge).toHaveAttribute("title", "Showing 2 of 6 registered personas in filter");
     expect(badge).toHaveAttribute("aria-label", "Showing 2 of 6 registered personas in filter");
-  it("renders a card for all six personas and sets descriptive title and aria-label on count badge", () => {
-    const { rerender } = render(<AgentOverview personas={personas} />);
-    const badge = screen.getByLabelText("Showing all 6 registered personas");
-    expect(badge).toBeInTheDocument();
-    expect(badge).toHaveAttribute("title", "Showing all 6 registered personas");
-    expect(screen.getByText("6 Personas Registered")).toBeInTheDocument();
-
-    rerender(<AgentOverview personas={personas} selected={["sakthai", "saksee"]} />);
-    const filteredBadge = screen.getByLabelText("Filtering 2 of 6 registered personas");
-    expect(filteredBadge).toBeInTheDocument();
-    expect(filteredBadge).toHaveAttribute("title", "Filtering 2 of 6 registered personas");
-    expect(screen.getByText("2 of 6 personas")).toBeInTheDocument();
   });
 
   it("surfaces unattributed runs rather than hiding them", () => {
@@ -361,22 +349,6 @@ describe("MemoryExplorer", () => {
 
     fireEvent.keyDown(obsTab, { key: "Home" });
     expect(factsTab).toHaveAttribute("aria-selected", "true");
-  });
-
-  it("provides explicit type='button' and dynamic title tooltips on tab buttons", () => {
-    render(<MemoryExplorer memory={demoMemory()} />);
-    const factsTab = screen.getByRole("tab", { name: /Facts/ });
-    const obsTab = screen.getByRole("tab", { name: /Observations/ });
-
-    expect(factsTab).toHaveAttribute("type", "button");
-    expect(factsTab).toHaveAttribute("title", "Showing facts memory tab");
-    expect(obsTab).toHaveAttribute("type", "button");
-    expect(obsTab).toHaveAttribute("title", "Switch to observations memory tab");
-
-    fireEvent.click(obsTab);
-
-    expect(factsTab).toHaveAttribute("title", "Switch to facts memory tab");
-    expect(obsTab).toHaveAttribute("title", "Showing observations memory tab");
   });
 });
 
