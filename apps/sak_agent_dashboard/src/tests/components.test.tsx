@@ -144,6 +144,9 @@ describe("AgentOverview", () => {
     expect(badge).toBeInTheDocument();
     expect(badge).toHaveAttribute("title", "Showing 2 of 6 registered personas in filter");
     expect(badge).toHaveAttribute("aria-label", "Showing 2 of 6 registered personas in filter");
+  it("renders a card for all six personas", () => {
+    render(<AgentOverview personas={personas} />);
+    expect(screen.getByText("6 Personas Registered")).toBeInTheDocument();
   });
 
   it("surfaces unattributed runs rather than hiding them", () => {
@@ -257,6 +260,22 @@ describe("MemoryExplorer", () => {
     const factsTab = screen.getByRole("tab", { name: /Facts/ });
     expect(factsTab.className).toContain("focus-visible:ring-offset-2");
     expect(factsTab.className).toContain("focus-visible:ring-offset-canvas");
+  });
+
+  it("includes explicit type=button and dynamic hover title tooltips on tab controls", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const factsTab = screen.getByRole("tab", { name: /Facts/ });
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+
+    expect(factsTab).toHaveAttribute("type", "button");
+    expect(factsTab).toHaveAttribute("title", "Showing facts memory items");
+    expect(obsTab).toHaveAttribute("type", "button");
+    expect(obsTab).toHaveAttribute("title", "Switch to observations memory items");
+
+    fireEvent.click(obsTab);
+
+    expect(factsTab).toHaveAttribute("title", "Switch to facts memory items");
+    expect(obsTab).toHaveAttribute("title", "Showing observations memory items");
   });
 
   it("uses roving tabIndex for active and inactive tabs", () => {
