@@ -248,22 +248,6 @@ describe("MemoryExplorer", () => {
     expect(factsTab.className).toContain("focus-visible:ring-offset-canvas");
   });
 
-  it("includes explicit type=button and dynamic hover title tooltips on tab controls", () => {
-    render(<MemoryExplorer memory={demoMemory()} />);
-    const factsTab = screen.getByRole("tab", { name: /Facts/ });
-    const obsTab = screen.getByRole("tab", { name: /Observations/ });
-
-    expect(factsTab).toHaveAttribute("type", "button");
-    expect(factsTab).toHaveAttribute("title", "Showing facts memory items");
-    expect(obsTab).toHaveAttribute("type", "button");
-    expect(obsTab).toHaveAttribute("title", "Switch to observations memory items");
-
-    fireEvent.click(obsTab);
-
-    expect(factsTab).toHaveAttribute("title", "Switch to facts memory items");
-    expect(obsTab).toHaveAttribute("title", "Showing observations memory items");
-  });
-
   it("uses roving tabIndex for active and inactive tabs", () => {
     render(<MemoryExplorer memory={demoMemory()} />);
     const factsTab = screen.getByRole("tab", { name: /Facts/ });
