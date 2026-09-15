@@ -43,9 +43,34 @@ jobs:
 
       - name: Export locked requirements
         # --no-emit-project: audit third-party deps only, not the local package.
-        run: uv export --frozen --all-extras --no-emit-project --no-hashes -o requirements.txt
+        #
+        # --all-groups is not redundant with --all-extras. Extras are
+        # [project.optional-dependencies]; groups are PEP 735
+        # [dependency-groups], and uv will not export a group unless asked.
+        # Without it the `evals` group -- lm-eval and its ~270 transitive
+        # dependencies, installed by run-evals.yml -- was never audited, which
+        # is how accelerate, nltk and sqlitedict sat here with published CVEs
+        # while this workflow reported "No known vulnerabilities found".
+        run: uv export --frozen --all-extras --all-groups --no-emit-project --no-hashes -o requirements.txt
 
       - name: Run pip-audit
         # --no-deps is safe: uv export already emits the fully resolved,
         # pinned dependency closure, so there is nothing left to resolve.
-        run: uvx pip-audit -r requirements.txt --disable-pip --no-deps
+        #
+        # The two --ignore-vuln entries are accepted risk, not dismissal: both
+        # are transitive dependencies of lm-eval reached only by run-evals.yml,
+        # and NEITHER HAS A FIXED RELEASE -- the newest version on PyPI is the
+        # last affected one in each case. Drop the corresponding flag the
+        # moment an upstream fix ships; leaving a stale ignore here silently
+        # re-opens the hole this workflow exists to close.
+        #
+        #   PYSEC-2026-3740 (GHSA-8mgp-746c-j5xp) nltk <=3.10.3, latest 3.10.3
+        #     -- model-artifact APIs can touch files outside allowed roots.
+        #        Reached only via rouge-score, on Hub artifacts we select.
+        #   PYSEC-2026-1939 (CVE-2024-35515) sqlitedict <=2.1.0, latest 2.1.0
+        #     -- insecure deserialization of an attacker-controlled DB file.
+        #        lm-eval only ever opens caches it wrote itself.
+        run: |
+          uvx pip-audit -r requirements.txt --disable-pip --no-deps \
+            --ignore-vuln PYSEC-2026-3740 \
+            --ignore-vuln PYSEC-2026-1939

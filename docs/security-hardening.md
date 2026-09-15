@@ -184,6 +184,49 @@ was ever pushed, it is compromised.
   `::test_head_rejects_traversal_with_token`,
   `::test_head_response_carries_no_body`.
 
+### 11. The dependency audit never saw the `evals` dependency group
+- **Where:** `.github/workflows/dependency-audit.yml` — the export step.
+- **Risk:** the workflow exported with `uv export --all-extras`. Extras are
+  `[project.optional-dependencies]`; the `evals` group is PEP 735
+  `[dependency-groups]`, and **uv does not export a group unless asked**. So
+  `lm-eval` and its ~270 transitive dependencies — everything `run-evals.yml`
+  installs — were never audited. The export was 202 lines; the real closure is
+  468. Three packages sat in `uv.lock` with published advisories while the
+  workflow reported *"No known vulnerabilities found"*: `accelerate` 1.14.0
+  (PYSEC-2026-3804, path traversal via sharded-checkpoint `weight_map`
+  entries), `nltk` 3.10.3 (PYSEC-2026-3740 / GHSA-8mgp-746c-j5xp) and
+  `sqlitedict` 2.1.0 (PYSEC-2026-1939 / CVE-2024-35515). Scorecard's OSV check
+  reads `uv.lock` wholesale and had been reporting all of them.
+- **Fix:** added `--all-groups` to the export. `accelerate` upgraded to 1.15.0,
+  which clears its advisory. `nltk` and `sqlitedict` have **no fixed release** —
+  the newest version on PyPI is the last affected one in each case — so they
+  are `--ignore-vuln` entries carrying the advisory ID, the affected range and
+  the reachability argument, to be removed the moment a fix ships.
+- **Prevention pattern:** a green audit proves nothing until you have checked
+  *what it scanned*. Assert the size of the dependency set, not just the exit
+  code, and re-check whenever a new extra or group is added. An ignore entry is
+  a dated risk acceptance with a named ID, never a way to quiet a red build.
+- **Regression tests:** verified by hand rather than in pytest, since the gate
+  is the workflow itself: auditing the pre-fix lock with the same two ignore
+  flags still exits **1** on `accelerate`, proving the ignores do not mask
+  anything else; the post-fix lock exits **0**.
+
+### 12. Workflow tokens granted `contents: write` to every job
+- **Where:** `auto-dependency-update.yml`, `continuous-security.yml`,
+  `daily-pr-review.yml`, `daily-workspace-status.yml`.
+- **Risk:** each declared `contents: write` (and mostly `pull-requests: write`)
+  at the **top level**, so the grant applied to every job in the file —
+  including any job added later, which inherits write access nobody reviewed.
+  Scorecard scores a top-level write grant 0 for this reason.
+- **Fix:** top level dropped to `contents: read`; the write scopes moved onto
+  the single job in each file that needs them, with a comment naming what each
+  is for. Effective permissions for today's jobs are unchanged.
+- **Prevention pattern:** grant a write scope on the job that uses it, never on
+  the workflow. `branch-cleanup.yml` and `code-scanning-cleanup.yml` were
+  already built this way and needed no change.
+- **Regression tests:** none — CI has no workflow-permission linter. Verified
+  by parsing each file and diffing effective per-job permissions before/after.
+
 ---
 
 ## CI / supply-chain hardening

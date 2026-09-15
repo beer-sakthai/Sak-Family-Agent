@@ -93,8 +93,15 @@ jobs:
 
       # PyYAML is the framework's one third-party dependency (agent_workflow
       # parses YAML workflow definitions); everything else it imports is stdlib.
+      #
+      # Hash-locked (see .github/apps-requirements.in/.lock, regenerate with
+      # the command in the lock's header). A bare `pip install pytest pyyaml`
+      # resolves whatever the index serves at run time, which is both a
+      # Scorecard Pinned-Dependencies finding and a real supply-chain hole.
       - name: Install test dependencies
-        run: pip install pytest pyyaml
+        run: |
+          python -m pip install --disable-pip-version-check \
+            --require-hashes -r .github/apps-requirements.lock
 
       # Kept out of the main suite on purpose: pyproject sets
       # testpaths = ["tests"], and this package does not depend on sakthai.
@@ -118,8 +125,12 @@ jobs:
         with:
           python-version: "3.11"
 
+      # Same hash-locked set as the dashboard job above; it carries pytest too,
+      # which this job does not use but which costs one small wheel to install.
       - name: Install PyYAML
-        run: pip install pyyaml
+        run: |
+          python -m pip install --disable-pip-version-check \
+            --require-hashes -r .github/apps-requirements.lock
 
       # contracts.py is the single definition the dashboard's TypeScript types
       # are generated from. If the committed file is stale the two runtimes
