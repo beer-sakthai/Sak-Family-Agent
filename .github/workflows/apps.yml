@@ -98,10 +98,14 @@ jobs:
       # the command in the lock's header). A bare `pip install pytest pyyaml`
       # resolves whatever the index serves at run time, which is both a
       # Scorecard Pinned-Dependencies finding and a real supply-chain hole.
+      #
+      # The lock path is absolute: this job sets defaults.run.working-directory
+      # to apps/agent_workflow_framework, so a repo-relative path would resolve
+      # inside that package rather than at the repo root.
       - name: Install test dependencies
         run: |
           python -m pip install --disable-pip-version-check \
-            --require-hashes -r .github/apps-requirements.lock
+            --require-hashes -r "${{ github.workspace }}/.github/apps-requirements.lock"
 
       # Kept out of the main suite on purpose: pyproject sets
       # testpaths = ["tests"], and this package does not depend on sakthai.
@@ -125,12 +129,14 @@ jobs:
         with:
           python-version: "3.11"
 
-      # Same hash-locked set as the dashboard job above; it carries pytest too,
-      # which this job does not use but which costs one small wheel to install.
+      # Same hash-locked set as the agent_workflow_framework job above; it
+      # carries pytest too, which this job does not use but which costs one
+      # small wheel to install. This job has no working-directory default, but
+      # the path is spelled absolutely to match, and to survive one being added.
       - name: Install PyYAML
         run: |
           python -m pip install --disable-pip-version-check \
-            --require-hashes -r .github/apps-requirements.lock
+            --require-hashes -r "${{ github.workspace }}/.github/apps-requirements.lock"
 
       # contracts.py is the single definition the dashboard's TypeScript types
       # are generated from. If the committed file is stale the two runtimes
