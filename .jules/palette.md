@@ -49,9 +49,3 @@
 **Learning:** Row-level action buttons in data tables (such as "Steps" in `WorkflowRuns` and "View" in `SessionExplorer`) that open detail drawers often carry `aria-label` screen reader text but omit `title` attributes and `type="button"`. Desktop mouse users benefit from instant hover tooltips describing the action target.
 
 **Action:** Always provide explicit `type="button"` and `title` tooltips matching `aria-label` text on table row action trigger buttons.
-
-## 2026-09-16 - Visible Text Labels and Accessible Name Attributes
-
-**Learning:** Buttons and tab controls with already descriptive visible text (such as "Facts (6)") should rely on their visible text content for the accessible name rather than adding an `aria-label` that overrides it, which would violate WCAG 2.5.3 (Label in Name) and cause redundant role announcements ("Facts tab... tab").
-
-**Action:** Rely on visible text for accessible names on controls with visible labels; pair with `type="button"` and dynamic `title` tooltips for hover guidance.
