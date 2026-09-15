@@ -246,7 +246,7 @@ class _Handler(SimpleHTTPRequestHandler):
                             break
         super().end_headers()
 
-    def _send_json(self, code: int, payload: dict[str, Any]) -> None:
+    def _send_json(self, code: int, payload: dict[str, Any], *, send_body: bool = True) -> None:
         from ..config import redact_secrets
 
         raw_body = json.dumps(payload, indent=2, ensure_ascii=False)
@@ -256,7 +256,106 @@ class _Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self.wfile.write(body)
+        # A HEAD response carries the headers of the GET it mirrors, but no body.
+        if send_body:
+            self.wfile.write(body)
+
+    def _reject_unauthenticated(self, path: str, *, send_body: bool = True) -> bool:
+        """Enforce the bearer token, answering the request when it is missing.
+
+        Returns True when the request was rejected and the caller must stop.
+        ``/health`` is the one unauthenticated path and is handled before this.
+        ``send_body`` is False for HEAD, whose response is headers only.
+        """
+        if self._is_authenticated():
+            return False
+
+        if path.startswith("/api/"):
+            auth_header = self.headers.get("Authorization", "")
+            if auth_header and not auth_header.startswith("Bearer "):
+                self._send_json(
+                    401,
+                    {
+                        "error": "Unauthorized",
+                        "message": "Authorization header must be in 'Bearer <token>' format",
+                    },
+                    send_body=send_body,
+                )
+                return True
+
+            if not self._has_auth_attempt():
+                self._send_json(
+                    401,
+                    {"error": "Unauthorized", "message": "Missing Authorization header"},
+                    send_body=send_body,
+                )
+            else:
+                self._send_json(
+                    403,
+                    {"error": "Forbidden", "message": "Invalid Bearer token"},
+                    send_body=send_body,
+                )
+            return True
+
+        body = b"Unauthorized: Missing or invalid bearer token"
+        self.send_response(401)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.end_headers()
+        if send_body:
+            self.wfile.write(body)
+        return True
+
+    def _static_path_allowed(self, raw_path: str) -> bool:
+        """True if ``raw_path`` canonicalises to somewhere inside the static root.
+
+        The stdlib handler serves relative to the configured directory
+        (explicitly set to _STATIC_ROOT above), so canonicalise the request the
+        same way and confirm it stays within the static root before delegating.
+        """
+        try:
+            root = os.path.realpath(str(_STATIC_ROOT))
+            requested = _recursive_unquote(raw_path).lstrip("/\\")
+            candidate = os.path.realpath(os.path.join(root, requested))
+            return candidate == root or candidate.startswith(root + os.sep)
+        except Exception:
+            return False
+
+    def do_HEAD(self) -> None:  # noqa: N802
+        """Answer HEAD under exactly the same gates as GET.
+
+        ``SimpleHTTPRequestHandler`` supplies its own ``do_HEAD``. Inheriting it
+        unchanged handed any caller without a token the headers of any file
+        under the static root -- existence, size and mtime, and a 404 for what
+        was absent, which is enough to enumerate the tree -- and skipped the
+        containment check that ``do_GET`` applies. Both gates now run here too.
+        """
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/") or "/"
+
+        if path == "/health":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", "16")
+            self.end_headers()
+            return
+
+        if self._reject_unauthenticated(path, send_body=False):
+            return
+
+        # The JSON endpoints are GET-only; there is no payload to describe.
+        if path.startswith("/api/"):
+            self.send_error(405, "Method Not Allowed")
+            return
+
+        if not self._static_path_allowed(parsed.path):
+            self.send_error(403, "Forbidden")
+            return
+
+        if not _STATIC_ROOT.is_dir():
+            self.send_error(404, "File not found")
+            return
+
+        super().do_HEAD()
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
@@ -270,33 +369,8 @@ class _Handler(SimpleHTTPRequestHandler):
             self.wfile.write(b'{"status": "ok"}')
             return
 
-        if path.startswith("/api/"):
-            if not self._is_authenticated():
-                auth_header = self.headers.get("Authorization", "")
-                if auth_header and not auth_header.startswith("Bearer "):
-                    self._send_json(
-                        401,
-                        {
-                            "error": "Unauthorized",
-                            "message": "Authorization header must be in 'Bearer <token>' format",
-                        },
-                    )
-                    return
-
-                if not self._has_auth_attempt():
-                    self._send_json(
-                        401, {"error": "Unauthorized", "message": "Missing Authorization header"}
-                    )
-                else:
-                    self._send_json(403, {"error": "Forbidden", "message": "Invalid Bearer token"})
-                return
-        else:
-            if not self._is_authenticated():
-                self.send_response(401)
-                self.send_header("Content-Type", "text/plain; charset=utf-8")
-                self.end_headers()
-                self.wfile.write(b"Unauthorized: Missing or invalid bearer token")
-                return
+        if self._reject_unauthenticated(path):
+            return
 
         if path == "/api/stages":
             try:
@@ -315,18 +389,8 @@ class _Handler(SimpleHTTPRequestHandler):
             self.send_error(403, "Forbidden")
             return
 
-        # Fallback: static files from the dashboard dist root. The stdlib
-        # handler serves relative to the configured directory (explicitly set
-        # to _STATIC_ROOT above), so canonicalise the request the same way and
-        # confirm it stays within the static root before delegating.
-        try:
-            root = os.path.realpath(str(_STATIC_ROOT))
-            requested = _recursive_unquote(parsed.path).lstrip("/\\")
-            candidate = os.path.realpath(os.path.join(root, requested))
-            if candidate != root and not candidate.startswith(root + os.sep):
-                self.send_error(403, "Forbidden")
-                return
-        except Exception:
+        # Fallback: static files from the dashboard dist root.
+        if not self._static_path_allowed(parsed.path):
             self.send_error(403, "Forbidden")
             return
 

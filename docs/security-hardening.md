@@ -158,6 +158,32 @@ was ever pushed, it is compromised.
 - **Regression tests:** `tests/test_web_server.py::test_serve_refuses_non_loopback_without_ack`,
   `::test_serve_allows_non_loopback_when_acknowledged`.
 
+### 10. `HEAD` bypassed web API authentication entirely
+- **Where:** `personas/sakthai/sakthai/web/server.py` — `_Handler`.
+- **Risk:** `_Handler` overrode `do_GET` but inherited `do_HEAD` from
+  `SimpleHTTPRequestHandler`, so the bearer-token gate never ran for `HEAD`.
+  An unauthenticated caller got `200` plus `Content-Length`, `Content-Type` and
+  `Last-Modified` for any file under the static root, and `404` for anything
+  absent — enough to enumerate the tree and size its contents by verb alone.
+  The inherited method also skipped the static-root containment check that
+  `do_GET` applies before delegating.
+- **Fix:** `do_HEAD` is now explicit and runs the same gates in the same order
+  as `do_GET` — public `/health`, then the token check, then containment. The
+  JSON endpoints answer `405` (they are GET-only), and every HEAD response is
+  headers only (`_send_json` grew a `send_body` flag). The auth block and the
+  containment check were extracted into `_reject_unauthenticated` and
+  `_static_path_allowed` so the two verbs cannot drift apart again.
+- **Prevention pattern:** when subclassing a handler that ships its own verb
+  methods, enumerate every `do_*` the base class defines — an authentication
+  check placed in one verb's handler is not a check on the resource. Share the
+  gate between verbs rather than copying it.
+- **Regression tests:** `tests/test_web_auth.py::test_head_static_requires_token`,
+  `::test_head_does_not_leak_file_existence`, `::test_head_api_requires_token`,
+  `::test_head_health_is_public`, `::test_head_static_allowed_with_token`,
+  `::test_head_api_is_method_not_allowed_with_token`,
+  `::test_head_rejects_traversal_with_token`,
+  `::test_head_response_carries_no_body`.
+
 ---
 
 ## CI / supply-chain hardening
