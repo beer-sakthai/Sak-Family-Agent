@@ -71,15 +71,15 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
         className="flex items-center gap-2"
       >
         <button
-          id="tab-facts"
           type="button"
+          id="tab-facts"
           role="tab"
           tabIndex={activeTab === "facts" ? 0 : -1}
           aria-selected={activeTab === "facts"}
           aria-controls="panel-facts"
           title={activeTab === "facts" ? "Viewing recorded memory facts" : "Switch to memory facts view"}
+          title={activeTab === "facts" ? "Showing facts memory items" : "Switch to facts memory items"}
           onClick={() => setActiveTab("facts")}
-          onKeyDown={handleKeyDown}
           className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
             activeTab === "facts"
               ? "bg-hue-cyan-tint/50 text-hue-cyan border-hue-cyan-line/50"
@@ -90,15 +90,19 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           Facts ({facts.length})
         </button>
         <button
-          id="tab-observations"
           type="button"
+          id="tab-observations"
           role="tab"
           tabIndex={activeTab === "observations" ? 0 : -1}
           aria-selected={activeTab === "observations"}
           aria-controls="panel-observations"
           title={activeTab === "observations" ? "Viewing recorded observations" : "Switch to observations view"}
+          title={
+            activeTab === "observations"
+              ? "Showing observations memory items"
+              : "Switch to observations memory items"
+          }
           onClick={() => setActiveTab("observations")}
-          onKeyDown={handleKeyDown}
           className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
             activeTab === "observations"
               ? "bg-hue-violet-tint/50 text-hue-violet border-hue-violet-line/50"
