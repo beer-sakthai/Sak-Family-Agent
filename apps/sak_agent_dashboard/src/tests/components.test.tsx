@@ -149,6 +149,8 @@ describe("AgentOverview", () => {
     expect(badge).toBeInTheDocument();
     expect(badge).toHaveAttribute("title", "Showing 2 of 6 registered personas in filter");
     expect(badge).toHaveAttribute("aria-label", "Showing 2 of 6 registered personas in filter");
+  });
+
   it("renders a card for all six personas", () => {
     render(<AgentOverview personas={personas} />);
     expect(screen.getByText("6 Personas Registered")).toBeInTheDocument();
