@@ -1,4 +1,27 @@
 # Enforce the repository security and quality skills on every pull request.
+#
+# Three jobs:
+#   * skill-validation — `sakthai skills validate` and `make compose-personas`
+#   * quality          — ruff + mypy + pytest at the 96% floor, on 3.11
+#   * security         — zizmor over the workflows, and the tracked-secret check
+#
+# `quality` duplicates ci.yml exactly: ci.yml runs the same ruff/ruff-format/
+# mypy/pytest chain at the same --cov-fail-under=96 across a 3.11 AND 3.12
+# matrix, so this job is a strict subset of it and every PR pays for the suite
+# twice. It was removed for that reason and then restored, because
+# "Quality gates" — the `name:` of this job — is a **required status check** on
+# `main`. Deleting the job does not relax the requirement; it strands it, and
+# GitHub refuses the merge with:
+#
+#     Required status check "Quality gates" is expected. (HTTP 405)
+#
+# Removing the duplication therefore needs a repository *settings* change first:
+# drop "Quality gates" from the required-checks list for `main` (Settings →
+# Branches → branch protection), which no commit can do. Once that is done this
+# job can go and `ci.yml` covers everything it did, on both Python versions
+# rather than one. Until then, leave it: a required check that never reports
+# blocks every PR, and a "Quality gates" job that does not run the quality gates
+# would be worse — a green light that checks nothing.
 name: Repository Security and Quality
 
 on:
@@ -114,7 +137,7 @@ jobs:
   security:
     name: Security gates
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -130,19 +153,37 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+      - name: Install zizmor
+        # Hash-locked like bandit and pylint (see
+        # .github/zizmor-requirements.in/.lock, regenerate with
+        # scripts/gen_hash_lock.py). This step used to be `uvx zizmor`, which
+        # resolves whatever version is newest at run time — an unpinned
+        # dependency in the job whose entire purpose is checking that
+        # dependencies are pinned.
+        run: |
+          python -m pip install --disable-pip-version-check \
+            --require-hashes -r .github/zizmor-requirements.lock
 
-      - name: Scan workflow action pins
-        run: uvx zizmor --pedantic .github/workflows/repository-security-quality.yml
-
-      - name: Install dependencies
-        run: uv sync --all-extras
-
-      - name: Run Bandit
-        run: uv run bandit -c pyproject.toml -r personas/sakthai/sakthai
+      - name: Scan workflows for supply-chain and injection issues
+        # Scans the whole directory. This used to name exactly one file --
+        # `.github/workflows/repository-security-quality.yml`, i.e. itself --
+        # so the repository's only workflow-security linter audited 1 of 26
+        # workflows and never saw the other 25.
+        #
+        # Default persona, not --pedantic: see the rationale and the two
+        # documented suppressions in .github/zizmor.yml.
+        #
+        # --no-online-audits keeps this gate deterministic. zizmor's online
+        # audits call the GitHub API and abort the whole run on any failure
+        # there ("error in 'artipacked' audit: couldn't list tags for
+        # actions/checkout"), which would make a transient API blip look like a
+        # security regression. Everything that found a real issue here --
+        # dangerous-triggers, archived-uses, excessive-permissions,
+        # template-injection -- resolves offline. Vulnerable-dependency coverage
+        # comes from dependency-audit.yml and dependency-review.yml instead.
+        run: zizmor --no-online-audits --config .github/zizmor.yml .github/workflows/
 
       - name: Check for tracked secret-like files
         run: |

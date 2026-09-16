@@ -11,6 +11,14 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    # Let a newly published version age for a week before proposing it. The
+    # attack this defends against is a maintainer-account compromise that
+    # publishes a malicious release: those are typically caught and yanked
+    # within days, and a cooldown means Dependabot never opens the PR that
+    # would otherwise walk it straight into the lockfile. Dependabot exempts
+    # security updates from cooldown, so real advisories still arrive at once.
+    cooldown:
+      default-days: 7
     groups:
       python-minor-patch:
         update-types: ["minor", "patch"]
@@ -32,6 +40,15 @@ updates:
     schedule:
       interval: "daily"
     open-pull-requests-limit: 5
+    # Same cooldown reasoning as the uv ecosystem above, and it matters most
+    # here: a workflow `uses:` runs with the job's token, so a compromised
+    # third-party action release is the highest-value supply-chain target in
+    # the repo. First-party `actions/*` are exempt — they are the ones whose
+    # security fixes we want immediately.
+    cooldown:
+      default-days: 7
+      exclude:
+        - "actions/*"
     groups:
       actions:
         patterns: ["*"]
@@ -51,15 +68,26 @@ updates:
       - dependency-name: "tailwindcss"
         update-types: ["version-update:semver-major"]
 
+  # The two stitch skill trees. Both carry an explicit PR limit and grouping:
+  # without them each entry defaults to 5 ungrouped PRs, so these two alone
+  # could open 10 a day and bury everything else in the queue.
   - package-ecosystem: npm
     directory: /personas/saksee/skills/SakSee-stitch::react-components
     schedule:
       interval: daily
+    open-pull-requests-limit: 3
+    groups:
+      stitch-react-components:
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: npm
     directory: /personas/saksee/skills/SakSee-stitch::react-native
     schedule:
       interval: daily
+    open-pull-requests-limit: 3
+    groups:
+      stitch-react-native:
+        update-types: ["minor", "patch"]
 
   # Docker base images. Both Dockerfiles pin their base by digest, which only
   # stays current if something bumps it — that something is this.

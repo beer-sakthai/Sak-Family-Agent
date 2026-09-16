@@ -1,0 +1,38 @@
+# zizmor configuration — https://docs.zizmor.sh/configuration/
+#
+# zizmor audits every file in .github/workflows/ (see the "Scan workflow action
+# pins" step in repository-security-quality.yml). It runs at the *default*
+# persona rather than --pedantic: pedantic adds ~50 further findings that are
+# almost entirely style (`undocumented-permissions` wants a `#` comment on every
+# permission line, `template-injection` flags benign `${{ matrix.* }}` uses), and
+# a gate that reports 50 things nobody intends to fix is a gate nobody reads.
+#
+# Everything suppressed below is suppressed with a reason. Do not add an entry
+# here to make CI go green — fix the workflow, or write down why the finding
+# does not apply, as these two do.
+
+rules:
+  dangerous-triggers:
+    ignore:
+      # labeler.yml is the *safe* shape of pull_request_target, not the unsafe
+      # one this audit is aimed at. The danger in pull_request_target is that it
+      # runs with a write-scoped token against a ref the PR author controls —
+      # which requires checking out the PR head. labeler.yml has no checkout
+      # step at all: it runs actions/labeler, which reads .github/labeler.yml
+      # from the *base* ref. Attacker-controlled code is never executed.
+      #
+      # It has to be pull_request_target rather than pull_request so that PRs
+      # from forks can be labelled; a plain pull_request trigger gets a
+      # read-only token there and the labelling silently no-ops.
+      - labeler.yml
+
+  archived-uses:
+    ignore:
+      # SonarSource/sonarcloud-github-action is archived upstream, superseded by
+      # SonarSource/sonarqube-scan-action. The finding is correct and the
+      # migration is real work that is deliberately NOT bundled into the
+      # workflow-quality change that added this config — it alters what gets
+      # analysed and can only be validated against a live SONAR_TOKEN.
+      #
+      # Tracked, not forgotten. Remove this entry together with the migration.
+      - sonarcloud.yml

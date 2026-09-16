@@ -1,0 +1,10 @@
+# Sits alongside bug_report.md, feature_request.md and question.md.
+# Without this file the three templates are offered but the "open a blank issue"
+# escape hatch is unconfigured and no contact links are shown.
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/beer-sakthai/Sak-Family-Agent/security/advisories/new
+    about: >-
+      Do not open a public issue for a vulnerability. Report it privately here —
+      see SECURITY.md at the repository root for the disclosure policy.

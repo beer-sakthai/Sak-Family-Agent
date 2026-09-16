@@ -68,6 +68,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # SonarCloud needs the full history, not the default shallow clone:
+          # blame attribution and the "new code" period are both computed from
+          # it. Without this, Sonar reports every line as new on every run.
+          fetch-depth: 0
 
       - name: Analyze with SonarCloud
         if: env.SONAR_TOKEN != ''
