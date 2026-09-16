@@ -60,7 +60,7 @@ Snapshot recorded on **2026-09-16** with `git ls-files`, `find`, `git ls-remote 
 | ⚙️ **Automation** | 🟢 27 workflows | CI, security, dependency, quality, evaluation, and maintenance workflows in [`.github/workflows/`](.github/workflows/). |
 | 👨‍👩‍👧‍👦 **Personas** | 🟢 6 + shared | SakThai, Saksee, SakJules, SakKing, SakSit, SakTan, plus shared skills and knowledge. |
 | 🔀 **Open pull requests** | 🟢 0 | No open pull requests against `main` at snapshot time. |
-| 🌱 **Branches** | 🟢 1 local / 2 remote | Local development is consolidated to `main`; the remote carries `main` plus one recently-merged working branch. |
+| 🌱 **Branches** | 🟡 1 local / 5 remote | A fresh clone checks out only `main`; the remote also carries this session's working branch plus three other in-flight branches (`fix/lint-errors`, two `palette/*`). |
 | 🎯 **Protected-branch policy** | 🔒 Enabled | Required checks, conversation resolution, no force-pushes, and no branch deletion on `main`. |
 
 ### 🎯 Quality-Gate Detail
