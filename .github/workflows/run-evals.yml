@@ -9,6 +9,12 @@ on:
 permissions:
   contents: read
 
+# Evals take up to an hour and publish the baseline artifact that the next run
+# compares against. Queue a second run rather than cancelling the first.
+concurrency:
+  group: run-evals
+  cancel-in-progress: false
+
 jobs:
   run-evaluations:
     strategy:
@@ -242,13 +248,25 @@ jobs:
       - name: Download baseline results artifact
         uses: dawidd6/action-download-artifact@d63b86af1b34672e53c440b1b83979861906bad7 # v24
         with:
-          # Download from the last successful workflow run on the main branch
-          workflow: ${{ github.workflow_id }}
+          # Download from the last successful workflow run on the main branch.
+          #
+          # This was `${{ github.workflow_id }}`, which is not a property of the
+          # `github` context (it has `workflow`, `workflow_ref` and
+          # `workflow_sha`, no `workflow_id`). It resolved to the empty string,
+          # the action had no workflow to search, and `continue-on-error` below
+          # swallowed the failure -- so "Check for score regressions" took its
+          # "No baseline results found. Skipping regression check." branch on
+          # every single run. The action wants a workflow filename here.
+          workflow: run-evals.yml
           branch: main
           name: baseline-results-main
           path: baseline
-        # Continue even if the artifact is not found (e.g., first run)
-        continue-on-error: true
+          # A genuinely absent baseline is normal -- the first run has nothing
+          # to compare against, and "Check for score regressions" already
+          # handles that by testing for the file. `warn` covers that case
+          # without also swallowing a malformed request, which is what the
+          # step-level `continue-on-error: true` here used to do.
+          if_no_artifact_found: warn
 
       - name: Check for score regressions
         id: check

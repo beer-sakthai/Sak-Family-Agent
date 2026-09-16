@@ -1,0 +1,31 @@
+# Code owners for Sak-Family-Agent.
+#
+# A CODEOWNERS entry requests a review automatically when a matching path
+# changes. It only *enforces* review if "Require review from Code Owners" is
+# enabled in the branch protection rule for `main` — that is a repository
+# setting, not repository content, so this file alone does not gate merges.
+#
+# Syntax: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything not matched more specifically below.
+*                                   @beer-sakthai
+
+# CI, supply-chain pins and the hash locks. A change here can disable a gate
+# for the whole repository without touching a line of application code.
+/.github/                           @beer-sakthai
+/scripts/gen_hash_lock.py           @beer-sakthai
+
+# The security surface. guardrails.py is copied into five persona trees and is
+# parity-enforced by tests/test_persona_guardrails_parity.py; web/server.py is
+# copied the same way with no test enforcing it.
+/personas/*/sakthai/agent/guardrails.py             @beer-sakthai
+/personas/*/sakthai/agent/security_hardening.py     @beer-sakthai
+/personas/*/sakthai/agent/guardrails_hardened.py    @beer-sakthai
+/personas/*/sakthai/web/server.py                   @beer-sakthai
+/personas/sakthai/sakthai/config.py                 @beer-sakthai
+/personas/sakthai/sakthai/auth.py                   @beer-sakthai
+/personas/sakthai/sakthai/giturl.py                 @beer-sakthai
+
+# Persona identity contracts — cross-persona consistency is CI-enforced by
+# tests/test_soul_consistency.py.
+/personas/*/SOUL.md                 @beer-sakthai

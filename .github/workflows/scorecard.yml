@@ -17,6 +17,13 @@ on:
 # Declare default permissions as read only.
 permissions: read-all
 
+# Never cancel: Scorecard is a code-scanning producer, and a SARIF alert only
+# closes when a newer analysis from the same tool stops reporting it. A
+# cancelled run publishes nothing and freezes its alerts open.
+concurrency:
+  group: scorecard
+  cancel-in-progress: false
+
 jobs:
   analysis:
     name: Scorecard analysis

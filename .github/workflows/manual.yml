@@ -21,6 +21,11 @@ on:
 # This workflow only echoes an input; it needs no repository scopes at all.
 permissions: {}
 
+# Two manual dispatches carry different inputs, so never cancel one for another.
+concurrency:
+  group: manual-${{ github.run_id }}
+  cancel-in-progress: false
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "greet"
@@ -38,5 +43,12 @@ jobs:
         use-policy-store: true
         api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
 
+    # The input is passed through `env:` rather than interpolated into the
+    # script body. A `${{ }}` expression is substituted into the shell source
+    # before it runs, so an input containing shell metacharacters would execute
+    # as code -- the `actions/code-injection` sink that codeql.yml's `actions`
+    # security-extended leg reports.
     - name: Send greeting
-      run: echo "Hello ${{ inputs.name }}"
+      env:
+        GREETING_NAME: ${{ inputs.name }}
+      run: echo "Hello $GREETING_NAME"
