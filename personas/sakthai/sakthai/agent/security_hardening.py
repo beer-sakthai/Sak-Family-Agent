@@ -601,8 +601,21 @@ class AuditLogger:
         Args:
             log_file: Path to audit log file (default: ~/.sakthai/audit.log)
         """
-        self.log_file = log_file or (sakthai_home() / "audit.log")
+        self._log_file = log_file
         self.events: list[SecurityEvent] = []
+
+    @property
+    def log_file(self) -> Path:
+        """Where events are appended, resolved on use rather than at construction.
+
+        ``_audit_logger`` below is a module-level singleton, so a path baked in
+        by ``__init__`` would be whatever ``SAKTHAI_HOME`` said at *import*
+        time. That made the default unreachable by configuration: the test
+        suite, which sets ``SAKTHAI_HOME``/``HOME`` per test, still had this
+        logger appending to the invoking user's real ``~/.sakthai/audit.log``.
+        An explicitly passed ``log_file`` is honoured as given.
+        """
+        return self._log_file or (sakthai_home() / "audit.log")
 
     def log_event(self, event: SecurityEvent) -> None:
         """Log a security event.

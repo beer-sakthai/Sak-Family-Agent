@@ -333,24 +333,36 @@ finding common to all three audits
 [28th](docs/test-coverage-audit-2026-08-28.md)). The command-line flag is what
 actually fails the build; keep the two numbers in step when changing either.
 
-**The figure depends on your home directory.** Back-to-back runs on an
-identical tree have differed by one uncovered statement and one partial branch —
-roughly 0.02pp. This is not nondeterminism: the suite writes outside its
-sandbox. `tests/conftest.py` has no autouse fixture, and
-`tests/test_agent_coordinator.py` calls `run_persona_task()` without patching
-`HOME`, so it creates `~/.sakthai/{sakking,saksee}/memory.db` — real persona
-shards, at the paths a deployed persona uses. `memory/store.py:211-217` then
-forks on whether the DB file already exists (create at `0600` vs `chmod`), so a
-pristine home measures one branch and a second run measures the other. The
-databases come out schema-migrated and empty, but the suite is taking a write
-lock on production paths, and nothing stops a future test inserting rows. Fix
-the fixture rather than chasing the statement — see finding 1 of
-[`docs/test-coverage-audit-2026-08-31.md`](docs/test-coverage-audit-2026-08-31.md).
+**The figure used to depend on your home directory; it no longer does.** Finding
+1 of [`docs/test-coverage-audit-2026-08-31.md`](docs/test-coverage-audit-2026-08-31.md)
+was that the suite wrote outside its sandbox: `tests/test_agent_coordinator.py`
+called `run_persona_task()` without patching `HOME`, creating
+`~/.sakthai/{sakking,saksee}/memory.db` — real persona shards, at the paths a
+deployed persona uses. `memory/store.py:211-217` forks on whether the DB file
+already exists (create at `0600` vs `chmod`), so a pristine home measured one
+branch and the next run measured the other. That was the ±0.02pp drift all four
+audits recorded and none explained.
 
-The flap does not threaten the gate today: 0.21pp of headroom is about ten times
-its size. In units that is 21 statements-or-branches, which is less than half of
-what the `client/` subsystem alone landed uncovered — so treat 21 as the working
-budget, and raise coverage rather than lowering the floor.
+`tests/conftest.py` now has an autouse `_isolate_home` fixture that points
+`HOME`, `USERPROFILE` and `SAKTHAI_HOME` at a per-test temp directory, and
+`tests/test_home_isolation.py` fails if a run creates a persona shard under the
+real `~/.sakthai`. Two consecutive full runs now report identical per-file
+coverage. Three things to know before touching it:
+
+- **`HOME` is the knob, not `SAKTHAI_HOME`.** `config.persona_memory_db_path()`
+  resolves from `Path.home()` *deliberately independent* of `SAKTHAI_HOME`, so
+  the latter alone cannot contain it.
+- **The sandbox is not under `tmp_path`.** Several tests hand `tmp_path` to
+  skill discovery and assert on everything under it, so a home nested there
+  shows up as a bogus skill directory.
+- **Opt out explicitly when a test needs the real fallback.**
+  `test_memory_merged.py::test_omitting_the_shared_key_is_not_how_you_exclude_it`
+  does `monkeypatch.delenv("SAKTHAI_HOME")` because it exercises the
+  `Path.home()` fallback that `SAKTHAI_HOME` would otherwise shadow.
+
+The headroom is still ~0.34pp, or about 35 statements-or-branches — less than
+what the `client/` subsystem alone landed uncovered, so treat it as the working
+budget and raise coverage rather than lowering the floor.
 
 Run the lint→pytest sequence locally before pushing — a drop below the floor now
 turns CI red rather than passing quietly.

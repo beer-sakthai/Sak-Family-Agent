@@ -21,6 +21,27 @@ from sakthai.agent.tools import BUILTIN_TOOLS
 from sakthai.memory.store import MemoryStore
 
 
+@pytest.fixture(autouse=True)
+def _repin_environment() -> None:
+    """Re-pin the environment after conftest has built this test's sandbox.
+
+    `security_hardening._env_pinner` is a module-level singleton that snapshots
+    `_CRITICAL_VARS` — `SAKTHAI_HOME` among them — at **import** time. The
+    `_isolate_home` fixture gives every test its own `SAKTHAI_HOME`, so the
+    live value no longer matches that snapshot and
+    `check_environment_integrity()` reports tampering, short-circuiting
+    `hardened_pre_check` before any of the path or command branches run.
+
+    Setting up a sandbox is not the tampering this check exists to catch, so
+    the pin is refreshed once per test, after conftest and before the body.
+    Tests that then change a critical var mid-test still re-pin themselves —
+    that case *is* what the check is for.
+    """
+    from sakthai.agent import security_hardening as sh
+
+    sh._env_pinner = sh.EnvironmentVariablePinning()
+
+
 class TestInitializeHardenedGuardrails:
     """Test initialization of hardened guardrails."""
 

@@ -96,6 +96,10 @@ def test_omitting_the_shared_key_is_not_how_you_exclude_it(
     """
     fallback_home = tmp_path / "fallback-home"
     (fallback_home / ".sakthai").mkdir(parents=True)
+    # `memory_db_path()` reads SAKTHAI_HOME before falling back to Path.home(),
+    # so the conftest `_isolate_home` default would shadow the fallback this
+    # test exists to exercise. Opting out is the point, not a workaround.
+    monkeypatch.delenv("SAKTHAI_HOME", raising=False)
     monkeypatch.setattr(Path, "home", lambda: fallback_home)
     _seed(fallback_home / ".sakthai" / "memory.db", [("from the fallback", "note", None)], [])
 
