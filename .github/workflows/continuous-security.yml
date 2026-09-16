@@ -15,8 +15,7 @@ on:
     - cron: '0 2 * * *'
 
 permissions:
-  contents: write # To create branches and commits for patches
-  pull-requests: write # To create pull requests with fixes
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}
@@ -25,6 +24,9 @@ concurrency:
 jobs:
   devsecops-scan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write      # create branches and commits for patches
+      pull-requests: write # open pull requests with fixes
     timeout-minutes: 45
     steps:
       - name: Harden the runner

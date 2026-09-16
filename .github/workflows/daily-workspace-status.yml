@@ -7,8 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: daily-workspace-status
@@ -18,6 +17,9 @@ jobs:
   workspace-status:
     name: Report branches and reconcile PR conflicts
     runs-on: ubuntu-latest
+    permissions:
+      contents: write      # push conflict reconciliation merges
+      pull-requests: write # update the PRs it reconciles
     timeout-minutes: 20
     steps:
       - name: Harden the runner

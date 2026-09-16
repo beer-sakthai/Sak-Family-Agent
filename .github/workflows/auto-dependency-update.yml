@@ -7,8 +7,7 @@ on:
     - cron: '0 8 * * 1'
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}
@@ -17,6 +16,9 @@ concurrency:
 jobs:
   auto-update:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write      # push the dependency-bump branch
+      pull-requests: write # open the draft PR
     timeout-minutes: 20
     steps:
       - name: Harden the runner
