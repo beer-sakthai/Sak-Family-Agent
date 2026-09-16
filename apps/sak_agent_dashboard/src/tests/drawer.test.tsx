@@ -30,6 +30,8 @@ describe("Drawer", () => {
   it("closes on the close button and provides explicit title tooltip and type", () => {
     const { onClose } = renderDrawer();
     const closeBtn = screen.getByLabelText("Close detail panel");
+    expect(closeBtn).toHaveAttribute("type", "button");
+    expect(closeBtn).toHaveAttribute("title", "Close detail panel (Esc)");
     expect(closeBtn).toHaveAttribute("title", "Close detail panel (Esc)");
     expect(closeBtn).toHaveAttribute("type", "button");
     fireEvent.click(closeBtn);

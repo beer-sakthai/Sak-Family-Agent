@@ -55,3 +55,9 @@
 **Learning:** View option tab triggers and copy code buttons in workbench panels (such as `StitchStudio`) provide tab roles and `aria-label` text for screen readers, but omit hover `title` tooltips for desktop mouse users. Adding explicit `title` tooltips gives desktop users clear visual feedback on hover.
 
 **Action:** Always complement `role="tab"` and action buttons in workbench tools with explicit `title` hover tooltips.
+
+## 2026-09-17 - Informative Shortcut Tooltips and Explicit Type on Drawer Close Buttons
+
+**Learning:** Header close buttons in overlay/drawer detail components (such as `Drawer`) often carry `aria-label` screen reader text but omit explicit `type="button"` and hover `title` tooltips with keyboard shortcut hints (`title="Close detail panel (Esc)"`). Desktop mouse users benefit from visual tooltip guidance showing both the action and its keyboard shortcut.
+
+**Action:** Always add explicit `type="button"` and `title` tooltips containing shortcut hints (e.g. `title="Close detail panel (Esc)"`) to overlay/drawer close buttons.
