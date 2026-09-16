@@ -688,12 +688,22 @@ describe("PersonaFilter", () => {
 });
 
 describe("StitchStudio", () => {
-  it("renders preset buttons with title tooltip attributes", () => {
+  it("renders preset buttons and view tab buttons with explicit title tooltip attributes", () => {
     render(<StitchStudio />);
     const presetButton = screen.getByRole("button", {
       name: "Select preset SakThai Interactive Agent Drawer",
     });
     expect(presetButton).toHaveAttribute("title", "Select preset SakThai Interactive Agent Drawer");
+
+    const previewTab = screen.getByRole("tab", { name: /Live Preview/ });
+    const codeTab = screen.getByRole("tab", { name: /TSX Code/ });
+    const specTab = screen.getByRole("tab", { name: /Stitch JSON Spec/ });
+    const copyButton = screen.getByRole("button", { name: "Copy TSX code" });
+
+    expect(previewTab).toHaveAttribute("title", "Switch to Live Preview view");
+    expect(codeTab).toHaveAttribute("title", "Switch to TSX Code view");
+    expect(specTab).toHaveAttribute("title", "Switch to Stitch JSON Spec view");
+    expect(copyButton).toHaveAttribute("title", "Copy TSX code");
   });
 
   it("uses roving tabIndex for active and inactive tabs", () => {

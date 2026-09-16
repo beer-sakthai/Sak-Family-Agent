@@ -27,9 +27,12 @@ describe("Drawer", () => {
     expect(screen.getByText("1700000000_abc")).toBeInTheDocument();
   });
 
-  it("closes on the close button", () => {
+  it("closes on the close button and provides explicit title tooltip and type", () => {
     const { onClose } = renderDrawer();
-    fireEvent.click(screen.getByLabelText("Close detail panel"));
+    const closeBtn = screen.getByLabelText("Close detail panel");
+    expect(closeBtn).toHaveAttribute("title", "Close detail panel (Esc)");
+    expect(closeBtn).toHaveAttribute("type", "button");
+    fireEvent.click(closeBtn);
     expect(onClose).toHaveBeenCalled();
   });
 
