@@ -652,7 +652,7 @@ describe("WorkflowRuns", () => {
 });
 
 describe("PersonaFilter", () => {
-  it("opens menu on trigger click and navigates items via Arrow keys and Home/End", () => {
+  it("opens menu on trigger click, auto-focuses first item, and navigates items via Arrow keys and Home/End", () => {
     const onChange = vi.fn();
 
     render(<PersonaFilter selected={[]} onChange={onChange} />);
@@ -669,8 +669,6 @@ describe("PersonaFilter", () => {
       ...screen.getAllByRole("menuitemcheckbox"),
     ];
     expect(menuItems.length).toBeGreaterThan(1);
-
-    fireEvent.keyDown(menu, { key: "ArrowDown" });
     expect(menuItems[0]).toHaveFocus();
 
     fireEvent.keyDown(menuItems[0], { key: "ArrowDown" });

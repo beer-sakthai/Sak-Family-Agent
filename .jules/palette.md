@@ -61,3 +61,9 @@
 **Learning:** Header close buttons in overlay/drawer detail components (such as `Drawer`) often carry `aria-label` screen reader text but omit explicit `type="button"` and hover `title` tooltips with keyboard shortcut hints (`title="Close detail panel (Esc)"`). Desktop mouse users benefit from visual tooltip guidance showing both the action and its keyboard shortcut.
 
 **Action:** Always add explicit `type="button"` and `title` tooltips containing shortcut hints (e.g. `title="Close detail panel (Esc)"`) to overlay/drawer close buttons.
+
+## 2026-09-18 - Initial Focus Management on Dropdown Menu Open
+
+**Learning:** Dropdown menu containers with `role="menu"` (such as `PersonaFilter`) that handle arrow key navigation require auto-focusing the first interactive item (`[role="menuitem"]`, `[role="menuitemcheckbox"]`) when opened so keyboard users can immediately start navigating without needing an extra keypress.
+
+**Action:** Add an effect on dropdown menus to focus the first menu item element immediately when `open` state becomes `true`.

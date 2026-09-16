@@ -33,6 +33,11 @@ export function PersonaFilter({ selected, onChange, counts }: PersonaFilterProps
 
   useEffect(() => {
     if (!open) return;
+    const firstItem = containerRef.current?.querySelector<HTMLButtonElement>(
+      '[role="menuitem"], [role="menuitemcheckbox"]',
+    );
+    firstItem?.focus();
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.stopPropagation();
