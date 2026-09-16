@@ -24,7 +24,7 @@ This repository is the living workspace of the Sak Family — autonomous AI agen
 
 ## 📊 System Status & Delivery Dashboard
 
-> **How to read this section:** the badges above are live links to GitHub Actions, Codecov, and pull requests for `main`. The figures below are a dated snapshot captured on **2026-09-12** from the checked-out repository and GitHub API. A badge is authoritative for the latest remote result; a snapshot is historical until this section is refreshed.
+> **How to read this section:** the badges above are live links to GitHub Actions, Codecov, and pull requests for `main`. The figures below are a dated snapshot captured on **2026-09-16** from the checked-out repository and GitHub API. A badge is authoritative for the latest remote result; a snapshot is historical until this section is refreshed.
 
 ### 🚦 Mainline status bars
 
@@ -38,29 +38,29 @@ This repository is the living workspace of the Sak Family — autonomous AI agen
 │  🧹 Lint / type safety    ██████████████████████████████████████ RUN │
 │  📈 Coverage gate         ████████████████████████████████████░░ ≥96%│
 ├───────────────────────────────────────────────────────────────────┤
-│  🌿 Target: main (protected)       🔀 Open PRs: 1 (#1362)          │
+│  🌿 Target: main (protected)       🔀 Open PRs: 0                  │
 │  ✅ Required gates: 15 contexts     🎯 Merge only after green     │
-│  📅 Snapshot: 2026-09-12           🔒 No force-pushes            │
+│  📅 Snapshot: 2026-09-16           🔒 No force-pushes            │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
-The bars labelled **RUN** reflect the latest `main` push observed at the snapshot time: CI, Pylint, CodeQL Advanced, and Apps were in progress while completed security scans were green. They intentionally point to the dynamic badges rather than pretending that a README commit can freeze remote workflow state. The `main` branch protection currently requires 15 status contexts covering tests, builds, secret scanning, Bandit, OSSAR, SonarCloud, CodeQL, repository skills, quality, security, and labeling before integration.
+The bars labelled **RUN** reflect the latest `main` push observed at the snapshot time and intentionally point to the dynamic badges rather than pretending that a README commit can freeze remote workflow state. The `main` branch protection currently requires 15 status contexts covering tests, builds, secret scanning, Bandit, OSSAR, SonarCloud, CodeQL, repository skills, quality, security, and labeling before integration.
 
 ### 🧭 Repository Snapshot
 
-Snapshot recorded on **2026-09-12** with `git ls-files`, `find`, `git ls-remote --heads origin`, and the GitHub CLI. The root package, documentation, tests, workflow inventory, protected-branch rules, and open pull requests are shown separately so contributors can see the project’s operational footprint at a glance.
+Snapshot recorded on **2026-09-16** with `git ls-files`, `find`, `git ls-remote --heads origin`, and the GitHub CLI. The root package, documentation, tests, workflow inventory, protected-branch rules, and open pull requests are shown separately so contributors can see the project’s operational footprint at a glance.
 
 | Area | Status | Detail |
 |---|---|---|
 | 🌿 **Integration branch** | 🟢 `main` | CI validates pushes and pull requests targeting [`main`](.github/workflows/ci.yml). |
-| 📂 **Tracked repository files** | 🟢 4,648 | Version-controlled files across the agent runtime, personas, training assets, documentation, and tests. |
-| 📚 **Documentation** | 🟢 73 files | Documentation files under [`docs/`](docs/), with further READMEs colocated beside components. |
+| 📂 **Tracked repository files** | 🟢 4,658 | Version-controlled files across the agent runtime, personas, training assets, documentation, and tests. |
+| 📚 **Documentation** | 🟢 72 files | Documentation files under [`docs/`](docs/), with further READMEs colocated beside components. |
 | 🐍 **Core Python source** | 🟢 83 files | The typed `sakthai` package at [`personas/sakthai/sakthai/`](personas/sakthai/sakthai/). |
-| 🧪 **Test modules** | 🟢 107 files | Pytest modules in [`tests/`](tests/) that exercise the core package and delivery surfaces. |
-| ⚙️ **Automation** | 🟢 26 workflows | CI, security, dependency, quality, evaluation, and maintenance workflows in [`.github/workflows/`](.github/workflows/). |
+| 🧪 **Test modules** | 🟢 108 files | Pytest modules in [`tests/`](tests/) that exercise the core package and delivery surfaces. |
+| ⚙️ **Automation** | 🟢 27 workflows | CI, security, dependency, quality, evaluation, and maintenance workflows in [`.github/workflows/`](.github/workflows/). |
 | 👨‍👩‍👧‍👦 **Personas** | 🟢 6 + shared | SakThai, Saksee, SakJules, SakKing, SakSit, SakTan, plus shared skills and knowledge. |
-| 🔀 **Open pull requests** | 🟡 1 | **#1362** — Palette KPI tile tooltip improvements; it is mergeable and currently running its required checks. |
-| 🌱 **Branches** | 🟢 1 local / 2 remote | Local development is consolidated to `main`; the remote also contains the active branch for **#1362**. |
+| 🔀 **Open pull requests** | 🟢 0 | No open pull requests against `main` at snapshot time. |
+| 🌱 **Branches** | 🟢 1 local / 2 remote | Local development is consolidated to `main`; the remote carries `main` plus one recently-merged working branch. |
 | 🎯 **Protected-branch policy** | 🔒 Enabled | Required checks, conversation resolution, no force-pushes, and no branch deletion on `main`. |
 
 ### 🎯 Quality-Gate Detail
@@ -75,7 +75,7 @@ The following commands define the documented engineering baseline. The live badg
 | 🛡️ **Security scan** | `████████████████████ 100%` | `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` | Bandit gate using the repository configuration. |
 | ✨ **Lint & format** | `████████████████████ 100%` | `uv run ruff check personas/sakthai/sakthai tests` and `uv run ruff format --check personas/sakthai/sakthai tests` | Ruff check and formatting gate. |
 
-**Recorded local verification:** **2026-09-12** for this README-only change, using Markdown structure checks and `git diff --check`. Full code gates remain enforced remotely by the protected-branch PR workflow.
+**Recorded local verification:** **2026-09-16** for this README-only change, using Markdown structure checks and `git diff --check`. Full code gates remain enforced remotely by the protected-branch PR workflow.
 
 > **Coverage is a release gate.** The explicit `--cov-fail-under=96` argument in [`ci.yml`](.github/workflows/ci.yml) is the enforcing control. The matching `pyproject.toml` value is documentation only; see the coverage-audit finding in [`docs/test-coverage-audit-2026-08-28.md`](docs/test-coverage-audit-2026-08-28.md).
 
