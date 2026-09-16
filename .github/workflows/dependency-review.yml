@@ -1,0 +1,57 @@
+# Dependency Review — scans dependency manifests that change in a pull request
+# and surfaces known-vulnerable versions of the packages it adds or bumps.
+#
+# Adapted from the `code-scanning/dependency-review.yml` starter template in
+# beer-sakthai/Sak-Workflow- (a fork of actions/starter-workflows). Adapted, not
+# copied: the starter pins `uses:` by tag (`@v4`), sets no `timeout-minutes`, no
+# `concurrency` and no `persist-credentials`, none of which matches this
+# repository's bar. Every `uses:` below is pinned by commit SHA so Scorecard's
+# Pinned-Dependencies check stays satisfied.
+#
+# This complements rather than duplicates dependency-audit.yml: that runs
+# pip-audit over the resolved `uv.lock` on a schedule and on lockfile changes;
+# this one is per-PR, covers the npm manifests under apps/ and infra/ as well as
+# the Python side, and reports the delta the PR itself introduces.
+name: Dependency Review
+
+on:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-review:
+    name: Review dependency changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read # for actions/checkout to fetch the code
+      pull-requests: write # for comment-summary-in-pr to post the review summary
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Review dependencies
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          # Start at `high` rather than the action's `low` default. The npm
+          # trees under apps/ and personas/saksee/skills/ pull in large
+          # transitive graphs, and a gate that fires on every low-severity
+          # transitive advisory would be turned off within a week. Tighten this
+          # to `moderate` once the backlog is known to be clean.
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure

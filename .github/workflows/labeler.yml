@@ -6,6 +6,11 @@ on: [pull_request_target]
 permissions:
   contents: read
 
+# Rapid-fire pushes to a PR only need the final labelling to land.
+concurrency:
+  group: labeler-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   labeler:
     runs-on: ubuntu-latest

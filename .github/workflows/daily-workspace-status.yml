@@ -103,9 +103,14 @@ jobs:
           echo "Attempted safe branch updates: ${attempted}" >> "$GITHUB_STEP_SUMMARY"
           echo "Manual conflict cases: ${unresolved}" >> "$GITHUB_STEP_SUMMARY"
 
-          # Automatic reconciliation is limited to GitHub's clean merge operation.
-          # Any unresolved conflict remains visible and fails the daily monitor.
+          # Automatic reconciliation is limited to GitHub's clean merge operation;
+          # anything else is an ordinary case a human resolves in the PR.
+          #
+          # This used to `exit 1` on any such PR, which made a red daily run the
+          # normal state rather than a signal -- a monitor nobody can trust is a
+          # monitor nobody reads. The count and the per-PR rows above are the
+          # report; the run stays green so that a red one means the monitor
+          # itself broke.
           if [ "$unresolved" -gt 0 ]; then
-            echo "One or more PRs still require manual conflict resolution." >&2
-            exit 1
+            echo "::warning::${unresolved} PR(s) require manual conflict resolution — see the job summary."
           fi

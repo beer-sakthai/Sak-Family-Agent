@@ -12,6 +12,11 @@ on:
 permissions:
   contents: read
 
+# One daily sweep at a time; a cancelled run leaves issues half-processed.
+concurrency:
+  group: stale
+  cancel-in-progress: false
+
 jobs:
   stale:
 
@@ -31,7 +36,31 @@ jobs:
     - uses: actions/stale@4391f3da665fdf50b6810c1a66712fb9ba21aa93 # v11.0.0
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
-        stale-issue-message: 'Stale issue message'
-        stale-pr-message: 'Stale pull request message'
+        # These were the starter template's literal placeholders — 'Stale issue
+        # message' and 'Stale pull request message' — which this workflow posted
+        # verbatim to anyone whose issue went quiet.
+        stale-issue-message: >-
+          This issue has had no activity for 60 days, so it is being marked
+          stale. Comment, or remove the `no-issue-activity` label, to keep it
+          open; otherwise it will close in 14 days. Closing is not a judgement
+          on the idea — reopen it whenever it becomes relevant again.
+        stale-pr-message: >-
+          This pull request has had no activity for 60 days, so it is being
+          marked stale. Push a commit, or remove the `no-pr-activity` label, to
+          keep it open; otherwise it will close in 14 days. The branch is not
+          deleted by closing, so the work is not lost.
+        close-issue-message: >-
+          Closing after 14 further days without activity. Reopen or open a
+          follow-up whenever you want to pick this back up.
+        close-pr-message: >-
+          Closing after 14 further days without activity. The branch still
+          exists — reopen this PR or open a fresh one to continue.
         stale-issue-label: 'no-issue-activity'
         stale-pr-label: 'no-pr-activity'
+        # Spelled out rather than inherited: the action's silent defaults are
+        # 60 stale / 7 to close, and the messages above quote these numbers.
+        days-before-stale: 60
+        days-before-close: 14
+        # Never auto-close something a human deliberately marked as ongoing.
+        exempt-issue-labels: 'pinned,security,keep-open'
+        exempt-pr-labels: 'pinned,security,keep-open,dependencies'

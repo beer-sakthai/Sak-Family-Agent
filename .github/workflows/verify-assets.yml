@@ -1,11 +1,11 @@
 # .github/workflows/verify-assets.yml
 name: Verify Public Hugging Face Assets
 
+# Read-only by default. `issues: write` is granted on the one job that needs it
+# rather than here: a workflow-level grant is inherited by every job added later,
+# so the scope silently widens the next time someone adds a job to this file.
 permissions:
   contents: read
-  # issues: write is only exercised by the failure-flagging step below (gated
-  # to the unattended nightly schedule run); everything else only needs read.
-  issues: write
 
 on:
   # Allows you to run this workflow manually from the Actions tab
@@ -27,6 +27,9 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read # for actions/checkout to fetch the code
+      issues: write # for the failure-flagging step below, gated to the nightly schedule run
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
