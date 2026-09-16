@@ -29,7 +29,10 @@ describe("Drawer", () => {
 
   it("closes on the close button", () => {
     const { onClose } = renderDrawer();
-    fireEvent.click(screen.getByLabelText("Close detail panel"));
+    const closeBtn = screen.getByLabelText("Close detail panel");
+    expect(closeBtn).toHaveAttribute("type", "button");
+    expect(closeBtn).toHaveAttribute("title", "Close detail panel (Esc)");
+    fireEvent.click(closeBtn);
     expect(onClose).toHaveBeenCalled();
   });
 
