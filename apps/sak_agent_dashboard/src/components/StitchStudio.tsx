@@ -214,6 +214,7 @@ export function StitchStudio() {
               tabIndex={activeTab === "preview" ? 0 : -1}
               aria-selected={activeTab === "preview"}
               aria-controls="stitch-panel-preview"
+              title="Switch to Live Preview view"
               onClick={() => setActiveTab("preview")}
               className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 activeTab === "preview"
@@ -231,6 +232,7 @@ export function StitchStudio() {
               tabIndex={activeTab === "code" ? 0 : -1}
               aria-selected={activeTab === "code"}
               aria-controls="stitch-panel-code"
+              title="Switch to TSX Code view"
               onClick={() => setActiveTab("code")}
               className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 activeTab === "code"
@@ -248,6 +250,7 @@ export function StitchStudio() {
               tabIndex={activeTab === "spec" ? 0 : -1}
               aria-selected={activeTab === "spec"}
               aria-controls="stitch-panel-spec"
+              title="Switch to Stitch JSON Spec view"
               onClick={() => setActiveTab("spec")}
               className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 activeTab === "spec"
@@ -264,6 +267,7 @@ export function StitchStudio() {
             type="button"
             aria-live="polite"
             aria-label={copied ? "Copied to clipboard" : activeTab === "spec" ? "Copy Stitch JSON spec" : "Copy TSX code"}
+            title={copied ? "Copied to clipboard" : activeTab === "spec" ? "Copy Stitch JSON spec" : "Copy TSX code"}
             onClick={handleCopyCode}
             className="flex items-center gap-1 text-xs font-mono text-fg-3 hover:text-hue-cyan transition-colors bg-raised/60 px-2.5 py-1 rounded-lg border border-line-strong/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >

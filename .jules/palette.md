@@ -49,3 +49,9 @@
 **Learning:** Row-level action buttons in data tables (such as "Steps" in `WorkflowRuns` and "View" in `SessionExplorer`) that open detail drawers often carry `aria-label` screen reader text but omit `title` attributes and `type="button"`. Desktop mouse users benefit from instant hover tooltips describing the action target.
 
 **Action:** Always provide explicit `type="button"` and `title` tooltips matching `aria-label` text on table row action trigger buttons.
+
+## 2026-09-16 - Informative Title Tooltips on StitchStudio View Options & Copy Action
+
+**Learning:** View option tab triggers and copy code buttons in workbench panels (such as `StitchStudio`) provide tab roles and `aria-label` text for screen readers, but omit hover `title` tooltips for desktop mouse users. Adding explicit `title` tooltips gives desktop users clear visual feedback on hover.
+
+**Action:** Always complement `role="tab"` and action buttons in workbench tools with explicit `title` hover tooltips.
