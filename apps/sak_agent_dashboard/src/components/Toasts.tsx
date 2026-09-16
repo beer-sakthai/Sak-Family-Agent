@@ -100,6 +100,7 @@ export function ToastStack({
             <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
             <span className="min-w-0 flex-1">{toast.message}</span>
             <button
+              type="button"
               onClick={() => onDismiss(toast.id)}
               aria-label="Dismiss notification"
               title="Dismiss notification"
