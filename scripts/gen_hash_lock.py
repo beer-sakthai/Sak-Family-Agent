@@ -195,14 +195,19 @@ def main():
             "# version bumps, and re-verify a couple of hashes against PyPI's own\n"
             "# published digests before committing (`curl -s https://pypi.org/pypi/<pkg>/<ver>/json`).\n\n"
         )
-        for name in sorted(merged):
+        # Blank line *between* package blocks, not after the last one. Writing
+        # it unconditionally left every generated lock ending "\n\n", which
+        # `git diff --check` reports as "new blank line at EOF" — see the
+        # whitespace gate in .github/workflows/sak-family-agent-contract.yml.
+        for i, name in enumerate(sorted(merged)):
+            if i:
+                f.write("\n")
             data = merged[name]
             f.write(f"{name}=={data['version']} \\\n")
             hashes = sorted(data["hashes"])
             for j, h in enumerate(hashes):
                 sep = " \\\n" if j < len(hashes) - 1 else "\n"
                 f.write(f"    --hash={h}{sep}")
-            f.write("\n")
     print(f"Wrote {len(merged)} packages to {args.output}", file=sys.stderr)
 
 
