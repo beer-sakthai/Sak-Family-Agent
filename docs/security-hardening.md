@@ -227,6 +227,34 @@ was ever pushed, it is compromised.
 - **Regression tests:** none — CI has no workflow-permission linter. Verified
   by parsing each file and diffing effective per-job permissions before/after.
 
+### 13. The test suite wrote to real persona memory databases
+- **Where:** `tests/conftest.py`, `tests/test_agent_coordinator.py`,
+  `agent/security_hardening.py` (`AuditLogger`).
+- **Risk:** isolation was opt-in. `tests/test_agent_coordinator.py` called
+  `run_persona_task("sakking", …)` with no `HOME` patch, so a run created
+  `~/.sakthai/sakking/memory.db` and `~/.sakthai/saksee/memory.db` — the exact
+  paths `infra/vm-agents/sakthai-agent-run.sh` gives those personas on the VM.
+  The suite opened them and ran `_migrate_schema()`'s `ALTER TABLE` under
+  `BEGIN IMMEDIATE`, taking a **write lock on a production database**.
+  Migrations are additive so nothing was destroyed, but nothing stopped a
+  future test inserting rows. `AuditLogger` leaked the same way for a different
+  reason: the module-level `_audit_logger` singleton baked
+  `sakthai_home() / "audit.log"` in at **import** time, before any fixture
+  could redirect it, so it appended to the invoking user's real log.
+- **Fix:** an autouse `_isolate_home` fixture pointing `HOME`, `USERPROFILE`
+  and `SAKTHAI_HOME` at a per-test temp directory, and `AuditLogger.log_file`
+  became a property resolved on use rather than at construction.
+  `SAKTHAI_HOME` alone could not have fixed this:
+  `config.persona_memory_db_path()` resolves from `Path.home()` deliberately
+  independent of it.
+- **Prevention pattern:** a module-level singleton that captures a path or an
+  environment snapshot at import time is unreachable by configuration —
+  resolve on use. Make isolation autouse rather than opt-in, so a new test is
+  sandboxed by default instead of by remembering.
+- **Regression tests:** `tests/test_home_isolation.py` — three tests asserting
+  `Path.home()` and `config.persona_memory_db_path()` both land in the sandbox,
+  and that no run leaves a persona shard under the real `~/.sakthai`.
+
 ---
 
 ## CI / supply-chain hardening

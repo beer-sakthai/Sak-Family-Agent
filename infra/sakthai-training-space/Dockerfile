@@ -57,7 +57,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip install \
     torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124 \
     transformers==4.47.1 \
-    datasets==3.2.0 \
+    datasets==5.0.1 \
     accelerate==1.2.1 \
     peft==0.14.0 \
     bitsandbytes==0.45.0 \

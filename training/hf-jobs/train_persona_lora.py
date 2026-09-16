@@ -6,7 +6,7 @@
 #     "trl==0.12.2",
 #     "peft==0.13.2",
 #     "accelerate==1.1.1",
-#     "datasets==3.1.0",
+#     "datasets==5.0.1",
 #     "bitsandbytes==0.44.1",
 #     "huggingface_hub",
 # ]
