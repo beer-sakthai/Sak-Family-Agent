@@ -1,15 +1,27 @@
 # Enforce the repository security and quality skills on every pull request.
 #
-# This workflow deliberately holds only what nothing else covers. It used to
-# carry a `quality` job (ruff check + ruff format + mypy + pytest at
-# --cov-fail-under=96) and a bandit step, all of which ci.yml already runs — and
-# runs across a 3.11/3.12 matrix rather than 3.11 alone, so this file's copy was
-# a strict subset. Every PR paid for the suite twice, and the coverage floor had
-# to be kept in step in three places at once.
-#
-# What is left is the work with no second home:
+# Three jobs:
 #   * skill-validation — `sakthai skills validate` and `make compose-personas`
+#   * quality          — ruff + mypy + pytest at the 96% floor, on 3.11
 #   * security         — zizmor over the workflows, and the tracked-secret check
+#
+# `quality` duplicates ci.yml exactly: ci.yml runs the same ruff/ruff-format/
+# mypy/pytest chain at the same --cov-fail-under=96 across a 3.11 AND 3.12
+# matrix, so this job is a strict subset of it and every PR pays for the suite
+# twice. It was removed for that reason and then restored, because
+# "Quality gates" — the `name:` of this job — is a **required status check** on
+# `main`. Deleting the job does not relax the requirement; it strands it, and
+# GitHub refuses the merge with:
+#
+#     Required status check "Quality gates" is expected. (HTTP 405)
+#
+# Removing the duplication therefore needs a repository *settings* change first:
+# drop "Quality gates" from the required-checks list for `main` (Settings →
+# Branches → branch protection), which no commit can do. Once that is done this
+# job can go and `ci.yml` covers everything it did, on both Python versions
+# rather than one. Until then, leave it: a required check that never reports
+# blocks every PR, and a "Quality gates" job that does not run the quality gates
+# would be worse — a green light that checks nothing.
 name: Repository Security and Quality
 
 on:
@@ -60,6 +72,67 @@ jobs:
       - name: Remove generated composition output
         if: always()
         run: rm -rf build
+
+  quality:
+    name: Quality gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run Ruff checks
+        run: |
+          uv run ruff check personas/sakthai/sakthai tests
+          uv run ruff format --check personas/sakthai/sakthai tests
+
+      - name: Run strict type checking
+        run: uv run mypy personas/sakthai/sakthai
+
+      - name: Run tests with coverage
+        run: >-
+          uv run pytest --cov=sakthai --cov-report=term-missing
+          --cov-report=xml:coverage.xml --cov-fail-under=96 tests/
+        env:
+          OPENAI_API_KEY: ""
+          OPENAI_API_BASE: ""
+          OPENAI_BASE_URL: ""
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-python-3.11
+          path: coverage.xml
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish coverage to Codecov
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          files: coverage.xml
+          flags: repository-security-quality
+          name: repository-security-quality-python-3.11
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
 
   security:
     name: Security gates
