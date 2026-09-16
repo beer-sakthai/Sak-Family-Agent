@@ -19,6 +19,23 @@ updates:
     # security updates from cooldown, so real advisories still arrive at once.
     cooldown:
       default-days: 7
+    # setuptools appears in pyproject.toml only under
+    # `[build-system] requires = ["setuptools>=83.0.0", "wheel"]`, never in
+    # `[project] dependencies`. Dependabot's uv FileUpdater does not write
+    # `[build-system] requires`, so every attempt produces no file change and
+    # the whole job dies:
+    #
+    #     Updating setuptools from 83.0.0 to 84.0.0
+    #     ERROR Error processing setuptools (RuntimeError)
+    #     ERROR No files have changed!
+    #           /home/dependabot/uv/lib/dependabot/uv/file_updater.rb:26
+    #
+    # There is nothing here for Dependabot to keep current anyway: that line is
+    # a floor (`>=`), not a pin, and the build backend is resolved at build time
+    # rather than from uv.lock. Bumping the floor by hand would not stop this
+    # recurring on the next setuptools release.
+    ignore:
+      - dependency-name: "setuptools"
     groups:
       python-minor-patch:
         update-types: ["minor", "patch"]
@@ -66,6 +83,16 @@ updates:
       # already (reverted once in b330e2f, re-proposed as 23745ae) — hold the
       # major until someone does the migration deliberately.
       - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]
+      # Same story, different package. TypeScript 7 is incompatible with the
+      # typescript-eslint that eslint-config-next@16 pins (`typescript-eslint
+      # does not support TS 7.0.` — it declares `typescript@>=4.8.4 <6.1.0`),
+      # so a TS 7 major turns `npm run lint` into a hard crash and apps.yml red.
+      # This has already happened twice: 6f61479 pinned TypeScript back once,
+      # but added no ignore here, so Dependabot proposed 7.0.2 again and #1396
+      # merged it. The pin alone is not the fix — this entry is.
+      # Lift both together once eslint-config-next ships TS 7 support.
+      - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
 
   # The two stitch skill trees. Both carry an explicit PR limit and grouping:
