@@ -32,6 +32,12 @@ on:
 permissions:
   contents: read
 
+# Serialise, and never cancel. This mutates code-scanning alert state; a run
+# killed halfway leaves the alert set in an arbitrary partial condition.
+concurrency:
+  group: code-scanning-cleanup
+  cancel-in-progress: false
+
 jobs:
   cleanup:
     name: Code scanning cleanup

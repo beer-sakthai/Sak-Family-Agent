@@ -1,6 +1,13 @@
 name: Pylint
 
-on: [push]
+# Was `on: [push]` — every branch, no path filter, and no `pull_request` at all,
+# so branch pushes burned a two-leg matrix while PRs from forks were never
+# linted. Matched to every other gate in this repo instead.
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
 permissions:
   contents: read
@@ -43,7 +50,11 @@ jobs:
     - name: Install the project
       # A local editable install is pinned by construction — the source is this
       # checkout, resolved through pyproject.toml.
-      run: pip install -e ".[dev]" || pip install -e "."
+      #
+      # No `|| pip install -e "."` fallback: that swallowed a genuinely broken
+      # `[dev]` extra and let pylint run against a partial install, reporting
+      # import errors as code smells instead of as the dependency failure it is.
+      run: pip install -e ".[dev]"
     - name: Analysing the code with pylint
       run: |
         # Monorepo: lint only the core sakthai-agent package (canonical copy at

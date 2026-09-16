@@ -34,6 +34,13 @@ on:
 permissions:
   contents: read
 
+# Serialise: this deletes branches. Two sweeps racing each other would each
+# compute eligibility against a tree the other is still changing. Never cancel
+# a run mid-delete.
+concurrency:
+  group: branch-cleanup
+  cancel-in-progress: false
+
 jobs:
   cleanup:
     name: Sweep merged branches

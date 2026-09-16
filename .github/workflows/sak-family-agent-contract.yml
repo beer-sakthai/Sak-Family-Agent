@@ -80,8 +80,15 @@ jobs:
       - name: Validate Claude agent definition
         run: python scripts/validate_agent_definition.py .claude/agents/sak-family-agent-developer.md
 
+      # Only meaningful on a pull request. This workflow also runs on `push` and
+      # `workflow_dispatch`, where `github.event.pull_request.base.sha` is empty
+      # and the range collapses to `...HEAD` (i.e. `HEAD...HEAD`) -- always
+      # clean, so the gate silently passed on two of its three triggers.
       - name: Check commit whitespace
-        run: git diff --check "${{ github.event.pull_request.base.sha }}...HEAD"
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: git diff --check "$BASE_SHA...HEAD"
 
       - name: Compose all persona skill trees
         run: make compose-personas
