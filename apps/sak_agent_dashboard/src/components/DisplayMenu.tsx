@@ -48,6 +48,11 @@ export function DisplayMenu({
   useEffect(() => {
     if (!open) return;
 
+    const firstItem = containerRef.current?.querySelector<HTMLButtonElement>(
+      '[role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"]',
+    );
+    firstItem?.focus();
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.stopPropagation();
