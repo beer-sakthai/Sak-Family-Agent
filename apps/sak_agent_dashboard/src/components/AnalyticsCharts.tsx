@@ -165,6 +165,7 @@ export function AnalyticsCharts({
           {TREND_WINDOWS.map((days) => (
             <button
               key={days}
+              type="button"
               onClick={() => onTrendChange(days)}
               aria-pressed={trend === days}
               aria-label={`Set trend window to ${trendWindowLabel(days)}`}
