@@ -553,14 +553,22 @@ describe("SessionExplorer", () => {
   // original asserted on a `currentPage` state this component no longer owns.
   it("says which end of the list a disabled pagination button is at", () => {
     renderExplorer({ total: 25, page: 1 });
-    expect(screen.getByLabelText("Previous page")).toHaveAttribute("title", "First page reached");
-    expect(screen.getByLabelText("Next page")).toHaveAttribute("title", "Next page");
+    const prevBtn = screen.getByLabelText("Previous page");
+    const nextBtn = screen.getByLabelText("Next page");
+    expect(prevBtn).toHaveAttribute("title", "First page reached");
+    expect(prevBtn).toHaveAttribute("type", "button");
+    expect(nextBtn).toHaveAttribute("title", "Next page");
+    expect(nextBtn).toHaveAttribute("type", "button");
   });
 
   it("names the action on a pagination button that is still usable", () => {
     renderExplorer({ total: 25, page: 3 });
-    expect(screen.getByLabelText("Previous page")).toHaveAttribute("title", "Previous page");
-    expect(screen.getByLabelText("Next page")).toHaveAttribute("title", "Last page reached");
+    const prevBtn = screen.getByLabelText("Previous page");
+    const nextBtn = screen.getByLabelText("Next page");
+    expect(prevBtn).toHaveAttribute("title", "Previous page");
+    expect(prevBtn).toHaveAttribute("type", "button");
+    expect(nextBtn).toHaveAttribute("title", "Last page reached");
+    expect(nextBtn).toHaveAttribute("type", "button");
   });
 
   it("shows no reset action when the list is empty for lack of data", () => {

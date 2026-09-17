@@ -221,6 +221,7 @@ export function SessionExplorer({
                 version of this component that the server-driven rewrite
                 replaced. */}
             <button
+              type="button"
               onClick={() => onPageChange(Math.max(1, page - 1))}
               disabled={page <= 1}
               aria-label="Previous page"
@@ -230,6 +231,7 @@ export function SessionExplorer({
               <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
             </button>
             <button
+              type="button"
               onClick={() => onPageChange(Math.min(totalPages, page + 1))}
               disabled={page >= totalPages}
               aria-label="Next page"

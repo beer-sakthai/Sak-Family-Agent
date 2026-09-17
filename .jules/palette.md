@@ -67,3 +67,9 @@
 **Learning:** Dropdown menu containers with `role="menu"` (such as `PersonaFilter`) that handle arrow key navigation require auto-focusing the first interactive item (`[role="menuitem"]`, `[role="menuitemcheckbox"]`) when opened so keyboard users can immediately start navigating without needing an extra keypress.
 
 **Action:** Add an effect on dropdown menus to focus the first menu item element immediately when `open` state becomes `true`.
+
+## 2026-09-19 - Explicit Type Attributes and Tooltips on Pagination Buttons
+
+**Learning:** Pagination buttons (such as Previous/Next triggers in `SessionExplorer`) often omit explicit `type="button"`. Omitting `type="button"` on interactive controls can cause unintentional form submissions if the component is rendered within a `<form>` element.
+
+**Action:** Always include explicit `type="button"` attributes alongside `aria-label` and `title` tooltips on pagination and table navigation controls.
