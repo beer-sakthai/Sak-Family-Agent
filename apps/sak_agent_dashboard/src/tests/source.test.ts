@@ -227,3 +227,32 @@ describe("resolveSource", () => {
     expect(source.kind).toBe("demo");
   });
 });
+
+describe("ApiSource SSRF protections", () => {
+  it("blocks protocol-relative URLs", async () => {
+    const { ApiSource } = await import("@/lib/sources/api");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const source = new ApiSource("http://127.0.0.1:3000") as any;
+    await expect(source.fetchJson("//attacker.com")).rejects.toThrow(
+      "Invalid path format: protocol-relative and absolute paths are blocked",
+    );
+  });
+
+  it("blocks absolute URLs", async () => {
+    const { ApiSource } = await import("@/lib/sources/api");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const source = new ApiSource("http://127.0.0.1:3000") as any;
+    await expect(source.fetchJson("https://attacker.com")).rejects.toThrow(
+      "Invalid path format: protocol-relative and absolute paths are blocked",
+    );
+  });
+
+  it("blocks backslashes in paths", async () => {
+    const { ApiSource } = await import("@/lib/sources/api");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const source = new ApiSource("http://127.0.0.1:3000") as any;
+    await expect(source.fetchJson("api\\personas")).rejects.toThrow(
+      "Invalid path format: protocol-relative and absolute paths are blocked",
+    );
+  });
+});

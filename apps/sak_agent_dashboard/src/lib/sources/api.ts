@@ -38,7 +38,19 @@ export class ApiSource implements DashboardSource {
   ) {}
 
   private async fetchJson<T>(pathname: string, params: Record<string, unknown> = {}): Promise<T> {
+    // SSRF and Token Exfiltration protection:
+    // Prevent protocol-relative URLs, absolute URLs with a scheme, and backslashes
+    // that might bypass base URL prefixing.
+    if (pathname.includes("\\")) {
+      throw new Error("Invalid path format: protocol-relative and absolute paths are blocked");
+    }
+
     const url = new URL(pathname, this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`);
+    const baseUrlObj = new URL(this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`);
+
+    if (url.origin !== baseUrlObj.origin) {
+      throw new Error("Invalid path format: protocol-relative and absolute paths are blocked");
+    }
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null && value !== "") {
         url.searchParams.set(key, String(value));
