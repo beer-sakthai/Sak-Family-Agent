@@ -26,6 +26,7 @@ describe("ShortcutsOverlay", () => {
     expect(closeBtn).toHaveTextContent("Esc");
     const backdropBtn = screen.getByRole("button", { name: "Dismiss keyboard shortcuts overlay backdrop" });
     expect(backdropBtn).toHaveAttribute("type", "button");
+    expect(backdropBtn).toHaveAttribute("title", "Dismiss keyboard shortcuts overlay");
   });
 
   it("closes on close button click", () => {
