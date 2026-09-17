@@ -753,7 +753,7 @@ describe("StitchStudio", () => {
 });
 
 describe("DisplayMenu", () => {
-  it("opens menu on trigger click and navigates radio items via Arrow keys and Home/End", () => {
+  it("opens menu on trigger click, auto-focuses first item, and navigates radio items via Arrow keys and Home/End", () => {
     const onThemeChange = vi.fn();
     const onDensityChange = vi.fn();
 
@@ -777,8 +777,7 @@ describe("DisplayMenu", () => {
     const menuItems = screen.getAllByRole("menuitemradio");
     expect(menuItems).toHaveLength(5); // 3 themes + 2 densities
 
-    // Initial focus can be set or driven by ArrowDown
-    fireEvent.keyDown(menu, { key: "ArrowDown" });
+    // Verify first option receives initial focus upon opening menu
     expect(menuItems[0]).toHaveFocus();
 
     fireEvent.keyDown(menuItems[0], { key: "ArrowDown" });
