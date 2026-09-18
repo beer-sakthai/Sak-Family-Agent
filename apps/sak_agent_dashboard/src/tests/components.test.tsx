@@ -754,6 +754,7 @@ describe("StitchStudio", () => {
 
 describe("DisplayMenu", () => {
   it("opens menu on trigger click, auto-focuses first item, and navigates radio items via Arrow keys and Home/End", () => {
+  it("opens menu on trigger click, auto-focuses first radio item, and navigates via Arrow keys and Home/End", () => {
     const onThemeChange = vi.fn();
     const onDensityChange = vi.fn();
 

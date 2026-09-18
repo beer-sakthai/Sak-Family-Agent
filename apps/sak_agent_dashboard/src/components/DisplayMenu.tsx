@@ -50,6 +50,7 @@ export function DisplayMenu({
 
     const firstItem = containerRef.current?.querySelector<HTMLButtonElement>(
       '[role="menuitemradio"]',
+      '[role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"]',
     );
     firstItem?.focus();
 
