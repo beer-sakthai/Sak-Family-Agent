@@ -777,8 +777,7 @@ describe("DisplayMenu", () => {
     const menuItems = screen.getAllByRole("menuitemradio");
     expect(menuItems).toHaveLength(5); // 3 themes + 2 densities
 
-    // Initial focus can be set or driven by ArrowDown
-    fireEvent.keyDown(menu, { key: "ArrowDown" });
+    // First item receives focus automatically on open
     expect(menuItems[0]).toHaveFocus();
 
     fireEvent.keyDown(menuItems[0], { key: "ArrowDown" });
