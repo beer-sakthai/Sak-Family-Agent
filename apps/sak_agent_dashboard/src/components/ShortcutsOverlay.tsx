@@ -24,12 +24,20 @@ const GENERAL: Shortcut[] = [
   { keys: ["Esc"], description: "Close a drawer, menu or overlay" },
 ];
 
+const KEY_NAME_MAP: Record<string, string> = {
+  "⌘": "Command",
+  "?": "Question mark",
+  "[": "Left bracket",
+  Esc: "Escape",
+};
+
 function Keys({ keys }: { keys: string[] }) {
   return (
     <span className="flex shrink-0 items-center gap-1">
       {keys.map((key) => (
         <kbd
           key={key}
+          aria-label={KEY_NAME_MAP[key] ?? key}
           className="min-w-[1.5rem] rounded border border-line-strong bg-sunken px-1.5 py-0.5 text-center font-mono text-[10px] text-fg-2"
         >
           {key}
