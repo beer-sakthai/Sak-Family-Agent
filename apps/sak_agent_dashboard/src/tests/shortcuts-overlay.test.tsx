@@ -51,4 +51,12 @@ describe("ShortcutsOverlay", () => {
     });
     expect(document.activeElement).toBe(headerCloseButton);
   });
+
+  it("renders key badges with accessible spoken labels for special key symbols", () => {
+    renderShortcutsOverlay();
+    expect(screen.getByLabelText("Command")).toBeInTheDocument();
+    expect(screen.getByLabelText("Question mark")).toBeInTheDocument();
+    expect(screen.getByLabelText("Left bracket")).toBeInTheDocument();
+    expect(screen.getByLabelText("Escape")).toBeInTheDocument();
+  });
 });
