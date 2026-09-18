@@ -73,3 +73,9 @@
 **Learning:** Pagination buttons (such as Previous/Next triggers in `SessionExplorer`) often omit explicit `type="button"`. Omitting `type="button"` on interactive controls can cause unintentional form submissions if the component is rendered within a `<form>` element.
 
 **Action:** Always include explicit `type="button"` attributes alongside `aria-label` and `title` tooltips on pagination and table navigation controls.
+
+## 2026-09-20 - Descriptive Screen Reader Labels for Special Keyboard Character Badges
+
+**Learning:** When displaying keyboard shortcut badges (`<kbd>`) for symbols or special characters (such as `⌘`, `?`, `[`), screen readers may fail to announce or mispronounce raw unicode symbols unless mapped to human-readable names (e.g. "Command", "Question mark", "Left bracket") in `aria-label` and `title` attributes.
+
+**Action:** Map unicode symbols to descriptive spoken words in `aria-label` and `title` attributes on `<kbd>` elements.
