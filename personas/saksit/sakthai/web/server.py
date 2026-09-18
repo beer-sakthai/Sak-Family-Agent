@@ -26,20 +26,6 @@ _DEFAULT_HOST = "127.0.0.1"
 _BEARER_TOKEN: str | None = None
 
 
-def _token_matches(candidate: str, expected: str) -> bool:
-    """Constant-time token comparison that is total over attacker input.
-
-    ``secrets.compare_digest`` raises ``TypeError`` when either ``str`` operand
-    contains a non-ASCII character, and every credential this server reads is
-    remote-controlled: a request carrying ``?token=%C3%A9``, a ``Bearer``
-    header with a high byte (headers decode as latin-1), or such a cookie used
-    to escape the handler as an unhandled exception and tear the connection
-    down instead of answering a clean 401. Comparing the UTF-8 encodings keeps
-    the check constant-time while accepting any input.
-    """
-    return secrets.compare_digest(candidate.encode("utf-8"), expected.encode("utf-8"))
-
-
 def _get_or_create_bearer_token() -> str:
     """Retrieve or create an opaque 32-character hex bearer token in MemoryStore."""
     global _BEARER_TOKEN
@@ -206,7 +192,7 @@ class _Handler(SimpleHTTPRequestHandler):
         auth_header = self.headers.get("Authorization", "")
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header[7:]
-            if _token_matches(token, expected_token):
+            if secrets.compare_digest(token, expected_token):
                 return True
 
         # 2. Check query parameter 'token' or 'bearer_token'
@@ -218,7 +204,7 @@ class _Handler(SimpleHTTPRequestHandler):
                     k, v = item.split("=", 1)
                     if k in ("token", "bearer_token"):
                         val = unquote(v)
-                        if _token_matches(val, expected_token):
+                        if secrets.compare_digest(val, expected_token):
                             return True
 
         # 3. Check Cookie header
@@ -229,7 +215,7 @@ class _Handler(SimpleHTTPRequestHandler):
                     k, v = item.strip().split("=", 1)
                     if k in ("token", "bearer_token"):
                         val = unquote(v)
-                        if _token_matches(val, expected_token):
+                        if secrets.compare_digest(val, expected_token):
                             return True
 
         return False
@@ -252,7 +238,7 @@ class _Handler(SimpleHTTPRequestHandler):
                     k, v = item.split("=", 1)
                     if k in ("token", "bearer_token"):
                         val = unquote(v)
-                        if _token_matches(val, expected_token):
+                        if secrets.compare_digest(val, expected_token):
                             self.send_header(
                                 "Set-Cookie",
                                 f"token={expected_token}; Path=/; HttpOnly; SameSite=Strict",

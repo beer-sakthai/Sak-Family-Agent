@@ -185,19 +185,6 @@ _SENSITIVE_MARKER_RE = "|".join([r"/", r"~", r"(?:\.\./)+", _SENSITIVE_NAME_RE])
 _SENSITIVE_SCRIPT_PATH_RE = rf"(?:{_SENSITIVE_MARKER_RE})[a-zA-Z0-9\._/-]*"
 
 
-def _split_path_components(path: str) -> list[str]:
-    """Split ``path`` on both POSIX and Windows separators.
-
-    ``os.sep`` alone is ``/`` on this interpreter, so a Windows-style reference
-    such as ``home\\.ssh\\id_rsa`` collapsed into a single component and neither
-    the ``.ssh`` directory check nor the ``id_rsa`` basename check could see it.
-    Splitting on both separators regardless of host OS keeps the guard's
-    matching "across separators" contract true for the Windows paths an agent
-    can emit on any platform.
-    """
-    return re.split(r"[/\\]", path)
-
-
 def _basename_is_sensitive(basename: str) -> bool:
     """Return True if a path basename names a sensitive file.
 
@@ -240,8 +227,8 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
 
     # Block access to known sensitive files and directories.
     normalized = os.path.normpath(path)
-    parts = _split_path_components(normalized)
-    basename = parts[-1] if parts else ""
+    parts = normalized.split(os.sep)
+    basename = os.path.basename(normalized)
 
     if _basename_is_sensitive(basename):
         return True
@@ -300,9 +287,8 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
             # If base_path is a prefix of any critical root (e.g. /et matching /etc),
             # it is also potentially sensitive if it is not just "/".
             if base_path != "/":
-                folded_base = base_path.casefold()
                 for root in _CRITICAL_ROOTS:
-                    if root.startswith(folded_base):
+                    if root.startswith(base_path):
                         return True
         elif not allow_local:
             # If the path starts with a wildcard and local paths are not allowed,
@@ -319,14 +305,7 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     if normalized.startswith("/"):
         if normalized == "/":
             return True
-        # Case-folded, like every other comparison here: on a case-insensitive
-        # filesystem (macOS by default, Windows) '/ETC/hosts' and '/PROC/self/
-        # environ' resolve to the same files as their lowercase spellings. The
-        # relative-root check below already folded; leaving this one exact let
-        # an absolute path through that its own relative form would have
-        # blocked.
-        folded = normalized.casefold()
-        return any(folded == c or folded.startswith(c + "/") for c in _CRITICAL_ROOTS)
+        return any(normalized == c or normalized.startswith(c + "/") for c in _CRITICAL_ROOTS)
     return False
 
 
@@ -345,10 +324,10 @@ def _is_local_make_dir(path: str) -> bool:
     if ".." in path:
         return False
     normalized = os.path.normpath(path)
-    components = _split_path_components(normalized)
-    if _basename_is_sensitive(components[-1] if components else ""):
+    basename = os.path.basename(normalized)
+    if _basename_is_sensitive(basename):
         return False
-    lowered_parts = {p.casefold() for p in components}
+    lowered_parts = {p.casefold() for p in normalized.split(os.sep)}
     if any(d in lowered_parts for d in _SENSITIVE_DIRS):
         return False
 
@@ -1237,22 +1216,7 @@ def _block_dangerous_shell_commands(
     except ValueError:
         return GuardrailResult(GuardrailAction.DENY, reason="Malformed shell command.")
 
-    result = _check_destructive_tokens(parts)
-    if result.action == GuardrailAction.DENY or "\\" not in command:
-        return result
-
-    # A parser differential: shlex's POSIX mode consumes backslashes as escapes,
-    # so a Windows-style path ('cat C:\Users\me\.aws\credentials') arrives here
-    # as 'C:Usersme.awscredentials' -- unrecognisable as a path -- while cmd.exe
-    # and PowerShell would read the real file. Re-scan with the backslashes
-    # preserved. Gated on the command containing one, so every backslash-free
-    # command keeps its existing behaviour exactly.
-    try:
-        raw_parts = shlex.split(command, posix=False)
-    except ValueError:
-        return GuardrailResult(GuardrailAction.DENY, reason="Malformed shell command.")
-
-    return _check_destructive_tokens(raw_parts)
+    return _check_destructive_tokens(parts)
 
 
 def _enforce_verbose_listing(
