@@ -29,6 +29,13 @@ describe("ShortcutsOverlay", () => {
     expect(backdropBtn).toHaveAttribute("title", "Dismiss keyboard shortcuts overlay");
   });
 
+  it("renders accessible key labels and title tooltips on shortcut tags", () => {
+    renderShortcutsOverlay();
+    const kbdTags = screen.getAllByText("⌘");
+    expect(kbdTags[0]).toHaveAttribute("title", "Key: Command");
+    expect(kbdTags[0]).toHaveAttribute("aria-label", "Key Command");
+  });
+
   it("closes on close button click", () => {
     const { onClose } = renderShortcutsOverlay();
     const headerCloseButton = screen.getByRole("button", {
