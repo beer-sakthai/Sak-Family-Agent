@@ -124,12 +124,15 @@ describe("Sidebar", () => {
     expect(expandButton).toHaveAttribute("title", "Expand sidebar");
   });
 
-  it("keeps the mobile drawer unmounted until it is opened and includes accessible backdrop attributes", () => {
+  it("keeps the mobile drawer unmounted until it is opened and includes accessible backdrop attributes and explicit type button", () => {
     const { rerender, props } = renderSidebar({ mobileOpen: false });
     expect(screen.queryByLabelText("Close navigation menu")).not.toBeInTheDocument();
     rerender(<Sidebar {...props} mobileOpen />);
-    expect(screen.getByLabelText("Close navigation menu")).toBeInTheDocument();
+    const closeBtn = screen.getByLabelText("Close navigation menu");
+    expect(closeBtn).toBeInTheDocument();
+    expect(closeBtn).toHaveAttribute("type", "button");
     const backdrop = screen.getByLabelText("Close navigation");
+    expect(backdrop).toHaveAttribute("type", "button");
     expect(backdrop).toHaveAttribute("title", "Close navigation menu");
     expect(backdrop).toHaveClass("focus-visible:ring-2");
     expect(backdrop).toHaveClass("focus-visible:ring-inset");
