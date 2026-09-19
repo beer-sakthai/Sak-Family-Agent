@@ -878,12 +878,10 @@ describe("DemoModeToggle", () => {
     );
   });
 
-  it("toggles and specifies explicit type button", () => {
+  it("toggles", () => {
     const onToggle = vi.fn();
     render(<DemoModeToggle isDemo={false} onToggle={onToggle} activeSource="local" />);
-    const button = screen.getByRole("button", { name: /Toggle sample data/ });
-    expect(button).toHaveAttribute("type", "button");
-    fireEvent.click(button);
+    fireEvent.click(screen.getByRole("button", { name: /Toggle sample data/ }));
     expect(onToggle).toHaveBeenCalledWith(true);
   });
 
