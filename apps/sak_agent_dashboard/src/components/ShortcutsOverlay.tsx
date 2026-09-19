@@ -25,6 +25,7 @@ const GENERAL: Shortcut[] = [
 ];
 
 const KEY_NAMES: Record<string, string> = {
+const KEY_NAME_MAP: Record<string, string> = {
   "⌘": "Command",
   "?": "Question mark",
   "[": "Left bracket",
@@ -35,7 +36,7 @@ function Keys({ keys }: { keys: string[] }) {
   return (
     <span className="flex shrink-0 items-center gap-1">
       {keys.map((key) => {
-        const label = KEY_NAMES[key] || key;
+        const label = KEY_NAME_MAP[key] ?? key;
         return (
           <kbd
             key={key}
