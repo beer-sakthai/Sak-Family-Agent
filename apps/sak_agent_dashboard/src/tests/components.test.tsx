@@ -753,7 +753,7 @@ describe("StitchStudio", () => {
 });
 
 describe("DisplayMenu", () => {
-  it("opens menu on trigger click and navigates radio items via Arrow keys and Home/End", () => {
+  it("opens menu on trigger click, auto-focuses first radio item, and navigates via Arrow keys and Home/End", () => {
     const onThemeChange = vi.fn();
     const onDensityChange = vi.fn();
 
@@ -880,10 +880,12 @@ describe("DemoModeToggle", () => {
     );
   });
 
-  it("toggles", () => {
+  it("toggles and specifies explicit type button", () => {
     const onToggle = vi.fn();
     render(<DemoModeToggle isDemo={false} onToggle={onToggle} activeSource="local" />);
-    fireEvent.click(screen.getByRole("button", { name: /Toggle sample data/ }));
+    const button = screen.getByRole("button", { name: /Toggle sample data/ });
+    expect(button).toHaveAttribute("type", "button");
+    fireEvent.click(button);
     expect(onToggle).toHaveBeenCalledWith(true);
   });
 
