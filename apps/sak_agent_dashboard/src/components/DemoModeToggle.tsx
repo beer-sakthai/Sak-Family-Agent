@@ -57,6 +57,7 @@ export function DemoModeToggle({ isDemo, onToggle, activeSource }: DemoModeToggl
       )}
 
       <button
+        type="button"
         onClick={() => onToggle(!isDemo)}
         aria-pressed={isDemo}
         aria-label="Toggle sample data"
