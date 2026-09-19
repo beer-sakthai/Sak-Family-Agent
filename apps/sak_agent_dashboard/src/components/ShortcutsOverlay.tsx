@@ -24,7 +24,6 @@ const GENERAL: Shortcut[] = [
   { keys: ["Esc"], description: "Close a drawer, menu or overlay" },
 ];
 
-const KEY_NAMES: Record<string, string> = {
 const KEY_NAME_MAP: Record<string, string> = {
   "⌘": "Command",
   "?": "Question mark",
