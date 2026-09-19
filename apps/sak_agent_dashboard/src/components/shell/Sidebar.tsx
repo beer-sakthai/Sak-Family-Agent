@@ -184,6 +184,7 @@ export function Sidebar({
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
+            type="button"
             aria-label="Close navigation"
             title="Close navigation menu"
             onClick={onMobileClose}
@@ -191,6 +192,7 @@ export function Sidebar({
           />
           <aside className="absolute left-0 top-0 flex h-full w-[260px] flex-col border-r border-line/70 bg-sunken/95 p-4">
             <button
+              type="button"
               onClick={onMobileClose}
               aria-label="Close navigation menu"
               title="Close navigation menu"

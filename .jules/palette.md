@@ -79,3 +79,9 @@
 **Learning:** When displaying keyboard shortcut badges (`<kbd>`) for symbols or special characters (such as `⌘`, `?`, `[`), screen readers may fail to announce or mispronounce raw unicode symbols unless mapped to human-readable names (e.g. "Command", "Question mark", "Left bracket") in `aria-label` and `title` attributes.
 
 **Action:** Map unicode symbols to descriptive spoken words in `aria-label` and `title` attributes on `<kbd>` elements.
+
+## 2026-09-21 - Explicit Type Attributes on Mobile Drawer Controls
+
+**Learning:** Mobile navigation drawers and off-canvas overlays (such as in `Sidebar.tsx`) contain backdrop dismiss buttons and close triggers that can default to `type="submit"` if omitted and rendered inside or alongside form contexts, potentially causing accidental form submissions or unexpected navigation behaviors.
+
+**Action:** Always include explicit `type="button"` attributes on mobile drawer dismiss triggers and backdrop overlays alongside `aria-label` and `title` tooltips.
