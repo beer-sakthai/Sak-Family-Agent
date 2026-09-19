@@ -24,11 +24,6 @@ const GENERAL: Shortcut[] = [
   { keys: ["Esc"], description: "Close a drawer, menu or overlay" },
 ];
 
-const KEY_NAMES: Record<string, string> = {
-  "⌘": "Command",
-  "?": "Question mark",
-  R: "R",
-  E: "E",
 const KEY_NAME_MAP: Record<string, string> = {
   "⌘": "Command",
   "?": "Question mark",
@@ -40,7 +35,7 @@ function Keys({ keys }: { keys: string[] }) {
   return (
     <span className="flex shrink-0 items-center gap-1">
       {keys.map((key) => {
-        const label = KEY_NAMES[key] || key;
+        const label = KEY_NAME_MAP[key] ?? key;
         return (
           <kbd
             key={key}
@@ -52,15 +47,6 @@ function Keys({ keys }: { keys: string[] }) {
           </kbd>
         );
       })}
-      {keys.map((key) => (
-        <kbd
-          key={key}
-          aria-label={KEY_NAME_MAP[key] ?? key}
-          className="min-w-[1.5rem] rounded border border-line-strong bg-sunken px-1.5 py-0.5 text-center font-mono text-[10px] text-fg-2"
-        >
-          {key}
-        </kbd>
-      ))}
     </span>
   );
 }
