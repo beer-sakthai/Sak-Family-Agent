@@ -85,3 +85,9 @@
 **Learning:** Mobile navigation drawers and off-canvas overlays (such as in `Sidebar.tsx`) contain backdrop dismiss buttons and close triggers that can default to `type="submit"` if omitted and rendered inside or alongside form contexts, potentially causing accidental form submissions or unexpected navigation behaviors.
 
 **Action:** Always include explicit `type="button"` attributes on mobile drawer dismiss triggers and backdrop overlays alongside `aria-label` and `title` tooltips.
+
+## 2026-09-22 - Explicit Type Attributes on TopBar Controls and Dropdown Menu Options
+
+**Learning:** TopBar controls (mobile nav toggle, command palette search, link copy, presentation mode, refresh) and dropdown options (`role="menuitem"`, `role="menuitemcheckbox"`, `role="menuitemradio"`) in header menus can default to `type="submit"` when explicit `type="button"` attributes are omitted, risking unintentional form submissions if embedded inside or alongside form contexts.
+
+**Action:** Always specify `type="button"` on all interactive topbar triggers and dropdown menu option elements across dashboard shell components.

@@ -131,6 +131,7 @@ export function DisplayMenu({
             return (
               <button
                 key={option}
+                type="button"
                 role="menuitemradio"
                 aria-checked={selected}
                 onClick={() => onThemeChange(option)}
@@ -165,6 +166,7 @@ export function DisplayMenu({
             return (
               <button
                 key={option}
+                type="button"
                 role="menuitemradio"
                 aria-checked={selected}
                 onClick={() => onDensityChange(option)}

@@ -257,6 +257,37 @@ describe("TopBar", () => {
     expect(indicator).toHaveClass("animate-pulse");
     expect(screen.getByTitle("Auto-refresh active (15s)")).toBeInTheDocument();
   });
+
+  it("ensures top bar interactive triggers carry explicit type button attributes", () => {
+    renderTopBar();
+    const openMobileNavBtn = screen.getByLabelText("Open navigation menu");
+    const openPaletteBtn = screen.getByLabelText("Open command palette");
+    const copyLinkBtn = screen.getByLabelText("Copy a link to this view");
+    const presentBtn = screen.getByLabelText("Enter presentation mode");
+    const refreshBtn = screen.getByLabelText("Refresh dashboard data");
+    const sampleToggleBtn = screen.getByLabelText("Toggle sample data");
+
+    expect(openMobileNavBtn).toHaveAttribute("type", "button");
+    expect(openPaletteBtn).toHaveAttribute("type", "button");
+    expect(copyLinkBtn).toHaveAttribute("type", "button");
+    expect(presentBtn).toHaveAttribute("type", "button");
+    expect(refreshBtn).toHaveAttribute("type", "button");
+    expect(sampleToggleBtn).toHaveAttribute("type", "button");
+  });
+
+  it("ensures dropdown menu option items carry explicit type button attributes", () => {
+    renderTopBar();
+    fireEvent.click(screen.getByLabelText("Display settings"));
+    const menuOptions = screen.getAllByRole("menuitemradio");
+    expect(menuOptions.length).toBeGreaterThan(0);
+    for (const opt of menuOptions) {
+      expect(opt).toHaveAttribute("type", "button");
+    }
+
+    fireEvent.click(screen.getByLabelText("Filter by persona"));
+    const personaAllOption = screen.getByRole("menuitem");
+    expect(personaAllOption).toHaveAttribute("type", "button");
+  });
 });
 
 describe("KpiStrip", () => {
@@ -503,9 +534,11 @@ describe("Skeletons", () => {
     expect(container.querySelectorAll(".animate-pulse").length).toBe(18);
   });
 
-  it("holds the card grid", () => {
-    render(<CardGridSkeleton count={3} />);
-    expect(screen.getByTestId("card-grid-skeleton").children).toHaveLength(3);
+  it("holds the card grid and provides status accessibility", () => {
+    render(<CardGridSkeleton count={3} label="Loading agent cards" />);
+    expect(screen.getByRole("status", { name: "Loading agent cards" })).toBeInTheDocument();
+    // 3 card placeholders + 1 sr-only text element = 4 elements under root container
+    expect(screen.getByTestId("card-grid-skeleton").children).toHaveLength(4);
   });
 
   it("announces what a panel is loading", () => {

@@ -37,9 +37,17 @@ export function KpiSkeleton() {
   );
 }
 
-export function CardGridSkeleton({ count = 6 }: { count?: number }) {
+export function CardGridSkeleton({
+  count = 6,
+  label = "Loading content cards",
+}: {
+  count?: number;
+  label?: string;
+}) {
   return (
     <div
+      role="status"
+      aria-label={label}
       className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
       data-testid="card-grid-skeleton"
     >
@@ -59,6 +67,7 @@ export function CardGridSkeleton({ count = 6 }: { count?: number }) {
           <Shimmer className="h-2 w-full rounded-full" />
         </div>
       ))}
+      <span className="sr-only">{label}</span>
     </div>
   );
 }
