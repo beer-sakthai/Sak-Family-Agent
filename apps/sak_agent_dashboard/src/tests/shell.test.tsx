@@ -105,22 +105,31 @@ describe("Sidebar", () => {
     expect(within(screen.getByRole("tab", { name: "Memory" })).queryByText(/\d/)).toBeNull();
   });
 
-  it("hides labels and counts when collapsed", () => {
+  it("hides labels and counts when collapsed and provides informative title tooltips", () => {
     renderSidebar({ collapsed: true, counts: { sessions: 42 } });
     // The accessible name survives via aria-label; the visible text does not.
-    expect(screen.getByRole("tab", { name: "Sessions" })).toBeInTheDocument();
+    const sessionsTab = screen.getByRole("tab", { name: "Sessions" });
+    expect(sessionsTab).toBeInTheDocument();
+    expect(sessionsTab).toHaveAttribute("type", "button");
+    expect(sessionsTab).toHaveAttribute("title", "Sessions");
     expect(screen.queryByText("42")).not.toBeInTheDocument();
   });
 
   it("toggles collapse through the parent and provides title tooltip", () => {
     const { props, rerender } = renderSidebar({ collapsed: false });
+    const navTab = screen.getByRole("tab", { name: "Overview" });
+    expect(navTab).toHaveAttribute("type", "button");
+    expect(navTab).toHaveAttribute("title", "Switch to Overview section");
+
     const collapseButton = screen.getByLabelText("Collapse sidebar");
+    expect(collapseButton).toHaveAttribute("type", "button");
     expect(collapseButton).toHaveAttribute("title", "Collapse sidebar");
     fireEvent.click(collapseButton);
     expect(props.onCollapsedChange).toHaveBeenCalledWith(true);
 
     rerender(<Sidebar {...props} collapsed={true} />);
     const expandButton = screen.getByLabelText("Expand sidebar");
+    expect(expandButton).toHaveAttribute("type", "button");
     expect(expandButton).toHaveAttribute("title", "Expand sidebar");
   });
 

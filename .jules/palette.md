@@ -91,3 +91,9 @@
 **Learning:** TopBar controls (mobile nav toggle, command palette search, link copy, presentation mode, refresh) and dropdown options (`role="menuitem"`, `role="menuitemcheckbox"`, `role="menuitemradio"`) in header menus can default to `type="submit"` when explicit `type="button"` attributes are omitted, risking unintentional form submissions if embedded inside or alongside form contexts.
 
 **Action:** Always specify `type="button"` on all interactive topbar triggers and dropdown menu option elements across dashboard shell components.
+
+## 2026-09-23 - Explicit Type Attributes and Dynamic Tooltips on Sidebar Nav Buttons
+
+**Learning:** Navigation tab buttons (`NavButton`) in sidebar components can default to `type="submit"` if `type="button"` is omitted and rendered in a form context. Additionally, omitting hover tooltips on expanded sidebar tabs leaves desktop users without instant target feedback.
+
+**Action:** Always provide explicit `type="button"` attributes and dynamic `title` tooltips (`title={collapsed ? item.label : \`Switch to ${item.label} section\`}`) on sidebar navigation tabs.
