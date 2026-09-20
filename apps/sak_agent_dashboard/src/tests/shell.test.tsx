@@ -498,9 +498,11 @@ describe("Skeletons", () => {
     expect(container.querySelectorAll(".animate-pulse").length).toBe(18);
   });
 
-  it("holds the card grid", () => {
-    render(<CardGridSkeleton count={3} />);
-    expect(screen.getByTestId("card-grid-skeleton").children).toHaveLength(3);
+  it("holds the card grid and provides status accessibility", () => {
+    render(<CardGridSkeleton count={3} label="Loading agent cards" />);
+    expect(screen.getByRole("status", { name: "Loading agent cards" })).toBeInTheDocument();
+    // 3 card placeholders + 1 sr-only text element = 4 elements under root container
+    expect(screen.getByTestId("card-grid-skeleton").children).toHaveLength(4);
   });
 
   it("announces what a panel is loading", () => {
