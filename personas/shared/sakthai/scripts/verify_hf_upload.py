@@ -51,6 +51,10 @@ def verify_url(url: str, resource_name: str) -> bool:
             except ValueError:
                 continue
 
+            # Unwrap IPv4-mapped IPv6 bypasses
+            if getattr(ip, "ipv4_mapped", None):
+                ip = ip.ipv4_mapped
+
             # Check if IP is global, multicast or private
             if not ip.is_global or ip.is_multicast:
                 print(
