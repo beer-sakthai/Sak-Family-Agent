@@ -230,7 +230,12 @@ describe("TopBar", () => {
 
   it("opens the palette and the mobile nav", () => {
     const { props } = renderTopBar();
-    fireEvent.click(screen.getByLabelText("Open command palette"));
+    const paletteBtn = screen.getByLabelText("Open command palette");
+    expect(paletteBtn).toBeInTheDocument();
+    expect(paletteBtn).toHaveAttribute("type", "button");
+    expect(paletteBtn).toHaveAttribute("title", "Open command palette (Command + K)");
+
+    fireEvent.click(paletteBtn);
     expect(props.onOpenPalette).toHaveBeenCalled();
     fireEvent.click(screen.getByLabelText("Open navigation menu"));
     expect(props.onOpenMobileNav).toHaveBeenCalled();
@@ -538,9 +543,11 @@ describe("Skeletons", () => {
     expect(container.querySelectorAll(".animate-pulse").length).toBe(18);
   });
 
-  it("holds the card grid", () => {
-    render(<CardGridSkeleton count={3} />);
-    expect(screen.getByTestId("card-grid-skeleton").children).toHaveLength(3);
+  it("holds the card grid and provides status accessibility", () => {
+    render(<CardGridSkeleton count={3} label="Loading agent cards" />);
+    expect(screen.getByRole("status", { name: "Loading agent cards" })).toBeInTheDocument();
+    // 3 card placeholders + 1 sr-only text element = 4 elements under root container
+    expect(screen.getByTestId("card-grid-skeleton").children).toHaveLength(4);
   });
 
   it("announces what a panel is loading", () => {
