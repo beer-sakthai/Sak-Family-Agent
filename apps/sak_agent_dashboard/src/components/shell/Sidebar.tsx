@@ -39,6 +39,7 @@ function NavButton({
   return (
     <button
       ref={register(index)}
+      type="button"
       role="tab"
       aria-selected={active}
       aria-label={item.label}
@@ -46,7 +47,7 @@ function NavButton({
       // within it, per the WAI-ARIA authoring practice. Seven tab stops
       // between the page start and the panel is the alternative.
       tabIndex={active ? 0 : -1}
-      title={collapsed ? item.label : undefined}
+      title={collapsed ? item.label : `Switch to ${item.label} section`}
       onClick={() => onSelect(item.id)}
       className={`group relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
         active
@@ -151,6 +152,7 @@ export function Sidebar({
       </nav>
 
       <button
+        type="button"
         onClick={() => onCollapsedChange(!collapsed)}
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
