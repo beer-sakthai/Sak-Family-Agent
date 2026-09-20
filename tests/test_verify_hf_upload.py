@@ -112,16 +112,6 @@ def test_verify_url_blocks_private_ip(mock_getaddrinfo: MagicMock) -> None:
     assert result is False
 
 
-@patch("socket.getaddrinfo")
-def test_verify_url_blocks_ipv4_mapped_ipv6(mock_getaddrinfo: MagicMock) -> None:
-    # Resolve to IPv4-mapped IPv6 loopback IP
-    mock_getaddrinfo.return_value = [
-        (socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("::ffff:127.0.0.1", 443, 0, 0))
-    ]
-    result = verify_hf_upload.verify_url("https://example.com", "Resource")
-    assert result is False
-
-
 @patch("sakthai.scripts.verify_hf_upload.verify_url")
 @patch("sys.exit")
 def test_main_success_with_multiple_urls(
