@@ -109,13 +109,13 @@ export function TopBar({
             type="button"
             onClick={onOpenPalette}
             aria-label="Open command palette"
-            title="Open command palette (⌘K)"
+            title="Open command palette (Command + K)"
             data-chrome="secondary"
             className="hidden items-center gap-2 rounded-xl border border-line bg-panel/60 px-3 py-1.5 text-[11px] text-fg-4 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:flex"
           >
             <Search className="h-3.5 w-3.5" aria-hidden />
             Jump to…
-            <kbd className="rounded border border-line-strong bg-sunken px-1.5 py-0.5 font-mono text-[10px] text-fg-3">
+            <kbd className="rounded border border-line-strong bg-sunken px-1.5 py-0.5 font-mono text-[10px] text-fg-3" aria-hidden="true">
               ⌘K
             </kbd>
           </button>

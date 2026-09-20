@@ -221,7 +221,12 @@ describe("TopBar", () => {
 
   it("opens the palette and the mobile nav", () => {
     const { props } = renderTopBar();
-    fireEvent.click(screen.getByLabelText("Open command palette"));
+    const paletteBtn = screen.getByLabelText("Open command palette");
+    expect(paletteBtn).toBeInTheDocument();
+    expect(paletteBtn).toHaveAttribute("type", "button");
+    expect(paletteBtn).toHaveAttribute("title", "Open command palette (Command + K)");
+
+    fireEvent.click(paletteBtn);
     expect(props.onOpenPalette).toHaveBeenCalled();
     fireEvent.click(screen.getByLabelText("Open navigation menu"));
     expect(props.onOpenMobileNav).toHaveBeenCalled();
