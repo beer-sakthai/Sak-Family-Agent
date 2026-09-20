@@ -28,7 +28,7 @@ jobs:
           api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
 
       - name: Checkout repository
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           # All writes go through the explicit GH_PAT_FOR_ACTIONS token passed
           # to create-pull-request below; don't also persist a credential
