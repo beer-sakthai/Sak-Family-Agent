@@ -145,6 +145,7 @@ export function PersonaFilter({ selected, onChange, counts }: PersonaFilterProps
           className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-line bg-panel p-2 shadow-glass backdrop-blur-xl"
         >
           <button
+            type="button"
             role="menuitem"
             onClick={() => onChange([])}
             className={`mb-1 flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
@@ -166,6 +167,7 @@ export function PersonaFilter({ selected, onChange, counts }: PersonaFilterProps
             return (
               <button
                 key={name}
+                type="button"
                 role="menuitemcheckbox"
                 aria-checked={checked}
                 onClick={() => toggle(name)}

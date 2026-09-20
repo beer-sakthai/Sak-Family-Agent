@@ -86,6 +86,7 @@ export function TopBar({
     <header className="sticky top-0 z-40 border-b border-line/70 bg-canvas/85 backdrop-blur-xl">
       <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
         <button
+          type="button"
           onClick={onOpenMobileNav}
           aria-label="Open navigation menu"
           title="Open navigation menu"
@@ -105,6 +106,7 @@ export function TopBar({
           {/* A palette trigger that looks like a search field: the shortcut is
               discoverable without a tour, and it still works on touch. */}
           <button
+            type="button"
             onClick={onOpenPalette}
             aria-label="Open command palette"
             title="Open command palette (⌘K)"
@@ -178,6 +180,7 @@ export function TopBar({
           </label>
 
           <button
+            type="button"
             onClick={onCopyLink}
             data-chrome="secondary"
             aria-label="Copy a link to this view"
@@ -225,6 +228,7 @@ export function TopBar({
           </label>
 
           <button
+            type="button"
             onClick={() => {
               const next = !presenting;
               onPresentingChange(next);
@@ -249,6 +253,7 @@ export function TopBar({
           </button>
 
           <button
+            type="button"
             onClick={onRefresh}
             disabled={isLoading}
             aria-label="Refresh dashboard data"
