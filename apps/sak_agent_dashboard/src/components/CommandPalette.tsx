@@ -205,6 +205,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
                 )}
                 <li>
                   <button
+                    type="button"
                     role="option"
                     aria-selected={index === clampedHighlight}
                     onMouseEnter={() => setHighlight(index)}
