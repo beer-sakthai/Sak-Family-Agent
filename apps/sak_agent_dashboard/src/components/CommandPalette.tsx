@@ -139,7 +139,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
       <button
         type="button"
         aria-label="Close command palette"
-        title="Close command palette"
+        title="Close command palette (Esc)"
         onClick={onClose}
         className="absolute inset-0 h-full w-full bg-sunken/80 backdrop-blur-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
       />
@@ -180,7 +180,10 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
               <X className="h-3.5 w-3.5" aria-hidden />
             </button>
           )}
-          <kbd className="hidden rounded border border-line-strong bg-sunken px-1.5 py-0.5 font-mono text-[10px] text-fg-4 sm:block">
+          <kbd
+            aria-hidden="true"
+            className="hidden rounded border border-line-strong bg-sunken px-1.5 py-0.5 font-mono text-[10px] text-fg-4 sm:block"
+          >
             esc
           </kbd>
         </div>
@@ -210,6 +213,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
                     aria-selected={index === clampedHighlight}
                     onMouseEnter={() => setHighlight(index)}
                     onClick={() => runAt(index)}
+                    title={command.shortcut ? `${command.label} (${command.shortcut})` : command.label}
                     className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                       index === clampedHighlight
                         ? "bg-raised/80 text-fg"
@@ -236,7 +240,10 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
                       </span>
                     </span>
                     {command.shortcut && (
-                      <kbd className="hidden shrink-0 rounded border border-line-strong bg-sunken px-1.5 py-0.5 font-mono text-[10px] text-fg-4 sm:block">
+                      <kbd
+                        aria-hidden="true"
+                        className="hidden shrink-0 rounded border border-line-strong bg-sunken px-1.5 py-0.5 font-mono text-[10px] text-fg-4 sm:block"
+                      >
                         {command.shortcut}
                       </kbd>
                     )}
