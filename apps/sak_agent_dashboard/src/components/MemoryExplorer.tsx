@@ -52,13 +52,19 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
         </div>
 
         <div className="flex items-center gap-2 font-mono text-xs">
-          <span className="px-3 py-1 rounded-full bg-panel border border-line text-hue-cyan">
+          <span
+            className="px-3 py-1 rounded-full bg-panel border border-line text-hue-cyan"
+            title={`Total recorded facts across shards: ${memory.total_facts.toLocaleString()}${memory.facts_this_week > 0 ? ` (${memory.facts_this_week} added this week)` : ""}`}
+          >
             {memory.total_facts.toLocaleString()} facts
             {memory.facts_this_week > 0 && (
               <span className="text-hue-emerald"> (+{memory.facts_this_week} this week)</span>
             )}
           </span>
-          <span className="px-3 py-1 rounded-full bg-panel border border-line text-hue-violet">
+          <span
+            className="px-3 py-1 rounded-full bg-panel border border-line text-hue-violet"
+            title={`Total recorded observations across shards: ${memory.total_observations.toLocaleString()}`}
+          >
             {memory.total_observations.toLocaleString()} observations
           </span>
         </div>
@@ -232,6 +238,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
             .map(([kind, count]) => (
               <span
                 key={kind}
+                title={`Fact count for kind "${kind}": ${count.toLocaleString()}`}
                 className="px-2 py-0.5 rounded-full bg-panel border border-line text-fg-2"
               >
                 {kind} <span className="text-hue-cyan">{count}</span>
