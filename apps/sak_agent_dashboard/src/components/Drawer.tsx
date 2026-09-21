@@ -93,6 +93,7 @@ export function Drawer({
   return (
     <div className="fixed inset-0 z-50 flex justify-end" data-testid={testId}>
       <button
+        type="button"
         aria-label="Close detail"
         title="Close detail panel"
         onClick={onClose}

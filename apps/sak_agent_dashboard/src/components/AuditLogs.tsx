@@ -89,6 +89,7 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
           return (
             <button
               key={sev}
+              type="button"
               onClick={() => onSeverityChange(sev)}
               aria-pressed={active}
               aria-label={`Filter audit log by ${sev} severity`}
