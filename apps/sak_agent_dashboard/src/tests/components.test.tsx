@@ -130,7 +130,17 @@ describe("AgentCard", () => {
     const { rerender } = render(<AgentCard agent={{ ...active, errors: 0 }} />);
     expect(screen.queryByText(/error/)).not.toBeInTheDocument();
     rerender(<AgentCard agent={{ ...active, errors: 3 }} />);
-    expect(screen.getByText("3 errors")).toBeInTheDocument();
+    const errorPill = screen.getByText("3 errors");
+    expect(errorPill).toBeInTheDocument();
+    expect(errorPill).toHaveAttribute("title", "Recorded errors: 3");
+  });
+
+  it("provides informative title tooltips on token count badges", () => {
+    const agent = { ...active, input_tokens: 1200, output_tokens: 800 };
+    render(<AgentCard agent={agent} />);
+    const tokenBadge = screen.getByText("2,000 tokens");
+    expect(tokenBadge).toBeInTheDocument();
+    expect(tokenBadge).toHaveAttribute("title", "Total token usage: 2,000 tokens");
   });
 });
 

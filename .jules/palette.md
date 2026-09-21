@@ -97,3 +97,15 @@
 **Learning:** Navigation tab buttons (`NavButton`) in sidebar components can default to `type="submit"` if `type="button"` is omitted and rendered in a form context. Additionally, omitting hover tooltips on expanded sidebar tabs leaves desktop users without instant target feedback.
 
 **Action:** Always provide explicit `type="button"` attributes and dynamic `title` tooltips (`title={collapsed ? item.label : \`Switch to ${item.label} section\`}`) on sidebar navigation tabs.
+
+## 2026-09-24 - Screen Reader Hidden Shortcut Badges and Tooltips in CommandPalette Options
+
+**Learning:** Interactive option items in command palettes (such as `CommandPalette.tsx`) render visual keyboard shortcut badges (`<kbd>`), which screen readers announce as redundant or unspaced text alongside the option label unless marked with `aria-hidden="true"`. Additionally, hover tooltips (`title`) on option items provide desktop users instant visual shortcut feedback.
+
+**Action:** Add `aria-hidden="true"` to visual `<kbd>` elements inside `CommandPalette` option buttons and complement them with informative hover `title` tooltips.
+
+## 2026-09-25 - Informative Hover Tooltips on AgentCard Stat Badges
+
+**Learning:** Token usage and error count status badges in `AgentCard` cards display numerical stats on screen, but desktop mouse users lack visual hover tooltips explaining the full context of those stats unless explicit `title` attributes are provided.
+
+**Action:** Add descriptive `title` tooltips (e.g. `title={`Total token usage: ${tokens} tokens`}` and `title={`Recorded errors: ${errors}`}`) to status badge elements on agent overview cards.
