@@ -246,12 +246,18 @@ export function AgentCard({
           overlayToggle ? "pointer-events-none" : ""
         }`}
       >
-        <span className="px-2 py-0.5 rounded-full bg-hue-cyan-tint/40 text-hue-cyan border border-hue-cyan-line/30 inline-flex items-center gap-1">
+        <span
+          title={`Total token usage: ${(agent.input_tokens + agent.output_tokens).toLocaleString()} tokens`}
+          className="px-2 py-0.5 rounded-full bg-hue-cyan-tint/40 text-hue-cyan border border-hue-cyan-line/30 inline-flex items-center gap-1"
+        >
           <Brain className="h-2.5 w-2.5" aria-hidden />
           {(agent.input_tokens + agent.output_tokens).toLocaleString()} tokens
         </span>
         {agent.errors > 0 && (
-          <span className="px-2 py-0.5 rounded-full bg-hue-rose-tint/40 text-hue-rose border border-hue-rose-line/30">
+          <span
+            title={`Recorded errors: ${agent.errors}`}
+            className="px-2 py-0.5 rounded-full bg-hue-rose-tint/40 text-hue-rose border border-hue-rose-line/30"
+          >
             {agent.errors} {agent.errors === 1 ? "error" : "errors"}
           </span>
         )}
