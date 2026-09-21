@@ -341,6 +341,31 @@ describe("MemoryExplorer", () => {
     expect(screen.getByText("Works late into the evening most days")).toBeInTheDocument();
   });
 
+  it("provides descriptive title tooltips on summary stat badges and kind count pills", () => {
+    const { container } = render(<MemoryExplorer memory={demoMemory()} />);
+    const memoryData = demoMemory();
+    const factsBadge = screen.getByText(`${memoryData.total_facts.toLocaleString()} facts`).closest("span");
+    expect(factsBadge).toBeInTheDocument();
+    expect(factsBadge).toHaveAttribute(
+      "title",
+      `Total recorded facts across shards: ${memoryData.total_facts.toLocaleString()} (${memoryData.facts_this_week} added this week)`,
+    );
+
+    const obsBadge = screen.getByText(`${memoryData.total_observations.toLocaleString()} observations`).closest("span");
+    expect(obsBadge).toBeInTheDocument();
+    expect(obsBadge).toHaveAttribute(
+      "title",
+      `Total recorded observations across shards: ${memoryData.total_observations.toLocaleString()}`,
+    );
+
+    const topKind = Object.entries(memoryData.kind_counts)[0];
+    if (topKind) {
+      const spans = Array.from(container.querySelectorAll("span"));
+      const kindBadge = spans.find((s) => s.getAttribute("title")?.includes(`Fact count for kind "${topKind[0]}"`));
+      expect(kindBadge).toBeInTheDocument();
+    }
+  });
+
   it("tags each fact with its shard", () => {
     render(<MemoryExplorer memory={demoMemory()} />);
     expect(screen.getAllByText("sakthai").length).toBeGreaterThan(0);
