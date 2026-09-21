@@ -391,11 +391,16 @@ describe("AuditLogs", () => {
     expect(screen.getByText("Blocked a destructive shell command")).toBeInTheDocument();
   });
 
-  it("wraps severity filter buttons in a group with an accessible label", () => {
+  it("wraps severity filter buttons in a group with an accessible label and explicit button type", () => {
     render(<AuditLogs audit={demoAudit()} severity="ALL" onSeverityChange={vi.fn()} />);
     expect(
       screen.getByRole("group", { name: "Filter audit log by severity" }),
     ).toBeInTheDocument();
+    const buttons = screen.getAllByRole("button", { name: /severity/i });
+    expect(buttons.length).toBeGreaterThan(0);
+    buttons.forEach((btn) => {
+      expect(btn).toHaveAttribute("type", "button");
+    });
   });
 
   it("reports the filter upward instead of filtering locally", () => {
