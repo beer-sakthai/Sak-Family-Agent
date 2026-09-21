@@ -144,6 +144,15 @@ describe("CommandPalette matching", () => {
     expect(rows[0]).toHaveTextContent(NAV_ITEMS[0].label);
     expect(rows[0]).toHaveTextContent("1");
   });
+
+  it("provides title tooltips and aria-hidden on inner shortcut badges", () => {
+    render(<CommandPalette onClose={vi.fn()} onNavigate={vi.fn()} actions={actions} />);
+    const rows = screen.getAllByRole("option");
+    expect(rows[0]).toHaveAttribute("title", `${NAV_ITEMS[0].label} (1)`);
+    const kbd = rows[0].querySelector("kbd");
+    expect(kbd).not.toBeNull();
+    expect(kbd).toHaveAttribute("aria-hidden", "true");
+  });
 });
 
 describe("Sidebar keyboard navigation", () => {
