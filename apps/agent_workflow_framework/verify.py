@@ -19,18 +19,25 @@ from pathlib import Path
 BASE_DIR = Path(__file__).parent.resolve()
 FIXTURES_DIR = BASE_DIR / "tests" / "test_workflows"
 
-# Import guard
+# Resolve imports consistently when this script is launched from another
+# working directory, and report missing runtime dependencies with a repair
+# command instead of falling through to the fallback module's same import.
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
 try:
     from agent_workflow.cli import main as cli_main
     from agent_workflow.parser import parse_workflow_file
     from agent_workflow.executor import WorkflowExecutor
     from agent_workflow.persistence import HistoryStore
     from agent_workflow.models import RunStatus, StepStatus
-except ModuleNotFoundError:
-    sys.path.insert(0, str(BASE_DIR))
-    from tests.engine_fallback import (
-        cli_main, parse_workflow_file, WorkflowExecutor, HistoryStore, RunStatus, StepStatus
-    )
+except ModuleNotFoundError as exc:
+    if exc.name == "yaml":
+        raise SystemExit(
+            "Missing dependency 'PyYAML'. Install it with: "
+            f"python -m pip install -r {BASE_DIR / 'requirements.txt'}"
+        ) from exc
+    raise
 
 
 def print_header(title: str) -> None:
