@@ -57,9 +57,13 @@ function ShareRow({
   bar: string;
 }) {
   const percent = share === null ? null : Math.round(share * 100);
+  const tooltip =
+    percent === null
+      ? `${label}: ${value} (no family total)`
+      : `${label}: ${value} (${percent}% of family total)`;
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5" title={tooltip}>
       <div className="flex items-baseline justify-between gap-3">
         <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-fg-4">
           <Icon className={`h-3 w-3 ${accent}`} aria-hidden />

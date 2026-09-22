@@ -103,6 +103,16 @@ describe("PersonaDrawer", () => {
     );
   });
 
+  it("provides informative title tooltips on share metric rows", () => {
+    renderDrawer(busiest);
+    const familyRuns = family.reduce((sum, persona) => sum + persona.runs, 0);
+    const expectedRuns = Math.round((busiest.runs / familyRuns) * 100);
+    expect(screen.getByText("Runs").closest("div[title]")).toHaveAttribute(
+      "title",
+      `Runs: ${busiest.runs.toLocaleString()} (${expectedRuns}% of family total)`,
+    );
+  });
+
   it("provides informative title tooltips on quick action navigation buttons", () => {
     renderDrawer(busiest);
     expect(screen.getByRole("button", { name: "Sessions" })).toHaveAttribute(
