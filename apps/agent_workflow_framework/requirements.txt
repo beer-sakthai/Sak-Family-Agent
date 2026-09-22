@@ -1,0 +1,2 @@
+# Runtime dependency for YAML workflow definitions.
+PyYAML==6.0.3
