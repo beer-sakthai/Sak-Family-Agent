@@ -33,7 +33,7 @@ describe("ShortcutsOverlay", () => {
     renderShortcutsOverlay();
     const kbdTags = screen.getAllByText("⌘");
     expect(kbdTags[0]).toHaveAttribute("title", "Key: Command");
-    expect(kbdTags[0]).toHaveAttribute("aria-label", "Key Command");
+    expect(kbdTags[0]).toHaveAttribute("aria-hidden", "true");
   });
 
   it("closes on close button click", () => {
@@ -61,9 +61,9 @@ describe("ShortcutsOverlay", () => {
 
   it("renders key badges with accessible spoken labels for special key symbols", () => {
     renderShortcutsOverlay();
-    expect(screen.getByLabelText("Key Command")).toBeInTheDocument();
-    expect(screen.getByLabelText("Key Question mark")).toBeInTheDocument();
-    expect(screen.getByLabelText("Key Left bracket")).toBeInTheDocument();
-    expect(screen.getByLabelText("Key Escape")).toBeInTheDocument();
+    expect(screen.getByText("(Command + K)")).toBeInTheDocument();
+    expect(screen.getByText("(Question mark)")).toBeInTheDocument();
+    expect(screen.getByText("(Left bracket)")).toBeInTheDocument();
+    expect(screen.getByText("(Escape)")).toBeInTheDocument();
   });
 });
