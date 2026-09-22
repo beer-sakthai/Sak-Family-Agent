@@ -32,15 +32,17 @@ const KEY_NAMES: Record<string, string> = {
 };
 
 function Keys({ keys }: { keys: string[] }) {
+  const spokenKeys = keys.map((key) => KEY_NAMES[key] || key).join(" + ");
   return (
     <span className="flex shrink-0 items-center gap-1">
+      <span className="sr-only">({spokenKeys})</span>
       {keys.map((key) => {
         const label = KEY_NAMES[key] || key;
         return (
           <kbd
             key={key}
             title={`Key: ${label}`}
-            aria-label={`Key ${label}`}
+            aria-hidden="true"
             className="min-w-[1.5rem] rounded border border-line-strong bg-sunken px-1.5 py-0.5 text-center font-mono text-[10px] text-fg-2"
           >
             {key}

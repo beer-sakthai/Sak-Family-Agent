@@ -109,3 +109,9 @@
 **Learning:** Token usage and error count status badges in `AgentCard` cards display numerical stats on screen, but desktop mouse users lack visual hover tooltips explaining the full context of those stats unless explicit `title` attributes are provided.
 
 **Action:** Add descriptive `title` tooltips (e.g. `title={`Total token usage: ${tokens} tokens`}` and `title={`Recorded errors: ${errors}`}`) to status badge elements on agent overview cards.
+
+## 2026-09-26 - Screen Reader Hidden Shortcut Badges in ShortcutsOverlay
+
+**Learning:** Shortcut list rows rendering multi-key combinations with visual `<kbd>` badges can cause screen readers to voice disjointed or repeated key announcements when each `<kbd>` element bears an individual `aria-label`. Marking visual `<kbd>` badges with `aria-hidden="true"` and providing a single visually hidden (`sr-only`) spoken text string (e.g. `(Command + K)`) allows screen readers to announce full key combinations smoothly.
+
+**Action:** Mark visual `<kbd>` elements inside shortcut list rows with `aria-hidden="true"` and render accessible spoken text inside a `<span className="sr-only">`.
