@@ -11,6 +11,7 @@ import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import ErrorBoundary from "@/app/error";
 import AgentCard from "@/components/AgentCard";
 import AgentOverview from "@/components/AgentOverview";
 import AnalyticsCharts from "@/components/AnalyticsCharts";
@@ -928,5 +929,20 @@ describe("DemoModeToggle", () => {
   it("omits the badge before the first response", () => {
     render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource={null} />);
     expect(screen.queryByTestId("active-source")).not.toBeInTheDocument();
+  });
+});
+
+describe("Route Error Boundary", () => {
+  it("renders retry button with type='button', aria-label, and title attributes", () => {
+    const reset = vi.fn();
+    render(<ErrorBoundary error={new Error("Test failure")} reset={reset} />);
+
+    const button = screen.getByRole("button", { name: "Try re-rendering the dashboard" });
+    expect(button).toBeInTheDocument();
+    expect(button).toHaveAttribute("type", "button");
+    expect(button).toHaveAttribute("title", "Try re-rendering the dashboard");
+
+    fireEvent.click(button);
+    expect(reset).toHaveBeenCalledTimes(1);
   });
 });
