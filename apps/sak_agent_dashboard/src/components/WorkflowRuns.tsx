@@ -47,12 +47,15 @@ const STATUS_STYLES: Record<string, { classes: string; icon: React.ReactNode }> 
 
 function StatusPill({ status }: { status: string }) {
   const style = STATUS_STYLES[status] ?? STATUS_STYLES.pending;
+  const label = status || "unknown";
   return (
     <span
+      title={`Workflow run status: ${label}`}
+      aria-label={`Status: ${label}`}
       className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono border ${style.classes}`}
     >
       {style.icon}
-      {status || "unknown"}
+      {label}
     </span>
   );
 }

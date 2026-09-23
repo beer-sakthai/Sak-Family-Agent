@@ -126,3 +126,9 @@
 **Learning:** Alert banner action triggers (such as error banner dismiss and partial data retry buttons) and route error boundary reset buttons can default to `type="submit"` if `type="button"` is omitted, and lack hover tooltips for desktop mouse users if `title` and `aria-label` attributes are missing.
 
 **Action:** Always include explicit `type="button"`, `aria-label`, and `title` tooltips on alert/warning banner action buttons and error boundary reset triggers.
+
+## 2026-09-28 - Informative Title Tooltips and ARIA Labels on Status and Severity Badges
+
+**Learning:** Status pills in workflow runs (`WorkflowRuns.tsx`) and severity badges in security audit logs (`AuditLogs.tsx`) render icons alongside status text, but desktop mouse users and screen readers lack explicit hover tooltips (`title`) and screen reader labels (`aria-label`) describing badge purpose.
+
+**Action:** Always provide explicit `title` and `aria-label` attributes on status and severity badge components (e.g. `title={`Workflow run status: ${status}`}` and `aria-label={`Severity: ${severity}`}`).
