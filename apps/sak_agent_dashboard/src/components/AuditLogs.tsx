@@ -41,6 +41,8 @@ function SeverityBadge({ severity }: { severity: string }) {
   const badge = BADGES[severity.toLowerCase()] ?? BADGES.low;
   return (
     <span
+      title={`Event severity level: ${severity}`}
+      aria-label={`Severity: ${severity}`}
       className={`px-2.5 py-0.5 rounded-full font-mono text-[10px] uppercase font-bold border inline-flex items-center gap-1 ${badge.classes}`}
     >
       {badge.icon}

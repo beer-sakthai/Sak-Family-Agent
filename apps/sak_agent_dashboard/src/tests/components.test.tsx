@@ -417,6 +417,13 @@ describe("AuditLogs", () => {
     expect(screen.getByText("Blocked a destructive shell command")).toBeInTheDocument();
   });
 
+  it("renders severity badges with explicit title tooltips and aria-labels", () => {
+    render(<AuditLogs audit={demoAudit()} severity="ALL" onSeverityChange={vi.fn()} />);
+    const badge = screen.getByLabelText("Severity: high");
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveAttribute("title", "Event severity level: high");
+  });
+
   it("wraps severity filter buttons in a group with an accessible label and explicit button type", () => {
     render(<AuditLogs audit={demoAudit()} severity="ALL" onSeverityChange={vi.fn()} />);
     expect(
@@ -626,6 +633,13 @@ describe("WorkflowRuns", () => {
     render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
     expect(screen.getByText("nightly-consolidation")).toBeInTheDocument();
     expect(screen.getAllByText("completed").length).toBeGreaterThan(0);
+  });
+
+  it("renders status pills with explicit title tooltips and aria-labels", () => {
+    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
+    const statusPill = screen.getAllByLabelText("Status: completed")[0];
+    expect(statusPill).toBeInTheDocument();
+    expect(statusPill).toHaveAttribute("title", "Workflow run status: completed");
   });
 
   it("marks failed steps", () => {
