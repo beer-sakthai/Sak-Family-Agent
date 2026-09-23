@@ -776,6 +776,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setError(null)}
+                aria-label="Dismiss error message"
                 aria-label="Dismiss error"
                 title="Dismiss error message"
                 className="shrink-0 rounded-lg border border-hue-rose-line px-2 py-0.5 font-mono text-[11px] text-hue-rose hover:bg-hue-rose-tint focus:outline-none focus-visible:ring-2 focus-visible:ring-hue-rose"
@@ -924,8 +925,8 @@ export default function Home() {
               {personas.length > 0 && ` · filtered to ${personas.length} persona${personas.length === 1 ? "" : "s"}`}
             </span>
             <span className="hidden sm:inline">
-              <kbd className="rounded border border-line px-1 py-0.5">⌘K</kbd> commands ·{" "}
-              <kbd className="rounded border border-line px-1 py-0.5">?</kbd> shortcuts
+              <kbd className="rounded border border-line px-1 py-0.5" aria-hidden="true" title="Command + K">⌘K</kbd> commands ·{" "}
+              <kbd className="rounded border border-line px-1 py-0.5" aria-hidden="true" title="Question mark">?</kbd> shortcuts
             </span>
           </footer>
         </main>
