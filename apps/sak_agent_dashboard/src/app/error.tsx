@@ -36,7 +36,10 @@ export default function Error({
         </code>
       )}
       <button
+        type="button"
         onClick={reset}
+        aria-label="Try re-rendering the dashboard"
+        title="Try re-rendering the dashboard"
         className="mt-1 inline-flex items-center gap-2 rounded-xl border border-line-strong bg-panel/70 px-4 py-2 text-sm text-fg-2 transition-colors hover:border-line-strong hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         <RotateCw className="h-4 w-4" aria-hidden />
