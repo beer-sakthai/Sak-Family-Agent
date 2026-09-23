@@ -86,6 +86,7 @@ never duplicate content across files.
 | **Sak Agent Dashboard — maximal UI and Vercel validation pass** — inspect the deployed dashboard, complete a targeted premium UI enhancement pass, validate the Vercel preview and merge a green pull request; work recorded on branch `manus/max-dashboard-ui` | [/] In progress — 2026-09-07 |
 | **Sak Agent Dashboard — action buttons tooltips and type attributes** — add explicit `type="button"` and informative `title` tooltips to action trigger buttons in `WorkflowRuns`, `SessionExplorer`, and `HostedNotice` | [x] 2026-09-14 |
 | **Dependency audit — security + in-range updates** — bump `anyio` 4.13.0 → 4.14.2 in `sakthai-chat-cli/uv.lock` (CVE-2026-63374, CVE-2026-64847) plus patch/minor lock refreshes in the root, `sakthai-chat-cli`, `services/teams-copilot-mcp` and `apps/sak_agent_dashboard`. Out of scope: majors (`fastmcp` 4, `anthropic` 1.x in chat-cli, `tailwindcss` 4, `typescript` 7) and the unfixed `sqlitedict`/`nltk` advisories in the `evals` group | [x] 2026-09-22 |
+| **Fix red `apps.yml` on main — duplicate `aria-label`** — #1452 and #1448 each added an `aria-label` to the error banner's Dismiss button in `apps/sak_agent_dashboard/src/app/page.tsx`; the merge kept both, failing `eslint` (`react/jsx-no-duplicate-props`). Kept `"Dismiss error message"` (matches the button's `title`) | [x] 2026-09-23 |
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |
