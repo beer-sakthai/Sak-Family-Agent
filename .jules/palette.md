@@ -116,6 +116,11 @@
 
 **Action:** Mark visual `<kbd>` elements inside shortcut list rows with `aria-hidden="true"` and render accessible spoken text inside a `<span className="sr-only">`.
 
+## 2026-09-27 - Explicit Type Attributes and Tooltips on Alert Banner Actions and Footer Badges
+
+**Learning:** Action buttons on error or warning alert banners (such as "Dismiss" and "Retry now") can default to `type="submit"` when rendered within form contexts if explicit `type="button"` attributes are omitted. Furthermore, visual `<kbd>` badges in page footers can cause disjointed screen reader output unless hidden with `aria-hidden="true"` and supplemented with hover `title` tooltips.
+
+**Action:** Always specify `type="button"` and `title` tooltips on alert banner action triggers, and apply `aria-hidden="true"` alongside `title` tooltips to footer shortcut badges.
 ## 2026-09-27 - Explicit Button Types, ARIA Labels, and Tooltips on Alert Banners and Error Boundaries
 
 **Learning:** Alert banner action triggers (such as error banner dismiss and partial data retry buttons) and route error boundary reset buttons can default to `type="submit"` if `type="button"` is omitted, and lack hover tooltips for desktop mouse users if `title` and `aria-label` attributes are missing.
