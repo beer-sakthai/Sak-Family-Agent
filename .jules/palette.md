@@ -115,3 +115,9 @@
 **Learning:** Shortcut list rows rendering multi-key combinations with visual `<kbd>` badges can cause screen readers to voice disjointed or repeated key announcements when each `<kbd>` element bears an individual `aria-label`. Marking visual `<kbd>` badges with `aria-hidden="true"` and providing a single visually hidden (`sr-only`) spoken text string (e.g. `(Command + K)`) allows screen readers to announce full key combinations smoothly.
 
 **Action:** Mark visual `<kbd>` elements inside shortcut list rows with `aria-hidden="true"` and render accessible spoken text inside a `<span className="sr-only">`.
+
+## 2026-09-27 - Explicit Button Types, ARIA Labels, and Tooltips on Alert Banners and Error Boundaries
+
+**Learning:** Alert banner action triggers (such as error banner dismiss and partial data retry buttons) and route error boundary reset buttons can default to `type="submit"` if `type="button"` is omitted, and lack hover tooltips for desktop mouse users if `title` and `aria-label` attributes are missing.
+
+**Action:** Always include explicit `type="button"`, `aria-label`, and `title` tooltips on alert/warning banner action buttons and error boundary reset triggers.

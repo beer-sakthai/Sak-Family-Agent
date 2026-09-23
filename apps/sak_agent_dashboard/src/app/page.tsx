@@ -774,8 +774,10 @@ export default function Home() {
             >
               <span>{error}</span>
               <button
+                type="button"
                 onClick={() => setError(null)}
                 aria-label="Dismiss error"
+                title="Dismiss error message"
                 className="shrink-0 rounded-lg border border-hue-rose-line px-2 py-0.5 font-mono text-[11px] text-hue-rose hover:bg-hue-rose-tint focus:outline-none focus-visible:ring-2 focus-visible:ring-hue-rose"
               >
                 Dismiss
@@ -795,8 +797,11 @@ export default function Home() {
                 Showing the last successful values while {failedEndpoints.join(", ")} recover.
               </span>
               <button
+                type="button"
                 onClick={handleRefresh}
                 disabled={isLoading}
+                aria-label="Retry fetching live data"
+                title={isLoading ? "Retrying data fetch…" : "Retry fetching live data"}
                 className="shrink-0 rounded-lg border border-hue-amber-line px-2.5 py-1 font-mono text-[11px] text-hue-amber transition-colors hover:bg-hue-amber-tint disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-hue-amber"
               >
                 Retry now
