@@ -113,6 +113,18 @@ describe("PersonaDrawer", () => {
     );
   });
 
+  it("renders progressbars with proper ARIA accessibility attributes", () => {
+    renderDrawer(busiest);
+    const familyRuns = family.reduce((sum, persona) => sum + persona.runs, 0);
+    const expectedRuns = Math.round((busiest.runs / familyRuns) * 100);
+    const runsBar = screen.getByRole("progressbar", { name: "Runs share of family" });
+    expect(runsBar).toBeInTheDocument();
+    expect(runsBar).toHaveAttribute("aria-valuenow", expectedRuns.toString());
+    expect(runsBar).toHaveAttribute("aria-valuemin", "0");
+    expect(runsBar).toHaveAttribute("aria-valuemax", "100");
+    expect(runsBar).toHaveAttribute("aria-valuetext", `${expectedRuns}% of family`);
+  });
+
   it("provides informative title tooltips on quick action navigation buttons", () => {
     renderDrawer(busiest);
     expect(screen.getByRole("button", { name: "Sessions" })).toHaveAttribute(
