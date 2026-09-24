@@ -249,14 +249,18 @@ export function ActivityHeatmap({ trends, days = 90, today }: ActivityHeatmapPro
 
       <div className="mt-3 flex items-center justify-end gap-1.5 font-mono text-[10px] text-fg-5">
         <span aria-hidden>Less</span>
-        {LEVEL_CLASS.map((className, level) => (
-          <span
-            key={level}
-            aria-hidden
-            title={level === 0 ? "No activity" : `Activity level ${level} of 4`}
-            className={`h-[11px] w-[11px] rounded-[2px] border border-line-soft/60 ${className}`}
-          />
-        ))}
+        {LEVEL_CLASS.map((className, level) => {
+          const label = level === 0 ? "No activity" : `Activity level ${level} of 4`;
+          return (
+            <span
+              key={level}
+              role="img"
+              title={label}
+              aria-label={label}
+              className={`h-[11px] w-[11px] rounded-[2px] border border-line-soft/60 ${className}`}
+            />
+          );
+        })}
         <span aria-hidden>More</span>
       </div>
     </section>
