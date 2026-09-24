@@ -91,9 +91,8 @@ class GraphClient:
         """
         # SSRF and Token Exfiltration protection:
         # Prevent protocol-relative URLs (e.g., //attacker.com)
-        if path.startswith(("/", "\\")):
-            if path.startswith(("//", "\\\\", "/\\", "\\/")):
-                raise ValueError("Invalid path format: protocol-relative paths are blocked")
+        if path.startswith(("//", "\\\\", "/\\", "\\/")):
+            raise ValueError("Invalid path format: protocol-relative paths are blocked")
 
         # If it has a scheme or a network location, treat as absolute/protocol-relative,
         # and strictly validate that it is HTTPS and targets graph.microsoft.com
