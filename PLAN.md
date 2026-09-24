@@ -89,6 +89,7 @@ never duplicate content across files.
 | **Fix red `apps.yml` on main — duplicate `aria-label`** — #1452 and #1448 each added an `aria-label` to the error banner's Dismiss button in `apps/sak_agent_dashboard/src/app/page.tsx`; the merge kept both, failing `eslint` (`react/jsx-no-duplicate-props`). Kept `"Dismiss error message"` (matches the button's `title`) | [x] 2026-09-23 |
 | **CLAUDE.md tool count** — `BUILTIN_TOOLS` has 19 tools, not 18; `huggingface_inference` was missing from the list (surfaced by the family auto-cycle dry run) | [x] 2026-09-24 |
 | **`sakthai-chat-cli` test failures** — 7 guardrail tests asserted on reason wording (`"destructive"`) that no longer matches: the commands are still denied, by the earlier `Potentially dangerous … blocked` rule; ported the canonical suite's `destructive`/`dangerous` assertion. `test_perform_eda.py` failed collection on undeclared `pandas`; added it to the `dev` extra. Suite now 1419 passed / 6 skipped | [x] 2026-09-24 |
+| **Repo-wide vulnerability + code-quality sweep** — ruff/mypy/bandit/pylint/pytest on the root package (all clean), bandit + ruff + tests on `sakthai-chat-cli`, `teams-copilot-mcp`, `agent_workflow_framework`, pip-audit + npm audit on every lockfile; fix the 12 ruff findings in the two un-linted trees | [x] 2026-09-24 |
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |
