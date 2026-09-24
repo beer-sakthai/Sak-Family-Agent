@@ -97,7 +97,7 @@ def test_dangerous_shell_commands_are_denied(
     policy = GuardrailPolicy()  # Use default rules
     result = policy.check_pre_execution(run_command_tool, {"command": command}, store)
     assert result.action == GuardrailAction.DENY
-    assert result.reason and "destructive" in result.reason
+    assert result.reason and any(s in result.reason.lower() for s in ("destructive", "dangerous"))
 
 
 @pytest.mark.parametrize(

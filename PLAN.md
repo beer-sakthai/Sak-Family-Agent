@@ -87,6 +87,8 @@ never duplicate content across files.
 | **Sak Agent Dashboard — action buttons tooltips and type attributes** — add explicit `type="button"` and informative `title` tooltips to action trigger buttons in `WorkflowRuns`, `SessionExplorer`, and `HostedNotice` | [x] 2026-09-14 |
 | **Dependency audit — security + in-range updates** — bump `anyio` 4.13.0 → 4.14.2 in `sakthai-chat-cli/uv.lock` (CVE-2026-63374, CVE-2026-64847) plus patch/minor lock refreshes in the root, `sakthai-chat-cli`, `services/teams-copilot-mcp` and `apps/sak_agent_dashboard`. Out of scope: majors (`fastmcp` 4, `anthropic` 1.x in chat-cli, `tailwindcss` 4, `typescript` 7) and the unfixed `sqlitedict`/`nltk` advisories in the `evals` group | [x] 2026-09-22 |
 | **Fix red `apps.yml` on main — duplicate `aria-label`** — #1452 and #1448 each added an `aria-label` to the error banner's Dismiss button in `apps/sak_agent_dashboard/src/app/page.tsx`; the merge kept both, failing `eslint` (`react/jsx-no-duplicate-props`). Kept `"Dismiss error message"` (matches the button's `title`) | [x] 2026-09-23 |
+| **CLAUDE.md tool count** — `BUILTIN_TOOLS` has 19 tools, not 18; `huggingface_inference` was missing from the list (surfaced by the family auto-cycle dry run) | [x] 2026-09-24 |
+| **`sakthai-chat-cli` test failures** — 7 guardrail tests asserted on reason wording (`"destructive"`) that no longer matches: the commands are still denied, by the earlier `Potentially dangerous … blocked` rule; ported the canonical suite's `destructive`/`dangerous` assertion. `test_perform_eda.py` failed collection on undeclared `pandas`; added it to the `dev` extra. Suite now 1419 passed / 6 skipped | [x] 2026-09-24 |
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |
