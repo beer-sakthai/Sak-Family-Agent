@@ -74,7 +74,12 @@ function ShareRow({
       <div className="flex items-center gap-2">
         <div
           className="h-1.5 flex-1 overflow-hidden rounded-full bg-raised/90"
-          role="presentation"
+          role="progressbar"
+          aria-label={`${label} share of family`}
+          aria-valuenow={percent ?? 0}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuetext={percent === null ? "no family total" : `${percent}% of family`}
         >
           <div
             className={`h-full rounded-full ${bar} transition-[width] duration-500`}

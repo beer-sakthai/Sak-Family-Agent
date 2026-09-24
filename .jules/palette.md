@@ -138,3 +138,9 @@
 **Learning:** Static `<span>` elements (such as color intensity swatches in `ActivityHeatmap`) bearing `aria-label` attributes are ignored by screen readers unless given an explicit `role="img"`, because WAI-ARIA ignores `aria-label` on generic non-interactive HTML elements without a landmark or component role.
 
 **Action:** Always include `role="img"` alongside `aria-label` and `title` when labeling static visual swatch or icon elements.
+
+## 2026-09-30 - Standard ARIA Progressbar Semantics for Metric Share Rows
+
+**Learning:** Visual percentage bars representing metric shares (such as in `PersonaDrawer.tsx`) marked with `role="presentation"` hide value state from assistive technologies. Replacing `role="presentation"` with `role="progressbar"` and supplying `aria-label`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and `aria-valuetext` ensures screen readers cleanly announce the metric share.
+
+**Action:** On custom visual progress bars, apply `role="progressbar"` along with explicit `aria-label`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and `aria-valuetext` attributes.
