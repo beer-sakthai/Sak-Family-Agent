@@ -1,12 +1,13 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from teams_copilot_mcp import server
 
 
 def test_resolve_path_fills_placeholders():
-    result = server._resolve_path("/teams/{team_id}/channels/{channel_id}", {"team_id": "T1", "channel_id": "C1"})
+    result = server._resolve_path(
+        "/teams/{team_id}/channels/{channel_id}", {"team_id": "T1", "channel_id": "C1"}
+    )
     assert result == "/teams/T1/channels/C1"
 
 
@@ -87,9 +88,11 @@ def test_list_calendar_events_builds_query_params():
 def test_copilot_retrieval_query_tool_never_calls_graph_client():
     fake_client = MagicMock()
 
-    with patch("teams_copilot_mcp.server.get_client", return_value=fake_client):
-        with pytest.raises(NotImplementedError):
-            server.copilot_retrieval_query(query_text="find docs", data_source="sharePoint")
+    with (
+        patch("teams_copilot_mcp.server.get_client", return_value=fake_client),
+        pytest.raises(NotImplementedError),
+    ):
+        server.copilot_retrieval_query(query_text="find docs", data_source="sharePoint")
 
     assert fake_client.request.call_count == 0
 
@@ -115,9 +118,7 @@ def test_get_meeting_transcript_calls_graph_client():
     fake_client.request.return_value = "WEBVTT\n..."
 
     with patch("teams_copilot_mcp.server.get_client", return_value=fake_client):
-        result = server.get_meeting_transcript(
-            user_id="u1", meeting_id="m1", transcript_id="t1"
-        )
+        result = server.get_meeting_transcript(user_id="u1", meeting_id="m1", transcript_id="t1")
 
     fake_client.request.assert_called_once_with(
         "GET", "/users/u1/onlineMeetings/m1/transcripts/t1/content"

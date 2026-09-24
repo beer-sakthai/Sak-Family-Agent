@@ -2,7 +2,6 @@ from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
-
 from teams_copilot_mcp.graph_client import GraphAuthError, GraphClient
 
 
@@ -64,6 +63,7 @@ def test_request_sends_bearer_token_from_acquired_access_token(monkeypatch):
     ):
         result = client.request("GET", "/me")
 
+    assert result == {"value": "ok"}
     sent_headers = mock_request.call_args.kwargs["headers"]
     assert sent_headers["Authorization"] == "Bearer the-real-token"
 
@@ -102,12 +102,14 @@ def test_raises_graph_auth_error_when_token_acquisition_fails(monkeypatch):
         "error_description": "bad secret",
     }
 
-    with patch(
-        "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
-        return_value=fake_app,
+    with (
+        patch(
+            "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
+            return_value=fake_app,
+        ),
+        pytest.raises(GraphAuthError) as exc_info,
     ):
-        with pytest.raises(GraphAuthError) as exc_info:
-            client.request("GET", "/me")
+        client.request("GET", "/me")
 
     message = str(exc_info.value)
     assert "invalid_client" in message
@@ -155,9 +157,9 @@ def test_non_2xx_response_raises(monkeypatch):
             return_value=fake_app,
         ),
         patch.object(httpx.Client, "request", return_value=fake_response),
+        pytest.raises(httpx.HTTPStatusError),
     ):
-        with pytest.raises(httpx.HTTPStatusError):
-            client.request("GET", "/me")
+        client.request("GET", "/me")
 
 
 def test_request_allows_valid_graph_absolute_url(monkeypatch):
