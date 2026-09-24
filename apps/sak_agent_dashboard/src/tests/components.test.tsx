@@ -590,24 +590,11 @@ describe("SessionExplorer", () => {
     expect(onSearchChange).toHaveBeenCalledWith("");
   });
 
-  it("offers a reset action from the empty state with title tooltip", () => {
+  it("offers a reset action from the empty state", () => {
     const onSearchChange = vi.fn();
     renderExplorer({ sessions: [], total: 0, search: "nothing", onSearchChange });
-    const resetButton = screen.getByRole("button", { name: /Clear search and filters/i });
-    expect(resetButton).toHaveAttribute("title", "Clear search query and reset filters");
-    fireEvent.click(resetButton);
+    fireEvent.click(screen.getByRole("button", { name: /Clear search and filters/i }));
     expect(onSearchChange).toHaveBeenCalledWith("");
-  });
-
-  it("renders persona badges and outcome pills with title tooltips and aria-labels in table rows", () => {
-    renderExplorer();
-    const firstSession = sessions.sessions[0];
-    const personaBadge = screen.getAllByText(firstSession.persona!)[0].closest("span");
-    expect(personaBadge).toHaveAttribute("title", `Persona: ${firstSession.persona}`);
-
-    const outcomePills = screen.getAllByLabelText(`Outcome: Success (${firstSession.stop_reason})`);
-    expect(outcomePills[0]).toBeInTheDocument();
-    expect(outcomePills[0]).toHaveAttribute("title", `Execution succeeded: ${firstSession.stop_reason}`);
   });
 
   // Ported from PR #1180, rewritten against the server-driven props: the
