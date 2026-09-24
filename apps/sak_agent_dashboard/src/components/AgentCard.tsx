@@ -233,7 +233,17 @@ export function AgentCard({
             {successRate === null ? "no runs yet" : `${successRate.toFixed(1)}%`}
           </span>
         </div>
-        <div className="h-2 w-full bg-raised/90 rounded-full overflow-hidden p-0.5 border border-line-strong/50">
+        <div
+          className="h-2 w-full bg-raised/90 rounded-full overflow-hidden p-0.5 border border-line-strong/50"
+          role="progressbar"
+          aria-label={`${agent.display_name} success rate`}
+          aria-valuenow={successRate === null ? 0 : Math.round(successRate)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuetext={
+            successRate === null ? "no runs recorded yet" : `${successRate.toFixed(1)}% success rate`
+          }
+        >
           <div
             className="h-full bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]"
             style={{ width: `${successRate ?? 0}%` }}
