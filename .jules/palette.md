@@ -132,3 +132,9 @@
 **Learning:** Status pills in workflow runs (`WorkflowRuns.tsx`) and severity badges in security audit logs (`AuditLogs.tsx`) render icons alongside status text, but desktop mouse users and screen readers lack explicit hover tooltips (`title`) and screen reader labels (`aria-label`) describing badge purpose.
 
 **Action:** Always provide explicit `title` and `aria-label` attributes on status and severity badge components (e.g. `title={`Workflow run status: ${status}`}` and `aria-label={`Severity: ${severity}`}`).
+
+## 2026-09-29 - Image Roles for Non-Interactive Visual Legend Swatches with ARIA Labels
+
+**Learning:** Static `<span>` elements (such as color intensity swatches in `ActivityHeatmap`) bearing `aria-label` attributes are ignored by screen readers unless given an explicit `role="img"`, because WAI-ARIA ignores `aria-label` on generic non-interactive HTML elements without a landmark or component role.
+
+**Action:** Always include `role="img"` alongside `aria-label` and `title` when labeling static visual swatch or icon elements.
