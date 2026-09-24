@@ -529,8 +529,8 @@ not an error.
 
 ### Agent subsystem (`agent/`)
 
-- **`agent/tools.py`** — defines `BUILTIN_TOOLS` (18 tools, one schema + handler
-  each): `learn`, `ingest_document`, `capture_lead`, `recall`, `search`,
+- **`agent/tools.py`** — defines `BUILTIN_TOOLS` (19 tools, one schema + handler
+  each): `learn`, `huggingface_inference`, `ingest_document`, `capture_lead`, `recall`, `search`,
   `search_sessions`, `forget`, `read_file`, `run_command`,
   `send_telegram_message`, `send_outlook_mail`, `read_outlook_mail`,
   `list_calendar_events`, `create_calendar_event`, `run_agent_loop`,
