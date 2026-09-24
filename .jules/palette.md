@@ -132,3 +132,9 @@
 **Learning:** Status pills in workflow runs (`WorkflowRuns.tsx`) and severity badges in security audit logs (`AuditLogs.tsx`) render icons alongside status text, but desktop mouse users and screen readers lack explicit hover tooltips (`title`) and screen reader labels (`aria-label`) describing badge purpose.
 
 **Action:** Always provide explicit `title` and `aria-label` attributes on status and severity badge components (e.g. `title={`Workflow run status: ${status}`}` and `aria-label={`Severity: ${severity}`}`).
+
+## 2026-09-29 - Informative Hover Tooltips and ARIA Labels on Session Table Badges
+
+**Learning:** Persona badges and execution outcome status pills in session tables (`SessionExplorer.tsx`) render shortened code text (e.g. `sakking` or `end_turn`), but desktop mouse users and screen readers lack explicit hover tooltips (`title`) and screen reader labels (`aria-label`) explaining the full persona context or whether execution succeeded or failed.
+
+**Action:** Always provide explicit `title` hover tooltips and `aria-label` attributes on table badges and status pills (e.g. `title={session.persona ? \`Persona: ${session.persona}\` : "Unattributed session (no persona recorded)"}` and `aria-label={\`Outcome: Success (${session.stop_reason})\`}`).
