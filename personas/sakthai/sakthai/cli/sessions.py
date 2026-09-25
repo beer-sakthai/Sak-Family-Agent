@@ -47,7 +47,13 @@ def sessions() -> None:
 
 
 @sessions.command("list")
-@click.option("--limit", default=20, show_default=True, help="Limit number of sessions shown.")
+@click.option(
+    "--limit",
+    default=20,
+    show_default=True,
+    type=click.IntRange(min=1),
+    help="Limit number of sessions shown.",
+)
 def sessions_list(limit: int) -> None:
     """List past agent sessions."""
     dir_path = sessions_dir()
@@ -162,7 +168,13 @@ def sessions_show(session_id: str) -> None:
 
 @sessions.command("search")
 @click.argument("query")
-@click.option("--limit", default=20, show_default=True, help="Maximum sessions to show.")
+@click.option(
+    "--limit",
+    default=20,
+    show_default=True,
+    type=click.IntRange(min=1),
+    help="Maximum sessions to show.",
+)
 def sessions_search(query: str, limit: int) -> None:
     """Search past sessions by content (task, final answer, and tool calls)."""
     try:

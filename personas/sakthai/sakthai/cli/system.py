@@ -44,6 +44,24 @@ def _emit_json_report(report: dict[str, object]) -> None:
     click.echo(json.dumps(report, sort_keys=True))
 
 
+def _has_provider_credentials(auth: dict[str, object]) -> bool:
+    """True when any model provider's credentials were detected.
+
+    ``ready`` only covers memory (``learn``/``recall``/``mcp`` need no key), so
+    this is what decides whether ``run``/``chat`` can reach a model. A local
+    Ollama at the default address needs no env var and is not detected here.
+    """
+    keys = ("anthropic_ok", "openai_ok", "gateway_ok", "huggingface_ok", "gemini_ok")
+    return any(bool(auth.get(k)) for k in keys) or bool(auth.get("gemini_cli_oauth"))
+
+
+_NO_PROVIDER_HINT = (
+    "  ! No model provider credentials found — `run`/`chat` need one "
+    "(e.g. ANTHROPIC_API_KEY, GEMINI_API_KEY, HF_TOKEN, OLLAMA_HOST);\n"
+    "    memory commands (`learn`, `recall`, `mcp`) work now."
+)
+
+
 def _exit_if_not_ready(report: dict[str, object]) -> None:
     """Return success only when the core components are usable."""
     if not report["ready"]:
@@ -106,7 +124,10 @@ def doctor(json_output: bool) -> None:
     )
 
     click.echo()
-    if env["ready"]:
+    if env["ready"] and not _has_provider_credentials(env["auth"]):
+        click.echo(click.style("  ✓ Memory is ready.", fg="green", bold=True))
+        click.echo(click.style(_NO_PROVIDER_HINT, fg="yellow"))
+    elif env["ready"]:
         click.echo(click.style("  ✓ SakThai is ready.", fg="green", bold=True))
     else:
         click.echo(click.style("  ✗ Core components missing — see above.", fg="red", bold=True))
@@ -257,7 +278,12 @@ def status(json_output: bool) -> None:
         click.echo(f"  {_info()} Skills dir       : none ({env['paths']['skills_dir']})")
 
     click.echo()
-    if env["ready"]:
+    if env["ready"] and not _has_provider_credentials(env["auth"]):
+        click.echo(
+            click.style("  ✓ Memory ready — try: sakthai learn / recall", fg="green", bold=True)
+        )
+        click.echo(click.style(_NO_PROVIDER_HINT, fg="yellow"))
+    elif env["ready"]:
         click.echo(
             click.style(
                 '  ✓ Ready — try: sakthai run "what do you know about me?"', fg="green", bold=True
@@ -312,7 +338,13 @@ def web_setup() -> None:
 
 @web.command("serve")
 @click.option("--host", default="127.0.0.1", show_default=True, help="Interface to bind.")
-@click.option("--port", default=3001, show_default=True, type=int, help="Port to listen on.")
+@click.option(
+    "--port",
+    default=3001,
+    show_default=True,
+    type=click.IntRange(0, 65535),
+    help="Port to listen on.",
+)
 def web_serve(host: str, port: int) -> None:
     """Serve the read-only web API.
 
@@ -323,7 +355,7 @@ def web_serve(host: str, port: int) -> None:
 
     try:
         server = serve(host=host, port=port)
-    except PermissionError as exc:
+    except OSError as exc:  # PermissionError (public bind refused), port in use, bad host
         raise click.ClickException(str(exc)) from exc
 
     click.echo(click.style(f"\n  SakThai web API on http://{host}:{port}", bold=True))

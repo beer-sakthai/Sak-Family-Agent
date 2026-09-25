@@ -102,7 +102,13 @@ def learn(
 @click.command()
 @click.argument("query", required=False)
 @click.option("--tag", "tag", default=None, help="Recall facts carrying this exact tag.")
-@click.option("--limit", default=20, show_default=True, help="Max results to display.")
+@click.option(
+    "--limit",
+    default=20,
+    show_default=True,
+    type=click.IntRange(min=1),
+    help="Max results to display.",
+)
 @click.option(
     "--persona", type=click.Choice(config.PERSONA_NAMES), default=None, help=_PERSONA_OPTION_HELP
 )
@@ -140,7 +146,7 @@ def memory(ctx: click.Context, persona: str | None) -> None:
 
 
 @memory.command("show")
-@click.option("--limit", default=50, show_default=True)
+@click.option("--limit", default=50, show_default=True, type=click.IntRange(min=1))
 @click.pass_context
 def memory_show(ctx: click.Context, limit: int) -> None:
     """List recent facts and top observations."""
@@ -193,7 +199,13 @@ def memory_stats(ctx: click.Context, as_json: bool) -> None:
 
 @memory.command("search")
 @click.argument("query")
-@click.option("--limit", default=50, show_default=True, help="Max results per section.")
+@click.option(
+    "--limit",
+    default=50,
+    show_default=True,
+    type=click.IntRange(min=1),
+    help="Max results per section.",
+)
 @click.pass_context
 def memory_search(ctx: click.Context, query: str, limit: int) -> None:
     """Search facts and observations for QUERY."""
@@ -219,7 +231,9 @@ def memory_forget(ctx: click.Context, fact_id: int) -> None:
     """Delete a fact by id."""
     with _open_store(ctx.obj) as store:
         ok = store.forget_fact(fact_id)
-    click.echo("forgotten" if ok else f"no fact with id {fact_id}")
+    if not ok:
+        raise click.ClickException(f"no fact with id {fact_id}")
+    click.echo("forgotten")
 
 
 @memory.command("forget-obs")
@@ -229,7 +243,9 @@ def memory_forget_obs(ctx: click.Context, obs_id: int) -> None:
     """Delete an observation by id."""
     with _open_store(ctx.obj) as store:
         ok = store.forget_observation(obs_id)
-    click.echo("forgotten" if ok else f"no observation with id {obs_id}")
+    if not ok:
+        raise click.ClickException(f"no observation with id {obs_id}")
+    click.echo("forgotten")
 
 
 @memory.command("backup")
@@ -275,8 +291,11 @@ def memory_export(ctx: click.Context, path: Path, force: bool, fmt: str) -> None
         payload = snapshot_to_jsonl(snapshot)
     else:
         payload = json.dumps(snapshot, indent=2, ensure_ascii=False)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(payload, encoding="utf-8")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(payload, encoding="utf-8")
+    except OSError as exc:
+        raise click.ClickException(f"could not write snapshot: {exc}") from exc
     click.echo(
         f"exported {len(snapshot['facts'])} facts, "
         f"{len(snapshot['observations'])} observations -> {path} ({fmt})"
@@ -339,7 +358,13 @@ _CONSOLIDATE_PROMPT = (
 
 
 @memory.command("consolidate-sessions")
-@click.option("--limit", default=10, show_default=True, type=int, help="Max sessions to process.")
+@click.option(
+    "--limit",
+    default=10,
+    show_default=True,
+    type=click.IntRange(min=1),
+    help="Max sessions to process.",
+)
 @click.option("--model", default=None, help="Model override for the extraction LLM.")
 @click.pass_context
 def memory_consolidate_sessions(ctx: click.Context, limit: int, model: str | None) -> None:
@@ -451,7 +476,13 @@ def memory_deduplicate(ctx: click.Context, dry_run: bool, verbose: bool) -> None
 
 
 @memory.command("family")
-@click.option("--limit", default=50, show_default=True, help="Max facts/observations to display.")
+@click.option(
+    "--limit",
+    default=50,
+    show_default=True,
+    type=click.IntRange(min=1),
+    help="Max facts/observations to display.",
+)
 @click.option(
     "--personas",
     "personas",

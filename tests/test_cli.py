@@ -209,7 +209,7 @@ def test_memory_forget(runner: CliRunner) -> None:
     with MemoryStore() as store:
         assert all(f.id != fact_id for f in store.list_facts())
     missing = runner.invoke(main, ["memory", "forget", "99999"])
-    assert missing.exit_code == 0
+    assert missing.exit_code == 1
     assert "no fact with id 99999" in missing.output
 
 
@@ -321,7 +321,7 @@ def test_memory_forget_obs(runner: CliRunner) -> None:
 
 def test_memory_forget_obs_missing(runner: CliRunner) -> None:
     result = runner.invoke(main, ["memory", "forget-obs", "99999"])
-    assert result.exit_code == 0
+    assert result.exit_code == 1
     assert "no observation with id 99999" in result.output
 
 

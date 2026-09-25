@@ -501,3 +501,38 @@ def test_setup_interactive_append_api_key(
     content = env_file.read_text(encoding="utf-8")
     assert "ANTHROPIC_API_KEY=sk-test-key-456" in content
     assert "OTHER_VAR=123" in content
+
+
+# ---------------------------------------------------------------------------
+# "ready" covers memory only — say so when no model provider is configured
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("command", ["doctor", "status"])
+def test_ready_without_provider_credentials_says_run_needs_one(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, command: str
+) -> None:
+    monkeypatch.setattr(system_mod, "check_env", lambda: _fake_env(anthropic_ok=False))
+    result = runner.invoke(main, [command])
+    assert result.exit_code == 0  # memory is usable, so still "ready" for automation
+    assert "No model provider credentials found" in result.output
+    assert "SakThai is ready." not in result.output
+    assert "try: sakthai run" not in result.output
+
+
+@pytest.mark.parametrize("command", ["doctor", "status"])
+def test_ready_with_provider_credentials_has_no_warning(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, command: str
+) -> None:
+    monkeypatch.setattr(system_mod, "check_env", lambda: _fake_env(anthropic_ok=True))
+    result = runner.invoke(main, [command])
+    assert result.exit_code == 0
+    assert "No model provider credentials found" not in result.output
+
+
+@pytest.mark.parametrize(
+    "auth_key", ["openai_ok", "gateway_ok", "huggingface_ok", "gemini_ok", "gemini_cli_oauth"]
+)
+def test_any_provider_counts_as_credentials(auth_key: str) -> None:
+    assert system_mod._has_provider_credentials({auth_key: True})
+    assert not system_mod._has_provider_credentials({"anthropic_ok": False})

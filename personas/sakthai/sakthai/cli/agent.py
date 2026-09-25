@@ -283,12 +283,15 @@ def run(
         resolved, missing = resolve_skill_names(list(with_skills), persona=persona)
         if resolved:
             click.echo(f"[dry-run] skills:      {len(resolved)} resolved ({', '.join(resolved)})")
+        problems = []
         if not report["runnable"]:
-            raise click.ClickException(
+            problems.append(
                 f"Not runnable: no credentials found for provider {report['provider']!r}."
             )
         if missing:
-            raise click.ClickException(f"Unresolved --with-skills name(s): {', '.join(missing)}")
+            problems.append(f"Unresolved --with-skills name(s): {', '.join(missing)}")
+        if problems:
+            raise click.ClickException(" ".join(problems))
         return
     if with_skills:
         _, missing = resolve_skill_names(list(with_skills), persona=persona)

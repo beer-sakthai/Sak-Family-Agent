@@ -15,7 +15,13 @@ def eval_cmd() -> None:
 
 
 @eval_cmd.command("summary")
-@click.option("--limit", default=50, show_default=True, help="Number of recent runs to summarize.")
+@click.option(
+    "--limit",
+    default=50,
+    show_default=True,
+    type=click.IntRange(min=1),
+    help="Number of recent runs to summarize.",
+)
 @click.option("--json", "as_json", is_flag=True, help="Emit the raw summary as JSON.")
 def eval_summary(limit: int, as_json: bool) -> None:
     """Summarize latency, tokens, and error rate over recent agent runs."""
