@@ -150,3 +150,9 @@
 **Learning:** Multi-select persona filter trigger buttons in dashboard header controls (such as `PersonaFilter.tsx`) can leave desktop users uncertain about current filter selection state before opening the dropdown unless dynamic hover `title` tooltips reflecting the active selection (e.g. `title="Filter dashboard by persona"` vs `title="Filter by persona (Selected: SakThai)"`) are provided.
 
 **Action:** Provide dynamic `title` hover tooltips on multi-select filter triggers reflecting both default and active selection states.
+
+## 2026-10-02 - Informative Hover Title Tooltips on Preference Menu Options
+
+**Learning:** Preference menu option buttons (such as theme and density options in `DisplayMenu.tsx`) carry `role="menuitemradio"` and visible labels, but desktop mouse users hovering over individual options lack target hover tooltips (`title`) clarifying the exact preference action before clicking.
+
+**Action:** Add explicit `title` attributes (e.g. `title={`Switch theme to ${label}`}`) on all `role="menuitemradio"` and preference option controls.
