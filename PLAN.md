@@ -92,6 +92,7 @@ never duplicate content across files.
 | **Repo-wide vulnerability + code-quality sweep** — ruff/mypy/bandit/pylint/pytest on the root package (all clean), bandit + ruff + tests on `sakthai-chat-cli`, `teams-copilot-mcp`, `agent_workflow_framework`, pip-audit + npm audit on every lockfile; fix the 12 ruff findings in the two un-linted trees | [x] 2026-09-24 |
 | **CI for `sakthai-chat-cli` and `teams-copilot-mcp` tests** — new path-filtered `subprojects.yml` running each tree's own pytest suite from its `uv.lock` (`uv sync --frozen`), so failures there stop accumulating unnoticed | [x] 2026-09-25 |
 | **Move `hypothesis` out of runtime dependencies** — `hypothesis[dev]>=6.165.10` sat in `[project].dependencies` (nothing in the package imports it; hypothesis has no `dev` extra). Removed it; the `dev` extra's floor raised to `>=6.165.10` so the minimum is unchanged | [x] 2026-09-25 |
+| **Upgrade `fastmcp` 3 → 4 in `teams-copilot-mcp`** — `fastmcp>=4.0.0,<5` (was unbounded `>=2.0.0`); lock resolves 4.0.9 with `mcp` 2.2.0. No code changes needed: 37 tests pass, and an in-memory plus a real stdio smoke test list all 8 tools and complete a tool call; pip-audit clean | [x] 2026-09-25 |
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |
