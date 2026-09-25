@@ -505,6 +505,37 @@ describe("SessionExplorer", () => {
     expect(screen.getAllByText("unattributed").length).toBeGreaterThan(0);
   });
 
+  it("renders persona badges and outcome status pills with explicit title tooltips and aria-labels", () => {
+    renderExplorer();
+    const firstSession = sessions.sessions[0];
+    if (firstSession.persona) {
+      const personaBadge = screen.getAllByLabelText(`Persona: ${firstSession.persona}`)[0];
+      expect(personaBadge).toBeInTheDocument();
+      expect(personaBadge).toHaveAttribute("title", `Persona: ${firstSession.persona}`);
+    }
+
+    const outcomeBadge = screen.getAllByLabelText(/Outcome:/)[0];
+    expect(outcomeBadge).toBeInTheDocument();
+    expect(outcomeBadge).toHaveAttribute(
+      "title",
+      `Outcome: ${firstSession.stop_reason || "unknown"}${
+        firstSession.had_error ? " (error)" : " (success)"
+      }`,
+    );
+  });
+
+  it("provides informative title tooltip on unattributed persona badge", () => {
+    const unattributedSession = {
+      ...sessions.sessions[0],
+      id: "unattr-1",
+      persona: null,
+    };
+    renderExplorer({ sessions: [unattributedSession], total: 1 });
+    const badge = screen.getByLabelText("Unattributed session (no persona recorded)");
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveAttribute("title", "Unattributed session (no persona recorded)");
+  });
+
   it("sends search upward for a server-side query", () => {
     const onSearchChange = vi.fn();
     renderExplorer({ onSearchChange });
@@ -568,7 +599,7 @@ describe("SessionExplorer", () => {
   // Ported from main (6f6ef8d, f2b0d71): a clear-search affordance and an
   // empty-state reset. Adapted because search is server-driven here, so both
   // report upward rather than mutating local state.
-  it("offers a clear-search button only once there is a query", () => {
+  it("offers a clear-search button only once there is a query with shortcut hint tooltip", () => {
     const { rerender } = renderExplorer({ search: "" });
     expect(screen.queryByLabelText("Clear search query")).not.toBeInTheDocument();
     rerender(
@@ -585,7 +616,9 @@ describe("SessionExplorer", () => {
         detail={null}
       />,
     );
-    expect(screen.getByLabelText("Clear search query")).toBeInTheDocument();
+    const clearBtn = screen.getByLabelText("Clear search query");
+    expect(clearBtn).toBeInTheDocument();
+    expect(clearBtn).toHaveAttribute("title", "Clear search query (Esc)");
   });
 
   it("clears the query through the parent when the button is used", () => {
