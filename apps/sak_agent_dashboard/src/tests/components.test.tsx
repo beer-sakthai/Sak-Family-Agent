@@ -143,6 +143,19 @@ describe("AgentCard", () => {
     expect(tokenBadge).toBeInTheDocument();
     expect(tokenBadge).toHaveAttribute("title", "Total token usage: 2,000 tokens");
   });
+
+  it("renders success rate progressbar with full ARIA progressbar attributes", () => {
+    const agent: PersonaSummary = { ...active, runs: 10, errors: 2 };
+    render(<AgentCard agent={agent} />);
+    const progressbar = screen.getByRole("progressbar", {
+      name: `${agent.display_name} success rate`,
+    });
+    expect(progressbar).toBeInTheDocument();
+    expect(progressbar).toHaveAttribute("aria-valuenow", "80");
+    expect(progressbar).toHaveAttribute("aria-valuemin", "0");
+    expect(progressbar).toHaveAttribute("aria-valuemax", "100");
+    expect(progressbar).toHaveAttribute("aria-valuetext", "80.0% success rate");
+  });
 });
 
 describe("AgentOverview", () => {
