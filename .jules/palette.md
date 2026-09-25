@@ -144,3 +144,9 @@
 **Learning:** Visual percentage bars representing metric shares (such as in `PersonaDrawer.tsx`) marked with `role="presentation"` hide value state from assistive technologies. Replacing `role="presentation"` with `role="progressbar"` and supplying `aria-label`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and `aria-valuetext` ensures screen readers cleanly announce the metric share.
 
 **Action:** On custom visual progress bars, apply `role="progressbar"` along with explicit `aria-label`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and `aria-valuetext` attributes.
+
+## 2026-10-01 - Dynamic Hover Title Tooltips on Persona Filter Controls
+
+**Learning:** Multi-select persona filter trigger buttons in dashboard header controls (such as `PersonaFilter.tsx`) can leave desktop users uncertain about current filter selection state before opening the dropdown unless dynamic hover `title` tooltips reflecting the active selection (e.g. `title="Filter dashboard by persona"` vs `title="Filter by persona (Selected: SakThai)"`) are provided.
+
+**Action:** Provide dynamic `title` hover tooltips on multi-select filter triggers reflecting both default and active selection states.
