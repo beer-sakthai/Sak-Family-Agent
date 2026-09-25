@@ -93,6 +93,7 @@ never duplicate content across files.
 | **CI for `sakthai-chat-cli` and `teams-copilot-mcp` tests** — new path-filtered `subprojects.yml` running each tree's own pytest suite from its `uv.lock` (`uv sync --frozen`), so failures there stop accumulating unnoticed | [x] 2026-09-25 |
 | **Move `hypothesis` out of runtime dependencies** — `hypothesis[dev]>=6.165.10` sat in `[project].dependencies` (nothing in the package imports it; hypothesis has no `dev` extra). Removed it; the `dev` extra's floor raised to `>=6.165.10` so the minimum is unchanged | [x] 2026-09-25 |
 | **Upgrade `fastmcp` 3 → 4 in `teams-copilot-mcp`** — `fastmcp>=4.0.0,<5` (was unbounded `>=2.0.0`); lock resolves 4.0.9 with `mcp` 2.2.0. No code changes needed: 37 tests pass, and an in-memory plus a real stdio smoke test list all 8 tools and complete a tool call; pip-audit clean | [x] 2026-09-25 |
+| **Upgrade `anthropic` 0.x → 1.x in `sakthai-chat-cli`** — `anthropic>=1.8.0,<2.0` (was `>=0.120.2,<1.0`); lock resolves 1.8.0 and adds `httpx2`/`httpcore2`. Audited against the SDK's v1 migration guide: no `with_raw_response`, Text Completions, sampling params, removed names, custom headers, Bedrock client, or `httpx` objects handed to the client, so no code changes. README documents the SDK line and the `httpx2` note. 1419 passed / 6 skipped (unchanged); pip-audit clean | [x] 2026-09-25 |
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |
