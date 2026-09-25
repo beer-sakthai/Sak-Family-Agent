@@ -1,0 +1,98 @@
+# Runs the test suites of the two self-contained Python sub-projects that
+# ci.yml does not cover: sakthai-chat-cli/ and services/teams-copilot-mcp/.
+#
+# Each has its own pyproject.toml and uv.lock, and until this workflow no job
+# ran either suite, so failures accumulated unnoticed (7 guardrail-assertion
+# failures and a collection error in chat-cli, fixed in #1458). Each job
+# installs strictly from its own lockfile (`uv sync --frozen`), so the pins are
+# exactly what the lock says and a pyproject/lock mismatch fails the job.
+#
+# Path-filtered so this stays off every change that touches neither tree.
+name: Sub-project tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sakthai-chat-cli/**"
+      - "services/teams-copilot-mcp/**"
+      - ".github/workflows/subprojects.yml"
+  pull_request:
+    paths:
+      - "sakthai-chat-cli/**"
+      - "services/teams-copilot-mcp/**"
+      - ".github/workflows/subprojects.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: subprojects-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  chat-cli:
+    name: sakthai-chat-cli
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: sakthai-chat-cli
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+
+      - name: Install dependencies
+        run: uv sync --frozen --all-extras
+
+      - name: Run tests
+        run: uv run pytest
+
+  teams-copilot-mcp:
+    name: teams-copilot-mcp
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: services/teams-copilot-mcp
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+
+      - name: Install dependencies
+        run: uv sync --frozen --all-extras
+
+      - name: Run tests
+        run: uv run pytest

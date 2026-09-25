@@ -728,6 +728,15 @@ describe("WorkflowRuns", () => {
 });
 
 describe("PersonaFilter", () => {
+  it("renders dynamic title tooltips on trigger based on selection state", () => {
+    const { rerender } = render(<PersonaFilter selected={[]} onChange={vi.fn()} />);
+    const trigger = screen.getByTestId("persona-filter");
+    expect(trigger).toHaveAttribute("title", "Filter dashboard by persona");
+
+    rerender(<PersonaFilter selected={["sakthai"]} onChange={vi.fn()} />);
+    expect(trigger).toHaveAttribute("title", "Filter by persona (Selected: SakThai)");
+  });
+
   it("opens menu on trigger click, auto-focuses first item, and navigates items via Arrow keys and Home/End", () => {
     const onChange = vi.fn();
 

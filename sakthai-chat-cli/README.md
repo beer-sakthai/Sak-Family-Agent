@@ -49,6 +49,13 @@ monorepo, not here.
 Requires **Python 3.11+**. [`uv`](https://docs.astral.sh/uv/) is recommended
 but `pip` works too.
 
+The Anthropic backend uses the **`anthropic` 1.x** Python SDK
+(`anthropic>=1.8.0,<2.0`), which is built on
+[`httpx2`](https://github.com/pydantic/httpx2) rather than `httpx`. If you
+build your own client for the SDK, take its `Timeout`/transport/`http_client`
+objects from `httpx2` (or `anthropic.DefaultHttpxClient`). The
+OpenAI-compatible backends still use plain `httpx`.
+
 ```bash
 # clone, then from the repo root:
 uv venv && uv pip install -e ".[dev]"     # or: pip install -e ".[dev]"
