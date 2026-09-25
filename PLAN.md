@@ -91,6 +91,7 @@ never duplicate content across files.
 | **`sakthai-chat-cli` test failures** — 7 guardrail tests asserted on reason wording (`"destructive"`) that no longer matches: the commands are still denied, by the earlier `Potentially dangerous … blocked` rule; ported the canonical suite's `destructive`/`dangerous` assertion. `test_perform_eda.py` failed collection on undeclared `pandas`; added it to the `dev` extra. Suite now 1419 passed / 6 skipped | [x] 2026-09-24 |
 | **Repo-wide vulnerability + code-quality sweep** — ruff/mypy/bandit/pylint/pytest on the root package (all clean), bandit + ruff + tests on `sakthai-chat-cli`, `teams-copilot-mcp`, `agent_workflow_framework`, pip-audit + npm audit on every lockfile; fix the 12 ruff findings in the two un-linted trees | [x] 2026-09-24 |
 | **CI for `sakthai-chat-cli` and `teams-copilot-mcp` tests** — new path-filtered `subprojects.yml` running each tree's own pytest suite from its `uv.lock` (`uv sync --frozen`), so failures there stop accumulating unnoticed | [x] 2026-09-25 |
+| **Move `hypothesis` out of runtime dependencies** — `hypothesis[dev]>=6.165.10` sat in `[project].dependencies` (nothing in the package imports it; hypothesis has no `dev` extra). Removed it; the `dev` extra's floor raised to `>=6.165.10` so the minimum is unchanged | [x] 2026-09-25 |
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |
