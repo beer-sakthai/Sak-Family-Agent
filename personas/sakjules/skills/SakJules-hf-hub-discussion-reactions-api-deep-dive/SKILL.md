@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-hf-hub-discussion-reactions-api-deep-dive
+name: SakJules-hf-hub-discussion-reactions-api-deep-dive
 description: "Complete deep-dive on the Hugging Face Hub Discussion Reactions API — emoji reactions on discussions, PRs, and comments with read/add/remove patterns."
 ---
 

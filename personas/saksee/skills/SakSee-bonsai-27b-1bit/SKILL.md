@@ -1,5 +1,5 @@
 ---
-name: SakSee-SakThai-bonsai-27b-1bit
+name: SakSee-bonsai-27b-1bit
 description: "|   Bonsai 27B by Prism ML — a true 1-bit (Q1_0_g128) LLM derived from Qwen3.6-27B.   3.9 GB footprint, ~90% FP16 intelligence, runs in-browser via WebGPU.   Companion ternary variant at ~7.2 GB (~95% FP16)."
 ---
 

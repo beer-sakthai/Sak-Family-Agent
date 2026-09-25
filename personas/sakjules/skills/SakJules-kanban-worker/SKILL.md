@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakSit-kanban-worker
+name: SakJules-kanban-worker
 description: "Execute tasks in a kanban workflow pattern."
 ---
 

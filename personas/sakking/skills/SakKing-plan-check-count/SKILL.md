@@ -1,5 +1,5 @@
 ---
-name: SakSit-plan-check-count
+name: SakKing-plan-check-count
 description: "Plan first, verify before reporting, count before stating."
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-user-communication
+name: SakJules-user-communication
 description: "Communication preferences and interaction conventions for the primary user (Beer / beer-sakthai). Apply on every interaction."
 ---
 

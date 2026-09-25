@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-hf-trending-crawl
+name: SakJules-hf-trending-crawl
 description: "Scheduled crawl of HF Hub trending models: fetch, select uncovered model, deep-dive, report, update tracker, sync to GitHub."
 ---
 

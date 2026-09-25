@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakSee-cron-fleet
+name: SakJules-cron-fleet
 description: "Manage a Hermes cron fleet across multiple profiles — list, audit, re-enable, and remediate scheduled jobs."
 ---
 

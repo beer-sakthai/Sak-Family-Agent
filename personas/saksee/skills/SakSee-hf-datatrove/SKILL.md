@@ -1,5 +1,5 @@
 ---
-name: SakSee-SakThai-hf-datatrove
+name: SakSee-hf-datatrove
 description: "Complete reference on Hugging Face DataTrove — the large-scale text data processing library for LLM training data pipelines. Covers pipeline blocks, executors (Local/Slurm/Ray/Jobs), deduplication (minhash/exact-substr/sentence), Synthetic data gener"
 ---
 

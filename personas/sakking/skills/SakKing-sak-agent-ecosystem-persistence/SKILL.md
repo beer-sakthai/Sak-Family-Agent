@@ -1,5 +1,5 @@
 ---
-name: SakSit-sak-agent-ecosystem-persistence
+name: SakKing-sak-agent-ecosystem-persistence
 description: "Backup agent state to Drive and Supermemory."
 ---
 

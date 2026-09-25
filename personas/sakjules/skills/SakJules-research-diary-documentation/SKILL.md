@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakSee-research-diary-documentation
+name: SakJules-research-diary-documentation
 description: "Create and save research diaries to GitHub for documentation safety."
 ---
 

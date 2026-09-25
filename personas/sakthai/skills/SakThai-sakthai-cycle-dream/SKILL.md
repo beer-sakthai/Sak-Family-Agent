@@ -1,5 +1,5 @@
 ---
-name: SakThai-SakKing-sakthai-cycle-dream
+name: SakThai-sakthai-cycle-dream
 description: "Sakking Sakthai Cycle Dream"
 ---
 # SakThai Cycle — Dream

@@ -1,5 +1,5 @@
 ---
-name: SakSit-SakThai-hf-hub-contents-api
+name: SakSit-hf-hub-contents-api
 description: "HuggingFace Hub Contents API endpoint details and usage patterns"
 ---
 

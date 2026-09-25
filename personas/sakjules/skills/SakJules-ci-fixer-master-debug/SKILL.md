@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-ci-fixer-master-debug
+name: SakJules-ci-fixer-master-debug
 description: "Diagnose and fix GitHub Actions CI failures."
 ---
 

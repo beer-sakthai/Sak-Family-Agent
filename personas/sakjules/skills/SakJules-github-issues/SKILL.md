@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakSee-github-issues
+name: SakJules-github-issues
 description: "Create, triage, label, assign GitHub issues via gh or REST."
 ---
 

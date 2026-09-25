@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-cron-watchdog-self-heal
+name: SakJules-cron-watchdog-self-heal
 description: "Auto-resume paused/disabled cron jobs across profiles."
 ---
 # Cron Watchdog Self-Heal

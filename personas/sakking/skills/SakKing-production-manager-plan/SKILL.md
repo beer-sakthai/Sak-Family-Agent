@@ -1,5 +1,5 @@
 ---
-name: SakSit-production-manager-plan
+name: SakKing-production-manager-plan
 description: "Plan, analyze, and report production with cost and metrics."
 ---
 

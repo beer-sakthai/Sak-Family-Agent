@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakSit-docker-compose-business-deploy
+name: SakJules-docker-compose-business-deploy
 description: "Practical Docker Compose patterns for containerizing Python/FastAPI backend services with databases, networking, and secrets management. Mirrors Beers WorkFlow-SakThai deployment style."
 ---
 

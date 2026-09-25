@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-hf-ecosystem-health-check
+name: SakJules-hf-ecosystem-health-check
 description: "Multi-source health snapshot and gap analysis for a Hugging Face asset portfolio — models, datasets, Spaces, collections, CI, crons, persona documentation consistency, and cross-platform trending visibility (GitHub, HF, Kaggle)"
 ---
 

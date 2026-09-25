@@ -1,5 +1,5 @@
 ---
-name: SakSee-SakKing-hf-jobs
+name: SakSee-hf-jobs
 description: "Hugging Face Jobs: run compute workloads (scripts, Docker, UV) on HF infrastructure with GPU/TPU/CPU, scheduling, webhooks, and the Jobs CLI / Python SDK."
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-github-ci-fix
+name: SakJules-github-ci-fix
 description: "Diagnose and repair GitHub Actions CI failures."
 ---
 

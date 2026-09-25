@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-hf-spaces-agents
+name: SakJules-hf-spaces-agents
 description: ">   Complete reference on using AI coding agents (Claude Code, Codex, OpenCode, etc.)   to create Hugging Face Spaces directly from model pages. Covers the Deploy -> Spaces   workflow, the AI prompt generation system, agent-compatible Space templates"
 ---
 

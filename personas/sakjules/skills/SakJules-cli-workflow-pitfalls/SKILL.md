@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakKing-cli-workflow-pitfalls
+name: SakJules-cli-workflow-pitfalls
 description: "CLI-specific pitfalls and workarounds for SakKing Agent workflows."
 ---
 

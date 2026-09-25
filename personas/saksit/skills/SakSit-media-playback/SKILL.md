@@ -1,5 +1,5 @@
 ---
-name: SakSit-SakThai-media-playback
+name: SakSit-media-playback
 description: "Find and deliver playable media links for requested tracks, playlists,   or sleep/relaxation content across desktop and mobile."
 ---
 

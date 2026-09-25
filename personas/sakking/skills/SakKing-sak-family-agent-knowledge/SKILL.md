@@ -1,5 +1,5 @@
 ---
-name: SakSit-sak-family-agent-knowledge
+name: SakKing-sak-family-agent-knowledge
 description: "Help and support for the Sak-Family-Agent monorepo."
 ---
 

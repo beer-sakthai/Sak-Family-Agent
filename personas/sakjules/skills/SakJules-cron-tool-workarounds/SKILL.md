@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-cron-tool-workarounds
+name: SakJules-cron-tool-workarounds
 description: "Approved terminal patterns for cron-mode execution — avoids tirith security blocks and execute_code restrictions."
 ---
 
@@ -699,7 +699,7 @@ See `references/pre-report-delta-check.md` for the full decision matrix and impl
 For producing external-facing promotional content (tweet threads, blog posts, community posts) from cron-mode HF data, see `references/content-creation.md` for the full 6-step workflow with content-type duplication pre-check, narrative hook identification, and character budget guidelines. The content types index tracks 15 formats with usage counts to avoid repetition.
 
 ⚠️ **MANDATORY pre-check — run BEFORE creating any promotional content.** As of 2026-07-30, **tweet thread drafts are at 8 uses and BLOCKED** (≥5 = hard block per the decision matrix). The content type duplication pre-check in `references/content-creation.md` is a 3-second local grep on the journal — always run it before Step 1 to avoid wasting ~5 min on a saturated format.
-See `SakThai-ci-fixer-master-debug` §1d for the full fallback procedure.
+See `SakJules-ci-fixer-master-debug` §1d for the full fallback procedure.
 
 See `references/git-credentials-extraction.md` for full extraction methods, verification steps, and the fake `gh` binary pitfall.
 See `references/exa-web-research-patterns.md` for tirith-safe web research via Composio EXA (search + full-page text extraction, no temp files).

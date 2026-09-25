@@ -1,5 +1,5 @@
 ---
-name: SakThai-agent-health-diagnostics
+name: SakKing-agent-health-diagnostics
 author: SakThai
 license: MIT
 description: "Diagnose why a Hermes agent isn't responding — gateway status, provider health, Telegram connectivity, log analysis"

@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-gradio-workflow
+name: SakJules-gradio-workflow
 description: "A skill for Gradio Workflow."
 ---
 

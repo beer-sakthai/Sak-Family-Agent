@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-hf-ltx2-video-gen
+name: SakJules-hf-ltx2-video-gen
 description: "Complete reference on Lightricks LTX-2 / LTX-2.3 video generation — open 22B DiT family with native audio, ComfyUI workflow-in-Space pattern, MSR IC-LoRA likeness guidance, GGUF prompt enhancers, ZeroGPU recipes. Verified 2026-07-31 on Fighterdan/LTX"
 ---
 

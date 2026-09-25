@@ -1,5 +1,5 @@
 ---
-name: SakSit-using-superpowers
+name: SakKing-using-superpowers
 description: "Use when starting any conversation - establishes how to find and use skills, requiring skill invocation before ANY response including clarifying questions"
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: SakSee-SakKing-playwright-console-error-enrichment
+name: SakSee-playwright-console-error-enrichment
 description: "Enrich Playwright run errors and test failures with browser console messages,   network failures, and runtime exceptions. Use when debugging flaky failures or hardening   E2E suites."
 ---
 

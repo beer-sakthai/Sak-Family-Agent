@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-playwright-browser-lifecycle
+name: SakJules-playwright-browser-lifecycle
 description: "Manage Playwright browser process lifecycles for long-lived cron/CI flows   — waitForEvent(close), controlled abort patterns, detached browser reuse, child-process   cleanup on timeout, and safe teardown for Chromium launched on ephemeral environment"
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: SakSit-project-plan-maintenance
+name: SakKing-project-plan-maintenance
 description: "Audit and standardize PLAN.md files across projects."
 ---
 

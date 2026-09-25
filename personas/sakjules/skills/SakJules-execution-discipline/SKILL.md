@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakKing-execution-discipline
+name: SakJules-execution-discipline
 description: ">   Class-level execution discipline for bounded, evidence-first action.   Apply whenever the next step is uncertain, a fix is unconfirmed, or the   user explicitly asks the agent to stop guessing. Governs the boundary   between reasoning and executi"
 ---
 

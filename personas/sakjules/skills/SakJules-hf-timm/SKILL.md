@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-hf-timm
+name: SakJules-hf-timm
 description: "PyTorch Image Models (timm) by Ross Wightman — model creation, listing, inference, feature extraction, data augmentation, training scripts, and Hugging Face Hub integration for 1,000+ vision models"
 ---
 

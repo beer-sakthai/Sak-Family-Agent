@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakTan-close-the-day
+name: SakJules-close-the-day
 description: "End-of-day closure routine — mark tasks done, log the days outcome, and set tomorrows top action."
 ---
 

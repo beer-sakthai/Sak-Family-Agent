@@ -1,5 +1,5 @@
 ---
-name: SakThai-SakKing-sakthai-cycle-care
+name: SakThai-sakthai-cycle-care
 description: "Sakking Sakthai Cycle Care"
 ---
 # SakThai Cycle — Care

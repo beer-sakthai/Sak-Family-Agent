@@ -1,5 +1,5 @@
 ---
-name: SakSee-SakKing-broadcast-channel-api
+name: SakSee-broadcast-channel-api
 description: "Cross-context communication in the browser using Broadcast Channel API — same-origin messaging between tabs, windows, iframes, and service workers."
 ---
 

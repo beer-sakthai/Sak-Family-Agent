@@ -1,5 +1,5 @@
 ---
-name: SakSee-SakThai-hf-hub-webhooks-practical-patterns-deep-dive
+name: SakSee-hf-hub-webhooks-practical-patterns-deep-dive
 description: "# HF Hub Webhooks — Practical Patterns"
 ---
 

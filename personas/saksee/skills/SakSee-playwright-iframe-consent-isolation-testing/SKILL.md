@@ -1,5 +1,5 @@
 ---
-name: SakSee-SakKing-playwright-iframe-consent-isolation-testing
+name: SakSee-playwright-iframe-consent-isolation-testing
 description: "Validate third-party iframe consent overlays (Consent Management Platforms,   GDPR/CCPA) AND first-party storage isolation across Playwright browser contexts.   Use this when you need to prove: (1) CMP banners render and accept/reject actually   set "
 ---
 

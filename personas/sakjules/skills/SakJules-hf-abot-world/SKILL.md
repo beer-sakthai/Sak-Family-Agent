@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-hf-abot-world
+name: SakJules-hf-abot-world
 description: "Complete reference on ABot-World (AMap CVLab) — action-conditioned interactive world model built on Wan2.2-TI2V-5B. Causal student distillation + LongForcing, local attention, lightweight VAE decoder, low-bit DiT inference, and the ZeroGPU streaming "
 ---
 

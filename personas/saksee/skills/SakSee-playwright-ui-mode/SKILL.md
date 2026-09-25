@@ -1,5 +1,5 @@
 ---
-name: SakSee-SakKing-playwright-ui-mode
+name: SakSee-playwright-ui-mode
 description: "Playwright UI Mode: interactive watch mode, live step view, and time-travel debugging for test authoring and failure investigation."
 ---
 

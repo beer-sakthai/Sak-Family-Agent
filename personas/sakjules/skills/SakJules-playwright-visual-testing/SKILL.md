@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakSee-playwright-visual-testing
+name: SakJules-playwright-visual-testing
 description: "Cover image-snapshot regression and responsive viewport checks together; avoids splitting the same visual workflow across skills."
 ---
 

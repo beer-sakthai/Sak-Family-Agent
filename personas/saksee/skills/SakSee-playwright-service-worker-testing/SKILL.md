@@ -1,5 +1,5 @@
 ---
-name: SakSee-SakThai-playwright-service-worker-testing
+name: SakSee-playwright-service-worker-testing
 description: "Use when testing/verifying service worker behaviors with Playwright:   route SW fetch/handle events, mock caches/offline, assert indexedDB writes, and   enable reproducible SW-driven scenarios in E2E and CI."
 ---
 

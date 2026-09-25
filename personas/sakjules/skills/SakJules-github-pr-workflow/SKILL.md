@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakKing-github-pr-workflow
+name: SakJules-github-pr-workflow
 description: "GitHub PR lifecycle: branch, commit, open, CI, merge."
 ---
 

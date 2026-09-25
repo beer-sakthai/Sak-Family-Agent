@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-cronjob-everything
+name: SakJules-cronjob-everything
 description: "Create, manage, heal, and debug any Hermes cron job."
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-hf-model-release-checklist
+name: SakJules-hf-model-release-checklist
 description: ">-   Complete reference on the Hugging Face Hub Model Release Checklist — a   structured workflow for releasing ML models to the Hub with proper metadata,   model cards, library integration, discoverability optimization, access   control, and post-re"
 ---
 

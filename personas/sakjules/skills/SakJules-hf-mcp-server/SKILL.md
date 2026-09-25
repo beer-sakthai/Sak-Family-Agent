@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-hf-mcp-server
+name: SakJules-hf-mcp-server
 description: ">   Complete reference on the Hugging Face MCP (Model Context Protocol) Server —   connecting MCP-compatible AI assistants (Claude Desktop, Cursor, VS Code, Codex,   ChatGPT, Zed) to the Hugging Face Hub. Covers built-in tools (hf_fs, Contribute   Re"
 ---
 

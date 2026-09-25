@@ -1,5 +1,5 @@
 ---
-name: SakSee-SakThai-audiocraft
+name: SakSee-audiocraft
 description: "AudioCraft: MusicGen text-to-music, AudioGen text-to-sound."
 ---
 
