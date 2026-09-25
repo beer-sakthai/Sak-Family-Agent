@@ -855,6 +855,9 @@ describe("DisplayMenu", () => {
     expect(menuItems).toHaveLength(5); // 3 themes + 2 densities
     expect(menuItems[0]).toHaveFocus();
 
+    expect(menuItems[0]).toHaveAttribute("title", "Switch theme to Match system");
+    expect(menuItems[3]).toHaveAttribute("title", "Switch display density to Comfortable");
+
     fireEvent.keyDown(menuItems[0], { key: "ArrowDown" });
     expect(menuItems[1]).toHaveFocus();
 
