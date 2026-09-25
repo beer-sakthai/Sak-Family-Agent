@@ -200,7 +200,7 @@ for the dashboard seam — `contract-types` (regenerate the TypeScript types fro
 
 ### CI
 
-Twenty-seven workflows live in `.github/workflows/`. The ones that gate a change:
+Twenty-eight workflows live in `.github/workflows/`. The ones that gate a change:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
@@ -214,6 +214,7 @@ Twenty-seven workflows live in `.github/workflows/`. The ones that gate a change
 | `sonarcloud.yml` | push to `main` | SonarCloud analysis |
 | `agent-self-evolution.yml` | push/PR touching `personas/sakthai/agent-self-evolution/**` | that subproject's own suite |
 | `apps.yml` | push/PR touching `apps/**`, `web/contracts.py`, `scripts/gen_dashboard_types.py` | builds and tests the two projects under `apps/`, which `ci.yml` does not cover; fails on generated-TypeScript drift |
+| `subprojects.yml` | push/PR touching `sakthai-chat-cli/**`, `services/teams-copilot-mcp/**` | runs each tree's own pytest suite from its own `uv.lock` (`uv sync --frozen`); tests only, no lint/coverage |
 | `labeler.yml` | `pull_request_target` | PR labelling |
 | `bandit.yml` | push/PR to `main`, weekly | bandit SARIF to code scanning |
 | `codeql.yml` | push/PR to `main`, weekly | CodeQL (advanced setup) |
@@ -779,20 +780,20 @@ against 17,128 lines of package). This is the only suite for the `sakthai`
 package — there is no per-persona test tree. Two files in `tests/` are not test
 modules: `conftest.py` and `security_audit.py` (a helper, not collected).
 
-It is not, however, the repo's only test tree. Four others exist, and **two of
-them no workflow runs**:
+It is not, however, the repo's only test tree. Four others exist:
 
 | Tree | Files | Run by |
 |---|---:|---|
 | `tests/` | 106 | `ci.yml` |
 | `apps/agent_workflow_framework/tests/` | 9 | `apps.yml` (no coverage measured) |
 | `apps/sak_agent_dashboard` (TypeScript) | 14 | `apps.yml` |
-| `sakthai-chat-cli/` | 86 | **nothing** — only `bandit.yml`/`codeql.yml` scan it |
-| `services/teams-copilot-mcp/tests/` | 3 | **nothing** — only `bandit.yml` scans it |
+| `sakthai-chat-cli/` | 86 | `subprojects.yml` (tests only; not linted in CI) |
+| `services/teams-copilot-mcp/tests/` | 3 | `subprojects.yml` (tests only; not linted in CI) |
 
-The chat-CLI tree is still being written to (72 files on 27 Aug, 86 now) while
-remaining unexecuted, so expect breakage the first time anyone runs it. Don't
-assume a green `ci.yml` says anything about those two trees.
+`subprojects.yml` is path-filtered, so a green `ci.yml` still says nothing about
+those two trees — check that workflow's run when you touch them. Before it
+existed, the chat-CLI suite went unexecuted and accumulated 7 failures and a
+collection error (fixed in #1458).
 
 All tests are hermetic: no network, no GCP credentials. Integration tests that
 may hit real endpoints (Ollama, Anthropic) are marked `@pytest.mark.integration` and self-skip when credentials/endpoints
