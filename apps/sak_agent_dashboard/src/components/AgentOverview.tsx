@@ -47,8 +47,10 @@ export function AgentOverview({
               old round-robin heuristic did. */}
           {unattributed > 0 && (
             <div
+              role="status"
               className="text-xs font-mono text-hue-amber bg-hue-amber-tint/30 border border-hue-amber-line/40 px-3 py-1 rounded-full"
               title="Runs recorded before persona attribution existed. Not assigned to any persona."
+              aria-label={`${unattributed} unattributed runs recorded before persona attribution existed`}
             >
               {unattributed} unattributed
             </div>
