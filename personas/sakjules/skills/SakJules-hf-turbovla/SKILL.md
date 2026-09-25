@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-hf-turbovla
+name: SakJules-hf-turbovla
 description: "TurboVLA — LLM-free real-time Vision-Language-Action (VLA) architecture. Direct V+L→A mapping with DINOv3 + frozen BERT + BiAttentionBlock bidirectional fusion + ACT-style chunk decoder. 0.2B params, 97.7% LIBERO, 32 Hz / 0.9 GB VRAM on RTX 4090. Dai"
 ---
 

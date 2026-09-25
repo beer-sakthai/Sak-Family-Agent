@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakKing-github-auth
+name: SakJules-github-auth
 description: "GitHub auth setup: HTTPS tokens, SSH keys, gh CLI login."
 ---
 

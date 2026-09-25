@@ -1,5 +1,5 @@
 ---
-name: SakSee-SakThai-huggingface-hub-webhooks
+name: SakSee-huggingface-hub-webhooks
 description: "Hugging Face Hub Webhooks — create, manage, and debug webhooks programmatically via the SDK, CLI, and UI. Covers event types, payload structure, watched items, secrets, rate limiting, and Job integration."
 ---
 

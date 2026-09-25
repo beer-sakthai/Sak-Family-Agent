@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakKing-saksit-ga4-to-sheets-dashboard
+name: SakJules-saksit-ga4-to-sheets-dashboard
 description: "Pull Google Analytics 4 metrics into Google Sheets for live business reporting. One-shot or cron-ready."
 ---
 

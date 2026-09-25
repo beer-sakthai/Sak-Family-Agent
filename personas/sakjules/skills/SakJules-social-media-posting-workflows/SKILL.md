@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakSit-social-media-posting-workflows
+name: SakJules-social-media-posting-workflows
 description: "Post to Instagram, LinkedIn, Facebook via Composio."
 ---
 

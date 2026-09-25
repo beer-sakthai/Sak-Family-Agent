@@ -1,5 +1,5 @@
 ---
-name: SakThai-smolagents
+name: SakKing-smolagents
 description: "Use when the user mentions agents, smolagents, tool use, code agents, or using any SakThai model for agentic tasks. Phase: DEPLOY."
 ---
 

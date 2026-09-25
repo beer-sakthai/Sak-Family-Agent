@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-hf-hub-pipeline-tags-model-card-enrichment
+name: SakJules-hf-hub-pipeline-tags-model-card-enrichment
 description: "Hugging Face pipeline tags taxonomy (53 canonical tags, verified from pipelines.ts), model card YAML metadata enrichment, subtask classification system, and batch-update workflows via REST API PATCH and ModelCard.push_to_hub"
 ---
 

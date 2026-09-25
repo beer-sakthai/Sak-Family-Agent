@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakSee-house-of-sak-site
+name: SakJules-house-of-sak-site
 description: "Manage the House of Sak landing page and repo — update sections, services, pricing, and push to GitHub → Vercel auto-deploy."
 ---
 

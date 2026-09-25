@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-model-publishing-pipeline
+name: SakJules-model-publishing-pipeline
 description: "End-to-end ML model publishing: free-GPU training (Kaggle/Colab), LoRA fine-tuning, GGUF quantization, BFCL benchmark, and HF Hub release with auto-reporting."
 ---
 

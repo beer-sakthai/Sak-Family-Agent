@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-hf-hub-notebooks-integration-deep-dive
+name: SakJules-hf-hub-notebooks-integration-deep-dive
 description: ">-   Complete deep-dive on Jupyter Notebook integration with the Hugging Face Hub —   one-click Colab/Kaggle model launching, custom notebook.ipynb in repos, .ipynb   rendering, the /colab and /kaggle endpoints, Open in Colab buttons, and practical  "
 ---
 

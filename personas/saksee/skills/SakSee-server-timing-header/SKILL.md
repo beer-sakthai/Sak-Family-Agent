@@ -1,5 +1,5 @@
 ---
-name: SakSee-SakKing-server-timing-header
+name: SakSee-server-timing-header
 description: "Use the HTTP Server-Timing response header to expose backend performance metrics to browser developer tools and JavaScript, enabling front-end-to-back-end performance debugging."
 ---
 

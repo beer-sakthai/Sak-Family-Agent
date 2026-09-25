@@ -1,5 +1,5 @@
 ---
-name: SakSee-SakThai-playwright-openai-computer-use
+name: SakSee-playwright-openai-computer-use
 description: "Record Playwright browser sessions into OpenAI Computer-Using Agent formatted   JSONL bundles for cross-tool agent narratives, replay, and audit."
 ---
 

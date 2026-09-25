@@ -1,5 +1,5 @@
 ---
-name: SakThai-SakKing-sakthai-cycle-trust
+name: SakThai-sakthai-cycle-trust
 description: "Sakking Sakthai Cycle Trust"
 ---
 # SakThai Cycle — Trust

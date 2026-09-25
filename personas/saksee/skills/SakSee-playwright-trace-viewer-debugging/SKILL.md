@@ -1,5 +1,5 @@
 ---
-name: SakSee-SakKing-playwright-trace-viewer-debugging
+name: SakSee-playwright-trace-viewer-debugging
 description: "Use Playwright Trace Viewer to debug failing tests by recording traces and replaying them in the Playwright Trace Viewer UI."
 ---
 

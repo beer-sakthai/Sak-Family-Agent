@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakKing-beer-cycle-signals
+name: SakJules-beer-cycle-signals
 description: "How Beer advances me through the Sak Family cycle — reading his stage signals so I never hold a stage open or miss his release."
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakTan-daily-briefing
+name: SakJules-daily-briefing
 description: "Generate Beers day-start briefing — todays calendar, open tasks, and one clear next action — from stored memory and connected tools."
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-hf-learn-skill-loop
+name: SakJules-hf-learn-skill-loop
 description: "Use when setting up a cron-driven loop that researches Hugging Face topics   on a schedule and writes a fresh peer-quality SKILL.md to ~/.hermes/skills/mlops/   each tick. Encodes the topic ledger, bucket rotation, HF-only scope rules, and Beer-speci"
 ---
 

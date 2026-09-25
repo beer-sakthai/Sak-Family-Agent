@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakKing-hf-knowledge-curation
+name: SakJules-hf-knowledge-curation
 description: "Autonomous Hugging Face knowledge curation — learning-loop pattern for cron jobs and agents: discover new HF subtopics, avoid duplicates, research from external sources, and author class-level skills. Covers fallback strategies when primary scraping "
 ---
 

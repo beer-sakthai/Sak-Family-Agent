@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakKing-board-deck-kpi-narrative-framing
+name: SakJules-board-deck-kpi-narrative-framing
 description: "Structure board packs, QBR decks, and executive presentations so they drive decisions. Covers the 10-slide order, Pyramid Principle, action titles, 3-3-3 exec summary, variance bridges, and readability checks. Use when building or reviewing any gover"
 ---
 

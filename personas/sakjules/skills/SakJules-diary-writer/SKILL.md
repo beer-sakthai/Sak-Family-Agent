@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakSit-diary-writer
+name: SakJules-diary-writer
 description: "Write project diaries and commit them to GitHub."
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-hf-open-llm-leaderboard
+name: SakJules-hf-open-llm-leaderboard
 description: "Complete reference for the Hugging Face Open LLM Leaderboard v2 — the 6 benchmark tasks (IFEval, BBH, MATH Lvl 5, GPQA, MuSR, MMLU-PRO), evaluation parameters, model categories, reproducibility commands, and submission workflow."
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakKing-hf-peft
+name: SakJules-hf-peft
 description: "Hugging Face PEFT (Parameter-Efficient Fine-Tuning): library overview, method taxonomy (LoRA, QLoRA, adapters, soft prompts, selective), training/inference workflow, and ecosystem integration with Transformers/Accelerate."
 ---
 

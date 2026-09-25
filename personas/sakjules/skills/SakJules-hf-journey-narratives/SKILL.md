@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-hf-journey-narratives
+name: SakJules-hf-journey-narratives
 description: "Create narrative content about your Hugging Face ecosystem journey — tweet threads, blog posts, HF forum posts, retrospectives, and collection notes — for self-improvement crons, social sharing, and community engagement"
 ---
 

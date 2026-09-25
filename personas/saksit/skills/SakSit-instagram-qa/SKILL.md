@@ -1,5 +1,5 @@
 ---
-name: SakThai-instagram-qa
+name: SakSit-instagram-qa
 category: social
 author: SakThai
 license: MIT

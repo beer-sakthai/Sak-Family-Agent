@@ -1,5 +1,5 @@
 ---
-name: SakSit-fastapi-business-patterns
+name: SakKing-fastapi-business-patterns
 description: "Lightweight FastAPI + SQLite + uv backend patterns for internal business tools — lead trackers, webhook receivers, data APIs, admin dashboards. Beers go-to Python backend stack."
 ---
 

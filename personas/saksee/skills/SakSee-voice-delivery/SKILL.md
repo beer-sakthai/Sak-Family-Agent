@@ -1,5 +1,5 @@
 ---
-name: SakSee-SakThai-voice-delivery
+name: SakSee-voice-delivery
 description: "Deliver Telegram replies as matched voice notes — preferred voice is   en-US-BrianMultilingualNeural (multilingual, Thai-capable US male). Covers edge-tts   setup, MEDIA: file sending, Hermes TTS config, and browser-automation quirks on   WSL."
 ---
 

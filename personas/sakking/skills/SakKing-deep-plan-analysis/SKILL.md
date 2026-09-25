@@ -1,5 +1,5 @@
 ---
-name: SakSit-deep-plan-analysis
+name: SakKing-deep-plan-analysis
 description: "Audit and diagnose PLAN.md files with deep analysis."
 ---
 

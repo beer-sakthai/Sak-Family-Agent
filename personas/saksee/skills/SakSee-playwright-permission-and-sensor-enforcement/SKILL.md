@@ -1,5 +1,5 @@
 ---
-name: SakSee-SakThai-playwright-permission-and-sensor-enforcement
+name: SakSee-playwright-permission-and-sensor-enforcement
 description: "Enforce browser permission boundaries and sensor/device API availability   during automated tests"
 ---
 

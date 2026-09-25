@@ -1,5 +1,5 @@
 ---
-name: SakThai-audiocraft-audio-generation
+name: SakKing-audiocraft-audio-generation
 description: "AudioCraft: MusicGen text-to-music, AudioGen text-to-sound."
 version: 1.0.0
 author: Orchestra Research

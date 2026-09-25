@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakSit-kanban-orchestrator
+name: SakJules-kanban-orchestrator
 description: "Orchestrate multi-agent kanban workflows."
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakSit-skills-repo-sync
+name: SakJules-skills-repo-sync
 description: "Sync SakSit skills to saksit-skills GitHub repo."
 ---
 

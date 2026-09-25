@@ -1,5 +1,5 @@
 ---
-name: SakSit-hermes-skill-evolution
+name: SakKing-hermes-skill-evolution
 description: "Evolve skills using DSPy and GEPA optimization."
 ---
 

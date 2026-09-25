@@ -1,5 +1,5 @@
 ---
-name: SakThai-SakKing-sakthai-cycle-hope
+name: SakThai-sakthai-cycle-hope
 description: "Turn the Dream vision into a concrete, defensible plan (PTCF)."
 ---
 

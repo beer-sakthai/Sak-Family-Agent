@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-hf-llm-course
+name: SakJules-hf-llm-course
 description: "Reference for Hugging Face Transformers and LLM workflows."
 ---
 # LLM Course — Transformers & NLP Reference

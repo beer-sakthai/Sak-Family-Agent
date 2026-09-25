@@ -1,5 +1,5 @@
 ---
-name: SakThai-SakKing-sakthai-cycle-joy
+name: SakThai-sakthai-cycle-joy
 description: "Package and ship through CI without breaking the loop."
 ---
 

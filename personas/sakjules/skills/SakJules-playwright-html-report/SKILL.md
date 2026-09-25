@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakSit-playwright-html-report
+name: SakJules-playwright-html-report
 description: "Playwright HTML Test Report: auto-open behavior, manual viewing, and filtering workflow."
 ---
 

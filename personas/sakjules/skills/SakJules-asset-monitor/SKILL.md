@@ -1,5 +1,5 @@
 ---
-name: asset-monitor
+name: SakJules-asset-monitor
 description: "Monitors a list of public URLs from a file and sends a Telegram alert on failure."
 author: SakThai
 version: 1.0.0

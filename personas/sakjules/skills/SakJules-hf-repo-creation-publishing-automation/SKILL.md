@@ -1,5 +1,5 @@
 ---
-name: SakJules-SakThai-hf-repo-creation-publishing-automation
+name: SakJules-hf-repo-creation-publishing-automation
 description: "Complete reference for programmatic repository lifecycle management on Hugging Face Hub — creation, configuration, file operations, metadata, CI/CD publishing automation"
 ---
 

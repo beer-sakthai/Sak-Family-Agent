@@ -1,5 +1,5 @@
 ---
-name: SakSee-SakKing-playwright-cross-origin-isolation-validation
+name: SakSee-playwright-cross-origin-isolation-validation
 description: "Use when verifying Cross-Origin Isolation (COOP/COEP) and SharedArrayBuffer   capabilities with Playwright."
 ---
 
