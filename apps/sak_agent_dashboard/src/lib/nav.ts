@@ -9,6 +9,7 @@
 import {
   Activity,
   BarChart3,
+  Boxes,
   Database,
   GitBranch,
   MessageSquare,
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 
 export type TabId =
+  | "system"
   | "overview"
   | "analytics"
   | "sessions"
@@ -37,6 +39,13 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: readonly NavItem[] = [
+  {
+    id: "system",
+    label: "System",
+    description: "This repository: personas, architecture, tools, CLI, CI and tests",
+    icon: Boxes,
+    accent: "text-hue-teal",
+  },
   {
     id: "overview",
     label: "Overview",

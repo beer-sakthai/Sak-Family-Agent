@@ -177,13 +177,13 @@ describe("Sidebar keyboard navigation", () => {
   });
 
   it("moves between sections with the arrow keys", () => {
-    const { props } = renderSidebar({ active: "overview" });
+    const { props } = renderSidebar({ active: NAV_ITEMS[0].id });
     fireEvent.keyDown(screen.getByRole("tablist"), { key: "ArrowDown" });
     expect(props.onSelect).toHaveBeenCalledWith(NAV_ITEMS[1].id);
   });
 
   it("wraps backwards from the first section to the last", () => {
-    const { props } = renderSidebar({ active: "overview" });
+    const { props } = renderSidebar({ active: NAV_ITEMS[0].id });
     fireEvent.keyDown(screen.getByRole("tablist"), { key: "ArrowUp" });
     expect(props.onSelect).toHaveBeenCalledWith(NAV_ITEMS[NAV_ITEMS.length - 1].id);
   });
