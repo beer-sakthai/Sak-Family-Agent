@@ -164,6 +164,13 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
             }}
             placeholder="Jump to a section or run a command…"
             aria-label="Search commands"
+            role="combobox"
+            aria-expanded="true"
+            aria-autocomplete="list"
+            aria-controls="command-palette-listbox"
+            aria-activedescendant={
+              results.length > 0 ? `cmd-option-${results[clampedHighlight]?.command.id}` : undefined
+            }
             className="w-full bg-transparent text-sm text-fg placeholder:text-fg-5 outline-none"
           />
           {query && (
@@ -188,19 +195,26 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
           </kbd>
         </div>
 
-        <ul ref={listRef} className="max-h-[50vh] overflow-y-auto p-2" role="listbox" aria-label="Commands">
+        <ul
+          id="command-palette-listbox"
+          ref={listRef}
+          className="max-h-[50vh] overflow-y-auto p-2"
+          role="listbox"
+          aria-label="Commands"
+        >
           {results.length === 0 && (
-            <li className="px-3 py-6 text-center font-mono text-xs text-fg-4">
+            <li className="px-3 py-6 text-center font-mono text-xs text-fg-4" role="status">
               Nothing matches “{query}”.
             </li>
           )}
           {results.map(({ command, match, startsGroup }, index) => {
             const segments = highlightSegments(command.label, match?.positions ?? []);
+            const optionId = `cmd-option-${command.id}`;
             return (
               <React.Fragment key={command.id}>
                 {startsGroup && (
                   <li
-                    aria-hidden
+                    aria-hidden="true"
                     className="px-3 pb-1 pt-3 text-[10px] font-medium uppercase tracking-wider text-fg-5"
                   >
                     {command.group}
@@ -208,6 +222,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
                 )}
                 <li>
                   <button
+                    id={optionId}
                     type="button"
                     role="option"
                     aria-selected={index === clampedHighlight}

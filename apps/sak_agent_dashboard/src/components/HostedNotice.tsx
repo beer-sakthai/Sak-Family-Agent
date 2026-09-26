@@ -33,7 +33,7 @@ export function HostedNotice({ activeSource, isDemo }: HostedNoticeProps) {
       aria-label="Hosted deployment notice"
       className="flex flex-wrap items-start gap-3 rounded-2xl border border-hue-amber-line/40 bg-hue-amber-tint/20 p-4 text-hue-amber"
     >
-      <Info className="mt-0.5 h-4 w-4 shrink-0 text-hue-amber" aria-hidden />
+      <Info className="mt-0.5 h-4 w-4 shrink-0 text-hue-amber" aria-hidden="true" />
       <div className="min-w-0 flex-1 space-y-1">
         <p className="text-sm font-medium">
           This deployment is showing sample data, not a live agent family.
@@ -53,7 +53,7 @@ export function HostedNotice({ activeSource, isDemo }: HostedNoticeProps) {
           <code className="font-mono text-[11px]">~/.sakthai</code>.
         </p>
       </div>
-      <Cloud className="hidden h-4 w-4 shrink-0 text-hue-amber/60 sm:block" aria-hidden />
+      <Cloud className="hidden h-4 w-4 shrink-0 text-hue-amber/60 sm:block" aria-hidden="true" />
       <button
         type="button"
         onClick={() => setDismissed(true)}
@@ -61,7 +61,7 @@ export function HostedNotice({ activeSource, isDemo }: HostedNoticeProps) {
         title="Dismiss hosted deployment notice"
         className="shrink-0 rounded-lg p-1 text-hue-amber/80 transition-colors hover:bg-hue-amber-tint/60 hover:text-hue-amber focus:outline-none focus-visible:ring-2 focus-visible:ring-hue-amber"
       >
-        <X className="h-4 w-4" aria-hidden />
+        <X className="h-4 w-4" aria-hidden="true" />
       </button>
     </div>
   );

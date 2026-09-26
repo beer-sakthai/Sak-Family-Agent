@@ -13,6 +13,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import ErrorBoundary from "@/app/error";
 import AgentCard from "@/components/AgentCard";
+import CommandPalette from "@/components/CommandPalette";
 import AgentOverview from "@/components/AgentOverview";
 import AnalyticsCharts from "@/components/AnalyticsCharts";
 import AuditLogs from "@/components/AuditLogs";
@@ -1029,5 +1030,17 @@ describe("Route Error Boundary", () => {
 
     fireEvent.click(button);
     expect(reset).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("CommandPalette", () => {
+  it("renders combobox search input with complete WAI-ARIA combobox accessibility attributes", () => {
+    render(<CommandPalette onClose={vi.fn()} onNavigate={vi.fn()} actions={[]} />);
+    const combobox = screen.getByRole("combobox", { name: "Search commands" });
+    expect(combobox).toBeInTheDocument();
+    expect(combobox).toHaveAttribute("aria-expanded", "true");
+    expect(combobox).toHaveAttribute("aria-autocomplete", "list");
+    expect(combobox).toHaveAttribute("aria-controls", "command-palette-listbox");
+    expect(combobox).toHaveAttribute("aria-activedescendant", "cmd-option-nav-overview");
   });
 });
