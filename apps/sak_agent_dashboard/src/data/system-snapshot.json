@@ -1,0 +1,1028 @@
+{
+  "meta": {
+    "source_commit": "8e59a0f",
+    "source_date": "2026-09-26T08:31:46+01:00",
+    "generator": "scripts/gen_system_snapshot.py"
+  },
+  "personas": [
+    {
+      "name": "sakking",
+      "lead": false,
+      "role": "General Assistant & Runner (Deputy 1)",
+      "domain": "TDD execution, CLI runner, utility refactoring, subagents",
+      "provider": "huggingface",
+      "model": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+      "skill_count": 106,
+      "mcp_servers": [
+        "chrome-devtools",
+        "hf-media",
+        "huggingface",
+        "playwright"
+      ]
+    },
+    {
+      "name": "sakthai",
+      "lead": true,
+      "role": "Main Lead & HF Master",
+      "domain": "Hugging Face Hub, Model Lifecycle, 6-Stage Energy Cycle, QLoRA",
+      "provider": "huggingface",
+      "model": "gemini-3.1-flash-lite",
+      "skill_count": 299,
+      "mcp_servers": [
+        "huggingface"
+      ]
+    },
+    {
+      "name": "saksee",
+      "lead": false,
+      "role": "Web / Browser Specialist (Deputy 3)",
+      "domain": "Playwright, Live Web Scraping, Chrome DevTools, OCR & extraction",
+      "provider": "huggingface",
+      "model": "gemini-3.1-flash-lite",
+      "skill_count": 182,
+      "mcp_servers": [
+        "chrome-devtools",
+        "huggingface",
+        "playwright"
+      ]
+    },
+    {
+      "name": "saksit",
+      "lead": false,
+      "role": "Social / Content Specialist",
+      "domain": "Brand Copy, Social Posts, Hub Dataset Cards, Storytelling",
+      "provider": "huggingface",
+      "model": "DeepSeek-V4-Flash",
+      "skill_count": 43,
+      "mcp_servers": [
+        "hf-media",
+        "huggingface"
+      ]
+    },
+    {
+      "name": "sakjules",
+      "lead": false,
+      "role": "Master of GitHub, CI/CD & Automation",
+      "domain": "GitHub Actions, Cron Fleet, DevSecOps, Release Automation",
+      "provider": "huggingface",
+      "model": "gemini-2.5-flash-lite",
+      "skill_count": 180,
+      "mcp_servers": [
+        "huggingface"
+      ]
+    },
+    {
+      "name": "saktan",
+      "lead": false,
+      "role": "Daily Ops & Rhythm (Deputy 2)",
+      "domain": "Schedule, alarms, rhythm, health checks, eval aggregation",
+      "provider": "ollama",
+      "model": "sakthai",
+      "skill_count": 13,
+      "mcp_servers": []
+    }
+  ],
+  "package": [
+    {
+      "name": "agent",
+      "kind": "package",
+      "files": 19,
+      "lines": 6281
+    },
+    {
+      "name": "auth",
+      "kind": "module",
+      "files": 1,
+      "lines": 313
+    },
+    {
+      "name": "cli",
+      "kind": "package",
+      "files": 13,
+      "lines": 2632
+    },
+    {
+      "name": "client",
+      "kind": "package",
+      "files": 4,
+      "lines": 581
+    },
+    {
+      "name": "config",
+      "kind": "module",
+      "files": 1,
+      "lines": 594
+    },
+    {
+      "name": "cycle",
+      "kind": "package",
+      "files": 3,
+      "lines": 136
+    },
+    {
+      "name": "dashboard",
+      "kind": "package",
+      "files": 1,
+      "lines": 273
+    },
+    {
+      "name": "extensions",
+      "kind": "package",
+      "files": 2,
+      "lines": 207
+    },
+    {
+      "name": "giturl",
+      "kind": "module",
+      "files": 1,
+      "lines": 42
+    },
+    {
+      "name": "hf",
+      "kind": "module",
+      "files": 1,
+      "lines": 45
+    },
+    {
+      "name": "lead",
+      "kind": "package",
+      "files": 2,
+      "lines": 43
+    },
+    {
+      "name": "learn",
+      "kind": "package",
+      "files": 3,
+      "lines": 87
+    },
+    {
+      "name": "mcp",
+      "kind": "package",
+      "files": 6,
+      "lines": 767
+    },
+    {
+      "name": "memory",
+      "kind": "package",
+      "files": 7,
+      "lines": 1601
+    },
+    {
+      "name": "sakking_skills",
+      "kind": "module",
+      "files": 1,
+      "lines": 329
+    },
+    {
+      "name": "sandbox",
+      "kind": "module",
+      "files": 1,
+      "lines": 167
+    },
+    {
+      "name": "scripts",
+      "kind": "package",
+      "files": 2,
+      "lines": 121
+    },
+    {
+      "name": "skills",
+      "kind": "module",
+      "files": 1,
+      "lines": 344
+    },
+    {
+      "name": "team",
+      "kind": "package",
+      "files": 4,
+      "lines": 723
+    },
+    {
+      "name": "telegram",
+      "kind": "package",
+      "files": 5,
+      "lines": 416
+    },
+    {
+      "name": "web",
+      "kind": "package",
+      "files": 3,
+      "lines": 1775
+    }
+  ],
+  "tools": [
+    {
+      "name": "learn",
+      "summary": "Save a fact about the user into persistent SakThai memory.",
+      "mcp_only": false
+    },
+    {
+      "name": "huggingface_inference",
+      "summary": "Run a bounded text-generation request through the configured Hugging Face Inference Providers router.",
+      "mcp_only": false
+    },
+    {
+      "name": "ingest_document",
+      "summary": "Parse a markdown, CSV, or plain-text document into explicit memory facts.",
+      "mcp_only": false
+    },
+    {
+      "name": "capture_lead",
+      "summary": "Capture a customer lead with contact details and their query.",
+      "mcp_only": false
+    },
+    {
+      "name": "recall",
+      "summary": "List facts and observations currently stored in SakThai memory.",
+      "mcp_only": false
+    },
+    {
+      "name": "search",
+      "summary": "Search SakThai facts and observations for matching substrings.",
+      "mcp_only": false
+    },
+    {
+      "name": "search_sessions",
+      "summary": "Search past agent session logs by content (task, final answer, and tool calls).",
+      "mcp_only": false
+    },
+    {
+      "name": "forget",
+      "summary": "Delete a fact from SakThai memory by its integer id.",
+      "mcp_only": false
+    },
+    {
+      "name": "read_file",
+      "summary": "Read a local text file from disk.",
+      "mcp_only": false
+    },
+    {
+      "name": "run_command",
+      "summary": "Execute a CLI command and return its output and exit code.",
+      "mcp_only": false
+    },
+    {
+      "name": "send_telegram_message",
+      "summary": "Send a text message to Telegram.",
+      "mcp_only": false
+    },
+    {
+      "name": "send_outlook_mail",
+      "summary": "Send an email through Microsoft Outlook / Microsoft 365.",
+      "mcp_only": false
+    },
+    {
+      "name": "read_outlook_mail",
+      "summary": "List recent messages from the Outlook inbox (subject, sender, preview).",
+      "mcp_only": false
+    },
+    {
+      "name": "list_calendar_events",
+      "summary": "List upcoming Outlook/Microsoft 365 calendar events.",
+      "mcp_only": false
+    },
+    {
+      "name": "create_calendar_event",
+      "summary": "Create an Outlook/Microsoft 365 calendar event.",
+      "mcp_only": false
+    },
+    {
+      "name": "run_agent_loop",
+      "summary": "Run a high-level task through the full SakThai agent loop (which can execute commands, read files, learn preferences, and recall memory to solve the task).",
+      "mcp_only": true
+    },
+    {
+      "name": "family_recall",
+      "summary": "Recall facts and top observations across the entire Sak Family memory shards.",
+      "mcp_only": false
+    },
+    {
+      "name": "family_search",
+      "summary": "Search facts and observations across all Sak Family personas' memory shards.",
+      "mcp_only": false
+    },
+    {
+      "name": "delegate_to_persona",
+      "summary": "Delegate a focused subtask to another Sak Family persona (sakking, sakthai, saksee, saksit, sakjules, saktan) in-process and return their response.",
+      "mcp_only": false
+    }
+  ],
+  "cli": {
+    "name": "sakthai",
+    "help": "SakThai — a personal learning agent with persistent memory.",
+    "commands": [
+      {
+        "name": "chat",
+        "help": "Open an interactive multi-turn chat session with a Sak Family persona."
+      },
+      {
+        "name": "client",
+        "help": "ServiceQuoteBot client provisioning, management, and verification.",
+        "commands": [
+          {
+            "name": "list",
+            "help": "List all provisioned ServiceQuoteBot clients."
+          },
+          {
+            "name": "onboard",
+            "help": "Provision a new client workspace and ingest their price book."
+          },
+          {
+            "name": "show",
+            "help": "Show details and paths for a provisioned client."
+          },
+          {
+            "name": "test",
+            "help": "Run pre-flight verification tests for a provisioned client."
+          }
+        ]
+      },
+      {
+        "name": "cycle",
+        "help": "Track and advance the 6-stage Dream → Growth cycle.",
+        "commands": [
+          {
+            "name": "list",
+            "help": "List all six stages, marking the current one."
+          },
+          {
+            "name": "next",
+            "help": "Advance to the next stage."
+          },
+          {
+            "name": "set",
+            "help": "Jump to a specific STAGE (dream, hope, care, joy, trust, growth)."
+          },
+          {
+            "name": "status",
+            "help": "Show the current stage and its guidance."
+          }
+        ]
+      },
+      {
+        "name": "doctor",
+        "help": "Report environment, paths, memory, and credential status."
+      },
+      {
+        "name": "eval",
+        "help": "Inspect local model evaluation / MLOps metrics.",
+        "commands": [
+          {
+            "name": "summary",
+            "help": "Summarize latency, tokens, and error rate over recent agent runs."
+          }
+        ]
+      },
+      {
+        "name": "extensions",
+        "help": "Install and manage SakThai extensions from git.",
+        "commands": [
+          {
+            "name": "install",
+            "help": "Clone and register an extension from a git URL."
+          },
+          {
+            "name": "list",
+            "help": "List installed extensions."
+          },
+          {
+            "name": "remove",
+            "help": "Remove an installed extension by NAME."
+          }
+        ]
+      },
+      {
+        "name": "hf",
+        "help": "Hugging Face Hub operations.",
+        "commands": [
+          {
+            "name": "download",
+            "help": "Download HF model REPO_ID into local SakThai cache."
+          },
+          {
+            "name": "info",
+            "help": "Show HF model info for REPO_ID."
+          }
+        ]
+      },
+      {
+        "name": "learn",
+        "help": "Add a fact (or a file of facts) to persistent memory."
+      },
+      {
+        "name": "mcp",
+        "help": "Serve the memory tools over MCP (stdio JSON-RPC)."
+      },
+      {
+        "name": "memory",
+        "help": "Inspect and manage persistent memory.",
+        "commands": [
+          {
+            "name": "backup",
+            "help": "Write a timestamped backup of the memory database."
+          },
+          {
+            "name": "consolidate",
+            "help": "Fold older facts into a single observation."
+          },
+          {
+            "name": "consolidate-sessions",
+            "help": "Mine local session logs for durable facts and learn them."
+          },
+          {
+            "name": "deduplicate",
+            "help": "Find and remove duplicate facts and observations."
+          },
+          {
+            "name": "export",
+            "help": "Write a snapshot of facts + observations to PATH."
+          },
+          {
+            "name": "family",
+            "help": "Show the merged, deduplicated view across every persona's memory shard."
+          },
+          {
+            "name": "forget",
+            "help": "Delete a fact by id."
+          },
+          {
+            "name": "forget-obs",
+            "help": "Delete an observation by id."
+          },
+          {
+            "name": "healthcheck",
+            "help": "Run a SQLite integrity check."
+          },
+          {
+            "name": "import",
+            "help": "Restore facts + observations from a JSON snapshot at PATH."
+          },
+          {
+            "name": "pull",
+            "help": "Fetch a Git remote and merge its facts/observations into local memory."
+          },
+          {
+            "name": "search",
+            "help": "Search facts and observations for QUERY."
+          },
+          {
+            "name": "show",
+            "help": "List recent facts and top observations."
+          },
+          {
+            "name": "stats",
+            "help": "Show aggregate counts and distributions over memory."
+          },
+          {
+            "name": "sync",
+            "help": "Synchronize memory to a remote Git repository or HTTP endpoint."
+          }
+        ]
+      },
+      {
+        "name": "recall",
+        "help": "Recall facts (and observations) matching QUERY, or filter by --tag."
+      },
+      {
+        "name": "run",
+        "help": "Run TASK through the standalone SakThai agent."
+      },
+      {
+        "name": "sessions",
+        "help": "Manage past agent sessions.",
+        "commands": [
+          {
+            "name": "clean",
+            "help": "Delete old session log files."
+          },
+          {
+            "name": "list",
+            "help": "List past agent sessions."
+          },
+          {
+            "name": "search",
+            "help": "Search past sessions by content (task, final answer, and tool calls)."
+          },
+          {
+            "name": "show",
+            "help": "Show detailed log of a session by its ID."
+          }
+        ]
+      },
+      {
+        "name": "setup",
+        "help": "Check the .env file, env vars, memory DB, and virtualenv."
+      },
+      {
+        "name": "skills",
+        "help": "Discover and inspect SakThai skills.",
+        "commands": [
+          {
+            "name": "create",
+            "help": "Scaffold a new skill directory with a template SKILL.md under skills/."
+          },
+          {
+            "name": "list",
+            "help": "List skills grouped by category."
+          },
+          {
+            "name": "show",
+            "help": "Show full metadata and body of skill NAME."
+          },
+          {
+            "name": "sync-sakking",
+            "help": "Import skills SakKing has learned into skills/ as sakthai- skills."
+          },
+          {
+            "name": "validate",
+            "help": "Validate skill frontmatter; exit 1 if any errors are found."
+          }
+        ]
+      },
+      {
+        "name": "status",
+        "help": "A high-level health summary of everything needed to start."
+      },
+      {
+        "name": "team",
+        "help": "Multi-agent team orchestration and declarative pipelines.",
+        "commands": [
+          {
+            "name": "list",
+            "help": "List available multi-agent team pipelines."
+          },
+          {
+            "name": "run",
+            "help": "Execute a team workflow pipeline on a task."
+          },
+          {
+            "name": "show",
+            "help": "Show details of a team workflow pipeline."
+          }
+        ]
+      },
+      {
+        "name": "tools",
+        "help": "List the built-in agent/MCP tools."
+      },
+      {
+        "name": "web",
+        "help": "Web server commands.",
+        "commands": [
+          {
+            "name": "regen-token",
+            "help": "Regenerate the Web API bearer token."
+          },
+          {
+            "name": "serve",
+            "help": "Serve the read-only web API."
+          },
+          {
+            "name": "setup",
+            "help": "Initialize web API authentication and display the token."
+          }
+        ]
+      }
+    ]
+  },
+  "workflows": [
+    {
+      "file": "agent-self-evolution.yml",
+      "name": "agent-self-evolution",
+      "triggers": [
+        "pull_request",
+        "push",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "test"
+      ]
+    },
+    {
+      "file": "apps.yml",
+      "name": "Apps",
+      "triggers": [
+        "pull_request",
+        "push"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "agent_workflow_framework",
+        "contract types in sync",
+        "sak_agent_dashboard"
+      ]
+    },
+    {
+      "file": "auto-dependency-update.yml",
+      "name": "Auto Dependency Update",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "auto-update"
+      ]
+    },
+    {
+      "file": "bandit.yml",
+      "name": "Bandit",
+      "triggers": [
+        "pull_request",
+        "push",
+        "schedule"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Bandit"
+      ]
+    },
+    {
+      "file": "branch-cleanup.yml",
+      "name": "Branch cleanup",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Sweep merged branches"
+      ]
+    },
+    {
+      "file": "ci.yml",
+      "name": "CI",
+      "triggers": [
+        "pull_request",
+        "push"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "test"
+      ]
+    },
+    {
+      "file": "code-scanning-cleanup.yml",
+      "name": "Code scanning cleanup",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Code scanning cleanup"
+      ]
+    },
+    {
+      "file": "codeql.yml",
+      "name": "CodeQL Advanced",
+      "triggers": [
+        "pull_request",
+        "push",
+        "schedule"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Analyze (${{ matrix.language }})"
+      ]
+    },
+    {
+      "file": "continuous-security.yml",
+      "name": "Continuous Security Scan",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "devsecops-scan"
+      ]
+    },
+    {
+      "file": "daily-pr-review.yml",
+      "name": "Daily PR review and branch cleanup",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Review PRs and clean no-op branches"
+      ]
+    },
+    {
+      "file": "daily-workspace-status.yml",
+      "name": "Daily workspace status and PR conflict monitor",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Report branches and reconcile PR conflicts"
+      ]
+    },
+    {
+      "file": "dependency-audit.yml",
+      "name": "Dependency Audit",
+      "triggers": [
+        "pull_request",
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "pip-audit"
+      ]
+    },
+    {
+      "file": "dependency-review.yml",
+      "name": "Dependency Review",
+      "triggers": [
+        "pull_request"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Review dependency changes"
+      ]
+    },
+    {
+      "file": "huggingface-integration.yml",
+      "name": "Hugging Face integration",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "live-inference"
+      ]
+    },
+    {
+      "file": "labeler.yml",
+      "name": "Labeler",
+      "triggers": [
+        "pull_request_target"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "labeler"
+      ]
+    },
+    {
+      "file": "manual.yml",
+      "name": "Manual workflow",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "greet"
+      ]
+    },
+    {
+      "file": "ossar.yml",
+      "name": "OSSAR",
+      "triggers": [
+        "pull_request",
+        "push",
+        "schedule"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "OSSAR-Scan"
+      ]
+    },
+    {
+      "file": "pylint.yml",
+      "name": "Pylint",
+      "triggers": [
+        "pull_request",
+        "push"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "build"
+      ]
+    },
+    {
+      "file": "repository-security-quality.yml",
+      "name": "Repository Security and Quality",
+      "triggers": [
+        "pull_request"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Quality gates",
+        "Security gates",
+        "Validate repository skills"
+      ]
+    },
+    {
+      "file": "run-evals.yml",
+      "name": "Run Evals",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "aggregate-results",
+        "check-regressions",
+        "post-summary",
+        "run-evaluations"
+      ]
+    },
+    {
+      "file": "sak-family-agent-contract.yml",
+      "name": "Sak Family agent contract",
+      "triggers": [
+        "pull_request",
+        "push",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Validate agent and persona contracts"
+      ]
+    },
+    {
+      "file": "scorecard.yml",
+      "name": "Scorecard supply-chain security",
+      "triggers": [
+        "branch_protection_rule",
+        "push",
+        "schedule"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Scorecard analysis"
+      ]
+    },
+    {
+      "file": "secret-scan.yml",
+      "name": "Secret Scan",
+      "triggers": [
+        "pull_request",
+        "push",
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Branch sweep",
+        "gitleaks"
+      ]
+    },
+    {
+      "file": "sonarcloud.yml",
+      "name": "SonarCloud analysis",
+      "triggers": [
+        "pull_request",
+        "push",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Analysis"
+      ]
+    },
+    {
+      "file": "stale.yml",
+      "name": "Mark stale issues and pull requests",
+      "triggers": [
+        "schedule"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "stale"
+      ]
+    },
+    {
+      "file": "subprojects.yml",
+      "name": "Sub-project tests",
+      "triggers": [
+        "pull_request",
+        "push"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "sakthai-chat-cli",
+        "teams-copilot-mcp"
+      ]
+    },
+    {
+      "file": "summary.yml",
+      "name": "Summarize new issues",
+      "triggers": [
+        "issues"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "summary"
+      ]
+    },
+    {
+      "file": "verify-assets.yml",
+      "name": "Verify Public Hugging Face Assets",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "verify"
+      ]
+    }
+  ],
+  "tests": {
+    "coverage_floor": 96.0,
+    "test_functions": 1952,
+    "trees": [
+      {
+        "name": "sakthai (tests/)",
+        "path": "tests",
+        "files": 110,
+        "runner": "ci.yml"
+      },
+      {
+        "name": "agent_workflow_framework",
+        "path": "apps/agent_workflow_framework/tests",
+        "files": 7,
+        "runner": "apps.yml"
+      },
+      {
+        "name": "sak_agent_dashboard",
+        "path": "apps/sak_agent_dashboard/src/tests",
+        "files": 18,
+        "runner": "apps.yml"
+      },
+      {
+        "name": "sakthai-chat-cli",
+        "path": "sakthai-chat-cli/tests",
+        "files": 73,
+        "runner": "subprojects.yml"
+      },
+      {
+        "name": "teams-copilot-mcp",
+        "path": "services/teams-copilot-mcp/tests",
+        "files": 3,
+        "runner": "subprojects.yml"
+      }
+    ]
+  },
+  "skills": {
+    "shared": [
+      "Sak-auto-cycle-loop",
+      "Sak-dogfood",
+      "Sak-repository-quality",
+      "Sak-repository-security",
+      "Sak-skill-authoring-and-validation",
+      "Sak-yuanbao"
+    ],
+    "library_categories": [
+      {
+        "name": "agent",
+        "skills": 4
+      },
+      {
+        "name": "automation",
+        "skills": 2
+      },
+      {
+        "name": "coding",
+        "skills": 5
+      },
+      {
+        "name": "devops",
+        "skills": 3
+      },
+      {
+        "name": "learning",
+        "skills": 3
+      },
+      {
+        "name": "llm",
+        "skills": 2
+      },
+      {
+        "name": "memory",
+        "skills": 4
+      },
+      {
+        "name": "observability",
+        "skills": 2
+      },
+      {
+        "name": "research",
+        "skills": 1
+      },
+      {
+        "name": "safety",
+        "skills": 2
+      },
+      {
+        "name": "security",
+        "skills": 3
+      }
+    ]
+  }
+}

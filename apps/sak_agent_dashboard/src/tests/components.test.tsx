@@ -35,6 +35,7 @@ import {
   demoSessions,
   demoWorkflows,
 } from "@/lib/demo";
+import { NAV_ITEMS } from "@/lib/nav";
 import { TREND_WINDOWS, trendWindowLabel } from "@/lib/url-state";
 
 const personas = demoPersonas();
@@ -1074,6 +1075,6 @@ describe("CommandPalette", () => {
     expect(combobox).toHaveAttribute("aria-expanded", "true");
     expect(combobox).toHaveAttribute("aria-autocomplete", "list");
     expect(combobox).toHaveAttribute("aria-controls", "command-palette-listbox");
-    expect(combobox).toHaveAttribute("aria-activedescendant", "cmd-option-nav-overview");
+    expect(combobox).toHaveAttribute("aria-activedescendant", `cmd-option-nav-${NAV_ITEMS[0].id}`);
   });
 });

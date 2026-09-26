@@ -187,8 +187,12 @@ which aborts the whole run.
 
 Other `make` targets: `compose-personas` (rebuild full skill trees into
 `build/personas/`), `export-agent-repos` / `export-agent-repo PERSONA=<name>`
-(materialize standalone per-persona repo snapshots), `test`, `lint`, and three
-for the dashboard seam — `contract-types` (regenerate the TypeScript types from
+(materialize standalone per-persona repo snapshots), `test`, `lint`, and four
+for the dashboard seam — `system-snapshot` (regenerate
+`apps/sak_agent_dashboard/src/data/system-snapshot.json`, the repo snapshot behind
+the dashboard's System view — the only section with real data on the Vercel
+deploy; deliberately not a CI gate, since skills land constantly),
+`contract-types` (regenerate the TypeScript types from
 `web/contracts.py`; `apps.yml` fails on drift), `dashboard-test` (the
 `apps/sak_agent_dashboard` npm lint/build/tsc/test chain), and `dashboard-dev`
 (runs `sakthai web serve` on :3001 with `SAKTHAI_WEB_CORS_ORIGIN` set and

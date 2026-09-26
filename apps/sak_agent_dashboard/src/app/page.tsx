@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import AgentOverview from "@/components/AgentOverview";
 import AnalyticsCharts from "@/components/AnalyticsCharts";
@@ -17,6 +17,7 @@ import TopBar, { REFRESH_INTERVALS, type RefreshInterval } from "@/components/sh
 import ShortcutsOverlay from "@/components/ShortcutsOverlay";
 import { CardGridSkeleton, KpiSkeleton, PanelSkeleton } from "@/components/Skeletons";
 import StitchStudio from "@/components/StitchStudio";
+import SystemView from "@/components/SystemView";
 import { ToastStack, useToasts } from "@/components/Toasts";
 import WorkflowRuns from "@/components/WorkflowRuns";
 import {
@@ -228,6 +229,20 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh();
   }, [refresh]);
+
+  // With no live agent behind it (a hosted deploy serves sample data), the only
+  // section showing real data is System — so a visit that did not ask for a
+  // section lands there instead of on sample runtime figures. A link to a
+  // specific section is always honoured. Checked once per page load, so the
+  // back button can return to the bare URL without being bounced again.
+  const landingChecked = useRef(false);
+  useEffect(() => {
+    if (activeSource === null || landingChecked.current) return;
+    landingChecked.current = true;
+    if (activeSource === "demo" && window.location.hash.replace(/^#/, "") === "") {
+      patchView({ tab: "system" });
+    }
+  }, [activeSource, patchView]);
 
   // Auto-refresh. Off by default; the interval is a stored preference, so a
   // wall-mounted tab keeps polling across a reload.
@@ -809,33 +824,41 @@ export default function Home() {
             </div>
           )}
 
-          <HostedNotice activeSource={activeSource} isDemo={isDemo} />
+          {/* System reads the repo snapshot, not the runtime source, so the
+              runtime banner and headline figures would describe other data. */}
+          {activeTab !== "system" && (
+            <>
+              <HostedNotice activeSource={activeSource} isDemo={isDemo} />
 
-          {awaitingFirstLoad ? (
-            <KpiSkeleton />
-          ) : (
-            <KpiStrip
-              metrics={metrics}
-              memory={memory}
-              sessions={sessions}
-              audit={audit}
-              onNavigate={goToTab}
-            />
-          )}
+              {awaitingFirstLoad ? (
+                <KpiSkeleton />
+              ) : (
+                <KpiStrip
+                  metrics={metrics}
+                  memory={memory}
+                  sessions={sessions}
+                  audit={audit}
+                  onNavigate={goToTab}
+                />
+              )}
 
-          {awaitingFirstLoad ? (
-            <PanelSkeleton label="Loading operational signals" />
-          ) : (
-            <OperationsPulse
-              personas={personasPayload}
-              metrics={metrics}
-              audit={audit}
-              workflows={workflows}
-              onNavigate={goToTab}
-            />
+              {awaitingFirstLoad ? (
+                <PanelSkeleton label="Loading operational signals" />
+              ) : (
+                <OperationsPulse
+                  personas={personasPayload}
+                  metrics={metrics}
+                  audit={audit}
+                  workflows={workflows}
+                  onNavigate={goToTab}
+                />
+              )}
+            </>
           )}
 
           <section key={activeTab} className="animate-panel-in">
+            {activeTab === "system" && <SystemView />}
+
             {activeTab === "overview" &&
               (personasPayload ? (
                 <AgentOverview

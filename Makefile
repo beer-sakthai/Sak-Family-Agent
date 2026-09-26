@@ -1,5 +1,5 @@
 .PHONY: help compose-personas export-agent-repos export-agent-repo test lint mutation \
-	dashboard-dev dashboard-test contract-types
+	dashboard-dev dashboard-test contract-types system-snapshot
 
 help:
 	@echo "SakThai Agent v2 - Workspace Operations"
@@ -12,6 +12,7 @@ help:
 	@echo "  make lint            - Run code linters (ruff, pylint)"
 	@echo "  make mutation        - Run mutmut on the core seam modules (slow, local-only)"
 	@echo "  make contract-types  - Regenerate the dashboard TypeScript types from web/contracts.py"
+	@echo "  make system-snapshot - Regenerate the dashboard System view's repo snapshot"
 	@echo "  make dashboard-test  - Lint, build, typecheck and test apps/sak_agent_dashboard"
 	@echo "  make dashboard-dev   - Run the web API (:3001) and the dashboard (:3000) together"
 
@@ -66,6 +67,13 @@ DASHBOARD_DIR := apps/sak_agent_dashboard
 # committed file is stale.
 contract-types:
 	@python3 scripts/gen_dashboard_types.py
+
+# The System view is the one dashboard section with real data on a hosted
+# deploy: a snapshot of this repo (personas, tools, CLI, CI, tests). It imports
+# the package, so it runs in the project env. Not a CI gate on purpose — skills
+# land constantly, and the view prints the commit it describes.
+system-snapshot:
+	@uv run --frozen python scripts/gen_system_snapshot.py
 
 # The same sequence .github/workflows/apps.yml runs. Build precedes typecheck
 # because next-env.d.ts imports ./.next/types/*.d.ts, which only exists after
