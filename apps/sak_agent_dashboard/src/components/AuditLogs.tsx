@@ -75,7 +75,12 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
             Guardrail and hardening events from <code className="text-fg-2">audit.log</code>
           </p>
         </div>
-        <span className="text-xs font-mono px-3 py-1 rounded-full bg-panel border border-line text-fg-2">
+        <span
+          role="status"
+          aria-label={`${audit.total.toLocaleString()} security audit events shown`}
+          title={`Total security audit events shown: ${audit.total.toLocaleString()}`}
+          className="text-xs font-mono px-3 py-1 rounded-full bg-panel border border-line text-fg-2"
+        >
           {audit.total.toLocaleString()} shown
         </span>
       </div>

@@ -106,7 +106,12 @@ export function WorkflowRuns({
               Not filtered by persona
             </span>
           )}
-          <span className="text-xs font-mono px-3 py-1 rounded-full bg-panel border border-line text-hue-violet">
+          <span
+            role="status"
+            aria-label={`${runs.length} workflow ${runs.length === 1 ? "run" : "runs"} recorded`}
+            title={`Total workflow runs recorded: ${runs.length}`}
+            className="text-xs font-mono px-3 py-1 rounded-full bg-panel border border-line text-hue-violet"
+          >
             {runs.length} {runs.length === 1 ? "run" : "runs"}
           </span>
         </div>
