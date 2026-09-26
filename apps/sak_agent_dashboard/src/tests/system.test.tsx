@@ -126,15 +126,23 @@ describe("SystemView", () => {
     expect(screen.getByText("provider default")).toBeInTheDocument();
   });
 
-  it("shows only PR-gating workflows until asked for all", () => {
+  it("shows only PR-gating workflows until asked for all and carries dynamic hover title tooltips", () => {
     render(<SystemView snapshot={FIXTURE} />);
     const panel = screen.getByRole("region", { name: "Workflows" });
     expect(within(panel).getByText("ci.yml")).toBeInTheDocument();
     expect(within(panel).queryByText("stale.yml")).not.toBeInTheDocument();
 
-    fireEvent.click(within(panel).getByRole("button", { name: "All 2" }));
+    const prBtn = within(panel).getByRole("button", { name: "Runs on PRs" });
+    const allBtn = within(panel).getByRole("button", { name: "All 2" });
+
+    expect(prBtn).toHaveAttribute("title", "Showing runs on prs workflows");
+    expect(allBtn).toHaveAttribute("title", "Filter workflows by all 2");
+
+    fireEvent.click(allBtn);
     expect(within(panel).getByText("stale.yml")).toBeInTheDocument();
-    expect(within(panel).getByRole("button", { name: "All 2" })).toHaveAttribute("aria-pressed", "true");
+    expect(allBtn).toHaveAttribute("aria-pressed", "true");
+    expect(allBtn).toHaveAttribute("title", "Showing all 2 workflows");
+    expect(prBtn).toHaveAttribute("title", "Filter workflows by runs on prs");
   });
 
   it("lists CLI groups with their subcommands", () => {
