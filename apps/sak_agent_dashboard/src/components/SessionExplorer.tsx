@@ -109,7 +109,7 @@ export function SessionExplorer({
           <button
             type="button"
             aria-label="Clear search query"
-            title="Clear search query"
+            title="Clear search query (Esc)"
             onClick={() => onSearchChange("")}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-fg-3 hover:text-fg hover:bg-raised/80 active:bg-raised-2/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
@@ -160,6 +160,16 @@ export function SessionExplorer({
                   <tr key={session.id} className="hover:bg-raised/40 transition-colors">
                     <td className="px-5 py-3.5">
                       <span
+                        title={
+                          session.persona
+                            ? `Persona: ${personaLabel(session.persona)}`
+                            : "Unattributed session (no persona recorded)"
+                        }
+                        aria-label={
+                          session.persona
+                            ? `Persona: ${personaLabel(session.persona)}`
+                            : "Unattributed session (no persona recorded)"
+                        }
                         className={`px-2 py-0.5 rounded text-[11px] border ${
                           session.persona
                             ? "bg-raised text-hue-cyan border-hue-cyan-line/20"
@@ -183,6 +193,12 @@ export function SessionExplorer({
                     </td>
                     <td className="px-5 py-3.5">
                       <span
+                        title={`Outcome: ${session.stop_reason || "unknown"}${
+                          session.had_error ? " (error)" : " (success)"
+                        }`}
+                        aria-label={`Outcome: ${session.stop_reason || "unknown"}${
+                          session.had_error ? " (error)" : " (success)"
+                        }`}
                         className={`inline-flex items-center gap-1 text-[11px] ${
                           session.had_error ? "text-hue-rose" : "text-hue-emerald"
                         }`}
