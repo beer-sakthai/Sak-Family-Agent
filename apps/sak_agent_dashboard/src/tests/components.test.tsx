@@ -425,6 +425,22 @@ describe("MemoryExplorer", () => {
 });
 
 describe("AuditLogs", () => {
+  it("renders total shown count badge with role='status', aria-label, and title tooltip", () => {
+    const audit = demoAudit();
+    render(<AuditLogs audit={audit} severity="ALL" onSeverityChange={vi.fn()} />);
+    const countBadge = screen.getByText(`${audit.total.toLocaleString()} shown`);
+    expect(countBadge).toBeInTheDocument();
+    expect(countBadge).toHaveAttribute("role", "status");
+    expect(countBadge).toHaveAttribute(
+      "aria-label",
+      `${audit.total.toLocaleString()} security audit events shown`,
+    );
+    expect(countBadge).toHaveAttribute(
+      "title",
+      `Total security audit events shown: ${audit.total.toLocaleString()}`,
+    );
+  });
+
   it("renders events", () => {
     render(<AuditLogs audit={demoAudit()} severity="ALL" onSeverityChange={vi.fn()} />);
     expect(screen.getByText("Blocked a destructive shell command")).toBeInTheDocument();
@@ -494,6 +510,21 @@ describe("SessionExplorer", () => {
       />,
     );
   }
+
+  it("renders header session count badge with role='status', aria-label, and title tooltip", () => {
+    renderExplorer();
+    const countBadge = screen.getByText(`${sessions.total.toLocaleString()} sessions`);
+    expect(countBadge).toBeInTheDocument();
+    expect(countBadge).toHaveAttribute("role", "status");
+    expect(countBadge).toHaveAttribute(
+      "aria-label",
+      `${sessions.total.toLocaleString()} sessions recorded`,
+    );
+    expect(countBadge).toHaveAttribute(
+      "title",
+      `Total recorded sessions: ${sessions.total.toLocaleString()}`,
+    );
+  });
 
   it("lists sessions", () => {
     renderExplorer();
@@ -641,6 +672,21 @@ describe("SessionExplorer", () => {
 
 describe("WorkflowRuns", () => {
   const workflows = demoWorkflows();
+
+  it("renders header workflow run count badge with role='status', aria-label, and title tooltip", () => {
+    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
+    const countBadge = screen.getByText(`${workflows.runs.length} runs`);
+    expect(countBadge).toBeInTheDocument();
+    expect(countBadge).toHaveAttribute("role", "status");
+    expect(countBadge).toHaveAttribute(
+      "aria-label",
+      `${workflows.runs.length} workflow runs recorded`,
+    );
+    expect(countBadge).toHaveAttribute(
+      "title",
+      `Total workflow runs recorded: ${workflows.runs.length}`,
+    );
+  });
 
   it("lists runs with their status", () => {
     render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);

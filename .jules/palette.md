@@ -156,3 +156,9 @@
 **Learning:** Preference menu option buttons (such as theme and density options in `DisplayMenu.tsx`) carry `role="menuitemradio"` and visible labels, but desktop mouse users hovering over individual options lack target hover tooltips (`title`) clarifying the exact preference action before clicking.
 
 **Action:** Add explicit `title` attributes (e.g. `title={`Switch theme to ${label}`}`) on all `role="menuitemradio"` and preference option controls.
+
+## 2026-10-03 - Status Roles and Tooltips on Panel Header Summary Count Badges
+
+**Learning:** Summary count badges in section headers (such as in `SessionExplorer.tsx`, `WorkflowRuns.tsx`, and `AuditLogs.tsx`) display metric totals on screen, but screen readers may bypass them as unlabelled text spans and desktop mouse users lack descriptive hover tooltips. Adding `role="status"`, explicit `aria-label` descriptions, and `title` tooltips ensures assistive technologies announce panel metric counts and mouse users get instant visual context on hover.
+
+**Action:** Include `role="status"`, explicit `aria-label`, and `title` tooltips on header summary count badges across dashboard panels.
