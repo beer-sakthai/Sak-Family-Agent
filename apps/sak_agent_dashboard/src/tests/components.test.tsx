@@ -357,11 +357,16 @@ describe("MemoryExplorer", () => {
     expect(screen.getByText("Works late into the evening most days")).toBeInTheDocument();
   });
 
-  it("provides descriptive title tooltips on summary stat badges and kind count pills", () => {
+  it("provides status roles, aria-labels, and descriptive title tooltips on summary stat badges and kind count pills", () => {
     const { container } = render(<MemoryExplorer memory={demoMemory()} />);
     const memoryData = demoMemory();
     const factsBadge = screen.getByText(`${memoryData.total_facts.toLocaleString()} facts`).closest("span");
     expect(factsBadge).toBeInTheDocument();
+    expect(factsBadge).toHaveAttribute("role", "status");
+    expect(factsBadge).toHaveAttribute(
+      "aria-label",
+      `Total recorded facts across shards: ${memoryData.total_facts.toLocaleString()} (${memoryData.facts_this_week} added this week)`,
+    );
     expect(factsBadge).toHaveAttribute(
       "title",
       `Total recorded facts across shards: ${memoryData.total_facts.toLocaleString()} (${memoryData.facts_this_week} added this week)`,
@@ -369,6 +374,11 @@ describe("MemoryExplorer", () => {
 
     const obsBadge = screen.getByText(`${memoryData.total_observations.toLocaleString()} observations`).closest("span");
     expect(obsBadge).toBeInTheDocument();
+    expect(obsBadge).toHaveAttribute("role", "status");
+    expect(obsBadge).toHaveAttribute(
+      "aria-label",
+      `Total recorded observations across shards: ${memoryData.total_observations.toLocaleString()}`,
+    );
     expect(obsBadge).toHaveAttribute(
       "title",
       `Total recorded observations across shards: ${memoryData.total_observations.toLocaleString()}`,

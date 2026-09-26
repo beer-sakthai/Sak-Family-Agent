@@ -53,6 +53,8 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
 
         <div className="flex items-center gap-2 font-mono text-xs">
           <span
+            role="status"
+            aria-label={`Total recorded facts across shards: ${memory.total_facts.toLocaleString()}${memory.facts_this_week > 0 ? ` (${memory.facts_this_week} added this week)` : ""}`}
             className="px-3 py-1 rounded-full bg-panel border border-line text-hue-cyan"
             title={`Total recorded facts across shards: ${memory.total_facts.toLocaleString()}${memory.facts_this_week > 0 ? ` (${memory.facts_this_week} added this week)` : ""}`}
           >
@@ -62,6 +64,8 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
             )}
           </span>
           <span
+            role="status"
+            aria-label={`Total recorded observations across shards: ${memory.total_observations.toLocaleString()}`}
             className="px-3 py-1 rounded-full bg-panel border border-line text-hue-violet"
             title={`Total recorded observations across shards: ${memory.total_observations.toLocaleString()}`}
           >
