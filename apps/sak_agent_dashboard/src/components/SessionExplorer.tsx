@@ -79,7 +79,12 @@ export function SessionExplorer({
             Agent transcripts from <code className="text-fg-2">~/.sakthai/sessions/</code>
           </p>
         </div>
-        <span className="text-xs font-mono px-3 py-1 rounded-full bg-panel border border-line text-hue-cyan">
+        <span
+          role="status"
+          aria-label={`${total.toLocaleString()} ${total === 1 ? "session" : "sessions"} recorded`}
+          title={`Total recorded sessions: ${total.toLocaleString()}`}
+          className="text-xs font-mono px-3 py-1 rounded-full bg-panel border border-line text-hue-cyan"
+        >
           {total.toLocaleString()} {total === 1 ? "session" : "sessions"}
         </span>
       </div>
