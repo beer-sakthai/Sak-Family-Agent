@@ -145,11 +145,14 @@ describe("SystemView", () => {
     expect(prBtn).toHaveAttribute("title", "Filter workflows by runs on prs");
   });
 
-  it("lists CLI groups with their subcommands", () => {
+  it("lists CLI groups with their subcommands and hover tooltip title", () => {
     render(<SystemView snapshot={FIXTURE} />);
     const tree = screen.getByRole("list", { name: "sakthai memory subcommands" });
     expect(within(tree).getByText("show")).toBeInTheDocument();
     expect(within(tree).getByText("stats")).toBeInTheDocument();
+
+    const groupSummary = screen.getByTitle("Toggle sakthai memory command group (2 subcommands)");
+    expect(groupSummary).toBeInTheDocument();
   });
 });
 

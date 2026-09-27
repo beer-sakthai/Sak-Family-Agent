@@ -162,3 +162,9 @@
 **Learning:** Summary count badges in section headers (such as in `SessionExplorer.tsx`, `WorkflowRuns.tsx`, and `AuditLogs.tsx`) display metric totals on screen, but screen readers may bypass them as unlabelled text spans and desktop mouse users lack descriptive hover tooltips. Adding `role="status"`, explicit `aria-label` descriptions, and `title` tooltips ensures assistive technologies announce panel metric counts and mouse users get instant visual context on hover.
 
 **Action:** Include `role="status"`, explicit `aria-label`, and `title` tooltips on header summary count badges across dashboard panels.
+
+## 2026-10-04 - Informative Hover Title Tooltips on Collapsible Command Group Summary Triggers
+
+**Learning:** Collapsible `<summary>` elements in command trees (such as in `SystemView.tsx`) expand and collapse nested subcommand lists, but desktop mouse users lack visual hover guidance explaining the toggle action and subcommand count unless explicit dynamic `title` tooltips are provided.
+
+**Action:** Provide explicit `title` hover tooltips on `<summary>` triggers detailing the group name and subcommand count (e.g. `title={`Toggle ${full.trim()} command group (${node.commands.length} subcommands)`}`).
