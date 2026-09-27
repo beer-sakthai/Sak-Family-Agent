@@ -168,3 +168,9 @@
 **Learning:** Collapsible `<summary>` elements in command trees (such as in `SystemView.tsx`) expand and collapse nested subcommand lists, but desktop mouse users lack visual hover guidance explaining the toggle action and subcommand count unless explicit dynamic `title` tooltips are provided.
 
 **Action:** Provide explicit `title` hover tooltips on `<summary>` triggers detailing the group name and subcommand count (e.g. `title={`Toggle ${full.trim()} command group (${node.commands.length} subcommands)`}`).
+
+## 2026-10-05 - Avoid Live Region Roles on Static Table Badges and Container Pills
+
+**Learning:** Applying `role="status"` live region attributes to static inline table cells, persona badges, or non-dynamic metric summary pills causes screen readers to misinterpret static content as dynamic live region updates, leading to repetitive or confusing announcements.
+
+**Action:** Do not use `role="status"` on static table badges or non-updating metric elements. Use standard semantic containers and native `title` tooltips for hover guidance without declaring live region roles.
