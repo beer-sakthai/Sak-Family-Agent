@@ -452,10 +452,13 @@ function CliBranch({ node, path }: { node: CliNode; path: string }) {
   return (
     <li className="py-0.5">
       <details className="group">
-        <summary className="flex cursor-pointer list-none items-baseline gap-2 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <summary
+          title={`Toggle ${full.trim()} command group (${node.commands.length} subcommand${node.commands.length === 1 ? "" : "s"})`}
+          className="flex cursor-pointer list-none items-baseline gap-2 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
           <ChevronRight
             className="h-3 w-3 shrink-0 translate-y-0.5 text-fg-4 transition-transform group-open:rotate-90"
-            aria-hidden
+            aria-hidden="true"
           />
           <code className="shrink-0 font-mono text-xs text-fg">{node.name}</code>
           <span className="rounded bg-sunken px-1 font-mono text-[10px] text-fg-4">
