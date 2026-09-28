@@ -174,3 +174,9 @@
 **Learning:** Workflow filter buttons (such as in `WorkflowsPanel` in `SystemView.tsx`) present filter choice text on screen, but desktop mouse users and screen readers benefit from dynamic hover tooltips (`title`) and explicit `aria-label` screen reader descriptions indicating the active versus inactive filtering state (e.g. `Showing Runs on PRs` vs `Filter workflows by All 2`).
 
 **Action:** Always complement `aria-pressed` on filter buttons in system panels with explicit `aria-label` and dynamic `title` tooltips describing selection state.
+
+## 2026-10-06 - Standard ARIA Progressbar Semantics on Persona Skill Count Bars
+
+**Learning:** Persona skill count bars in system overview panels (such as `SystemView.tsx`) render visual progress fill bars relative to the maximum skill count, but omission of WAI-ARIA progressbar attributes hides current skill metrics from screen reader users. Supplying `role="progressbar"`, `aria-label`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and `aria-valuetext` ensures assistive technologies announce skill metrics clearly.
+
+**Action:** Apply `role="progressbar"` along with explicit `aria-label`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and `aria-valuetext` attributes on visual skill and metric progress bars.
