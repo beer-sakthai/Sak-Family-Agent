@@ -168,3 +168,9 @@
 **Learning:** Collapsible `<summary>` elements in command trees (such as in `SystemView.tsx`) expand and collapse nested subcommand lists, but desktop mouse users lack visual hover guidance explaining the toggle action and subcommand count unless explicit dynamic `title` tooltips are provided.
 
 **Action:** Provide explicit `title` hover tooltips on `<summary>` triggers detailing the group name and subcommand count (e.g. `title={`Toggle ${full.trim()} command group (${node.commands.length} subcommands)`}`).
+
+## 2026-10-05 - Dynamic Hover Tooltips and ARIA Labels on Workflow Group Filter Toggles
+
+**Learning:** Workflow filter buttons (such as in `WorkflowsPanel` in `SystemView.tsx`) present filter choice text on screen, but desktop mouse users and screen readers benefit from dynamic hover tooltips (`title`) and explicit `aria-label` screen reader descriptions indicating the active versus inactive filtering state (e.g. `Showing Runs on PRs` vs `Filter workflows by All 2`).
+
+**Action:** Always complement `aria-pressed` on filter buttons in system panels with explicit `aria-label` and dynamic `title` tooltips describing selection state.
