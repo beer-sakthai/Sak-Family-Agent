@@ -529,6 +529,8 @@ function WorkflowsPanel({ snapshot }: { snapshot: SystemSnapshot }) {
               type="button"
               aria-pressed={filter === option.id}
               onClick={() => setFilter(option.id)}
+              aria-label={`Filter workflows: ${option.label}`}
+              title={filter === option.id ? `Showing ${option.label}` : `Filter workflows by ${option.label}`}
               className={`rounded-md px-2 py-1 text-[11px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 filter === option.id ? "bg-raised text-fg" : "text-fg-4 hover:text-fg-2"
               }`}
