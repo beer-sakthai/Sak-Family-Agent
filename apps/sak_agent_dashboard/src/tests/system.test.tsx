@@ -126,6 +126,16 @@ describe("SystemView", () => {
     expect(screen.getByText("provider default")).toBeInTheDocument();
   });
 
+  it("renders persona skill count progressbars with accessibility attributes", () => {
+    render(<SystemView snapshot={FIXTURE} />);
+    const progressBar = screen.getByRole("progressbar", { name: "SakThai skill count" });
+    expect(progressBar).toBeInTheDocument();
+    expect(progressBar).toHaveAttribute("aria-valuenow", "10");
+    expect(progressBar).toHaveAttribute("aria-valuemin", "0");
+    expect(progressBar).toHaveAttribute("aria-valuemax", "10");
+    expect(progressBar).toHaveAttribute("aria-valuetext", "10 of 10 skills");
+  });
+
   it("shows only PR-gating workflows until asked for all", () => {
     render(<SystemView snapshot={FIXTURE} />);
     const panel = screen.getByRole("region", { name: "Workflows" });

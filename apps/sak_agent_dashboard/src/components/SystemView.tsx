@@ -305,7 +305,15 @@ function PersonaGrid({ snapshot }: { snapshot: SystemSnapshot }) {
                 <span className="text-fg-4">Skills</span>
                 <span className="font-mono text-fg-2">{persona.skill_count}</span>
               </div>
-              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-sunken" aria-hidden>
+              <div
+                className="mt-1 h-1.5 overflow-hidden rounded-full bg-sunken"
+                role="progressbar"
+                aria-label={`${displayName(persona.name)} skill count`}
+                aria-valuenow={persona.skill_count}
+                aria-valuemin={0}
+                aria-valuemax={maxSkills}
+                aria-valuetext={`${persona.skill_count} of ${maxSkills} skills`}
+              >
                 <div
                   className="h-full rounded-full bg-accent"
                   style={{ width: `${(persona.skill_count / maxSkills) * 100}%` }}
