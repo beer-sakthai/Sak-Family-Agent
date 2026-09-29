@@ -186,3 +186,9 @@
 **Learning:** Persona skill count bars in system overview panels (such as `SystemView.tsx`) render visual progress fill bars relative to the maximum skill count, but omission of WAI-ARIA progressbar attributes hides current skill metrics from screen reader users. Supplying `role="progressbar"`, `aria-label`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and `aria-valuetext` ensures assistive technologies announce skill metrics clearly.
 
 **Action:** Apply `role="progressbar"` along with explicit `aria-label`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and `aria-valuetext` attributes on visual skill and metric progress bars.
+
+## 2026-10-05 - Avoid Live Region Roles on Static Table Badges and Container Pills
+
+**Learning:** Applying `role="status"` live region attributes to static inline table cells, persona badges, or non-dynamic metric summary pills causes screen readers to misinterpret static content as dynamic live region updates, leading to repetitive or confusing announcements.
+
+**Action:** Do not use `role="status"` on static table badges or non-updating metric elements. Use standard semantic containers and native `title` tooltips for hover guidance without declaring live region roles.

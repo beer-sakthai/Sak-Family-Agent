@@ -360,7 +360,7 @@ describe("MemoryExplorer", () => {
   });
 
   it("provides status roles, aria-labels, and descriptive title tooltips on summary stat badges and kind count pills", () => {
-    const { container } = render(<MemoryExplorer memory={demoMemory()} />);
+    render(<MemoryExplorer memory={demoMemory()} />);
     const memoryData = demoMemory();
     const factsBadge = screen.getByText(`${memoryData.total_facts.toLocaleString()} facts`).closest("span");
     expect(factsBadge).toBeInTheDocument();
@@ -388,15 +388,16 @@ describe("MemoryExplorer", () => {
 
     const topKind = Object.entries(memoryData.kind_counts)[0];
     if (topKind) {
-      const spans = Array.from(container.querySelectorAll("span"));
-      const kindBadge = spans.find((s) => s.getAttribute("title")?.includes(`Fact count for kind "${topKind[0]}"`));
+      const kindBadge = screen.getByTitle(`Fact count for kind "${topKind[0]}": ${topKind[1].toLocaleString()}`);
       expect(kindBadge).toBeInTheDocument();
     }
   });
 
-  it("tags each fact with its shard", () => {
+  it("tags each fact with its shard and provides a title tooltip", () => {
     render(<MemoryExplorer memory={demoMemory()} />);
-    expect(screen.getAllByText("sakthai").length).toBeGreaterThan(0);
+    const firstFact = demoMemory().facts[0];
+    const shardBadges = screen.getAllByTitle(`Persona shard: ${firstFact.persona}`);
+    expect(shardBadges.length).toBeGreaterThan(0);
   });
 
   it("renders an empty state", () => {
