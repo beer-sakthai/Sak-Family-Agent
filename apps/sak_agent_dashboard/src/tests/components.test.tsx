@@ -866,20 +866,29 @@ describe("PersonaFilter", () => {
 describe("StitchStudio", () => {
   it("renders preset buttons and view tab buttons with explicit title tooltip attributes", () => {
     render(<StitchStudio />);
-    const presetButton = screen.getByRole("button", {
-      name: "Select preset SakThai Interactive Agent Drawer",
+    const activePresetButton = screen.getByRole("button", {
+      name: "Active preset: SakThai Interactive Agent Drawer",
     });
-    expect(presetButton).toHaveAttribute("title", "Select preset SakThai Interactive Agent Drawer");
+    expect(activePresetButton).toHaveAttribute("title", "Active preset: SakThai Interactive Agent Drawer");
+
+    const inactivePresetButton = screen.getByRole("button", {
+      name: "Select preset Multi-Agent System Architecture",
+    });
+    expect(inactivePresetButton).toHaveAttribute("title", "Select preset Multi-Agent System Architecture");
 
     const previewTab = screen.getByRole("tab", { name: /Live Preview/ });
     const codeTab = screen.getByRole("tab", { name: /TSX Code/ });
     const specTab = screen.getByRole("tab", { name: /Stitch JSON Spec/ });
     const copyButton = screen.getByRole("button", { name: "Copy TSX code" });
 
-    expect(previewTab).toHaveAttribute("title", "Switch to Live Preview view");
+    expect(previewTab).toHaveAttribute("title", "Viewing Live Preview");
     expect(codeTab).toHaveAttribute("title", "Switch to TSX Code view");
     expect(specTab).toHaveAttribute("title", "Switch to Stitch JSON Spec view");
     expect(copyButton).toHaveAttribute("title", "Copy TSX code");
+
+    fireEvent.click(codeTab);
+    expect(previewTab).toHaveAttribute("title", "Switch to Live Preview view");
+    expect(codeTab).toHaveAttribute("title", "Viewing TSX Code");
   });
 
   it("uses roving tabIndex for active and inactive tabs", () => {
