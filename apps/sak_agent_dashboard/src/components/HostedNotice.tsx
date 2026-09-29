@@ -57,8 +57,15 @@ export function HostedNotice({ activeSource, isDemo }: HostedNoticeProps) {
       <button
         type="button"
         onClick={() => setDismissed(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            e.stopPropagation();
+            setDismissed(true);
+          }
+        }}
         aria-label="Dismiss hosted deployment notice"
-        title="Dismiss hosted deployment notice"
+        title="Dismiss hosted deployment notice (Esc)"
         className="shrink-0 rounded-lg p-1 text-hue-amber/80 transition-colors hover:bg-hue-amber-tint/60 hover:text-hue-amber focus:outline-none focus-visible:ring-2 focus-visible:ring-hue-amber"
       >
         <X className="h-4 w-4" aria-hidden="true" />
