@@ -119,6 +119,8 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
         {delta && Number.isFinite(delta.value) && delta.value !== 0 && (
           <span
             data-testid="kpi-delta"
+            title={`Prior period comparison: ${delta.value >= 0 ? "+" : "-"}${Math.abs(delta.value).toFixed(0)}% (${deltaGood ? "improved" : "declined"})`}
+            aria-label={`Prior period change: ${delta.value >= 0 ? "+" : "-"}${Math.abs(delta.value).toFixed(0)}%`}
             className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 font-mono text-[10px] ${
               deltaGood
                 ? "border-hue-emerald-line/50 bg-hue-emerald-tint/40 text-hue-emerald"
