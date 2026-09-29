@@ -1,23 +1,9 @@
-🎨 Palette: Add status tooltips and ARIA attributes to agent cards
+**SakJules · Master of Automation & CI/CD.**
 
-💡 What: Added dynamic `title` hover tooltips explaining the status logic (`Active`, `Ready`, `Idle`) and explicit `aria-label` attributes to the persona status badges in `AgentCard.tsx`. Hided the inner status indicator dot from screen readers using `aria-hidden="true"`.
+🛡️ Sentinel: [CRITICAL] Fix Path Validation Bypass via '@' Prefix
 
-🎯 Why: Desktop users hovering over persona status badges were unable to discern why a persona was marked as "Active" (executed in last 24h), "Ready" (has memory/history), or "Idle" (no history or shard). Screen readers now also receive a dedicated accessible name ("Status: Idle") without redundant text.
-
-📸 Before/After: Visual badge is unchanged, but now shows helpful native hover tooltips on mouseover and clean accessible names for screen reader users.
-
-♿ Accessibility: Added `aria-label="Status: <status>"` to the container badge and `aria-hidden="true"` to the decorative pulsing status dot.
-🎨 Palette: Add title hover tooltips and accessible labels to AgentOverview persona count badge
-
-💡 What:
-Added explicit `title` hover tooltips and `aria-label` attributes to the registered/filtered persona count badge in `AgentOverview.tsx` in `apps/sak_agent_dashboard`. Updated corresponding unit tests in `components.test.tsx`.
-
-🎯 Why:
-Desktop mouse users hovering over the count pill in `AgentOverview` were missing context on whether the count represented total registered personas or a subset filtered by persona selection. The tooltip clarifies active vs total count states.
-
-📸 Before/After:
-- Before: `<div className="...">6 Personas Registered</div>` (No tooltip or ARIA description)
-- After: `<div title="6 total agent personas registered" aria-label="6 total agent personas registered">6 Personas Registered</div>` (Full hover tooltip and accessible ARIA description)
-
-♿ Accessibility:
-Provides screen readers and desktop users with unambiguous context regarding total vs filtered persona counts.
+🚨 Severity: CRITICAL
+💡 Vulnerability: File path validation (`_validate_filepath`) in `apps/agent_workflow_framework/agent_workflow/executor.py` failed to strip leading `@` characters from path strings before resolving them with `Path().resolve()`. This allowed an attacker to bypass absolute path checks (like `target.is_absolute()`) and subsequent system-root checks (e.g. `['@', 'var', 'log', 'syslog']` check bypassing because `is_absolute()` is False) when evaluating sensitive paths.
+🎯 Impact: Attackers could read arbitrary sensitive files (e.g. `@/var/log/syslog`) on the host system bypassing path traversal and sensitive directory constraints.
+🔧 Fix: Modified `_validate_filepath` to explicitly strip leading `@` characters by calling `.lstrip("@")` on the `path_str` at the entry boundary. Added comprehensive regression tests handling `@` variants of malicious paths.
+✅ Verification: Ran the full unit test suite `uv run pytest apps/agent_workflow_framework/tests/test_executor.py` which passes successfully and asserts protections on `@/etc/passwd` and `@@.env` variants.
