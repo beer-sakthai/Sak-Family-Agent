@@ -180,3 +180,9 @@
 **Learning:** Selection cards and view tab triggers (such as in `StitchStudio.tsx`) that display static hover tooltips (`Select preset ...` or `Switch to ... view`) can confuse users when hovering over already selected items. Providing dynamic `title` tooltips and `aria-label` attributes reflecting active selection state (e.g. `Active preset: ...` / `Viewing Live Preview`) ensures clear visual hover feedback and accurate screen reader context.
 
 **Action:** Always provide state-aware dynamic `title` hover tooltips and `aria-label` attributes on selection cards and view tabs across workbench components.
+
+## 2026-10-06 - Standard ARIA Progressbar Semantics on Persona Skill Count Bars
+
+**Learning:** Persona skill count bars in system overview panels (such as `SystemView.tsx`) render visual progress fill bars relative to the maximum skill count, but omission of WAI-ARIA progressbar attributes hides current skill metrics from screen reader users. Supplying `role="progressbar"`, `aria-label`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and `aria-valuetext` ensures assistive technologies announce skill metrics clearly.
+
+**Action:** Apply `role="progressbar"` along with explicit `aria-label`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and `aria-valuetext` attributes on visual skill and metric progress bars.

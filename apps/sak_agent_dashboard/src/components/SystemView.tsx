@@ -276,7 +276,11 @@ function PersonaGrid({ snapshot }: { snapshot: SystemSnapshot }) {
                 <p className="flex items-center gap-1.5 font-display text-base font-semibold text-fg">
                   {displayName(persona.name)}
                   {persona.lead && (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">
+                    <span
+                      title="Family lead persona"
+                      aria-label="Family lead persona"
+                      className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent"
+                    >
                       <Crown className="h-3 w-3" aria-hidden />
                       Lead
                     </span>
@@ -305,7 +309,15 @@ function PersonaGrid({ snapshot }: { snapshot: SystemSnapshot }) {
                 <span className="text-fg-4">Skills</span>
                 <span className="font-mono text-fg-2">{persona.skill_count}</span>
               </div>
-              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-sunken" aria-hidden>
+              <div
+                className="mt-1 h-1.5 overflow-hidden rounded-full bg-sunken"
+                role="progressbar"
+                aria-label={`${displayName(persona.name)} skills count`}
+                aria-valuenow={persona.skill_count}
+                aria-valuemin={0}
+                aria-valuemax={maxSkills}
+                aria-valuetext={`${persona.skill_count} skills configured`}
+              >
                 <div
                   className="h-full rounded-full bg-accent"
                   style={{ width: `${(persona.skill_count / maxSkills) * 100}%` }}

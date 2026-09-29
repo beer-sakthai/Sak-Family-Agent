@@ -21,6 +21,8 @@ export default function NotFound() {
       </p>
       <Link
         href="/"
+        aria-label="Return to the main dashboard"
+        title="Return to the main dashboard"
         className="mt-1 rounded-xl border border-line-strong bg-panel/70 px-4 py-2 text-sm text-fg-2 transition-colors hover:border-line-strong hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         Back to the dashboard
