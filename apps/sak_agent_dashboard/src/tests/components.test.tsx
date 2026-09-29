@@ -985,8 +985,21 @@ describe("ToastStack", () => {
       />,
     );
     const dismissButton = screen.getByRole("button", { name: "Dismiss notification" });
-    expect(dismissButton).toHaveAttribute("title", "Dismiss notification");
+    expect(dismissButton).toHaveAttribute("title", "Dismiss notification (Esc)");
     fireEvent.click(dismissButton);
+    expect(onDismiss).toHaveBeenCalledWith(1);
+  });
+
+  it("can be dismissed by pressing Escape on the dismiss button", () => {
+    const onDismiss = vi.fn();
+    render(
+      <ToastStack
+        toasts={[{ id: 1, tone: "info", message: "Export complete" }]}
+        onDismiss={onDismiss}
+      />,
+    );
+    const dismissButton = screen.getByRole("button", { name: "Dismiss notification" });
+    fireEvent.keyDown(dismissButton, { key: "Escape" });
     expect(onDismiss).toHaveBeenCalledWith(1);
   });
 });
