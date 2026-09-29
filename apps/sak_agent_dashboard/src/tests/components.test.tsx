@@ -999,9 +999,18 @@ describe("HostedNotice", () => {
     render(<HostedNotice activeSource="demo" isDemo={false} />);
     const dismissBtn = screen.getByRole("button", { name: "Dismiss hosted deployment notice" });
     expect(dismissBtn).toBeInTheDocument();
-    expect(dismissBtn).toHaveAttribute("title", "Dismiss hosted deployment notice");
+    expect(dismissBtn).toHaveAttribute("title", "Dismiss hosted deployment notice (Esc)");
 
     fireEvent.click(dismissBtn);
+    expect(screen.queryByTestId("hosted-notice")).not.toBeInTheDocument();
+  });
+
+  it("can be dismissed by pressing Escape on the dismiss button", () => {
+    render(<HostedNotice activeSource="demo" isDemo={false} />);
+    const dismissBtn = screen.getByRole("button", { name: "Dismiss hosted deployment notice" });
+    expect(dismissBtn).toBeInTheDocument();
+
+    fireEvent.keyDown(dismissBtn, { key: "Escape" });
     expect(screen.queryByTestId("hosted-notice")).not.toBeInTheDocument();
   });
 });

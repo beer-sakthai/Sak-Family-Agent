@@ -521,7 +521,7 @@ describe("HostedNotice", () => {
     expect(screen.getByTestId("hosted-notice")).toHaveTextContent("SAKTHAI_API_URL");
     const dismissBtn = screen.getByLabelText("Dismiss hosted deployment notice");
     expect(dismissBtn).toHaveAttribute("type", "button");
-    expect(dismissBtn).toHaveAttribute("title", "Dismiss hosted deployment notice");
+    expect(dismissBtn).toHaveAttribute("title", "Dismiss hosted deployment notice (Esc)");
   });
 
   it("stays out of the way when the sample data was asked for", () => {
