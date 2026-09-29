@@ -120,10 +120,21 @@ describe("SystemView", () => {
   it("marks the lead persona and the MCP-only tool", () => {
     render(<SystemView snapshot={FIXTURE} />);
     expect(screen.getByText("Lead")).toBeInTheDocument();
+    expect(screen.getByTitle("Family lead persona")).toBeInTheDocument();
+    expect(screen.getByLabelText("Family lead persona")).toBeInTheDocument();
     expect(screen.getByText("MCP only")).toBeInTheDocument();
     expect(screen.getByText("No MCP servers")).toBeInTheDocument();
     // A persona with no configured model says so rather than printing "null".
     expect(screen.getByText("provider default")).toBeInTheDocument();
+  });
+
+  it("renders persona skill bars with ARIA progressbar semantics", () => {
+    render(<SystemView snapshot={FIXTURE} />);
+    const bar = screen.getByRole("progressbar", { name: "SakThai skills count" });
+    expect(bar).toBeInTheDocument();
+    expect(bar).toHaveAttribute("aria-valuenow", "10");
+    expect(bar).toHaveAttribute("aria-valuemax", "10");
+    expect(bar).toHaveAttribute("aria-valuetext", "10 skills configured");
   });
 
   it("shows only PR-gating workflows until asked for all", () => {

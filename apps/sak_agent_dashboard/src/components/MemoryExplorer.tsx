@@ -163,7 +163,10 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
                         )}
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className="px-2 py-0.5 rounded bg-raised text-hue-emerald border border-hue-emerald-line/20 text-[11px]">
+                        <span
+                          title={`Persona shard: ${f.persona}`}
+                          className="px-2 py-0.5 rounded bg-raised text-hue-emerald border border-hue-emerald-line/20 text-[11px]"
+                        >
                           {f.persona}
                         </span>
                       </td>
@@ -210,7 +213,10 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
                     <tr key={`${o.persona}-${o.id}`} className="hover:bg-raised/40 transition-colors">
                       <td className="px-5 py-3.5 text-fg-4">{o.id}</td>
                       <td className="px-5 py-3.5">
-                        <span className="px-2 py-0.5 rounded bg-raised text-hue-violet border border-hue-violet-line/20 text-[11px]">
+                        <span
+                          title={`Persona shard: ${o.persona}`}
+                          className="px-2 py-0.5 rounded bg-raised text-hue-violet border border-hue-violet-line/20 text-[11px]"
+                        >
                           {o.persona}
                         </span>
                       </td>

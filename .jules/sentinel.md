@@ -522,3 +522,9 @@
 **Learning:** Using overly high version numbers for community or official actions can lead to infrastructure-level failures as runners fail to resolve the action reference. Always use established, stable major versions (e.g., `@v4` for checkout) unless a specific new feature is required and verified to exist.
 
 **Prevention:** Audit workflow files regularly to ensure action versions match the current stable releases provided by maintainers. Avoid "future-proofing" by inflating version numbers.
+
+## 2026-09-29 - [Path Validation Bypass via '@' Prefix]
+
+**Vulnerability:** File path validation (`_validate_filepath`) failed to strip leading `@` characters from path strings before resolving them with `Path().resolve()`. This allowed an attacker to bypass absolute path checks (like `target.is_absolute()`) and subsequent system-root checks (e.g. `['@', 'var', 'log', 'syslog']` check bypassing because `is_absolute()` is False) when evaluating sensitive paths.
+**Learning:** Security validations that rely on structure parsing (like `is_absolute()` or checking the first non-root directory) can be completely bypassed by prefixing a valid path with a non-path character (like `@` from cURL semantics) if the validation logic does not explicitly strip or normalize such prefixes prior to evaluating path segments.
+**Prevention:** Always strip potential argument prefixes (`@`, etc.) at the outermost boundary of file path validation functions before constructing Path objects or performing structural checks.

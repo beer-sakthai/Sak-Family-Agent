@@ -360,7 +360,7 @@ describe("MemoryExplorer", () => {
   });
 
   it("provides status roles, aria-labels, and descriptive title tooltips on summary stat badges and kind count pills", () => {
-    const { container } = render(<MemoryExplorer memory={demoMemory()} />);
+    render(<MemoryExplorer memory={demoMemory()} />);
     const memoryData = demoMemory();
     const factsBadge = screen.getByText(`${memoryData.total_facts.toLocaleString()} facts`).closest("span");
     expect(factsBadge).toBeInTheDocument();
@@ -388,15 +388,16 @@ describe("MemoryExplorer", () => {
 
     const topKind = Object.entries(memoryData.kind_counts)[0];
     if (topKind) {
-      const spans = Array.from(container.querySelectorAll("span"));
-      const kindBadge = spans.find((s) => s.getAttribute("title")?.includes(`Fact count for kind "${topKind[0]}"`));
+      const kindBadge = screen.getByTitle(`Fact count for kind "${topKind[0]}": ${topKind[1].toLocaleString()}`);
       expect(kindBadge).toBeInTheDocument();
     }
   });
 
-  it("tags each fact with its shard", () => {
+  it("tags each fact with its shard and provides a title tooltip", () => {
     render(<MemoryExplorer memory={demoMemory()} />);
-    expect(screen.getAllByText("sakthai").length).toBeGreaterThan(0);
+    const firstFact = demoMemory().facts[0];
+    const shardBadges = screen.getAllByTitle(`Persona shard: ${firstFact.persona}`);
+    expect(shardBadges.length).toBeGreaterThan(0);
   });
 
   it("renders an empty state", () => {
@@ -866,20 +867,29 @@ describe("PersonaFilter", () => {
 describe("StitchStudio", () => {
   it("renders preset buttons and view tab buttons with explicit title tooltip attributes", () => {
     render(<StitchStudio />);
-    const presetButton = screen.getByRole("button", {
-      name: "Select preset SakThai Interactive Agent Drawer",
+    const activePresetButton = screen.getByRole("button", {
+      name: "Active preset: SakThai Interactive Agent Drawer",
     });
-    expect(presetButton).toHaveAttribute("title", "Select preset SakThai Interactive Agent Drawer");
+    expect(activePresetButton).toHaveAttribute("title", "Active preset: SakThai Interactive Agent Drawer");
+
+    const inactivePresetButton = screen.getByRole("button", {
+      name: "Select preset Multi-Agent System Architecture",
+    });
+    expect(inactivePresetButton).toHaveAttribute("title", "Select preset Multi-Agent System Architecture");
 
     const previewTab = screen.getByRole("tab", { name: /Live Preview/ });
     const codeTab = screen.getByRole("tab", { name: /TSX Code/ });
     const specTab = screen.getByRole("tab", { name: /Stitch JSON Spec/ });
     const copyButton = screen.getByRole("button", { name: "Copy TSX code" });
 
-    expect(previewTab).toHaveAttribute("title", "Switch to Live Preview view");
+    expect(previewTab).toHaveAttribute("title", "Viewing Live Preview");
     expect(codeTab).toHaveAttribute("title", "Switch to TSX Code view");
     expect(specTab).toHaveAttribute("title", "Switch to Stitch JSON Spec view");
     expect(copyButton).toHaveAttribute("title", "Copy TSX code");
+
+    fireEvent.click(codeTab);
+    expect(previewTab).toHaveAttribute("title", "Switch to Live Preview view");
+    expect(codeTab).toHaveAttribute("title", "Viewing TSX Code");
   });
 
   it("uses roving tabIndex for active and inactive tabs", () => {

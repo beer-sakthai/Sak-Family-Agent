@@ -175,8 +175,8 @@ export function StitchStudio() {
               key={preset.id}
               type="button"
               aria-pressed={isSelected}
-              aria-label={`Select preset ${preset.title}`}
-              title={`Select preset ${preset.title}`}
+              aria-label={isSelected ? `Active preset: ${preset.title}` : `Select preset ${preset.title}`}
+              title={isSelected ? `Active preset: ${preset.title}` : `Select preset ${preset.title}`}
               onClick={() => setActivePreset(preset)}
               className={`text-left p-4 rounded-xl transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-canvas ${
                 isSelected
@@ -214,7 +214,7 @@ export function StitchStudio() {
               tabIndex={activeTab === "preview" ? 0 : -1}
               aria-selected={activeTab === "preview"}
               aria-controls="stitch-panel-preview"
-              title="Switch to Live Preview view"
+              title={activeTab === "preview" ? "Viewing Live Preview" : "Switch to Live Preview view"}
               onClick={() => setActiveTab("preview")}
               className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 activeTab === "preview"
@@ -232,7 +232,7 @@ export function StitchStudio() {
               tabIndex={activeTab === "code" ? 0 : -1}
               aria-selected={activeTab === "code"}
               aria-controls="stitch-panel-code"
-              title="Switch to TSX Code view"
+              title={activeTab === "code" ? "Viewing TSX Code" : "Switch to TSX Code view"}
               onClick={() => setActiveTab("code")}
               className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 activeTab === "code"
@@ -250,7 +250,7 @@ export function StitchStudio() {
               tabIndex={activeTab === "spec" ? 0 : -1}
               aria-selected={activeTab === "spec"}
               aria-controls="stitch-panel-spec"
-              title="Switch to Stitch JSON Spec view"
+              title={activeTab === "spec" ? "Viewing Stitch JSON Spec" : "Switch to Stitch JSON Spec view"}
               onClick={() => setActiveTab("spec")}
               className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 activeTab === "spec"

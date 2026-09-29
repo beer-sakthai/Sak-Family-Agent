@@ -104,7 +104,7 @@ def _validate_filepath(filepath: Any) -> Path:
     if not filepath:
         raise ValueError("File path cannot be empty.")
 
-    path_str = str(filepath).strip()
+    path_str = str(filepath).strip().lstrip("@")
 
     # Recursively decode URL-encoded path segments up to 5 levels to prevent multi-layered encoding bypasses.
     current_path = path_str
