@@ -347,7 +347,7 @@ describe("KpiStrip", () => {
     expect(screen.queryAllByTestId("kpi-delta")).toHaveLength(0);
   });
 
-  it("compares the two halves of the trend window when there is enough of it", () => {
+  it("compares the two halves of the trend window when there is enough of it and provides title and aria-label", () => {
     const point = metrics.trends[0];
     render(
       <KpiStrip
@@ -366,7 +366,10 @@ describe("KpiStrip", () => {
       />,
     );
     // 2 runs in the older half, 8 in the newer: +300%.
-    expect(screen.getByTestId("kpi-delta")).toHaveTextContent("300%");
+    const deltaBadge = screen.getByTestId("kpi-delta");
+    expect(deltaBadge).toHaveTextContent("300%");
+    expect(deltaBadge).toHaveAttribute("title", "Prior period comparison: +300% (improved)");
+    expect(deltaBadge).toHaveAttribute("aria-label", "Prior period change: +300%");
   });
 
   it("declines to compute a delta against a window with no runs in it", () => {
