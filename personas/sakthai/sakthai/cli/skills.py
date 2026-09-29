@@ -133,11 +133,22 @@ def skills_validate(source: str, naming: bool) -> None:
 
 
 def _naming_violations() -> list[tuple[Path, str]]:
-    """Naming-convention violations across the shared library and every persona overlay."""
+    """Naming-convention violations across the shared library and every persona overlay.
+
+    ``naming_violations`` skips a SKILL.md it cannot parse (parse errors belong to
+    ``validate_tree``), and nothing else validates the persona overlays' frontmatter.
+    A skill with broken YAML or no ``name:`` cannot be resolved at all, so it would
+    otherwise pass this audit silently; the same roots' parse errors are reported here.
+    """
+    roots = [(PERSONAS_DIR / "shared" / "skills", SHARED_SKILL_PREFIX)]
+    roots += [
+        (PERSONAS_DIR / persona / "skills", prefix)
+        for persona, prefix in PERSONA_SKILL_PREFIXES.items()
+    ]
     found: list[tuple[Path, str]] = []
-    found.extend(naming_violations(PERSONAS_DIR / "shared" / "skills", prefix=SHARED_SKILL_PREFIX))
-    for persona, prefix in PERSONA_SKILL_PREFIXES.items():
-        found.extend(naming_violations(PERSONAS_DIR / persona / "skills", prefix=prefix))
+    for root, prefix in roots:
+        found.extend(naming_violations(root, prefix=prefix))
+    found.extend(validate_tree(*(root for root, _ in roots)))
     return found
 
 
