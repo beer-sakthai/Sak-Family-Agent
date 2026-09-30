@@ -1008,6 +1008,29 @@ describe("ToastStack", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByText("Test toast")).not.toBeInTheDocument();
   });
+
+  it("leaves the toast alone when a control already consumed the Escape", () => {
+    function TestToastComponent() {
+      const { toasts, push, dismiss } = useToasts();
+      return (
+        <div>
+          <button onClick={() => push("info", "Test toast")}>Push Toast</button>
+          <input
+            aria-label="Search"
+            onKeyDown={(e) => {
+              if (e.key === "Escape") e.preventDefault();
+            }}
+          />
+          <ToastStack toasts={toasts} onDismiss={dismiss} />
+        </div>
+      );
+    }
+
+    render(<TestToastComponent />);
+    fireEvent.click(screen.getByRole("button", { name: "Push Toast" }));
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "Search" }), { key: "Escape" });
+    expect(screen.getByText("Test toast")).toBeInTheDocument();
+  });
 });
 
 describe("HostedNotice", () => {

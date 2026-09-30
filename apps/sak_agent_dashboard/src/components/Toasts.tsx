@@ -69,7 +69,8 @@ export function useToasts() {
   useEffect(() => {
     if (toasts.length === 0) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      // Skip an Escape a control already consumed (e.g. closing the palette).
+      if (event.key === "Escape" && !event.defaultPrevented) {
         event.preventDefault();
         // Dismiss the last (newest) toast
         dismiss(toasts[toasts.length - 1].id);
