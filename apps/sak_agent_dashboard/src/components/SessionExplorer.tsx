@@ -92,7 +92,7 @@ export function SessionExplorer({
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-fg-4 pointer-events-none" aria-hidden />
         <input
-          type="text"
+          type="search"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           onKeyDown={(e) => {
@@ -103,6 +103,7 @@ export function SessionExplorer({
           }}
           placeholder="Search sessions by task, model, id, or persona…"
           aria-label="Search sessions"
+          title="Search sessions by task, model, id, or persona"
           className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-panel/80 border border-line text-sm text-fg placeholder:text-fg-5 font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus:border-hue-cyan-line/50 transition-colors"
         />
         {search && (
