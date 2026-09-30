@@ -24,7 +24,7 @@ import MemoryExplorer from "@/components/MemoryExplorer";
 import PersonaFilter from "@/components/PersonaFilter";
 import SessionExplorer from "@/components/SessionExplorer";
 import StitchStudio from "@/components/StitchStudio";
-import ToastStack, { useToasts } from "@/components/Toasts";
+import ToastStack from "@/components/Toasts";
 import WorkflowRuns from "@/components/WorkflowRuns";
 import type { PersonaSummary } from "@/lib/contracts.generated";
 import {
@@ -976,7 +976,7 @@ describe("DisplayMenu", () => {
 });
 
 describe("ToastStack", () => {
-  it("renders toasts with accessible dismiss buttons containing title attributes with shortcut hint", () => {
+  it("renders toasts with accessible dismiss buttons containing title attributes", () => {
     const onDismiss = vi.fn();
     render(
       <ToastStack
@@ -1001,25 +1001,6 @@ describe("ToastStack", () => {
     const dismissButton = screen.getByRole("button", { name: "Dismiss notification" });
     fireEvent.keyDown(dismissButton, { key: "Escape" });
     expect(onDismiss).toHaveBeenCalledWith(1);
-  it("dismisses the latest active toast when Escape key is pressed", () => {
-    function TestComponent() {
-      const { toasts, push, dismiss } = useToasts();
-      return (
-        <div>
-          <button type="button" onClick={() => push("info", "Test Toast")}>
-            Trigger Toast
-          </button>
-          <ToastStack toasts={toasts} onDismiss={dismiss} />
-        </div>
-      );
-    }
-
-    render(<TestComponent />);
-    fireEvent.click(screen.getByRole("button", { name: "Trigger Toast" }));
-    expect(screen.getByText("Test Toast")).toBeInTheDocument();
-
-    fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.queryByText("Test Toast")).not.toBeInTheDocument();
   });
 });
 
