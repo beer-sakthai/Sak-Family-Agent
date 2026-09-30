@@ -115,7 +115,19 @@ function SignalCard({ signal, onNavigate }: { signal: Signal; onNavigate?: (tab:
           <span className="hidden 2xl:inline">{style.label}</span>
         </span>
       </div>
-      <div className="mt-4 h-1 overflow-hidden rounded-full bg-panel/70" aria-hidden>
+      <div
+        role="progressbar"
+        aria-label={`${signal.label} health indicator`}
+        aria-valuenow={signal.progress === null ? 0 : Math.round(signal.progress)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuetext={
+          signal.progress === null
+            ? "Awaiting data"
+            : `${Math.round(signal.progress)}%`
+        }
+        className="mt-4 h-1 overflow-hidden rounded-full bg-panel/70"
+      >
         <div
           className={`h-full rounded-full transition-[width] duration-500 ${style.fill}`}
           style={{ width: `${signal.progress ?? 0}%` }}
