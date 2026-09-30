@@ -1,7 +1,8 @@
 # Enforce the repository security and quality skills on every pull request.
 #
 # Three jobs:
-#   * skill-validation — `sakthai skills validate` and `make compose-personas`
+#   * skill-validation — `sakthai skills validate` (library frontmatter, then
+#                        persona `--naming`) and `make compose-personas`
 #   * quality          — ruff + mypy + pytest at the 96% floor, on 3.11
 #   * security         — zizmor over the workflows, and the tracked-secret check
 #
@@ -65,6 +66,13 @@ jobs:
 
       - name: Validate shared skill frontmatter
         run: uv run sakthai skills validate --source library
+
+      # Every persona skill's frontmatter `name:` must carry its persona's
+      # prefix and match its folder. Skills resolve by that name, so a
+      # mismatch is a skill `--with-skills` and workspace.yaml cannot find;
+      # 175 of them built up unnoticed before this ran in CI.
+      - name: Validate persona skill naming
+        run: uv run sakthai skills validate --naming
 
       - name: Compose persona skill trees
         run: make compose-personas
