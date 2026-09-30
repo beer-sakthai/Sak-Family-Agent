@@ -24,7 +24,7 @@ import MemoryExplorer from "@/components/MemoryExplorer";
 import PersonaFilter from "@/components/PersonaFilter";
 import SessionExplorer from "@/components/SessionExplorer";
 import StitchStudio from "@/components/StitchStudio";
-import ToastStack from "@/components/Toasts";
+import ToastStack, { useToasts } from "@/components/Toasts";
 import WorkflowRuns from "@/components/WorkflowRuns";
 import type { PersonaSummary } from "@/lib/contracts.generated";
 import {
@@ -985,9 +985,28 @@ describe("ToastStack", () => {
       />,
     );
     const dismissButton = screen.getByRole("button", { name: "Dismiss notification" });
-    expect(dismissButton).toHaveAttribute("title", "Dismiss notification");
+    expect(dismissButton).toHaveAttribute("title", "Dismiss notification (Esc)");
     fireEvent.click(dismissButton);
     expect(onDismiss).toHaveBeenCalledWith(1);
+  });
+
+  it("dismisses the active toast on Escape key press via useToasts hook", () => {
+    function TestToastComponent() {
+      const { toasts, push, dismiss } = useToasts();
+      return (
+        <div>
+          <button onClick={() => push("info", "Test toast")}>Push Toast</button>
+          <ToastStack toasts={toasts} onDismiss={dismiss} />
+        </div>
+      );
+    }
+
+    render(<TestToastComponent />);
+    fireEvent.click(screen.getByRole("button", { name: "Push Toast" }));
+    expect(screen.getByText("Test toast")).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByText("Test toast")).not.toBeInTheDocument();
   });
 });
 
