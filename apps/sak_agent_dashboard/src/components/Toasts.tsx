@@ -58,6 +58,16 @@ export function useToasts() {
   );
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && toasts.length > 0) {
+        dismiss(toasts[toasts.length - 1].id);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toasts, dismiss]);
+
+  useEffect(() => {
     const pending = timers.current;
     return () => {
       for (const timer of pending) window.clearTimeout(timer);
@@ -103,7 +113,7 @@ export function ToastStack({
               type="button"
               onClick={() => onDismiss(toast.id)}
               aria-label="Dismiss notification"
-              title="Dismiss notification"
+              title="Dismiss notification (Esc)"
               className="shrink-0 rounded p-0.5 opacity-60 transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               <X className="h-3 w-3" aria-hidden />
