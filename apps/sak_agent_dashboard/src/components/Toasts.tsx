@@ -65,6 +65,20 @@ export function useToasts() {
     };
   }, []);
 
+  // Global Escape key handler to dismiss the most recent toast
+  useEffect(() => {
+    if (toasts.length === 0) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        // Dismiss the last (newest) toast
+        dismiss(toasts[toasts.length - 1].id);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [toasts, dismiss]);
+
   return { toasts, push, dismiss };
 }
 
@@ -102,13 +116,6 @@ export function ToastStack({
             <button
               type="button"
               onClick={() => onDismiss(toast.id)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onDismiss(toast.id);
-                }
-              }}
               aria-label="Dismiss notification"
               title="Dismiss notification (Esc)"
               className="shrink-0 rounded p-0.5 opacity-60 transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
