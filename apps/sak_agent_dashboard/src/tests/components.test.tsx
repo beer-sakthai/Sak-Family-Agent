@@ -976,7 +976,7 @@ describe("DisplayMenu", () => {
 });
 
 describe("ToastStack", () => {
-  it("renders toasts with accessible dismiss buttons containing title attributes with shortcut hint", () => {
+  it("renders toasts with accessible dismiss buttons containing title attributes", () => {
     const onDismiss = vi.fn();
     render(
       <ToastStack
@@ -996,25 +996,17 @@ describe("ToastStack", () => {
       return (
         <div>
           <button onClick={() => push("info", "Test toast")}>Push Toast</button>
-  it("dismisses the latest active toast when Escape key is pressed", () => {
-    function TestComponent() {
-      const { toasts, push, dismiss } = useToasts();
-      return (
-        <div>
-          <button type="button" onClick={() => push("info", "Test Toast")}>
-            Trigger Toast
-          </button>
           <ToastStack toasts={toasts} onDismiss={dismiss} />
         </div>
       );
     }
 
-    render(<TestComponent />);
-    fireEvent.click(screen.getByRole("button", { name: "Trigger Toast" }));
-    expect(screen.getByText("Test Toast")).toBeInTheDocument();
+    render(<TestToastComponent />);
+    fireEvent.click(screen.getByRole("button", { name: "Push Toast" }));
+    expect(screen.getByText("Test toast")).toBeInTheDocument();
 
-    fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.queryByText("Test Toast")).not.toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByText("Test toast")).not.toBeInTheDocument();
   });
 });
 
