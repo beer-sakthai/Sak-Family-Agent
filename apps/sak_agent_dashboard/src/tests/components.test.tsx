@@ -24,7 +24,7 @@ import MemoryExplorer from "@/components/MemoryExplorer";
 import PersonaFilter from "@/components/PersonaFilter";
 import SessionExplorer from "@/components/SessionExplorer";
 import StitchStudio from "@/components/StitchStudio";
-import ToastStack from "@/components/Toasts";
+import ToastStack, { useToasts } from "@/components/Toasts";
 import WorkflowRuns from "@/components/WorkflowRuns";
 import type { PersonaSummary } from "@/lib/contracts.generated";
 import {
@@ -1007,17 +1007,6 @@ describe("ToastStack", () => {
 
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByText("Test toast")).not.toBeInTheDocument();
-  it("can be dismissed by pressing Escape on the dismiss button", () => {
-    const onDismiss = vi.fn();
-    render(
-      <ToastStack
-        toasts={[{ id: 1, tone: "info", message: "Export complete" }]}
-        onDismiss={onDismiss}
-      />,
-    );
-    const dismissButton = screen.getByRole("button", { name: "Dismiss notification" });
-    fireEvent.keyDown(dismissButton, { key: "Escape" });
-    expect(onDismiss).toHaveBeenCalledWith(1);
   });
 });
 

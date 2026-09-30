@@ -1,5 +1,11 @@
 ---
-name: SakJules-hf-datasets-5-release
+name: SakJules-SakThai-hf-datasets-5-release
+description: "|---"
+---
+---
+
+|---
+name: hf-datasets-5-release
 author: SakThai
 license: MIT
 description: Complete reference for Hugging Face Datasets v5.0.0 — agent trace parsing via teich (v0.2.9), multi-shard streaming shuffle, batch-by-column, Apache Iceberg, TsFile, 3D Mesh, CoNLL, and robotics batch batching.

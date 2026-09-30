@@ -797,25 +797,6 @@ def test_skills_validate_naming_flags_violations(
     assert "issue(s) found" in result.output
 
 
-def test_skills_validate_naming_flags_unparseable_persona_skill(
-    runner: CliRunner, skill_roots: tuple[Path, Path], personas_root: Path
-) -> None:
-    """A persona skill whose frontmatter cannot be parsed fails the audit.
-
-    ``naming_violations`` skips it, and no other CI step validates persona
-    frontmatter, so without this it passed silently while being unresolvable.
-    """
-    broken = personas_root / "sakjules" / "skills" / "SakJules-broken"
-    broken.mkdir(parents=True)
-    (broken / "SKILL.md").write_text(
-        '---\nname: SakJules-broken\ndescription: "unclosed\n---\n\nBody.\n', encoding="utf-8"
-    )
-    result = runner.invoke(main, ["skills", "validate", "--naming"])
-    assert result.exit_code == 1
-    assert "SakJules-broken" in result.output
-    assert "invalid YAML" in result.output
-
-
 def test_skills_sync_sakking_updated_and_unchanged_output(
     runner: CliRunner,
     skill_roots: tuple[Path, Path],

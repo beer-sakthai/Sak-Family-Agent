@@ -116,13 +116,6 @@ export function ToastStack({
             <button
               type="button"
               onClick={() => onDismiss(toast.id)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onDismiss(toast.id);
-                }
-              }}
               aria-label="Dismiss notification"
               title="Dismiss notification (Esc)"
               className="shrink-0 rounded p-0.5 opacity-60 transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
