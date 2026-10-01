@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Cloud, Info, X } from "lucide-react";
+import { Check, Cloud, Copy, Info, X } from "lucide-react";
 
 import type { DataSource } from "@/lib/contracts.generated";
 
@@ -22,8 +22,17 @@ interface HostedNoticeProps {
  */
 export function HostedNotice({ activeSource, isDemo }: HostedNoticeProps) {
   const [dismissed, setDismissed] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   if (dismissed || activeSource !== "demo" || isDemo) return null;
+
+  const handleCopy = () => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      void navigator.clipboard.writeText("sakthai web setup");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
     <div
@@ -48,7 +57,28 @@ export function HostedNotice({ activeSource, isDemo }: HostedNoticeProps) {
           <code className="rounded bg-hue-amber-tint/60 px-1 py-0.5 font-mono text-[11px]">
             SAKTHAI_API_TOKEN
           </code>
-          , from <code className="font-mono text-[11px]">sakthai web setup</code>) in the
+          , from{" "}
+          <span className="inline-flex items-center gap-1">
+            <code className="font-mono text-[11px]">sakthai web setup</code>
+            <button
+              type="button"
+              onClick={handleCopy}
+              aria-label={
+                copied
+                  ? "Copied sakthai web setup command"
+                  : "Copy sakthai web setup command to clipboard"
+              }
+              title={copied ? "Copied command!" : "Copy sakthai web setup command to clipboard"}
+              className="inline-flex items-center rounded p-0.5 transition-colors hover:bg-hue-amber-tint/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-hue-amber"
+            >
+              {copied ? (
+                <Check className="h-3 w-3 text-hue-amber" aria-hidden="true" />
+              ) : (
+                <Copy className="h-3 w-3 text-hue-amber/80" aria-hidden="true" />
+              )}
+            </button>
+          </span>
+          ) in the
           deployment&apos;s environment, or run the dashboard locally beside{" "}
           <code className="font-mono text-[11px]">~/.sakthai</code>.
         </p>
