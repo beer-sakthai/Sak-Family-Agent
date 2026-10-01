@@ -131,11 +131,15 @@ export function StitchStudio() {
     2
   );
 
-  const handleCopyCode = () => {
+  const handleCopyCode = async () => {
     const textToCopy = activeTab === "spec" ? jsonSpec : activePreset.codeSnippet;
-    navigator.clipboard.writeText(textToCopy);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Gracefully handle clipboard errors in restricted environments
+    }
   };
 
   return (
@@ -159,7 +163,7 @@ export function StitchStudio() {
 
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono text-hue-emerald bg-hue-emerald-tint/80 px-3 py-1.5 rounded-xl border border-hue-emerald-line/40 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-hue-emerald animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-hue-emerald animate-pulse" aria-hidden="true" />
               Stitch MCP Connected
             </span>
           </div>
