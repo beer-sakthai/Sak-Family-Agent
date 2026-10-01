@@ -930,6 +930,22 @@ describe("StitchStudio", () => {
     fireEvent.keyDown(tablist, { key: "End" });
     expect(specTab).toHaveAttribute("aria-selected", "true");
   });
+
+  it("copies code snippet to clipboard and updates button state", async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextMock,
+      },
+    });
+
+    render(<StitchStudio />);
+    const copyBtn = screen.getByRole("button", { name: "Copy TSX code" });
+    fireEvent.click(copyBtn);
+
+    expect(writeTextMock).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole("button", { name: "Copied to clipboard" })).toBeInTheDocument();
+  });
 });
 
 describe("DisplayMenu", () => {

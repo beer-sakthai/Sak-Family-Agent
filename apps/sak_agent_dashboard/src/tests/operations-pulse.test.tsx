@@ -55,4 +55,25 @@ describe("OperationsPulse", () => {
     expect(screen.getAllByText("Awaiting data")).toHaveLength(4);
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
+
+  it("exposes progressbars with accessible labels and status tooltips", () => {
+    render(
+      <OperationsPulse
+        personas={demoPersonas()}
+        metrics={demoMetrics()}
+        audit={demoAudit()}
+        workflows={demoWorkflows()}
+      />,
+    );
+
+    const progressbars = screen.getAllByRole("progressbar");
+    expect(progressbars).toHaveLength(4);
+
+    const runQualityBar = screen.getByRole("progressbar", { name: "Run quality health indicator" });
+    expect(runQualityBar).toHaveAttribute("aria-valuenow", "98");
+    expect(runQualityBar).toHaveAttribute("aria-valuetext", "98%");
+
+    const statusPills = screen.getAllByTitle(/^Signal status:/);
+    expect(statusPills).toHaveLength(4);
+  });
 });
