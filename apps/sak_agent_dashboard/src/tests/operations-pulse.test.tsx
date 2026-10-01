@@ -56,7 +56,7 @@ describe("OperationsPulse", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
-  it("exposes progressbars with accessible labels and status tooltips", () => {
+  it("exposes accessible role='progressbar' elements for operational signal health", () => {
     render(
       <OperationsPulse
         personas={demoPersonas()}
@@ -66,14 +66,25 @@ describe("OperationsPulse", () => {
       />,
     );
 
-    const progressbars = screen.getAllByRole("progressbar");
-    expect(progressbars).toHaveLength(4);
+    const progressBars = screen.getAllByRole("progressbar");
+    expect(progressBars).toHaveLength(4);
 
     const runQualityBar = screen.getByRole("progressbar", { name: "Run quality health indicator" });
     expect(runQualityBar).toHaveAttribute("aria-valuenow", "98");
     expect(runQualityBar).toHaveAttribute("aria-valuetext", "98%");
+  });
 
-    const statusPills = screen.getAllByTitle(/^Signal status:/);
-    expect(statusPills).toHaveLength(4);
+  it("gives each status pill a tooltip and accessible name", () => {
+    render(
+      <OperationsPulse
+        personas={demoPersonas()}
+        metrics={demoMetrics()}
+        audit={demoAudit()}
+        workflows={demoWorkflows()}
+      />,
+    );
+
+    expect(screen.getAllByTitle(/^Signal status:/)).toHaveLength(4);
+    expect(screen.getAllByLabelText(/^Status:/)).toHaveLength(4);
   });
 });
