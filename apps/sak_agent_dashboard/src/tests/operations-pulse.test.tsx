@@ -73,4 +73,18 @@ describe("OperationsPulse", () => {
     expect(runQualityBar).toHaveAttribute("aria-valuenow", "98");
     expect(runQualityBar).toHaveAttribute("aria-valuetext", "98%");
   });
+
+  it("gives each status pill a tooltip and accessible name", () => {
+    render(
+      <OperationsPulse
+        personas={demoPersonas()}
+        metrics={demoMetrics()}
+        audit={demoAudit()}
+        workflows={demoWorkflows()}
+      />,
+    );
+
+    expect(screen.getAllByTitle(/^Signal status:/)).toHaveLength(4);
+    expect(screen.getAllByLabelText(/^Status:/)).toHaveLength(4);
+  });
 });

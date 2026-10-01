@@ -109,6 +109,8 @@ function SignalCard({ signal, onNavigate }: { signal: Signal; onNavigate?: (tab:
           <p className="mt-1 min-h-8 text-xs leading-4 text-fg-3">{signal.detail}</p>
         </div>
         <span
+          title={`Signal status: ${style.label}`}
+          aria-label={`Status: ${style.label}`}
           className={`inline-flex shrink-0 items-center gap-1 rounded-full border border-current/20 bg-panel/40 px-2 py-1 font-mono text-[10px] ${style.text}`}
         >
           <StatusIcon className="h-3 w-3" aria-hidden />
