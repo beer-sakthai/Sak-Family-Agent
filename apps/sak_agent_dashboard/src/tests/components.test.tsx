@@ -1093,6 +1093,29 @@ describe("HostedNotice", () => {
     fireEvent.keyDown(dismissBtn, { key: "Escape" });
     expect(screen.queryByTestId("hosted-notice")).not.toBeInTheDocument();
   });
+
+  it("copies sakthai web setup command to clipboard on copy button click", async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextMock,
+      },
+    });
+
+    render(<HostedNotice activeSource="demo" isDemo={false} />);
+    const copyBtn = screen.getByRole("button", {
+      name: "Copy sakthai web setup command to clipboard",
+    });
+    expect(copyBtn).toBeInTheDocument();
+    expect(copyBtn).toHaveAttribute("title", "Copy sakthai web setup command to clipboard");
+
+    fireEvent.click(copyBtn);
+    expect(writeTextMock).toHaveBeenCalledWith("sakthai web setup");
+
+    expect(
+      screen.getByRole("button", { name: "Copied sakthai web setup command" }),
+    ).toBeInTheDocument();
+  });
 });
 
 describe("DemoModeToggle", () => {
