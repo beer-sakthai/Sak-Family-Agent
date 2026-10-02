@@ -152,6 +152,7 @@ export function PersonaFilter({ selected, onChange, counts }: PersonaFilterProps
             type="button"
             role="menuitem"
             onClick={() => onChange([])}
+            title="Show all personas"
             className={`mb-1 flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               selected.length === 0
                 ? "bg-raised text-fg"
@@ -168,6 +169,11 @@ export function PersonaFilter({ selected, onChange, counts }: PersonaFilterProps
           {PERSONA_NAMES.map((name) => {
             const checked = selected.includes(name);
             const count = counts?.[name];
+            const personaName = displayName(name);
+            const tooltip =
+              count !== undefined
+                ? `Filter by ${personaName} persona (${count} ${count === 1 ? "run" : "runs"})`
+                : `Filter by ${personaName} persona`;
             return (
               <button
                 key={name}
@@ -175,6 +181,7 @@ export function PersonaFilter({ selected, onChange, counts }: PersonaFilterProps
                 role="menuitemcheckbox"
                 aria-checked={checked}
                 onClick={() => toggle(name)}
+                title={tooltip}
                 className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                   checked ? "bg-raised text-fg" : "text-fg-3 hover:bg-raised/60 hover:text-fg-2"
                 }`}
