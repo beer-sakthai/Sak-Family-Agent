@@ -831,10 +831,10 @@ describe("PersonaFilter", () => {
     expect(trigger).toHaveAttribute("title", "Filter by persona (Selected: SakThai)");
   });
 
-  it("opens menu on trigger click, auto-focuses first item, and navigates items via Arrow keys and Home/End", () => {
+  it("opens menu on trigger click, auto-focuses first item, provides menu item title tooltips, and navigates items via Arrow keys and Home/End", () => {
     const onChange = vi.fn();
 
-    render(<PersonaFilter selected={[]} onChange={onChange} />);
+    const { rerender } = render(<PersonaFilter selected={[]} onChange={onChange} />);
 
     const trigger = screen.getByTestId("persona-filter");
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
@@ -842,6 +842,18 @@ describe("PersonaFilter", () => {
     fireEvent.click(trigger);
     const menu = screen.getByRole("menu", { name: "Filter by persona" });
     expect(menu).toBeInTheDocument();
+
+    const allPersonasItem = screen.getByRole("menuitem", { name: /All personas/ });
+    expect(allPersonasItem).toHaveAttribute("title", "Show all personas");
+
+    const sakthaiCheckbox = screen.getByRole("menuitemcheckbox", { name: /SakThai/ });
+    expect(sakthaiCheckbox).toHaveAttribute("title", "Filter by SakThai persona");
+
+    rerender(<PersonaFilter selected={[]} onChange={onChange} counts={{ sakthai: 12 }} />);
+    expect(screen.getByRole("menuitemcheckbox", { name: /SakThai/ })).toHaveAttribute(
+      "title",
+      "Filter by SakThai persona (12 runs)",
+    );
 
     const menuItems = [
       ...screen.getAllByRole("menuitem"),

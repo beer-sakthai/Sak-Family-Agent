@@ -89,7 +89,6 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           aria-controls="panel-facts"
           title={activeTab === "facts" ? "Viewing recorded memory facts" : "Switch to memory facts view"}
           onClick={() => setActiveTab("facts")}
-          onKeyDown={handleKeyDown}
           className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
             activeTab === "facts"
               ? "bg-hue-cyan-tint/50 text-hue-cyan border-hue-cyan-line/50"
@@ -108,7 +107,6 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           aria-controls="panel-observations"
           title={activeTab === "observations" ? "Viewing recorded observations" : "Switch to observations view"}
           onClick={() => setActiveTab("observations")}
-          onKeyDown={handleKeyDown}
           className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
             activeTab === "observations"
               ? "bg-hue-violet-tint/50 text-hue-violet border-hue-violet-line/50"
