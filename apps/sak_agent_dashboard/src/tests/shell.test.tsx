@@ -123,14 +123,14 @@ describe("Sidebar", () => {
 
     const collapseButton = screen.getByLabelText("Collapse sidebar");
     expect(collapseButton).toHaveAttribute("type", "button");
-    expect(collapseButton).toHaveAttribute("title", "Collapse sidebar");
+    expect(collapseButton).toHaveAttribute("title", "Collapse sidebar ([)");
     fireEvent.click(collapseButton);
     expect(props.onCollapsedChange).toHaveBeenCalledWith(true);
 
     rerender(<Sidebar {...props} collapsed={true} />);
     const expandButton = screen.getByLabelText("Expand sidebar");
     expect(expandButton).toHaveAttribute("type", "button");
-    expect(expandButton).toHaveAttribute("title", "Expand sidebar");
+    expect(expandButton).toHaveAttribute("title", "Expand sidebar ([)");
   });
 
   it("keeps the mobile drawer unmounted until it is opened and includes accessible backdrop attributes and explicit type button", () => {
