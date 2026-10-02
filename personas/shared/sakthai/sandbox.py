@@ -47,6 +47,7 @@ def build_image(*, force: bool = False) -> None:
         capture_output=True,
         text=True,
         shell=False,
+        check=False,
     )
     if result.returncode != 0:
         raise SandboxError(
@@ -163,5 +164,5 @@ def run_in_sandbox(
 
     # Explicit shell=False. The task string is passed as a positional argument to
     # the 'run' command inside the container, not interpreted by a host shell.
-    proc = subprocess.run(cmd, shell=False)  # nosec B603
+    proc = subprocess.run(cmd, shell=False, check=False)  # nosec B603
     return proc.returncode

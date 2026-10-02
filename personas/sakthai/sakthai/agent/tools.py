@@ -386,6 +386,7 @@ def _run_command(args: dict[str, Any], store: MemoryStore) -> str:
             capture_output=True,
             text=True,
             timeout=timeout,
+            check=False,
         )
     except subprocess.TimeoutExpired:
         return f"[timeout after {timeout:.0f}s]\n(command: {command})"
