@@ -682,6 +682,15 @@ describe("SessionExplorer", () => {
     expect(onSearchChange).toHaveBeenCalledWith("");
   });
 
+  it("focuses search input when / shortcut key is pressed", () => {
+    renderExplorer();
+    const searchInput = screen.getByLabelText("Search sessions");
+    expect(document.activeElement).not.toBe(searchInput);
+
+    fireEvent.keyDown(window, { key: "/" });
+    expect(document.activeElement).toBe(searchInput);
+  });
+
   it("offers a reset action from the empty state", () => {
     const onSearchChange = vi.fn();
     renderExplorer({ sessions: [], total: 0, search: "nothing", onSearchChange });
