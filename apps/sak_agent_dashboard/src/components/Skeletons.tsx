@@ -11,7 +11,7 @@ import React from "react";
  */
 
 function Shimmer({ className }: { className: string }) {
-  return <div className={`animate-pulse rounded-lg bg-raised/60 ${className}`} aria-hidden />;
+  return <div className={`animate-pulse rounded-lg bg-raised/60 ${className}`} aria-hidden="true" />;
 }
 
 export function KpiSkeleton() {

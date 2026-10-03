@@ -267,7 +267,7 @@ describe("TopBar", () => {
     expect(screen.getByTitle("Auto-refresh active (15s)")).toBeInTheDocument();
   });
 
-  it("ensures top bar interactive triggers carry explicit type button attributes", () => {
+  it("ensures top bar interactive triggers carry explicit type button attributes and shortcut tooltips", () => {
     renderTopBar();
     const openMobileNavBtn = screen.getByLabelText("Open navigation menu");
     const openPaletteBtn = screen.getByLabelText("Open command palette");
@@ -281,6 +281,7 @@ describe("TopBar", () => {
     expect(copyLinkBtn).toHaveAttribute("type", "button");
     expect(presentBtn).toHaveAttribute("type", "button");
     expect(refreshBtn).toHaveAttribute("type", "button");
+    expect(refreshBtn).toHaveAttribute("title", "Refresh dashboard data (R)");
     expect(sampleToggleBtn).toHaveAttribute("type", "button");
   });
 
@@ -546,7 +547,11 @@ describe("Skeletons", () => {
     expect(screen.getByRole("status", { name: "Loading KPI metrics" })).toBeInTheDocument();
     // 6 tile cards + 1 sr-only text node = 7 children under root grid container
     expect(screen.getByTestId("kpi-skeleton").children).toHaveLength(7);
-    expect(container.querySelectorAll(".animate-pulse").length).toBe(18);
+    const shimmers = container.querySelectorAll(".animate-pulse");
+    expect(shimmers.length).toBe(18);
+    shimmers.forEach((shimmer) => {
+      expect(shimmer).toHaveAttribute("aria-hidden", "true");
+    });
   });
 
   it("holds the card grid and provides status accessibility", () => {
