@@ -61,11 +61,36 @@ export function SessionExplorer({
   isLoadingDetail = false,
 }: SessionExplorerProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   const openDetail = (session: SessionSummary) => onSessionSelect(session.id);
   const closeDetail = () => onSessionSelect(null);
 
   const openSummary = sessions.find((s) => s.id === openSessionId) ?? detail?.summary ?? null;
+
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.key === "/" &&
+        !event.defaultPrevented &&
+        document.activeElement !== searchInputRef.current
+      ) {
+        const target = event.target as HTMLElement | null;
+        const isEditable =
+          target &&
+          (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.isContentEditable);
+        if (!isEditable) {
+          event.preventDefault();
+          searchInputRef.current?.focus();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -92,6 +117,7 @@ export function SessionExplorer({
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-fg-4 pointer-events-none" aria-hidden />
         <input
+          ref={searchInputRef}
           type="search"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
@@ -101,22 +127,31 @@ export function SessionExplorer({
               onSearchChange("");
             }
           }}
-          placeholder="Search sessions by task, model, id, or persona…"
+          placeholder="Search sessions by task, model, id, or persona… (/)"
           aria-label="Search sessions"
-          title="Search sessions by task, model, id, or persona"
-          className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-panel/80 border border-line text-sm text-fg placeholder:text-fg-5 font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus:border-hue-cyan-line/50 transition-colors [&::-webkit-search-cancel-button]:hidden"
+          title="Search sessions by task, model, id, or persona (/)"
+          className="w-full pl-10 pr-14 py-2.5 rounded-xl bg-panel/80 border border-line text-sm text-fg placeholder:text-fg-5 font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus:border-hue-cyan-line/50 transition-colors [&::-webkit-search-cancel-button]:hidden"
         />
-        {search && (
-          <button
-            type="button"
-            aria-label="Clear search query"
-            title="Clear search query (Esc)"
-            onClick={() => onSearchChange("")}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-fg-3 hover:text-fg hover:bg-raised/80 active:bg-raised-2/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            <X className="h-3.5 w-3.5" aria-hidden />
-          </button>
-        )}
+        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          {search ? (
+            <button
+              type="button"
+              aria-label="Clear search query"
+              title="Clear search query (Esc)"
+              onClick={() => onSearchChange("")}
+              className="p-1 rounded-md text-fg-3 hover:text-fg hover:bg-raised/80 active:bg-raised-2/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          ) : (
+            <kbd
+              aria-hidden="true"
+              className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono text-fg-4 bg-raised/60 border border-line rounded shadow-xs select-none"
+            >
+              /
+            </kbd>
+          )}
+        </div>
       </div>
 
       <div className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl">
