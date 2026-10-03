@@ -194,7 +194,7 @@ export function TopBar({
               two more buttons in this row would crowd the ones used often. */}
           <label
             data-chrome="secondary"
-            title={canExport ? "Export current panel data" : "No rows available to export"}
+            title={canExport ? "Export current panel data (E)" : "No rows available to export"}
             className={`inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-2.5 py-1.5 font-mono text-[11px] text-fg-3 transition-colors focus-within:ring-2 focus-within:ring-accent ${
               canExport
                 ? "cursor-pointer hover:border-line-strong hover:text-fg-2"
@@ -257,7 +257,7 @@ export function TopBar({
             onClick={onRefresh}
             disabled={isLoading}
             aria-label="Refresh dashboard data"
-            title={isLoading ? "Refreshing dashboard data…" : "Refresh dashboard data"}
+            title={isLoading ? "Refreshing dashboard data…" : "Refresh dashboard data (R)"}
             className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-3 py-1.5 font-mono text-[11px] text-fg-2 transition-colors hover:border-line-strong disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <RefreshCw className={`h-3 w-3 ${isLoading ? "animate-spin" : ""}`} aria-hidden />
