@@ -66,4 +66,25 @@ describe("ShortcutsOverlay", () => {
     expect(screen.getByText("(Left bracket)")).toBeInTheDocument();
     expect(screen.getByText("(Escape)")).toBeInTheDocument();
   });
+
+  it("filters shortcuts by search query and allows clearing the search", () => {
+    renderShortcutsOverlay();
+    const searchInput = screen.getByRole("searchbox", { name: "Filter keyboard shortcuts" });
+    expect(searchInput).toBeInTheDocument();
+
+    // Search for "command"
+    fireEvent.change(searchInput, { target: { value: "command" } });
+    expect(screen.getByText("Open the command palette")).toBeInTheDocument();
+    expect(screen.queryByText("Show this list")).not.toBeInTheDocument();
+
+    // Clear search button
+    const clearBtn = screen.getByRole("button", { name: "Clear shortcut search filter" });
+    fireEvent.click(clearBtn);
+    expect(searchInput).toHaveValue("");
+    expect(screen.getByText("Show this list")).toBeInTheDocument();
+
+    // Search for unmatched query
+    fireEvent.change(searchInput, { target: { value: "nonexistent query" } });
+    expect(screen.getByText('No shortcuts match "nonexistent query"')).toBeInTheDocument();
+  });
 });
