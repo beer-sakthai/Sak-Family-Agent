@@ -547,7 +547,11 @@ describe("Skeletons", () => {
     expect(screen.getByRole("status", { name: "Loading KPI metrics" })).toBeInTheDocument();
     // 6 tile cards + 1 sr-only text node = 7 children under root grid container
     expect(screen.getByTestId("kpi-skeleton").children).toHaveLength(7);
-    expect(container.querySelectorAll(".animate-pulse").length).toBe(18);
+    const shimmers = container.querySelectorAll(".animate-pulse");
+    expect(shimmers.length).toBe(18);
+    shimmers.forEach((shimmer) => {
+      expect(shimmer).toHaveAttribute("aria-hidden", "true");
+    });
   });
 
   it("holds the card grid and provides status accessibility", () => {
