@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import { Search, X } from "lucide-react";
+import React, { useEffect, useRef } from "react";
+import { X } from "lucide-react";
 
 import { useFocusTrap } from "@/lib/focus";
 import { NAV_ITEMS } from "@/lib/nav";
@@ -72,7 +72,6 @@ function Row({ shortcut }: { shortcut: Shortcut }) {
 export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
   const dialogRef = useFocusTrap<HTMLDivElement>();
   const closeRef = useRef<HTMLButtonElement>(null);
-  const [query, setQuery] = useState("");
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -131,91 +130,32 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
           </button>
         </div>
 
-        <div className="relative mb-4">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-4" aria-hidden="true" />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search shortcuts..."
-            aria-label="Filter keyboard shortcuts"
-            title="Filter shortcuts by key or description"
-            className="w-full rounded-xl border border-line bg-sunken py-1.5 pl-9 pr-8 text-xs text-fg placeholder:text-fg-4 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent [&::-webkit-search-cancel-button]:hidden"
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={() => setQuery("")}
-              aria-label="Clear shortcut search filter"
-              title="Clear search"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-fg-4 hover:text-fg focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
-            >
-              <X className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
-          )}
+        <div className="grid gap-6 sm:grid-cols-2">
+          <section>
+            <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
+              General
+            </h3>
+            <ul className="divide-y divide-line">
+              {GENERAL.map((shortcut) => (
+                <Row key={shortcut.description} shortcut={shortcut} />
+              ))}
+            </ul>
+          </section>
+
+          <section>
+            <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
+              Sections
+            </h3>
+            <ul className="divide-y divide-line">
+              {NAV_ITEMS.map((item, index) => (
+                <Row
+                  key={item.id}
+                  shortcut={{ keys: [String(index + 1)], description: item.label }}
+                />
+              ))}
+            </ul>
+          </section>
         </div>
-
-        {(() => {
-          const q = query.trim().toLowerCase();
-          const filteredGeneral = GENERAL.filter(
-            (s) =>
-              !q ||
-              s.description.toLowerCase().includes(q) ||
-              s.keys.some(
-                (k) =>
-                  k.toLowerCase().includes(q) ||
-                  (KEY_NAMES[k] && KEY_NAMES[k].toLowerCase().includes(q))
-              )
-          );
-
-          const filteredSections = NAV_ITEMS.map((item, index) => ({
-            id: item.id,
-            shortcut: { keys: [String(index + 1)], description: item.label },
-          })).filter(
-            ({ shortcut }) =>
-              !q ||
-              shortcut.description.toLowerCase().includes(q) ||
-              shortcut.keys.some((k) => k.toLowerCase().includes(q))
-          );
-
-          if (filteredGeneral.length === 0 && filteredSections.length === 0) {
-            return (
-              <div className="py-8 text-center font-mono text-xs text-fg-4">
-                No shortcuts match &quot;{query}&quot;
-              </div>
-            );
-          }
-
-          return (
-            <div className="grid gap-6 sm:grid-cols-2">
-              {filteredGeneral.length > 0 && (
-                <section>
-                  <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
-                    General
-                  </h3>
-                  <ul className="divide-y divide-line">
-                    {filteredGeneral.map((shortcut) => (
-                      <Row key={shortcut.description} shortcut={shortcut} />
-                    ))}
-                  </ul>
-                </section>
-              )}
-
-              {filteredSections.length > 0 && (
-                <section>
-                  <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
-                    Sections
-                  </h3>
-                  <ul className="divide-y divide-line">
-                    {filteredSections.map(({ id, shortcut }) => (
-                      <Row key={id} shortcut={shortcut} />
-                    ))}
-                  </ul>
-                </section>
-              )}
-            </div>
-          );
-        })()}
       </div>
     </div>
   );
