@@ -487,15 +487,23 @@ describe("AuditLogs", () => {
     expect(onChange).toHaveBeenCalledWith("critical");
   });
 
-  it("marks the active severity and provides title tooltips describing selection state", () => {
-    render(<AuditLogs audit={demoAudit()} severity="high" onSeverityChange={vi.fn()} />);
-    const highBtn = screen.getByRole("button", { name: /high severity/ });
-    expect(highBtn).toHaveAttribute("aria-pressed", "true");
-    expect(highBtn).toHaveAttribute("title", "Showing high severity events");
+  it("marks the active severity and provides title tooltips describing selection state and counts", () => {
+    const audit = demoAudit();
+    const highCount = audit.severity_counts["high"] ?? 0;
+    const criticalCount = audit.severity_counts["critical"] ?? 0;
 
-    const criticalBtn = screen.getByRole("button", { name: /critical severity/ });
+    render(<AuditLogs audit={audit} severity="high" onSeverityChange={vi.fn()} />);
+    const highBtn = screen.getByRole("button", { name: new RegExp(`Showing high severity events \\(${highCount} total\\)`) });
+    expect(highBtn).toHaveAttribute("aria-pressed", "true");
+    expect(highBtn).toHaveAttribute("title", `Showing high severity events (${highCount} total)`);
+
+    const criticalBtn = screen.getByRole("button", { name: new RegExp(`Filter audit log by critical severity \\(${criticalCount} total\\)`) });
     expect(criticalBtn).toHaveAttribute("aria-pressed", "false");
-    expect(criticalBtn).toHaveAttribute("title", "Filter audit log by critical severity");
+    expect(criticalBtn).toHaveAttribute("title", `Filter audit log by critical severity (${criticalCount} total)`);
+
+    const allBtn = screen.getByRole("button", { name: "Filter audit log by all severities" });
+    expect(allBtn).toHaveAttribute("aria-pressed", "false");
+    expect(allBtn).toHaveAttribute("title", "Filter audit log by all severities");
   });
 
   it("explains an empty log rather than looking broken", () => {

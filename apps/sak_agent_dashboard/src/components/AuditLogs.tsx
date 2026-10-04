@@ -93,14 +93,21 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
         {SEVERITIES.map((sev) => {
           const count = sev === "ALL" ? null : (audit.severity_counts[sev] ?? 0);
           const active = severity === sev;
+          const label = active
+            ? count !== null
+              ? `Showing ${sev} severity events (${count} total)`
+              : "Showing all severity events"
+            : count !== null
+            ? `Filter audit log by ${sev} severity (${count} total)`
+            : "Filter audit log by all severities";
           return (
             <button
               key={sev}
               type="button"
               onClick={() => onSeverityChange(sev)}
               aria-pressed={active}
-              aria-label={`Filter audit log by ${sev} severity`}
-              title={active ? `Showing ${sev} severity events` : `Filter audit log by ${sev} severity`}
+              aria-label={label}
+              title={label}
               className={`px-3 py-1.5 rounded-xl text-[11px] font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 active
                   ? "bg-hue-cyan-tint/50 text-hue-cyan border-hue-cyan-line/50"
