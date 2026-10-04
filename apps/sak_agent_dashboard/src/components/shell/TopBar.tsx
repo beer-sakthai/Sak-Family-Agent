@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { Download, Link2, Maximize2, Menu, Minimize2, RefreshCw, Search } from "lucide-react";
+import React, { useState } from "react";
+import { Check, Download, Link2, Maximize2, Menu, Minimize2, RefreshCw, Search } from "lucide-react";
 
 import DemoModeToggle from "@/components/DemoModeToggle";
 import DisplayMenu from "@/components/DisplayMenu";
@@ -81,6 +81,21 @@ export function TopBar({
   onPresentingChange,
 }: TopBarProps) {
   const item = navItem(active);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const copyTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
+
+  const handleCopyLink = () => {
+    onCopyLink();
+    setCopiedLink(true);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopiedLink(false), 2000);
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-line/70 bg-canvas/85 backdrop-blur-xl">
@@ -181,13 +196,17 @@ export function TopBar({
 
           <button
             type="button"
-            onClick={onCopyLink}
+            onClick={handleCopyLink}
             data-chrome="secondary"
-            aria-label="Copy a link to this view"
-            title="Copy a link to this view"
+            aria-label={copiedLink ? "Copied link to clipboard" : "Copy a link to this view"}
+            title={copiedLink ? "Copied link to clipboard!" : "Copy a link to this view"}
             className="hidden rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:block"
           >
-            <Link2 className="h-3.5 w-3.5" aria-hidden />
+            {copiedLink ? (
+              <Check className="h-3.5 w-3.5 text-hue-emerald" aria-hidden />
+            ) : (
+              <Link2 className="h-3.5 w-3.5" aria-hidden />
+            )}
           </button>
 
           {/* A select rather than two buttons: export is a rare action, and

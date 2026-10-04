@@ -285,6 +285,18 @@ describe("TopBar", () => {
     expect(sampleToggleBtn).toHaveAttribute("type", "button");
   });
 
+  it("updates copy link button feedback when clicked", () => {
+    const { props } = renderTopBar();
+    const copyLinkBtn = screen.getByLabelText("Copy a link to this view");
+    expect(copyLinkBtn).toHaveAttribute("title", "Copy a link to this view");
+
+    fireEvent.click(copyLinkBtn);
+    expect(props.onCopyLink).toHaveBeenCalledTimes(1);
+
+    const copiedBtn = screen.getByLabelText("Copied link to clipboard");
+    expect(copiedBtn).toHaveAttribute("title", "Copied link to clipboard!");
+  });
+
   it("ensures dropdown menu option items carry explicit type button attributes", () => {
     renderTopBar();
     fireEvent.click(screen.getByLabelText("Display settings"));

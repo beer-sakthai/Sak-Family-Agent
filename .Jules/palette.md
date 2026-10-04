@@ -9,3 +9,7 @@
 ## 2026-10-03 - Search input keyboard focus shortcut with visual indicator
 **Learning:** Adding a global `/` key listener to focus search inputs (bypassing when focus is already inside editable controls) alongside a subtle `<kbd>` hint badge improves keyboard discoverability and navigation efficiency.
 **Action:** Attach a global keydown handler for `/`, mark the inner `<kbd>` badge with `aria-hidden="true"`, and include `(/)` in `title` and `placeholder` attributes.
+
+## 2026-10-24 - Immediate visual and accessible feedback on copy actions
+**Learning:** Action buttons that copy content to the clipboard benefit from immediate in-place feedback—swapping the icon to a checkmark (`Check`) and updating `aria-label` and `title` tooltips to indicate the copied state before resetting.
+**Action:** Implement local copied state with a timer on copy trigger buttons and update `title` and `aria-label` attributes dynamically.
