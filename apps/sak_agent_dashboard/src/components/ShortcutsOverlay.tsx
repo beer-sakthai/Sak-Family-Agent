@@ -17,7 +17,7 @@ interface Shortcut {
 
 const GENERAL: Shortcut[] = [
   { keys: ["⌘", "K"], description: "Open the command palette" },
-  { keys: ["/"], description: "Focus search field" },
+  { keys: ["/"], description: "Focus the session search (Sessions view)" },
   { keys: ["?"], description: "Show this list" },
   { keys: ["R"], description: "Refresh every panel" },
   { keys: ["E"], description: "Export the current panel as JSON" },
