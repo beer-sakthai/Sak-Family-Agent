@@ -133,3 +133,29 @@ def test_delete_unknown_category_deletes_nothing(
     assert csa.cmd_delete(args, "t") == 1
 
     assert deleted == []
+
+
+def test_delete_none_sentinel_selects_only_uncategorized(
+    csa: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    deleted: list[str] = []
+    analyses = [
+        {"id": 9, "tool": {"name": "Bandit"}, "category": "live"},
+        {"id": 8, "tool": {"name": "Bandit"}, "category": ""},
+        {"id": 7, "tool": {"name": "Bandit"}},
+    ]
+
+    def fake_request(
+        method: str, path: str, token: str, params: dict[str, Any] | None = None
+    ) -> tuple[int, Any, str | None]:
+        if method == "DELETE":
+            deleted.append(path.rsplit("/", 1)[1])
+            return 200, {}, None
+        return 200, analyses, None
+
+    monkeypatch.setattr(csa, "_request", fake_request)
+    args = argparse.Namespace(repo="o/r", tool="Bandit", category=csa.NO_CATEGORY, apply=True)
+
+    assert csa.cmd_delete(args, "t") == 0
+
+    assert deleted == ["8", "7"]

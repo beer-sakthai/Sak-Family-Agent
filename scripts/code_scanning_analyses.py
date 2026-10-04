@@ -72,6 +72,11 @@ PER_PAGE = 100
 MAX_PAGES = 200
 
 
+# How `list --tool` shows an analysis uploaded without a category, and what
+# `delete --category` accepts to select exactly those.
+NO_CATEGORY = "(none)"
+
+
 class ApiError(RuntimeError):
     """An API call failed in a way the caller should see verbatim."""
 
@@ -278,7 +283,7 @@ def cmd_list(args: argparse.Namespace, token: str) -> int:
         _print_table(
             [
                 (
-                    cat or "(none)",
+                    cat or NO_CATEGORY,
                     str(len(items)),
                     max((a.get("created_at", "") for a in items), default="-") or "-",
                 )
@@ -324,6 +329,10 @@ def cmd_list(args: argparse.Namespace, token: str) -> int:
 def cmd_delete(args: argparse.Namespace, token: str) -> int:
     analyses = fetch_analyses(args.repo, token, args.tool)
     category = getattr(args, "category", None)
+    if category == NO_CATEGORY:
+        # `list --tool` prints an uncategorized analysis as NO_CATEGORY; a
+        # blank input can't select it, because blank means "every category".
+        category = ""
     if category is not None:
         # Retire one stale configuration without touching a live one that
         # uploads under the same tool name.
@@ -344,7 +353,7 @@ def cmd_delete(args: argparse.Namespace, token: str) -> int:
 
     print(f"Tool:     {args.tool}")
     if category is not None:
-        print(f"Category: {category or '(none)'}")
+        print(f"Category: {category or NO_CATEGORY}")
     print(f"Repo:     {args.repo}")
     print(f"Analyses: {len(ordered)}  (reporting {total_results} results in total)")
     print()
@@ -425,7 +434,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_del.add_argument("--tool", required=True, help="tool name exactly as `list` prints it")
     p_del.add_argument(
         "--category",
-        help="only delete this category's analyses, exactly as `list --tool` prints it",
+        help=(
+            "only delete this category's analyses, exactly as `list --tool` prints it "
+            f"(`{NO_CATEGORY}` selects analyses uploaded without a category)"
+        ),
     )
     p_del.add_argument(
         "--apply",

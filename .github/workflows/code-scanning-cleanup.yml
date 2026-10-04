@@ -24,7 +24,7 @@ on:
         required: false
         type: string
       category:
-        description: "Only delete this category of the tool, as the report's by-category table spells it. Leave blank for every category."
+        description: "Only delete this category of the tool, as the report's by-category table spells it ('(none)' for uncategorized). Leave blank for every category."
         required: false
         type: string
       apply:
