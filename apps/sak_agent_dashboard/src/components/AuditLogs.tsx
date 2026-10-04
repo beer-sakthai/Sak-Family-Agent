@@ -93,14 +93,13 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
         {SEVERITIES.map((sev) => {
           const count = sev === "ALL" ? null : (audit.severity_counts[sev] ?? 0);
           const active = severity === sev;
-          const label =
-            sev === "ALL"
-              ? active
-                ? "Showing all severity events"
-                : "Filter audit log by all severities"
-              : active
+          const label = active
+            ? count !== null
               ? `Showing ${sev} severity events (${count} total)`
-              : `Filter audit log by ${sev} severity (${count} total)`;
+              : "Showing all severity events"
+            : count !== null
+            ? `Filter audit log by ${sev} severity (${count} total)`
+            : "Filter audit log by all severities";
           return (
             <button
               key={sev}
