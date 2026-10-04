@@ -71,7 +71,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-        run: python scripts/code_scanning_analyses.py list --alerts
+          TOOL: ${{ inputs.tool }}
+        run: python scripts/code_scanning_analyses.py list --alerts ${TOOL:+--tool "$TOOL"}
 
       # An alert that stops appearing under `open` has either been fixed by a
       # diff, dropped by a re-scoring scan, or dismissed as accepted risk, and
@@ -84,7 +85,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-        run: python scripts/code_scanning_analyses.py list --alerts --state closed
+          TOOL: ${{ inputs.tool }}
+        run: python scripts/code_scanning_analyses.py list --alerts --state closed ${TOOL:+--tool "$TOOL"}
 
       - name: Delete the named tool's analyses
         if: ${{ inputs.tool != '' }}
