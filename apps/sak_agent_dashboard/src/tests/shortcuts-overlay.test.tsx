@@ -62,6 +62,7 @@ describe("ShortcutsOverlay", () => {
   it("renders key badges with accessible spoken labels for special key symbols", () => {
     renderShortcutsOverlay();
     expect(screen.getByText("(Command + K)")).toBeInTheDocument();
+    expect(screen.getByText("(Slash)")).toBeInTheDocument();
     expect(screen.getByText("(Question mark)")).toBeInTheDocument();
     expect(screen.getByText("(Left bracket)")).toBeInTheDocument();
     expect(screen.getByText("(Escape)")).toBeInTheDocument();
