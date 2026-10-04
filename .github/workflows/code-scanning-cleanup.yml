@@ -23,6 +23,10 @@ on:
         description: "Tool whose analyses to delete, exactly as the report spells it. Leave blank to only list."
         required: false
         type: string
+      category:
+        description: "Only delete this category of the tool, as the report's by-category table spells it. Leave blank for every category."
+        required: false
+        type: string
       apply:
         description: "Actually delete. Leave unchecked for a dry run."
         required: false
@@ -94,12 +98,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           TOOL: ${{ inputs.tool }}
+          CATEGORY: ${{ inputs.category }}
           APPLY: ${{ inputs.apply }}
         run: |
           if [ "$APPLY" = "true" ]; then
-            python scripts/code_scanning_analyses.py delete --tool "$TOOL" --apply
+            python scripts/code_scanning_analyses.py delete --tool "$TOOL" ${CATEGORY:+--category "$CATEGORY"} --apply
           else
-            python scripts/code_scanning_analyses.py delete --tool "$TOOL"
+            python scripts/code_scanning_analyses.py delete --tool "$TOOL" ${CATEGORY:+--category "$CATEGORY"}
           fi
 
       - name: Report what remains
