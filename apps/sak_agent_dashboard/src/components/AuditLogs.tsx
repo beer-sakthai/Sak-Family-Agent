@@ -100,6 +100,14 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
             : count !== null
             ? `Filter audit log by ${sev} severity (${count} total)`
             : "Filter audit log by all severities";
+          const label =
+            sev === "ALL"
+              ? active
+                ? "Showing all severity events"
+                : "Filter audit log by all severities"
+              : active
+              ? `Showing ${sev} severity events (${count} total)`
+              : `Filter audit log by ${sev} severity (${count} total)`;
           return (
             <button
               key={sev}
