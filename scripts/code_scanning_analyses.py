@@ -76,6 +76,10 @@ class ApiError(RuntimeError):
     """An API call failed in a way the caller should see verbatim."""
 
 
+class PageLimitError(ApiError):
+    """A list endpoint has more than ``MAX_PAGES`` pages."""
+
+
 def _get_next_url(link_header: str | None) -> str | None:
     """Extract the next URL from a Link header."""
     if not link_header:
@@ -150,7 +154,7 @@ def _paginate(path: str, token: str, params: dict[str, Any]) -> list[Any]:
             return out
         current_path = next_url
         current_params = None
-    raise ApiError(f"Refusing to page past {MAX_PAGES} pages of {path}")
+    raise PageLimitError(f"Refusing to page past {MAX_PAGES} pages of {path}")
 
 
 def _message(body: Any) -> str:
@@ -220,7 +224,20 @@ def _alert_state(alert: dict[str, Any]) -> str:
 def cmd_list(args: argparse.Namespace, token: str) -> int:
     state = getattr(args, "state", "open")
     alerts = fetch_alerts(args.repo, token, state)
-    analyses = fetch_analyses(args.repo, token, args.tool)
+    try:
+        analyses = fetch_analyses(args.repo, token, args.tool)
+    except PageLimitError:
+        if args.tool:
+            raise
+        # Every tool's whole upload history no longer fits under MAX_PAGES. The
+        # alerts are still worth reporting; one tool's analyses stay reachable
+        # through --tool, which the API filters server-side.
+        print(
+            f"Analysis history exceeds {MAX_PAGES} pages; the analyses column is "
+            "omitted. Pass --tool to list one tool's analyses.",
+            file=sys.stderr,
+        )
+        analyses = []
 
     by_tool_alerts = group_by_tool(alerts)
     by_tool_analyses = group_by_tool(analyses)
