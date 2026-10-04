@@ -72,6 +72,11 @@ PER_PAGE = 100
 MAX_PAGES = 200
 
 
+# How `list --tool` shows an analysis uploaded without a category, and what
+# `delete --category` accepts to select exactly those.
+NO_CATEGORY = "(none)"
+
+
 class ApiError(RuntimeError):
     """An API call failed in a way the caller should see verbatim."""
 
@@ -264,6 +269,29 @@ def cmd_list(args: argparse.Namespace, token: str) -> int:
     else:
         print("Nothing reported.")
 
+    if args.tool and analyses:
+        # A tool can upload under several categories (one per workflow/job or
+        # explicit `category:`), and GitHub tracks each as its own
+        # configuration. One that stops uploading is reported as a warning on
+        # the tool-status page even when the live category is clean, so show
+        # them apart: a stale category is the one whose latest analysis stopped.
+        print()
+        print(f"--- {args.tool} by category ---")
+        by_category: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for a in analyses:
+            by_category[str(a.get("category") or "")].append(a)
+        _print_table(
+            [
+                (
+                    cat or NO_CATEGORY,
+                    str(len(items)),
+                    max((a.get("created_at", "") for a in items), default="-") or "-",
+                )
+                for cat, items in sorted(by_category.items())
+            ],
+            ("category", "analyses", "latest analysis"),
+        )
+
     if args.alerts:
         print()
         for tool in sorted(by_tool_alerts):
@@ -300,10 +328,20 @@ def cmd_list(args: argparse.Namespace, token: str) -> int:
 
 def cmd_delete(args: argparse.Namespace, token: str) -> int:
     analyses = fetch_analyses(args.repo, token, args.tool)
+    category = getattr(args, "category", None)
+    if category == NO_CATEGORY:
+        # `list --tool` prints an uncategorized analysis as NO_CATEGORY; a
+        # blank input can't select it, because blank means "every category".
+        category = ""
+    if category is not None:
+        # Retire one stale configuration without touching a live one that
+        # uploads under the same tool name.
+        analyses = [a for a in analyses if str(a.get("category") or "") == category]
     if not analyses:
+        scope = f"tool {args.tool!r}" + (f" category {category!r}" if category is not None else "")
         print(
-            f"No analyses found for tool {args.tool!r} on {args.repo}. "
-            "Run `list` to see the exact tool names as GitHub spells them.",
+            f"No analyses found for {scope} on {args.repo}. "
+            "Run `list --tool` to see the exact names as GitHub spells them.",
             file=sys.stderr,
         )
         return 1
@@ -314,6 +352,8 @@ def cmd_delete(args: argparse.Namespace, token: str) -> int:
     total_results = sum(int(a.get("results_count") or 0) for a in ordered)
 
     print(f"Tool:     {args.tool}")
+    if category is not None:
+        print(f"Category: {category or NO_CATEGORY}")
     print(f"Repo:     {args.repo}")
     print(f"Analyses: {len(ordered)}  (reporting {total_results} results in total)")
     print()
@@ -392,6 +432,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_del = sub.add_parser("delete", help="delete every analysis uploaded by one tool")
     p_del.add_argument("--tool", required=True, help="tool name exactly as `list` prints it")
+    p_del.add_argument(
+        "--category",
+        help=(
+            "only delete this category's analyses, exactly as `list --tool` prints it "
+            f"(`{NO_CATEGORY}` selects analyses uploaded without a category)"
+        ),
+    )
     p_del.add_argument(
         "--apply",
         action="store_true",
