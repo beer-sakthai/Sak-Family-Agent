@@ -285,6 +285,27 @@ describe("TopBar", () => {
     expect(sampleToggleBtn).toHaveAttribute("type", "button");
   });
 
+  it("updates aria-label and title on copy link button click", async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextMock,
+      },
+    });
+
+    const { props } = renderTopBar();
+    const copyLinkBtn = screen.getByLabelText("Copy a link to this view");
+    expect(copyLinkBtn).toHaveAttribute("title", "Copy a link to this view");
+
+    fireEvent.click(copyLinkBtn);
+
+    const copiedBtn = await screen.findByLabelText("Copied link to clipboard");
+    expect(copiedBtn).toBeInTheDocument();
+    expect(copiedBtn).toHaveAttribute("title", "Copied link to clipboard");
+    expect(props.onCopyLink).toHaveBeenCalledTimes(1);
+    expect(writeTextMock).toHaveBeenCalled();
+  });
+
   it("ensures dropdown menu option items carry explicit type button attributes", () => {
     renderTopBar();
     fireEvent.click(screen.getByLabelText("Display settings"));
