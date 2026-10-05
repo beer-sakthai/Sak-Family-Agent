@@ -139,6 +139,13 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape" && query) {
+                e.stopPropagation();
+                e.preventDefault();
+                setQuery("");
+              }
+            }}
             placeholder="Search shortcuts..."
             aria-label="Filter keyboard shortcuts"
             title="Filter shortcuts by key or description"
@@ -149,7 +156,7 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
               type="button"
               onClick={() => setQuery("")}
               aria-label="Clear shortcut search filter"
-              title="Clear search"
+              title="Clear search (Esc)"
               className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-fg-4 hover:text-fg focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
             >
               <X className="h-3.5 w-3.5" aria-hidden="true" />
