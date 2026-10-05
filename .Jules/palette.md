@@ -9,3 +9,7 @@
 ## 2026-10-03 - Search input keyboard focus shortcut with visual indicator
 **Learning:** Adding a global `/` key listener to focus search inputs (bypassing when focus is already inside editable controls) alongside a subtle `<kbd>` hint badge improves keyboard discoverability and navigation efficiency.
 **Action:** Attach a global keydown handler for `/`, mark the inner `<kbd>` badge with `aria-hidden="true"`, and include `(/)` in `title` and `placeholder` attributes.
+
+## 2026-10-05 - Search filter Escape key clearance in overlay modals
+**Learning:** Search inputs inside modal overlays benefit from intercepting `Escape` keydown when populated to clear search text and stop event propagation, preventing users from accidentally dismissing the entire modal.
+**Action:** Add `onKeyDown` handler checking `e.key === "Escape"` to search inputs in overlays to call `e.stopPropagation()` and reset search query.

@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { Download, Link2, Maximize2, Menu, Minimize2, RefreshCw, Search } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Check, Download, Link2, Maximize2, Menu, Minimize2, RefreshCw, Search } from "lucide-react";
 
 import DemoModeToggle from "@/components/DemoModeToggle";
 import DisplayMenu from "@/components/DisplayMenu";
@@ -43,7 +43,12 @@ interface TopBarProps {
   /** False when the active panel holds no rows — the button says so. */
   canExport: boolean;
   onExport: (format: "json" | "csv") => void;
-  onCopyLink: () => void;
+  /**
+   * Copies the link and reports the result. The caller owns the clipboard
+   * write (and its toast); the button only mirrors the outcome, so one click
+   * is exactly one write.
+   */
+  onCopyLink: () => Promise<boolean>;
   /** Presentation mode hides the chrome for a wall-mounted display. */
   presenting: boolean;
   onPresentingChange: (next: boolean) => void;
@@ -80,7 +85,23 @@ export function TopBar({
   presenting,
   onPresentingChange,
 }: TopBarProps) {
+  const [copied, setCopied] = useState(false);
+  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const item = navItem(active);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
+
+  const handleCopyLink = async () => {
+    if (await onCopyLink()) {
+      setCopied(true);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-line/70 bg-canvas/85 backdrop-blur-xl">
@@ -181,13 +202,17 @@ export function TopBar({
 
           <button
             type="button"
-            onClick={onCopyLink}
+            onClick={handleCopyLink}
             data-chrome="secondary"
-            aria-label="Copy a link to this view"
-            title="Copy a link to this view"
+            aria-label={copied ? "Copied link to clipboard" : "Copy a link to this view"}
+            title={copied ? "Copied link to clipboard" : "Copy a link to this view"}
             className="hidden rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:block"
           >
-            <Link2 className="h-3.5 w-3.5" aria-hidden />
+            {copied ? (
+              <Check className="h-3.5 w-3.5 text-hue-emerald" aria-hidden />
+            ) : (
+              <Link2 className="h-3.5 w-3.5" aria-hidden />
+            )}
           </button>
 
           {/* A select rather than two buttons: export is a rare action, and

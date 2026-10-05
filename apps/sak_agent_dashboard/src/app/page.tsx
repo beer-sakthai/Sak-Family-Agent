@@ -469,13 +469,18 @@ export default function Home() {
     [exportable, activeTab, pushToast],
   );
 
-  const handleCopyLink = useCallback(() => {
+  const handleCopyLink = useCallback(async (): Promise<boolean> => {
     // The fragment already carries the whole view, so the current href is the
-    // shareable link with no assembly needed.
-    navigator.clipboard
-      .writeText(window.location.href)
-      .then(() => pushToast("success", "Link to this view copied."))
-      .catch(() => pushToast("error", "Could not copy to the clipboard."));
+    // shareable link with no assembly needed. Resolves whether the write
+    // landed, so the TopBar button can mirror it without writing again.
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      pushToast("success", "Link to this view copied.");
+      return true;
+    } catch {
+      pushToast("error", "Could not copy to the clipboard.");
+      return false;
+    }
   }, [pushToast]);
 
   // Keyboard. ⌘K/Ctrl+K for the palette, digits for sections, `r` refresh,
