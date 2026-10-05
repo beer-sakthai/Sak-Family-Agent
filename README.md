@@ -24,7 +24,7 @@ This repository is the living workspace of the Sak Family — autonomous AI agen
 
 ## 📊 System Status & Delivery Dashboard
 
-> **How to read this section:** the badges above are live links to GitHub Actions, Codecov, and pull requests for `main`. The figures below are a dated snapshot captured on **2026-09-16** from the checked-out repository and GitHub API. A badge is authoritative for the latest remote result; a snapshot is historical until this section is refreshed.
+> **How to read this section:** the badges above are live links to GitHub Actions, Codecov, and pull requests for `main`. The figures below are a dated snapshot captured on **2026-10-05** from the checked-out repository and GitHub API. A badge is authoritative for the latest remote result; a snapshot is historical until this section is refreshed.
 
 ### 🚦 Mainline status bars
 
@@ -40,7 +40,7 @@ This repository is the living workspace of the Sak Family — autonomous AI agen
 ├───────────────────────────────────────────────────────────────────┤
 │  🌿 Target: main (protected)       🔀 Open PRs: 0                  │
 │  ✅ Required gates: 15 contexts     🎯 Merge only after green     │
-│  📅 Snapshot: 2026-09-16           🔒 No force-pushes            │
+│  📅 Snapshot: 2026-10-05           🔒 No force-pushes            │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
@@ -48,19 +48,19 @@ The bars labelled **RUN** reflect the latest `main` push observed at the snapsho
 
 ### 🧭 Repository Snapshot
 
-Snapshot recorded on **2026-09-16** with `git ls-files`, `find`, `git ls-remote --heads origin`, and the GitHub CLI. The root package, documentation, tests, workflow inventory, protected-branch rules, and open pull requests are shown separately so contributors can see the project’s operational footprint at a glance.
+Snapshot recorded on **2026-10-05** with `git ls-files`, `find`, `git ls-remote --heads origin`, and the GitHub CLI. The root package, documentation, tests, workflow inventory, protected-branch rules, and open pull requests are shown separately so contributors can see the project’s operational footprint at a glance.
 
 | Area | Status | Detail |
 |---|---|---|
 | 🌿 **Integration branch** | 🟢 `main` | CI validates pushes and pull requests targeting [`main`](.github/workflows/ci.yml). |
-| 📂 **Tracked repository files** | 🟢 4,658 | Version-controlled files across the agent runtime, personas, training assets, documentation, and tests. |
+| 📂 **Tracked repository files** | 🟢 4,671 | Version-controlled files across the agent runtime, personas, training assets, documentation, and tests. |
 | 📚 **Documentation** | 🟢 72 files | Documentation files under [`docs/`](docs/), with further READMEs colocated beside components. |
 | 🐍 **Core Python source** | 🟢 83 files | The typed `sakthai` package at [`personas/sakthai/sakthai/`](personas/sakthai/sakthai/). |
-| 🧪 **Test modules** | 🟢 108 files | Pytest modules in [`tests/`](tests/) that exercise the core package and delivery surfaces. |
-| ⚙️ **Automation** | 🟢 27 workflows | CI, security, dependency, quality, evaluation, and maintenance workflows in [`.github/workflows/`](.github/workflows/). |
+| 🧪 **Test modules** | 🟢 111 files | Pytest modules in [`tests/`](tests/) that exercise the core package and delivery surfaces. |
+| ⚙️ **Automation** | 🟢 28 workflows | CI, security, dependency, quality, evaluation, and maintenance workflows in [`.github/workflows/`](.github/workflows/). |
 | 👨‍👩‍👧‍👦 **Personas** | 🟢 6 + shared | SakThai, Saksee, SakJules, SakKing, SakSit, SakTan, plus shared skills and knowledge. |
 | 🔀 **Open pull requests** | 🟢 0 | No open pull requests against `main` at snapshot time. |
-| 🌱 **Branches** | 🟡 1 local / 5 remote | A fresh clone checks out only `main`; the remote also carries this session's working branch plus three other in-flight branches (`fix/lint-errors`, two `palette/*`). |
+| 🌱 **Branches** | 🟢 1 remote | `main` is the only branch: every open PR was merged or closed and its branch removed on 2026-10-05. Bot PRs (Dependabot, Jules) open new ones regularly. |
 | 🎯 **Protected-branch policy** | 🔒 Enabled | Required checks, conversation resolution, no force-pushes, and no branch deletion on `main`. |
 
 ### 🎯 Quality-Gate Detail
@@ -75,7 +75,7 @@ The following commands define the documented engineering baseline. The live badg
 | 🛡️ **Security scan** | `████████████████████ 100%` | `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` | Bandit gate using the repository configuration. |
 | ✨ **Lint & format** | `████████████████████ 100%` | `uv run ruff check personas/sakthai/sakthai tests` and `uv run ruff format --check personas/sakthai/sakthai tests` | Ruff check and formatting gate. |
 
-**Recorded local verification:** **2026-09-16** for this README-only change, using Markdown structure checks and `git diff --check`. Full code gates remain enforced remotely by the protected-branch PR workflow.
+**Recorded local verification:** **2026-10-05** for this README-only change, using Markdown structure checks and `git diff --check`. Full code gates remain enforced remotely by the protected-branch PR workflow.
 
 > **Coverage is a release gate.** The explicit `--cov-fail-under=96` argument in [`ci.yml`](.github/workflows/ci.yml) is the enforcing control. The matching `pyproject.toml` value is documentation only; see the coverage-audit finding in [`docs/test-coverage-audit-2026-08-28.md`](docs/test-coverage-audit-2026-08-28.md).
 
@@ -123,7 +123,7 @@ sakthai mcp                                        # serve the tools over MCP st
 
 `sakthai run` takes the task as its argument — see `sakthai run --help` for the
 full flag set (`--provider`, `--model`, `--with-skills`, `--fast`, `--stateless`,
-`--sandbox`, `--dry-run`, `--stream`). Full CLI surface:
+`--sandbox`, `--dry-run`, `--stream`, `--persona`). Full CLI surface:
 
 `sakthai doctor --json` and `sakthai status --json` emit the same structured,
 deterministic environment report for scripts and CI. The report includes paths,
@@ -133,9 +133,14 @@ the core components are not ready; the default human-readable mode preserves its
 existing output and exit-code behavior.
 
 ```
-chat  cycle  doctor  eval  extensions  hf  learn  mcp  memory
-recall  run  sessions  setup  skills  status  tools  web
+chat  client  cycle  doctor  eval  extensions  hf  learn  mcp  memory
+recall  run  sessions  setup  skills  status  team  tools  web
 ```
+
+`team` runs declarative multi-persona pipelines (`team list|show|run`), and
+`client` provisions and verifies ServiceQuoteBot client workspaces
+(`client list|show|onboard|test`). Both hand each step to the target persona
+through the in-process coordinator (`agent/coordinator.py`).
 
 ---
 
@@ -159,11 +164,12 @@ The heart of the family — a **provider-agnostic, tool-using AI agent** with pe
 personas/sakthai/sakthai/
 ├── agent/                    # Orchestration & provider abstraction
 │   ├── loop.py               # Main agent orchestration (tool use, retries)
-│   ├── tools.py              # BUILTIN_TOOLS registry (18 tools)
+│   ├── tools.py              # BUILTIN_TOOLS registry (19 tools)
 │   ├── registry.py           # Tool discovery & dispatch
 │   ├── guardrails.py         # Shell command denylist + path validation
-│   ├── guardrails_hardened.py# Composed hardened guardrail layer
-│   ├── security_hardening.py # 8 defense modules (see Security section)
+│   ├── guardrails_hardened.py# Composed hardened layer (not wired in; see Security)
+│   ├── security_hardening.py # 8 defense classes (MCP validator wired in)
+│   ├── coordinator.py        # Depth-bounded, cycle-safe persona delegation
 │   ├── context_filter.py     # Turn summarization / context trimming
 │   ├── context_manager.py    # Context-window budgeting
 │   ├── prompt_builder.py     # System prompt assembly
@@ -182,13 +188,15 @@ personas/sakthai/sakthai/
 │   ├── client.py             # External MCP server launcher
 │   ├── manager.py            # Multi-server context manager
 │   └── servers.py            # Server discovery
-├── cli/                      # Command-line interface (10 command modules)
+├── cli/                      # Command-line interface (12 command modules)
 │   ├── agent.py              # run, mcp
 │   ├── memory.py             # learn, recall, memory group
 │   ├── system.py             # doctor, setup, status, tools
 │   ├── chat.py               # chat
-│   └── cycle · skills · extensions · eval · sessions · hf
+│   └── cycle · skills · extensions · eval · sessions · hf · team · client
 ├── cycle/                    # Dream → Hope → Care → Joy → Trust → Growth
+├── team/                     # Declarative multi-persona pipelines
+├── client/                   # ServiceQuoteBot client provisioning + checks
 ├── web/                      # HTTP API server (loopback-only by default)
 ├── dashboard/                # KPI/lead/revenue collection (API backend)
 ├── telegram/                 # Polling bot + workflow executor
@@ -207,9 +215,9 @@ personas/sakthai/sakthai/
 - ✅ **Tool sandbox** — Opt-in shell, allowlisted file reads, SSRF protection, optional Docker isolation
 - ✅ **MCP support** — Both as server (stdio) and client (spawn external servers)
 - ✅ **6-stage cycle** — Dream → Hope → Care → Joy → Trust → Growth state machine
-- ✅ **Skill system** — 31 curated + 3 shared + 823 persona skills, YAML frontmatter parsed
+- ✅ **Skill system** — 31 curated + 6 shared + 823 persona skills, YAML frontmatter parsed
 
-### 📦 Built-in Tools (18)
+### 📦 Built-in Tools (19)
 
 | Tool | Purpose | Safety Gate |
 |------|---------|-------------|
@@ -229,7 +237,8 @@ personas/sakthai/sakthai/
 | `run_agent_loop` | Spawn nested agent (MCP only) | Filtered out of the in-loop tool set |
 | `family_recall` | Recall across every persona's memory shard | None (read-only) |
 | `family_search` | Search across every persona's memory shard | None (read-only) |
-| `delegate_to_persona` | Hand a subtask to another Sak Family persona | Persona name is enum-constrained |
+| `delegate_to_persona` | Hand a subtask to another Sak Family persona | Persona name is enum-constrained; depth- and cycle-bounded |
+| `huggingface_inference` | Call a Hugging Face Inference Providers model | Requires `HF_TOKEN` |
 
 Adding a `Tool(...)` to `BUILTIN_TOOLS` surfaces it in **both** `sakthai run` and
 `sakthai mcp` — there is no second wiring step.
@@ -277,12 +286,14 @@ The **House of Sak** consists of **6 specialized agent personas** carrying **823
 | 🧠 **SakTan** (`saktan`) | Memory, Supermemory & Context Management | 13 | `sakthai` (Ollama, local) | `~/.sakthai/saktan` |
 
 Each persona ships `/skills/` (prefixed `Sak<Name>-`) and `/config/`
-(`config.yaml`, `mcp.json`, `gateway_voice_mode.json`). Five of the six symlink
-the shared `personas/shared/sakthai/` package; **SakThai's copy is the one
-actually installed and run**.
+(`config.yaml`, `mcp.json`, `gateway_voice_mode.json`). **SakThai's
+`personas/sakthai/sakthai/` is the package actually installed and run.** SakJules
+and SakTan symlink the shared `personas/shared/sakthai/` copy; SakKing, SakSee
+and SakSit carry a few real files (their guardrails and web server copies) that
+shadow it. See [`CLAUDE.md`](CLAUDE.md) for the parity rules.
 
 Shared skill pools on top of the per-persona overlays: `personas/shared/skills/`
-(3 skills, byte-identical across personas) and the root `library/` (31 curated
+(6 `Sak-` skills shared by every persona) and the root `library/` (31 curated
 skills across 11 categories).
 
 ---
@@ -312,8 +323,9 @@ The repository includes a suite of Python scripts for financial analysis and por
 Separately, the in-package `web/server.py` exposes an authenticated JSON API
 (`/api/*`, bearer token stored as a `web_auth` fact) backed by
 `dashboard/data.py`. It refuses non-loopback binds unless
-`SAKTHAI_WEB_ALLOW_PUBLIC` is set, and runs API-only — there is no bundled
-frontend build.
+`SAKTHAI_WEB_ALLOW_PUBLIC` is set. The package itself ships no frontend; the
+Next.js dashboard in [`apps/sak_agent_dashboard/`](apps/sak_agent_dashboard/)
+consumes the API (`make dashboard-dev` runs both locally).
 
 ### 🧠 SakThai 7B LoRA Training
 
@@ -373,6 +385,14 @@ The adapter this produces, [`Nanthasit/sakthai-context-7b-tools`](https://huggin
 
 Configurable via `SecurityLevel` (`STRICT` / `BALANCED` (default) / `PERMISSIVE`).
 
+> **What actually runs.** Every tool call goes through `DEFAULT_POLICY` in the
+> base `agent/guardrails.py`. Of the hardening layer, only `MCPServerValidator` is
+> wired into the runtime, where `mcp/manager.py` validates external MCP server
+> configs before launching them. The other classes and `guardrails_hardened.py`
+> are tested but not yet called from the agent loop, CLI or MCP server, so the
+> vector list above describes what the layer implements, not what every tool
+> call enforces today.
+
 **Verified test coverage of the hardening layer (2026-08-08):**
 
 ```
@@ -408,15 +428,22 @@ and the dated `docs/security_audit_*.md` reports.
 ├─ 🛡️  Security Scan (Bandit)        ci.yml
 ├─ 🧪 Test + Coverage (3.11)        ci.yml             → floor 96%, branch coverage
 ├─ 🧪 Test + Coverage (3.12)        ci.yml
-├─ 🧹 Pylint                        pylint.yml         → on: push
-├─ 🤖 OSSAR Scan                    ossar.yml
+├─ 🧹 Pylint                        pylint.yml
+├─ 🛡️  Bandit (SARIF upload)         bandit.yml
+├─ 🤖 OSSAR Scan (Trivy)            ossar.yml
 ├─ 📡 SonarCloud                    sonarcloud.yml
-├─ 🏗️  CodeQL                        GitHub default setup (no workflow file — adding one would conflict)
+├─ 🏗️  CodeQL                        codeql.yml         → advanced setup (default setup must stay off)
+├─ 📦 Dependency review             dependency-review.yml → PRs only, blocks high-severity
+├─ ✅ Skills + quality gates        repository-security-quality.yml → PRs only
 └─ 🏷️  Labeler                       labeler.yml        → pull_request_target
 ```
 
-Path-filtered: `dependency-audit.yml` (on `pyproject.toml` / `uv.lock` changes)
-and `agent-self-evolution.yml` (on `personas/sakthai/agent-self-evolution/**`).
+Path-filtered: `apps.yml` (the two `apps/` projects), `subprojects.yml`
+(`sakthai-chat-cli/`, `services/teams-copilot-mcp/`), `dependency-audit.yml`
+(on `pyproject.toml` / `uv.lock` changes), `sak-family-agent-contract.yml`
+(persona contracts) and `agent-self-evolution.yml`
+(on `personas/sakthai/agent-self-evolution/**`). `scorecard.yml` runs on
+pushes to `main` and weekly.
 
 ### Scheduled / manual only
 
@@ -429,7 +456,10 @@ and `agent-self-evolution.yml` (on `personas/sakthai/agent-self-evolution/**`).
 | `dependency-audit.yml` | weekly (Mon 05:30 UTC) | `pip-audit` over `uv.lock` |
 | `auto-dependency-update.yml` | weekly (Mon 08:00 UTC) | Dependency bump PRs |
 | `ossar.yml` | weekly (Mon 06:15 UTC) | Extra scheduled scan |
-| `manual.yml` · `summary.yml` | manual / on issue open | Utility workflows |
+| `daily-pr-review.yml` · `daily-workspace-status.yml` | daily | PR and workspace status reports |
+| `code-scanning-cleanup.yml` | manual | List code-scanning alerts by tool and category; delete a retired tool's or category's stale analyses |
+| `branch-cleanup.yml` | manual | Delete branches whose merge into `main` would change nothing (dry run unless `apply`) |
+| `manual.yml` · `summary.yml` · `huggingface-integration.yml` | manual / on issue open | Utility workflows |
 
 Green CI is the bar for `main`. Run the lint → mypy → bandit → pytest sequence
 locally before pushing.
@@ -460,7 +490,15 @@ Report vulnerabilities per [`SECURITY.md`](SECURITY.md).
 
 ---
 
-## ✨ Recent Updates (Aug 2026)
+## ✨ Recent Updates (Oct 2026)
+
+- **Persona delegation fixed.** `delegate_to_persona`, `sakthai team run` and `sakthai client test` all raised `TypeError` on every real call, because the coordinator passed keyword arguments `run_agent()` doesn't accept. A regression test now drives the real loop.
+- **Dependency advisories:** urllib3 2.8.0 and pyjwt 2.15.1 in the `sakthai-chat-cli` and `teams-copilot-mcp` subprojects.
+- **Code-scanning cleanup.** The cleanup workflow handles a 20k+ analysis history, lists by category and deletes one category. It was used to retire stale BinSkim, ESLint, OpenSSF-baseline and old OSSAR-Bandit configurations.
+- **Dashboard:** copy-link feedback (one clipboard write per click), shortcut-overlay search and Escape handling, AuditLog filter labels, and next 16.3.8.
+- **Branch consolidation.** Every open PR was merged or closed; `main` is the only branch.
+
+## ✨ Earlier Updates (Aug 2026)
 
 - **Guardrail hardening** — closed Makefile-based command-execution bypasses (while still permitting ordinary local project directories), folded executor path-validation deltas into `_validate_filepath`, and fixed path traversal / sensitive-file access in the agent workflow executor.
 - **SSRF & credential defense** — hardened `GraphClient` against SSRF, custom-scheme and protocol-relative URL abuse, and bearer-token leaks; symmetric secret redaction for MS Graph, Stripe, and Twilio credentials.
