@@ -192,74 +192,84 @@ export function SessionExplorer({
                   </td>
                 </tr>
               ) : (
-                sessions.map((session) => (
-                  <tr key={session.id} className="hover:bg-raised/40 transition-colors">
-                    <td className="px-5 py-3.5">
-                      <span
-                        title={
-                          session.persona
-                            ? `Persona: ${personaLabel(session.persona)}`
-                            : "Unattributed session (no persona recorded)"
-                        }
-                        aria-label={
-                          session.persona
-                            ? `Persona: ${personaLabel(session.persona)}`
-                            : "Unattributed session (no persona recorded)"
-                        }
-                        className={`px-2 py-0.5 rounded text-[11px] border ${
-                          session.persona
-                            ? "bg-raised text-hue-cyan border-hue-cyan-line/20"
-                            : "bg-panel text-fg-4 border-line-strong"
-                        }`}
-                      >
-                        {personaLabel(session.persona)}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 font-sans text-fg max-w-md truncate">
-                      {session.task || "—"}
-                    </td>
-                    <td className="px-5 py-3.5 text-fg-3 text-[11px] max-w-[12rem] truncate">
-                      {session.model || "—"}
-                    </td>
-                    <td className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap">
-                      {formatTimestamp(session.timestamp)}
-                    </td>
-                    <td className="px-5 py-3.5 text-right text-fg-2">
-                      {session.tokens.total_tokens.toLocaleString()}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span
-                        title={`Outcome: ${session.stop_reason || "unknown"}${
-                          session.had_error ? " (error)" : " (success)"
-                        }`}
-                        aria-label={`Outcome: ${session.stop_reason || "unknown"}${
-                          session.had_error ? " (error)" : " (success)"
-                        }`}
-                        className={`inline-flex items-center gap-1 text-[11px] ${
-                          session.had_error ? "text-hue-rose" : "text-hue-emerald"
-                        }`}
-                      >
-                        {session.had_error ? (
-                          <AlertCircle className="h-3 w-3" aria-hidden />
-                        ) : (
-                          <CheckCircle2 className="h-3 w-3" aria-hidden />
-                        )}
-                        {session.stop_reason || "—"}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-right">
-                      <button
-                        type="button"
-                        onClick={() => openDetail(session)}
-                        aria-label={`View transcript for ${session.task ? `task "${session.task}"` : session.id}`}
-                        title={`View transcript for ${session.task ? `task "${session.task}"` : session.id}`}
-                        className="text-[11px] px-2.5 py-1 rounded-lg bg-raised border border-line-strong text-hue-cyan hover:border-hue-cyan-line/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                sessions.map((session) => {
+                  const label = `View transcript for ${session.task ? `task "${session.task}"` : session.id}`;
+                  return (
+                    <tr
+                      key={session.id}
+                      onClick={() => openDetail(session)}
+                      className="cursor-pointer hover:bg-raised/60 transition-colors"
+                    >
+                      <td className="px-5 py-3.5">
+                        <span
+                          title={
+                            session.persona
+                              ? `Persona: ${personaLabel(session.persona)}`
+                              : "Unattributed session (no persona recorded)"
+                          }
+                          aria-label={
+                            session.persona
+                              ? `Persona: ${personaLabel(session.persona)}`
+                              : "Unattributed session (no persona recorded)"
+                          }
+                          className={`px-2 py-0.5 rounded text-[11px] border ${
+                            session.persona
+                              ? "bg-raised text-hue-cyan border-hue-cyan-line/20"
+                              : "bg-panel text-fg-4 border-line-strong"
+                          }`}
+                        >
+                          {personaLabel(session.persona)}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 font-sans text-fg max-w-md truncate">
+                        {session.task || "—"}
+                      </td>
+                      <td className="px-5 py-3.5 text-fg-3 text-[11px] max-w-[12rem] truncate">
+                        {session.model || "—"}
+                      </td>
+                      <td className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap">
+                        {formatTimestamp(session.timestamp)}
+                      </td>
+                      <td className="px-5 py-3.5 text-right text-fg-2">
+                        {session.tokens.total_tokens.toLocaleString()}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span
+                          title={`Outcome: ${session.stop_reason || "unknown"}${
+                            session.had_error ? " (error)" : " (success)"
+                          }`}
+                          aria-label={`Outcome: ${session.stop_reason || "unknown"}${
+                            session.had_error ? " (error)" : " (success)"
+                          }`}
+                          className={`inline-flex items-center gap-1 text-[11px] ${
+                            session.had_error ? "text-hue-rose" : "text-hue-emerald"
+                          }`}
+                        >
+                          {session.had_error ? (
+                            <AlertCircle className="h-3 w-3" aria-hidden />
+                          ) : (
+                            <CheckCircle2 className="h-3 w-3" aria-hidden />
+                          )}
+                          {session.stop_reason || "—"}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openDetail(session);
+                          }}
+                          aria-label={label}
+                          title={label}
+                          className="text-[11px] px-2.5 py-1 rounded-lg bg-raised border border-line-strong text-hue-cyan hover:border-hue-cyan-line/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
