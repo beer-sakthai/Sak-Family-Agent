@@ -7,7 +7,7 @@
  * data directly.
  */
 
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import CommandPalette, { type Command } from "@/components/CommandPalette";
@@ -181,7 +181,7 @@ describe("TopBar", () => {
       personaCounts: {},
       canExport: true,
       onExport: vi.fn(),
-      onCopyLink: vi.fn(),
+      onCopyLink: vi.fn().mockResolvedValue(true),
       presenting: false,
       onPresentingChange: vi.fn(),
       ...overrides,
@@ -303,7 +303,18 @@ describe("TopBar", () => {
     expect(copiedBtn).toBeInTheDocument();
     expect(copiedBtn).toHaveAttribute("title", "Copied link to clipboard");
     expect(props.onCopyLink).toHaveBeenCalledTimes(1);
-    expect(writeTextMock).toHaveBeenCalled();
+    // The caller owns the clipboard write; the button must not write again.
+    expect(writeTextMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps the copy link button unconfirmed when the copy fails", async () => {
+    const { props } = renderTopBar({ onCopyLink: vi.fn().mockResolvedValue(false) });
+
+    fireEvent.click(screen.getByLabelText("Copy a link to this view"));
+
+    await waitFor(() => expect(props.onCopyLink).toHaveBeenCalledTimes(1));
+    expect(screen.queryByLabelText("Copied link to clipboard")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Copy a link to this view")).toBeInTheDocument();
   });
 
   it("ensures dropdown menu option items carry explicit type button attributes", () => {

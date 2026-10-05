@@ -43,7 +43,12 @@ interface TopBarProps {
   /** False when the active panel holds no rows — the button says so. */
   canExport: boolean;
   onExport: (format: "json" | "csv") => void;
-  onCopyLink: () => void;
+  /**
+   * Copies the link and reports the result. The caller owns the clipboard
+   * write (and its toast); the button only mirrors the outcome, so one click
+   * is exactly one write.
+   */
+  onCopyLink: () => Promise<boolean>;
   /** Presentation mode hides the chrome for a wall-mounted display. */
   presenting: boolean;
   onPresentingChange: (next: boolean) => void;
@@ -91,21 +96,11 @@ export function TopBar({
   }, []);
 
   const handleCopyLink = async () => {
-    let success = false;
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(window.location.href);
-        success = true;
-      }
-    } catch {
-      // Clipboard write failed or restricted environment
-    }
-    if (success) {
+    if (await onCopyLink()) {
       setCopied(true);
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
       copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
     }
-    onCopyLink();
   };
 
   return (
