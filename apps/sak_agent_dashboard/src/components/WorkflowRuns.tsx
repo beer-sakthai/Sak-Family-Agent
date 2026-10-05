@@ -138,40 +138,50 @@ export function WorkflowRuns({
                   </td>
                 </tr>
               ) : (
-                runs.map((run) => (
-                  <tr key={run.run_id} className="hover:bg-raised/40 transition-colors">
-                    <td className="px-5 py-3.5">
-                      <span className="font-bold text-fg">{run.workflow_name || "—"}</span>
-                      <span className="block text-[10px] text-fg-4">{run.run_id}</span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <StatusPill status={run.status} />
-                    </td>
-                    <td className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap">
-                      {started(run.started_at)}
-                    </td>
-                    <td className="px-5 py-3.5 text-right text-fg-2">
-                      {duration(run.duration_seconds)}
-                    </td>
-                    <td className="px-5 py-3.5 text-right">
-                      <span className="text-fg-2">{run.step_count}</span>
-                      {run.failed_steps > 0 && (
-                        <span className="text-hue-rose"> ({run.failed_steps} failed)</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5 text-right">
-                      <button
-                        type="button"
-                        onClick={() => open(run.run_id)}
-                        aria-label={`View steps for ${run.workflow_name || run.run_id}`}
-                        title={`View steps for ${run.workflow_name || run.run_id}`}
-                        className="text-[11px] px-2.5 py-1 rounded-lg bg-raised border border-line-strong text-hue-violet hover:border-hue-violet-line/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                      >
-                        Steps
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                runs.map((run) => {
+                  const label = `View steps for ${run.workflow_name || run.run_id}`;
+                  return (
+                    <tr
+                      key={run.run_id}
+                      onClick={() => open(run.run_id)}
+                      className="cursor-pointer hover:bg-raised/60 transition-colors"
+                    >
+                      <td className="px-5 py-3.5">
+                        <span className="font-bold text-fg">{run.workflow_name || "—"}</span>
+                        <span className="block text-[10px] text-fg-4">{run.run_id}</span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <StatusPill status={run.status} />
+                      </td>
+                      <td className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap">
+                        {started(run.started_at)}
+                      </td>
+                      <td className="px-5 py-3.5 text-right text-fg-2">
+                        {duration(run.duration_seconds)}
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <span className="text-fg-2">{run.step_count}</span>
+                        {run.failed_steps > 0 && (
+                          <span className="text-hue-rose"> ({run.failed_steps} failed)</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            open(run.run_id);
+                          }}
+                          aria-label={label}
+                          title={label}
+                          className="text-[11px] px-2.5 py-1 rounded-lg bg-raised border border-line-strong text-hue-violet hover:border-hue-violet-line/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        >
+                          Steps
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
