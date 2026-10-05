@@ -116,7 +116,7 @@ updates:
       stitch-react-native:
         update-types: ["minor", "patch"]
 
-  # Docker base images. Both Dockerfiles pin their base by digest, which only
+  # Docker base images. Every Dockerfile pins its base by digest, which only
   # stays current if something bumps it — that something is this.
   - package-ecosystem: docker
     directory: /
@@ -125,5 +125,10 @@ updates:
 
   - package-ecosystem: docker
     directory: /infra/sakthai-training-space
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /infra/servicequotebot/docker
     schedule:
       interval: weekly
