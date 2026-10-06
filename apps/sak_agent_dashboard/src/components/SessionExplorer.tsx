@@ -7,9 +7,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  FileQuestion,
   FileText,
   MessageSquare,
   Search,
+  SearchX,
   Terminal,
   X,
 } from "lucide-react";
@@ -173,6 +175,11 @@ export function SessionExplorer({
                 <tr>
                   <td colSpan={7} className="px-5 py-8 text-center">
                     <div className="flex flex-col items-center justify-center gap-2 font-sans">
+                      {search ? (
+                        <SearchX className="h-6 w-6 text-fg-4/80" aria-hidden />
+                      ) : (
+                        <FileQuestion className="h-6 w-6 text-fg-4/80" aria-hidden />
+                      )}
                       <p className="text-fg-4 text-xs">
                         {search
                           ? `No sessions match \u201C${search}\u201D.`
@@ -182,6 +189,7 @@ export function SessionExplorer({
                         <button
                           type="button"
                           aria-label="Clear search and filters"
+                          title="Reset search query"
                           onClick={() => onSearchChange("")}
                           className="px-3 py-1 rounded-lg bg-raised text-hue-cyan hover:text-hue-cyan hover:bg-raised-2 font-mono text-xs border border-line-strong transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                         >
