@@ -235,7 +235,7 @@ fi
 if curl -fsS "http://127.0.0.1:$PORT/system_stats" >/dev/null 2>&1; then
     log "Server already running on port $PORT — skipping launch."
     log "Stop with \`$COMFY_BIN stop\` if you want a fresh start."
-    curl -fsS "http://127.0.0.1:$PORT/system_stats" | python3 -m json.tool 2>/dev/null || true
+    printf '%s' "$(curl -fsS "http://127.0.0.1:$PORT/system_stats")" | python3 -m json.tool 2>/dev/null || true
     log "Done."
     exit 0
 fi
@@ -257,7 +257,7 @@ ELAPSED=0
 while [ $ELAPSED -lt $MAX_WAIT ]; do
     if curl -fsS "http://127.0.0.1:$PORT/system_stats" >/dev/null 2>&1; then
         log "Server is running!"
-        curl -fsS "http://127.0.0.1:$PORT/system_stats" | python3 -m json.tool 2>/dev/null || true
+        printf '%s' "$(curl -fsS "http://127.0.0.1:$PORT/system_stats")" | python3 -m json.tool 2>/dev/null || true
         break
     fi
     sleep 2
