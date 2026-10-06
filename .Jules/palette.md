@@ -13,3 +13,7 @@
 ## 2026-10-05 - Search filter Escape key clearance in overlay modals
 **Learning:** Search inputs inside modal overlays benefit from intercepting `Escape` keydown when populated to clear search text and stop event propagation, preventing users from accidentally dismissing the entire modal.
 **Action:** Add `onKeyDown` handler checking `e.key === "Escape"` to search inputs in overlays to call `e.stopPropagation()` and reset search query.
+
+## 2026-10-06 - Interactive reset action in filtered empty table states
+**Learning:** Filtered data tables showing zero matching results (such as severity-filtered audit logs) benefit from an inline reset action button in the empty state container, allowing users to return to the unfiltered view without scrolling back to control panels.
+**Action:** Render a reset filter button with `type="button"`, `aria-label`, and hover `title` inside empty table state containers when active filters yield zero results.

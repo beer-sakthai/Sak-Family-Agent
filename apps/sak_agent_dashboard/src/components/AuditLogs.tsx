@@ -136,10 +136,25 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
             <tbody className="divide-y divide-line/60 text-fg-2">
               {events.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-fg-4 italic">
-                    {severity === "ALL"
-                      ? "No security audit events recorded."
-                      : `No ${severity} severity events recorded.`}
+                  <td colSpan={5} className="px-5 py-8 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2 font-sans">
+                      <p className="text-fg-4 text-xs italic">
+                        {severity === "ALL"
+                          ? "No security audit events recorded."
+                          : `No ${severity} severity events recorded.`}
+                      </p>
+                      {severity !== "ALL" && (
+                        <button
+                          type="button"
+                          aria-label="Reset severity filter"
+                          title="Show all severity events"
+                          onClick={() => onSeverityChange("ALL")}
+                          className="px-3 py-1 rounded-lg bg-raised text-hue-cyan hover:bg-raised-2 font-mono text-xs border border-line-strong transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        >
+                          Reset severity filter
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
