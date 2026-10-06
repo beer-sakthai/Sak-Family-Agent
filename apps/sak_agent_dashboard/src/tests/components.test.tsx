@@ -714,10 +714,12 @@ describe("SessionExplorer", () => {
     expect(document.activeElement).toBe(searchInput);
   });
 
-  it("offers a reset action from the empty state", () => {
+  it("offers a reset action from the empty state with title tooltip", () => {
     const onSearchChange = vi.fn();
     renderExplorer({ sessions: [], total: 0, search: "nothing", onSearchChange });
-    fireEvent.click(screen.getByRole("button", { name: /Clear search and filters/i }));
+    const resetButton = screen.getByRole("button", { name: /Clear search and filters/i });
+    expect(resetButton).toHaveAttribute("title", "Reset search query");
+    fireEvent.click(resetButton);
     expect(onSearchChange).toHaveBeenCalledWith("");
   });
 
