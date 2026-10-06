@@ -400,10 +400,20 @@ describe("MemoryExplorer", () => {
     expect(shardBadges.length).toBeGreaterThan(0);
   });
 
-  it("renders an empty state", () => {
-    const empty = { ...demoMemory(), facts: [] };
+  it("renders empty state guidance and icons for facts and observations", () => {
+    const empty = { ...demoMemory(), facts: [], observations: [] };
     render(<MemoryExplorer memory={empty} />);
-    expect(screen.getByText("No memory facts found.")).toBeInTheDocument();
+    expect(screen.getByText("No memory facts recorded yet.")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Facts are extracted during agent runs/i),
+    ).toBeInTheDocument();
+
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+    fireEvent.click(obsTab);
+    expect(screen.getByText("No observations recorded yet.")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Observations summarize learned behaviors/i),
+    ).toBeInTheDocument();
   });
 
   it("sets tabIndex=0 on the active tab and tabIndex=-1 on inactive tabs", () => {

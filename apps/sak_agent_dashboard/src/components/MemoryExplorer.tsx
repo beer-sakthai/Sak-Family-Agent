@@ -140,8 +140,14 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
               <tbody className="divide-y divide-line/60 text-fg-2">
                 {facts.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-5 py-8 text-center text-fg-4 italic">
-                      No memory facts found.
+                    <td colSpan={5} className="px-5 py-8 text-center">
+                      <div className="flex flex-col items-center justify-center gap-2 font-sans">
+                        <Database className="h-6 w-6 text-fg-4/80" aria-hidden="true" />
+                        <p className="text-xs font-medium text-fg-3">No memory facts recorded yet.</p>
+                        <p className="text-[11px] text-fg-4 max-w-sm leading-relaxed">
+                          Facts are extracted during agent runs and saved into each persona&apos;s <code className="text-fg-3 font-mono">memory.db</code> shard.
+                        </p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -202,8 +208,14 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
               <tbody className="divide-y divide-line/60 text-fg-2">
                 {observations.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-5 py-8 text-center text-fg-4 italic">
-                      No observations recorded.
+                    <td colSpan={5} className="px-5 py-8 text-center">
+                      <div className="flex flex-col items-center justify-center gap-2 font-sans">
+                        <Lightbulb className="h-6 w-6 text-fg-4/80" aria-hidden="true" />
+                        <p className="text-xs font-medium text-fg-3">No observations recorded yet.</p>
+                        <p className="text-[11px] text-fg-4 max-w-sm leading-relaxed">
+                          Observations summarize learned behaviors and insights synthesized across agent executions.
+                        </p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
