@@ -5,7 +5,7 @@ Read-only analytics UI over the SakThai agent family's runtime state.
 ## Architecture
 
 - **Framework:** Next.js 16 (App Router) + React 19 + TypeScript 6
-- **Styling:** Tailwind CSS 3 over a semantic token layer (below); Inter,
+- **Styling:** Tailwind CSS 4 over a semantic token layer (below); Inter,
   Outfit and JetBrains Mono via `next/font/google`, which self-hosts them
 - **Charts:** Recharts 3, coloured from the same tokens via `lib/chart-theme.ts`
 - **Tests:** Vitest 4 + React Testing Library — see [`TESTING.md`](./TESTING.md)

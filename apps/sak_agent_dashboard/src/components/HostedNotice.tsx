@@ -69,7 +69,7 @@ export function HostedNotice({ activeSource, isDemo }: HostedNoticeProps) {
                   : "Copy sakthai web setup command to clipboard"
               }
               title={copied ? "Copied command!" : "Copy sakthai web setup command to clipboard"}
-              className="inline-flex items-center rounded p-0.5 transition-colors hover:bg-hue-amber-tint/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-hue-amber"
+              className="inline-flex items-center rounded p-0.5 transition-colors hover:bg-hue-amber-tint/60 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-hue-amber"
             >
               {copied ? (
                 <Check className="h-3 w-3 text-hue-amber" aria-hidden="true" />
@@ -96,7 +96,7 @@ export function HostedNotice({ activeSource, isDemo }: HostedNoticeProps) {
         }}
         aria-label="Dismiss hosted deployment notice"
         title="Dismiss hosted deployment notice (Esc)"
-        className="shrink-0 rounded-lg p-1 text-hue-amber/80 transition-colors hover:bg-hue-amber-tint/60 hover:text-hue-amber focus:outline-none focus-visible:ring-2 focus-visible:ring-hue-amber"
+        className="shrink-0 rounded-lg p-1 text-hue-amber/80 transition-colors hover:bg-hue-amber-tint/60 hover:text-hue-amber focus:outline-hidden focus-visible:ring-2 focus-visible:ring-hue-amber"
       >
         <X className="h-4 w-4" aria-hidden="true" />
       </button>

@@ -111,7 +111,7 @@ export function TopBar({
           onClick={onOpenMobileNav}
           aria-label="Open navigation menu"
           title="Open navigation menu"
-          className="rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:hidden"
+          className="rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent lg:hidden"
         >
           <Menu className="h-4 w-4" aria-hidden />
         </button>
@@ -132,7 +132,7 @@ export function TopBar({
             aria-label="Open command palette"
             title="Open command palette (Command + K)"
             data-chrome="secondary"
-            className="hidden items-center gap-2 rounded-xl border border-line bg-panel/60 px-3 py-1.5 text-[11px] text-fg-4 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:flex"
+            className="hidden items-center gap-2 rounded-xl border border-line bg-panel/60 px-3 py-1.5 text-[11px] text-fg-4 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent sm:flex"
           >
             <Search className="h-3.5 w-3.5" aria-hidden />
             Jump to…
@@ -190,7 +190,7 @@ export function TopBar({
               onChange={(event) =>
                 onRefreshIntervalChange(Number(event.target.value) as RefreshInterval)
               }
-              className="cursor-pointer rounded bg-transparent text-fg outline-none focus-visible:ring-2 focus-visible:ring-hue-cyan"
+              className="cursor-pointer rounded bg-transparent text-fg outline-hidden focus-visible:ring-2 focus-visible:ring-hue-cyan"
             >
               {REFRESH_INTERVALS.map((seconds) => (
                 <option key={seconds} value={seconds} className="bg-panel text-fg">
@@ -206,7 +206,7 @@ export function TopBar({
             data-chrome="secondary"
             aria-label={copied ? "Copied link to clipboard" : "Copy a link to this view"}
             title={copied ? "Copied link to clipboard" : "Copy a link to this view"}
-            className="hidden rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:block"
+            className="hidden rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent sm:block"
           >
             {copied ? (
               <Check className="h-3.5 w-3.5 text-hue-emerald" aria-hidden />
@@ -238,7 +238,7 @@ export function TopBar({
                 // in a row still fires a change event.
                 event.target.value = "";
               }}
-              className="bg-transparent text-fg-2 outline-none disabled:cursor-not-allowed enabled:cursor-pointer"
+              className="bg-transparent text-fg-2 outline-hidden disabled:cursor-not-allowed enabled:cursor-pointer"
             >
               <option value="" className="bg-panel">
                 {canExport ? "Export" : "No rows"}
@@ -268,7 +268,7 @@ export function TopBar({
             aria-pressed={presenting}
             aria-label={presenting ? "Exit presentation mode" : "Enter presentation mode"}
             title={presenting ? "Exit presentation mode" : "Enter presentation mode"}
-            className="rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
             {presenting ? (
               <Minimize2 className="h-3.5 w-3.5" aria-hidden />
@@ -283,7 +283,7 @@ export function TopBar({
             disabled={isLoading}
             aria-label="Refresh dashboard data"
             title={isLoading ? "Refreshing dashboard data…" : "Refresh dashboard data (R)"}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-3 py-1.5 font-mono text-[11px] text-fg-2 transition-colors hover:border-line-strong disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-3 py-1.5 font-mono text-[11px] text-fg-2 transition-colors hover:border-line-strong disabled:opacity-50 disabled:cursor-not-allowed focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
             <RefreshCw className={`h-3 w-3 ${isLoading ? "animate-spin" : ""}`} aria-hidden />
             <span className="hidden sm:inline">

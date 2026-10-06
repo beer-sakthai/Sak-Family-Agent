@@ -174,7 +174,7 @@ export function WorkflowRuns({
                           }}
                           aria-label={label}
                           title={label}
-                          className="text-[11px] px-2.5 py-1 rounded-lg bg-raised border border-line-strong text-hue-violet hover:border-hue-violet-line/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                          className="text-[11px] px-2.5 py-1 rounded-lg bg-raised border border-line-strong text-hue-violet hover:border-hue-violet-line/60 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
                         >
                           Steps
                         </button>
@@ -220,7 +220,7 @@ export function WorkflowRuns({
                       </span>
                     </div>
                     {step.error && (
-                      <p className="text-hue-rose font-sans break-words">{step.error}</p>
+                      <p className="text-hue-rose font-sans wrap-break-word">{step.error}</p>
                     )}
                   </div>
                 ))

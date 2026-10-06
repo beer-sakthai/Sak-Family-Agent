@@ -95,7 +95,7 @@ function SignalCard({ signal, onNavigate }: { signal: Signal; onNavigate?: (tab:
         : {})}
       className={`group relative overflow-hidden rounded-2xl border p-4 text-left transition-all ${style.panel} ${
         interactive
-          ? "cursor-pointer hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-lg hover:shadow-accent/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          ? "cursor-pointer hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-lg hover:shadow-accent/5 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           : ""
       }`}
     >
