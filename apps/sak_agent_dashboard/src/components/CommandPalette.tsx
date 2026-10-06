@@ -130,7 +130,12 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
       runAt(clampedHighlight);
     } else if (event.key === "Escape") {
       event.preventDefault();
-      onClose();
+      if (query) {
+        setQuery("");
+        setHighlight(0);
+      } else {
+        onClose();
+      }
     }
   };
 

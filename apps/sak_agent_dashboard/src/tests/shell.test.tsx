@@ -546,6 +546,23 @@ describe("CommandPalette", () => {
     expect(input).toHaveValue("");
     expect(screen.getAllByRole("option")).toHaveLength(NAV_ITEMS.length + actions.length);
   });
+
+  it("clears search query on Escape when query is non-empty before closing", () => {
+    const { props } = renderPalette();
+    const input = screen.getByLabelText("Search commands");
+    fireEvent.change(input, { target: { value: "guardrail" } });
+    expect(screen.getAllByRole("option")).toHaveLength(1);
+
+    const dialog = screen.getByRole("dialog");
+    fireEvent.keyDown(dialog, { key: "Escape" });
+
+    expect(input).toHaveValue("");
+    expect(screen.getAllByRole("option")).toHaveLength(NAV_ITEMS.length + actions.length);
+    expect(props.onClose).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    expect(props.onClose).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("HostedNotice", () => {
