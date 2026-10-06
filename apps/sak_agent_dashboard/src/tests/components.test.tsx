@@ -511,6 +511,21 @@ describe("AuditLogs", () => {
     render(<AuditLogs audit={empty} severity="ALL" onSeverityChange={vi.fn()} />);
     expect(screen.getByText(/An empty audit log is a normal state/)).toBeInTheDocument();
   });
+
+  it("offers an inline reset filter button when severity filter yields no events and calls onSeverityChange", () => {
+    const onChange = vi.fn();
+    const empty = { events: [], severity_counts: { critical: 0 }, total: 0 };
+    render(<AuditLogs audit={empty} severity="critical" onSeverityChange={onChange} />);
+
+    expect(screen.getByText("No critical severity events recorded.")).toBeInTheDocument();
+    const resetBtn = screen.getByRole("button", { name: "Reset severity filter to show all events" });
+    expect(resetBtn).toBeInTheDocument();
+    expect(resetBtn).toHaveAttribute("title", "Reset severity filter to show all events");
+    expect(resetBtn).toHaveAttribute("type", "button");
+
+    fireEvent.click(resetBtn);
+    expect(onChange).toHaveBeenCalledWith("ALL");
+  });
 });
 
 describe("SessionExplorer", () => {
