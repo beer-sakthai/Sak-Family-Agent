@@ -109,7 +109,7 @@ export function AgentCard({
   return (
     <Root
       {...interactive}
-      className={`glass-card p-5 rounded-2xl bg-panel/80 border backdrop-blur-xl shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4 relative overflow-hidden group text-left w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${glowClass} ${
+      className={`glass-card p-5 rounded-2xl bg-panel/80 border backdrop-blur-xl shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4 relative overflow-hidden group text-left w-full focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${glowClass} ${
         status === "Idle" ? "opacity-70" : ""
       } ${dimmed ? "opacity-40 saturate-50" : ""} ${
         selected ? "ring-2 ring-accent ring-offset-2 ring-offset-canvas" : ""
@@ -125,11 +125,11 @@ export function AgentCard({
           aria-pressed={selected}
           aria-label={toggleLabel}
           title={toggleLabel}
-          className="absolute inset-0 z-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+          className="absolute inset-0 z-0 rounded-2xl focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
         />
       )}
 
-      <div className={overlayToggle ? "pointer-events-none relative z-[1]" : undefined}>
+      <div className={overlayToggle ? "pointer-events-none relative z-1" : undefined}>
         {/* items-start: the text column is three lines tall, so centring the
             icon and the status pill against it leaves the name floating alone
             above both. */}
@@ -203,7 +203,7 @@ export function AgentCard({
 
       <div
         className={`grid grid-cols-2 gap-2 py-2 px-3 rounded-xl bg-sunken/60 border border-line/80 font-mono text-xs ${
-          overlayToggle ? "pointer-events-none relative z-[1]" : ""
+          overlayToggle ? "pointer-events-none relative z-1" : ""
         }`}
       >
         <div>
@@ -224,7 +224,7 @@ export function AgentCard({
         </div>
       </div>
 
-      <div className={`space-y-1.5 ${overlayToggle ? "pointer-events-none relative z-[1]" : ""}`}>
+      <div className={`space-y-1.5 ${overlayToggle ? "pointer-events-none relative z-1" : ""}`}>
         <div className="flex items-center justify-between text-xs font-mono">
           <span className="text-fg-3 text-[11px] flex items-center gap-1">
             <Award className="h-3 w-3 text-hue-amber" aria-hidden /> Success rate
@@ -245,14 +245,14 @@ export function AgentCard({
           }
         >
           <div
-            className="h-full bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]"
+            className="h-full bg-linear-to-r from-cyan-500 via-teal-400 to-emerald-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]"
             style={{ width: `${successRate ?? 0}%` }}
           />
         </div>
       </div>
 
       <div
-        className={`relative z-[2] flex flex-wrap items-center gap-1.5 pt-1 font-mono text-[10px] ${
+        className={`relative z-2 flex flex-wrap items-center gap-1.5 pt-1 font-mono text-[10px] ${
           overlayToggle ? "pointer-events-none" : ""
         }`}
       >
@@ -277,7 +277,7 @@ export function AgentCard({
             onClick={onOpenDetail}
             aria-label={`Open details for ${agent.display_name}`}
             title={`Open details for ${agent.display_name}`}
-            className="pointer-events-auto ml-auto inline-flex items-center gap-1 rounded-full border border-line-strong bg-raised/90 px-2 py-0.5 text-[10px] text-fg-2 transition-colors hover:border-accent/50 hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="pointer-events-auto ml-auto inline-flex items-center gap-1 rounded-full border border-line-strong bg-raised/90 px-2 py-0.5 text-[10px] text-fg-2 transition-colors hover:border-accent/50 hover:text-accent focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
             Details
             <ArrowUpRight className="h-2.5 w-2.5" aria-hidden />

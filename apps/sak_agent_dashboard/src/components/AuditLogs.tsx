@@ -108,7 +108,7 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
               aria-pressed={active}
               aria-label={label}
               title={label}
-              className={`px-3 py-1.5 rounded-xl text-[11px] font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-mono border transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
                 active
                   ? "bg-hue-cyan-tint/50 text-hue-cyan border-hue-cyan-line/50"
                   : "bg-panel/60 text-fg-3 border-line hover:border-line-strong"
@@ -149,7 +149,7 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
                           onClick={() => onSeverityChange("ALL")}
                           aria-label="Reset severity filter to show all events"
                           title="Reset severity filter to show all events"
-                          className="px-3 py-1 rounded-lg bg-raised text-hue-cyan hover:bg-raised-2 font-mono text-xs border border-line-strong transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                          className="px-3 py-1 rounded-lg bg-raised text-hue-cyan hover:bg-raised-2 font-mono text-xs border border-line-strong transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
                         >
                           Reset severity filter
                         </button>

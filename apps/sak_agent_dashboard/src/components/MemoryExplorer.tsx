@@ -89,7 +89,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           aria-controls="panel-facts"
           title={activeTab === "facts" ? "Viewing recorded memory facts" : "Switch to memory facts view"}
           onClick={() => setActiveTab("facts")}
-          className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
+          className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
             activeTab === "facts"
               ? "bg-hue-cyan-tint/50 text-hue-cyan border-hue-cyan-line/50"
               : "bg-panel/60 text-fg-3 border-line hover:border-line-strong"
@@ -107,7 +107,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           aria-controls="panel-observations"
           title={activeTab === "observations" ? "Viewing recorded observations" : "Switch to observations view"}
           onClick={() => setActiveTab("observations")}
-          className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
+          className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
             activeTab === "observations"
               ? "bg-hue-violet-tint/50 text-hue-violet border-hue-violet-line/50"
               : "bg-panel/60 text-fg-3 border-line hover:border-line-strong"
@@ -124,7 +124,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           id="panel-facts"
           aria-labelledby="tab-facts"
           tabIndex={0}
-          className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
         >
           <div className="overflow-x-auto">
             <table className="w-full text-left font-mono text-xs">
@@ -186,7 +186,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           id="panel-observations"
           aria-labelledby="tab-observations"
           tabIndex={0}
-          className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
         >
           <div className="overflow-x-auto">
             <table className="w-full text-left font-mono text-xs">

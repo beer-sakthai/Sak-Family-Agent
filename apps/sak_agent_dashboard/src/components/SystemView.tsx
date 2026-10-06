@@ -466,7 +466,7 @@ function CliBranch({ node, path }: { node: CliNode; path: string }) {
       <details className="group">
         <summary
           title={`Toggle ${full.trim()} command group (${node.commands.length} subcommand${node.commands.length === 1 ? "" : "s"})`}
-          className="flex cursor-pointer list-none items-baseline gap-2 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="flex cursor-pointer list-none items-baseline gap-2 rounded focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
         >
           <ChevronRight
             className="h-3 w-3 shrink-0 translate-y-0.5 text-fg-4 transition-transform group-open:rotate-90"
@@ -543,7 +543,7 @@ function WorkflowsPanel({ snapshot }: { snapshot: SystemSnapshot }) {
               onClick={() => setFilter(option.id)}
               aria-label={`Filter workflows: ${option.label}`}
               title={filter === option.id ? `Showing ${option.label}` : `Filter workflows by ${option.label}`}
-              className={`rounded-md px-2 py-1 text-[11px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+              className={`rounded-md px-2 py-1 text-[11px] transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
                 filter === option.id ? "bg-raised text-fg" : "text-fg-4 hover:text-fg-2"
               }`}
             >

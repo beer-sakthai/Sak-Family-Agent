@@ -93,13 +93,13 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[10vh]">
+    <div className="fixed inset-0 z-60 flex items-start justify-center p-4 pt-[10vh]">
       <button
         type="button"
         aria-label="Dismiss keyboard shortcuts overlay backdrop"
         title="Dismiss keyboard shortcuts overlay"
         onClick={onClose}
-        className="absolute inset-0 h-full w-full animate-scrim-in bg-canvas/80 backdrop-blur-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+        className="absolute inset-0 h-full w-full animate-scrim-in bg-canvas/80 backdrop-blur-sm focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
       />
       <div
         ref={dialogRef}
@@ -124,7 +124,7 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
             onClick={onClose}
             aria-label="Close keyboard shortcuts"
             title="Close keyboard shortcuts (Esc)"
-            className="inline-flex items-center gap-1.5 shrink-0 rounded-lg px-2 py-1 text-fg-3 transition-colors hover:bg-raised/60 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="inline-flex items-center gap-1.5 shrink-0 rounded-lg px-2 py-1 text-fg-3 transition-colors hover:bg-raised/60 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
             <kbd className="rounded border border-line-strong bg-sunken px-1.5 py-0.5 font-mono text-[10px] text-fg-3" aria-hidden="true">
               Esc
@@ -149,7 +149,7 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
             placeholder="Search shortcuts..."
             aria-label="Filter keyboard shortcuts"
             title="Filter shortcuts by key or description"
-            className="w-full rounded-xl border border-line bg-sunken py-1.5 pl-9 pr-8 text-xs text-fg placeholder:text-fg-4 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent [&::-webkit-search-cancel-button]:hidden"
+            className="w-full rounded-xl border border-line bg-sunken py-1.5 pl-9 pr-8 text-xs text-fg placeholder:text-fg-4 focus:border-accent focus:outline-hidden focus:ring-1 focus:ring-accent [&::-webkit-search-cancel-button]:hidden"
           />
           {query && (
             <button
@@ -157,7 +157,7 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
               onClick={() => setQuery("")}
               aria-label="Clear shortcut search filter"
               title="Clear search (Esc)"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-fg-4 hover:text-fg focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-fg-4 hover:text-fg focus:outline-hidden focus-visible:ring-1 focus-visible:ring-accent"
             >
               <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>

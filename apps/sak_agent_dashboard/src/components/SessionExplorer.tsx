@@ -132,7 +132,7 @@ export function SessionExplorer({
           placeholder="Search sessions by task, model, id, or persona… (/)"
           aria-label="Search sessions"
           title="Search sessions by task, model, id, or persona (/)"
-          className="w-full pl-10 pr-14 py-2.5 rounded-xl bg-panel/80 border border-line text-sm text-fg placeholder:text-fg-5 font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus:border-hue-cyan-line/50 transition-colors [&::-webkit-search-cancel-button]:hidden"
+          className="w-full pl-10 pr-14 py-2.5 rounded-xl bg-panel/80 border border-line text-sm text-fg placeholder:text-fg-5 font-mono focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus:border-hue-cyan-line/50 transition-colors [&::-webkit-search-cancel-button]:hidden"
         />
         <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
           {search ? (
@@ -141,7 +141,7 @@ export function SessionExplorer({
               aria-label="Clear search query"
               title="Clear search query (Esc)"
               onClick={() => onSearchChange("")}
-              className="p-1 rounded-md text-fg-3 hover:text-fg hover:bg-raised/80 active:bg-raised-2/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="p-1 rounded-md text-fg-3 hover:text-fg hover:bg-raised/80 active:bg-raised-2/80 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
             >
               <X className="h-3.5 w-3.5" aria-hidden />
             </button>
@@ -191,7 +191,7 @@ export function SessionExplorer({
                           aria-label="Clear search and filters"
                           title="Reset search query"
                           onClick={() => onSearchChange("")}
-                          className="px-3 py-1 rounded-lg bg-raised text-hue-cyan hover:text-hue-cyan hover:bg-raised-2 font-mono text-xs border border-line-strong transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                          className="px-3 py-1 rounded-lg bg-raised text-hue-cyan hover:text-hue-cyan hover:bg-raised-2 font-mono text-xs border border-line-strong transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
                         >
                           Reset search
                         </button>
@@ -270,7 +270,7 @@ export function SessionExplorer({
                           }}
                           aria-label={label}
                           title={label}
-                          className="text-[11px] px-2.5 py-1 rounded-lg bg-raised border border-line-strong text-hue-cyan hover:border-hue-cyan-line/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                          className="text-[11px] px-2.5 py-1 rounded-lg bg-raised border border-line-strong text-hue-cyan hover:border-hue-cyan-line/60 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
                         >
                           View
                         </button>
@@ -301,7 +301,7 @@ export function SessionExplorer({
               disabled={page <= 1}
               aria-label="Previous page"
               title={page <= 1 ? "First page reached" : "Previous page"}
-              className="px-3 py-1.5 rounded-lg bg-panel border border-line disabled:opacity-40 disabled:cursor-not-allowed hover:border-line-strong transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="px-3 py-1.5 rounded-lg bg-panel border border-line disabled:opacity-40 disabled:cursor-not-allowed hover:border-line-strong transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
             >
               <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
             </button>
@@ -311,7 +311,7 @@ export function SessionExplorer({
               disabled={page >= totalPages}
               aria-label="Next page"
               title={page >= totalPages ? "Last page reached" : "Next page"}
-              className="px-3 py-1.5 rounded-lg bg-panel border border-line disabled:opacity-40 disabled:cursor-not-allowed hover:border-line-strong transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="px-3 py-1.5 rounded-lg bg-panel border border-line disabled:opacity-40 disabled:cursor-not-allowed hover:border-line-strong transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
             >
               <ChevronRight className="h-3.5 w-3.5" aria-hidden />
             </button>
@@ -385,7 +385,7 @@ export function SessionExplorer({
                       >
                         {msg.role}
                       </span>
-                      <p className="text-fg font-sans whitespace-pre-wrap break-words">
+                      <p className="text-fg font-sans whitespace-pre-wrap wrap-break-word">
                         {msg.content}
                       </p>
                     </div>
@@ -423,7 +423,7 @@ export function SessionExplorer({
               {detail?.result_text && (
                 <div className="p-3 rounded-xl bg-sunken/60 border border-line">
                   <span className="text-[10px] uppercase text-fg-4 block mb-1">Result</span>
-                  <p className="text-fg font-sans whitespace-pre-wrap break-words">
+                  <p className="text-fg font-sans whitespace-pre-wrap wrap-break-word">
                     {detail.result_text}
                   </p>
                 </div>

@@ -135,13 +135,13 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[12vh]">
+    <div className="fixed inset-0 z-60 flex items-start justify-center p-4 pt-[12vh]">
       <button
         type="button"
         aria-label="Close command palette"
         title="Close command palette (Esc)"
         onClick={onClose}
-        className="absolute inset-0 h-full w-full bg-sunken/80 backdrop-blur-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+        className="absolute inset-0 h-full w-full bg-sunken/80 backdrop-blur-sm focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
       />
       <div
         ref={dialogRef}
@@ -171,7 +171,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
             aria-activedescendant={
               results.length > 0 ? `cmd-option-${results[clampedHighlight]?.command.id}` : undefined
             }
-            className="w-full bg-transparent text-sm text-fg placeholder:text-fg-5 outline-none"
+            className="w-full bg-transparent text-sm text-fg placeholder:text-fg-5 outline-hidden"
           />
           {query && (
             <button
@@ -182,7 +182,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
                 setQuery("");
                 setHighlight(0);
               }}
-              className="rounded-lg p-1 text-fg-4 transition-colors hover:bg-raised/80 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="rounded-lg p-1 text-fg-4 transition-colors hover:bg-raised/80 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
             >
               <X className="h-3.5 w-3.5" aria-hidden />
             </button>
@@ -229,7 +229,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
                     onMouseEnter={() => setHighlight(index)}
                     onClick={() => runAt(index)}
                     title={command.shortcut ? `${command.label} (${command.shortcut})` : command.label}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
                       index === clampedHighlight
                         ? "bg-raised/80 text-fg"
                         : "text-fg-2 hover:bg-raised/40"
