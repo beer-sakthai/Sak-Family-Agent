@@ -77,6 +77,8 @@ export function demoPersonas(): PersonasPayload {
       input_tokens: runs * 820,
       output_tokens: runs * 310,
       last_run_at: runs > 0 ? EPOCH - index * 900 : null,
+      charge: null,
+      current_stage: null,
     };
   });
   return { personas, unattributed_runs: 37 };

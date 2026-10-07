@@ -279,4 +279,3 @@ class TestTelemetryContracts:
         assert required.issubset(set(contracts.__all__)), (
             f"Missing from __all__: {required - set(contracts.__all__)}"
         )
-
