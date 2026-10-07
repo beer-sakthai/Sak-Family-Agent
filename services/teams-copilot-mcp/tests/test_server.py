@@ -124,3 +124,17 @@ def test_get_meeting_transcript_calls_graph_client():
         "GET", "/users/u1/onlineMeetings/m1/transcripts/t1/content"
     )
     assert result == "WEBVTT\n..."
+
+
+def test_convenience_tools_reject_control_characters():
+    with pytest.raises(ValueError, match="ASCII control characters are not allowed"):
+        server.list_channels(team_id="T1\n")
+
+    with pytest.raises(ValueError, match="ASCII control characters are not allowed"):
+        server.send_channel_message(team_id="T1", channel_id="C1\x00", content="hello")
+
+    with pytest.raises(ValueError, match="ASCII control characters are not allowed"):
+        server.list_calendar_events(user_id="u1\r", top=10)
+
+    with pytest.raises(ValueError, match="ASCII control characters are not allowed"):
+        server.get_meeting_transcript(user_id="u1", meeting_id="m1", transcript_id="t1\t")
