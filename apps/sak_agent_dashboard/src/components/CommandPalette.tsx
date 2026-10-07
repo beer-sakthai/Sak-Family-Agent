@@ -130,7 +130,12 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
       runAt(clampedHighlight);
     } else if (event.key === "Escape") {
       event.preventDefault();
-      onClose();
+      if (query) {
+        setQuery("");
+        setHighlight(0);
+      } else {
+        onClose();
+      }
     }
   };
 
@@ -157,6 +162,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
             // The palette is a modal opened by an explicit ⌘K; focusing its
             // only field is the whole point of opening it.
             autoFocus
+            type="search"
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
@@ -164,6 +170,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
             }}
             placeholder="Jump to a section or run a command…"
             aria-label="Search commands"
+            title="Search commands or filter actions (Esc to clear)"
             role="combobox"
             aria-expanded="true"
             aria-autocomplete="list"
@@ -171,7 +178,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
             aria-activedescendant={
               results.length > 0 ? `cmd-option-${results[clampedHighlight]?.command.id}` : undefined
             }
-            className="w-full bg-transparent text-sm text-fg placeholder:text-fg-5 outline-hidden"
+            className="w-full bg-transparent text-sm text-fg placeholder:text-fg-5 outline-hidden [&::-webkit-search-cancel-button]:hidden"
           />
           {query && (
             <button
