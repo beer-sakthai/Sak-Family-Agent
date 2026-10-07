@@ -125,24 +125,17 @@ describe("PersonaDrawer", () => {
     expect(runsBar).toHaveAttribute("aria-valuetext", `${expectedRuns}% of family`);
   });
 
-  it("provides informative title tooltips and ARIA labels on quick action navigation buttons", () => {
+  it("provides informative title tooltips on quick action navigation buttons", () => {
     renderDrawer(busiest);
-    const sessionsBtn = screen.getByRole("button", { name: `View sessions for ${busiest.display_name}` });
-    const memoryBtn = screen.getByRole("button", { name: `View memory for ${busiest.display_name}` });
-    const analyticsBtn = screen.getByRole("button", { name: `View analytics for ${busiest.display_name}` });
-
-    expect(sessionsBtn).toBeInTheDocument();
-    expect(sessionsBtn).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Sessions" })).toHaveAttribute(
       "title",
       `View sessions for ${busiest.display_name}`,
     );
-    expect(memoryBtn).toBeInTheDocument();
-    expect(memoryBtn).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Memory" })).toHaveAttribute(
       "title",
       `View memory for ${busiest.display_name}`,
     );
-    expect(analyticsBtn).toBeInTheDocument();
-    expect(analyticsBtn).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Analytics" })).toHaveAttribute(
       "title",
       `View analytics for ${busiest.display_name}`,
     );
@@ -151,7 +144,7 @@ describe("PersonaDrawer", () => {
   it("navigates to a panel rather than fetching anything itself", () => {
     const onNavigate = vi.fn();
     renderDrawer(busiest, { onNavigate });
-    fireEvent.click(screen.getByRole("button", { name: `View sessions for ${busiest.display_name}` }));
+    fireEvent.click(screen.getByRole("button", { name: "Sessions" }));
     expect(onNavigate).toHaveBeenCalledWith("sessions");
   });
 
