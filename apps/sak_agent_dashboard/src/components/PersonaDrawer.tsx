@@ -260,6 +260,7 @@ export function PersonaDrawer({
           <button
             type="button"
             onClick={() => onNavigate("sessions")}
+            aria-label={`View sessions for ${persona.display_name}`}
             title={`View sessions for ${persona.display_name}`}
             className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-raised/80 px-3 py-1.5 font-mono text-xs text-fg-2 transition-colors hover:bg-raised-2 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
@@ -269,6 +270,7 @@ export function PersonaDrawer({
           <button
             type="button"
             onClick={() => onNavigate("memory")}
+            aria-label={`View memory for ${persona.display_name}`}
             title={`View memory for ${persona.display_name}`}
             className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-raised/80 px-3 py-1.5 font-mono text-xs text-fg-2 transition-colors hover:bg-raised-2 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
@@ -278,6 +280,7 @@ export function PersonaDrawer({
           <button
             type="button"
             onClick={() => onNavigate("analytics")}
+            aria-label={`View analytics for ${persona.display_name}`}
             title={`View analytics for ${persona.display_name}`}
             className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-raised/80 px-3 py-1.5 font-mono text-xs text-fg-2 transition-colors hover:bg-raised-2 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
