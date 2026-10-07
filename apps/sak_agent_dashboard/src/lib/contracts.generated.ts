@@ -46,6 +46,8 @@ export interface PersonaSummary {
   input_tokens: number;
   output_tokens: number;
   last_run_at: number | null;
+  charge: ChargeReport | null;
+  current_stage: string | null;
 }
 
 export interface PersonasPayload {
@@ -186,4 +188,60 @@ export interface ApiEnvelope<T = unknown> {
   source: DataSource;
   generated_at: string;
   data: T;
+}
+
+export type ChargeState = "Optimal" | "Active" | "Low" | "Critical";
+
+export interface ChargeReport {
+  persona: string;
+  level: number;
+  state: ChargeState;
+  updated_at: number | null;
+}
+
+export interface ChargePayload {
+  reports: ChargeReport[];
+  household_average: number;
+}
+
+export interface CycleStageInfo {
+  stage: string;
+  number: number;
+  goal: string;
+  guidance: string;
+  commands: string[];
+}
+
+export interface CycleStatusPayload {
+  current_stage: string;
+  stages: CycleStageInfo[];
+  next_stage: string;
+}
+
+export interface WorkflowRunRequest {
+  workflow_name: string;
+  persona: string;
+  params: Record<string, string>;
+}
+
+export interface WorkflowRunResult {
+  run_id: string;
+  workflow_name: string;
+  persona: string;
+  status: "completed" | "failed" | "running";
+  started_at: number;
+  completed_at: number | null;
+  error: string | null;
+}
+
+export interface AgentPingRequest {
+  persona: string;
+  message: string;
+}
+
+export interface AgentPingResponse {
+  persona: string;
+  status: "ok" | "error";
+  latency_ms: number;
+  reply: string;
 }
