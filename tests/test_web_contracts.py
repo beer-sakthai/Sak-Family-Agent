@@ -213,3 +213,70 @@ class TestGeneratedFile:
         monkeypatch.setattr(gen, "REPO_ROOT", tmp_path)
         assert gen.main([]) == 0
         assert target.read_text(encoding="utf-8") == gen.generate()
+
+
+class TestTelemetryContracts:
+    """Smoke tests for the new telemetry and control TypedDict types."""
+
+    def test_new_contract_types_importable(self) -> None:
+        from sakthai.web.contracts import (  # noqa: F401
+            AgentPingRequest,
+            AgentPingResponse,
+            ChargePayload,
+            ChargeReport,
+            CycleStageInfo,
+            CycleStatusPayload,
+            WorkflowRunRequest,
+            WorkflowRunResult,
+        )
+
+    def test_charge_report_annotations(self) -> None:
+        from sakthai.web.contracts import ChargeReport
+
+        assert "persona" in ChargeReport.__annotations__
+        assert "level" in ChargeReport.__annotations__
+        assert "state" in ChargeReport.__annotations__
+        assert "updated_at" in ChargeReport.__annotations__
+
+    def test_cycle_status_payload_annotations(self) -> None:
+        from sakthai.web.contracts import CycleStatusPayload
+
+        assert "current_stage" in CycleStatusPayload.__annotations__
+        assert "stages" in CycleStatusPayload.__annotations__
+        assert "next_stage" in CycleStatusPayload.__annotations__
+
+    def test_workflow_run_result_annotations(self) -> None:
+        from sakthai.web.contracts import WorkflowRunResult
+
+        assert "run_id" in WorkflowRunResult.__annotations__
+        assert "status" in WorkflowRunResult.__annotations__
+        assert "error" in WorkflowRunResult.__annotations__
+
+    def test_agent_ping_response_annotations(self) -> None:
+        from sakthai.web.contracts import AgentPingResponse
+
+        assert "latency_ms" in AgentPingResponse.__annotations__
+        assert "reply" in AgentPingResponse.__annotations__
+
+    def test_persona_summary_has_telemetry_fields(self) -> None:
+        from sakthai.web.contracts import PersonaSummary
+
+        assert "charge" in PersonaSummary.__annotations__
+        assert "current_stage" in PersonaSummary.__annotations__
+
+    def test_all_new_types_in_dunder_all(self) -> None:
+        required = {
+            "ChargeState",
+            "ChargeReport",
+            "ChargePayload",
+            "CycleStageInfo",
+            "CycleStatusPayload",
+            "WorkflowRunRequest",
+            "WorkflowRunResult",
+            "AgentPingRequest",
+            "AgentPingResponse",
+        }
+        assert required.issubset(set(contracts.__all__)), (
+            f"Missing from __all__: {required - set(contracts.__all__)}"
+        )
+
