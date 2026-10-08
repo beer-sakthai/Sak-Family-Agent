@@ -133,8 +133,13 @@ export function WorkflowRuns({
             <tbody className="divide-y divide-line/60 text-fg-2">
               {runs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-8 text-center text-fg-4 italic">
-                    No workflow runs recorded yet.
+                  <td colSpan={6} className="px-5 py-8 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2 font-sans">
+                      <GitBranch className="h-6 w-6 text-fg-4/80" aria-hidden />
+                      <p className="text-fg-4 text-xs">
+                        No workflow runs recorded yet.
+                      </p>
+                    </div>
                   </td>
                 </tr>
               ) : (

@@ -851,9 +851,14 @@ describe("WorkflowRuns", () => {
     expect(screen.getByText("3 attempts")).toBeInTheDocument();
   });
 
-  it("renders an empty state", () => {
-    render(<WorkflowRuns runs={[]} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
+  it("renders an empty state with contextual icon and message", () => {
+    const { container } = render(
+      <WorkflowRuns runs={[]} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
+    );
     expect(screen.getByText("No workflow runs recorded yet.")).toBeInTheDocument();
+    const svgIcon = container.querySelector("td svg");
+    expect(svgIcon).toBeInTheDocument();
+    expect(svgIcon).toHaveAttribute("aria-hidden", "true");
   });
 
   // Workflow runs record no persona, so this panel cannot honour the global
