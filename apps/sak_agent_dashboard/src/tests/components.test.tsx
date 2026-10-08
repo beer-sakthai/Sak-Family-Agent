@@ -280,6 +280,19 @@ describe("AnalyticsCharts", () => {
       ).toHaveAttribute("title", `Set trend window to ${trendWindowLabel(days)}`);
     }
   });
+
+  it("renders data source badges with title tooltips and aria-labels", () => {
+    renderCharts();
+    const sourceBadges = screen.getAllByLabelText("Data source: eval.jsonl");
+    expect(sourceBadges.length).toBeGreaterThan(0);
+    expect(sourceBadges[0]).toHaveAttribute("title", "Data source: eval.jsonl");
+  });
+
+  it("renders empty chart state containers with role='status' and aria-label", () => {
+    renderCharts({ metrics: { ...demoMetrics(), trends: [], stop_reasons: {} } });
+    const emptyStatuses = screen.getAllByRole("status", { name: "No runs recorded yet" });
+    expect(emptyStatuses.length).toBeGreaterThan(0);
+  });
 });
 
 describe("MemoryExplorer", () => {
