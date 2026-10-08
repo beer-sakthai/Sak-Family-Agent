@@ -13,3 +13,7 @@
 ## 2026-10-05 - Search filter Escape key clearance in overlay modals
 **Learning:** Search inputs inside modal overlays benefit from intercepting `Escape` keydown when populated to clear search text and stop event propagation, preventing users from accidentally dismissing the entire modal.
 **Action:** Add `onKeyDown` handler checking `e.key === "Escape"` to search inputs in overlays to call `e.stopPropagation()` and reset search query.
+
+## 2026-10-08 - Accessible empty state containers and data source tooltips for chart panels
+**Learning:** Chart panel headers benefit from decorative icons marked `aria-hidden="true"`, data source badges with explicit `title` hover tooltips and `aria-label` descriptions, and empty chart state containers marked with `role="status"` and `aria-label` to announce empty states to assistive technologies.
+**Action:** Mark decorative chart panel icons with `aria-hidden="true"`, add `title` and `aria-label` to data source badges, and assign `role="status"` and `aria-label` to empty chart placeholder containers.
