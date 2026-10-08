@@ -955,12 +955,12 @@ describe("StitchStudio", () => {
     const previewTab = screen.getByRole("tab", { name: /Live Preview/ });
     const codeTab = screen.getByRole("tab", { name: /TSX Code/ });
     const specTab = screen.getByRole("tab", { name: /Stitch JSON Spec/ });
-    const copyButton = screen.getByRole("button", { name: "Copy TSX code" });
+    const copyButton = screen.getByRole("button", { name: "Copy Code snippet" });
 
     expect(previewTab).toHaveAttribute("title", "Viewing Live Preview");
     expect(codeTab).toHaveAttribute("title", "Switch to TSX Code view");
     expect(specTab).toHaveAttribute("title", "Switch to Stitch JSON Spec view");
-    expect(copyButton).toHaveAttribute("title", "Copy TSX code");
+    expect(copyButton).toHaveAttribute("title", "Copy Code snippet");
 
     fireEvent.click(codeTab);
     expect(previewTab).toHaveAttribute("title", "Switch to Live Preview view");
@@ -1015,7 +1015,7 @@ describe("StitchStudio", () => {
     });
 
     render(<StitchStudio />);
-    const copyBtn = screen.getByRole("button", { name: "Copy TSX code" });
+    const copyBtn = screen.getByRole("button", { name: "Copy Code snippet" });
     fireEvent.click(copyBtn);
 
     expect(writeTextMock).toHaveBeenCalledTimes(1);
