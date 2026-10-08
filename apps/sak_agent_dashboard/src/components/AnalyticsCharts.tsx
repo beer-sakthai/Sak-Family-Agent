@@ -37,7 +37,11 @@ interface AnalyticsChartsProps {
 /** Rendered in place of a chart that has nothing real to show. */
 function EmptyChart({ label }: { label: string }) {
   return (
-    <div className="h-64 w-full flex items-center justify-center text-xs font-mono text-fg-4 border border-dashed border-line rounded-xl">
+    <div
+      role="status"
+      aria-label={label}
+      className="h-64 w-full flex items-center justify-center text-xs font-mono text-fg-4 border border-dashed border-line rounded-xl"
+    >
       {label}
     </div>
   );
@@ -60,10 +64,16 @@ function Panel({
     <div className="glass-panel p-5 rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className={`p-2 rounded-lg border ${accent}`}>{icon}</div>
+          <div className={`p-2 rounded-lg border ${accent}`} aria-hidden="true">
+            {icon}
+          </div>
           <h4 className="text-sm font-bold font-display text-fg">{title}</h4>
         </div>
-        <span className="text-[10px] font-mono text-fg-4 uppercase tracking-wider">
+        <span
+          title={`Data source: ${source}`}
+          aria-label={`Data source: ${source}`}
+          className="text-[10px] font-mono text-fg-4 uppercase tracking-wider"
+        >
           {source}
         </span>
       </div>
@@ -196,7 +206,7 @@ export function AnalyticsCharts({
           title="Success Rate by Persona (%)"
           source="eval.jsonl"
           accent="bg-hue-cyan/10 text-hue-cyan border-hue-cyan-line/20"
-          icon={<BarChart3 className="h-4 w-4" />}
+          icon={<BarChart3 className="h-4 w-4" aria-hidden="true" />}
         >
           {!isMounted ? null : successData.length === 0 ? (
             <EmptyChart label="No attributed runs yet" />
@@ -217,7 +227,7 @@ export function AnalyticsCharts({
           title="Token Usage by Persona"
           source="eval.jsonl"
           accent="bg-hue-emerald/10 text-hue-emerald border-hue-emerald-line/20"
-          icon={<Zap className="h-4 w-4" />}
+          icon={<Zap className="h-4 w-4" aria-hidden="true" />}
         >
           {!isMounted ? null : tokenData.length === 0 ? (
             <EmptyChart label="No attributed runs yet" />
@@ -256,7 +266,7 @@ export function AnalyticsCharts({
           title="Runs & Latency Over Time"
           source="eval.jsonl"
           accent="bg-hue-violet/10 text-hue-violet border-hue-violet-line/20"
-          icon={<TrendingUp className="h-4 w-4" />}
+          icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}
         >
           {!isMounted ? null : trendData.length === 0 ? (
             <EmptyChart label="No runs recorded yet" />
@@ -298,7 +308,7 @@ export function AnalyticsCharts({
           title="Stop Reason Breakdown"
           source="eval.jsonl"
           accent="bg-hue-amber/10 text-hue-amber border-hue-amber-line/20"
-          icon={<PieIcon className="h-4 w-4" />}
+          icon={<PieIcon className="h-4 w-4" aria-hidden="true" />}
         >
           {!isMounted ? null : stopReasonData.length === 0 ? (
             <EmptyChart label="No runs recorded yet" />

@@ -12,6 +12,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import ErrorBoundary from "@/app/error";
+import GlobalError from "@/app/global-error";
 import AgentCard from "@/components/AgentCard";
 import CommandPalette from "@/components/CommandPalette";
 import AgentOverview from "@/components/AgentOverview";
@@ -279,6 +280,19 @@ describe("AnalyticsCharts", () => {
         screen.getByRole("button", { name: `Set trend window to ${trendWindowLabel(days)}` }),
       ).toHaveAttribute("title", `Set trend window to ${trendWindowLabel(days)}`);
     }
+  });
+
+  it("renders data source badges with title tooltips and aria-labels", () => {
+    renderCharts();
+    const sourceBadges = screen.getAllByLabelText("Data source: eval.jsonl");
+    expect(sourceBadges.length).toBeGreaterThan(0);
+    expect(sourceBadges[0]).toHaveAttribute("title", "Data source: eval.jsonl");
+  });
+
+  it("renders empty chart state containers with role='status' and aria-label", () => {
+    renderCharts({ metrics: { ...demoMetrics(), trends: [], stop_reasons: {} } });
+    const emptyStatuses = screen.getAllByRole("status", { name: "No runs recorded yet" });
+    expect(emptyStatuses.length).toBeGreaterThan(0);
   });
 });
 
@@ -1226,6 +1240,21 @@ describe("Route Error Boundary", () => {
     render(<ErrorBoundary error={new Error("Test failure")} reset={reset} />);
 
     const button = screen.getByRole("button", { name: "Try re-rendering the dashboard" });
+    expect(button).toBeInTheDocument();
+    expect(button).toHaveAttribute("type", "button");
+    expect(button).toHaveAttribute("title", "Try re-rendering the dashboard");
+
+    fireEvent.click(button);
+    expect(reset).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Global Error Boundary", () => {
+  it("renders retry button with type='button', aria-label, and title attributes", () => {
+    const reset = vi.fn();
+    render(<GlobalError error={new Error("Root layout failure")} reset={reset} />);
+
+    const button = screen.getByRole("button", { name: "Try again - re-render the dashboard" });
     expect(button).toBeInTheDocument();
     expect(button).toHaveAttribute("type", "button");
     expect(button).toHaveAttribute("title", "Try re-rendering the dashboard");
