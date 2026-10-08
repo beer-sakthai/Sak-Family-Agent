@@ -13,3 +13,7 @@
 ## 2026-10-05 - Search filter Escape key clearance in overlay modals
 **Learning:** Search inputs inside modal overlays benefit from intercepting `Escape` keydown when populated to clear search text and stop event propagation, preventing users from accidentally dismissing the entire modal.
 **Action:** Add `onKeyDown` handler checking `e.key === "Escape"` to search inputs in overlays to call `e.stopPropagation()` and reset search query.
+
+## 2026-10-08 - WCAG 2.5.3 Label in Name compliance on ARIA-labeled text buttons
+**Learning:** When adding `aria-label` screen reader names to interactive buttons displaying visible text, the `aria-label` must begin with or contain the exact visible text (e.g., `aria-label="Try again - re-render the dashboard"` for a button showing "Try again") to comply with WCAG 2.5.3 (Label in Name) and prevent speech recognition activation failures.
+**Action:** Ensure button `aria-label` values include the full visible button text before additional contextual descriptions.
