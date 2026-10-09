@@ -414,6 +414,24 @@ describe("MemoryExplorer", () => {
     expect(shardBadges.length).toBeGreaterThan(0);
   });
 
+  it("provides title tooltips and aria-labels on observation weight and confidence cells", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+    fireEvent.click(obsTab);
+
+    const firstObs = demoMemory().observations[0];
+    const weightText = firstObs.weight.toFixed(2);
+    const confidenceText = `${(firstObs.confidence * 100).toFixed(0)}%`;
+
+    const weightCell = screen.getByLabelText(`Observation weight: ${weightText}`);
+    expect(weightCell).toBeInTheDocument();
+    expect(weightCell).toHaveAttribute("title", `Observation weight: ${weightText}`);
+
+    const confidenceCell = screen.getByLabelText(`Confidence score: ${confidenceText}`);
+    expect(confidenceCell).toBeInTheDocument();
+    expect(confidenceCell).toHaveAttribute("title", `Confidence score: ${confidenceText}`);
+  });
+
   it("renders empty state guidance and icons for facts and observations", () => {
     const empty = { ...demoMemory(), facts: [], observations: [] };
     render(<MemoryExplorer memory={empty} />);
