@@ -270,8 +270,8 @@ export function StitchStudio() {
           <button
             type="button"
             aria-live="polite"
-            aria-label={copied ? "Copied to clipboard" : activeTab === "spec" ? "Copy Stitch JSON spec" : "Copy TSX code"}
-            title={copied ? "Copied to clipboard" : activeTab === "spec" ? "Copy Stitch JSON spec" : "Copy TSX code"}
+            aria-label={copied ? "Copied to clipboard" : activeTab === "spec" ? "Copy Spec JSON" : "Copy Code snippet"}
+            title={copied ? "Copied to clipboard" : activeTab === "spec" ? "Copy Spec JSON" : "Copy Code snippet"}
             onClick={handleCopyCode}
             className="flex items-center gap-1 text-xs font-mono text-fg-3 hover:text-hue-cyan transition-colors bg-raised/60 px-2.5 py-1 rounded-lg border border-line-strong/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
