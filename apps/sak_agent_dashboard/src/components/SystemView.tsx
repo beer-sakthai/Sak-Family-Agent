@@ -371,12 +371,20 @@ function BarList({ rows, unit }: { rows: BarRow[]; unit: string }) {
           title={`${row.label}: ${row.value.toLocaleString()} ${unit}${row.note ? ` · ${row.note}` : ""}`}
         >
           <span className="truncate font-mono text-fg-2">{row.label}</span>
-          <span className="h-2 overflow-hidden rounded-full bg-sunken" aria-hidden>
+          <div
+            role="progressbar"
+            aria-label={`${row.label} ${unit}`}
+            aria-valuenow={row.value}
+            aria-valuemin={0}
+            aria-valuemax={max}
+            aria-valuetext={`${row.label}: ${row.value.toLocaleString()} ${unit}${row.note ? ` (${row.note})` : ""}`}
+            className="h-2 overflow-hidden rounded-full bg-sunken"
+          >
             <span
               className="block h-full rounded-full bg-accent"
               style={{ width: `${Math.max(2, (row.value / max) * 100)}%` }}
             />
-          </span>
+          </div>
           <span className="text-right font-mono tabular-nums text-fg-3">
             {row.value.toLocaleString()}
             {row.note && <span className="ml-1.5 text-fg-5">{row.note}</span>}
