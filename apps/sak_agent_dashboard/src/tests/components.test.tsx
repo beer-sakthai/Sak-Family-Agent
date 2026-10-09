@@ -12,6 +12,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import ErrorBoundary from "@/app/error";
+import GlobalError from "@/app/global-error";
 import AgentCard from "@/components/AgentCard";
 import CommandPalette from "@/components/CommandPalette";
 import AgentOverview from "@/components/AgentOverview";
@@ -144,6 +145,18 @@ describe("AgentCard", () => {
     const tokenBadge = screen.getByText("2,000 tokens");
     expect(tokenBadge).toBeInTheDocument();
     expect(tokenBadge).toHaveAttribute("title", "Total token usage: 2,000 tokens");
+  });
+
+  it("renders provider and model badges with title tooltips and aria-label attributes", () => {
+    const agent = { ...active, provider: "anthropic", model: "claude-3-5-sonnet-20241022" };
+    render(<AgentCard agent={agent} />);
+    const providerBadge = screen.getByLabelText("Provider: anthropic");
+    expect(providerBadge).toBeInTheDocument();
+    expect(providerBadge).toHaveAttribute("title", "Model provider: anthropic");
+
+    const modelBadge = screen.getByLabelText("Model: claude-3-5-sonnet-20241022");
+    expect(modelBadge).toBeInTheDocument();
+    expect(modelBadge).toHaveAttribute("title", "Configured model: claude-3-5-sonnet-20241022");
   });
 
   it("renders success rate progressbar with full ARIA progressbar attributes", () => {
@@ -411,6 +424,24 @@ describe("MemoryExplorer", () => {
     const firstFact = demoMemory().facts[0];
     const shardBadges = screen.getAllByTitle(`Persona shard: ${firstFact.persona}`);
     expect(shardBadges.length).toBeGreaterThan(0);
+  });
+
+  it("provides title tooltips and aria-labels on observation weight and confidence cells", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+    fireEvent.click(obsTab);
+
+    const firstObs = demoMemory().observations[0];
+    const weightText = firstObs.weight.toFixed(2);
+    const confidenceText = `${(firstObs.confidence * 100).toFixed(0)}%`;
+
+    const weightCell = screen.getByLabelText(`Observation weight: ${weightText}`);
+    expect(weightCell).toBeInTheDocument();
+    expect(weightCell).toHaveAttribute("title", `Observation weight: ${weightText}`);
+
+    const confidenceCell = screen.getByLabelText(`Confidence score: ${confidenceText}`);
+    expect(confidenceCell).toBeInTheDocument();
+    expect(confidenceCell).toHaveAttribute("title", `Confidence score: ${confidenceText}`);
   });
 
   it("renders empty state guidance and icons for facts and observations", () => {
@@ -850,9 +881,14 @@ describe("WorkflowRuns", () => {
     expect(screen.getByText("3 attempts")).toBeInTheDocument();
   });
 
-  it("renders an empty state", () => {
-    render(<WorkflowRuns runs={[]} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
+  it("renders an empty state with contextual icon and message", () => {
+    const { container } = render(
+      <WorkflowRuns runs={[]} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
+    );
     expect(screen.getByText("No workflow runs recorded yet.")).toBeInTheDocument();
+    const svgIcon = container.querySelector("td svg");
+    expect(svgIcon).toBeInTheDocument();
+    expect(svgIcon).toHaveAttribute("aria-hidden", "true");
   });
 
   // Workflow runs record no persona, so this panel cannot honour the global
@@ -949,12 +985,12 @@ describe("StitchStudio", () => {
     const previewTab = screen.getByRole("tab", { name: /Live Preview/ });
     const codeTab = screen.getByRole("tab", { name: /TSX Code/ });
     const specTab = screen.getByRole("tab", { name: /Stitch JSON Spec/ });
-    const copyButton = screen.getByRole("button", { name: "Copy TSX code" });
+    const copyButton = screen.getByRole("button", { name: "Copy Code snippet" });
 
     expect(previewTab).toHaveAttribute("title", "Viewing Live Preview");
     expect(codeTab).toHaveAttribute("title", "Switch to TSX Code view");
     expect(specTab).toHaveAttribute("title", "Switch to Stitch JSON Spec view");
-    expect(copyButton).toHaveAttribute("title", "Copy TSX code");
+    expect(copyButton).toHaveAttribute("title", "Copy Code snippet");
 
     fireEvent.click(codeTab);
     expect(previewTab).toHaveAttribute("title", "Switch to Live Preview view");
@@ -1009,7 +1045,7 @@ describe("StitchStudio", () => {
     });
 
     render(<StitchStudio />);
-    const copyBtn = screen.getByRole("button", { name: "Copy TSX code" });
+    const copyBtn = screen.getByRole("button", { name: "Copy Code snippet" });
     fireEvent.click(copyBtn);
 
     expect(writeTextMock).toHaveBeenCalledTimes(1);
@@ -1239,6 +1275,21 @@ describe("Route Error Boundary", () => {
     render(<ErrorBoundary error={new Error("Test failure")} reset={reset} />);
 
     const button = screen.getByRole("button", { name: "Try re-rendering the dashboard" });
+    expect(button).toBeInTheDocument();
+    expect(button).toHaveAttribute("type", "button");
+    expect(button).toHaveAttribute("title", "Try re-rendering the dashboard");
+
+    fireEvent.click(button);
+    expect(reset).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Global Error Boundary", () => {
+  it("renders retry button with type='button', aria-label, and title attributes", () => {
+    const reset = vi.fn();
+    render(<GlobalError error={new Error("Root layout failure")} reset={reset} />);
+
+    const button = screen.getByRole("button", { name: "Try again - re-render the dashboard" });
     expect(button).toBeInTheDocument();
     expect(button).toHaveAttribute("type", "button");
     expect(button).toHaveAttribute("title", "Try re-rendering the dashboard");
