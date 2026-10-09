@@ -285,8 +285,8 @@ bash scripts/comfyui_setup.sh --m-series --port=8190 --workspace=/data/comfy
 
 It runs `hardware_check.py` internally, refuses to install locally when the
 verdict is `cloud` (unless `--force-cloud-override`), picks the right
-`comfy-cli` flag, and prefers `pipx`/`uvx` over global `pip` to avoid polluting
-system Python.
+`comfy-cli` flag, and installs `comfy-cli` with `uvx` or `pipx` — one of them
+must be installed; it never falls back to a global `pip install`.
 
 ---
 
