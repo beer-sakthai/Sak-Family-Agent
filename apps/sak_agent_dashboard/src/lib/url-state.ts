@@ -105,7 +105,9 @@ export function parseView(hash: string): ViewState {
     tab: isTabId(rawTab) ? rawTab : DEFAULT_VIEW.tab,
     search: params.get("q") ?? DEFAULT_VIEW.search,
     severity: params.get("severity") ?? DEFAULT_VIEW.severity,
-    page: Number.isFinite(page) && page > 0 ? page : DEFAULT_VIEW.page,
+    // Safe integers only: past 2^53 parseInt is no longer exact, and
+    // String(1e23) is "1e+23", which re-parses as page 1 on the next click.
+    page: Number.isSafeInteger(page) && page > 0 ? page : DEFAULT_VIEW.page,
     // Deduplicated; already narrowed to PERSONA_NAMES above.
     personas: [...new Set(personas)],
     session: params.get("session") || null,

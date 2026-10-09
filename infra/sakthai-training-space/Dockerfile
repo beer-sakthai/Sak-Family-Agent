@@ -2,7 +2,7 @@
 # Docker GPU Space for TRL + DeepSpeed RLHF/GRPO training on Hugging Face Spaces
 #
 # Base image: NVIDIA CUDA 12.4 + Ubuntu 22.04 + Python 3.11
-# Pre-installed: PyTorch 2.5.1 (CUDA 12.4), DeepSpeed 0.15.4, TRL 0.15+ (latest stable)
+# Pre-installed: PyTorch 2.5.1 (CUDA 12.4), DeepSpeed 0.15.4, TRL 0.15 (see requirements.in)
 #
 # Hugging Face Docker Space expects the container to listen on the port
 # declared in README.md (default 7860). For a training Space, we keep the
@@ -28,7 +28,7 @@ ENV HUGGINGFACE_HUB_CACHE=/tmp/.huggingface/hub
 # -----------------------------------------------------------------------------
 # 1. System dependencies + Python 3.11
 # -----------------------------------------------------------------------------
-# hadolint ignore=DL3008,DL3013
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     ca-certificates \
@@ -47,45 +47,38 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     vim \
     wget \
     && rm -rf /var/lib/apt/lists/* \
-    && ln -sf /usr/bin/python3.11 /usr/bin/python \
-    && python -m pip install --upgrade pip setuptools wheel
+    && ln -sf /usr/bin/python3.11 /usr/bin/python
 
 # -----------------------------------------------------------------------------
-# 2. Core ML stack (pinned for CUDA 12.4)
+# 2. Python packages, every one pinned by hash (Scorecard Pinned-Dependencies)
 # -----------------------------------------------------------------------------
-# hadolint ignore=DL3013
-RUN pip install \
-    torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124 \
-    transformers==4.47.1 \
-    datasets==5.0.1 \
-    accelerate==1.2.1 \
-    peft==0.14.0 \
-    bitsandbytes==0.45.0 \
-    evaluate==0.4.3 \
-    wandb==0.19.1 \
-    tensorboard \
-    scipy \
-    scikit-learn \
-    ninja
+# The locks are generated from requirements.in; the command is in each header.
+# --require-hashes makes pip refuse any file whose hash is not in the lock, and
+# --no-deps keeps it from resolving anything the lock does not already list.
+COPY build-requirements.lock requirements.lock deepspeed.lock /tmp/requirements/
 
-# -----------------------------------------------------------------------------
-# 3. DeepSpeed + TRL (install together to avoid ABI/version drift)
-# -----------------------------------------------------------------------------
-# trl[deepspeed] pulls the deepspeed extra; we also pin deepspeed explicitly.
-# Kept as a separate layer from the core stack so ML-stack rebuilds cache.
-# hadolint ignore=DL3013,DL3059
-RUN pip install \
-    deepspeed==0.15.4 \
-    "trl[deepspeed]>=0.15.0,<0.16.0" \
-    sentencepiece \
-    protobuf
+# Toolchain first: Ubuntu 22.04's pip predates some of the wheels below.
+RUN python -m pip install --no-cache-dir --require-hashes \
+    -r /tmp/requirements/build-requirements.lock
+
+# Core ML stack (torch/vision/audio from the CUDA 12.4 index), TRL and the
+# rest of DeepSpeed's dependencies. Kept as its own layer so it caches.
+RUN python -m pip install --no-cache-dir --require-hashes --no-deps \
+    -r /tmp/requirements/requirements.lock
+
+# DeepSpeed ships only as an sdist whose build imports torch, so it installs
+# after torch and against it, rather than in an isolated build environment.
+# hadolint ignore=DL3059
+RUN python -m pip install --no-cache-dir --require-hashes --no-deps --no-build-isolation \
+    -r /tmp/requirements/deepspeed.lock \
+    && rm -rf /tmp/requirements
 
 # Optional: vLLM for fast generation in online RL (GRPO/RLOO). Version pinned
 # to TRL-supported range. Disable if not needed to save build time/image size.
 # RUN pip install vllm==0.7.3
 
 # -----------------------------------------------------------------------------
-# 4. Workspace layout
+# 3. Workspace layout
 # -----------------------------------------------------------------------------
 WORKDIR /workspace
 RUN mkdir -p /workspace/scripts /workspace/configs /workspace/outputs /workspace/data
@@ -95,7 +88,7 @@ COPY scripts/ /workspace/scripts/
 COPY configs/ /workspace/configs/
 
 # -----------------------------------------------------------------------------
-# 5. Runtime defaults for a Docker GPU Space
+# 4. Runtime defaults for a Docker GPU Space
 # -----------------------------------------------------------------------------
 # Docker Spaces expect a process that keeps running. For a training Space we:
 #   - expose port 7860 (conventional; not used by training unless you serve logs)
