@@ -218,7 +218,7 @@ describe("TopBar", () => {
 
   it("provides informative tooltip on sample data toggle button", () => {
     renderTopBar({ isDemo: false });
-    const toggle = screen.getByLabelText("Toggle sample data");
+    const toggle = screen.getByLabelText(/Sample: OFF - toggle sample data/);
     expect(toggle).toHaveAttribute("title", "Switch to sample dataset");
   });
 
@@ -274,7 +274,7 @@ describe("TopBar", () => {
     const copyLinkBtn = screen.getByLabelText("Copy a link to this view");
     const presentBtn = screen.getByLabelText("Enter presentation mode");
     const refreshBtn = screen.getByLabelText("Refresh dashboard data");
-    const sampleToggleBtn = screen.getByLabelText("Toggle sample data");
+    const sampleToggleBtn = screen.getByLabelText(/Sample: OFF - toggle sample data/);
 
     expect(openMobileNavBtn).toHaveAttribute("type", "button");
     expect(openPaletteBtn).toHaveAttribute("type", "button");

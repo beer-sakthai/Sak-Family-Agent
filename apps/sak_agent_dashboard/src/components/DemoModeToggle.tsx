@@ -60,7 +60,7 @@ export function DemoModeToggle({ isDemo, onToggle, activeSource }: DemoModeToggl
         type="button"
         onClick={() => onToggle(!isDemo)}
         aria-pressed={isDemo}
-        aria-label="Toggle sample data"
+        aria-label={`Sample: ${isDemo ? "ON" : "OFF"} - toggle sample data`}
         title={isDemo ? "Switch to live agent data" : "Switch to sample dataset"}
         className={`px-3 py-1.5 rounded-xl text-[11px] font-mono border transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
           isDemo
