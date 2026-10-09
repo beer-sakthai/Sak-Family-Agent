@@ -147,6 +147,18 @@ describe("AgentCard", () => {
     expect(tokenBadge).toHaveAttribute("title", "Total token usage: 2,000 tokens");
   });
 
+  it("renders provider and model badges with title tooltips and aria-label attributes", () => {
+    const agent = { ...active, provider: "anthropic", model: "claude-3-5-sonnet-20241022" };
+    render(<AgentCard agent={agent} />);
+    const providerBadge = screen.getByLabelText("Provider: anthropic");
+    expect(providerBadge).toBeInTheDocument();
+    expect(providerBadge).toHaveAttribute("title", "Model provider: anthropic");
+
+    const modelBadge = screen.getByLabelText("Model: claude-3-5-sonnet-20241022");
+    expect(modelBadge).toBeInTheDocument();
+    expect(modelBadge).toHaveAttribute("title", "Configured model: claude-3-5-sonnet-20241022");
+  });
+
   it("renders success rate progressbar with full ARIA progressbar attributes", () => {
     const agent: PersonaSummary = { ...active, runs: 10, errors: 2 };
     render(<AgentCard agent={agent} />);

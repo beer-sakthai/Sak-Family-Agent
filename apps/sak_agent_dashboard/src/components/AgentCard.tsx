@@ -149,7 +149,11 @@ export function AgentCard({
               </h4>
               <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 font-mono text-xs leading-snug text-fg-3">
                 {agent.provider && (
-                  <span className="rounded bg-hue-cyan-tint px-1.5 py-0.5 text-[10px] text-hue-cyan border border-hue-cyan-line/50">
+                  <span
+                    title={`Model provider: ${agent.provider}`}
+                    aria-label={`Provider: ${agent.provider}`}
+                    className="rounded bg-hue-cyan-tint px-1.5 py-0.5 text-[10px] text-hue-cyan border border-hue-cyan-line/50"
+                  >
                     {agent.provider}
                   </span>
                 )}
@@ -194,8 +198,12 @@ export function AgentCard({
         </div>
 
         <div className="mt-3 flex items-center gap-2">
-          <span className="text-[11px] font-mono text-fg-2 px-2.5 py-1 rounded-md bg-raised/90 border border-line-strong/60 inline-flex items-center gap-1.5 max-w-full">
-            <Cpu className="h-3 w-3 text-hue-cyan shrink-0" aria-hidden />
+          <span
+            title={`Configured model: ${agent.model || "no configured model"}`}
+            aria-label={`Model: ${agent.model || "no configured model"}`}
+            className="text-[11px] font-mono text-fg-2 px-2.5 py-1 rounded-md bg-raised/90 border border-line-strong/60 inline-flex items-center gap-1.5 max-w-full"
+          >
+            <Cpu className="h-3 w-3 text-hue-cyan shrink-0" aria-hidden="true" />
             <span className="truncate">{agent.model || "no configured model"}</span>
           </span>
         </div>
@@ -208,7 +216,7 @@ export function AgentCard({
       >
         <div>
           <span className="text-[10px] uppercase text-fg-3 mb-0.5 flex items-center gap-1">
-            <Clock className="h-3 w-3 text-hue-cyan" aria-hidden /> Avg latency
+            <Clock className="h-3 w-3 text-hue-cyan" aria-hidden="true" /> Avg latency
           </span>
           <span className="font-bold text-hue-cyan">
             {agent.runs > 0 ? `${Math.round(agent.avg_latency_ms)}ms` : "—"}
@@ -216,7 +224,7 @@ export function AgentCard({
         </div>
         <div>
           <span className="text-[10px] uppercase text-fg-3 mb-0.5 flex items-center gap-1">
-            <Activity className="h-3 w-3 text-hue-emerald" aria-hidden /> Executions
+            <Activity className="h-3 w-3 text-hue-emerald" aria-hidden="true" /> Executions
           </span>
           <span className="font-bold text-hue-emerald">
             {agent.runs} {agent.runs === 1 ? "run" : "runs"}
@@ -227,7 +235,7 @@ export function AgentCard({
       <div className={`space-y-1.5 ${overlayToggle ? "pointer-events-none relative z-1" : ""}`}>
         <div className="flex items-center justify-between text-xs font-mono">
           <span className="text-fg-3 text-[11px] flex items-center gap-1">
-            <Award className="h-3 w-3 text-hue-amber" aria-hidden /> Success rate
+            <Award className="h-3 w-3 text-hue-amber" aria-hidden="true" /> Success rate
           </span>
           <span className="font-bold text-hue-emerald">
             {successRate === null ? "no runs yet" : `${successRate.toFixed(1)}%`}
@@ -260,7 +268,7 @@ export function AgentCard({
           title={`Total token usage: ${(agent.input_tokens + agent.output_tokens).toLocaleString()} tokens`}
           className="px-2 py-0.5 rounded-full bg-hue-cyan-tint/40 text-hue-cyan border border-hue-cyan-line/30 inline-flex items-center gap-1"
         >
-          <Brain className="h-2.5 w-2.5" aria-hidden />
+          <Brain className="h-2.5 w-2.5" aria-hidden="true" />
           {(agent.input_tokens + agent.output_tokens).toLocaleString()} tokens
         </span>
         {agent.errors > 0 && (
@@ -280,7 +288,7 @@ export function AgentCard({
             className="pointer-events-auto ml-auto inline-flex items-center gap-1 rounded-full border border-line-strong bg-raised/90 px-2 py-0.5 text-[10px] text-fg-2 transition-colors hover:border-accent/50 hover:text-accent focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
             Details
-            <ArrowUpRight className="h-2.5 w-2.5" aria-hidden />
+            <ArrowUpRight className="h-2.5 w-2.5" aria-hidden="true" />
           </button>
         )}
       </div>
