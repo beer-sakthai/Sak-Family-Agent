@@ -1212,6 +1212,16 @@ describe("HostedNotice", () => {
 });
 
 describe("DemoModeToggle", () => {
+  it("includes visible label text in button aria-label for WCAG 2.5.3 compliance", () => {
+    const { rerender } = render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="local" />);
+    const offButton = screen.getByRole("button", { name: /^Sample: OFF/ });
+    expect(offButton).toHaveAttribute("aria-label", "Sample: OFF - toggle sample data");
+
+    rerender(<DemoModeToggle isDemo={true} onToggle={vi.fn()} activeSource="demo" />);
+    const onButton = screen.getByRole("button", { name: /^Sample: ON/ });
+    expect(onButton).toHaveAttribute("aria-label", "Sample: ON - toggle sample data");
+  });
+
   it("reports the source actually in use", () => {
     render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="local" />);
     const activeSource = screen.getByTestId("active-source");
@@ -1239,7 +1249,7 @@ describe("DemoModeToggle", () => {
       "aria-label",
       "Data source: Demonstration sample dataset",
     );
-    expect(screen.getByRole("button", { name: /Toggle sample data/ })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: /toggle sample data/i })).toHaveAttribute(
       "aria-pressed",
       "false",
     );
@@ -1259,7 +1269,7 @@ describe("DemoModeToggle", () => {
   it("toggles", () => {
     const onToggle = vi.fn();
     render(<DemoModeToggle isDemo={false} onToggle={onToggle} activeSource="local" />);
-    fireEvent.click(screen.getByRole("button", { name: /Toggle sample data/ }));
+    fireEvent.click(screen.getByRole("button", { name: /toggle sample data/i }));
     expect(onToggle).toHaveBeenCalledWith(true);
   });
 
