@@ -1,0 +1,12 @@
+# Generated from requirements.in by:
+#   uv pip compile requirements.in --generate-hashes --emit-index-url --python-version 3.11 --python-platform x86_64-manylinux_2_28 --index-strategy unsafe-best-match --no-header
+# then split: deepspeed goes to deepspeed.lock (it builds from source against
+# the installed torch, so it installs second, with --no-build-isolation).
+# Do not edit by hand.
+--index-url https://pypi.org/simple
+--extra-index-url https://download.pytorch.org/whl/cu124
+deepspeed==0.15.4 \
+    --hash=sha256:60e7c044b7fc386cdad1206212d22b6963ea551f656ed51f7cb34b299459bf2c
+    # via
+    #   -r requirements.in
+    #   trl
