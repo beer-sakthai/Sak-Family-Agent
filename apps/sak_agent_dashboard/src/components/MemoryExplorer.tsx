@@ -233,10 +233,18 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
                       <td className="px-5 py-3.5 font-sans text-xs text-fg leading-relaxed">
                         {o.summary}
                       </td>
-                      <td className="px-5 py-3.5 text-right text-hue-amber">
+                      <td
+                        title={`Observation weight: ${o.weight.toFixed(2)}`}
+                        aria-label={`Observation weight: ${o.weight.toFixed(2)}`}
+                        className="px-5 py-3.5 text-right text-hue-amber"
+                      >
                         {o.weight.toFixed(2)}
                       </td>
-                      <td className="px-5 py-3.5 text-right text-hue-emerald">
+                      <td
+                        title={`Confidence score: ${(o.confidence * 100).toFixed(0)}%`}
+                        aria-label={`Confidence score: ${(o.confidence * 100).toFixed(0)}%`}
+                        className="px-5 py-3.5 text-right text-hue-emerald"
+                      >
                         {(o.confidence * 100).toFixed(0)}%
                       </td>
                     </tr>
