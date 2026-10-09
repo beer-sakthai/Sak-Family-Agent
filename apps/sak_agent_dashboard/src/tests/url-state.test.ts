@@ -31,6 +31,12 @@ describe("parseView", () => {
     expect(parseView("sessions?page=abc").page).toBe(1);
   });
 
+  it("rejects a page too large to be an exact integer", () => {
+    // Found by url-state.fuzz.test.ts: 1e23 serialised as "1e+23" and came
+    // back as page 1 on the next click.
+    expect(parseView("sessions?page=99999999999999999999999").page).toBe(1);
+  });
+
   it("rejects a zero or negative page", () => {
     expect(parseView("sessions?page=0").page).toBe(1);
     expect(parseView("sessions?page=-3").page).toBe(1);
