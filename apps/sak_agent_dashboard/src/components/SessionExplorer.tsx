@@ -126,6 +126,7 @@ export function SessionExplorer({
           onKeyDown={(e) => {
             if (e.key === "Escape" && search) {
               e.preventDefault();
+              e.stopPropagation();
               onSearchChange("");
             }
           }}
