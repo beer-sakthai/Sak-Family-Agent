@@ -159,3 +159,100 @@ def test_delete_none_sentinel_selects_only_uncategorized(
     assert csa.cmd_delete(args, "t") == 0
 
     assert deleted == ["8", "7"]
+
+
+def _alert_api(
+    csa: ModuleType, monkeypatch: pytest.MonkeyPatch, state: str
+) -> list[tuple[str, dict[str, Any] | None]]:
+    """One alert in ``state``; records every call as ``(method, body)``."""
+    calls: list[tuple[str, dict[str, Any] | None]] = []
+
+    def fake_request(
+        method: str,
+        path: str,
+        token: str,
+        params: dict[str, Any] | None = None,
+        body: dict[str, Any] | None = None,
+    ) -> tuple[int, Any, str | None]:
+        calls.append((method, body))
+        assert path == "/repos/o/r/code-scanning/alerts/15460"
+        alert = {"number": 15460, "tool": {"name": "Scorecard"}, "rule": {"id": "CodeReviewID"}}
+        if method == "PATCH":
+            return 200, {**alert, "state": body["state"] if body else state}, None
+        return 200, {**alert, "state": state}, None
+
+    monkeypatch.setattr(csa, "_request", fake_request)
+    return calls
+
+
+def _dismiss_args(comment: str = "Accepted risk.", apply: bool = True) -> argparse.Namespace:
+    return argparse.Namespace(
+        repo="o/r", alert=15460, comment=comment, reason="won't fix", apply=apply
+    )
+
+
+def test_dismiss_dry_run_only_reads(
+    csa: ModuleType, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    calls = _alert_api(csa, monkeypatch, "open")
+
+    assert csa.cmd_dismiss(_dismiss_args(apply=False), "t") == 0
+
+    assert [method for method, _ in calls] == ["GET"]
+    assert "Scorecard CodeReviewID, state=open" in capsys.readouterr().out
+
+
+def test_dismiss_apply_sends_reason_and_comment(
+    csa: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = _alert_api(csa, monkeypatch, "open")
+
+    assert csa.cmd_dismiss(_dismiss_args("  Accepted risk.  "), "t") == 0
+
+    assert calls[-1] == (
+        "PATCH",
+        {
+            "state": "dismissed",
+            "dismissed_reason": "won't fix",
+            "dismissed_comment": "Accepted risk.",
+        },
+    )
+
+
+def test_dismiss_rejects_an_overlong_comment_before_any_call(
+    csa: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = _alert_api(csa, monkeypatch, "open")
+
+    assert csa.cmd_dismiss(_dismiss_args("x" * 281), "t") == 1
+
+    assert calls == []
+
+
+def test_dismiss_leaves_an_already_dismissed_alert_alone(
+    csa: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = _alert_api(csa, monkeypatch, "dismissed")
+
+    assert csa.cmd_dismiss(_dismiss_args(), "t") == 0
+
+    assert [method for method, _ in calls] == ["GET"]
+
+
+def test_dismiss_refuses_a_fixed_alert(csa: ModuleType, monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = _alert_api(csa, monkeypatch, "fixed")
+
+    assert csa.cmd_dismiss(_dismiss_args(), "t") == 1
+
+    assert [method for method, _ in calls] == ["GET"]
+
+
+def test_dismiss_cli_defaults_to_wont_fix_and_dry_run(csa: ModuleType) -> None:
+    args = csa.build_parser().parse_args(["dismiss", "--alert", "7", "--comment", "why"])
+
+    assert (args.alert, args.reason, args.apply, args.func) == (
+        7,
+        "won't fix",
+        False,
+        csa.cmd_dismiss,
+    )

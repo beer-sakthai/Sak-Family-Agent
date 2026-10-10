@@ -13,7 +13,8 @@
 #
 # Manual only, and read-only unless asked otherwise: with no inputs it just
 # reports what is on the dashboard. Deleting requires naming a tool *and*
-# ticking `apply`.
+# ticking `apply`. Dismissing an alert no commit can close (accepted risk, see
+# docs/scorecard-accepted-risks.md) requires its number, a comment *and* `apply`.
 name: Code scanning cleanup
 
 on:
@@ -27,8 +28,16 @@ on:
         description: "Only delete this category of the tool, as the report's by-category table spells it ('(none)' for uncategorized). Leave blank for every category."
         required: false
         type: string
+      dismiss_alert:
+        description: "Alert number to dismiss as won't fix. Leave blank to dismiss nothing."
+        required: false
+        type: string
+      dismiss_comment:
+        description: "Why it is dismissed (at most 280 characters). Required with dismiss_alert."
+        required: false
+        type: string
       apply:
-        description: "Actually delete. Leave unchecked for a dry run."
+        description: "Actually delete or dismiss. Leave unchecked for a dry run."
         required: false
         default: false
         type: boolean
@@ -77,6 +86,23 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           TOOL: ${{ inputs.tool }}
         run: python scripts/code_scanning_analyses.py list --alerts ${TOOL:+--tool "$TOOL"}
+
+      # Before the closed-alert report: that listing pages through thousands of
+      # alerts and can fail on a transient 503, which must not block this.
+      - name: Dismiss the named alert
+        if: ${{ inputs.dismiss_alert != '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ALERT: ${{ inputs.dismiss_alert }}
+          COMMENT: ${{ inputs.dismiss_comment }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          if [ "$APPLY" = "true" ]; then
+            python scripts/code_scanning_analyses.py dismiss --alert "$ALERT" --comment "$COMMENT" --apply
+          else
+            python scripts/code_scanning_analyses.py dismiss --alert "$ALERT" --comment "$COMMENT"
+          fi
 
       # An alert that stops appearing under `open` has either been fixed by a
       # diff, dropped by a re-scoring scan, or dismissed as accepted risk, and

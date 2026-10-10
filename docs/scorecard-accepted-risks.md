@@ -8,9 +8,11 @@ page records why they are accepted, what gates a merge instead, and what
 would let them close.
 
 All three are dismissed as **Won't fix** on the Security tab with the
-comments below, so a new finding is not lost among them. Dismissal has to be
-done in the GitHub UI by a maintainer. Revisit them when the conditions under
-[When to revisit](#when-to-revisit) are met.
+comments below, so a new finding is not lost among them. The
+`code-scanning-cleanup.yml` workflow dismisses them (see
+[Dismissal comments](#dismissal-comments)); the Security tab works too.
+Revisit them when the conditions under [When to revisit](#when-to-revisit)
+are met.
 
 ## Code-Review (alert #15460)
 
@@ -104,6 +106,10 @@ passing.
 ## Dismissal comments
 
 GitHub limits a dismissal comment to 280 characters; each of these fits.
+To dismiss one, run **Code scanning cleanup** from the Actions tab with
+`dismiss_alert` set to its number, `dismiss_comment` to its comment below,
+and `apply` ticked (leave `apply` unticked for a dry run). The workflow's
+`GITHUB_TOKEN` has the `security-events: write` permission this needs.
 
 **Code-Review (#15460):**
 
