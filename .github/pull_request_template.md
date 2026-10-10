@@ -38,6 +38,6 @@
 
 ## Checklist
 
-- [ ] Guardrail changes are synced across every persona copy (`tests/test_persona_guardrails_parity.py` enforces this; `web/server.py` has **no** such test — diff it by hand).
+- [ ] Guardrail and `web/server.py` changes are synced across every persona copy (`tests/test_persona_guardrails_parity.py` and `tests/test_persona_web_server_parity.py` enforce this).
 - [ ] `PLAN.md` (or the relevant sub-plan) is updated if this completes a planned item.
 - [ ] No `.lock` file was hand-edited — regenerate with `scripts/gen_hash_lock.py`.
