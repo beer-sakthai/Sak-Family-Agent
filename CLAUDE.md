@@ -213,7 +213,7 @@ Twenty-eight workflows live in `.github/workflows/`. The ones that gate a change
 | `repository-security-quality.yml` | PR to `main` | skill validation (library frontmatter + persona `skills validate --naming`) + `make compose-personas`; `Quality gates` (a **required status check** — see below); zizmor over **every** workflow; tracked-secret-file check |
 | `dependency-review.yml` | PR to `main` | blocks PRs introducing known-vulnerable deps (`fail-on-severity: high`) |
 | `secret-scan.yml` | push to `main`, all PRs | gitleaks (config `.gitleaks.toml`, which allowlists persona docs) |
-| `dependency-audit.yml` | PRs touching `pyproject.toml`/`uv.lock`/the training locks/`training/**/*.py`, weekly | pip-audit over `uv.lock`, the three `infra/sakthai-training-space/*.lock` files (`+cuNNN` stripped, or torch is silently skipped), and every PEP 723 script under `training/` — none of which Dependabot reads |
+| `dependency-audit.yml` | PRs touching `pyproject.toml`/`uv.lock`/the training locks/`training/**/*.py`, weekly | pip-audit over `uv.lock`, the three `infra/sakthai-training-space/*.lock` files, and every PEP 723 script under `training/` (Dependabot reads neither of the last two). Local version tags (`+cpu`, `+cuNNN`) are stripped first: pip-audit skips `torch==…+cpu` as "not found on PyPI" and still reports clean |
 | `ossar.yml` | push/PR to `main`, weekly | open-source static analysis |
 | `sonarcloud.yml` | push to `main` | SonarCloud analysis |
 | `agent-self-evolution.yml` | push/PR touching `personas/sakthai/agent-self-evolution/**` | that subproject's own suite |
