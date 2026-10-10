@@ -1,16 +1,35 @@
 # House of Sak — Sak Family Agent
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/banner-dark.svg">
+    <img alt="House of Sak — Sak Family Agent: six personas (SakThai, SakSee, SakJules, SakKing, SakSit, SakTan) around one shared runtime, working through Dream, Hope, Care, Joy, Trust and Growth" src="docs/images/banner-light.svg" width="100%">
+  </picture>
+</p>
+
+<p align="center">
+  <a href="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml?query=branch%3Amain"><img alt="CI" src="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/apps.yml?query=branch%3Amain"><img alt="Apps" src="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/apps.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/subprojects.yml?query=branch%3Amain"><img alt="Sub-project tests" src="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/subprojects.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/pylint.yml?query=branch%3Amain"><img alt="Pylint" src="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/pylint.yml/badge.svg?branch=main"></a>
+  <a href=".github/workflows/ci.yml"><img alt="Coverage: at least 96%, enforced in CI" src="https://img.shields.io/badge/coverage-%E2%89%A596%25%20enforced-16A34A"></a>
+  <br>
+  <a href="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/repository-security-quality.yml?query=branch%3Amain"><img alt="Security and quality" src="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/repository-security-quality.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/codeql.yml?query=branch%3Amain"><img alt="CodeQL" src="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/codeql.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/secret-scan.yml?query=branch%3Amain"><img alt="Secret Scan" src="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/secret-scan.yml/badge.svg?branch=main"></a>
+  <a href="https://securityscorecards.dev/viewer/?uri=github.com/beer-sakthai/Sak-Family-Agent"><img alt="OpenSSF Scorecard" src="https://api.securityscorecards.dev/projects/github.com/beer-sakthai/Sak-Family-Agent/badge"></a>
+  <br>
+  <img alt="Version 2.0.0" src="https://img.shields.io/badge/version-2.0.0-2563EB">
+  <img alt="Python 3.11 | 3.12" src="https://img.shields.io/badge/python-3.11%20%7C%203.12-3776AB?logo=python&amp;logoColor=white">
+  <img alt="6 personas" src="https://img.shields.io/badge/personas-6-7C3AED">
+  <a href="LICENSE"><img alt="License: custom IP license" src="https://img.shields.io/badge/license-custom%20IP%20license-4B5563"></a>
+</p>
+
 > **Six personas, one shared runtime.**
 
 House of Sak is a local-first, provider-agnostic AI agent workspace. It combines a durable SQLite memory store, a tool-using agent loop, Model Context Protocol (MCP) support, persona-specific skills, multi-agent coordination, and a web dashboard in one monorepo.
 
 The project is built around the six-stage cycle **Dream → Hope → Care → Joy → Trust → Growth**.
-
-| | Status |
-|---|---|
-| **Build** | [![CI](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml?query=branch%3Amain) [![Apps](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/apps.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/apps.yml?query=branch%3Amain) [![Sub-project tests](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/subprojects.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/subprojects.yml?query=branch%3Amain) [![Pylint](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/pylint.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/pylint.yml?query=branch%3Amain) [![Code coverage](https://codecov.io/gh/beer-sakthai/Sak-Family-Agent/branch/main/graph/badge.svg)](https://codecov.io/gh/beer-sakthai/Sak-Family-Agent) |
-| **Security** | [![Security and quality](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/repository-security-quality.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/repository-security-quality.yml?query=branch%3Amain) [![CodeQL](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/codeql.yml?query=branch%3Amain) [![Secret Scan](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/secret-scan.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/secret-scan.yml?query=branch%3Amain) [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/beer-sakthai/Sak-Family-Agent/badge)](https://securityscorecards.dev/viewer/?uri=github.com/beer-sakthai/Sak-Family-Agent) |
-| **Project** | ![Version](https://img.shields.io/badge/version-2.0.0-2563EB) ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white) ![Personas](https://img.shields.io/badge/personas-6-7C3AED) [![License](https://img.shields.io/badge/license-custom%20IP%20license-4B5563)](LICENSE) |
 
 ## What is included
 
@@ -22,6 +41,54 @@ The project is built around the six-stage cycle **Dream → Hope → Care → Jo
 - **Team and client workflows** — declarative multi-persona pipelines and ServiceQuoteBot client workspace provisioning.
 - **Dashboard** — a Next.js frontend backed by the SakThai HTTP API for personas, metrics, sessions, memory, audit data, and workflows.
 - **Security and quality gates** — guardrails for tools and file access, strict typing, linting, secret scanning, CodeQL, Bandit, and automated tests.
+
+## A look at the dashboard
+
+The Next.js dashboard in [`apps/sak_agent_dashboard`](apps/sak_agent_dashboard), shown with its built-in sample data (`#overview?demo=1`). The images follow your GitHub light or dark theme.
+
+**Overview** — run totals, the system pulse, and a card per persona.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dashboard-overview-dark.png">
+  <img alt="Dashboard overview with sample data: KPI strip (546 runs, 97.9% success), system pulse cards, and persona cards for SakKing, SakThai and SakSee" src="docs/images/dashboard-overview-light.png">
+</picture>
+
+**System** — a real snapshot of this repository: personas, skills, tools, CLI commands, CI workflows and tests, the architecture, and the family.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dashboard-system-dark.png">
+  <img alt="Dashboard System view: repository totals, the layered architecture from entry points to SQLite, and the six persona cards with their roles, models and skill counts" src="docs/images/dashboard-system-light.png">
+</picture>
+
+## How it fits together
+
+Every entry point shares one tool registry and one memory store. The full diagram and the layer-by-layer notes are in [`docs/architecture.md`](docs/architecture.md).
+
+```mermaid
+flowchart TD
+    DASH["Dashboard<br/>Next.js, read-only"]
+    WEB["Web API<br/>web/server.py, bearer token"]
+    CLI["CLI<br/>sakthai run · chat · memory · team"]
+    LOOP["Agent loop<br/>agent/loop.py"]
+    MCP["MCP stdio server<br/>sakthai mcp"]
+    GUARD["Guardrail policy<br/>checks every tool call"]
+    TOOLS["Shared tool registry<br/>agent/tools.py"]
+    STORE["MemoryStore<br/>memory/store.py"]
+    HOME[("~/.sakthai<br/>memory.db per persona · sessions · eval log")]
+    PROV["Model providers<br/>Anthropic · Gemini · OpenAI-compatible · Ollama · Hugging Face"]
+    EXT["External MCP servers"]
+
+    DASH -- HTTP --> WEB
+    DASH -. direct reads .-> HOME
+    WEB --> STORE
+    CLI --> LOOP
+    CLI --> MCP
+    LOOP <--> PROV
+    LOOP --> GUARD --> TOOLS
+    MCP --> TOOLS
+    TOOLS <--> EXT
+    TOOLS --> STORE --> HOME
+```
 
 ## Quick start
 
