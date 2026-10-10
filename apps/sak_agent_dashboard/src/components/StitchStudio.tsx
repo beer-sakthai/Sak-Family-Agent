@@ -226,7 +226,7 @@ export function StitchStudio() {
                   : "text-fg-3 hover:text-fg"
               }`}
             >
-              <Eye className="w-3.5 h-3.5" aria-hidden />
+              <Eye className="w-3.5 h-3.5" aria-hidden="true" />
               Live Preview
             </button>
             <button
@@ -244,7 +244,7 @@ export function StitchStudio() {
                   : "text-fg-3 hover:text-fg"
               }`}
             >
-              <Code2 className="w-3.5 h-3.5" aria-hidden />
+              <Code2 className="w-3.5 h-3.5" aria-hidden="true" />
               TSX Code
             </button>
             <button
@@ -262,7 +262,7 @@ export function StitchStudio() {
                   : "text-fg-3 hover:text-fg"
               }`}
             >
-              <Terminal className="w-3.5 h-3.5" aria-hidden />
+              <Terminal className="w-3.5 h-3.5" aria-hidden="true" />
               Stitch JSON Spec
             </button>
           </div>
@@ -275,7 +275,7 @@ export function StitchStudio() {
             onClick={handleCopyCode}
             className="flex items-center gap-1 text-xs font-mono text-fg-3 hover:text-hue-cyan transition-colors bg-raised/60 px-2.5 py-1 rounded-lg border border-line-strong/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-hue-emerald" aria-hidden /> : <Copy className="w-3.5 h-3.5" aria-hidden />}
+            {copied ? <Check className="w-3.5 h-3.5 text-hue-emerald" aria-hidden="true" /> : <Copy className="w-3.5 h-3.5" aria-hidden="true" />}
             {copied ? "Copied!" : activeTab === "spec" ? "Copy Spec" : "Copy Code"}
           </button>
         </div>
@@ -290,7 +290,19 @@ export function StitchStudio() {
         >
           {activeTab === "preview" && (
             <div className="min-h-[240px] flex flex-col items-center justify-center p-8 rounded-xl bg-sunken/80 border border-line/60">
-              {activePreset.displayMode === "HTML" && (
+              {activePreset.id === "security-badge" ? (
+                <div className="w-full max-w-md p-4 rounded-xl bg-panel/90 border border-hue-emerald-line/30 shadow-xl space-y-3">
+                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-panel/60 border border-line/80 hover:border-hue-emerald-line/40 transition-all">
+                    <div className="flex items-center gap-3">
+                      <span className="w-2.5 h-2.5 rounded-full bg-hue-emerald shadow-xs shadow-hue-emerald/50" />
+                      <span className="text-sm font-medium text-fg">Unauthorized API Access Blocked</span>
+                    </div>
+                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-hue-emerald-tint/60 border border-hue-emerald-line/50 text-hue-emerald">
+                      HIGH
+                    </span>
+                  </div>
+                </div>
+              ) : activePreset.displayMode === "HTML" ? (
                 <div className="w-full max-w-md bg-panel/90 backdrop-blur-xl border border-hue-cyan-line/30 p-6 rounded-2xl shadow-2xl space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -312,7 +324,7 @@ export function StitchStudio() {
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-hue-cyan-tint/60 border border-hue-cyan-line/40 text-hue-cyan">tool-call</span>
                   </div>
                 </div>
-              )}
+              ) : null}
 
               {activePreset.displayMode === "MERMAID" && (
                 <div className="w-full max-w-lg p-6 rounded-xl bg-panel/90 border border-hue-cyan-line/30 space-y-3 font-mono text-xs text-hue-cyan">
