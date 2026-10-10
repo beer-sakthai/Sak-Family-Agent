@@ -13,10 +13,10 @@ pinned: false
 GPU-backed Docker Space for reinforcement-learning / post-training of Sak family agents.
 
 Pre-installed stack:
-- PyTorch 2.5.1 (CUDA 12.4)
-- Transformers, Datasets, Accelerate, PEFT
-- DeepSpeed 0.15.4
-- TRL 0.15.x with `trl[deepspeed]`
+- PyTorch 2.14.1 (CUDA 13.0)
+- Transformers 5.x, Datasets, Accelerate, PEFT
+- DeepSpeed 0.19.7
+- TRL 1.15.x with `trl[deepspeed]`
 - Optional: vLLM, Weights & Biases, TensorBoard
 
 Every Python package is installed from a hash-pinned lock. To change a

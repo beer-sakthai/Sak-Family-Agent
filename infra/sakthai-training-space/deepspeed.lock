@@ -4,9 +4,9 @@
 # the installed torch, so it installs second, with --no-build-isolation).
 # Do not edit by hand.
 --index-url https://pypi.org/simple
---extra-index-url https://download.pytorch.org/whl/cu124
-deepspeed==0.15.4 \
-    --hash=sha256:60e7c044b7fc386cdad1206212d22b6963ea551f656ed51f7cb34b299459bf2c
+--extra-index-url https://download.pytorch.org/whl/cu130
+deepspeed==0.19.7 \
+    --hash=sha256:c6640ecbda08ec6b4b6c72521155351719f145f48d850687b7332f503992921c
     # via
     #   -r requirements.in
     #   trl

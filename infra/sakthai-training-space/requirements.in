@@ -1,16 +1,17 @@
 # Top-level pins for the training image. requirements.lock is generated from
 # this file; never edit the lock by hand (the command is in its header).
---extra-index-url https://download.pytorch.org/whl/cu124
+--extra-index-url https://download.pytorch.org/whl/cu130
 
-# Core ML stack (CUDA 12.4)
-torch==2.5.1+cu124
-torchvision==0.20.1+cu124
-torchaudio==2.5.1+cu124
-transformers==4.47.1
+# Core ML stack (CUDA 13.0 wheels, matching the CUDA 13 base image). No
+# torchaudio: its last release (2.11.0) pins torch 2.11, and nothing here
+# imports it.
+torch==2.14.1+cu130
+torchvision==0.29.1+cu130
+transformers==5.19.0
 datasets==5.0.1
-accelerate==1.2.1
-peft==0.14.0
-bitsandbytes==0.45.0
+accelerate==1.15.0
+peft==0.21.2
+bitsandbytes==0.50.2
 evaluate==0.4.3
 wandb==0.19.1
 tensorboard
@@ -19,7 +20,7 @@ scikit-learn
 ninja
 
 # DeepSpeed + TRL (resolved together to avoid ABI/version drift)
-deepspeed==0.15.4
-trl[deepspeed]>=0.15.0,<0.16.0
+deepspeed==0.19.7
+trl[deepspeed]>=1.15.0,<1.16.0
 sentencepiece
 protobuf
