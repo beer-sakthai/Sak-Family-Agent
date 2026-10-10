@@ -751,11 +751,14 @@ describe("SessionExplorer", () => {
     expect(onSearchChange).toHaveBeenCalledWith("");
   });
 
-  it("clears search query when Escape key is pressed in search input", () => {
+  it("clears search query and stops event propagation when Escape key is pressed in search input", () => {
     const onSearchChange = vi.fn();
     renderExplorer({ search: "deploy", onSearchChange });
     const searchInput = screen.getByLabelText("Search sessions");
-    fireEvent.keyDown(searchInput, { key: "Escape" });
+    const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    const stopPropagationSpy = vi.spyOn(event, "stopPropagation");
+    fireEvent(searchInput, event);
+    expect(stopPropagationSpy).toHaveBeenCalled();
     expect(onSearchChange).toHaveBeenCalledWith("");
   });
 
