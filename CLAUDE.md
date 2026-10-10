@@ -213,7 +213,7 @@ Twenty-eight workflows live in `.github/workflows/`. The ones that gate a change
 | `repository-security-quality.yml` | PR to `main` | skill validation (library frontmatter + persona `skills validate --naming`) + `make compose-personas`; `Quality gates` (a **required status check** — see below); zizmor over **every** workflow; tracked-secret-file check |
 | `dependency-review.yml` | PR to `main` | blocks PRs introducing known-vulnerable deps (`fail-on-severity: high`) |
 | `secret-scan.yml` | push to `main`, all PRs | gitleaks (config `.gitleaks.toml`, which allowlists persona docs) |
-| `dependency-audit.yml` | PRs touching `pyproject.toml`/`uv.lock`, weekly | pip-audit over `uv.lock` |
+| `dependency-audit.yml` | PRs touching `pyproject.toml`/`uv.lock`/the training locks/`training/**/*.py`, weekly | pip-audit over `uv.lock`, the three `infra/sakthai-training-space/*.lock` files (`+cuNNN` stripped, or torch is silently skipped), and every PEP 723 script under `training/` — none of which Dependabot reads |
 | `ossar.yml` | push/PR to `main`, weekly | open-source static analysis |
 | `sonarcloud.yml` | push to `main` | SonarCloud analysis |
 | `agent-self-evolution.yml` | push/PR touching `personas/sakthai/agent-self-evolution/**` | that subproject's own suite |
@@ -632,16 +632,19 @@ moment any copy drifts from `personas/sakthai/sakthai/agent/guardrails.py`
 (`test_guardrails_*.py`, `test_sentinel_*.py`, `test_security_*.py`) cover this
 area; add a regression test for every new bypass you close.
 
-**`web/server.py` has the same copy-per-persona property and no parity test.**
-It carries the bearer-token auth, it is copied into the same five trees, and it
-took two code-scanning autofixes this week (#1214, #1219) for cookie
-construction from user-supplied input — exactly the class of fix that must not
-land in one copy only. The auth block is byte-identical across all five right
-now, so there is no live vulnerability, but nothing keeps it that way, and the
-suite only ever imports the canonical copy. **Sync `web/server.py` by hand
-across every persona copy when you touch its auth, and diff before you finish** —
-CI will not catch you. `memory/merged.py` has already drifted between the
-canonical and shared copies for want of the same check.
+**`web/server.py` has the same copy-per-persona property, and now its own
+parity test.** It carries the bearer-token auth and took two code-scanning
+autofixes (#1214, #1219) for cookie construction from user-supplied input —
+exactly the class of fix that must not land in one copy only. The copies had
+drifted 147 lines behind (no CORS, no dashboard routes) before they were synced;
+`tests/test_persona_web_server_parity.py` now fails CI the moment any of
+sakjules, saktan (both via the shared symlink), sakking, saksee or saksit
+differs from the canonical file. Copy it to all four real copies (`shared`,
+`sakking`, `saksee`, `saksit`) whenever you change it. In those trees the
+dashboard routes import `web/api.py` lazily and only the canonical tree has
+that module — harmless, since none of them is installed or run.
+`memory/merged.py` has already drifted between the canonical and shared copies
+for want of the same check.
 
 ### MCP subsystem (`mcp/`)
 
@@ -818,8 +821,8 @@ Key test areas:
   `test_provider_contracts.py`, `test_provider_resilience.py`
 - **Security** — `test_guardrails*.py` (10 files), `test_sentinel_*.py` (6 files),
   `test_security_hardening.py`, `test_security_sentinel.py`,
-  `test_persona_guardrails_parity.py`, `test_sakking_skill_security.py`,
-  `test_giturl.py`, `test_web_auth.py`
+  `test_persona_guardrails_parity.py`, `test_persona_web_server_parity.py`,
+  `test_sakking_skill_security.py`, `test_giturl.py`, `test_web_auth.py`
 - **MCP** — `test_mcp_server.py`, `test_mcp_client.py`,
   `test_mcp_client_resilience.py`, `test_mcp_manager.py`, `test_mcp_servers.py`,
   `test_mcp_main.py`
@@ -855,7 +858,7 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 - **Guardrail changes must be synced across personas.** Copy the canonical
   `personas/sakthai/sakthai/agent/guardrails.py` to every persona copy, or
   `tests/test_persona_guardrails_parity.py` fails CI. `web/server.py` needs the
-  same sync and has **no** test enforcing it — diff the copies yourself.
+  same sync, enforced by `tests/test_persona_web_server_parity.py`.
 - **Not linted / not type-checked:** ruff excludes `library/` and `scripts/`;
   mypy covers only `personas/sakthai/sakthai`. Don't "fix" lint/types in the
   other trees.
