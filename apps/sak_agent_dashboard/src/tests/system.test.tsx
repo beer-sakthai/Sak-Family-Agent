@@ -157,9 +157,9 @@ describe("SystemView", () => {
     expect(within(panel).getByText("ci.yml")).toBeInTheDocument();
     expect(within(panel).queryByText("stale.yml")).not.toBeInTheDocument();
 
-    fireEvent.click(within(panel).getByRole("button", { name: "Filter workflows: All 2" }));
+    fireEvent.click(within(panel).getByRole("button", { name: "Filter workflows by All 2" }));
     expect(within(panel).getByText("stale.yml")).toBeInTheDocument();
-    expect(within(panel).getByRole("button", { name: "Filter workflows: All 2" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(panel).getByRole("button", { name: "Showing All 2" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("lists CLI groups with their subcommands and hover tooltip title", () => {
