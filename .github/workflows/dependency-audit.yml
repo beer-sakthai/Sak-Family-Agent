@@ -2,6 +2,10 @@
 # databases (OSV / PyPI advisories). Dependabot proposes version bumps, but
 # nothing else in CI fails when a *current* pin has a published CVE — this
 # workflow closes that gap. Runs weekly, on dependency changes, and on demand.
+#
+# It also audits the training stack, which Dependabot cannot see at all: it
+# reads neither the hashed .lock files under infra/sakthai-training-space/
+# nor PEP 723 inline script metadata.
 name: Dependency Audit
 
 on:
@@ -9,6 +13,8 @@ on:
     paths:
       - "pyproject.toml"
       - "uv.lock"
+      - "infra/sakthai-training-space/*.lock"
+      - "training/**/*.py"
       - ".github/workflows/dependency-audit.yml"
   schedule:
     - cron: "30 5 * * 1"
@@ -64,3 +70,29 @@ jobs:
         # upgrade, to an ignore: a stale ignore silently re-opens the hole this
         # workflow exists to close.
         run: uvx pip-audit -r requirements.txt --disable-pip --no-deps
+
+      - name: Audit the training image locks
+        # The three hashed locks the training Space image installs from. The
+        # +cuNNN local version tags are stripped first: pip-audit skips
+        # torch==2.14.1+cu130 as "not found on PyPI" and still reports
+        # "No known vulnerabilities found", so torch would go unaudited.
+        run: |
+          for lock in infra/sakthai-training-space/*.lock; do
+            echo "::group::$lock"
+            sed -E 's/\+cu[0-9]+//' "$lock" > "$RUNNER_TEMP/training-lock.txt"
+            uvx pip-audit -r "$RUNNER_TEMP/training-lock.txt" --disable-pip --no-deps
+            echo "::endgroup::"
+          done
+
+      - name: Audit the training scripts' inline dependencies
+        # Every script under training/ that carries a PEP 723 header (the HF
+        # Jobs and serving scripts). uv resolves each header the way
+        # `uv run <script>` / `hf jobs uv run` would, then pip-audit checks
+        # the result.
+        run: |
+          for script in $(git ls-files -- 'training/*.py' | xargs -r grep -l '^# /// script$'); do
+            echo "::group::$script"
+            uv export --quiet --script "$script" --no-hashes -o "$RUNNER_TEMP/script-requirements.txt"
+            uvx pip-audit -r "$RUNNER_TEMP/script-requirements.txt" --disable-pip --no-deps
+            echo "::endgroup::"
+          done

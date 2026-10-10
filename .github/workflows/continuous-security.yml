@@ -24,9 +24,11 @@ concurrency:
 jobs:
   devsecops-scan:
     runs-on: ubuntu-latest
+    # Read-only on purpose. The agent audits and reports; it has no push
+    # credential and no write scope, so a prompt injection in anything it
+    # reads cannot turn into a commit, a branch or a pull request.
     permissions:
-      contents: write      # create branches and commits for patches
-      pull-requests: write # open pull requests with fixes
+      contents: read
     timeout-minutes: 45
     steps:
       - name: Harden the runner
@@ -59,15 +61,10 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
 
-      - name: Configure Git User
-        run: |
-          git config --global user.name "SakKing Agent [bot]"
-          git config --global user.email "sakking-agent[bot]@users.noreply.github.com"
-
       - name: Run DevSecOps Skill
         # This command invokes the agent and tells it to use security skills to
-        # scan for issues and trigger the automated patching pipeline, which
-        # may create a pull request with a proposed fix.
+        # scan for issues and report findings with proposed fixes in its output.
+        # It does not push or open pull requests.
         #
         # --with-skills matches by exact skill name (sakthai/skills.py
         # resolve_skill_names) against SakThai's own skills dir + the shared
@@ -93,13 +90,17 @@ jobs:
             --provider anthropic \
             --max-seconds 1800
         env:
-          # API keys are needed for the LLM to generate patches.
+          # The provider key is the only secret this step gets. run_command
+          # withholds credential-named variables from the programs it starts,
+          # so the allow-listed tools below never see it.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # A PAT is used instead of the default GITHUB_TOKEN to ensure that any
-          # pull requests created by the agent will trigger the full CI suite.
-          # This is a critical security and validation measure.
-          GITHUB_TOKEN: ${{ secrets.GH_PAT_FOR_ACTIONS }}
-          # Scope shell execution to only the security tools the skill needs,
-          # rather than "1" (which would allow ANY binary). Colon-separated
-          # program allow-list, honored by sakthai's run_command tool.
-          SAKTHAI_SHELL_ALLOW: "ruff:bandit:mypy:pytest:uv:git:python:python3"
+          # Scope shell execution to the analysis tools the skills need, rather
+          # than "1" (which would allow ANY binary). Colon-separated program
+          # allow-list, honored by sakthai's run_command tool; `uv run` puts
+          # .venv/bin on PATH, so these resolve to the locked versions.
+          #
+          # Deliberately absent: python, python3 and uv (each runs arbitrary
+          # code by design) and git (`git -c core.pager=<cmd> log` and
+          # `git -c alias.x='!<cmd>' x` run arbitrary commands, and the
+          # guardrails only check git for sensitive-path arguments).
+          SAKTHAI_SHELL_ALLOW: "ruff:bandit:mypy:pytest"

@@ -34,6 +34,7 @@ The workflow currently covers the first of three intended stages:
 2. **Automated Triage and Patching** (aspirational — not yet implemented):
     - The intent is for the agent to trigger an `automated-vulnerability-patching` skill for each actionable finding, following a 5-step isolate/reproduce/generate-fix/test-fix/surface-for-review pipeline.
     - No skill by that name currently exists in this repository (there is no `automated-vulnerability-patching` skill under any persona or the shared library), so this stage does not run yet. Until it's authored, the nightly scan surfaces findings in the run log rather than opening patch PRs automatically.
+    - The scanning job is deliberately read-only: it holds no push credential and only `contents: read`, and its shell allow-list is `ruff:bandit:mypy:pytest`. A patching stage would need its own, separately reviewed job rather than write access granted to the agent that reads untrusted input.
 
 3. **Human-in-the-Loop**:
     - **No code is ever merged automatically.**

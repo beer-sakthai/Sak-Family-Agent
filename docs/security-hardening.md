@@ -31,6 +31,15 @@ was ever pushed, it is compromised.
   riskier operation — decide explicitly if the values must be purged from
   history via `git filter-repo`/BFG, and rotate first regardless).
 
+**Rotate (or delete) `GH_PAT_FOR_ACTIONS`.** Until finding 17 was fixed, the
+nightly `continuous-security.yml` agent held this token in its environment and
+every command it ran inherited it, alongside an allow-list that included
+`python` and `uv`. Nothing in the repository uses it any more.
+
+- **Action:** revoke it, then delete the repository secret. If something
+  outside this repo still needs it, replace it with a fine-grained,
+  single-repository token with an expiry.
+
 ---
 
 ## Findings, fixes, and prevention
@@ -115,7 +124,8 @@ was ever pushed, it is compromised.
   (or `true`/`all`/`*`) keeps the legacy "any program" behavior; any other
   value is an `os.pathsep`-separated list of permitted program names, and only
   those may run. Used by `continuous-security.yml`
-  (`SAKTHAI_SHELL_ALLOW="ruff:bandit:mypy:pytest:uv:git:python:python3"`).
+  (`SAKTHAI_SHELL_ALLOW="ruff:bandit:mypy:pytest"`; see finding 17 for why
+  `python`, `python3`, `uv` and `git` were later dropped).
 - **Prevention pattern:** prefer an explicit allow-list over an on/off switch
   for powerful capabilities.
 - **Regression tests:** `tests/test_tools.py::test_run_command_allowlist_permits_named_program`,
@@ -332,6 +342,37 @@ was ever pushed, it is compromised.
 - **Regression tests:** `tests/test_guardrails_normalization.py::test_windows_separators_are_split`,
   `tests/test_guardrails_sentinel_bypasses.py::TestShellTokenizerParserDifferential`
   (blocked, separator parity, and the backslash-free no-op control).
+
+### 17. The nightly agent could hand a push token to the commands it ran
+- **Where:** `.github/workflows/continuous-security.yml`;
+  `personas/sakthai/sakthai/agent/tools.py` — `_run_command`, `_command_env`.
+- **Risk:** the nightly security agent ran with
+  `GITHUB_TOKEN: ${{ secrets.GH_PAT_FOR_ACTIONS }}`, `contents: write` and
+  `pull-requests: write`, and an allow-list of
+  `ruff:bandit:mypy:pytest:uv:git:python:python3`. `run_command` passed no
+  `env=`, so every child inherited the PAT and `ANTHROPIC_API_KEY`. `python -c`
+  and `uv run` execute arbitrary code by design, and `git -c core.pager=<cmd>`
+  or `git -c alias.x='!<cmd>'` do the same, so a prompt injection in anything
+  the agent read (a file, a tool result) was one tool call away from sending
+  either secret off the runner. The write scopes served a patching stage that
+  was never built.
+- **Fix:** the job is read-only (`contents: read`, no PAT); the allow-list is
+  `ruff:bandit:mypy:pytest`; and `run_command` now builds its child's
+  environment with `_command_env()`, which drops every variable whose
+  `_`-separated name segments include `TOKEN`, `SECRET`, `PASSWORD`, `PASSWD`,
+  `KEY`, `APIKEY`, `PAT`, `CREDENTIAL` or `CREDENTIALS`. Segment matching
+  keeps `PATH` and `SSH_AUTH_SOCK`.
+- **Limits:** the environment filter is defense in depth, not a sandbox. A
+  child that does get arbitrary code execution can still read its parent's
+  `/proc/<ppid>/environ`, which is why the allow-list cut is the primary fix.
+  A local user who allows `gh` or `huggingface-cli` through `run_command` now
+  has to authenticate those tools by other means than `GH_TOKEN`/`HF_TOKEN`.
+- **Prevention pattern:** an autonomous agent gets the least privilege its
+  task needs: read-only tokens, no interpreters on the allow-list, and no
+  credentials in the environment of anything it launches. Treat "can run
+  program X" as "can do anything X's flags allow".
+- **Regression tests:** `tests/test_tools.py::test_run_command_withholds_credential_env_vars`,
+  `::test_run_command_keeps_ordinary_env_vars`.
 
 
 ## CI / supply-chain hardening
