@@ -997,6 +997,17 @@ describe("StitchStudio", () => {
     expect(codeTab).toHaveAttribute("title", "Viewing TSX Code");
   });
 
+  it("renders matching Security Audit Event Pill live preview when security-badge preset is selected", () => {
+    render(<StitchStudio />);
+    const securityPresetButton = screen.getByRole("button", {
+      name: "Select preset Security Audit Event Pill",
+    });
+    fireEvent.click(securityPresetButton);
+
+    expect(screen.getByText("Unauthorized API Access Blocked")).toBeInTheDocument();
+    expect(screen.getByText("HIGH")).toBeInTheDocument();
+  });
+
   it("uses roving tabIndex for active and inactive tabs", () => {
     render(<StitchStudio />);
     const previewTab = screen.getByRole("tab", { name: /Live Preview/ });
