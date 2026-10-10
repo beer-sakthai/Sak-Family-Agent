@@ -51,7 +51,7 @@ def main():
         per_device_train_batch_size=args.per_device_train_batch_size,
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         learning_rate=args.learning_rate,
-        warmup_ratio=0.03,
+        warmup_steps=0.03,  # a float below 1 is a ratio of total steps
         lr_scheduler_type="cosine",
         logging_steps=10,
         save_strategy="epoch",
@@ -62,7 +62,7 @@ def main():
         report_to=args.report_to if args.report_to != "none" else [],
         push_to_hub=args.push_to_hub,
         hub_model_id=args.hub_model_id,
-        max_seq_length=args.max_seq_length,
+        max_length=args.max_seq_length,
         packing=False,
         dataset_text_field="messages",
     )
@@ -79,7 +79,7 @@ def main():
     model = AutoModelForCausalLM.from_pretrained(  # nosec B615
         args.model_name,
         trust_remote_code=True,
-        torch_dtype="auto",
+        dtype="auto",
         device_map=None,  # let DeepSpeed / Accelerate handle placement
     )
 
@@ -107,7 +107,7 @@ def main():
 
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         train_dataset=dataset,
         args=sft_config,
         peft_config=peft_config,

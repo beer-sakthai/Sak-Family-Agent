@@ -1,8 +1,8 @@
 # sakthai-training-space Dockerfile
 # Docker GPU Space for TRL + DeepSpeed RLHF/GRPO training on Hugging Face Spaces
 #
-# Base image: NVIDIA CUDA 12.4 + Ubuntu 22.04 + Python 3.11
-# Pre-installed: PyTorch 2.5.1 (CUDA 12.4), DeepSpeed 0.15.4, TRL 0.15 (see requirements.in)
+# Base image: NVIDIA CUDA 13 + Ubuntu 22.04 + Python 3.11
+# Pre-installed: PyTorch 2.14.1 (CUDA 13.0), DeepSpeed 0.19.7, TRL 1.15 (see requirements.in)
 #
 # Hugging Face Docker Space expects the container to listen on the port
 # declared in README.md (default 7860). For a training Space, we keep the
@@ -61,7 +61,7 @@ COPY build-requirements.lock requirements.lock deepspeed.lock /tmp/requirements/
 RUN python -m pip install --no-cache-dir --require-hashes \
     -r /tmp/requirements/build-requirements.lock
 
-# Core ML stack (torch/vision/audio from the CUDA 12.4 index), TRL and the
+# Core ML stack (torch/vision from the CUDA 13.0 index), TRL and the
 # rest of DeepSpeed's dependencies. Kept as its own layer so it caches.
 RUN python -m pip install --no-cache-dir --require-hashes --no-deps \
     -r /tmp/requirements/requirements.lock
@@ -73,9 +73,9 @@ RUN python -m pip install --no-cache-dir --require-hashes --no-deps --no-build-i
     -r /tmp/requirements/deepspeed.lock \
     && rm -rf /tmp/requirements
 
-# Optional: vLLM for fast generation in online RL (GRPO/RLOO). Version pinned
-# to TRL-supported range. Disable if not needed to save build time/image size.
-# RUN pip install vllm==0.7.3
+# Optional: vLLM for fast generation in online RL (GRPO/RLOO), kept to the
+# range TRL 1.15 supports. Disable if not needed to save build time/image size.
+# RUN pip install "vllm>=0.21.0,<=0.31.0"
 
 # -----------------------------------------------------------------------------
 # 3. Workspace layout

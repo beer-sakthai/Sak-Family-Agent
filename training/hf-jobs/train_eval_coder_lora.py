@@ -1,13 +1,13 @@
 # /// script
-# requires-python = ">=3.10"
+# requires-python = ">=3.11"
 # dependencies = [
-#     "torch==2.5.1",
-#     "transformers==4.46.3",
-#     "trl==0.12.2",
-#     "peft==0.13.2",
-#     "accelerate==1.1.1",
+#     "torch==2.14.1",
+#     "transformers==5.19.0",
+#     "trl==1.15.0",
+#     "peft==0.21.2",
+#     "accelerate==1.15.0",
 #     "datasets==5.0.1",
-#     "bitsandbytes==0.44.1",
+#     "bitsandbytes==0.50.2",
 #     "huggingface_hub",
 # ]
 # ///
@@ -160,6 +160,7 @@ def _run_code_probes(model: Any, tokenizer: Any) -> list[dict[str, Any]]:
             messages,
             add_generation_prompt=True,
             return_tensors="pt",
+            return_dict=False,
         ).to(model.device)
         with torch.no_grad():
             output = model.generate(
@@ -209,14 +210,14 @@ def main() -> None:
         args=SFTConfig(
             output_dir="sakthai-coder-output",
             dataset_text_field="text",
-            max_seq_length=2048,
+            max_length=2048,
             packing=False,
             per_device_train_batch_size=1,
             per_device_eval_batch_size=1,
             gradient_accumulation_steps=8,
             learning_rate=2e-4,
             num_train_epochs=EPOCHS,
-            warmup_ratio=0.05,
+            warmup_steps=0.05,  # a float below 1 is a ratio of total steps
             lr_scheduler_type="cosine",
             logging_steps=5,
             bf16=True,
@@ -248,7 +249,7 @@ def main() -> None:
                 "down_proj",
             ],
         ),
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
     )
 
     trainer.train()
