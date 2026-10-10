@@ -137,6 +137,20 @@ describe("SystemView", () => {
     expect(bar).toHaveAttribute("aria-valuetext", "10 skills configured");
   });
 
+  it("renders BarList rows with ARIA progressbar semantics", () => {
+    render(<SystemView snapshot={FIXTURE} />);
+    const agentBar = screen.getByRole("progressbar", { name: "agent lines" });
+    expect(agentBar).toBeInTheDocument();
+    expect(agentBar).toHaveAttribute("aria-valuenow", "900");
+    expect(agentBar).toHaveAttribute("aria-valuemax", "900");
+    expect(agentBar).toHaveAttribute("aria-valuetext", "agent: 900 lines (3f)");
+
+    const testBar = screen.getByRole("progressbar", { name: "sakthai (tests/) test files" });
+    expect(testBar).toBeInTheDocument();
+    expect(testBar).toHaveAttribute("aria-valuenow", "100");
+    expect(testBar).toHaveAttribute("aria-valuetext", "sakthai (tests/): 100 test files (ci.yml)");
+  });
+
   it("shows only PR-gating workflows until asked for all", () => {
     render(<SystemView snapshot={FIXTURE} />);
     const panel = screen.getByRole("region", { name: "Workflows" });
