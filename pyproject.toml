@@ -199,6 +199,21 @@ evals = [
     "torch>=2.0",
 ]
 
+[tool.uv]
+# lm-eval (evals group) declares rouge-score and sqlitedict as hard
+# dependencies, but its core imports neither: rouge-score (and nltk under it)
+# is only used by a few bundled tasks — cnn_dailymail, noreval, ifeval and
+# the like — and sqlitedict only by CachingLM behind --use_cache. run-evals.yml
+# runs none of those, and both carry advisories with no fixed release (nltk:
+# GHSA-8mgp-746c-j5xp, sqlitedict: PYSEC-2026-1939). The marker contradicts
+# requires-python, so uv drops both from uv.lock entirely (a made-up platform
+# such as sys_platform == 'never' would not: uv still resolves it). Drop an
+# entry before using a ROUGE/nltk task or --use_cache.
+override-dependencies = [
+    "rouge-score ; python_version < '3'",
+    "sqlitedict ; python_version < '3'",
+]
+
 [tool.uv.sources]
 # CPU-only torch wheel: GitHub-hosted runners have no GPU, and the default
 # PyPI torch wheel pulls in multi-GB CUDA dependencies that are both wasted

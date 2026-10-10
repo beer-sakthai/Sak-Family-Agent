@@ -57,20 +57,10 @@ jobs:
         # --no-deps is safe: uv export already emits the fully resolved,
         # pinned dependency closure, so there is nothing left to resolve.
         #
-        # The two --ignore-vuln entries are accepted risk, not dismissal: both
-        # are transitive dependencies of lm-eval reached only by run-evals.yml,
-        # and NEITHER HAS A FIXED RELEASE -- the newest version on PyPI is the
-        # last affected one in each case. Drop the corresponding flag the
-        # moment an upstream fix ships; leaving a stale ignore here silently
-        # re-opens the hole this workflow exists to close.
-        #
-        #   PYSEC-2026-3740 (GHSA-8mgp-746c-j5xp) nltk <=3.10.3, latest 3.10.3
-        #     -- model-artifact APIs can touch files outside allowed roots.
-        #        Reached only via rouge-score, on Hub artifacts we select.
-        #   PYSEC-2026-1939 (CVE-2024-35515) sqlitedict <=2.1.0, latest 2.1.0
-        #     -- insecure deserialization of an attacker-controlled DB file.
-        #        lm-eval only ever opens caches it wrote itself.
-        run: |
-          uvx pip-audit -r requirements.txt --disable-pip --no-deps \
-            --ignore-vuln PYSEC-2026-3740 \
-            --ignore-vuln PYSEC-2026-1939
+        # No --ignore-vuln entries. nltk (PYSEC-2026-3740) and sqlitedict
+        # (PYSEC-2026-1939) used to be ignored here because neither has a
+        # fixed release; they are now kept out of uv.lock altogether by
+        # [tool.uv] override-dependencies in pyproject.toml. Prefer that, or an
+        # upgrade, to an ignore: a stale ignore silently re-opens the hole this
+        # workflow exists to close.
+        run: uvx pip-audit -r requirements.txt --disable-pip --no-deps
