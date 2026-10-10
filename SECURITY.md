@@ -11,8 +11,8 @@ These run automatically and are the controls actually enforced on this repositor
 | Lint + static analysis | `ci.yml` | `ruff`, strict `mypy`, and `bandit` over the core `sakthai` package on every push/PR to `main` |
 | Secret scanning | `secret-scan.yml` | `gitleaks` over the full git history (config: `.gitleaks.toml`) on pushes to `main` and every pull request |
 | Dependency vulnerability audit | `dependency-audit.yml` | `pip-audit` over the locked dependency set (`uv.lock`) — weekly, on dependency changes, and on demand |
-| Code scanning (SAST) | CodeQL default setup | GitHub CodeQL analysis, managed in repository settings (no workflow file — do not add a conflicting `codeql.yml`) |
-| Multi-tool SAST | `ossar.yml` | Microsoft Security DevOps (MSDO), results uploaded to the Security tab |
+| Code scanning (SAST) | `codeql.yml` | GitHub CodeQL, advanced setup (Python, JavaScript/TypeScript, Actions); default setup must stay off in repository settings or every run fails |
+| Container and dependency scanning | `ossar.yml` | Microsoft Security DevOps running Trivy, results uploaded to the Security tab |
 | Quality/security hotspots | `sonarcloud.yml`, `pylint.yml` | SonarCloud analysis and pylint |
 | Dependency updates | `.github/dependabot.yml` | Weekly update PRs for Python (uv), npm (`infra/pw-poc`), and pinned GitHub Actions versions |
 
@@ -47,7 +47,12 @@ We take all security reports seriously. If you discover a security vulnerability
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-Instead, please send an email directly to **<beer-sakthai@users.noreply.github.com>**.
+Instead, report it privately through GitHub: open
+**[Report a vulnerability](https://github.com/beer-sakthai/Sak-Family-Agent/security/advisories/new)**
+(Security tab → Advisories → Report a vulnerability). Only the maintainer and
+you can see the report. To report by email instead, use the address in
+[`docs/SECURITY.md`](docs/SECURITY.md); the `users.noreply.github.com`
+address on commits does not receive mail.
 
 In your report, please include:
 

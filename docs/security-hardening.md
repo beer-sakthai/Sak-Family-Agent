@@ -200,8 +200,18 @@ was ever pushed, it is compromised.
 - **Fix:** added `--all-groups` to the export. `accelerate` upgraded to 1.15.0,
   which clears its advisory. `nltk` and `sqlitedict` have **no fixed release** —
   the newest version on PyPI is the last affected one in each case — so they
-  are `--ignore-vuln` entries carrying the advisory ID, the affected range and
-  the reachability argument, to be removed the moment a fix ships.
+  were first `--ignore-vuln` entries carrying the advisory ID, the affected
+  range and the reachability argument.
+- **Follow-up (2026-10-09):** both are now out of `uv.lock` altogether, and the
+  ignores are gone. lm-eval lists `rouge-score` (which pulls in `nltk`) and
+  `sqlitedict` as hard dependencies, but its core imports neither: they are
+  used only by a few bundled ROUGE/nltk tasks and by `CachingLM` behind
+  `--use_cache`, none of which `run-evals.yml` runs. `[tool.uv]
+  override-dependencies` in `pyproject.toml` gives both a marker that
+  contradicts `requires-python` (`python_version < '3'`), which uv resolves to
+  nothing. A made-up platform marker such as `sys_platform == 'never'` does
+  not work: uv keeps the package for that hypothetical platform, so it stays in
+  the lock and in every scanner's view.
 - **Prevention pattern:** a green audit proves nothing until you have checked
   *what it scanned*. Assert the size of the dependency set, not just the exit
   code, and re-check whenever a new extra or group is added. An ignore entry is
