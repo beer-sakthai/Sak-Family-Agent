@@ -206,6 +206,7 @@ export function SessionExplorer({
                     <tr
                       key={session.id}
                       onClick={() => openDetail(session)}
+                      title={label}
                       className="cursor-pointer hover:bg-raised/60 transition-colors"
                     >
                       <td className="px-5 py-3.5">
