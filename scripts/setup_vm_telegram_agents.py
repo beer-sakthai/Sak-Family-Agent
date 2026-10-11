@@ -70,7 +70,7 @@ def _secret(value: str | None, env_name: str, prompt: str) -> str:
         try:
             secret = getpass.getpass(f"{prompt}: ")
         except EOFError:  # no terminal to prompt on
-            secret = ""
+            secret = None
     if not secret:
         raise SystemExit(f"{prompt} is required (flag, ${env_name}, or the prompt)")
     return secret
