@@ -446,7 +446,7 @@ describe("KpiStrip", () => {
     });
   });
 
-  it("provides hover title tooltips on interactive KPI tiles when onNavigate is passed", () => {
+  it("provides hover title tooltips and visual navigation indicators on interactive KPI tiles when onNavigate is passed", () => {
     const onNavigate = vi.fn();
     render(
       <KpiStrip
@@ -460,6 +460,7 @@ describe("KpiStrip", () => {
     const analyticsButtons = screen.getAllByTitle("Open the analytics panel");
     expect(analyticsButtons.length).toBeGreaterThan(0);
     expect(analyticsButtons[0]).toHaveAttribute("title", "Open the analytics panel");
+    expect(within(analyticsButtons[0]).getByText("Open →")).toBeInTheDocument();
     fireEvent.click(analyticsButtons[0]);
     expect(onNavigate).toHaveBeenCalledWith("analytics");
   });
