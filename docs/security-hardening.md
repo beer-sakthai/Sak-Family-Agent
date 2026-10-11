@@ -424,6 +424,74 @@ every command it ran inherited it, alongside an allow-list that included
   carry the same Security Rules.
 
 
+### 19. Five security checks no test could fail
+- **Where:** `telegram/bot.py` (`_is_authorized`), `web/server.py`
+  (`_token_matches`, `_is_authenticated`), `agent/guardrails.py`
+  (`_is_sensitive_path`).
+- **Risk:** sixteen hand-written mutants were run against the security seams,
+  each against the test files that own it. Five survived, so each of these
+  regressions would have shipped with CI green:
+  - **T1:** the Telegram bots answer any Telegram user. The bots are public,
+    and their handles are listed in `docs/SOUL.md`.
+  - **T2:** the bots answer everyone when the allowlist is empty.
+  - **M5:** web auth accepts any token that matches the first 8 characters.
+  - **M6:** web auth lets every request in when no token is configured.
+  - **M3:** `_is_sensitive_path` stops splitting on commas, so
+    `--mount src=/etc,dst=/x` passes.
+
+  M3, M5 and M6 were first reported in
+  [`test-coverage-audit-2026-09-01.md`](./test-coverage-audit-2026-09-01.md)
+  and were still alive. Every Telegram test sent its message as the one
+  allowlisted user. The only wrong-token test differed from the real token in
+  its first character.
+- **Fix:** tests only, since the code was correct.
+  - The Telegram tests send from an unlisted user and from an empty allowlist
+    to all eight gated handlers. They check that the user gets the refusal and
+    that the agent never runs.
+  - The web tests send five near-miss tokens over the header, query and cookie
+    channels: last character changed, truncated, an 8-character prefix,
+    extended by one, case changed. They also check that an unconfigured token
+    lets nothing in, an empty credential included.
+  - The guardrail tests check `docker --mount` comma specs.
+
+  All five mutants are now killed. The other eleven were already killed:
+  public bind, any auth scheme, MCP child env, `run_command` env filter and its
+  `KEY`/`PAT` segments, `read_file` roots, MCP tool-name validation and
+  description labelling, and git `ext::` and leading-dash rejection.
+- **Prevention pattern:** for every security check, write the test that would
+  fail if the check were deleted: an attacker-shaped input, not only the happy
+  path. Coverage cannot show this: a line can be covered and still have no
+  test that fails when it changes. `telegram/bot.py` is not measured at all.
+- **Regression tests:** `tests/test_telegram_bot.py::test_unauthorized_user_gets_only_the_refusal`,
+  `tests/test_web_auth.py::test_near_miss_token_is_rejected`,
+  `::test_unconfigured_token_fails_closed`,
+  `tests/test_guardrails_normalization.py::test_comma_separated_mount_spec_is_sensitive`.
+
+### 20. The VM bundle wrote every bot token world-readable
+- **Where:** `scripts/setup_vm_telegram_agents.py`, `infra/vm-agents/README.md`.
+- **Risk:** the script builds the deployment bundle for all six Telegram bots.
+  It wrote `common.env` (the OpenAI key) and the six `<agent>.env` files (the
+  bot tokens) with `write_text`. Under the usual `022` umask that is `0644`
+  inside a `0755` directory, readable by every local user, and the README's
+  `cp` step carried that mode into `~/.config/`. The script also required all
+  seven secrets as command-line flags, which show up in `ps` and shell history.
+  The README said it prompted for them; it did not.
+- **Fix:** both secret files and the `config/` directory are created owner-only
+  (`0600` and `0700`), and a re-run tightens a file left world-readable by an
+  older run. Each secret now comes from its flag, else its environment variable
+  (`OPENAI_API_KEY`, `<AGENT>_TELEGRAM_BOT_TOKEN`), else a hidden `getpass`
+  prompt. A missing secret, or one with no terminal to prompt on, exits with a
+  clear message. The README example passes no secrets, and the copy step uses
+  `install -m 600`.
+- **Prevention pattern:** a file that holds a secret is created with its final
+  mode, not `chmod`ed after the fact. Secrets travel by environment or prompt,
+  never by argv.
+- **Regression tests:** `tests/test_setup_vm_telegram_agents.py::test_env_files_holding_secrets_are_owner_only`,
+  `::test_rerun_tightens_a_world_readable_env_file`,
+  `::test_secret_prefers_flag_then_environment_then_prompt`,
+  `::test_missing_secret_exits_cleanly`,
+  `::test_parser_does_not_require_secrets_on_the_command_line`.
+
 ## CI / supply-chain hardening
 
 | Finding | Fix | Prevention |
