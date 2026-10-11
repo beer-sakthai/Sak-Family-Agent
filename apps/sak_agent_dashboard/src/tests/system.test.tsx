@@ -171,6 +171,24 @@ describe("SystemView", () => {
     const groupSummary = screen.getByTitle("Toggle sakthai memory command group (2 subcommands)");
     expect(groupSummary).toBeInTheDocument();
   });
+
+  it("provides hover tooltips and aria-labels for MCP-only badges and workflow trigger badges", () => {
+    render(<SystemView snapshot={FIXTURE} />);
+    const mcpBadge = screen.getByLabelText("MCP only tool");
+    expect(mcpBadge).toBeInTheDocument();
+    expect(mcpBadge).toHaveAttribute(
+      "title",
+      "Tool is available only via MCP stdio server, not directly in the core agent loop",
+    );
+
+    const triggerBadge = screen.getByLabelText("Trigger event: pull_request");
+    expect(triggerBadge).toBeInTheDocument();
+    expect(triggerBadge).toHaveAttribute("title", "Trigger event: pull_request");
+
+    const subcommandsBadge = screen.getByLabelText("2 subcommands");
+    expect(subcommandsBadge).toBeInTheDocument();
+    expect(subcommandsBadge).toHaveAttribute("title", "2 subcommands");
+  });
 });
 
 describe("navigation", () => {
