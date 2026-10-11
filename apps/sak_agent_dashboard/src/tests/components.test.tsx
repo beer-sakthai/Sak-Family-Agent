@@ -927,6 +927,23 @@ describe("PersonaFilter", () => {
     expect(trigger).toHaveAttribute("title", "Filter by persona (Selected: SakThai)");
   });
 
+  it("renders trigger and clear filter controls as separate non-nested buttons when filter is active", () => {
+    const onChange = vi.fn();
+    const { container } = render(<PersonaFilter selected={["sakthai"]} onChange={onChange} />);
+
+    const triggerButton = screen.getByTestId("persona-filter");
+    const clearButton = screen.getByRole("button", { name: "Clear persona filter" });
+
+    expect(triggerButton).toBeInTheDocument();
+    expect(clearButton).toBeInTheDocument();
+
+    // Verify there are no nested <button> elements inside another <button>
+    expect(container.querySelector("button button")).toBeNull();
+
+    fireEvent.click(clearButton);
+    expect(onChange).toHaveBeenCalledWith([]);
+  });
+
   it("opens menu on trigger click, auto-focuses first item, provides menu item title tooltips, and navigates items via Arrow keys and Home/End", () => {
     const onChange = vi.fn();
 
