@@ -69,7 +69,13 @@ jobs:
         # [tool.uv] override-dependencies in pyproject.toml. Prefer that, or an
         # upgrade, to an ignore: a stale ignore silently re-opens the hole this
         # workflow exists to close.
-        run: uvx pip-audit -r requirements.txt --disable-pip --no-deps
+        #
+        # The sed strips local version tags first. The `evals` group pins
+        # torch==2.14.0+cpu, which pip-audit skips as "not found on PyPI"
+        # while still reporting "No known vulnerabilities found".
+        run: |
+          sed -i -E 's/\+(cpu|cu[0-9]+)//' requirements.txt
+          uvx pip-audit -r requirements.txt --disable-pip --no-deps
 
       - name: Audit the training image locks
         # The three hashed locks the training Space image installs from. The
