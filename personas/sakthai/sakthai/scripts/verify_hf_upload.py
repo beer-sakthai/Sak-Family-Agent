@@ -57,7 +57,7 @@ def verify_url(url: str, resource_name: str) -> bool:
                 continue
 
             # Unwrap IPv4-mapped IPv6 addresses
-            if getattr(ip, "ipv4_mapped", None):
+            if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
                 ip = ip.ipv4_mapped
 
             # Check if IP is global, multicast or private
