@@ -440,7 +440,11 @@ function ToolsPanel({ snapshot }: { snapshot: SystemSnapshot }) {
             <p className="flex items-center gap-2">
               <code className="truncate font-mono text-xs text-fg">{tool.name}</code>
               {tool.mcp_only && (
-                <span className="shrink-0 rounded border border-hue-amber-line bg-hue-amber-tint px-1 text-[10px] text-hue-amber">
+                <span
+                  title="Tool is available only via MCP stdio server, not directly in the core agent loop"
+                  aria-label="MCP only tool"
+                  className="shrink-0 rounded border border-hue-amber-line bg-hue-amber-tint px-1 text-[10px] text-hue-amber"
+                >
                   MCP only
                 </span>
               )}
@@ -481,7 +485,11 @@ function CliBranch({ node, path }: { node: CliNode; path: string }) {
             aria-hidden="true"
           />
           <code className="shrink-0 font-mono text-xs text-fg">{node.name}</code>
-          <span className="rounded bg-sunken px-1 font-mono text-[10px] text-fg-4">
+          <span
+            title={`${node.commands.length} subcommand${node.commands.length === 1 ? "" : "s"}`}
+            aria-label={`${node.commands.length} subcommands`}
+            className="rounded bg-sunken px-1 font-mono text-[10px] text-fg-4"
+          >
             {node.commands.length}
           </span>
           <span className="min-w-0 truncate text-[11px] text-fg-5" title={node.help}>
@@ -576,12 +584,18 @@ function WorkflowsPanel({ snapshot }: { snapshot: SystemSnapshot }) {
               {workflow.triggers.map((trigger) => (
                 <span
                   key={trigger}
+                  title={`Trigger event: ${trigger}`}
+                  aria-label={`Trigger event: ${trigger}`}
                   className="rounded border border-line bg-sunken/60 px-1 font-mono text-[10px] text-fg-3"
                 >
                   {trigger}
                 </span>
               ))}
-              <span className="font-mono text-[10px] text-fg-5">
+              <span
+                title={`${workflow.jobs.length} CI job${workflow.jobs.length === 1 ? "" : "s"}`}
+                aria-label={`${workflow.jobs.length} CI jobs`}
+                className="font-mono text-[10px] text-fg-5"
+              >
                 · {workflow.jobs.length} job{workflow.jobs.length === 1 ? "" : "s"}
               </span>
             </div>
