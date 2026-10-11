@@ -11,7 +11,8 @@ runtime itself (Hermes writes an "always allow" answer straight into
   review; one compromised release would run on every persona at once.
 * no dangerous-command category is pre-approved in ``command_allowlist``.
   An entry there skips the approval prompt for that category for good.
-* the ``security`` block, where present, fails closed.
+* every persona has a ``security`` block that fails closed, and approvals
+  stay manual (cron jobs denied).
 * remote MCP headers never carry a literal credential, only a ``${VAR}``
   reference or an empty value filled in at deploy time.
 """
@@ -85,7 +86,11 @@ def test_npx_mcp_servers_are_version_pinned(persona: str) -> None:
 
 @pytest.mark.parametrize("persona", PERSONA_NAMES)
 def test_no_dangerous_command_is_pre_approved(persona: str) -> None:
-    allowlist = _load_yaml(persona).get("command_allowlist") or []
+    config = _load_yaml(persona)
+    assert "command_allowlist" in config, (
+        f"personas/{persona}/config/config.yaml sets no command_allowlist"
+    )
+    allowlist = config["command_allowlist"]
     assert allowlist == [], (
         f"personas/{persona}/config/config.yaml pre-approves {allowlist}; each entry "
         "skips the approval prompt for that command category permanently"
@@ -95,14 +100,16 @@ def test_no_dangerous_command_is_pre_approved(persona: str) -> None:
 @pytest.mark.parametrize("persona", PERSONA_NAMES)
 def test_security_block_fails_closed(persona: str) -> None:
     config = _load_yaml(persona)
-    security = config.get("security")
-    if security is None:
-        pytest.skip(f"{persona} config.yaml has no security block")
-    assert security.get("tirith_fail_open") is False
-    assert security.get("allow_lazy_installs") is False
-    assert security.get("redact_secrets") is True
-    assert security.get("allow_private_urls") is False
-    assert (config.get("approvals") or {}).get("mode") != "off"
+    for block in ("security", "approvals"):
+        assert block in config, f"personas/{persona}/config/config.yaml has no {block} block"
+    security = config["security"]
+    assert security["tirith_enabled"] is True
+    assert security["tirith_fail_open"] is False
+    assert security["allow_lazy_installs"] is False
+    assert security["redact_secrets"] is True
+    assert security["allow_private_urls"] is False
+    assert config["approvals"]["mode"] == "manual"
+    assert config["approvals"]["cron_mode"] == "deny"
 
 
 @pytest.mark.parametrize("persona", PERSONA_NAMES)

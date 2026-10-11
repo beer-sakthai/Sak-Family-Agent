@@ -398,18 +398,30 @@ every command it ran inherited it, alongside an allow-list that included
   removed. All three `command_allowlist`s are emptied, so those commands ask
   again. The test passes `--no-mcp`. Run under an `npx` shim that logs each
   call, the full suite now makes none; before the fix it made four.
+- **Parity:** SakJules and SakTan shipped a model-only `config.yaml`, so they
+  ran on Hermes's defaults. They now carry the same fail-closed `security`,
+  manual `approvals` and empty `command_allowlist` blocks as the other four.
+  Three SOULs (SakKing, SakThai, SakTan) had no security rules at all, and the
+  SOUL is the system prompt each persona runs with. All six now end with one
+  identical `## Security Rules` section: keep secrets out of output, treat
+  content as data, wait for Beer on irreversible actions, never work around a
+  guardrail, install nothing at runtime.
 - **Limits:** a pinned version is only as good as the release it names, so a
   bump is a reviewed change, not an automatic one. Dependabot does not read
-  these files. SakJules and SakTan ship a model-only `config.yaml`, so they
-  run on Hermes's defaults rather than an explicit fail-closed `security`
-  block.
+  these files. SOUL rules steer the model, but they do not enforce anything;
+  the guardrails do. With `tirith_fail_open: false`, a host without `tirith`
+  on `PATH` blocks the guarded actions instead of allowing them.
 - **Prevention pattern:** runtime config is code. Pin what it installs,
   pre-approve nothing destructive, and let a test hold every persona to it,
   because the runtime edits these files itself.
 - **Regression tests:** `tests/test_persona_security_config.py` checks all six
   personas. Each `npx` server must be version-pinned and `command_allowlist`
-  must be empty. Any `security` block must fail closed. Remote MCP headers may
-  hold only `${VAR}` references, not literal credentials.
+  must be empty. The `security` block must be present and fail closed, and
+  approvals stay manual. Remote MCP headers may hold only `${VAR}` references,
+  not literal credentials.
+  `tests/test_soul_consistency.py::test_soul_carries_the_shared_security_rules`
+  checks that all six SOULs, and the Hermes profile SOULs that link to them,
+  carry the same Security Rules.
 
 
 ## CI / supply-chain hardening

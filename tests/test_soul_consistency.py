@@ -78,6 +78,41 @@ def test_memory_tools_exist_in_builtin_tools() -> None:
     assert {"learn", "recall", "search"} <= builtin_names
 
 
+HERMES_SOULS: dict[str, Path] = {
+    slug: REPO_ROOT
+    / "infra"
+    / "hermes-agents"
+    / ("default" if slug == "sakthai" else f"profiles/{slug}")
+    / "SOUL.md"
+    for slug in PERSONAS
+}
+
+
+def security_rules(path: Path) -> str:
+    """The ``## Security Rules`` section of a SOUL file, or "" if it has none."""
+    text = path.read_text(encoding="utf-8")
+    start = text.find("\n## Security Rules\n")
+    if start == -1:
+        return ""
+    return text[start : text.find("\n---\n", start)]
+
+
+@pytest.mark.parametrize("slug", sorted(PERSONAS))
+def test_soul_carries_the_shared_security_rules(slug: str) -> None:
+    """Every SOUL, and its Hermes profile copy, carries the same Security Rules.
+
+    The SOUL is injected as the agent's system prompt, so it is the only place
+    these rules reach the model: a persona without the section never hears
+    them.
+    """
+    canonical = security_rules(PERSONAS_DIR / "sakthai" / "SOUL.md")
+    assert canonical, "personas/sakthai/SOUL.md has no '## Security Rules' section"
+    for path in (PERSONAS_DIR / slug / "SOUL.md", HERMES_SOULS[slug]):
+        assert security_rules(path) == canonical, (
+            f"{path.relative_to(REPO_ROOT)} Security Rules differ from personas/sakthai/SOUL.md"
+        )
+
+
 def test_shared_soul_lists_all_six_handles() -> None:
     """docs/SOUL.md (the shared family contract) must list all six bot handles."""
     text = (REPO_ROOT / "docs" / "SOUL.md").read_text(encoding="utf-8")

@@ -823,7 +823,8 @@ Key test areas:
   `test_security_hardening.py`, `test_security_sentinel.py`,
   `test_persona_guardrails_parity.py`, `test_persona_web_server_parity.py`,
   `test_persona_security_config.py` (all six personas' `config/` files: `npx`
-  MCP servers version-pinned, no pre-approved dangerous commands),
+  MCP servers version-pinned, no pre-approved dangerous commands, a fail-closed
+  `security` block),
   `test_sakking_skill_security.py`, `test_giturl.py`, `test_web_auth.py`
 - **MCP** — `test_mcp_server.py`, `test_mcp_client.py`,
   `test_mcp_client_resilience.py`, `test_mcp_manager.py`, `test_mcp_servers.py`,
