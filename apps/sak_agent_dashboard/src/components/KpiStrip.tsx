@@ -106,7 +106,7 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
     >
       {tile.series && <Sparkline values={tile.series} className={tile.accent} />}
       <div className="relative flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-fg-4">
             <Icon className={`h-3 w-3 ${tile.accent}`} aria-hidden />
             {tile.label}
@@ -114,14 +114,7 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
           <p className="mt-1.5 font-display text-2xl font-bold tracking-tight text-fg">
             {tile.value}
           </p>
-          <div className="mt-0.5 flex items-center justify-between gap-2 font-mono text-[11px] text-fg-4">
-            <span className="truncate">{tile.hint}</span>
-            {target && onNavigate && (
-              <span className="shrink-0 text-[10px] text-fg-5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-                Open →
-              </span>
-            )}
-          </div>
+          <p className="mt-0.5 truncate font-mono text-[11px] text-fg-4">{tile.hint}</p>
         </div>
         {delta && Number.isFinite(delta.value) && delta.value !== 0 && (
           <span
@@ -143,6 +136,13 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
           </span>
         )}
       </div>
+      {/* Out of flow, in the bottom strip pb-9 reserves: the hint is invisible
+          until hover or focus, so it must not take width from the hint line. */}
+      {target && onNavigate && (
+        <span className="pointer-events-none absolute bottom-2.5 right-4 font-mono text-[10px] text-fg-5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+          Open →
+        </span>
+      )}
     </Root>
   );
 }
