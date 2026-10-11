@@ -19,6 +19,7 @@ on:
       - "tests/test_compose_persona.py"
       - "tests/test_export_agent_repo.py"
       - "tests/test_persona_guardrails_parity.py"
+      - "tests/test_persona_security_config.py"
       - ".github/workflows/sak-family-agent-contract.yml"
   pull_request:
     branches: ["main"]
@@ -38,6 +39,7 @@ on:
       - "tests/test_compose_persona.py"
       - "tests/test_export_agent_repo.py"
       - "tests/test_persona_guardrails_parity.py"
+      - "tests/test_persona_security_config.py"
       - ".github/workflows/sak-family-agent-contract.yml"
   workflow_dispatch:
 
@@ -110,3 +112,4 @@ jobs:
           tests/test_compose_persona.py
           tests/test_export_agent_repo.py
           tests/test_persona_guardrails_parity.py
+          tests/test_persona_security_config.py

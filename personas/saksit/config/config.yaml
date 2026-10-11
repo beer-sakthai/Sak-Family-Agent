@@ -507,8 +507,7 @@ approvals:
   cron_mode: deny
   mcp_reload_confirm: true
   destructive_slash_confirm: false
-command_allowlist:
-- script execution via -e/-c flag
+command_allowlist: []
 quick_commands: {}
 platform_hints: {}
 hooks: {}

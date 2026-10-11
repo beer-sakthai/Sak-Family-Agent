@@ -374,6 +374,43 @@ every command it ran inherited it, alongside an allow-list that included
 - **Regression tests:** `tests/test_tools.py::test_run_command_withholds_credential_env_vars`,
   `::test_run_command_keeps_ordinary_env_vars`.
 
+### 18. Persona configs ran floating npm packages and pre-approved dangerous commands
+- **Where:** `personas/*/config/mcp.json`, `personas/*/config/config.yaml`;
+  `tests/test_cli.py::test_run_persona_uses_persona_store_and_soul`.
+- **Risk:** `sakthai run --persona X` launches the stdio MCP servers in that
+  persona's `mcp.json`. SakKing, SakSee and SakSit launched them as
+  `npx -y @playwright/mcp@latest`, `chrome-devtools-mcp@latest` and an
+  unversioned `@llmindset/mcp-hfspace`: whatever was published last, installed
+  and run on every launch, with no review. One compromised release would have
+  run on every persona at once. A unit test ran `run --persona sakking` without
+  `--no-mcp`, so CI did the same on every push. Five personas also listed
+  `npx -y @huggingface/mcp-server`, a package that does not exist on npm; it
+  failed on every launch. Separately, Hermes writes an "always allow" answer
+  into `command_allowlist`, and an entry there skips the approval prompt for
+  that command category for good. SakThai pre-approved `recursive delete` and
+  `stop/restart system service`. SakSee pre-approved those plus
+  `stop/restart hermes gateway` and `script execution via -e/-c flag`. SakSit
+  pre-approved `script execution via -e/-c flag`. That last one is
+  `python -c`, the class finding 17 removed from the nightly agent.
+- **Fix:** every `npx` server is pinned to an exact version
+  (`@playwright/mcp@0.0.83`, `chrome-devtools-mcp@1.10.1`,
+  `@llmindset/mcp-hfspace@0.5.4`). The non-existent `huggingface` entries are
+  removed. All three `command_allowlist`s are emptied, so those commands ask
+  again. The test passes `--no-mcp`. Run under an `npx` shim that logs each
+  call, the full suite now makes none; before the fix it made four.
+- **Limits:** a pinned version is only as good as the release it names, so a
+  bump is a reviewed change, not an automatic one. Dependabot does not read
+  these files. SakJules and SakTan ship a model-only `config.yaml`, so they
+  run on Hermes's defaults rather than an explicit fail-closed `security`
+  block.
+- **Prevention pattern:** runtime config is code. Pin what it installs,
+  pre-approve nothing destructive, and let a test hold every persona to it,
+  because the runtime edits these files itself.
+- **Regression tests:** `tests/test_persona_security_config.py` checks all six
+  personas. Each `npx` server must be version-pinned and `command_allowlist`
+  must be empty. Any `security` block must fail closed. Remote MCP headers may
+  hold only `${VAR}` references, not literal credentials.
+
 
 ## CI / supply-chain hardening
 

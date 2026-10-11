@@ -1447,7 +1447,7 @@ def test_run_persona_uses_persona_store_and_soul(
         return types.SimpleNamespace(text="ok")
 
     monkeypatch.setattr(agent_mod, "run_agent", fake_run_agent)
-    result = runner.invoke(main, ["run", "hi", "--persona", "sakking"])
+    result = runner.invoke(main, ["run", "hi", "--persona", "sakking", "--no-mcp"])
     assert result.exit_code == 0
 
     store = captured["store"]
