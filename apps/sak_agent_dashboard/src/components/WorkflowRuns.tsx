@@ -198,7 +198,7 @@ export function WorkflowRuns({
         <Drawer
           title={detail?.summary.workflow_name ?? openRunId}
           subtitle={openRunId}
-          icon={<GitBranch className="h-4 w-4 text-hue-violet" />}
+          icon={<GitBranch className="h-4 w-4 text-hue-violet" aria-hidden="true" />}
           onClose={close}
           data-testid="workflow-drawer"
         >
