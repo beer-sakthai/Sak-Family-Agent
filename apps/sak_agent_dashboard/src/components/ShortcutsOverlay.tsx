@@ -189,7 +189,11 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
 
           if (filteredGeneral.length === 0 && filteredSections.length === 0) {
             return (
-              <div className="py-8 text-center font-mono text-xs text-fg-4">
+              <div
+                role="status"
+                aria-label={`No shortcuts match "${query}"`}
+                className="py-8 text-center font-mono text-xs text-fg-4"
+              >
                 No shortcuts match &quot;{query}&quot;
               </div>
             );

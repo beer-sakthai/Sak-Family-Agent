@@ -87,7 +87,8 @@ describe("ShortcutsOverlay", () => {
 
     // Search for unmatched query
     fireEvent.change(searchInput, { target: { value: "nonexistent query" } });
-    expect(screen.getByText('No shortcuts match "nonexistent query"')).toBeInTheDocument();
+    const emptyState = screen.getByRole("status", { name: 'No shortcuts match "nonexistent query"' });
+    expect(emptyState).toBeInTheDocument();
   });
 
   it("clears active search query on Escape keypress inside search input without closing overlay", () => {

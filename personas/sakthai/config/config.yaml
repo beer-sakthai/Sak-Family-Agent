@@ -507,9 +507,7 @@ approvals:
   cron_mode: deny
   mcp_reload_confirm: true
   destructive_slash_confirm: false
-command_allowlist:
-- stop/restart system service
-- recursive delete
+command_allowlist: []
 quick_commands: {}
 platform_hints: {}
 hooks: {}

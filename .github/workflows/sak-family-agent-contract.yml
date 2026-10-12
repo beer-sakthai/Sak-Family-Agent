@@ -19,6 +19,7 @@ on:
       - "tests/test_compose_persona.py"
       - "tests/test_export_agent_repo.py"
       - "tests/test_persona_guardrails_parity.py"
+      - "tests/test_persona_security_config.py"
       - ".github/workflows/sak-family-agent-contract.yml"
   pull_request:
     branches: ["main"]
@@ -38,6 +39,7 @@ on:
       - "tests/test_compose_persona.py"
       - "tests/test_export_agent_repo.py"
       - "tests/test_persona_guardrails_parity.py"
+      - "tests/test_persona_security_config.py"
       - ".github/workflows/sak-family-agent-contract.yml"
   workflow_dispatch:
 
@@ -55,7 +57,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Harden the runner
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        uses: step-security/harden-runner@351661ca32ac09a36dc5ee2d536e3128f2a3c8ed # v2.22.0
         with:
           use-policy-store: true
           api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
@@ -110,3 +112,4 @@ jobs:
           tests/test_compose_persona.py
           tests/test_export_agent_repo.py
           tests/test_persona_guardrails_parity.py
+          tests/test_persona_security_config.py
