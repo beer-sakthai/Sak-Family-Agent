@@ -507,11 +507,7 @@ approvals:
   cron_mode: deny
   mcp_reload_confirm: true
   destructive_slash_confirm: false
-command_allowlist:
-- stop/restart system service
-- recursive delete
-- stop/restart hermes gateway (kills running agents)
-- script execution via -e/-c flag
+command_allowlist: []
 quick_commands: {}
 platform_hints: {}
 hooks: {}
@@ -659,7 +655,7 @@ mcp_servers:
     command: npx
     args:
     - -y
-    - '@playwright/mcp@latest'
+    - '@playwright/mcp@0.0.83'
     - --headless
     - --isolated
     enabled: true
