@@ -329,7 +329,11 @@ def memory_import(ctx: click.Context, path: Path, replace: bool, yes: bool) -> N
 
 @memory.command("consolidate")
 @click.option(
-    "--age", default=86400, show_default=True, type=int, help="Fold facts older than AGE seconds."
+    "--age",
+    default=86400,
+    show_default=True,
+    type=click.IntRange(min=0),
+    help="Fold facts older than AGE seconds.",
 )
 @click.pass_context
 def memory_consolidate(ctx: click.Context, age: int) -> None:
@@ -500,6 +504,13 @@ def memory_family(limit: int, personas: str | None, as_json: bool) -> None:
     specific persona's own shard instead.
     """
     persona_list = [p.strip() for p in personas.split(",") if p.strip()] if personas else None
+    unknown = [p for p in persona_list or [] if p not in config.PERSONA_NAMES]
+    if unknown:
+        raise click.BadParameter(
+            f"unknown persona(s) {', '.join(unknown)}; "
+            f"expected one of {', '.join(config.PERSONA_NAMES)}.",
+            param_hint="'--personas'",
+        )
     with FamilyMemoryView(personas=persona_list) as view:
         facts = view.list_facts(limit=limit)
         obs = view.top_observations(limit=limit)
