@@ -180,7 +180,7 @@ make system-snapshot                         # Refresh dashboard system data
 make mutation                               # Run local mutation testing (slow)
 ```
 
-Tests that may call external services are marked `integration`; the normal CI command excludes them:
+Tests that may call external services (Ollama, Anthropic) are marked `integration` and skip themselves when the endpoint or credential is missing, which keeps CI offline. To leave them out explicitly:
 
 ```bash
 uv run pytest tests/ -m "not integration"
@@ -201,6 +201,15 @@ Contribution guidelines are in [`CONTRIBUTING.md`](CONTRIBUTING.md). Repository-
 ## Security and privacy
 
 Do not commit API keys, refresh tokens, memory databases, or generated client data. Use `.env` for local credentials and review tool permissions before enabling shell, Telegram, Microsoft Graph, or external MCP integrations.
+
+What the defaults enforce:
+
+- **Every tool call passes a guardrail policy.** `run_command` is off until `SAKTHAI_SHELL_ALLOW` is set, can be limited to named programs (`git:ls`), and its child process does not inherit credential variables. `read_file` reads only the working directory, `~/.sakthai` and `SAKTHAI_READ_ALLOW`. Sensitive paths and destructive commands are refused, and secrets are redacted from tool output and logs.
+- **The web API stays local.** It binds to loopback unless `SAKTHAI_WEB_ALLOW_PUBLIC` is set, and every path except `/health` needs the bearer token from `sakthai web setup`.
+- **All six personas follow the same rules, and tests check them.** Each persona's `config/` pins its `npx` MCP servers to exact versions, pre-approves no dangerous commands, fails closed when the Tirith scanner is unavailable, and keeps approvals manual with cron jobs denied (`tests/test_persona_security_config.py`). Each `SOUL.md` carries the same Security Rules section (`tests/test_soul_consistency.py`), and every persona copy of the guardrails and web server must match the canonical file.
+- **Secrets are scanned continuously.** gitleaks checks every pull request and every push to `main`, and the full history daily. Known historical findings are baselined by fingerprint in `.gitleaksignore`, so only a new leak fails the scan.
+
+Past findings, with the regression test behind each fix, are in [`docs/security-hardening.md`](docs/security-hardening.md).
 
 Security vulnerabilities should be reported according to [`SECURITY.md`](SECURITY.md), not through a public issue.
 
