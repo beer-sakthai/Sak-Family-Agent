@@ -144,13 +144,17 @@ export function WorkflowRuns({
                 </tr>
               ) : (
                 runs.map((run) => {
+                  const isSelected = run.run_id === openRunId;
                   const label = `View steps for ${run.workflow_name || run.run_id}`;
                   return (
                     <tr
                       key={run.run_id}
+                      aria-selected={isSelected}
                       onClick={() => open(run.run_id)}
                       title={label}
-                      className="cursor-pointer hover:bg-raised/60 transition-colors"
+                      className={`cursor-pointer transition-colors ${
+                        isSelected ? "bg-raised/80 font-medium" : "hover:bg-raised/60"
+                      }`}
                     >
                       <td className="px-5 py-3.5">
                         <span className="font-bold text-fg">{run.workflow_name || "—"}</span>

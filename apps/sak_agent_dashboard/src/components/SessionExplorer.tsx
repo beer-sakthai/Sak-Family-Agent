@@ -202,13 +202,17 @@ export function SessionExplorer({
                 </tr>
               ) : (
                 sessions.map((session) => {
+                  const isSelected = session.id === openSessionId;
                   const label = `View transcript for ${session.task ? `task "${session.task}"` : session.id}`;
                   return (
                     <tr
                       key={session.id}
+                      aria-selected={isSelected}
                       onClick={() => openDetail(session)}
                       title={label}
-                      className="cursor-pointer hover:bg-raised/60 transition-colors"
+                      className={`cursor-pointer transition-colors ${
+                        isSelected ? "bg-raised/80 font-medium" : "hover:bg-raised/60"
+                      }`}
                     >
                       <td className="px-5 py-3.5">
                         <span

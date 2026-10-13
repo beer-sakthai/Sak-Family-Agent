@@ -826,6 +826,14 @@ describe("SessionExplorer", () => {
     expect(screen.getByText("No sessions recorded yet.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Clear search/i })).not.toBeInTheDocument();
   });
+
+  it("marks active selected row with aria-selected='true' and active background class", () => {
+    const selectedSession = sessions.sessions[0];
+    const { container } = renderExplorer({ openSessionId: selectedSession.id });
+    const selectedRow = container.querySelector(`tr[aria-selected="true"]`);
+    expect(selectedRow).toBeInTheDocument();
+    expect(selectedRow).toHaveClass("bg-raised/80");
+  });
 });
 
 describe("WorkflowRuns", () => {
@@ -933,6 +941,16 @@ describe("WorkflowRuns", () => {
       <WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
     );
     expect(screen.queryByTestId("workflows-family-wide")).not.toBeInTheDocument();
+  });
+
+  it("marks active selected row with aria-selected='true' and active background class", () => {
+    const selectedRun = workflows.runs[0];
+    const { container } = render(
+      <WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={selectedRun.run_id} detail={null} />,
+    );
+    const selectedRow = container.querySelector(`tr[aria-selected="true"]`);
+    expect(selectedRow).toBeInTheDocument();
+    expect(selectedRow).toHaveClass("bg-raised/80");
   });
 });
 
