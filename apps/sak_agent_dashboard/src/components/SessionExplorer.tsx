@@ -234,7 +234,11 @@ export function SessionExplorer({
                       <td className="px-5 py-3.5 font-sans text-fg max-w-md truncate">
                         {session.task || "—"}
                       </td>
-                      <td className="px-5 py-3.5 text-fg-3 text-[11px] max-w-[12rem] truncate">
+                      <td
+                        title={session.model ? `Configured model: ${session.model}` : "Model not recorded"}
+                        aria-label={session.model ? `Model: ${session.model}` : "Model not recorded"}
+                        className="px-5 py-3.5 text-fg-3 text-[11px] max-w-[12rem] truncate"
+                      >
                         {session.model || "—"}
                       </td>
                       <td className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap">
@@ -340,7 +344,11 @@ export function SessionExplorer({
                   </div>
                   <div>
                     <span className="text-[10px] uppercase text-fg-4 block">Model</span>
-                    <span className="font-bold text-fg truncate block">
+                    <span
+                      title={openSummary.model ? `Configured model: ${openSummary.model}` : "Model not recorded"}
+                      aria-label={openSummary.model ? `Model: ${openSummary.model}` : "Model not recorded"}
+                      className="font-bold text-fg truncate block"
+                    >
                       {openSummary.model || "—"}
                     </span>
                   </div>

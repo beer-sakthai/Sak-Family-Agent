@@ -659,6 +659,25 @@ describe("SessionExplorer", () => {
     expect(badge).toHaveAttribute("title", "Unattributed session (no persona recorded)");
   });
 
+  it("renders model table cells and drawer model badge with title hover tooltips and aria-label attributes", () => {
+    const firstSession = sessions.sessions[0];
+    const expectedModel = firstSession.model || "—";
+    const expectedTitle = firstSession.model ? `Configured model: ${firstSession.model}` : "Model not recorded";
+    const expectedAriaLabel = firstSession.model ? `Model: ${firstSession.model}` : "Model not recorded";
+
+    renderExplorer({ openSessionId: firstSession.id });
+
+    const modelCell = screen.getAllByLabelText(expectedAriaLabel)[0];
+    expect(modelCell).toBeInTheDocument();
+    expect(modelCell).toHaveAttribute("title", expectedTitle);
+    expect(modelCell).toHaveTextContent(expectedModel);
+
+    const drawerModel = screen.getAllByLabelText(expectedAriaLabel)[1];
+    expect(drawerModel).toBeInTheDocument();
+    expect(drawerModel).toHaveAttribute("title", expectedTitle);
+    expect(drawerModel).toHaveTextContent(expectedModel);
+  });
+
   it("sends search upward for a server-side query", () => {
     const onSearchChange = vi.fn();
     renderExplorer({ onSearchChange });
