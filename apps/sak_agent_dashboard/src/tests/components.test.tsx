@@ -659,6 +659,25 @@ describe("SessionExplorer", () => {
     expect(badge).toHaveAttribute("title", "Unattributed session (no persona recorded)");
   });
 
+  it("renders model table cells and drawer model badge with title hover tooltips and aria-label attributes", () => {
+    const firstSession = sessions.sessions[0];
+    const expectedModel = firstSession.model || "—";
+    const expectedTitle = firstSession.model ? `Configured model: ${firstSession.model}` : "Model not recorded";
+    const expectedAriaLabel = firstSession.model ? `Model: ${firstSession.model}` : "Model not recorded";
+
+    renderExplorer({ openSessionId: firstSession.id });
+
+    const modelCell = screen.getAllByLabelText(expectedAriaLabel)[0];
+    expect(modelCell).toBeInTheDocument();
+    expect(modelCell).toHaveAttribute("title", expectedTitle);
+    expect(modelCell).toHaveTextContent(expectedModel);
+
+    const drawerModel = screen.getAllByLabelText(expectedAriaLabel)[1];
+    expect(drawerModel).toBeInTheDocument();
+    expect(drawerModel).toHaveAttribute("title", expectedTitle);
+    expect(drawerModel).toHaveTextContent(expectedModel);
+  });
+
   it("sends search upward for a server-side query", () => {
     const onSearchChange = vi.fn();
     renderExplorer({ onSearchChange });
@@ -703,7 +722,7 @@ describe("SessionExplorer", () => {
   it("reports a close upward instead of closing itself", () => {
     const onSessionSelect = vi.fn();
     renderExplorer({ openSessionId: sessions.sessions[0].id, onSessionSelect });
-    fireEvent.click(screen.getByLabelText("Close detail panel"));
+    fireEvent.click(screen.getByRole("dialog").querySelector('button[aria-label="Close detail panel"]')!);
     expect(onSessionSelect).toHaveBeenCalledWith(null);
   });
 
@@ -806,6 +825,14 @@ describe("SessionExplorer", () => {
     renderExplorer({ sessions: [], total: 0, search: "" });
     expect(screen.getByText("No sessions recorded yet.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Clear search/i })).not.toBeInTheDocument();
+  });
+
+  it("marks active selected row with aria-selected='true' and active background class", () => {
+    const selectedSession = sessions.sessions[0];
+    const { container } = renderExplorer({ openSessionId: selectedSession.id });
+    const selectedRow = container.querySelector(`tr[aria-selected="true"]`);
+    expect(selectedRow).toBeInTheDocument();
+    expect(selectedRow).toHaveClass("bg-raised/80");
   });
 });
 
@@ -914,6 +941,16 @@ describe("WorkflowRuns", () => {
       <WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
     );
     expect(screen.queryByTestId("workflows-family-wide")).not.toBeInTheDocument();
+  });
+
+  it("marks active selected row with aria-selected='true' and active background class", () => {
+    const selectedRun = workflows.runs[0];
+    const { container } = render(
+      <WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={selectedRun.run_id} detail={null} />,
+    );
+    const selectedRow = container.querySelector(`tr[aria-selected="true"]`);
+    expect(selectedRow).toBeInTheDocument();
+    expect(selectedRow).toHaveClass("bg-raised/80");
   });
 });
 
@@ -1246,11 +1283,11 @@ describe("DemoModeToggle", () => {
   it("includes visible label text in button aria-label for WCAG 2.5.3 compliance", () => {
     const { rerender } = render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="local" />);
     const offButton = screen.getByRole("button", { name: /^Sample: OFF/ });
-    expect(offButton).toHaveAttribute("aria-label", "Sample: OFF - toggle sample data");
+    expect(offButton).toHaveAttribute("aria-label", "Sample: OFF - switch to sample dataset");
 
     rerender(<DemoModeToggle isDemo={true} onToggle={vi.fn()} activeSource="demo" />);
     const onButton = screen.getByRole("button", { name: /^Sample: ON/ });
-    expect(onButton).toHaveAttribute("aria-label", "Sample: ON - toggle sample data");
+    expect(onButton).toHaveAttribute("aria-label", "Sample: ON - switch to live agent data");
   });
 
   it("reports the source actually in use", () => {
@@ -1280,7 +1317,7 @@ describe("DemoModeToggle", () => {
       "aria-label",
       "Data source: Demonstration sample dataset",
     );
-    expect(screen.getByRole("button", { name: /toggle sample data/i })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: /switch to sample dataset/i })).toHaveAttribute(
       "aria-pressed",
       "false",
     );
@@ -1300,7 +1337,7 @@ describe("DemoModeToggle", () => {
   it("toggles", () => {
     const onToggle = vi.fn();
     render(<DemoModeToggle isDemo={false} onToggle={onToggle} activeSource="local" />);
-    fireEvent.click(screen.getByRole("button", { name: /toggle sample data/i }));
+    fireEvent.click(screen.getByRole("button", { name: /switch to sample dataset/i }));
     expect(onToggle).toHaveBeenCalledWith(true);
   });
 

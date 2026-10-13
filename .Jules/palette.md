@@ -25,3 +25,7 @@
 ## 2026-10-11 - Avoid nesting interactive controls inside trigger buttons
 **Learning:** Placing interactive controls (`span role="button" tabIndex={0}`) inside native `<button>` elements violates HTML semantics and causes erratic focus behavior and screen reader misannouncements. Wrapping the trigger and clear buttons as sibling `<button>` elements inside a flex container maintains the pill aesthetic while ensuring proper ARIA accessibility and keyboard navigation.
 **Action:** Structure composite buttons with inner clear actions using sibling `<button>` elements inside a flex wrapper rather than nesting interactive elements inside a `<button>`.
+
+## 2026-10-13 - Visual and ARIA selection state for table rows with detail drawers
+**Learning:** In table views accompanied by side detail drawers, table rows should check if their ID matches the open item, applying `aria-selected={isSelected}` and active highlight styling (`bg-raised/80 font-medium`) so users visually spot the open record and screen readers announce row selection.
+**Action:** Set `aria-selected={isSelected}` and active background styling on table rows when their detail drawer is open.
