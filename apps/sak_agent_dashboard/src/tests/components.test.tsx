@@ -722,7 +722,7 @@ describe("SessionExplorer", () => {
   it("reports a close upward instead of closing itself", () => {
     const onSessionSelect = vi.fn();
     renderExplorer({ openSessionId: sessions.sessions[0].id, onSessionSelect });
-    fireEvent.click(screen.getByLabelText("Close detail panel"));
+    fireEvent.click(screen.getByRole("dialog").querySelector('button[aria-label="Close detail panel"]')!);
     expect(onSessionSelect).toHaveBeenCalledWith(null);
   });
 

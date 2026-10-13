@@ -125,7 +125,7 @@ export function Drawer({
             title="Close detail panel (Esc)"
             className="shrink-0 rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-raised hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
-            <X className="h-4 w-4" aria-hidden />
+            <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </header>
 

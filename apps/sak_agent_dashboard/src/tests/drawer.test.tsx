@@ -4,10 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import Drawer from "@/components/Drawer";
 
-function renderDrawer(overrides: { onClose?: () => void } = {}) {
+function renderDrawer(overrides: { onClose?: () => void; icon?: React.ReactNode } = {}) {
   const onClose = overrides.onClose ?? vi.fn();
   const result = render(
-    <Drawer title="Session transcript" subtitle="1700000000_abc" onClose={onClose}>
+    <Drawer title="Session transcript" subtitle="1700000000_abc" icon={overrides.icon} onClose={onClose}>
       <button>inner one</button>
       <button>inner two</button>
     </Drawer>,
@@ -29,13 +29,17 @@ describe("Drawer", () => {
 
   it("closes on the close button and provides explicit title tooltip and type", () => {
     const { onClose } = renderDrawer();
-    const closeBtn = screen.getByLabelText("Close detail panel");
+    const closeBtn = within(screen.getByRole("dialog")).getByLabelText("Close detail panel");
     expect(closeBtn).toHaveAttribute("type", "button");
     expect(closeBtn).toHaveAttribute("title", "Close detail panel (Esc)");
-    expect(closeBtn).toHaveAttribute("title", "Close detail panel (Esc)");
-    expect(closeBtn).toHaveAttribute("type", "button");
     fireEvent.click(closeBtn);
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("marks decorative icon wrapper with aria-hidden", () => {
+    renderDrawer({ icon: <span data-testid="test-icon">icon</span> });
+    const iconWrapper = screen.getByTestId("test-icon").parentElement;
+    expect(iconWrapper).toHaveAttribute("aria-hidden", "true");
   });
 
   it("closes on Escape", () => {
@@ -53,13 +57,16 @@ describe("Drawer", () => {
   it("closes on the scrim, which is a real button", () => {
     const { onClose } = renderDrawer();
     // The modal this replaces used a <div onClick> — unreachable by keyboard.
-    fireEvent.click(screen.getByLabelText("Close detail panel backdrop"));
+    const scrimBtn = screen.getByLabelText("Close detail panel backdrop");
+    expect(scrimBtn).toHaveAttribute("type", "button");
+    expect(scrimBtn).toHaveAttribute("title", "Close detail panel");
+    fireEvent.click(scrimBtn);
     expect(onClose).toHaveBeenCalled();
   });
 
   it("moves focus into the drawer on open", () => {
     renderDrawer();
-    expect(document.activeElement).toBe(screen.getByLabelText("Close detail panel"));
+    expect(document.activeElement).toBe(within(screen.getByRole("dialog")).getByLabelText("Close detail panel"));
   });
 
   it("returns focus to the opener on unmount", () => {
