@@ -20,6 +20,17 @@ _PERSONA_OPTION_HELP = (
     "(~/.sakthai/<persona>/memory.db). Omit to use the default, unscoped memory.db."
 )
 
+_IMPORT_HINT = (
+    "Only `memory export --format json` files can be imported; csv and jsonl exports are one-way."
+)
+
+
+def _non_blank_kind(_ctx: click.Context, _param: click.Parameter, value: str) -> str:
+    kind = value.strip()
+    if not kind:
+        raise click.BadParameter("must not be blank.")
+    return kind
+
 
 def _open_store(persona: str | None) -> MemoryStore:
     """Open PERSONA's memory shard, or the default unscoped store if None."""
@@ -38,7 +49,9 @@ def _obs_line(o: Observation) -> str:
 
 @click.command()
 @click.argument("value", required=False)
-@click.option("--kind", default="note", show_default=True, help="Fact category.")
+@click.option(
+    "--kind", default="note", show_default=True, callback=_non_blank_kind, help="Fact category."
+)
 @click.option("--key", default=None, help="Optional key/name for the fact.")
 @click.option(
     "--tag",
@@ -311,8 +324,15 @@ def memory_import(ctx: click.Context, path: Path, replace: bool, yes: bool) -> N
     """Restore facts + observations from a JSON snapshot at PATH."""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+    except OSError as exc:
         raise click.ClickException(f"could not read snapshot: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise click.ClickException(f"could not read snapshot: {exc}. {_IMPORT_HINT}") from exc
+    # A one-record jsonl export parses as JSON too; only a json snapshot has a version.
+    if not isinstance(data, dict) or "version" not in data:
+        raise click.ClickException(
+            f"could not read snapshot: {path.name} is not a JSON snapshot. {_IMPORT_HINT}"
+        )
     if replace and not yes:
         click.confirm(
             "--replace will delete all existing facts and observations. Continue?",
