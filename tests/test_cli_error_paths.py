@@ -175,3 +175,14 @@ def test_learn_rejects_a_blank_kind(runner: CliRunner, kind: str) -> None:
 def test_learn_strips_the_kind(runner: CliRunner) -> None:
     assert runner.invoke(main, ["learn", "tea", "--kind", " drink "]).exit_code == 0
     assert "[drink] tea" in runner.invoke(main, ["recall", "tea"]).output
+
+
+def test_saktan_dry_run_is_runnable_on_the_default_ollama_host(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # SakTan's config.yaml defaults to ollama/sakthai, and Ollama needs no key.
+    for var in ("OLLAMA_HOST", "OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_API_BASE"):
+        monkeypatch.delenv(var, raising=False)
+    result = runner.invoke(main, ["run", "--dry-run", "--no-mcp", "--persona", "saktan", "hi"])
+    assert result.exit_code == 0, result.output
+    assert "runnable:    yes" in result.output
