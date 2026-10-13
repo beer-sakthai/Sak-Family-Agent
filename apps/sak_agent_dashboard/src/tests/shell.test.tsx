@@ -230,13 +230,24 @@ describe("TopBar", () => {
 
   it("opens the palette and the mobile nav", () => {
     const { props } = renderTopBar();
-    const paletteBtn = screen.getByLabelText("Open command palette");
-    expect(paletteBtn).toBeInTheDocument();
-    expect(paletteBtn).toHaveAttribute("type", "button");
-    expect(paletteBtn).toHaveAttribute("title", "Open command palette (Command + K)");
+    const paletteBtns = screen.getAllByLabelText("Open command palette");
+    expect(paletteBtns).toHaveLength(2);
+    // Mobile search button (sm:hidden)
+    expect(paletteBtns[0]).toHaveAttribute("type", "button");
+    expect(paletteBtns[0]).toHaveAttribute("title", "Open command palette");
+    expect(paletteBtns[0]).toHaveClass("sm:hidden");
 
-    fireEvent.click(paletteBtn);
-    expect(props.onOpenPalette).toHaveBeenCalled();
+    // Desktop search button (hidden sm:flex)
+    expect(paletteBtns[1]).toHaveAttribute("type", "button");
+    expect(paletteBtns[1]).toHaveAttribute("title", "Open command palette (Command + K)");
+    expect(paletteBtns[1]).toHaveClass("sm:flex");
+
+    fireEvent.click(paletteBtns[0]);
+    expect(props.onOpenPalette).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(paletteBtns[1]);
+    expect(props.onOpenPalette).toHaveBeenCalledTimes(2);
+
     fireEvent.click(screen.getByLabelText("Open navigation menu"));
     expect(props.onOpenMobileNav).toHaveBeenCalled();
   });
@@ -270,14 +281,15 @@ describe("TopBar", () => {
   it("ensures top bar interactive triggers carry explicit type button attributes and shortcut tooltips", () => {
     renderTopBar();
     const openMobileNavBtn = screen.getByLabelText("Open navigation menu");
-    const openPaletteBtn = screen.getByLabelText("Open command palette");
+    const openPaletteBtns = screen.getAllByLabelText("Open command palette");
     const copyLinkBtn = screen.getByLabelText("Copy a link to this view");
     const presentBtn = screen.getByLabelText("Enter presentation mode");
     const refreshBtn = screen.getByLabelText("Refresh dashboard data");
     const sampleToggleBtn = screen.getByLabelText(/Sample: OFF - switch to sample dataset/);
 
     expect(openMobileNavBtn).toHaveAttribute("type", "button");
-    expect(openPaletteBtn).toHaveAttribute("type", "button");
+    expect(openPaletteBtns[0]).toHaveAttribute("type", "button");
+    expect(openPaletteBtns[1]).toHaveAttribute("type", "button");
     expect(copyLinkBtn).toHaveAttribute("type", "button");
     expect(presentBtn).toHaveAttribute("type", "button");
     expect(refreshBtn).toHaveAttribute("type", "button");
