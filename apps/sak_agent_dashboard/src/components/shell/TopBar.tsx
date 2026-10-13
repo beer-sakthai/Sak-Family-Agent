@@ -124,6 +124,18 @@ export function TopBar({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Mobile palette trigger: icon-only button so mobile users can open the command palette without a physical keyboard */}
+          <button
+            type="button"
+            onClick={onOpenPalette}
+            aria-label="Open command palette"
+            title="Open command palette"
+            data-chrome="secondary"
+            className="rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent sm:hidden"
+          >
+            <Search className="h-3.5 w-3.5" aria-hidden />
+          </button>
+
           {/* A palette trigger that looks like a search field: the shortcut is
               discoverable without a tour, and it still works on touch. */}
           <button
