@@ -48,7 +48,7 @@ sakthai = "sakthai.cli:main"
 addopts = "-q"
 testpaths = ["tests"]
 markers = [
-    "integration: tests that may hit real external endpoints (Ollama/Anthropic); excluded from CI via -m 'not integration', and self-skip when the endpoint/credential is absent",
+    "integration: tests that may hit real external endpoints (Ollama/Anthropic); CI runs them and they self-skip when the endpoint/credential is absent; deselect locally with -m 'not integration'",
 ]
 
 [tool.coverage.run]
