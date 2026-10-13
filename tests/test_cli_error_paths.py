@@ -141,3 +141,37 @@ def test_memory_family_unknown_persona_is_a_usage_error(runner: CliRunner) -> No
     _assert_clean_failure(result, exit_code=2)
     assert "--personas" in result.output
     assert "nobody" in result.output
+
+
+# --- memory import reads only json snapshots ------------------------------
+
+
+@pytest.mark.parametrize("facts", [["tea"], ["tea", "coffee"]])
+@pytest.mark.parametrize("fmt", ["csv", "jsonl"])
+def test_memory_import_of_a_flat_export_says_which_format_works(
+    runner: CliRunner, tmp_path: Path, fmt: str, facts: list[str]
+) -> None:
+    # A one-record jsonl file is valid JSON, so it fails later than a
+    # multi-record one; both used to surface a bare parse or version error.
+    for fact in facts:
+        runner.invoke(main, ["learn", fact])
+    snap = tmp_path / f"snap.{fmt}"
+    assert runner.invoke(main, ["memory", "export", str(snap), "--format", fmt]).exit_code == 0
+    result = runner.invoke(main, ["memory", "import", str(snap)])
+    _assert_clean_failure(result)
+    assert "--format json" in result.output
+
+
+# --- learn --kind must not be blank ---------------------------------------
+
+
+@pytest.mark.parametrize("kind", ["", "   "])
+def test_learn_rejects_a_blank_kind(runner: CliRunner, kind: str) -> None:
+    result = runner.invoke(main, ["learn", "tea", "--kind", kind])
+    _assert_clean_failure(result, exit_code=2)
+    assert "--kind" in result.output
+
+
+def test_learn_strips_the_kind(runner: CliRunner) -> None:
+    assert runner.invoke(main, ["learn", "tea", "--kind", " drink "]).exit_code == 0
+    assert "[drink] tea" in runner.invoke(main, ["recall", "tea"]).output
