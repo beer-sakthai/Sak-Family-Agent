@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 import types
 from collections.abc import Iterator
 from pathlib import Path
@@ -336,8 +337,11 @@ def test_memory_consolidate_moves_old_facts(runner: CliRunner, sakthai_home: Pat
     from sakthai.memory.store import MemoryStore
 
     with MemoryStore() as store:
-        store.add_fact("very old fact")
-    result = runner.invoke(main, ["memory", "consolidate", "--age", "-1"])
+        fid = store.add_fact("very old fact")
+        two_days_ago = int(time.time()) - 2 * 86400
+        store._conn.execute("UPDATE facts SET updated_at = ? WHERE id = ?", (two_days_ago, fid))
+        store._conn.commit()
+    result = runner.invoke(main, ["memory", "consolidate"])
     assert result.exit_code == 0
     assert "consolidated" in result.output
     assert "1" in result.output

@@ -104,3 +104,40 @@ def test_dry_run_reports_unknown_skill_even_without_credentials(
     _assert_clean_failure(result)
     assert "no credentials found" in result.output
     assert "Unresolved --with-skills name(s): no-such-skill" in result.output
+
+
+# --- budgets must be positive ---------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("flag", "value"),
+    [
+        ("--max-iterations", "0"),
+        ("--max-tokens", "0"),
+        ("--max-seconds", "0"),
+        ("--max-seconds", "-1"),
+    ],
+)
+def test_run_rejects_a_non_positive_budget(runner: CliRunner, flag: str, value: str) -> None:
+    # --dry-run used to pass these, and a real run rejected them only after
+    # setup (iterations, seconds) or a provider round trip (tokens).
+    result = runner.invoke(main, ["run", "--dry-run", "--no-mcp", flag, value, "hi"])
+    _assert_clean_failure(result, exit_code=2)
+    assert flag in result.output
+
+
+def test_memory_consolidate_rejects_a_negative_age(runner: CliRunner) -> None:
+    # A negative age reads as "older than the future", so it folded every fact.
+    result = runner.invoke(main, ["memory", "consolidate", "--age", "-5"])
+    _assert_clean_failure(result, exit_code=2)
+    assert "--age" in result.output
+
+
+# --- memory family --------------------------------------------------------
+
+
+def test_memory_family_unknown_persona_is_a_usage_error(runner: CliRunner) -> None:
+    result = runner.invoke(main, ["memory", "family", "--personas", "sakking,nobody"])
+    _assert_clean_failure(result, exit_code=2)
+    assert "--personas" in result.output
+    assert "nobody" in result.output
