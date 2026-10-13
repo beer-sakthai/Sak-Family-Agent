@@ -325,7 +325,7 @@ export function SessionExplorer({
         <Drawer
           title="Session transcript"
           subtitle={openSessionId}
-          icon={<Terminal className="h-4 w-4 text-hue-cyan" />}
+          icon={<Terminal className="h-4 w-4 text-hue-cyan" aria-hidden="true" />}
           onClose={closeDetail}
           data-testid="session-drawer"
         >

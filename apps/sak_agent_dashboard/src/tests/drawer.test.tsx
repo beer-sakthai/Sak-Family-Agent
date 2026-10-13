@@ -53,7 +53,7 @@ describe("Drawer", () => {
   it("closes on the scrim, which is a real button", () => {
     const { onClose } = renderDrawer();
     // The modal this replaces used a <div onClick> — unreachable by keyboard.
-    fireEvent.click(screen.getByLabelText("Close detail"));
+    fireEvent.click(screen.getByLabelText("Close detail panel backdrop"));
     expect(onClose).toHaveBeenCalled();
   });
 
