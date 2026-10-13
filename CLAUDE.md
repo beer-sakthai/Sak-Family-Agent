@@ -204,7 +204,7 @@ deploy; deliberately not a CI gate, since skills land constantly),
 
 ### CI
 
-Twenty-eight workflows live in `.github/workflows/`. The ones that gate a change:
+Twenty-seven workflows live in `.github/workflows/`. The ones that gate a change:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
@@ -212,7 +212,7 @@ Twenty-eight workflows live in `.github/workflows/`. The ones that gate a change
 | `pylint.yml` | push/PR to `main` | pylint over `personas/sakthai/sakthai` + `tests` |
 | `repository-security-quality.yml` | PR to `main` | skill validation (library frontmatter + persona `skills validate --naming`) + `make compose-personas`; `Quality gates` (a **required status check** — see below); zizmor over **every** workflow; tracked-secret-file check |
 | `dependency-review.yml` | PR to `main` | blocks PRs introducing known-vulnerable deps (`fail-on-severity: high`) |
-| `secret-scan.yml` | push to `main`, all PRs | gitleaks (config `.gitleaks.toml`, which allowlists persona docs) |
+| `secret-scan.yml` | push to `main`, all PRs, daily | gitleaks (config `.gitleaks.toml`, which allowlists persona docs). The daily run scans full history; its known historical hits are baselined by fingerprint in `.gitleaksignore`, so only a new leak turns it red |
 | `dependency-audit.yml` | PRs touching `pyproject.toml`/`uv.lock`/the training locks/`training/**/*.py`, weekly | pip-audit over `uv.lock`, the three `infra/sakthai-training-space/*.lock` files, and every PEP 723 script under `training/` (Dependabot reads neither of the last two). Local version tags (`+cpu`, `+cuNNN`) are stripped first: pip-audit skips `torch==…+cpu` as "not found on PyPI" and still reports clean |
 | `ossar.yml` | push/PR to `main`, weekly | open-source static analysis |
 | `sonarcloud.yml` | push to `main` | SonarCloud analysis |
@@ -224,9 +224,9 @@ Twenty-eight workflows live in `.github/workflows/`. The ones that gate a change
 | `codeql.yml` | push/PR to `main`, weekly | CodeQL (advanced setup) |
 
 Scheduled / manual only, so they never block a PR: `continuous-security.yml`
-(nightly), `verify-assets.yml` (daily HF asset check), `run-evals.yml` (weekly
-lm-eval, installs the `evals` dependency group), `auto-dependency-update.yml`
-(weekly), `stale.yml` (daily), `summary.yml` (on new issues), `manual.yml`,
+(`workflow_dispatch` only; needs an `ANTHROPIC_API_KEY` repository secret),
+`verify-assets.yml` (daily HF asset check), `run-evals.yml` (weekly lm-eval,
+installs the `evals` dependency group), `stale.yml` (daily), `summary.yml` (on new issues), `manual.yml`,
 `scorecard.yml` (push to `main` + weekly), `code-scanning-cleanup.yml`
 (`workflow_dispatch` only), `branch-cleanup.yml` (`workflow_dispatch` only —
 deletes branches whose merge into `main` would change nothing, dry-run unless
