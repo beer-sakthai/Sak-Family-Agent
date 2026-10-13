@@ -1,7 +1,7 @@
 {
   "meta": {
-    "source_commit": "8e59a0f",
-    "source_date": "2026-09-26T08:31:46+01:00",
+    "source_commit": "4e3f1abf",
+    "source_date": "2026-10-13T23:17:58+00:00",
     "generator": "scripts/gen_system_snapshot.py"
   },
   "personas": [
@@ -16,7 +16,6 @@
       "mcp_servers": [
         "chrome-devtools",
         "hf-media",
-        "huggingface",
         "playwright"
       ]
     },
@@ -26,11 +25,9 @@
       "role": "Main Lead & HF Master",
       "domain": "Hugging Face Hub, Model Lifecycle, 6-Stage Energy Cycle, QLoRA",
       "provider": "huggingface",
-      "model": "gemini-3.1-flash-lite",
+      "model": "deepseek-ai/DeepSeek-V4.1-Flash",
       "skill_count": 299,
-      "mcp_servers": [
-        "huggingface"
-      ]
+      "mcp_servers": []
     },
     {
       "name": "saksee",
@@ -38,11 +35,10 @@
       "role": "Web / Browser Specialist (Deputy 3)",
       "domain": "Playwright, Live Web Scraping, Chrome DevTools, OCR & extraction",
       "provider": "huggingface",
-      "model": "gemini-3.1-flash-lite",
+      "model": "deepseek-ai/DeepSeek-V4.1-Flash",
       "skill_count": 182,
       "mcp_servers": [
         "chrome-devtools",
-        "huggingface",
         "playwright"
       ]
     },
@@ -52,11 +48,10 @@
       "role": "Social / Content Specialist",
       "domain": "Brand Copy, Social Posts, Hub Dataset Cards, Storytelling",
       "provider": "huggingface",
-      "model": "DeepSeek-V4-Flash",
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
       "skill_count": 43,
       "mcp_servers": [
-        "hf-media",
-        "huggingface"
+        "hf-media"
       ]
     },
     {
@@ -65,11 +60,9 @@
       "role": "Master of GitHub, CI/CD & Automation",
       "domain": "GitHub Actions, Cron Fleet, DevSecOps, Release Automation",
       "provider": "huggingface",
-      "model": "gemini-2.5-flash-lite",
+      "model": "deepseek-ai/DeepSeek-V4.1-Flash",
       "skill_count": 180,
-      "mcp_servers": [
-        "huggingface"
-      ]
+      "mcp_servers": []
     },
     {
       "name": "saktan",
@@ -87,19 +80,19 @@
       "name": "agent",
       "kind": "package",
       "files": 19,
-      "lines": 6281
+      "lines": 6300
     },
     {
       "name": "auth",
       "kind": "module",
       "files": 1,
-      "lines": 313
+      "lines": 317
     },
     {
       "name": "cli",
       "kind": "package",
       "files": 13,
-      "lines": 2632
+      "lines": 2677
     },
     {
       "name": "client",
@@ -165,7 +158,7 @@
       "name": "memory",
       "kind": "package",
       "files": 7,
-      "lines": 1601
+      "lines": 1627
     },
     {
       "name": "sakking_skills",
@@ -177,13 +170,13 @@
       "name": "sandbox",
       "kind": "module",
       "files": 1,
-      "lines": 167
+      "lines": 168
     },
     {
       "name": "scripts",
       "kind": "package",
       "files": 2,
-      "lines": 121
+      "lines": 130
     },
     {
       "name": "skills",
@@ -207,7 +200,7 @@
       "name": "web",
       "kind": "package",
       "files": 3,
-      "lines": 1775
+      "lines": 1868
     }
   ],
   "tools": [
@@ -614,18 +607,6 @@
       ]
     },
     {
-      "file": "auto-dependency-update.yml",
-      "name": "Auto Dependency Update",
-      "triggers": [
-        "schedule",
-        "workflow_dispatch"
-      ],
-      "gates_prs": false,
-      "jobs": [
-        "auto-update"
-      ]
-    },
-    {
       "file": "bandit.yml",
       "name": "Bandit",
       "triggers": [
@@ -689,7 +670,6 @@
       "file": "continuous-security.yml",
       "name": "Continuous Security Scan",
       "triggers": [
-        "schedule",
         "workflow_dispatch"
       ],
       "gates_prs": false,
@@ -935,12 +915,12 @@
   ],
   "tests": {
     "coverage_floor": 96.0,
-    "test_functions": 1952,
+    "test_functions": 2021,
     "trees": [
       {
         "name": "sakthai (tests/)",
         "path": "tests",
-        "files": 110,
+        "files": 113,
         "runner": "ci.yml"
       },
       {
@@ -952,7 +932,7 @@
       {
         "name": "sak_agent_dashboard",
         "path": "apps/sak_agent_dashboard/src/tests",
-        "files": 18,
+        "files": 19,
         "runner": "apps.yml"
       },
       {

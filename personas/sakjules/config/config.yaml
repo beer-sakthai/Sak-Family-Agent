@@ -1,6 +1,6 @@
 model:
   provider: huggingface
-  default: gemini-2.5-flash-lite
+  default: deepseek-ai/DeepSeek-V4.1-Flash
 fallback_model:
   provider: ollama-cloud
   model: gpt-oss:120b
