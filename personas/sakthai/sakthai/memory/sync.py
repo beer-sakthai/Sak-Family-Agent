@@ -16,7 +16,7 @@ from typing import Any
 
 from ..config import sakthai_home
 from ..giturl import validate_git_url
-from .store import SNAPSHOT_VERSION, MemoryStore
+from .store import LEGACY_SNAPSHOT_VERSION, MemoryStore
 
 # Ceiling on the HTTP backup POST so a dead endpoint fails instead of hanging.
 _HTTP_SYNC_TIMEOUT = 30.0
@@ -217,8 +217,11 @@ def _merge_remote_into_store(home: Path) -> tuple[int, int]:
     facts_path = home / "facts.jsonl"
     obs_path = home / "observations.jsonl"
 
+    # The JSONL files carry no version, and a remote running a sakthai that
+    # predates fact tags writes rows without them: read them under the v1 rules,
+    # where tags are optional (still validated when present).
     snapshot = {
-        "version": SNAPSHOT_VERSION,
+        "version": LEGACY_SNAPSHOT_VERSION,
         "facts": _read_jsonl(facts_path),
         "observations": _read_jsonl(obs_path),
     }
