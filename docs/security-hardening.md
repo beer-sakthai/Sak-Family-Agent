@@ -19,17 +19,33 @@ findings and how each is prevented going forward.
 
 ## Operational action required (not fixable in code)
 
-**Rotate two credentials.** `.gitleaks.toml` previously allowlisted, by exact
-value, a `ck_…` consumer key and the token `H9hhwS50qwxJIORLdXbIgFHMUeMKyn4h`.
-Its own comment noted these were scrubbed from the working tree but **remain in
-git history**. Scrubbing a secret from the tree does not invalidate it — if it
-was ever pushed, it is compromised.
+**Revoke three credentials.** Each was committed, pushed, and later scrubbed from
+the working tree, so each **remains in git history**. Scrubbing a secret from
+the tree does not invalidate it: if it was ever pushed, it is compromised.
 
-- **Action:** rotate/revoke both at their providers. This is the only real fix.
-- The exact-value allowlist entries were **removed** so gitleaks will flag them
-  if they are ever reintroduced. History was **not** rewritten (a separate,
-  riskier operation — decide explicitly if the values must be purged from
-  history via `git filter-repo`/BFG, and rotate first regardless).
+| Credential | Where it was committed | Revoke at |
+|---|---|---|
+| Composio consumer key (`ck_…`) | `config/config.yaml`, the `composio` MCP server's `x-consumer-api-key` header (2026-06-21) | the Composio dashboard |
+| Mistral API key (`H9hh…`) | `default/config.yaml`, the `api_key` of the model provider and of the `mistral-code208` custom provider (2026-06-20) | the Mistral console, API keys |
+| Kaggle API token (`KGAT…`) | `scripts/family-status.sh`, `KAGGLE_API_TOKEN` (2026-07-25, commit `130d5492`) | Kaggle, Settings → API |
+
+Earlier revisions of this section, `.gitleaks.toml` and
+`security/SECURITY_FIXES_PLAN.md` called the first two a "Stripe" key and a
+"Twilio" token. The headers and config keys they sit under show they are
+Composio and Mistral keys. This section and `.gitleaks.toml` also quoted the
+Mistral key in full. It is now shortened to its first four characters
+everywhere in the tree.
+
+- **Action:** revoke all three at their providers. This is the only real fix.
+- `.gitleaks.toml` no longer allowlists any value, so gitleaks flags these if
+  they are ever committed again. The scheduled full-history scan in
+  `secret-scan.yml` is kept green by `.gitleaksignore`. That file lists the
+  exact historical fingerprints (commit, file, rule, line) of these hits and of
+  19 false positives. A fingerprint matches one historical line only, so any
+  new commit carrying the same value still fails the scan.
+- History was **not** rewritten. Purging the values with `git filter-repo`/BFG
+  is a separate and riskier operation: it breaks every existing clone. Decide
+  on it explicitly, and revoke first either way.
 
 **Rotate (or delete) `GH_PAT_FOR_ACTIONS`.** Until finding 17 was fixed, the
 nightly `continuous-security.yml` agent held this token in its environment and

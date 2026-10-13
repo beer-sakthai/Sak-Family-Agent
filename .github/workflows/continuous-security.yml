@@ -1,7 +1,12 @@
-# This workflow runs the agent with security-focused skills on a schedule to
-# proactively find, triage, and propose fixes for vulnerabilities.
+# This workflow runs the agent with security-focused skills to proactively
+# find, triage, and propose fixes for vulnerabilities.
 #
-# This file is ACTIVE: it lives under .github/workflows/ and runs nightly.
+# Manual only (Actions tab -> Run workflow). It ran nightly until 2026-10-13,
+# but it needs an ANTHROPIC_API_KEY repository secret and every scheduled run
+# since at least 2026-10-02 failed for want of one. Add the secret before
+# running it, and restore the schedule only if the nightly API cost is wanted.
+#
+# This file is ACTIVE: it lives under .github/workflows/.
 # A stale duplicate previously sat at the repository root and was documented
 # in docs/security-hardening.md as proof this workflow was dormant — that
 # doc entry was wrong (this copy has been live since the workflow file first
@@ -10,9 +15,6 @@ name: Continuous Security Scan
 
 on:
   workflow_dispatch: # Allows manual triggering from the Actions tab
-  schedule:
-    # Runs nightly at 2 AM UTC
-    - cron: '0 2 * * *'
 
 permissions:
   contents: read
