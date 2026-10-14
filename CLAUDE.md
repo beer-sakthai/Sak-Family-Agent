@@ -985,9 +985,10 @@ Skill body goes here. This is injected into the agent system prompt when the
 skill is active.
 ```
 
-Note: `tags`/`related_skills` must be nested under `metadata.sakthai` — a flat
-top-level `tags:`/`related_skills:` is silently ignored by the parser in
-`skills.py`.
+Note: `tags`/`related_skills` belong under `metadata.sakthai`. The parser in
+`skills.py` falls back to `metadata.hermes` (skills written for the Hermes
+runtime) and then to flat top-level fields, so older skills still show theirs;
+it used to ignore both, which hid the tags of 75 skills.
 
 Discovery roots are listed under "Other subsystems" above. Run
 `sakthai skills list` to see everything discovered, and `sakthai skills validate
