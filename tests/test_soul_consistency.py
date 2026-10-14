@@ -10,11 +10,16 @@ so the drift cannot silently regress.
 from __future__ import annotations
 
 import re
+import shlex
 from pathlib import Path
 
+import click
 import pytest
+import yaml
 
 from sakthai.agent.tools import BUILTIN_TOOLS
+from sakthai.cli import main as cli_main
+from sakthai.config import persona_model_defaults
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PERSONAS_DIR = REPO_ROOT / "personas"
@@ -48,10 +53,19 @@ def test_soul_names_all_five_siblings(slug: str) -> None:
 
 
 @pytest.mark.parametrize("slug", sorted(PERSONAS))
-def test_soul_follows_local_model_policy(slug: str) -> None:
-    """All agents default to the free local Ollama model (PR #344 policy)."""
+def test_soul_does_not_misstate_its_default_model(slug: str) -> None:
+    """A SOUL must not claim a default model its own config.yaml contradicts.
+
+    PR #344 put every agent on local Ollama and this test once required each
+    SOUL to say so; #1619 moved five of them to Hugging Face, which left a
+    "Default Local Model: Ollama" footer that only SakTan's config still bears out.
+    """
     text = soul_text(slug)
-    assert "Ollama" in text, f"{slug}/SOUL.md does not mention Ollama"
+    provider, _model = persona_model_defaults(slug)
+    if provider != "ollama":
+        assert "Default Local Model: Ollama" not in text, (
+            f"{slug}/SOUL.md claims Ollama, but its config.yaml uses {provider!r}"
+        )
     for stale_model in ("llama3", "`qwen`"):
         assert stale_model not in text.lower(), (
             f"{slug}/SOUL.md names {stale_model!r} — pre-PR-#344 model drift"
@@ -59,7 +73,7 @@ def test_soul_follows_local_model_policy(slug: str) -> None:
 
 
 def test_financial_analysis_has_no_owner() -> None:
-    """No active persona claims financial analysis (SakTan was deleted)."""
+    """No active persona claims financial analysis (SakTan, which once held that lane, now keeps operations)."""
     owners = [slug for slug in PERSONAS if "Master of Financial Analysis" in soul_text(slug)]
     assert owners == [], f"finance role still claimed by: {owners}"
 
@@ -76,6 +90,36 @@ def test_memory_tools_exist_in_builtin_tools() -> None:
     """The memory tools the SOULs point agents at must exist in the runtime."""
     builtin_names = {tool.name for tool in BUILTIN_TOOLS}
     assert {"learn", "recall", "search"} <= builtin_names
+
+
+def soul_cli_lines(slug: str) -> list[str]:
+    """Every ``sakthai ...`` command in the SOUL's code blocks, continuations joined."""
+    lines: list[str] = []
+    for block in re.findall(r"```[a-z]*\n(.*?)```", soul_text(slug), re.S):
+        joined = re.sub(r"\\\n\s*", " ", block)
+        lines += [
+            line.strip() for line in joined.splitlines() if line.strip().startswith("sakthai ")
+        ]
+    return lines
+
+
+@pytest.mark.parametrize("slug", sorted(PERSONAS))
+def test_soul_cli_commands_parse_against_the_real_cli(slug: str) -> None:
+    """Each ``sakthai`` command a SOUL tells its agent to run must exist and parse.
+
+    Five SOULs once told agents to run ``sakthai search ... --tag a --tag b``,
+    a command the CLI never had.
+    """
+    for line in soul_cli_lines(slug):
+        command: click.Command = cli_main
+        args = shlex.split(line)[1:]
+        while isinstance(command, click.Group) and args and args[0] in command.commands:
+            command = command.commands[args.pop(0)]
+        assert not isinstance(command, click.Group), f"{slug}/SOUL.md: no such command: {line}"
+        try:
+            command.make_context("sakthai", args)
+        except click.UsageError as exc:
+            pytest.fail(f"{slug}/SOUL.md: `{line}` does not parse: {exc.format_message()}")
 
 
 HERMES_SOULS: dict[str, Path] = {
@@ -118,6 +162,20 @@ def test_shared_soul_lists_all_six_handles() -> None:
     text = (REPO_ROOT / "docs" / "SOUL.md").read_text(encoding="utf-8")
     missing = [f"@{slug}_agent_bot" for slug in PERSONAS if f"@{slug}_agent_bot" not in text]
     assert not missing, f"docs/SOUL.md missing handle(s): {missing}"
+
+
+def test_shared_soul_roles_match_the_workspace_configs() -> None:
+    """docs/SOUL.md's team table shows each persona's role from its own workspace.yaml.
+
+    It once listed SakTan and SakJules as retired and named models no config used.
+    """
+    text = (REPO_ROOT / "docs" / "SOUL.md").read_text(encoding="utf-8")
+    for slug in PERSONAS:
+        workspace = yaml.safe_load(
+            (PERSONAS_DIR / slug / "config" / "workspace.yaml").read_text(encoding="utf-8")
+        )
+        row = f"| `@{slug}_agent_bot` | {workspace['role']} |"
+        assert row in text, f"docs/SOUL.md has no row {row!r}"
 
 
 def test_personas_readme_skill_counts_match_disk() -> None:

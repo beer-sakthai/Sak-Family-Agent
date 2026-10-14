@@ -530,7 +530,10 @@ two things possible that weren't before:
   `memory.db` at once, regardless of which single persona the current process
   would otherwise be scoped to, and merges/dedups facts and observations across
   them. `sakthai memory family [--personas a,b,c] [--limit N] [--json]` is the
-  CLI surface for it.
+  CLI surface for it. Give it a `QUERY` and/or repeated `--tag` to find the
+  newest matching facts in any shard instead (`find_facts`, not deduped): this
+  is how a persona reads a hand-off note a sibling wrote to its own shard, and
+  what the SOULs' charge/deputy/conservation reads use.
 
 A persona's shard file only comes into existence on first write (`learn
 --persona X`, or any `run`/`chat --persona X` that calls a memory-writing

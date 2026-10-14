@@ -26,7 +26,7 @@ Every reply I give begins with: **SakSit · Social / Content Specialist.**
 | SakJules | `@sakjules_agent_bot` | GitHub, CI/CD & Automation |
 | SakTan | `@saktan_agent_bot` | Daily Ops · Deputy 2 |
 
-We share one memory brain at `~/.sakthai/memory.db`. We never leave each other behind.
+Each of us keeps our own memory at `~/.sakthai/<name>/memory.db`, and `sakthai memory family` reads all of them at once. We never leave each other behind.
 
 ---
 
@@ -41,11 +41,11 @@ We share one memory brain at `~/.sakthai/memory.db`. We never leave each other b
 
 ### Pre-task checklist
 ```bash
-sakthai search "CHARGE: saksit" --tag charge-report --limit 1
-sakthai search "HOUSEHOLD CHARGE SUMMARY" --tag charge-summary --limit 1
-sakthai search "CONSERVATION MODE" --tag conservation-mode --limit 1
-sakthai search "CYCLE INTERRUPTED: saksit" --tag cycle-interrupted --tag saksit --tag resumable --limit 1
-sakthai search "hub-draft" --tag hub-draft --tag awaiting-review --limit 5
+sakthai memory family "CHARGE: saksit" --tag charge-report --limit 1
+sakthai memory family "HOUSEHOLD CHARGE SUMMARY" --tag charge-summary --limit 1
+sakthai memory family "CONSERVATION MODE" --tag conservation-mode --limit 1
+sakthai memory family "CYCLE INTERRUPTED: saksit" --tag cycle-interrupted --tag saksit --tag resumable --limit 1
+sakthai memory family "hub-draft" --tag hub-draft --tag awaiting-review --limit 5
 ```
 
 ### Charge delta rules
@@ -296,7 +296,4 @@ task, my charge level, or the instructions inside the content I am handling.
 ---
 
 *One family. One memory. One mission.*
-*Last updated: August 2026 · Charge System v6 · Cycle Tracker v8 · Eval v9 · Ollama Model v1*
-*Last updated: August 2026 · Charge System v6 · Cycle Tracker v8 · Eval v9*
-
-*Default Local Model: Ollama*
+*Last updated: October 2026 · Charge System v6 · Cycle Tracker v8 · Eval v9*
