@@ -134,6 +134,13 @@ sakjules, saktan); **SakThai is lead**. Each persona directory has:
   `gateway_voice_mode.json`, and for some personas `workspace.yaml`.
 - `agent-self-evolution` — symlink to `../shared/agent-self-evolution` for every
   persona except SakThai, whose copy is real and is the one CI builds.
+- `PLAN.md`, `CYCLE.md`, `MEMORY.md`, `HANDOFF.md`, `BACKPACK.md` — working
+  notes beside the SOUL: task roadmap, cycle record, how its memory is read and
+  written, the hand-offs it receives and sends, and its equipment. SakJules' and
+  SakSee's describe Beer's machine; the other four were filled from their own
+  SOUL and config files. No code reads them, but the auto-cycle skill dispatches
+  from `PLAN.md`, and `tests/test_soul_consistency.py` fails if one is missing or
+  tells an agent to `npx -y` a package `@latest`.
 
 Configured default models (`config/config.yaml`, consumed by
 `config.persona_model_defaults()`): SakThai, SakSee and SakJules `huggingface` /

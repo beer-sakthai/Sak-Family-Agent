@@ -178,6 +178,23 @@ def test_shared_soul_roles_match_the_workspace_configs() -> None:
         assert row in text, f"docs/SOUL.md has no row {row!r}"
 
 
+PERSONA_FILES = ("SOUL.md", "PLAN.md", "CYCLE.md", "MEMORY.md", "HANDOFF.md", "BACKPACK.md")
+
+
+@pytest.mark.parametrize("slug", sorted(PERSONAS))
+def test_persona_keeps_the_working_files_and_installs_nothing_at_runtime(slug: str) -> None:
+    """Every persona carries the same six files, and none says to `npx -y` a package `@latest`.
+
+    Only SakJules and SakSee had the five beside SOUL.md once, and both of their
+    BACKPACK files listed `@latest` installs that their own Security Rule 5 forbids.
+    """
+    for name in PERSONA_FILES:
+        path = PERSONAS_DIR / slug / name
+        assert path.is_file(), f"personas/{slug}/{name} is missing"
+        unpinned = re.findall(r"npx -y [\w@/.-]+@latest", path.read_text(encoding="utf-8"))
+        assert not unpinned, f"personas/{slug}/{name} installs unpinned: {unpinned}"
+
+
 def test_personas_readme_skill_counts_match_disk() -> None:
     """personas/README.md per-persona and total skill counts must match disk."""
     readme = (PERSONAS_DIR / "README.md").read_text(encoding="utf-8")
