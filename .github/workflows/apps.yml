@@ -15,12 +15,18 @@ on:
       - "apps/**"
       - "personas/sakthai/sakthai/web/contracts.py"
       - "scripts/gen_dashboard_types.py"
+      # The dashboard serves copies of the README's persona portraits;
+      # persona-avatar.test.tsx fails when the two sets drift.
+      - "docs/images/personas/**"
       - ".github/workflows/apps.yml"
   pull_request:
     paths:
       - "apps/**"
       - "personas/sakthai/sakthai/web/contracts.py"
       - "scripts/gen_dashboard_types.py"
+      # The dashboard serves copies of the README's persona portraits;
+      # persona-avatar.test.tsx fails when the two sets drift.
+      - "docs/images/personas/**"
       - ".github/workflows/apps.yml"
 
 permissions:

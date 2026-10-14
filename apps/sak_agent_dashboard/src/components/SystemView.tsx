@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import { compactNumber } from "@/lib/format";
+import { PersonaAvatar } from "@/components/PersonaAvatar";
 import { displayName } from "@/lib/persona";
 import {
   SYSTEM_SNAPSHOT,
@@ -272,21 +273,24 @@ function PersonaGrid({ snapshot }: { snapshot: SystemSnapshot }) {
             }`}
           >
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="flex items-center gap-1.5 font-display text-base font-semibold text-fg">
-                  {displayName(persona.name)}
-                  {persona.lead && (
-                    <span
-                      title="Family lead persona"
-                      aria-label="Family lead persona"
-                      className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent"
-                    >
-                      <Crown className="h-3 w-3" aria-hidden />
-                      Lead
-                    </span>
-                  )}
-                </p>
-                <p className="mt-0.5 text-xs text-fg-3">{persona.role || "—"}</p>
+              <div className="flex min-w-0 items-start gap-3">
+                <PersonaAvatar name={persona.name} size={44} />
+                <div className="min-w-0">
+                  <p className="flex items-center gap-1.5 font-display text-base font-semibold text-fg">
+                    {displayName(persona.name)}
+                    {persona.lead && (
+                      <span
+                        title="Family lead persona"
+                        aria-label="Family lead persona"
+                        className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent"
+                      >
+                        <Crown className="h-3 w-3" aria-hidden />
+                        Lead
+                      </span>
+                    )}
+                  </p>
+                  <p className="mt-0.5 text-xs text-fg-3">{persona.role || "—"}</p>
+                </div>
               </div>
               <span
                 className="shrink-0 rounded-md border border-line bg-sunken/60 px-1.5 py-0.5 font-mono text-[10px] text-fg-3"
