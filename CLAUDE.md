@@ -519,7 +519,9 @@ two things possible that weren't before:
   that persona's own skill overlay instead of SakThai's, auto-load its own
   `config/mcp.json` when `SAKTHAI_MCP_CONFIG` isn't already set, and default
   `--model`/`--provider` from its own `config/config.yaml` when those flags are
-  left at their CLI defaults. `memory sync`/`memory pull` reject `--persona`
+  left at their CLI defaults (for `chat`, as a pair and only when neither flag
+  is passed, so one explicit flag never mixes Ollama with a Hub model).
+  `memory sync`/`memory pull` reject `--persona`
   (they always target the unscoped `memory.db` — no per-persona git/HTTP sync
   exists). `run --persona` can't combine with `--sandbox` (the sandbox only
   bind-mounts the unscoped `memory.db`).
