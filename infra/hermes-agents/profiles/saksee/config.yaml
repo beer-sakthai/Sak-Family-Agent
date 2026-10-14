@@ -1,2 +1,2 @@
 model:
-  provider: anthropic
+  provider: huggingface

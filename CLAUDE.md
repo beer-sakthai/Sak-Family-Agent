@@ -136,10 +136,13 @@ sakjules, saktan); **SakThai is lead**. Each persona directory has:
   persona except SakThai, whose copy is real and is the one CI builds.
 
 Configured default models (`config/config.yaml`, consumed by
-`config.persona_model_defaults()`): SakThai and SakSee `huggingface` /
-`gemini-3.1-flash-lite`, SakKing `huggingface` /
-`Qwen/Qwen3-Coder-30B-A3B-Instruct`, SakSit `huggingface` / `DeepSeek-V4-Flash`,
-SakJules `huggingface` / `gemini-2.5-flash-lite`, SakTan `ollama` / `sakthai`.
+`config.persona_model_defaults()`): SakThai, SakSee and SakJules `huggingface` /
+`deepseek-ai/DeepSeek-V4.1-Flash`, SakKing `huggingface` /
+`Qwen/Qwen3-Coder-30B-A3B-Instruct`, SakSit `huggingface` /
+`deepseek-ai/DeepSeek-V4-Flash`, SakTan `ollama` / `sakthai`. The Hugging Face
+router needs the full `org/model` repo ID, and only models published on the Hub
+can be served (no Gemini). The VM deployment overrides all of these with Azure
+OpenAI models in `infra/vm-agents/sakthai-agent-run.sh`.
 
 **Shared resources:** `personas/shared/` holds `sakthai/` (the shared package
 copy), `agent-self-evolution/` (template), `skills/` (3 `Sak-*` skills, identical

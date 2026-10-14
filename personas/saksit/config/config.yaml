@@ -1,6 +1,6 @@
 model:
   provider: huggingface
-  default: DeepSeek-V4-Flash
+  default: deepseek-ai/DeepSeek-V4-Flash
 providers: {}
 fallback_providers: []
 credential_pool_strategies: {}
