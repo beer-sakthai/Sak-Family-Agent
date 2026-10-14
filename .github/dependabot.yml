@@ -99,7 +99,7 @@ updates:
   # without them each entry defaults to 5 ungrouped PRs, so these two alone
   # could open 10 a day and bury everything else in the queue.
   - package-ecosystem: npm
-    directory: /personas/saksee/skills/SakSee-stitch::react-components
+    directory: /personas/saksee/skills/SakSee-stitch-react-components
     schedule:
       interval: daily
     open-pull-requests-limit: 3
@@ -108,7 +108,7 @@ updates:
         update-types: ["minor", "patch"]
 
   - package-ecosystem: npm
-    directory: /personas/saksee/skills/SakSee-stitch::react-native
+    directory: /personas/saksee/skills/SakSee-stitch-react-native
     schedule:
       interval: daily
     open-pull-requests-limit: 3
