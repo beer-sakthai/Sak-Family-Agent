@@ -1296,10 +1296,11 @@ describe("DemoModeToggle", () => {
     expect(onButton).toHaveAttribute("aria-label", "Sample: ON - switch to live agent data");
   });
 
-  it("reports the source actually in use", () => {
+  it("reports the source actually in use, inside a live region", () => {
     render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="local" />);
     const activeSource = screen.getByTestId("active-source");
     expect(activeSource).toHaveTextContent("Live · local ~/.sakthai");
+    expect(activeSource.closest('[role="status"]')).toBe(screen.getByTestId("active-source-status"));
     expect(activeSource).toHaveAttribute(
       "title",
       "Data source: Local runtime directory (~/.sakthai)",
@@ -1308,6 +1309,19 @@ describe("DemoModeToggle", () => {
       "aria-label",
       "Data source: Local runtime directory (~/.sakthai)",
     );
+  });
+
+  it("mounts the live region empty before the source is known, then fills it", () => {
+    // Screen readers announce changes to a region that already exists; one
+    // mounted already filled on the first response is usually read by nobody.
+    const { rerender } = render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource={null} />);
+    const region = screen.getByTestId("active-source-status");
+    expect(region).toHaveAttribute("role", "status");
+    expect(region).toBeEmptyDOMElement();
+
+    rerender(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="demo" />);
+    expect(screen.getByTestId("active-source-status")).toBe(region);
+    expect(region).toHaveTextContent("Sample data");
   });
 
   it("can report demo even while the toggle is off", () => {
