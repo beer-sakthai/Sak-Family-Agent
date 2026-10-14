@@ -217,7 +217,7 @@ export function StitchStudio() {
               role="tab"
               tabIndex={activeTab === "preview" ? 0 : -1}
               aria-selected={activeTab === "preview"}
-              aria-controls="stitch-panel-preview"
+              aria-controls="stitch-tabpanel"
               title={activeTab === "preview" ? "Viewing Live Preview" : "Switch to Live Preview view"}
               onClick={() => setActiveTab("preview")}
               className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
@@ -235,7 +235,7 @@ export function StitchStudio() {
               role="tab"
               tabIndex={activeTab === "code" ? 0 : -1}
               aria-selected={activeTab === "code"}
-              aria-controls="stitch-panel-code"
+              aria-controls="stitch-tabpanel"
               title={activeTab === "code" ? "Viewing TSX Code" : "Switch to TSX Code view"}
               onClick={() => setActiveTab("code")}
               className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
@@ -253,7 +253,7 @@ export function StitchStudio() {
               role="tab"
               tabIndex={activeTab === "spec" ? 0 : -1}
               aria-selected={activeTab === "spec"}
-              aria-controls="stitch-panel-spec"
+              aria-controls="stitch-tabpanel"
               title={activeTab === "spec" ? "Viewing Stitch JSON Spec" : "Switch to Stitch JSON Spec view"}
               onClick={() => setActiveTab("spec")}
               className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
@@ -282,7 +282,7 @@ export function StitchStudio() {
 
         {/* Tab Body Content */}
         <div
-          id={`stitch-panel-${activeTab}`}
+          id="stitch-tabpanel"
           role="tabpanel"
           aria-labelledby={`stitch-tab-${activeTab}`}
           tabIndex={0}
