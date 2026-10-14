@@ -847,17 +847,22 @@ export default function Home() {
                 />
               )}
 
-              {awaitingFirstLoad ? (
-                <PanelSkeleton label="Loading operational signals" />
-              ) : (
-                <OperationsPulse
-                  personas={personasPayload}
-                  metrics={metrics}
-                  audit={audit}
-                  workflows={workflows}
-                  onNavigate={goToTab}
-                />
-              )}
+              {/* The pulse is Overview's briefing: four cards that each point
+                  at another tab. Above every tab it was ~250px of the same
+                  four cards standing between the reader and the tab they
+                  opened, and on the tab a card points at it says nothing new. */}
+              {activeTab === "overview" &&
+                (awaitingFirstLoad ? (
+                  <PanelSkeleton label="Loading operational signals" />
+                ) : (
+                  <OperationsPulse
+                    personas={personasPayload}
+                    metrics={metrics}
+                    audit={audit}
+                    workflows={workflows}
+                    onNavigate={goToTab}
+                  />
+                ))}
             </>
           )}
 

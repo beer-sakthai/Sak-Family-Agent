@@ -7,7 +7,6 @@ import {
   Award,
   Brain,
   Clock,
-  Cpu,
   Database,
   Filter,
   MessageSquare,
@@ -18,6 +17,7 @@ import { compactNumber, duration, relativeTime } from "@/lib/format";
 import type { TabId } from "@/lib/nav";
 
 import { Drawer } from "./Drawer";
+import { PersonaAvatar } from "./PersonaAvatar";
 
 interface PersonaDrawerProps {
   persona: PersonaSummary;
@@ -143,7 +143,7 @@ export function PersonaDrawer({
           {persona.last_run_at !== null && ` · last run ${relativeTime(persona.last_run_at * 1000)}`}
         </span>
       }
-      icon={<Cpu className="h-5 w-5 text-accent" aria-hidden />}
+      icon={<PersonaAvatar name={persona.name} size={40} />}
       onClose={onClose}
       data-testid="persona-drawer"
     >
