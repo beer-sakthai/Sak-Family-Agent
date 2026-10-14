@@ -1290,10 +1290,11 @@ describe("DemoModeToggle", () => {
     expect(onButton).toHaveAttribute("aria-label", "Sample: ON - switch to live agent data");
   });
 
-  it("reports the source actually in use", () => {
+  it("reports the source actually in use with role='status'", () => {
     render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="local" />);
     const activeSource = screen.getByTestId("active-source");
     expect(activeSource).toHaveTextContent("Live · local ~/.sakthai");
+    expect(activeSource).toHaveAttribute("role", "status");
     expect(activeSource).toHaveAttribute(
       "title",
       "Data source: Local runtime directory (~/.sakthai)",

@@ -74,7 +74,7 @@ describe("OperationsPulse", () => {
     expect(runQualityBar).toHaveAttribute("aria-valuetext", "98%");
   });
 
-  it("gives each status pill a tooltip and accessible name", () => {
+  it("gives each status pill a tooltip, status role, and accessible name", () => {
     render(
       <OperationsPulse
         personas={demoPersonas()}
@@ -85,6 +85,10 @@ describe("OperationsPulse", () => {
     );
 
     expect(screen.getAllByTitle(/^Signal status:/)).toHaveLength(4);
-    expect(screen.getAllByLabelText(/^Status:/)).toHaveLength(4);
+    const statusPills = screen.getAllByLabelText(/^Status:/);
+    expect(statusPills).toHaveLength(4);
+    statusPills.forEach((pill) => {
+      expect(pill).toHaveAttribute("role", "status");
+    });
   });
 });

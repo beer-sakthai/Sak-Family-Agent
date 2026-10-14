@@ -19,19 +19,19 @@ const SOURCE_LABELS: Record<
   local: {
     label: "Live · local ~/.sakthai",
     title: "Data source: Local runtime directory (~/.sakthai)",
-    icon: <Database className="h-3 w-3" aria-hidden />,
+    icon: <Database className="h-3 w-3" aria-hidden="true" />,
     classes: "bg-hue-emerald/10 text-hue-emerald border-hue-emerald-line/30",
   },
   api: {
     label: "Live · SakThai API",
     title: "Data source: Remote SakThai API endpoint",
-    icon: <Cloud className="h-3 w-3" aria-hidden />,
+    icon: <Cloud className="h-3 w-3" aria-hidden="true" />,
     classes: "bg-hue-cyan/10 text-hue-cyan border-hue-cyan-line/30",
   },
   demo: {
     label: "Sample data",
     title: "Data source: Demonstration sample dataset",
-    icon: <FlaskConical className="h-3 w-3" aria-hidden />,
+    icon: <FlaskConical className="h-3 w-3" aria-hidden="true" />,
     classes: "bg-hue-amber/10 text-hue-amber border-hue-amber-line/30",
   },
 };
@@ -46,6 +46,7 @@ export function DemoModeToggle({ isDemo, onToggle, activeSource }: DemoModeToggl
           ~/.sakthai falls back to demo, and this is how you find out. */}
       {source && (
         <span
+          role="status"
           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border ${source.classes}`}
           data-testid="active-source"
           title={source.title}
