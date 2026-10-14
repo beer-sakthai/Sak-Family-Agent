@@ -9,6 +9,7 @@ network or spawns a subprocess.
 
 from __future__ import annotations
 
+import itertools
 import json
 import sys
 import time
@@ -1436,6 +1437,58 @@ def test_memory_family_json(runner: CliRunner) -> None:
     assert any(
         f["value"] == "json family fact" and f["persona"] == "sakthai" for f in data["facts"]
     )
+
+
+def test_memory_family_query_and_tags_find_a_siblings_note(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from sakthai.config import persona_memory_db_path
+
+    ticks = itertools.count(1_700_000_000)  # one second per write: no same-second ties
+    monkeypatch.setattr("sakthai.memory.store._now", lambda: next(ticks))
+
+    with MemoryStore(persona_memory_db_path("sakthai")) as store:
+        store.add_fact("DEPUTY CHAIN | old", tags=["deputy-chain"])
+        store.add_fact("DEPUTY CHAIN | sakking then saktan", tags=["deputy-chain"])
+        store.add_fact("DEPUTY CHAIN | draft")
+    with MemoryStore(persona_memory_db_path("sakking")) as store:
+        store.add_observation("deputy chain looked healthy", weight=0.9)
+
+    result = runner.invoke(
+        main, ["memory", "family", "DEPUTY CHAIN", "--tag", "deputy-chain", "--limit", "1"]
+    )
+    assert result.exit_code == 0, result.output
+    assert "# Facts (1)" in result.output
+    assert "[sakthai]" in result.output and "sakking then saktan" in result.output
+    assert "Observations" not in result.output  # a tag filter leaves observations out
+
+    by_query = runner.invoke(main, ["memory", "family", "deputy chain"])
+    assert "deputy chain looked healthy" in by_query.output
+
+
+def test_memory_family_filter_with_no_match_says_so(runner: CliRunner) -> None:
+    from sakthai.config import persona_memory_db_path
+
+    with MemoryStore(persona_memory_db_path("sakthai")) as store:
+        store.add_fact("unrelated", kind="note")
+
+    result = runner.invoke(main, ["memory", "family", "--tag", "conservation-mode"])
+    assert result.exit_code == 0
+    assert "no matches found" in result.output
+
+
+def test_memory_family_json_with_a_tag(runner: CliRunner) -> None:
+    from sakthai.config import persona_memory_db_path
+
+    with MemoryStore(persona_memory_db_path("saktan")) as store:
+        store.add_fact("SCHEDULE REQUEST | nightly", tags=["schedule-request"])
+
+    result = runner.invoke(main, ["memory", "family", "--tag", "schedule-request", "--json"])
+    data = json.loads(result.output)
+    assert [(f["persona"], f["value"]) for f in data["facts"]] == [
+        ("saktan", "SCHEDULE REQUEST | nightly")
+    ]
+    assert data["observations"] == []
 
 
 def test_run_persona_uses_persona_store_and_soul(
