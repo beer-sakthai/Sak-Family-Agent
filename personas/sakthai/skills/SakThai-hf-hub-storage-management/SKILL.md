@@ -173,7 +173,7 @@ Most operations accept a `revision=` parameter (branch, tag, commit hash). Note:
 - Buckets revision parameter not supported
 
 ## Related Skills
-- [`mlops/huggingface-hub`](../huggingface-hub/SKILL.md) — HF CLI for repos, datasets, cache/prune, webhooks, general Hub ops
+- [`mlops/huggingface-hub`](../SakThai-huggingface-hub/SKILL.md) — HF CLI for repos, datasets, cache/prune, webhooks, general Hub ops
 - [`mlops/spaces-zerogpu`](../spaces-zerogpu/SKILL.md) — ZeroGPU allocation planning (storage-related for Spaces)
 
 ## Research/Academic Grants

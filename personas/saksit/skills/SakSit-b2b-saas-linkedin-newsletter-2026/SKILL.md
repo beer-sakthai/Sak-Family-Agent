@@ -155,8 +155,8 @@ Track these weekly in a spreadsheet or BI tool:
 
 ## Related Skills
 
-- [b2b-saas-content-distribution-2026](./b2b-saas-content-distribution-2026/SKILL.md) — Distribute and repurpose newsletter content across channels
-- [b2b-saas-twitter-x-marketing-2026](./b2b-saas-twitter-x-marketing-2026/SKILL.md) — Complementary X/Twitter strategy for cross-promotion
+- [b2b-saas-content-distribution-2026](../SakSit-b2b-saas-content-distribution-2026/SKILL.md) — Distribute and repurpose newsletter content across channels
+- [b2b-saas-twitter-x-marketing-2026](../SakSit-b2b-saas-twitter-x-marketing-2026/SKILL.md) — Complementary X/Twitter strategy for cross-promotion
 - [b2b-saas-short-form-video-2026](./b2b-saas-short-form-video-2026/SKILL.md) — Repurpose newsletter insights into video content
 - [b2b-saas-employee-advocacy-2026](./b2b-saas-employee-advocacy-2026/SKILL.md) — Amplify newsletter content through employee networks
-- [b2b-saas-community-building-2026](./b2b-saas-community-building-2026/SKILL.md) — Cross-promote newsletter within your community
+- [b2b-saas-community-building-2026](../SakSit-b2b-saas-community-building-2026/SKILL.md) — Cross-promote newsletter within your community
