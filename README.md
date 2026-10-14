@@ -34,13 +34,28 @@ The project is built around the six-stage cycle **Dream → Hope → Care → Jo
 ## What is included
 
 - **SakThai core agent** — a Python 3.11+ package with a provider-agnostic tool loop, retries, streaming, usage tracking, and dry-run preflight.
-- **Persistent memory** — SQLite-backed facts and observations stored under `~/.sakthai`, with search, tagging, consolidation, snapshots, and sync helpers.
+- **Persistent memory** — SQLite-backed facts and observations stored under `~/.sakthai`, with search, tagging, consolidation, versioned JSON snapshots ([format](data/README.md)), and sync helpers.
 - **Multiple providers** — Anthropic, Google Gemini, OpenAI-compatible endpoints, Ollama, gateways, and Hugging Face inference providers.
 - **MCP** — a dependency-light stdio server plus discovery and namespaced connections to external MCP servers.
 - **Six personas** — SakThai, SakSee, SakJules, SakKing, SakSit, and SakTan, each with its own identity, skills, and memory overlay.
 - **Team and client workflows** — declarative multi-persona pipelines and ServiceQuoteBot client workspace provisioning.
 - **Dashboard** — a Next.js frontend backed by the SakThai HTTP API for personas, metrics, sessions, memory, audit data, and workflows.
 - **Security and quality gates** — guardrails for tools and file access, strict typing, linting, secret scanning, CodeQL, Bandit, and automated tests.
+
+## The six personas
+
+| Persona | Role | Default model |
+|---|---|---|
+| **SakThai** (lead) | Main Lead & HF Master | `deepseek-ai/DeepSeek-V4.1-Flash` |
+| **SakSee** | Web / Browser Specialist | `deepseek-ai/DeepSeek-V4.1-Flash` |
+| **SakJules** | Master of GitHub, CI/CD & Automation | `deepseek-ai/DeepSeek-V4.1-Flash` |
+| **SakKing** | General Assistant & Runner | `Qwen/Qwen3-Coder-30B-A3B-Instruct` |
+| **SakSit** | Social / Content Specialist | `deepseek-ai/DeepSeek-V4-Flash` |
+| **SakTan** | Daily Ops & Rhythm | `sakthai` on a local Ollama |
+
+`sakthai run --persona <name>` loads that persona's `SOUL.md`, skills, MCP servers and memory shard (`~/.sakthai/<name>/memory.db`), and runs on its default model unless you pass `--provider` or `--model`. The first five run through the Hugging Face router and need `HF_TOKEN`. SakTan needs no key: it expects a model named `sakthai` on Ollama at `127.0.0.1:11434` (set `OLLAMA_HOST` for another host). Each persona's settings live in `personas/<name>/config/config.yaml`.
+
+`sakthai chat --persona <name>` (default `sakthai`) loads the same identity, skills, MCP servers and memory shard, but talks to that local Ollama `sakthai` model for every persona unless you pass `--provider` and `--model`.
 
 ## A look at the dashboard
 
@@ -102,7 +117,8 @@ flowchart TD
 
 ```bash
 cp .env.example .env
-# Edit .env and add ANTHROPIC_API_KEY, or configure another supported provider.
+# Edit .env: ANTHROPIC_API_KEY (or another provider's key) for `sakthai run`,
+# and HF_TOKEN for the Hugging Face personas (see "The six personas" above).
 uv sync --all-extras
 ```
 
@@ -112,8 +128,8 @@ The editable install exposes the `sakthai` command:
 sakthai status
 sakthai doctor --json
 sakthai run "summarize docs/architecture.md"
-sakthai run "review the latest memory" --persona sakking
-sakthai chat
+sakthai run "review the latest memory" --persona sakking   # needs HF_TOKEN
+sakthai chat                                               # local Ollama `sakthai` model
 sakthai mcp
 ```
 
