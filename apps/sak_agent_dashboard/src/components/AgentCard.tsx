@@ -1,20 +1,9 @@
 "use client";
 
 import React from "react";
-import {
-  Activity,
-  ArrowUpRight,
-  Award,
-  Brain,
-  Clock,
-  Cpu,
-  Eye,
-  Shield,
-  Sparkles,
-  Terminal,
-  Zap,
-} from "lucide-react";
+import { Activity, ArrowUpRight, Award, Brain, Clock, Cpu } from "lucide-react";
 
+import { PersonaAvatar } from "@/components/PersonaAvatar";
 import type { PersonaSummary } from "@/lib/contracts.generated";
 
 interface AgentCardProps {
@@ -29,23 +18,20 @@ interface AgentCardProps {
   onOpenDetail?: () => void;
 }
 
-/** Keyed by the canonical lowercase persona name, all six of them. */
-const personaIcons: Record<string, React.ReactNode> = {
-  sakthai: <Terminal className="h-5 w-5 text-hue-cyan" />,
-  sakking: <Zap className="h-5 w-5 text-hue-purple" />,
-  saksee: <Eye className="h-5 w-5 text-hue-amber" />,
-  saksit: <Shield className="h-5 w-5 text-hue-emerald" />,
-  sakjules: <Activity className="h-5 w-5 text-hue-rose" />,
-  saktan: <Sparkles className="h-5 w-5 text-hue-sky" />,
-};
-
+/**
+ * Keyed by the canonical lowercase persona name, all six of them.
+ *
+ * Each accent is the nearest hue token to the persona's portrait (and the
+ * README banner): SakThai cyan, SakSee amber, SakJules violet, SakKing blue
+ * (sky), SakSit pink (rose), SakTan emerald.
+ */
 const personaGlows: Record<string, string> = {
   sakthai: "border-hue-cyan-line/30 hover:border-hue-cyan-line/60 shadow-hue-cyan-tint/40",
-  sakking: "border-hue-purple-line/30 hover:border-hue-purple-line/60 shadow-hue-purple-tint/40",
+  sakking: "border-hue-sky-line/30 hover:border-hue-sky-line/60 shadow-hue-sky-tint/40",
   saksee: "border-hue-amber-line/30 hover:border-hue-amber-line/60 shadow-hue-amber-tint/40",
-  saksit: "border-hue-emerald-line/30 hover:border-hue-emerald-line/60 shadow-hue-emerald-tint/40",
-  sakjules: "border-hue-rose-line/30 hover:border-hue-rose-line/60 shadow-hue-rose-tint/40",
-  saktan: "border-hue-sky-line/30 hover:border-hue-sky-line/60 shadow-hue-sky-tint/40",
+  saksit: "border-hue-rose-line/30 hover:border-hue-rose-line/60 shadow-hue-rose-tint/40",
+  sakjules: "border-hue-violet-line/30 hover:border-hue-violet-line/60 shadow-hue-violet-tint/40",
+  saktan: "border-hue-emerald-line/30 hover:border-hue-emerald-line/60 shadow-hue-emerald-tint/40",
 };
 
 const DAY_SECONDS = 86_400;
@@ -76,7 +62,6 @@ export function AgentCard({
 }: AgentCardProps) {
   const status = deriveStatus(agent);
   const glowClass = personaGlows[agent.name] ?? "border-line hover:border-line-strong";
-  const icon = personaIcons[agent.name] ?? <Cpu className="h-5 w-5 text-hue-cyan" />;
 
   // Real, derived from recorded runs and errors -- not the `?? 92.5` default
   // and `Math.random()` fallback this replaces. Undefined with no runs, and
@@ -140,9 +125,7 @@ export function AgentCard({
               `truncate` gave up first. min-w-0 on every level so the card can
               still narrow to whatever column the auto-fill grid gives it. */}
           <div className="flex min-w-0 flex-1 items-start space-x-2.5">
-            <div className="p-2 rounded-xl bg-raised/80 border border-line-strong/50 shrink-0">
-              {icon}
-            </div>
+            <PersonaAvatar name={agent.name} size={38} />
             <div className="min-w-0 flex-1">
               <h4 className="truncate text-lg font-bold font-display text-fg tracking-tight">
                 {agent.display_name}

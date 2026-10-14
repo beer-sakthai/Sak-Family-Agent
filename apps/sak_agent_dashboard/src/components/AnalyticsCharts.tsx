@@ -2,12 +2,11 @@
 
 import React, { useSyncExternalStore } from "react";
 import {
-  Area,
-  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   Legend,
   Line,
   LineChart,
@@ -21,6 +20,7 @@ import {
 import { BarChart3, PieChart as PieIcon, TrendingUp, Zap } from "lucide-react";
 
 import { useChartTokens } from "@/lib/chart-theme";
+import { compactNumber } from "@/lib/format";
 import type { MetricsPayload, PersonasPayload } from "@/lib/contracts.generated";
 import { TREND_WINDOWS, trendWindowLabel, type TrendWindow } from "@/lib/url-state";
 
@@ -212,12 +212,24 @@ export function AnalyticsCharts({
             <EmptyChart label="No attributed runs yet" />
           ) : (
             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-              <BarChart data={successData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart data={successData} margin={{ top: 18, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
                 <XAxis dataKey="name" stroke={chart.axis} fontSize={11} tickLine={false} />
                 <YAxis stroke={chart.axis} fontSize={11} domain={[0, 100]} tickLine={false} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="success" fill={chart.series[0]} radius={[6, 6, 0, 0]} name="Success %" />
+                {/* Every bar sits in the high 90s, so on a zero-based axis they
+                    look identical. The axis stays at zero (a cut-off axis would
+                    exaggerate a one-point gap); the exact value rides on each
+                    bar instead. */}
+                <Bar dataKey="success" fill={chart.series[0]} radius={[4, 4, 0, 0]} name="Success %">
+                  <LabelList
+                    dataKey="success"
+                    position="top"
+                    formatter={(value) => `${value}%`}
+                    fill={chart.axis}
+                    fontSize={11}
+                  />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -232,32 +244,35 @@ export function AnalyticsCharts({
           {!isMounted ? null : tokenData.length === 0 ? (
             <EmptyChart label="No attributed runs yet" />
           ) : (
+            // Stacked bars, not an area: the personas are separate categories,
+            // and a curve through them drew a trend between neighbours that
+            // does not exist. The 2px stroke in the panel colour keeps the two
+            // segments of a bar apart.
             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-              <AreaChart data={tokenData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <BarChart data={tokenData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
                 <XAxis dataKey="name" stroke={chart.axis} fontSize={11} tickLine={false} />
-                <YAxis stroke={chart.axis} fontSize={11} tickLine={false} />
+                <YAxis stroke={chart.axis} fontSize={11} tickLine={false} tickFormatter={compactNumber} />
                 <Tooltip contentStyle={tooltipStyle} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Area
-                  type="monotone"
+                <Bar
                   dataKey="input"
-                  stackId="1"
-                  stroke={chart.series[0]}
+                  stackId="tokens"
                   fill={chart.series[0]}
-                  fillOpacity={0.3}
+                  stroke={chart.tooltipBackground}
+                  strokeWidth={2}
                   name="Input"
                 />
-                <Area
-                  type="monotone"
+                <Bar
                   dataKey="output"
-                  stackId="1"
-                  stroke={chart.series[1]}
+                  stackId="tokens"
                   fill={chart.series[1]}
-                  fillOpacity={0.3}
+                  stroke={chart.tooltipBackground}
+                  strokeWidth={2}
+                  radius={[4, 4, 0, 0]}
                   name="Output"
                 />
-              </AreaChart>
+              </BarChart>
             </ResponsiveContainer>
           )}
         </Panel>
@@ -271,36 +286,63 @@ export function AnalyticsCharts({
           {!isMounted ? null : trendData.length === 0 ? (
             <EmptyChart label="No runs recorded yet" />
           ) : (
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-              <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
-                <XAxis dataKey="date" stroke={chart.axis} fontSize={11} tickLine={false} />
-                <YAxis stroke={chart.axis} fontSize={11} tickLine={false} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Line type="monotone" dataKey="runs" stroke={chart.series[0]} strokeWidth={2} dot={false} name="Runs" />
-                <Line
-                  type="monotone"
-                  dataKey="latency"
-                  stroke={chart.series[3]}
-                  strokeWidth={2}
-                  dot={false}
-                  name="Latency (ms)"
-                />
-                {/* `errors` was computed into trendData and never drawn. It is
-                    the one series here that says whether the runs beside it
-                    actually worked. */}
-                <Line
-                  type="monotone"
-                  dataKey="errors"
-                  stroke={chart.series[4]}
-                  strokeWidth={2}
-                  strokeDasharray="4 3"
-                  dot={false}
-                  name="Errors"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            // Runs and errors are counts in the tens; latency is hundreds of
+            // milliseconds. On one axis the counts were squashed flat against
+            // zero, so each unit gets its own chart. `syncId` keeps one shared
+            // hover across both, and only the lower chart labels the dates.
+            <div className="flex h-full flex-col gap-1">
+              <div className="min-h-0 flex-[3]">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                  <LineChart
+                    data={trendData}
+                    syncId="trend"
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+                    <XAxis dataKey="date" hide />
+                    <YAxis stroke={chart.axis} fontSize={11} tickLine={false} allowDecimals={false} />
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Line type="monotone" dataKey="runs" stroke={chart.series[0]} strokeWidth={2} dot={false} name="Runs" />
+                    {/* `errors` was computed into trendData and never drawn. It is
+                        the one series here that says whether the runs beside it
+                        actually worked. */}
+                    <Line
+                      type="monotone"
+                      dataKey="errors"
+                      stroke={chart.series[4]}
+                      strokeWidth={2}
+                      strokeDasharray="4 3"
+                      dot={false}
+                      name="Errors"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="font-mono text-[10px] uppercase tracking-wider text-fg-4">Avg latency (ms)</p>
+              <div className="min-h-0 flex-[2]">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                  <LineChart
+                    data={trendData}
+                    syncId="trend"
+                    margin={{ top: 4, right: 10, left: -20, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+                    <XAxis dataKey="date" stroke={chart.axis} fontSize={11} tickLine={false} />
+                    <YAxis stroke={chart.axis} fontSize={11} tickLine={false} />
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Line
+                      type="monotone"
+                      dataKey="latency"
+                      stroke={chart.series[3]}
+                      strokeWidth={2}
+                      dot={false}
+                      name="Latency (ms)"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           )}
         </Panel>
 
