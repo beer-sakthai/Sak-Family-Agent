@@ -66,7 +66,7 @@ The project is built around the six-stage cycle **Dream → Hope → Care → Jo
 
 `sakthai run --persona <name>` loads that persona's `SOUL.md`, skills, MCP servers and memory shard (`~/.sakthai/<name>/memory.db`), and runs on its default model unless you pass `--provider` or `--model`. The first five run through the Hugging Face router and need `HF_TOKEN`. SakTan needs no key: it expects a model named `sakthai` on Ollama at `127.0.0.1:11434` (set `OLLAMA_HOST` for another host). Each persona's settings live in `personas/<name>/config/config.yaml`.
 
-`sakthai chat --persona <name>` (default `sakthai`) loads the same identity, skills, MCP servers and memory shard, but talks to that local Ollama `sakthai` model for every persona unless you pass `--provider` and `--model`.
+`sakthai chat --persona <name>` (default `sakthai`) loads the same identity, skills, MCP servers, memory shard and default model. Pass `--provider` and `--model` to talk to something else, such as `--provider ollama --model sakthai` for the local Ollama model.
 
 ## A look at the dashboard
 
@@ -129,7 +129,7 @@ flowchart TD
 ```bash
 cp .env.example .env
 # Edit .env: ANTHROPIC_API_KEY (or another provider's key) for `sakthai run`,
-# and HF_TOKEN for the Hugging Face personas (see "The six personas" above).
+# and HF_TOKEN for `chat` and the Hugging Face personas (see "The six personas" above).
 uv sync --all-extras
 ```
 
@@ -140,7 +140,7 @@ sakthai status
 sakthai doctor --json
 sakthai run "summarize docs/architecture.md"
 sakthai run "review the latest memory" --persona sakking   # needs HF_TOKEN
-sakthai chat                                               # local Ollama `sakthai` model
+sakthai chat                                               # SakThai's model, so HF_TOKEN
 sakthai mcp
 ```
 

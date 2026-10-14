@@ -56,9 +56,9 @@ def _has_provider_credentials(auth: dict[str, object]) -> bool:
 
 
 _NO_PROVIDER_HINT = (
-    "  ! No model provider credentials found — `run` needs one "
+    "  ! No model provider credentials found — `run`/`chat` need one "
     "(e.g. ANTHROPIC_API_KEY, GEMINI_API_KEY, HF_TOKEN);\n"
-    "    `chat` and `--provider ollama` need none if Ollama runs at 127.0.0.1:11434 "
+    "    `--provider ollama` and SakTan need none if Ollama runs at 127.0.0.1:11434 "
     "(or OLLAMA_HOST);\n"
     "    memory commands (`learn`, `recall`, `mcp`) work now."
 )

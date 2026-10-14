@@ -1504,6 +1504,63 @@ def test_chat_uses_persona_specific_memory_shard(
     assert store.db_path == persona_memory_db_path("sakking")
 
 
+@pytest.mark.parametrize(
+    ("args", "expected"),
+    [
+        # No --provider/--model: the persona's own config.yaml decides, as for `run`.
+        (["--persona", "sakking"], ("huggingface", "Qwen/Qwen3-Coder-30B-A3B-Instruct")),
+        ([], ("huggingface", "deepseek-ai/DeepSeek-V4.1-Flash")),  # the default persona
+        (["--persona", "saktan"], ("ollama", "sakthai")),
+        # Both flags given: they win, including a request for local Ollama.
+        (
+            ["--persona", "sakking", "--provider", "ollama", "--model", "sakthai"],
+            ("ollama", "sakthai"),
+        ),
+        # One flag given: the persona pair is not split, so an Ollama provider is
+        # never handed a Hub model name (or the reverse).
+        (["--persona", "sakking", "--provider", "ollama"], ("ollama", "sakthai")),
+        (["--persona", "sakking", "--model", "llama3"], ("ollama", "llama3")),
+    ],
+)
+def test_chat_model_follows_the_persona_unless_flags_say_otherwise(
+    runner: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+    args: list[str],
+    expected: tuple[str, str],
+) -> None:
+    import sakthai.cli.chat as chat_cli
+
+    captured: dict[str, object] = {}
+
+    def fake_run_chat(**kwargs: object) -> None:
+        captured["provider"] = kwargs.get("provider")
+        captured["model"] = kwargs.get("model")
+
+    monkeypatch.setattr(chat_cli, "run_chat", fake_run_chat)
+    result = runner.invoke(main, ["chat", *args, "--no-mcp"])
+    assert result.exit_code == 0, result.output
+    assert (captured["provider"], captured["model"]) == expected
+
+
+def test_chat_keeps_its_cli_defaults_for_a_persona_without_a_model(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A persona whose config.yaml names no model falls back to local Ollama."""
+    import sakthai.cli.chat as chat_cli
+
+    captured: dict[str, object] = {}
+
+    def fake_run_chat(**kwargs: object) -> None:
+        captured["provider"] = kwargs.get("provider")
+        captured["model"] = kwargs.get("model")
+
+    monkeypatch.setattr(chat_cli, "run_chat", fake_run_chat)
+    monkeypatch.setattr(chat_cli.config, "persona_model_defaults", lambda persona: (None, None))
+    result = runner.invoke(main, ["chat", "--persona", "sakking", "--no-mcp"])
+    assert result.exit_code == 0, result.output
+    assert (captured["provider"], captured["model"]) == ("ollama", "sakthai")
+
+
 def test_run_persona_threads_persona_into_run_agent(
     runner: CliRunner, monkeypatch: pytest.MonkeyPatch
 ) -> None:
