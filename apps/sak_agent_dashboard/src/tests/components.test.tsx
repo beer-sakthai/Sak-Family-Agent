@@ -1049,9 +1049,15 @@ describe("StitchStudio", () => {
     expect(specTab).toHaveAttribute("title", "Switch to Stitch JSON Spec view");
     expect(copyButton).toHaveAttribute("title", "Copy Code snippet");
 
+    expect(previewTab).toHaveAttribute("aria-controls", "stitch-tabpanel");
+    expect(codeTab).toHaveAttribute("aria-controls", "stitch-tabpanel");
+    expect(specTab).toHaveAttribute("aria-controls", "stitch-tabpanel");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("id", "stitch-tabpanel");
+
     fireEvent.click(codeTab);
     expect(previewTab).toHaveAttribute("title", "Switch to Live Preview view");
     expect(codeTab).toHaveAttribute("title", "Viewing TSX Code");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("id", "stitch-tabpanel");
   });
 
   it("renders matching Security Audit Event Pill live preview when security-badge preset is selected", () => {

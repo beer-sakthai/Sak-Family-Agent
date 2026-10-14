@@ -29,3 +29,7 @@
 ## 2026-10-13 - Visual and ARIA selection state for table rows with detail drawers
 **Learning:** In table views accompanied by side detail drawers, table rows should check if their ID matches the open item, applying `aria-selected={isSelected}` and active highlight styling (`bg-raised/80 font-medium`) so users visually spot the open record and screen readers announce row selection.
 **Action:** Set `aria-selected={isSelected}` and active background styling on table rows when their detail drawer is open.
+
+## 2026-10-16 - Stable target IDs for single dynamic tabpanel containers
+**Learning:** In tablist components where multiple tabs switch content inside a single dynamic `<div role="tabpanel">` container, tab controls (`role="tab"`) should reference a stable container ID (`aria-controls="stitch-tabpanel"`) rather than tab-specific IDs, ensuring `aria-controls` always resolves to a valid DOM node regardless of active tab state.
+**Action:** Assign a stable `id` to single dynamic `<div role="tabpanel">` containers and set matching `aria-controls` on all member `role="tab"` buttons.
