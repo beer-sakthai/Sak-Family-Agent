@@ -74,7 +74,7 @@ describe("OperationsPulse", () => {
     expect(runQualityBar).toHaveAttribute("aria-valuetext", "98%");
   });
 
-  it("gives each status pill a tooltip, status role, and accessible name", () => {
+  it("gives each status pill a tooltip and accessible name", () => {
     render(
       <OperationsPulse
         personas={demoPersonas()}
@@ -85,10 +85,28 @@ describe("OperationsPulse", () => {
     );
 
     expect(screen.getAllByTitle(/^Signal status:/)).toHaveLength(4);
-    const statusPills = screen.getAllByLabelText(/^Status:/);
-    expect(statusPills).toHaveLength(4);
-    statusPills.forEach((pill) => {
-      expect(pill).toHaveAttribute("role", "status");
+    expect(screen.getAllByLabelText(/^Status:/)).toHaveLength(4);
+  });
+
+  it("puts no live region inside a clickable card", () => {
+    // With onNavigate, as on the dashboard, each card is a <button>. A
+    // button's descendants are presentational, so a nested role="status"
+    // would never announce: it would only look accessible in a test.
+    render(
+      <OperationsPulse
+        personas={demoPersonas()}
+        metrics={demoMetrics()}
+        audit={demoAudit()}
+        workflows={demoWorkflows()}
+        onNavigate={vi.fn()}
+      />,
+    );
+
+    const pills = screen.getAllByLabelText(/^Status:/);
+    expect(pills).toHaveLength(4);
+    pills.forEach((pill) => {
+      expect(pill.closest("button")).not.toBeNull();
+      expect(pill.closest('[role="status"]')).toBeNull();
     });
   });
 });

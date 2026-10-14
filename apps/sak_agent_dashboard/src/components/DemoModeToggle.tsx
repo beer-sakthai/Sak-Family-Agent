@@ -43,19 +43,26 @@ export function DemoModeToggle({ isDemo, onToggle, activeSource }: DemoModeToggl
     <div className="flex items-center gap-2">
       {/* The source badge reports what the data actually is. It can disagree
           with the toggle -- asking for live data on a host with no
-          ~/.sakthai falls back to demo, and this is how you find out. */}
-      {source && (
-        <span
-          role="status"
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border ${source.classes}`}
-          data-testid="active-source"
-          title={source.title}
-          aria-label={source.title}
-        >
-          {source.icon}
-          {source.label}
-        </span>
-      )}
+          ~/.sakthai falls back to demo, and this is how you find out.
+
+          The live region wraps the badge rather than being the badge: screen
+          readers announce changes to a region that already exists, so one
+          mounted already filled -- on the first response, the moment the
+          source matters most -- was usually read out by nobody. The wrapper
+          is there, empty, from the first render. */}
+      <span role="status" data-testid="active-source-status" className="inline-flex">
+        {source && (
+          <span
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border ${source.classes}`}
+            data-testid="active-source"
+            title={source.title}
+            aria-label={source.title}
+          >
+            {source.icon}
+            {source.label}
+          </span>
+        )}
+      </span>
 
       <button
         type="button"
