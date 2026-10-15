@@ -1429,4 +1429,21 @@ describe("CommandPalette", () => {
     expect(combobox).toHaveAttribute("aria-controls", "command-palette-listbox");
     expect(combobox).toHaveAttribute("aria-activedescendant", `cmd-option-nav-${NAV_ITEMS[0].id}`);
   });
+
+  it("renders an inline reset button when search yields no matches and clears search when clicked", () => {
+    render(<CommandPalette onClose={vi.fn()} onNavigate={vi.fn()} actions={[]} />);
+    const searchInput = screen.getByRole("combobox", { name: "Search commands" });
+
+    fireEvent.change(searchInput, { target: { value: "nonexistentquery123" } });
+    expect(screen.getByText("Nothing matches “nonexistentquery123”.").closest("li")).toBeInTheDocument();
+
+    const resetButton = screen.getByRole("button", { name: "Clear search query and show all commands" });
+    expect(resetButton).toBeInTheDocument();
+    expect(resetButton).toHaveAttribute("title", "Clear search query (Esc)");
+    expect(resetButton).toHaveAttribute("type", "button");
+
+    fireEvent.click(resetButton);
+    expect(screen.queryByText("Nothing matches “nonexistentquery123”.")).not.toBeInTheDocument();
+    expect(searchInput).toHaveValue("");
+  });
 });
