@@ -210,8 +210,20 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
           aria-label="Commands"
         >
           {results.length === 0 && (
-            <li className="px-3 py-6 text-center font-mono text-xs text-fg-4" role="status">
-              Nothing matches “{query}”.
+            <li className="flex flex-col items-center justify-center gap-2 px-3 py-6 text-center font-mono text-xs text-fg-4" role="status">
+              <p>Nothing matches “{query}”.</p>
+              <button
+                type="button"
+                aria-label="Clear command palette search query"
+                title="Reset search query (Esc)"
+                onClick={() => {
+                  setQuery("");
+                  setHighlight(0);
+                }}
+                className="mt-1 rounded-lg border border-line-strong bg-raised px-2.5 py-1 text-xs text-hue-cyan hover:bg-raised-2 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                Clear search
+              </button>
             </li>
           )}
           {results.map(({ command, match, startsGroup }, index) => {
