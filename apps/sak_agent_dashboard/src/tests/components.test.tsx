@@ -952,6 +952,28 @@ describe("WorkflowRuns", () => {
     expect(selectedRow).toBeInTheDocument();
     expect(selectedRow).toHaveClass("bg-raised/80");
   });
+
+  it("renders execution metric table cells with explicit title hover tooltips", () => {
+    const { container } = render(
+      <WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
+    );
+    const firstRun = workflows.runs[0];
+    const startedCell = container.querySelector(`td[title^="Started:"]`);
+    const durationCell = container.querySelector(`td[title^="Execution duration:"]`);
+    const stepCountCell = container.querySelector(`td[title^="Step count:"]`);
+
+    expect(startedCell).toBeInTheDocument();
+    expect(startedCell).toHaveAttribute("title", expect.stringContaining("Started:"));
+
+    expect(durationCell).toBeInTheDocument();
+    expect(durationCell).toHaveAttribute("title", expect.stringContaining("Execution duration:"));
+
+    expect(stepCountCell).toBeInTheDocument();
+    expect(stepCountCell).toHaveAttribute(
+      "title",
+      expect.stringContaining(`Step count: ${firstRun.step_count}`),
+    );
+  });
 });
 
 describe("PersonaFilter", () => {
