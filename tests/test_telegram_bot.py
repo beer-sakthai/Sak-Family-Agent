@@ -46,17 +46,32 @@ class _FakeStore:
         pass
 
 
-def test_session_store_is_persistent_per_chat(
+def test_session_is_kept_per_chat_but_memory_is_the_personas(
     sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123")
+    """Each chat keeps its own settings; every chat writes to the persona's one shard."""
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123,456")
+    monkeypatch.setenv("SAKTHAI_PERSONA", "saktan")
     monkeypatch.setattr(bot, "MemoryStore", _FakeStore)
     context = _Context()
     first = bot._get_chat_session(context, 123)
     second = bot._get_chat_session(context, 123)
+    other_chat = bot._get_chat_session(context, 456)
 
     assert first is second
-    assert first.db_path == sakthai_home / "telegram" / "123" / "memory.db"
+    assert other_chat is not first
+    shard = Path.home() / ".sakthai" / "saktan" / "memory.db"
+    assert first.db_path == other_chat.db_path == shard
+
+
+def test_session_memory_without_a_persona_is_the_default_store(
+    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123")
+    monkeypatch.delenv("SAKTHAI_PERSONA", raising=False)
+    monkeypatch.setattr(bot, "MemoryStore", _FakeStore)
+
+    assert bot._get_chat_session(_Context(), 123).db_path == sakthai_home / "memory.db"
 
 
 def test_set_model_command(monkeypatch: pytest.MonkeyPatch) -> None:
