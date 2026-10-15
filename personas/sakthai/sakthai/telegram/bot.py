@@ -133,6 +133,8 @@ async def _reply_with_agent_result(
         fast=sakthai_fast_mode(),
         stateless=_env_bool("SAKTHAI_STATELESS", False),
         system_prompt_prefix=system_prompt_prefix,
+        # Resolve skills and slash commands from the persona's own skill folder.
+        persona=sakthai_persona(),
     )
     await update.message.reply_text(result.text)
 

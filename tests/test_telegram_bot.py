@@ -74,6 +74,36 @@ def test_session_memory_without_a_persona_is_the_default_store(
     assert bot._get_chat_session(_Context(), 123).db_path == sakthai_home / "memory.db"
 
 
+def test_deployed_skills_resolve_from_the_personas_own_skills(
+    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The VM's SAKTHAI_WITH_SKILLS name reaches SakSee's prompt.
+
+    The bot called run_agent without the persona, so skills resolved against
+    SakThai's skill folder and SakSee-playwright, which only SakSee has, was
+    silently skipped.
+    """
+    from sakthai.agent.loop import _build_skills_block
+
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123")
+    monkeypatch.setenv("SAKTHAI_PERSONA", "saksee")
+    monkeypatch.setenv("SAKTHAI_WITH_SKILLS", "SakSee-playwright")
+    monkeypatch.setattr(bot, "MemoryStore", _FakeStore)
+    calls: list[dict[str, object]] = []
+
+    def fake_run_agent(task: str, **kwargs: object) -> object:
+        calls.append(kwargs)
+        return type("Result", (), {"text": "done"})()
+
+    monkeypatch.setattr(bot, "run_agent", fake_run_agent)
+    asyncio.run(bot.handle_text(_Update(123, text="check the site"), _Context()))
+
+    (kwargs,) = calls
+    skills, persona = kwargs["skills"], kwargs.get("persona")
+    assert isinstance(skills, list) and (persona is None or isinstance(persona, str))
+    assert "### SakSee-playwright" in _build_skills_block(skills, "", None, persona)
+
+
 def test_set_model_command(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123")
     monkeypatch.setattr(bot, "MemoryStore", _FakeStore)
