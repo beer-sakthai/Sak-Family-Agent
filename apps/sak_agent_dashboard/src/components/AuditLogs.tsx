@@ -93,15 +93,22 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
         {SEVERITIES.map((sev) => {
           const count = sev === "ALL" ? null : (audit.severity_counts[sev] ?? 0);
           const active = severity === sev;
+          const label = active
+            ? count !== null
+              ? `Showing ${sev} severity events (${count} total)`
+              : "Showing all severity events"
+            : count !== null
+            ? `Filter audit log by ${sev} severity (${count} total)`
+            : "Filter audit log by all severities";
           return (
             <button
               key={sev}
               type="button"
               onClick={() => onSeverityChange(sev)}
               aria-pressed={active}
-              aria-label={`Filter audit log by ${sev} severity`}
-              title={active ? `Showing ${sev} severity events` : `Filter audit log by ${sev} severity`}
-              className={`px-3 py-1.5 rounded-xl text-[11px] font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+              aria-label={label}
+              title={label}
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-mono border transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
                 active
                   ? "bg-hue-cyan-tint/50 text-hue-cyan border-hue-cyan-line/50"
                   : "bg-panel/60 text-fg-3 border-line hover:border-line-strong"
@@ -129,10 +136,25 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
             <tbody className="divide-y divide-line/60 text-fg-2">
               {events.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-fg-4 italic">
-                    {severity === "ALL"
-                      ? "No security audit events recorded."
-                      : `No ${severity} severity events recorded.`}
+                  <td colSpan={5} className="px-5 py-8 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2 font-sans">
+                      <p className="text-fg-4 text-xs italic">
+                        {severity === "ALL"
+                          ? "No security audit events recorded."
+                          : `No ${severity} severity events recorded.`}
+                      </p>
+                      {severity !== "ALL" && (
+                        <button
+                          type="button"
+                          onClick={() => onSeverityChange("ALL")}
+                          aria-label="Reset severity filter to show all events"
+                          title="Reset severity filter to show all events"
+                          className="px-3 py-1 rounded-lg bg-raised text-hue-cyan hover:bg-raised-2 font-mono text-xs border border-line-strong transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+                        >
+                          Reset severity filter
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (

@@ -342,6 +342,26 @@ def _shell_allowlist() -> tuple[bool, frozenset[str]]:
     return (True, frozenset(tokens))
 
 
+# Name segments that mark an environment variable as a credential. A
+# run_command child gets the rest of the environment (PATH, HOME, the venv,
+# locale), but not ANTHROPIC_API_KEY, HF_TOKEN, GH_PAT_FOR_ACTIONS and the
+# like: nothing the allow-listed tools need, and everything an injected
+# command would want to exfiltrate. Matched per `_`-separated segment, so
+# PATH and SSH_AUTH_SOCK are kept.
+_SECRET_ENV_SEGMENTS: frozenset[str] = frozenset(
+    {"TOKEN", "SECRET", "PASSWORD", "PASSWD", "KEY", "APIKEY", "PAT", "CREDENTIAL", "CREDENTIALS"}
+)
+
+
+def _command_env() -> dict[str, str]:
+    """The parent environment minus every credential-named variable."""
+    return {
+        name: value
+        for name, value in os.environ.items()
+        if _SECRET_ENV_SEGMENTS.isdisjoint(name.upper().split("_"))
+    }
+
+
 def _program_name(argv0: str) -> str:
     """Basename of a program path, without a Windows ``.exe`` suffix."""
     name = Path(argv0).name
@@ -356,7 +376,8 @@ def _run_command(args: dict[str, Any], store: MemoryStore) -> str:
     Disabled unless ``SAKTHAI_SHELL_ALLOW`` is set, so a stray tool call cannot
     execute arbitrary code on a machine where the user has not opted in. When
     ``SAKTHAI_SHELL_ALLOW`` names specific programs (an os.pathsep list rather
-    than a truthy flag), only those programs may run.
+    than a truthy flag), only those programs may run. Credential-named
+    environment variables are withheld from the child (see ``_command_env``).
     """
     command = args.get("command")
     if not isinstance(command, str) or not command.strip():
@@ -386,6 +407,8 @@ def _run_command(args: dict[str, Any], store: MemoryStore) -> str:
             capture_output=True,
             text=True,
             timeout=timeout,
+            check=False,
+            env=_command_env(),
         )
     except subprocess.TimeoutExpired:
         return f"[timeout after {timeout:.0f}s]\n(command: {command})"

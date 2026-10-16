@@ -37,9 +37,13 @@ fi
 
 # Resolve username for curl method
 if [ "$GH_AUTH_METHOD" = "curl" ] && [ -z "$GH_USER" ]; then
-    GH_USER=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-        https://api.github.com/user 2>/dev/null \
+    # Captured first, then parsed: curl piped straight into an interpreter is
+    # what Scorecard reports as download-then-run.
+    _gh_user_json=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+        https://api.github.com/user 2>/dev/null)
+    GH_USER=$(printf '%s' "$_gh_user_json" \
         | python3 -c "import sys,json; print(json.load(sys.stdin).get('login',''))" 2>/dev/null)
+    unset _gh_user_json
 fi
 
 # --- Repo detection (if inside a git repo with a GitHub remote) ---

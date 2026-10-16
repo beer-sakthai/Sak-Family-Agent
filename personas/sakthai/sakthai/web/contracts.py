@@ -51,6 +51,15 @@ __all__ = [
     "WorkflowRunDetail",
     "WorkflowsPayload",
     "ApiEnvelope",
+    "ChargeState",
+    "ChargeReport",
+    "ChargePayload",
+    "CycleStageInfo",
+    "CycleStatusPayload",
+    "WorkflowRunRequest",
+    "WorkflowRunResult",
+    "AgentPingRequest",
+    "AgentPingResponse",
 ]
 
 T = TypeVar("T")
@@ -118,6 +127,8 @@ class PersonaSummary(TypedDict):
     input_tokens: int
     output_tokens: int
     last_run_at: int | None
+    charge: ChargeReport | None
+    current_stage: str | None
 
 
 class PersonasPayload(TypedDict):
@@ -298,3 +309,83 @@ class ApiEnvelope(TypedDict, Generic[T]):
     source: DataSource
     generated_at: str  # ISO-8601 UTC
     data: T
+
+
+#: The four operational states of the Hermes v6 Charge System.
+ChargeState = Literal["Optimal", "Active", "Low", "Critical"]
+
+
+class ChargeReport(TypedDict):
+    """Hermes charge state for a persona recorded in memory.
+
+    ``level`` is an integer percentage (0–100). ``state`` is the v6 bucket:
+    Optimal (80–100), Active (50–79), Low (20–49), Critical (0–19).
+    ``updated_at`` is the Unix epoch timestamp of the last recorded charge
+    update, or None if no report has been written yet.
+    """
+
+    persona: str
+    level: int  # Integer 0 to 100
+    state: ChargeState
+    updated_at: int | None  # Epoch timestamp in seconds
+
+
+class ChargePayload(TypedDict):
+    """All persona charge states and household summary."""
+
+    reports: list[ChargeReport]
+    household_average: float
+
+
+class CycleStageInfo(TypedDict):
+    """Metadata for each stage in the six-stage Dream→Growth cycle."""
+
+    stage: str  # 'dream', 'hope', 'care', 'joy', 'trust', 'growth'
+    number: int  # 1 to 6
+    goal: str
+    guidance: str
+    commands: list[str]
+
+
+class CycleStatusPayload(TypedDict):
+    """Current cycle position and all stage metadata."""
+
+    current_stage: str
+    stages: list[CycleStageInfo]
+    next_stage: str
+
+
+class WorkflowRunRequest(TypedDict):
+    """Parameters for dispatching a workflow run from the dashboard."""
+
+    workflow_name: str
+    persona: str
+    params: dict[str, str]
+
+
+class WorkflowRunResult(TypedDict):
+    """Execution status and metadata for a dispatched workflow run."""
+
+    run_id: str
+    workflow_name: str
+    persona: str
+    status: Literal["completed", "failed", "running"]
+    started_at: int
+    completed_at: int | None
+    error: str | None
+
+
+class AgentPingRequest(TypedDict):
+    """Payload for checking agent connectivity and responsiveness."""
+
+    persona: str
+    message: str
+
+
+class AgentPingResponse(TypedDict):
+    """Response from an agent health ping."""
+
+    persona: str
+    status: Literal["ok", "error"]
+    latency_ms: float
+    reply: str

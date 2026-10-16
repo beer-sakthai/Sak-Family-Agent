@@ -23,7 +23,10 @@ const STYLE = `
   h1 { font-size:1.25rem; font-weight:700 }
   p { color:var(--dim); font-size:0.875rem; line-height:1.6 }
   button { margin-top:0.75rem; padding:0.5rem 1rem; border-radius:0.75rem; border:1px solid var(--edge);
-           background:var(--btn); color:var(--fg); font-size:0.875rem; cursor:pointer }
+           background:var(--btn); color:var(--fg); font-size:0.875rem; cursor:pointer;
+           transition:background-color 150ms ease, border-color 150ms ease }
+  button:hover { border-color:var(--dim) }
+  button:focus-visible { outline:2px solid var(--fg); outline-offset:2px }
 `;
 
 export default function GlobalError({
@@ -45,7 +48,12 @@ export default function GlobalError({
             The error happened in the root layout, before any of the application shell existed.
             {error.digest ? ` Digest ${error.digest}.` : ""}
           </p>
-          <button onClick={reset} type="button">
+          <button
+            onClick={reset}
+            type="button"
+            aria-label="Try again - re-render the dashboard"
+            title="Try re-rendering the dashboard"
+          >
             Try again
           </button>
         </main>

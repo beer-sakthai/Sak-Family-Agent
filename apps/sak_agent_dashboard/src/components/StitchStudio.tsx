@@ -72,7 +72,7 @@ const STITCH_PRESETS: StitchScreenPreset[] = [
   return (
     <div className="flex items-center justify-between p-3.5 rounded-xl bg-panel/60 border border-line/80 hover:border-hue-emerald-line/40 transition-all">
       <div className="flex items-center gap-3">
-        <span className="w-2.5 h-2.5 rounded-full bg-hue-emerald shadow-sm shadow-hue-emerald/50" />
+        <span className="w-2.5 h-2.5 rounded-full bg-hue-emerald shadow-xs shadow-hue-emerald/50" />
         <span className="text-sm font-medium text-fg">{event}</span>
       </div>
       <span className="text-xs font-mono px-2 py-0.5 rounded bg-hue-emerald-tint/60 border border-hue-emerald-line/50 text-hue-emerald">
@@ -145,7 +145,7 @@ export function StitchStudio() {
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-hue-cyan-tint/60 via-panel/90 to-hue-purple-tint/60 border border-hue-cyan-line/30 p-6 shadow-2xl">
+      <div className="relative overflow-hidden rounded-2xl bg-linear-to-r from-hue-cyan-tint/60 via-panel/90 to-hue-purple-tint/60 border border-hue-cyan-line/30 p-6 shadow-2xl">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -182,7 +182,7 @@ export function StitchStudio() {
               aria-label={isSelected ? `Active preset: ${preset.title}` : `Select preset ${preset.title}`}
               title={isSelected ? `Active preset: ${preset.title}` : `Select preset ${preset.title}`}
               onClick={() => setActivePreset(preset)}
-              className={`text-left p-4 rounded-xl transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-canvas ${
+              className={`text-left p-4 rounded-xl transition-all border focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-canvas ${
                 isSelected
                   ? "bg-hue-cyan-tint/40 border-hue-cyan-line/60 shadow-lg shadow-hue-cyan-tint/30"
                   : "bg-panel/60 border-line hover:border-line-strong"
@@ -217,16 +217,16 @@ export function StitchStudio() {
               role="tab"
               tabIndex={activeTab === "preview" ? 0 : -1}
               aria-selected={activeTab === "preview"}
-              aria-controls="stitch-panel-preview"
+              aria-controls="stitch-tabpanel"
               title={activeTab === "preview" ? "Viewing Live Preview" : "Switch to Live Preview view"}
               onClick={() => setActiveTab("preview")}
-              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
                 activeTab === "preview"
                   ? "bg-hue-cyan text-accent-contrast font-bold shadow-md shadow-hue-cyan/20"
                   : "text-fg-3 hover:text-fg"
               }`}
             >
-              <Eye className="w-3.5 h-3.5" aria-hidden />
+              <Eye className="w-3.5 h-3.5" aria-hidden="true" />
               Live Preview
             </button>
             <button
@@ -235,16 +235,16 @@ export function StitchStudio() {
               role="tab"
               tabIndex={activeTab === "code" ? 0 : -1}
               aria-selected={activeTab === "code"}
-              aria-controls="stitch-panel-code"
+              aria-controls="stitch-tabpanel"
               title={activeTab === "code" ? "Viewing TSX Code" : "Switch to TSX Code view"}
               onClick={() => setActiveTab("code")}
-              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
                 activeTab === "code"
                   ? "bg-hue-cyan text-accent-contrast font-bold shadow-md shadow-hue-cyan/20"
                   : "text-fg-3 hover:text-fg"
               }`}
             >
-              <Code2 className="w-3.5 h-3.5" aria-hidden />
+              <Code2 className="w-3.5 h-3.5" aria-hidden="true" />
               TSX Code
             </button>
             <button
@@ -253,16 +253,16 @@ export function StitchStudio() {
               role="tab"
               tabIndex={activeTab === "spec" ? 0 : -1}
               aria-selected={activeTab === "spec"}
-              aria-controls="stitch-panel-spec"
+              aria-controls="stitch-tabpanel"
               title={activeTab === "spec" ? "Viewing Stitch JSON Spec" : "Switch to Stitch JSON Spec view"}
               onClick={() => setActiveTab("spec")}
-              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
                 activeTab === "spec"
                   ? "bg-hue-cyan text-accent-contrast font-bold shadow-md shadow-hue-cyan/20"
                   : "text-fg-3 hover:text-fg"
               }`}
             >
-              <Terminal className="w-3.5 h-3.5" aria-hidden />
+              <Terminal className="w-3.5 h-3.5" aria-hidden="true" />
               Stitch JSON Spec
             </button>
           </div>
@@ -270,27 +270,39 @@ export function StitchStudio() {
           <button
             type="button"
             aria-live="polite"
-            aria-label={copied ? "Copied to clipboard" : activeTab === "spec" ? "Copy Stitch JSON spec" : "Copy TSX code"}
-            title={copied ? "Copied to clipboard" : activeTab === "spec" ? "Copy Stitch JSON spec" : "Copy TSX code"}
+            aria-label={copied ? "Copied to clipboard" : activeTab === "spec" ? "Copy Spec JSON" : "Copy Code snippet"}
+            title={copied ? "Copied to clipboard" : activeTab === "spec" ? "Copy Spec JSON" : "Copy Code snippet"}
             onClick={handleCopyCode}
-            className="flex items-center gap-1 text-xs font-mono text-fg-3 hover:text-hue-cyan transition-colors bg-raised/60 px-2.5 py-1 rounded-lg border border-line-strong/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="flex items-center gap-1 text-xs font-mono text-fg-3 hover:text-hue-cyan transition-colors bg-raised/60 px-2.5 py-1 rounded-lg border border-line-strong/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-hue-emerald" aria-hidden /> : <Copy className="w-3.5 h-3.5" aria-hidden />}
+            {copied ? <Check className="w-3.5 h-3.5 text-hue-emerald" aria-hidden="true" /> : <Copy className="w-3.5 h-3.5" aria-hidden="true" />}
             {copied ? "Copied!" : activeTab === "spec" ? "Copy Spec" : "Copy Code"}
           </button>
         </div>
 
         {/* Tab Body Content */}
         <div
-          id={`stitch-panel-${activeTab}`}
+          id="stitch-tabpanel"
           role="tabpanel"
           aria-labelledby={`stitch-tab-${activeTab}`}
           tabIndex={0}
-          className="p-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-xl"
+          className="p-6 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent rounded-xl"
         >
           {activeTab === "preview" && (
             <div className="min-h-[240px] flex flex-col items-center justify-center p-8 rounded-xl bg-sunken/80 border border-line/60">
-              {activePreset.displayMode === "HTML" && (
+              {activePreset.id === "security-badge" ? (
+                <div className="w-full max-w-md p-4 rounded-xl bg-panel/90 border border-hue-emerald-line/30 shadow-xl space-y-3">
+                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-panel/60 border border-line/80 hover:border-hue-emerald-line/40 transition-all">
+                    <div className="flex items-center gap-3">
+                      <span className="w-2.5 h-2.5 rounded-full bg-hue-emerald shadow-xs shadow-hue-emerald/50" />
+                      <span className="text-sm font-medium text-fg">Unauthorized API Access Blocked</span>
+                    </div>
+                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-hue-emerald-tint/60 border border-hue-emerald-line/50 text-hue-emerald">
+                      HIGH
+                    </span>
+                  </div>
+                </div>
+              ) : activePreset.displayMode === "HTML" ? (
                 <div className="w-full max-w-md bg-panel/90 backdrop-blur-xl border border-hue-cyan-line/30 p-6 rounded-2xl shadow-2xl space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -312,7 +324,7 @@ export function StitchStudio() {
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-hue-cyan-tint/60 border border-hue-cyan-line/40 text-hue-cyan">tool-call</span>
                   </div>
                 </div>
-              )}
+              ) : null}
 
               {activePreset.displayMode === "MERMAID" && (
                 <div className="w-full max-w-lg p-6 rounded-xl bg-panel/90 border border-hue-cyan-line/30 space-y-3 font-mono text-xs text-hue-cyan">

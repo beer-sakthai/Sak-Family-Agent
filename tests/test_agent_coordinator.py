@@ -37,7 +37,7 @@ def test_resolve_persona_agent_kwargs_valid(tmp_path) -> None:
     assert kwargs["skills"] == ["SakKing-comfyui"]
     assert kwargs["max_iterations"] == 5
     assert kwargs["store"] is store
-    assert "SakKing" in (kwargs["system_prompt"] or "")
+    assert "SakKing" in kwargs["system_prompt_prefix"]
 
 
 def test_resolve_persona_agent_kwargs_unknown_persona() -> None:
@@ -128,3 +128,41 @@ def test_run_parallel_persona_tasks_success() -> None:
         assert results[0].text == "Research result"
         assert results[1].text == "Tech architecture"
         assert mock_run.call_count == 2
+
+
+def test_run_persona_task_reaches_the_real_run_agent() -> None:
+    """Every other test here patches ``run_agent``, which is how delegation
+    shipped passing kwargs (``no_mcp``, ``system_prompt``...) that
+    ``run_agent`` does not accept: every real call raised ``TypeError``.
+    Drive the real loop with a fake model client instead."""
+    captured: dict[str, object] = {}
+
+    class _Block:
+        type = "text"
+        text = "delegated ok"
+
+    class _Resp:
+        stop_reason = "end_turn"
+        content = [_Block()]
+
+    class _Messages:
+        def create(self, **kwargs: object) -> _Resp:
+            captured.update(kwargs)
+            return _Resp()
+
+    class _Client:
+        messages = _Messages()
+
+    result = run_persona_task(
+        "sakking",
+        "Write tests",
+        store=MemoryStore(":memory:"),
+        client=_Client(),
+        provider="anthropic",
+        model="test-model",
+    )
+
+    assert result.text == "delegated ok"
+    assert captured["model"] == "test-model"
+    # The persona's SOUL.md is prepended to the system prompt.
+    assert str(captured["system"]).startswith("# SOUL.md — SakKing")

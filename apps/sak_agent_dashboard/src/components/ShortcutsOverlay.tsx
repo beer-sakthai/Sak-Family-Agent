@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
-import { X } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Search, X } from "lucide-react";
 
 import { useFocusTrap } from "@/lib/focus";
 import { NAV_ITEMS } from "@/lib/nav";
@@ -17,6 +17,7 @@ interface Shortcut {
 
 const GENERAL: Shortcut[] = [
   { keys: ["⌘", "K"], description: "Open the command palette" },
+  { keys: ["/"], description: "Focus the session search (Sessions view)" },
   { keys: ["?"], description: "Show this list" },
   { keys: ["R"], description: "Refresh every panel" },
   { keys: ["E"], description: "Export the current panel as JSON" },
@@ -26,6 +27,7 @@ const GENERAL: Shortcut[] = [
 
 const KEY_NAMES: Record<string, string> = {
   "⌘": "Command",
+  "/": "Slash",
   "?": "Question mark",
   "[": "Left bracket",
   Esc: "Escape",
@@ -72,6 +74,7 @@ function Row({ shortcut }: { shortcut: Shortcut }) {
 export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
   const dialogRef = useFocusTrap<HTMLDivElement>();
   const closeRef = useRef<HTMLButtonElement>(null);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -90,13 +93,13 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[10vh]">
+    <div className="fixed inset-0 z-60 flex items-start justify-center p-4 pt-[10vh]">
       <button
         type="button"
         aria-label="Dismiss keyboard shortcuts overlay backdrop"
         title="Dismiss keyboard shortcuts overlay"
         onClick={onClose}
-        className="absolute inset-0 h-full w-full animate-scrim-in bg-canvas/80 backdrop-blur-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+        className="absolute inset-0 h-full w-full animate-scrim-in bg-canvas/80 backdrop-blur-sm focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
       />
       <div
         ref={dialogRef}
@@ -121,7 +124,7 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
             onClick={onClose}
             aria-label="Close keyboard shortcuts"
             title="Close keyboard shortcuts (Esc)"
-            className="inline-flex items-center gap-1.5 shrink-0 rounded-lg px-2 py-1 text-fg-3 transition-colors hover:bg-raised/60 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="inline-flex items-center gap-1.5 shrink-0 rounded-lg px-2 py-1 text-fg-3 transition-colors hover:bg-raised/60 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
             <kbd className="rounded border border-line-strong bg-sunken px-1.5 py-0.5 font-mono text-[10px] text-fg-3" aria-hidden="true">
               Esc
@@ -130,32 +133,111 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
           </button>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2">
-          <section>
-            <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
-              General
-            </h3>
-            <ul className="divide-y divide-line">
-              {GENERAL.map((shortcut) => (
-                <Row key={shortcut.description} shortcut={shortcut} />
-              ))}
-            </ul>
-          </section>
-
-          <section>
-            <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
-              Sections
-            </h3>
-            <ul className="divide-y divide-line">
-              {NAV_ITEMS.map((item, index) => (
-                <Row
-                  key={item.id}
-                  shortcut={{ keys: [String(index + 1)], description: item.label }}
-                />
-              ))}
-            </ul>
-          </section>
+        <div className="relative mb-4">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-4" aria-hidden="true" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape" && query) {
+                e.stopPropagation();
+                e.preventDefault();
+                setQuery("");
+              }
+            }}
+            placeholder="Search shortcuts..."
+            aria-label="Filter keyboard shortcuts"
+            title="Filter shortcuts by key or description"
+            className="w-full rounded-xl border border-line bg-sunken py-1.5 pl-9 pr-8 text-xs text-fg placeholder:text-fg-4 focus:border-accent focus:outline-hidden focus:ring-1 focus:ring-accent [&::-webkit-search-cancel-button]:hidden"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              aria-label="Clear shortcut search filter"
+              title="Clear search (Esc)"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-fg-4 hover:text-fg focus:outline-hidden focus-visible:ring-1 focus-visible:ring-accent"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          )}
         </div>
+
+        {(() => {
+          const q = query.trim().toLowerCase();
+          const filteredGeneral = GENERAL.filter(
+            (s) =>
+              !q ||
+              s.description.toLowerCase().includes(q) ||
+              s.keys.some(
+                (k) =>
+                  k.toLowerCase().includes(q) ||
+                  (KEY_NAMES[k] && KEY_NAMES[k].toLowerCase().includes(q))
+              )
+          );
+
+          const filteredSections = NAV_ITEMS.map((item, index) => ({
+            id: item.id,
+            shortcut: { keys: [String(index + 1)], description: item.label },
+          })).filter(
+            ({ shortcut }) =>
+              !q ||
+              shortcut.description.toLowerCase().includes(q) ||
+              shortcut.keys.some((k) => k.toLowerCase().includes(q))
+          );
+
+          if (filteredGeneral.length === 0 && filteredSections.length === 0) {
+            return (
+              <div
+                role="status"
+                aria-label={`No shortcuts match "${query}"`}
+                className="flex flex-col items-center justify-center gap-2 py-8 text-center font-mono text-xs text-fg-4"
+              >
+                <span>No shortcuts match &quot;{query}&quot;</span>
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label="Clear search filter and show all shortcuts"
+                  title="Clear search filter (Esc)"
+                  className="mt-1 rounded-lg border border-line bg-raised px-2.5 py-1 font-sans text-xs text-fg-3 transition-colors hover:bg-raised/80 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  Clear search filter
+                </button>
+              </div>
+            );
+          }
+
+          return (
+            <div className="grid gap-6 sm:grid-cols-2">
+              {filteredGeneral.length > 0 && (
+                <section>
+                  <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
+                    General
+                  </h3>
+                  <ul className="divide-y divide-line">
+                    {filteredGeneral.map((shortcut) => (
+                      <Row key={shortcut.description} shortcut={shortcut} />
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {filteredSections.length > 0 && (
+                <section>
+                  <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
+                    Sections
+                  </h3>
+                  <ul className="divide-y divide-line">
+                    {filteredSections.map(({ id, shortcut }) => (
+                      <Row key={id} shortcut={shortcut} />
+                    ))}
+                  </ul>
+                </section>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

@@ -2,6 +2,10 @@
 # databases (OSV / PyPI advisories). Dependabot proposes version bumps, but
 # nothing else in CI fails when a *current* pin has a published CVE — this
 # workflow closes that gap. Runs weekly, on dependency changes, and on demand.
+#
+# It also audits the training stack, which Dependabot cannot see at all: it
+# reads neither the hashed .lock files under infra/sakthai-training-space/
+# nor PEP 723 inline script metadata.
 name: Dependency Audit
 
 on:
@@ -9,6 +13,8 @@ on:
     paths:
       - "pyproject.toml"
       - "uv.lock"
+      - "infra/sakthai-training-space/*.lock"
+      - "training/**/*.py"
       - ".github/workflows/dependency-audit.yml"
   schedule:
     - cron: "30 5 * * 1"
@@ -28,7 +34,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Harden the runner
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
         with:
           use-policy-store: true
           api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
@@ -39,7 +45,7 @@ jobs:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
 
       - name: Export locked requirements
         # --no-emit-project: audit third-party deps only, not the local package.
@@ -57,20 +63,42 @@ jobs:
         # --no-deps is safe: uv export already emits the fully resolved,
         # pinned dependency closure, so there is nothing left to resolve.
         #
-        # The two --ignore-vuln entries are accepted risk, not dismissal: both
-        # are transitive dependencies of lm-eval reached only by run-evals.yml,
-        # and NEITHER HAS A FIXED RELEASE -- the newest version on PyPI is the
-        # last affected one in each case. Drop the corresponding flag the
-        # moment an upstream fix ships; leaving a stale ignore here silently
-        # re-opens the hole this workflow exists to close.
+        # No --ignore-vuln entries. nltk (PYSEC-2026-3740) and sqlitedict
+        # (PYSEC-2026-1939) used to be ignored here because neither has a
+        # fixed release; they are now kept out of uv.lock altogether by
+        # [tool.uv] override-dependencies in pyproject.toml. Prefer that, or an
+        # upgrade, to an ignore: a stale ignore silently re-opens the hole this
+        # workflow exists to close.
         #
-        #   PYSEC-2026-3740 (GHSA-8mgp-746c-j5xp) nltk <=3.10.3, latest 3.10.3
-        #     -- model-artifact APIs can touch files outside allowed roots.
-        #        Reached only via rouge-score, on Hub artifacts we select.
-        #   PYSEC-2026-1939 (CVE-2024-35515) sqlitedict <=2.1.0, latest 2.1.0
-        #     -- insecure deserialization of an attacker-controlled DB file.
-        #        lm-eval only ever opens caches it wrote itself.
+        # The sed strips local version tags first. The `evals` group pins
+        # torch==2.14.0+cpu, which pip-audit skips as "not found on PyPI"
+        # while still reporting "No known vulnerabilities found".
         run: |
-          uvx pip-audit -r requirements.txt --disable-pip --no-deps \
-            --ignore-vuln PYSEC-2026-3740 \
-            --ignore-vuln PYSEC-2026-1939
+          sed -i -E 's/\+(cpu|cu[0-9]+)//' requirements.txt
+          uvx pip-audit -r requirements.txt --disable-pip --no-deps
+
+      - name: Audit the training image locks
+        # The three hashed locks the training Space image installs from. The
+        # +cuNNN local version tags are stripped first: pip-audit skips
+        # torch==2.14.1+cu130 as "not found on PyPI" and still reports
+        # "No known vulnerabilities found", so torch would go unaudited.
+        run: |
+          for lock in infra/sakthai-training-space/*.lock; do
+            echo "::group::$lock"
+            sed -E 's/\+cu[0-9]+//' "$lock" > "$RUNNER_TEMP/training-lock.txt"
+            uvx pip-audit -r "$RUNNER_TEMP/training-lock.txt" --disable-pip --no-deps
+            echo "::endgroup::"
+          done
+
+      - name: Audit the training scripts' inline dependencies
+        # Every script under training/ that carries a PEP 723 header (the HF
+        # Jobs and serving scripts). uv resolves each header the way
+        # `uv run <script>` / `hf jobs uv run` would, then pip-audit checks
+        # the result.
+        run: |
+          for script in $(git ls-files -- 'training/*.py' | xargs -r grep -l '^# /// script$'); do
+            echo "::group::$script"
+            uv export --quiet --script "$script" --no-hashes -o "$RUNNER_TEMP/script-requirements.txt"
+            uvx pip-audit -r "$RUNNER_TEMP/script-requirements.txt" --disable-pip --no-deps
+            echo "::endgroup::"
+          done

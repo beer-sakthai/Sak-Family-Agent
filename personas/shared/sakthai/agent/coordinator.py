@@ -13,7 +13,6 @@ from typing import Any
 from ..config import (
     PERSONA_NAMES,
     PERSONAS_DIR,
-    persona_mcp_config_path,
     persona_memory_db_path,
     persona_model_defaults,
 )
@@ -59,16 +58,15 @@ def resolve_persona_agent_kwargs(
     store: MemoryStore | None = None,
     model: str | None = None,
     provider: str | None = None,
-    no_mcp: bool = False,
     client: Any = None,
     system_prompt: str | None = None,
-    verbose: bool = False,
 ) -> dict[str, Any]:
-    """Resolve default runtime arguments scoped to the target persona.
+    """Resolve ``run_agent`` keyword arguments scoped to the target persona.
 
     Injects the persona's `SOUL.md` prefix, resolves default model/provider
-    from `config.yaml`, scopes memory db to the persona shard if not injected,
-    and sets up persona MCP manifest.
+    from `config.yaml`, and scopes memory db to the persona shard if not
+    injected. Every key returned is a ``run_agent`` parameter. The delegated
+    run gets the built-in tools only; the persona's MCP manifest is not loaded.
     """
     if persona not in PERSONA_NAMES:
         raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
@@ -90,10 +88,7 @@ def resolve_persona_agent_kwargs(
         db_path = persona_memory_db_path(persona)
         resolved_store = MemoryStore(db_path)
 
-    mcp_config = persona_mcp_config_path(persona)
-    resolved_mcp_config = mcp_config if mcp_config.is_file() else None
-
-    return {
+    kwargs: dict[str, Any] = {
         "task": task,
         "persona": persona,
         "store": resolved_store,
@@ -101,13 +96,12 @@ def resolve_persona_agent_kwargs(
         "model": resolved_model,
         "skills": with_skills,
         "max_iterations": max_iterations or 8,
-        "max_tokens": max_tokens,
-        "no_mcp": no_mcp,
-        "mcp_config": resolved_mcp_config,
         "client": client,
-        "system_prompt": combined_prompt if combined_prompt else None,
-        "verbose": verbose,
+        "system_prompt_prefix": combined_prompt,
     }
+    if max_tokens is not None:
+        kwargs["max_tokens"] = max_tokens
+    return kwargs
 
 
 def run_persona_task(
@@ -128,6 +122,8 @@ def run_persona_task(
     """Execute a task in-process under the scoped target persona.
 
     Guards against recursion cycles and nesting beyond ``max_depth``.
+    ``no_mcp`` and ``verbose`` are accepted for caller compatibility but have
+    no effect: a delegated run uses the built-in tools only.
     """
     if persona not in PERSONA_NAMES:
         raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
@@ -154,9 +150,7 @@ def run_persona_task(
         store=store,
         model=model,
         provider=provider,
-        no_mcp=no_mcp,
         client=client,
-        verbose=verbose,
     )
 
     new_chain = (*current_chain, persona)

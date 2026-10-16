@@ -110,7 +110,7 @@ export function DisplayMenu({
         aria-haspopup="menu"
         aria-label="Display settings"
         title="Display settings"
-        className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-2.5 py-1.5 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-2.5 py-1.5 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
       >
         <TriggerIcon className="h-3.5 w-3.5" aria-hidden />
         <Settings2 className="h-3 w-3 opacity-60" aria-hidden />
@@ -134,9 +134,13 @@ export function DisplayMenu({
                 type="button"
                 role="menuitemradio"
                 aria-checked={selected}
-                onClick={() => onThemeChange(option)}
+                onClick={() => {
+                  onThemeChange(option);
+                  setOpen(false);
+                  triggerRef.current?.focus();
+                }}
                 title={`Switch theme to ${THEME_LABELS[option]}`}
-                className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
                   selected ? "bg-raised text-fg" : "text-fg-3 hover:bg-raised/60 hover:text-fg-2"
                 }`}
               >
@@ -170,9 +174,13 @@ export function DisplayMenu({
                 type="button"
                 role="menuitemradio"
                 aria-checked={selected}
-                onClick={() => onDensityChange(option)}
+                onClick={() => {
+                  onDensityChange(option);
+                  setOpen(false);
+                  triggerRef.current?.focus();
+                }}
                 title={`Switch display density to ${label}`}
-                className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
                   selected ? "bg-raised text-fg" : "text-fg-3 hover:bg-raised/60 hover:text-fg-2"
                 }`}
               >

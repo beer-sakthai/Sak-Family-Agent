@@ -7,7 +7,7 @@ Thank you for your interest in contributing! This project represents the work of
 ### Reporting Issues
 - **Bug reports**: Open a GitHub issue with steps to reproduce
 - **Feature suggestions**: Open a GitHub issue describing the idea
-- **Security vulnerabilities**: Email beer-sakthai@users.noreply.github.com (do NOT open a public issue)
+- **Security vulnerabilities**: Report them privately as described in [SECURITY.md](SECURITY.md) (do NOT open a public issue)
 
 ### Pull Requests
 Pull requests are not currently accepted for this repository. This is a living workspace for AI agents, not a community-maintained open source project.

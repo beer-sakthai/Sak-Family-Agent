@@ -95,52 +95,47 @@ export function PersonaFilter({ selected, onChange, counts }: PersonaFilterProps
         : `${selected.length} personas`;
 
   return (
-    <div ref={containerRef} className="relative">
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        aria-label="Filter by persona"
-        title={
-          selected.length === 0
-            ? "Filter dashboard by persona"
-            : `Filter by persona (Selected: ${label})`
-        }
-        data-testid="persona-filter"
-        className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 font-mono text-[11px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+    <div ref={containerRef} className="relative inline-flex items-center">
+      <div
+        className={`inline-flex items-center rounded-xl border transition-colors ${
           selected.length > 0
             ? "border-hue-cyan-line bg-hue-cyan-tint/50 text-hue-cyan"
             : "border-line bg-panel/60 text-fg-3 hover:border-line-strong hover:text-fg-2"
         }`}
       >
-        <Users className="h-3 w-3" aria-hidden />
-        {label}
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+          aria-haspopup="menu"
+          aria-label="Filter by persona"
+          title={
+            selected.length === 0
+              ? "Filter dashboard by persona"
+              : `Filter by persona (Selected: ${label})`
+          }
+          data-testid="persona-filter"
+          className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 font-mono text-[11px] focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          <Users className="h-3 w-3" aria-hidden />
+          {label}
+        </button>
         {selected.length > 0 && (
-          // A nested <button> would be invalid inside the trigger, so the
-          // clear affordance is a focusable span with an explicit role.
-          <span
-            role="button"
-            tabIndex={0}
+          <button
+            type="button"
             aria-label="Clear persona filter"
             title="Clear persona filter"
             onClick={(event) => {
               event.stopPropagation();
               onChange([]);
             }}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter" && event.key !== " ") return;
-              event.preventDefault();
-              event.stopPropagation();
-              onChange([]);
-            }}
-            className="-mr-0.5 ml-0.5 rounded p-0.5 hover:bg-hue-cyan-tint focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="-ml-1 mr-1.5 rounded p-0.5 hover:bg-hue-cyan-tint focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
             <X className="h-3 w-3" aria-hidden />
-          </span>
+          </button>
         )}
-      </button>
+      </div>
 
       {open && (
         <div
@@ -153,7 +148,7 @@ export function PersonaFilter({ selected, onChange, counts }: PersonaFilterProps
             role="menuitem"
             onClick={() => onChange([])}
             title="Show all personas"
-            className={`mb-1 flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+            className={`mb-1 flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
               selected.length === 0
                 ? "bg-raised text-fg"
                 : "text-fg-3 hover:bg-raised/60 hover:text-fg-2"
@@ -182,7 +177,7 @@ export function PersonaFilter({ selected, onChange, counts }: PersonaFilterProps
                 aria-checked={checked}
                 onClick={() => toggle(name)}
                 title={tooltip}
-                className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
                   checked ? "bg-raised text-fg" : "text-fg-3 hover:bg-raised/60 hover:text-fg-2"
                 }`}
               >

@@ -81,7 +81,7 @@ def _validate_url(url_str: str) -> str:
                 continue
 
             # Unwrap IPv4-mapped IPv6 bypasses
-            if getattr(ip, "ipv4_mapped", None):
+            if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
                 ip = ip.ipv4_mapped
 
             if not ip.is_global or ip.is_multicast:

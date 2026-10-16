@@ -99,3 +99,45 @@ def test_session_status_command(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert "qwen2.5-coder" in update.message.replies[-1]
     assert "Saksee" in update.message.replies[-1]
+
+
+_REFUSAL = "Sorry, you are not authorized to use this bot."
+_GATED_HANDLERS = (
+    "start",
+    "set_model",
+    "set_persona",
+    "list_models",
+    "session_status",
+    "workflow",
+    "workflows",
+    "handle_text",
+)
+
+
+@pytest.mark.parametrize("handler", _GATED_HANDLERS)
+@pytest.mark.parametrize("allowlist", ["123", ""], ids=["unlisted-user", "empty-allowlist"])
+def test_unauthorized_user_gets_only_the_refusal(
+    monkeypatch: pytest.MonkeyPatch, handler: str, allowlist: str
+) -> None:
+    """A user missing from the allowlist gets the refusal and the agent never runs.
+
+    The six bots are public on Telegram, so this gate is all that stands between
+    a stranger and the agent. An empty allowlist must refuse everyone, not admit
+    everyone.
+    """
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", allowlist)
+    monkeypatch.setattr(bot, "MemoryStore", _FakeStore)
+    ran: list[str] = []
+
+    def fake_run_agent(task: str, **_: object) -> object:
+        ran.append(task)
+        return type("Result", (), {"text": "agent ran"})()
+
+    monkeypatch.setattr(bot, "run_agent", fake_run_agent)
+    update = _Update(999, text="read my memory")
+    context = _Context(args=["sakking"])
+
+    asyncio.run(getattr(bot, handler)(update, context))
+
+    assert update.message.replies == [_REFUSAL]
+    assert ran == []

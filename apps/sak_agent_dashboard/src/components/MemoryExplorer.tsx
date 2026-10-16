@@ -89,7 +89,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           aria-controls="panel-facts"
           title={activeTab === "facts" ? "Viewing recorded memory facts" : "Switch to memory facts view"}
           onClick={() => setActiveTab("facts")}
-          className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
+          className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
             activeTab === "facts"
               ? "bg-hue-cyan-tint/50 text-hue-cyan border-hue-cyan-line/50"
               : "bg-panel/60 text-fg-3 border-line hover:border-line-strong"
@@ -107,7 +107,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           aria-controls="panel-observations"
           title={activeTab === "observations" ? "Viewing recorded observations" : "Switch to observations view"}
           onClick={() => setActiveTab("observations")}
-          className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
+          className={`px-4 py-2 rounded-xl text-xs font-mono border transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
             activeTab === "observations"
               ? "bg-hue-violet-tint/50 text-hue-violet border-hue-violet-line/50"
               : "bg-panel/60 text-fg-3 border-line hover:border-line-strong"
@@ -124,7 +124,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           id="panel-facts"
           aria-labelledby="tab-facts"
           tabIndex={0}
-          className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
         >
           <div className="overflow-x-auto">
             <table className="w-full text-left font-mono text-xs">
@@ -140,8 +140,14 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
               <tbody className="divide-y divide-line/60 text-fg-2">
                 {facts.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-5 py-8 text-center text-fg-4 italic">
-                      No memory facts found.
+                    <td colSpan={5} className="px-5 py-8 text-center">
+                      <div className="flex flex-col items-center justify-center gap-2 font-sans">
+                        <Database className="h-6 w-6 text-fg-4/80" aria-hidden="true" />
+                        <p className="text-xs font-medium text-fg-3">No memory facts recorded yet.</p>
+                        <p className="text-[11px] text-fg-4 max-w-sm leading-relaxed">
+                          Facts are extracted during agent runs and saved into each persona&apos;s <code className="text-fg-3 font-mono">memory.db</code> shard.
+                        </p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -186,7 +192,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
           id="panel-observations"
           aria-labelledby="tab-observations"
           tabIndex={0}
-          className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
         >
           <div className="overflow-x-auto">
             <table className="w-full text-left font-mono text-xs">
@@ -202,8 +208,14 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
               <tbody className="divide-y divide-line/60 text-fg-2">
                 {observations.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-5 py-8 text-center text-fg-4 italic">
-                      No observations recorded.
+                    <td colSpan={5} className="px-5 py-8 text-center">
+                      <div className="flex flex-col items-center justify-center gap-2 font-sans">
+                        <Lightbulb className="h-6 w-6 text-fg-4/80" aria-hidden="true" />
+                        <p className="text-xs font-medium text-fg-3">No observations recorded yet.</p>
+                        <p className="text-[11px] text-fg-4 max-w-sm leading-relaxed">
+                          Observations summarize learned behaviors and insights synthesized across agent executions.
+                        </p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -221,10 +233,18 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
                       <td className="px-5 py-3.5 font-sans text-xs text-fg leading-relaxed">
                         {o.summary}
                       </td>
-                      <td className="px-5 py-3.5 text-right text-hue-amber">
+                      <td
+                        title={`Observation weight: ${o.weight.toFixed(2)}`}
+                        aria-label={`Observation weight: ${o.weight.toFixed(2)}`}
+                        className="px-5 py-3.5 text-right text-hue-amber"
+                      >
                         {o.weight.toFixed(2)}
                       </td>
-                      <td className="px-5 py-3.5 text-right text-hue-emerald">
+                      <td
+                        title={`Confidence score: ${(o.confidence * 100).toFixed(0)}%`}
+                        aria-label={`Confidence score: ${(o.confidence * 100).toFixed(0)}%`}
+                        className="px-5 py-3.5 text-right text-hue-emerald"
+                      >
                         {(o.confidence * 100).toFixed(0)}%
                       </td>
                     </tr>

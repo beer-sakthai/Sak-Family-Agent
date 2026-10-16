@@ -11,9 +11,13 @@ REPO="$HOME/Sak-Family-Agent"
 
 get_secret() {
 	local secret_name="$1"
-	local kv_token
-	kv_token=$(curl -s -H "Metadata:true" "http://169.254.169.254/metadata/identity/oauth2/token?resource=https://vault.azure.net&api-version=2018-02-01" | python3 -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
-	curl -s -H "Authorization: Bearer $kv_token" "https://$VAULT.vault.azure.net/secrets/$secret_name?api-version=7.4" | python3 -c "import json,sys; print(json.load(sys.stdin)['value'])"
+	local kv_token resp
+	# Each response is captured before python3 parses it: piping curl straight
+	# into an interpreter is what Scorecard reports as download-then-run.
+	resp=$(curl -s -H "Metadata:true" "http://169.254.169.254/metadata/identity/oauth2/token?resource=https://vault.azure.net&api-version=2018-02-01")
+	kv_token=$(printf '%s' "$resp" | python3 -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
+	resp=$(curl -s -H "Authorization: Bearer $kv_token" "https://$VAULT.vault.azure.net/secrets/$secret_name?api-version=7.4")
+	printf '%s' "$resp" | python3 -c "import json,sys; print(json.load(sys.stdin)['value'])"
 }
 
 OPENAI_API_KEY="$(get_secret sakthai-openai-key)"
