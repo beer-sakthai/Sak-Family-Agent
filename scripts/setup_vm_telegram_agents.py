@@ -22,7 +22,7 @@ AGENTS = {
     "saksee": {
         "model": "gpt-4o-mini",
         "persona": "personas/saksee/SOUL.md",
-        "skills": "playwright",
+        "skills": "SakSee-playwright",
     },
     "saksit": {
         "model": "gpt-4o-mini",

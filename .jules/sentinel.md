@@ -528,3 +528,7 @@
 **Vulnerability:** File path validation (`_validate_filepath`) failed to strip leading `@` characters from path strings before resolving them with `Path().resolve()`. This allowed an attacker to bypass absolute path checks (like `target.is_absolute()`) and subsequent system-root checks (e.g. `['@', 'var', 'log', 'syslog']` check bypassing because `is_absolute()` is False) when evaluating sensitive paths.
 **Learning:** Security validations that rely on structure parsing (like `is_absolute()` or checking the first non-root directory) can be completely bypassed by prefixing a valid path with a non-path character (like `@` from cURL semantics) if the validation logic does not explicitly strip or normalize such prefixes prior to evaluating path segments.
 **Prevention:** Always strip potential argument prefixes (`@`, etc.) at the outermost boundary of file path validation functions before constructing Path objects or performing structural checks.
+## 2026-10-16 - Prevent XSS in Dashboard and Index Error Messages
+**Vulnerability:** Cross-Site Scripting (XSS) via `e.message` injection into DOM using `.innerHTML`.
+**Learning:** Even internal API error messages can contain reflected user input if the backend echoes bad input in the error response. Directly inserting these into the DOM using `.innerHTML` creates an XSS vulnerability.
+**Prevention:** Always wrap dynamically generated error strings with an HTML escaper (like the local `escapeHtml` function) before injecting them into `.innerHTML`.

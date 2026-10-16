@@ -123,7 +123,7 @@ async function searchRAG() {
       '<div>' + r.text + '</div></div>'
     ).join('');
   } catch(e) {
-    results.innerHTML = '<div style=\"color:#f85149\">Error: ' + e.message + '</div>';
+    results.innerHTML = '<div style=\"color:#f85149\">Error: ' + escapeHtml(e.message) + '</div>';
   }
 }
 
@@ -176,7 +176,7 @@ async function sendChat() {
     $('modelOutput').textContent = data.debug || data.response;
     $('modelSpeed').textContent = data.speed ? data.speed + ' tok/s' : '-';
   } catch(e) {
-    box.innerHTML += '<div class="msg ai" style="color:#f85149">⚠️ Error: ' + e.message + '</div>';
+    box.innerHTML += '<div class="msg ai" style="color:#f85149">⚠️ Error: ' + escapeHtml(e.message) + '</div>';
     $('modelOutput').textContent = 'Error: ' + e.message;
   }
   box.scrollTop = box.scrollHeight;

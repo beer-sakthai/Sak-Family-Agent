@@ -46,17 +46,62 @@ class _FakeStore:
         pass
 
 
-def test_session_store_is_persistent_per_chat(
+def test_session_is_kept_per_chat_but_memory_is_the_personas(
     sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123")
+    """Each chat keeps its own settings; every chat writes to the persona's one shard."""
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123,456")
+    monkeypatch.setenv("SAKTHAI_PERSONA", "saktan")
     monkeypatch.setattr(bot, "MemoryStore", _FakeStore)
     context = _Context()
     first = bot._get_chat_session(context, 123)
     second = bot._get_chat_session(context, 123)
+    other_chat = bot._get_chat_session(context, 456)
 
     assert first is second
-    assert first.db_path == sakthai_home / "telegram" / "123" / "memory.db"
+    assert other_chat is not first
+    shard = Path.home() / ".sakthai" / "saktan" / "memory.db"
+    assert first.db_path == other_chat.db_path == shard
+
+
+def test_session_memory_without_a_persona_is_the_default_store(
+    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123")
+    monkeypatch.delenv("SAKTHAI_PERSONA", raising=False)
+    monkeypatch.setattr(bot, "MemoryStore", _FakeStore)
+
+    assert bot._get_chat_session(_Context(), 123).db_path == sakthai_home / "memory.db"
+
+
+def test_deployed_skills_resolve_from_the_personas_own_skills(
+    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The VM's SAKTHAI_WITH_SKILLS name reaches SakSee's prompt.
+
+    The bot called run_agent without the persona, so skills resolved against
+    SakThai's skill folder and SakSee-playwright, which only SakSee has, was
+    silently skipped.
+    """
+    from sakthai.agent.loop import _build_skills_block
+
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123")
+    monkeypatch.setenv("SAKTHAI_PERSONA", "saksee")
+    monkeypatch.setenv("SAKTHAI_WITH_SKILLS", "SakSee-playwright")
+    monkeypatch.setattr(bot, "MemoryStore", _FakeStore)
+    calls: list[dict[str, object]] = []
+
+    def fake_run_agent(task: str, **kwargs: object) -> object:
+        calls.append(kwargs)
+        return type("Result", (), {"text": "done"})()
+
+    monkeypatch.setattr(bot, "run_agent", fake_run_agent)
+    asyncio.run(bot.handle_text(_Update(123, text="check the site"), _Context()))
+
+    (kwargs,) = calls
+    skills, persona = kwargs["skills"], kwargs.get("persona")
+    assert isinstance(skills, list) and (persona is None or isinstance(persona, str))
+    assert "### SakSee-playwright" in _build_skills_block(skills, "", None, persona)
 
 
 def test_set_model_command(monkeypatch: pytest.MonkeyPatch) -> None:

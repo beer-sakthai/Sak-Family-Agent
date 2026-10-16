@@ -190,16 +190,16 @@ def memory_db_path() -> Path:
 def persona_memory_db_path(persona: str) -> Path:
     """Path to PERSONA's own memory shard, by convention: ``~/.sakthai/<persona>/memory.db``.
 
-    When ``SAKTHAI_HOME`` is set (e.g. in tests) the path resolves under that
-    override so tests get proper isolation.  When unset, falls back to
-    ``Path.home() / \".sakthai\"``, matching the production convention used by
-    ``infra/vm-agents/sakthai-agent-run.sh`` where ``SAKTHAI_HOME`` is set
-    to ``$HOME/.sakthai/$AGENT`` per deployed persona.
+    Resolved from the home directory, deliberately independent of ``SAKTHAI_HOME``.
+    ``infra/vm-agents/sakthai-agent-run.sh`` sets ``SAKTHAI_HOME=$HOME/.sakthai/$AGENT``
+    for each deployed persona, so a path built from it put every sibling at
+    ``~/.sakthai/<self>/<sibling>/memory.db`` and every family read on the VM came
+    back empty. Tests isolate it by pointing ``HOME`` at a temp directory
+    (``tests/conftest.py``).
     """
     if persona not in PERSONA_NAMES:
         raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
-    base = Path(os.environ.get("SAKTHAI_HOME", Path.home() / ".sakthai"))
-    return base / persona / "memory.db"
+    return Path.home() / ".sakthai" / persona / "memory.db"
 
 
 def sessions_dir() -> Path:
@@ -370,11 +370,6 @@ def telegram_allowed_user_ids() -> list[int]:
         except ValueError:
             continue
     return values
-
-
-def telegram_session_db_path(chat_id: int | str) -> Path:
-    """Return the persistent memory DB path for one Telegram chat session."""
-    return sakthai_home() / "telegram" / str(chat_id) / "memory.db"
 
 
 def _paths_report() -> dict[str, Any]:
