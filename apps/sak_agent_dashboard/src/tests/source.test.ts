@@ -234,7 +234,7 @@ describe("ApiSource SSRF protections", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const source = new ApiSource("http://127.0.0.1:3000") as any;
     await expect(source.fetchJson("//attacker.com")).rejects.toThrow(
-      "Invalid path format: protocol-relative and absolute paths are blocked",
+      "Invalid path format: protocol-relative, absolute, and traversal paths are blocked",
     );
   });
 
@@ -243,7 +243,7 @@ describe("ApiSource SSRF protections", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const source = new ApiSource("http://127.0.0.1:3000") as any;
     await expect(source.fetchJson("https://attacker.com")).rejects.toThrow(
-      "Invalid path format: protocol-relative and absolute paths are blocked",
+      "Invalid path format: protocol-relative, absolute, and traversal paths are blocked",
     );
   });
 
@@ -253,6 +253,24 @@ describe("ApiSource SSRF protections", () => {
     const source = new ApiSource("http://127.0.0.1:3000") as any;
     await expect(source.fetchJson("api\\personas")).rejects.toThrow(
       "Invalid path format: protocol-relative and absolute paths are blocked",
+    );
+  });
+
+  it("blocks path traversal that escapes the base path", async () => {
+    const { ApiSource } = await import("@/lib/sources/api");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const source = new ApiSource("http://127.0.0.1:3000/api/v1") as any;
+    await expect(source.fetchJson("../../admin/delete")).rejects.toThrow(
+      "Invalid path format: protocol-relative, absolute, and traversal paths are blocked",
+    );
+  });
+
+  it("blocks double URL-encoded path traversal that escapes the base path", async () => {
+    const { ApiSource } = await import("@/lib/sources/api");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const source = new ApiSource("http://127.0.0.1:3000/api/v1") as any;
+    await expect(source.fetchJson("%252e%252e%252f%252e%252e%252fadmin/delete")).rejects.toThrow(
+      "Invalid path format: protocol-relative, absolute, and traversal paths are blocked",
     );
   });
 });
