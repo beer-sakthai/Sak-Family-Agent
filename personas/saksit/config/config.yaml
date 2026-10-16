@@ -1,6 +1,6 @@
 model:
   provider: huggingface
-  default: DeepSeek-V4-Flash
+  default: deepseek-ai/DeepSeek-V4-Flash
 providers: {}
 fallback_providers: []
 credential_pool_strategies: {}
@@ -507,8 +507,7 @@ approvals:
   cron_mode: deny
   mcp_reload_confirm: true
   destructive_slash_confirm: false
-command_allowlist:
-- script execution via -e/-c flag
+command_allowlist: []
 quick_commands: {}
 platform_hints: {}
 hooks: {}

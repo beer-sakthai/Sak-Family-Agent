@@ -44,7 +44,11 @@ MAX_MEMORY_CONTENT_CHARS = 32768
 
 # Snapshot format version. Bump whenever the exported columns change so old
 # snapshots are rejected loudly instead of importing into the wrong shape.
-SNAPSHOT_VERSION = 1
+# v2 requires every fact to carry ``tags``, a list of strings. v1 predates that
+# field, so a v1 fact may omit it and imports with no tags.
+SNAPSHOT_VERSION = 2
+LEGACY_SNAPSHOT_VERSION = 1
+SUPPORTED_SNAPSHOT_VERSIONS = (LEGACY_SNAPSHOT_VERSION, SNAPSHOT_VERSION)
 SNAPSHOT_FACT_FIELDS = {
     "id",
     "kind",
@@ -193,6 +197,18 @@ def _validate_row(row: Any, required: set[str], label: str) -> None:
     missing = required - row.keys()
     if missing:
         raise ValueError(f"{label} row missing fields: {sorted(missing)}")
+
+
+def _validate_snapshot_tags(tags: Any, index: int) -> None:
+    """A snapshot fact's ``tags`` must be a list of strings."""
+    if isinstance(tags, list):
+        bad = [t for t in tags if not isinstance(t, str)]
+        if not bad:
+            return
+        got = f"a list containing {type(bad[0]).__name__}"
+    else:
+        got = type(tags).__name__
+    raise ValueError(f"fact row {index}: tags must be a list of strings, got {got}")
 
 
 class MemoryStore:
@@ -821,10 +837,16 @@ class MemoryStore:
             raise ValueError(f"mode must be 'merge' or 'replace', got {mode!r}")
         if not isinstance(data, dict):
             raise ValueError("snapshot must be a dict")
-        if data.get("version") != SNAPSHOT_VERSION:
+        version = data.get("version")
+        # An int but not a bool: True and 1.0 compare equal to 1, so `in` alone accepts them.
+        if (
+            not isinstance(version, int)
+            or isinstance(version, bool)
+            or version not in SUPPORTED_SNAPSHOT_VERSIONS
+        ):
             raise ValueError(
-                f"unsupported snapshot version: {data.get('version')!r} "
-                f"(expected {SNAPSHOT_VERSION})"
+                f"unsupported snapshot version: {version!r} "
+                f"(supported: {', '.join(map(str, SUPPORTED_SNAPSHOT_VERSIONS))})"
             )
         facts = data.get("facts")
         obs = data.get("observations")
@@ -832,8 +854,13 @@ class MemoryStore:
             raise ValueError("snapshot must contain list 'facts' and 'observations'")
 
         # Validate everything before touching the DB.
-        for row in facts:
-            _validate_row(row, SNAPSHOT_FACT_FIELDS, "fact")
+        fact_fields = SNAPSHOT_FACT_FIELDS
+        if version != LEGACY_SNAPSHOT_VERSION:
+            fact_fields = SNAPSHOT_FACT_FIELDS | {"tags"}
+        for index, row in enumerate(facts):
+            _validate_row(row, fact_fields, "fact")
+            if "tags" in row:  # required from v2; optional, but still checked, in v1
+                _validate_snapshot_tags(row["tags"], index)
         for row in obs:
             _validate_row(row, SNAPSHOT_OBS_FIELDS, "observation")
 
@@ -842,11 +869,7 @@ class MemoryStore:
             clean_value = redact_secrets(str(f["value"]))[:MAX_MEMORY_CONTENT_CHARS]
             clean_kind = redact_secrets(str(f["kind"]))
             clean_key = redact_secrets(str(f["key"])) if f.get("key") else None
-            clean_tags = (
-                [redact_secrets(str(t)) for t in f["tags"]]
-                if isinstance(f.get("tags"), list)
-                else None
-            )
+            clean_tags = [redact_secrets(t) for t in f.get("tags", [])]
             clean_source_session = (
                 redact_secrets(str(f["source_session"])) if f.get("source_session") else None
             )

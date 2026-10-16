@@ -1,6 +1,6 @@
 # Pinned by digest (Scorecard Pinned-Dependencies). The tag is kept alongside
 # the digest so Dependabot's docker ecosystem can bump both together.
-FROM python:3.11-slim@sha256:6f31d6e9ba2b0a787a3f81c37b004155b87b9efa1b771182bd550c1615745be5
+FROM python:3.14-slim@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \

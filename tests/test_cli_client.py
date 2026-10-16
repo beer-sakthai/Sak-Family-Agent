@@ -147,3 +147,21 @@ def test_cli_client_test(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
         data = json.loads(res_json.output)
         assert data["all_passed"] is True
         assert data["total_tests"] == 3
+
+
+@pytest.mark.parametrize("extra", [[], ["--json"]])
+def test_cli_client_test_failure_exits_nonzero(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, extra: list[str]
+) -> None:
+    """Failed checks fail the command in both output modes; --json used to exit 0."""
+    monkeypatch.setenv("SAKTHAI_CLIENTS_DIR", str(tmp_path / "clients"))
+    save_client(ClientConfig(client_id="test-hvac", company_name="Test HVAC"))
+
+    runner = CliRunner()
+    with patch(
+        "sakthai.client.verifier.run_persona_task", side_effect=RuntimeError("no credentials")
+    ):
+        res = runner.invoke(main, ["client", "test", "test-hvac", *extra])
+    assert res.exit_code == 1, res.output
+    if extra:
+        assert json.loads(res.output)["all_passed"] is False

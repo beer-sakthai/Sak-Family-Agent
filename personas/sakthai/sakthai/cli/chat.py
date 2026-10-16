@@ -80,6 +80,22 @@ def chat(
     kept in-process for this session only; continuity across separate
     `sakthai chat` runs comes from persistent memory, same as `sakthai run`.
     """
+    # Like `run --persona`, the persona's own config.yaml picks the model when
+    # the caller did not. Unlike `run`, the pair is taken whole and only when
+    # neither flag was passed (asked of click, not inferred from the value):
+    # `--provider ollama` alone keeps the CLI's own pair rather than sending a
+    # Hub model name to Ollama, and `--provider ollama --model sakthai` still
+    # means local Ollama even though those are also the defaults.
+    ctx = click.get_current_context()
+    flags_given = any(
+        ctx.get_parameter_source(name) is not click.core.ParameterSource.DEFAULT
+        for name in ("model", "provider")
+    )
+    if not flags_given:
+        default_provider, default_model = config.persona_model_defaults(persona)
+        if default_provider and default_model:
+            provider, model = default_provider, default_model
+
     soul_text = load_persona_soul(persona)
     console = Console()
     # Each persona gets its own memory shard (~/.sakthai/<persona>/memory.db),

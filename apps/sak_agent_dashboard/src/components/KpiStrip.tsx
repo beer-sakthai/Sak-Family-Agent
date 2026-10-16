@@ -136,6 +136,13 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
           </span>
         )}
       </div>
+      {/* Out of flow, in the bottom strip pb-9 reserves: the hint is invisible
+          until hover or focus, so it must not take width from the hint line. */}
+      {target && onNavigate && (
+        <span className="pointer-events-none absolute bottom-2.5 right-4 font-mono text-[10px] text-fg-5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+          Open →
+        </span>
+      )}
     </Root>
   );
 }

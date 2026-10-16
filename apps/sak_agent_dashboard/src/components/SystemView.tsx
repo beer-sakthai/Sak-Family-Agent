@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import { compactNumber } from "@/lib/format";
+import { PersonaAvatar } from "@/components/PersonaAvatar";
 import { displayName } from "@/lib/persona";
 import {
   SYSTEM_SNAPSHOT,
@@ -272,21 +273,24 @@ function PersonaGrid({ snapshot }: { snapshot: SystemSnapshot }) {
             }`}
           >
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="flex items-center gap-1.5 font-display text-base font-semibold text-fg">
-                  {displayName(persona.name)}
-                  {persona.lead && (
-                    <span
-                      title="Family lead persona"
-                      aria-label="Family lead persona"
-                      className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent"
-                    >
-                      <Crown className="h-3 w-3" aria-hidden />
-                      Lead
-                    </span>
-                  )}
-                </p>
-                <p className="mt-0.5 text-xs text-fg-3">{persona.role || "—"}</p>
+              <div className="flex min-w-0 items-start gap-3">
+                <PersonaAvatar name={persona.name} size={44} />
+                <div className="min-w-0">
+                  <p className="flex items-center gap-1.5 font-display text-base font-semibold text-fg">
+                    {displayName(persona.name)}
+                    {persona.lead && (
+                      <span
+                        title="Family lead persona"
+                        aria-label="Family lead persona"
+                        className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent"
+                      >
+                        <Crown className="h-3 w-3" aria-hidden />
+                        Lead
+                      </span>
+                    )}
+                  </p>
+                  <p className="mt-0.5 text-xs text-fg-3">{persona.role || "—"}</p>
+                </div>
               </div>
               <span
                 className="shrink-0 rounded-md border border-line bg-sunken/60 px-1.5 py-0.5 font-mono text-[10px] text-fg-3"
@@ -371,12 +375,20 @@ function BarList({ rows, unit }: { rows: BarRow[]; unit: string }) {
           title={`${row.label}: ${row.value.toLocaleString()} ${unit}${row.note ? ` · ${row.note}` : ""}`}
         >
           <span className="truncate font-mono text-fg-2">{row.label}</span>
-          <span className="h-2 overflow-hidden rounded-full bg-sunken" aria-hidden>
+          <div
+            role="progressbar"
+            aria-label={`${row.label} ${unit}`}
+            aria-valuenow={row.value}
+            aria-valuemin={0}
+            aria-valuemax={max}
+            aria-valuetext={`${row.label}: ${row.value.toLocaleString()} ${unit}${row.note ? ` (${row.note})` : ""}`}
+            className="h-2 overflow-hidden rounded-full bg-sunken"
+          >
             <span
               className="block h-full rounded-full bg-accent"
               style={{ width: `${Math.max(2, (row.value / max) * 100)}%` }}
             />
-          </span>
+          </div>
           <span className="text-right font-mono tabular-nums text-fg-3">
             {row.value.toLocaleString()}
             {row.note && <span className="ml-1.5 text-fg-5">{row.note}</span>}
@@ -432,7 +444,11 @@ function ToolsPanel({ snapshot }: { snapshot: SystemSnapshot }) {
             <p className="flex items-center gap-2">
               <code className="truncate font-mono text-xs text-fg">{tool.name}</code>
               {tool.mcp_only && (
-                <span className="shrink-0 rounded border border-hue-amber-line bg-hue-amber-tint px-1 text-[10px] text-hue-amber">
+                <span
+                  title="Tool is available only via MCP stdio server, not directly in the core agent loop"
+                  aria-label="MCP only tool"
+                  className="shrink-0 rounded border border-hue-amber-line bg-hue-amber-tint px-1 text-[10px] text-hue-amber"
+                >
                   MCP only
                 </span>
               )}
@@ -473,7 +489,11 @@ function CliBranch({ node, path }: { node: CliNode; path: string }) {
             aria-hidden="true"
           />
           <code className="shrink-0 font-mono text-xs text-fg">{node.name}</code>
-          <span className="rounded bg-sunken px-1 font-mono text-[10px] text-fg-4">
+          <span
+            title={`${node.commands.length} subcommand${node.commands.length === 1 ? "" : "s"}`}
+            aria-label={`${node.commands.length} subcommands`}
+            className="rounded bg-sunken px-1 font-mono text-[10px] text-fg-4"
+          >
             {node.commands.length}
           </span>
           <span className="min-w-0 truncate text-[11px] text-fg-5" title={node.help}>
@@ -541,7 +561,7 @@ function WorkflowsPanel({ snapshot }: { snapshot: SystemSnapshot }) {
               type="button"
               aria-pressed={filter === option.id}
               onClick={() => setFilter(option.id)}
-              aria-label={`Filter workflows: ${option.label}`}
+              aria-label={filter === option.id ? `Showing ${option.label}` : `Filter workflows by ${option.label}`}
               title={filter === option.id ? `Showing ${option.label}` : `Filter workflows by ${option.label}`}
               className={`rounded-md px-2 py-1 text-[11px] transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
                 filter === option.id ? "bg-raised text-fg" : "text-fg-4 hover:text-fg-2"
@@ -568,12 +588,18 @@ function WorkflowsPanel({ snapshot }: { snapshot: SystemSnapshot }) {
               {workflow.triggers.map((trigger) => (
                 <span
                   key={trigger}
+                  title={`Trigger event: ${trigger}`}
+                  aria-label={`Trigger event: ${trigger}`}
                   className="rounded border border-line bg-sunken/60 px-1 font-mono text-[10px] text-fg-3"
                 >
                   {trigger}
                 </span>
               ))}
-              <span className="font-mono text-[10px] text-fg-5">
+              <span
+                title={`${workflow.jobs.length} CI job${workflow.jobs.length === 1 ? "" : "s"}`}
+                aria-label={`${workflow.jobs.length} CI jobs`}
+                className="font-mono text-[10px] text-fg-5"
+              >
                 · {workflow.jobs.length} job{workflow.jobs.length === 1 ? "" : "s"}
               </span>
             </div>

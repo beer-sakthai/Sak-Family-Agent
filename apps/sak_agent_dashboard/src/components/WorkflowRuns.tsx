@@ -144,12 +144,17 @@ export function WorkflowRuns({
                 </tr>
               ) : (
                 runs.map((run) => {
+                  const isSelected = run.run_id === openRunId;
                   const label = `View steps for ${run.workflow_name || run.run_id}`;
                   return (
                     <tr
                       key={run.run_id}
+                      aria-selected={isSelected}
                       onClick={() => open(run.run_id)}
-                      className="cursor-pointer hover:bg-raised/60 transition-colors"
+                      title={label}
+                      className={`cursor-pointer transition-colors ${
+                        isSelected ? "bg-raised/80 font-medium" : "hover:bg-raised/60"
+                      }`}
                     >
                       <td className="px-5 py-3.5">
                         <span className="font-bold text-fg">{run.workflow_name || "—"}</span>
@@ -158,13 +163,22 @@ export function WorkflowRuns({
                       <td className="px-5 py-3.5">
                         <StatusPill status={run.status} />
                       </td>
-                      <td className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap">
+                      <td
+                        title={`Started: ${started(run.started_at)}`}
+                        className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap"
+                      >
                         {started(run.started_at)}
                       </td>
-                      <td className="px-5 py-3.5 text-right text-fg-2">
+                      <td
+                        title={`Execution duration: ${duration(run.duration_seconds)}`}
+                        className="px-5 py-3.5 text-right text-fg-2"
+                      >
                         {duration(run.duration_seconds)}
                       </td>
-                      <td className="px-5 py-3.5 text-right">
+                      <td
+                        title={`Step count: ${run.step_count} total${run.failed_steps > 0 ? `, ${run.failed_steps} failed` : ""}`}
+                        className="px-5 py-3.5 text-right"
+                      >
                         <span className="text-fg-2">{run.step_count}</span>
                         {run.failed_steps > 0 && (
                           <span className="text-hue-rose"> ({run.failed_steps} failed)</span>
@@ -197,7 +211,7 @@ export function WorkflowRuns({
         <Drawer
           title={detail?.summary.workflow_name ?? openRunId}
           subtitle={openRunId}
-          icon={<GitBranch className="h-4 w-4 text-hue-violet" />}
+          icon={<GitBranch className="h-4 w-4 text-hue-violet" aria-hidden="true" />}
           onClose={close}
           data-testid="workflow-drawer"
         >
