@@ -618,6 +618,13 @@ describe("SessionExplorer", () => {
     );
   });
 
+  it("renders accessible Actions column header in session table", () => {
+    renderExplorer();
+    const actionsHeader = screen.getByRole("columnheader", { name: "Actions" });
+    expect(actionsHeader).toBeInTheDocument();
+    expect(actionsHeader).toHaveAttribute("aria-label", "Actions");
+  });
+
   it("lists sessions", () => {
     renderExplorer();
     expect(screen.getByText("Draft the release notes for v2.1")).toBeInTheDocument();
@@ -852,6 +859,13 @@ describe("WorkflowRuns", () => {
       "title",
       `Total workflow runs recorded: ${workflows.runs.length}`,
     );
+  });
+
+  it("renders accessible Actions column header in workflow runs table", () => {
+    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
+    const actionsHeader = screen.getByRole("columnheader", { name: "Actions" });
+    expect(actionsHeader).toBeInTheDocument();
+    expect(actionsHeader).toHaveAttribute("aria-label", "Actions");
   });
 
   it("lists runs with their status", () => {

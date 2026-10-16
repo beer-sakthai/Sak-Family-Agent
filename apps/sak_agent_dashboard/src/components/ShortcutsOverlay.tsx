@@ -203,11 +203,6 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
                   className="mt-1 rounded-lg border border-line bg-raised px-2.5 py-1 font-sans text-xs text-fg-3 transition-colors hover:bg-raised/80 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   Clear search filter
-                  aria-label="Clear shortcut search filter and show all shortcuts"
-                  title="Clear search (Esc)"
-                  className="mt-1 rounded-lg border border-line bg-raised px-2.5 py-1 font-sans text-xs text-fg-3 transition-colors hover:bg-raised/80 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  Clear search query
                 </button>
               </div>
             );
