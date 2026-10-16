@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from sakthai.config import memory_db_path
 from sakthai.memory.merged import FamilyMemoryView, ShardedFact
 from sakthai.memory.store import MemoryStore
 
@@ -230,6 +231,25 @@ def test_find_facts_reads_a_tagged_note_from_a_siblings_shard(
         "HOUSEHOLD CHARGE SUMMARY | old",
         "HOUSEHOLD CHARGE SUMMARY | new",
     }
+
+
+def test_a_vm_persona_reads_a_note_its_sibling_wrote(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The VM layout: each persona runs with SAKTHAI_HOME=$HOME/.sakthai/<self>.
+
+    SakSee writes a ban to its own store; SakTan, running as itself, must find it.
+    Shards used to resolve under SAKTHAI_HOME, which put SakSee's shard at
+    ~/.sakthai/saktan/saksee/memory.db for SakTan, so the read came back empty.
+    """
+    family_root = Path.home() / ".sakthai"
+    monkeypatch.setenv("SAKTHAI_HOME", str(family_root / "saksee"))
+    with MemoryStore(memory_db_path()) as store:
+        store.add_fact("RATE LIMIT BAN: example.com", tags=["rate-limit-ban"])
+
+    monkeypatch.setenv("SAKTHAI_HOME", str(family_root / "saktan"))
+    with FamilyMemoryView() as view:
+        found = view.find_facts(tags=["rate-limit-ban"])
+
+    assert [(f.persona, f.fact.value) for f in found] == [("saksee", "RATE LIMIT BAN: example.com")]
 
 
 def test_find_facts_requires_every_tag_even_past_the_limit(
