@@ -13,14 +13,16 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, Messa
 
 from ..agent.loop import run_agent
 from ..config import (
+    memory_db_path,
+    persona_memory_db_path,
     sakthai_default_model,
     sakthai_default_provider,
     sakthai_fast_mode,
+    sakthai_persona,
     sakthai_system_prompt_prefix,
     sakthai_with_skills,
     telegram_allowed_user_ids,
     telegram_bot_token,
-    telegram_session_db_path,
 )
 from ..memory.store import MemoryStore
 from . import workflow_executor
@@ -45,7 +47,7 @@ RECOMMENDED_MODELS = (
 
 @dataclass
 class TelegramSession:
-    """Per-chat persistent state for the Telegram bot."""
+    """Per-chat settings for the Telegram bot; memory is the persona's, shared by every chat."""
 
     db_path: Path
     store: MemoryStore
@@ -78,7 +80,10 @@ def _get_chat_session(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> Teleg
     sessions = context.application.bot_data.setdefault("telegram_sessions", {})
     session = sessions.get(chat_id)
     if session is None:
-        db_path = telegram_session_db_path(chat_id)
+        # One memory per persona (Beer's call): a database per chat kept what a
+        # persona learned in one chat from its siblings and its other chats.
+        persona = sakthai_persona()
+        db_path = persona_memory_db_path(persona) if persona else memory_db_path()
         session = TelegramSession(db_path=db_path, store=MemoryStore(db_path))
         sessions[chat_id] = session
     return session
@@ -128,6 +133,8 @@ async def _reply_with_agent_result(
         fast=sakthai_fast_mode(),
         stateless=_env_bool("SAKTHAI_STATELESS", False),
         system_prompt_prefix=system_prompt_prefix,
+        # Resolve skills and slash commands from the persona's own skill folder.
+        persona=sakthai_persona(),
     )
     await update.message.reply_text(result.text)
 

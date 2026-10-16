@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import re
 import stat
 import sys
 from pathlib import Path
@@ -131,3 +132,46 @@ def test_parser_does_not_require_secrets_on_the_command_line() -> None:
     assert all(
         getattr(args, f"{agent}_telegram_bot_token") is None for agent in SCRIPT_MODULE.AGENTS
     )
+
+
+def _deployed_skill_settings() -> list[tuple[str, str, str]]:
+    """(source, persona, skill) for every SAKTHAI_WITH_SKILLS a VM deployment sets."""
+    repo_root = Path(__file__).resolve().parents[1]
+    found = [
+        ("setup_vm_telegram_agents.py", persona, skill)
+        for persona, spec in SCRIPT_MODULE.AGENTS.items()
+        for skill in spec["skills"].replace(",", " ").split()
+    ]
+    templates = repo_root / "infra" / "vm-agents" / "env-templates"
+    for template in sorted(templates.glob("sak*.env.example")):
+        persona = template.name.removesuffix(".env.example")
+        for line in template.read_text(encoding="utf-8").splitlines():
+            if line.startswith("SAKTHAI_WITH_SKILLS="):
+                for skill in line.split("=", 1)[1].replace(",", " ").split():
+                    found.append((template.name, persona, skill))
+    launcher = (repo_root / "infra" / "vm-agents" / "sakthai-agent-run.sh").read_text(
+        encoding="utf-8"
+    )
+    for persona, block in re.findall(r"^(sak\w+)\)(.*?);;", launcher, re.M | re.S):
+        for value in re.findall(r"SAKTHAI_WITH_SKILLS=(\S*)", block):
+            for skill in value.replace(",", " ").split():
+                found.append(("sakthai-agent-run.sh", persona, skill))
+    return found
+
+
+def test_every_deployed_with_skills_name_resolves() -> None:
+    """A skill name the VM passes must exist for that persona, or it is silently skipped.
+
+    SakSee ran with SAKTHAI_WITH_SKILLS=playwright, a name no skill root has; the
+    real skill is SakSee-playwright.
+    """
+    from sakthai.skills import collect_skills, default_skill_roots
+
+    settings = _deployed_skill_settings()
+    assert settings, "no SAKTHAI_WITH_SKILLS setting found"
+    missing = [
+        (source, persona, skill)
+        for source, persona, skill in settings
+        if skill not in {s.name for s in collect_skills(*default_skill_roots(persona))}
+    ]
+    assert not missing, f"unresolved skill names: {missing}"
