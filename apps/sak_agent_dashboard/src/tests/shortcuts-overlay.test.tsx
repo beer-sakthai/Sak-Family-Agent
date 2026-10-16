@@ -89,6 +89,14 @@ describe("ShortcutsOverlay", () => {
     fireEvent.change(searchInput, { target: { value: "nonexistent query" } });
     const emptyState = screen.getByRole("status", { name: 'No shortcuts match "nonexistent query"' });
     expect(emptyState).toBeInTheDocument();
+
+    // Verify inline reset button in empty state
+    const resetBtn = screen.getByRole("button", { name: "Clear shortcut search filter and show all shortcuts" });
+    expect(resetBtn).toHaveAttribute("type", "button");
+    expect(resetBtn).toHaveAttribute("title", "Clear search (Esc)");
+    fireEvent.click(resetBtn);
+    expect(searchInput).toHaveValue("");
+    expect(screen.getByText("Show this list")).toBeInTheDocument();
   });
 
   it("clears active search query on Escape keypress inside search input without closing overlay", () => {
