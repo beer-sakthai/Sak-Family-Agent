@@ -87,24 +87,16 @@ So leave `--model` and `--provider` off. Each persona's config picks them
 passing `--provider anthropic` overrides all six back to being identical,
 which is the problem `--persona` solves.
 
-Memory resolves as `$SAKTHAI_HOME/<persona>/memory.db`, falling back to
-`~/.sakthai/<persona>/memory.db` when `SAKTHAI_HOME` is unset. That fallback
-*is* the production path — it matches what
-`infra/vm-agents/sakthai-agent-run.sh` gives each deployed persona — which is
-why a live run simply omits `SAKTHAI_HOME` rather than setting it.
+With `--persona`, memory always resolves to `~/.sakthai/<persona>/memory.db`,
+whatever `SAKTHAI_HOME` says. That is the same file
+`infra/vm-agents/sakthai-agent-run.sh` gives each deployed persona. `SAKTHAI_HOME`
+still moves everything else (sessions, the eval log, the unscoped `memory.db`),
+which is why a live run simply omits it.
 
-**The trap: never set `SAKTHAI_HOME` to a persona's own home while also
-passing `--persona`.** Both append the persona segment, so they compound:
-
-```
-SAKTHAI_HOME unset            --persona sakthai  ->  ~/.sakthai/sakthai/memory.db          # correct
-SAKTHAI_HOME=~/.sakthai/sakthai --persona sakthai  ->  ~/.sakthai/sakthai/sakthai/memory.db  # wrong
-```
-
-The wrong one fails silently: the run looks successful while reading and
-writing an empty nested shard, so the persona appears to have forgotten
-everything and its work lands nowhere. In test mode `SAKTHAI_HOME=$(mktemp -d)`
-is safe precisely because compounding under a temp dir is the isolation you want.
+**What test mode isolates, and what it doesn't.** A dry run never opens memory,
+so `SAKTHAI_HOME=$(mktemp -d)` plus `--dry-run` touches nothing real. The temp
+home does **not** move the persona's shard: a "test" dispatch without `--dry-run`
+writes that persona's real memory. Keep `--dry-run` on every test dispatch.
 
 ### Reading the dry-run output
 
@@ -179,8 +171,8 @@ blocks reporting the other five.
 - Dispatching persona 1, waiting for its result, then persona 2.
 - Passing `--provider anthropic` or an explicit `--model`, flattening all six
   back into the same agent and discarding each persona's own config.
-- Setting `SAKTHAI_HOME` to a persona's real home *and* passing `--persona`,
-  which silently targets a nested empty shard.
+- Dropping `--dry-run` from a test dispatch because the temp `SAKTHAI_HOME`
+  seems to protect memory. It doesn't move the persona's shard.
 - Mixing live and test across the six dispatches in one round.
 - Stopping to ask "test or live?" before the safe default, or refusing to
   dispatch until the user enumerates six tasks by hand.
