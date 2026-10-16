@@ -304,10 +304,6 @@ def get_credential_source(provider: str) -> str | None:
         return gemini_credential_source()
     if provider == "openai":
         return openai_credential_source()
-    if provider == "ollama":
-        # Ollama takes no key, and resolve_ollama_credentials() falls back to the
-        # default local host, so there is always something to connect to.
-        return "ollama_host" if os.environ.get("OLLAMA_HOST") else "ollama_default"
     if provider == "gateway":
         return gateway_credential_source()
     if provider == "huggingface":

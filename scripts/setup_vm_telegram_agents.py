@@ -4,8 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import getpass
-import os
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -59,31 +57,6 @@ def parse_user_ids(raw: str) -> list[int]:
     return [int(value) for value in raw.replace(",", " ").split()]
 
 
-def _secret(value: str | None, env_name: str, prompt: str) -> str:
-    """A secret from its flag, else its environment variable, else a hidden prompt.
-
-    Prefer the environment or the prompt: a flag's value shows up in ``ps`` for
-    every local user and in shell history.
-    """
-    secret = value or os.environ.get(env_name)
-    if not secret:
-        try:
-            secret = getpass.getpass(f"{prompt}: ")
-        except EOFError:  # no terminal to prompt on
-            secret = None
-    if not secret:
-        raise SystemExit(f"{prompt} is required (flag, ${env_name}, or the prompt)")
-    return secret
-
-
-def _write_secret_file(path: Path, text: str) -> None:
-    """Write ``text`` readable by its owner only, tightening a pre-existing file."""
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    os.fchmod(fd, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as handle:
-        handle.write(text)
-
-
 def _render_common_env(*, openai_base_url: str, openai_api_key: str) -> str:
     return (
         f"OPENAI_BASE_URL={openai_base_url}\n"
@@ -128,24 +101,21 @@ def build_vm_bundle(
     target_dir = target_dir.resolve()
     config_dir = target_dir / "config"
     systemd_dir = target_dir / "systemd"
-    # config/ holds the API key and every bot token: owner-only, files and dir.
     config_dir.mkdir(parents=True, exist_ok=True)
-    config_dir.chmod(0o700)
     systemd_dir.mkdir(parents=True, exist_ok=True)
 
     common_env_file = config_dir / "common.env"
-    _write_secret_file(
-        common_env_file,
+    common_env_file.write_text(
         _render_common_env(
             openai_base_url=openai_base_url, openai_api_key=openai_api_key
         ),
+        encoding="utf-8",
     )
 
     env_files: dict[str, Path] = {}
     for agent in AGENTS:
         env_file = config_dir / f"{agent}.env"
-        _write_secret_file(
-            env_file,
+        env_file.write_text(
             _render_agent_env(
                 repo_root=repo_root,
                 agent=agent,
@@ -153,6 +123,7 @@ def build_vm_bundle(
                 telegram_allowed_user_ids=telegram_allowed_user_ids,
                 sakthai_home=shared_sakthai_home,
             ),
+            encoding="utf-8",
         )
         env_files[agent] = env_file
 
@@ -178,32 +149,22 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--repo-root", type=Path, required=True)
     parser.add_argument("--target-dir", type=Path, required=True)
     parser.add_argument("--openai-base-url", required=True)
-    # Secrets are optional here: unset, each falls back to its environment
-    # variable (OPENAI_API_KEY, <AGENT>_TELEGRAM_BOT_TOKEN) and then a prompt.
-    parser.add_argument("--openai-api-key")
+    parser.add_argument("--openai-api-key", required=True)
     parser.add_argument("--telegram-allowed-user-ids", required=True)
     parser.add_argument("--shared-sakthai-home", type=Path, required=True)
     for agent in AGENTS:
-        parser.add_argument(f"--{agent}-telegram-bot-token")
+        parser.add_argument(f"--{agent}-telegram-bot-token", required=True)
     return parser
 
 
 def main() -> int:
     args = _build_parser().parse_args()
-    openai_api_key = _secret(args.openai_api_key, "OPENAI_API_KEY", "OpenAI API key")
-    tokens = {
-        agent: _secret(
-            getattr(args, f"{agent}_telegram_bot_token"),
-            f"{agent.upper()}_TELEGRAM_BOT_TOKEN",
-            f"{agent} Telegram bot token",
-        )
-        for agent in AGENTS
-    }
+    tokens = {agent: getattr(args, f"{agent}_telegram_bot_token") for agent in AGENTS}
     bundle = build_vm_bundle(
         repo_root=args.repo_root,
         target_dir=args.target_dir,
         openai_base_url=args.openai_base_url,
-        openai_api_key=openai_api_key,
+        openai_api_key=args.openai_api_key,
         telegram_bot_tokens=tokens,
         telegram_allowed_user_ids=parse_user_ids(args.telegram_allowed_user_ids),
         shared_sakthai_home=args.shared_sakthai_home,

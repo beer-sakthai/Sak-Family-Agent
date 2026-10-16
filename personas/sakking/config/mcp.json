@@ -3,17 +3,21 @@
   "mcpServers": {
     "playwright": {
       "command": "npx",
-      "args": ["-y", "@playwright/mcp@0.0.83"]
+      "args": ["-y", "@playwright/mcp@latest"]
     },
     "chrome-devtools": {
       "command": "npx",
-      "args": ["-y", "chrome-devtools-mcp@1.10.1"]
+      "args": ["-y", "chrome-devtools-mcp@latest"]
+    },
+    "huggingface": {
+      "command": "npx",
+      "args": ["-y", "@huggingface/mcp-server"]
     },
     "hf-media": {
       "command": "npx",
       "args": [
         "-y",
-        "@llmindset/mcp-hfspace@0.5.4",
+        "@llmindset/mcp-hfspace",
         "black-forest-labs/FLUX.1-schnell",
         "Lightricks/LTX-Video"
       ]

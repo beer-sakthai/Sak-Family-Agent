@@ -3,7 +3,7 @@ role: Master of GitHub, CI/CD & Automation
 domain: GitHub Actions, Cron Fleet, DevSecOps, Release Automation
 workspace_root: /home/beern/Sak-Family-Agent
 primary_skills:
-  - SakJules-github-ci-fix
+  - SakJules-github-actions
   - SakJules-triage-issues
   - SakJules-workflow
 allowed_tools:

@@ -25,6 +25,6 @@ like `AI.FORECAST`, `AI.KEY_DRIVERS`, `AI.DETECT_ANOMALIES`, and `AI.GENERATE`.
 
 ## Related Skills
 
-- [BigQuery Basics Skill](../SakKing-bigquery-basics):
+- [BigQuery Basics Skill](../bigquery-basics):
   SKILL.md file for core BigQuery concepts, resource management, CLI,
   and client libraries.

@@ -7,11 +7,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-  FileQuestion,
   FileText,
   MessageSquare,
   Search,
-  SearchX,
   Terminal,
   X,
 } from "lucide-react";
@@ -63,36 +61,11 @@ export function SessionExplorer({
   isLoadingDetail = false,
 }: SessionExplorerProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   const openDetail = (session: SessionSummary) => onSessionSelect(session.id);
   const closeDetail = () => onSessionSelect(null);
 
   const openSummary = sessions.find((s) => s.id === openSessionId) ?? detail?.summary ?? null;
-
-  React.useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (
-        event.key === "/" &&
-        !event.defaultPrevented &&
-        document.activeElement !== searchInputRef.current
-      ) {
-        const target = event.target as HTMLElement | null;
-        const isEditable =
-          target &&
-          (target.tagName === "INPUT" ||
-            target.tagName === "TEXTAREA" ||
-            target.isContentEditable);
-        if (!isEditable) {
-          event.preventDefault();
-          searchInputRef.current?.focus();
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
 
   return (
     <div className="space-y-4">
@@ -119,42 +92,31 @@ export function SessionExplorer({
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-fg-4 pointer-events-none" aria-hidden />
         <input
-          ref={searchInputRef}
           type="search"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Escape" && search) {
               e.preventDefault();
-              e.stopPropagation();
               onSearchChange("");
             }
           }}
-          placeholder="Search sessions by task, model, id, or persona… (/)"
+          placeholder="Search sessions by task, model, id, or persona…"
           aria-label="Search sessions"
-          title="Search sessions by task, model, id, or persona (/)"
-          className="w-full pl-10 pr-14 py-2.5 rounded-xl bg-panel/80 border border-line text-sm text-fg placeholder:text-fg-5 font-mono focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus:border-hue-cyan-line/50 transition-colors [&::-webkit-search-cancel-button]:hidden"
+          title="Search sessions by task, model, id, or persona"
+          className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-panel/80 border border-line text-sm text-fg placeholder:text-fg-5 font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus:border-hue-cyan-line/50 transition-colors [&::-webkit-search-cancel-button]:hidden"
         />
-        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-          {search ? (
-            <button
-              type="button"
-              aria-label="Clear search query"
-              title="Clear search query (Esc)"
-              onClick={() => onSearchChange("")}
-              className="p-1 rounded-md text-fg-3 hover:text-fg hover:bg-raised/80 active:bg-raised-2/80 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <X className="h-3.5 w-3.5" aria-hidden />
-            </button>
-          ) : (
-            <kbd
-              aria-hidden="true"
-              className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono text-fg-4 bg-raised/60 border border-line rounded shadow-xs select-none"
-            >
-              /
-            </kbd>
-          )}
-        </div>
+        {search && (
+          <button
+            type="button"
+            aria-label="Clear search query"
+            title="Clear search query (Esc)"
+            onClick={() => onSearchChange("")}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-fg-3 hover:text-fg hover:bg-raised/80 active:bg-raised-2/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        )}
       </div>
 
       <div className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl">
@@ -168,9 +130,7 @@ export function SessionExplorer({
                 <th className="px-5 py-3">When</th>
                 <th className="px-5 py-3 text-right">Tokens</th>
                 <th className="px-5 py-3">Outcome</th>
-                <th className="px-5 py-3 text-right" aria-label="Actions">
-                  <span className="sr-only">Actions</span>
-                </th>
+                <th className="px-5 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-line/60 text-fg-2">
@@ -178,11 +138,6 @@ export function SessionExplorer({
                 <tr>
                   <td colSpan={7} className="px-5 py-8 text-center">
                     <div className="flex flex-col items-center justify-center gap-2 font-sans">
-                      {search ? (
-                        <SearchX className="h-6 w-6 text-fg-4/80" aria-hidden />
-                      ) : (
-                        <FileQuestion className="h-6 w-6 text-fg-4/80" aria-hidden />
-                      )}
                       <p className="text-fg-4 text-xs">
                         {search
                           ? `No sessions match \u201C${search}\u201D.`
@@ -192,9 +147,8 @@ export function SessionExplorer({
                         <button
                           type="button"
                           aria-label="Clear search and filters"
-                          title="Reset search query"
                           onClick={() => onSearchChange("")}
-                          className="px-3 py-1 rounded-lg bg-raised text-hue-cyan hover:text-hue-cyan hover:bg-raised-2 font-mono text-xs border border-line-strong transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+                          className="px-3 py-1 rounded-lg bg-raised text-hue-cyan hover:text-hue-cyan hover:bg-raised-2 font-mono text-xs border border-line-strong transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                         >
                           Reset search
                         </button>
@@ -203,93 +157,74 @@ export function SessionExplorer({
                   </td>
                 </tr>
               ) : (
-                sessions.map((session) => {
-                  const isSelected = session.id === openSessionId;
-                  const label = `View transcript for ${session.task ? `task "${session.task}"` : session.id}`;
-                  return (
-                    <tr
-                      key={session.id}
-                      aria-selected={isSelected}
-                      onClick={() => openDetail(session)}
-                      title={label}
-                      className={`cursor-pointer transition-colors ${
-                        isSelected ? "bg-raised/80 font-medium" : "hover:bg-raised/60"
-                      }`}
-                    >
-                      <td className="px-5 py-3.5">
-                        <span
-                          title={
-                            session.persona
-                              ? `Persona: ${personaLabel(session.persona)}`
-                              : "Unattributed session (no persona recorded)"
-                          }
-                          aria-label={
-                            session.persona
-                              ? `Persona: ${personaLabel(session.persona)}`
-                              : "Unattributed session (no persona recorded)"
-                          }
-                          className={`px-2 py-0.5 rounded text-[11px] border ${
-                            session.persona
-                              ? "bg-raised text-hue-cyan border-hue-cyan-line/20"
-                              : "bg-panel text-fg-4 border-line-strong"
-                          }`}
-                        >
-                          {personaLabel(session.persona)}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 font-sans text-fg max-w-md truncate">
-                        {session.task || "—"}
-                      </td>
-                      <td
-                        title={session.model ? `Configured model: ${session.model}` : "Model not recorded"}
-                        aria-label={session.model ? `Model: ${session.model}` : "Model not recorded"}
-                        className="px-5 py-3.5 text-fg-3 text-[11px] max-w-[12rem] truncate"
+                sessions.map((session) => (
+                  <tr key={session.id} className="hover:bg-raised/40 transition-colors">
+                    <td className="px-5 py-3.5">
+                      <span
+                        title={
+                          session.persona
+                            ? `Persona: ${personaLabel(session.persona)}`
+                            : "Unattributed session (no persona recorded)"
+                        }
+                        aria-label={
+                          session.persona
+                            ? `Persona: ${personaLabel(session.persona)}`
+                            : "Unattributed session (no persona recorded)"
+                        }
+                        className={`px-2 py-0.5 rounded text-[11px] border ${
+                          session.persona
+                            ? "bg-raised text-hue-cyan border-hue-cyan-line/20"
+                            : "bg-panel text-fg-4 border-line-strong"
+                        }`}
                       >
-                        {session.model || "—"}
-                      </td>
-                      <td className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap">
-                        {formatTimestamp(session.timestamp)}
-                      </td>
-                      <td className="px-5 py-3.5 text-right text-fg-2">
-                        {session.tokens.total_tokens.toLocaleString()}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span
-                          title={`Outcome: ${session.stop_reason || "unknown"}${
-                            session.had_error ? " (error)" : " (success)"
-                          }`}
-                          aria-label={`Outcome: ${session.stop_reason || "unknown"}${
-                            session.had_error ? " (error)" : " (success)"
-                          }`}
-                          className={`inline-flex items-center gap-1 text-[11px] ${
-                            session.had_error ? "text-hue-rose" : "text-hue-emerald"
-                          }`}
-                        >
-                          {session.had_error ? (
-                            <AlertCircle className="h-3 w-3" aria-hidden />
-                          ) : (
-                            <CheckCircle2 className="h-3 w-3" aria-hidden />
-                          )}
-                          {session.stop_reason || "—"}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openDetail(session);
-                          }}
-                          aria-label={label}
-                          title={label}
-                          className="text-[11px] px-2.5 py-1 rounded-lg bg-raised border border-line-strong text-hue-cyan hover:border-hue-cyan-line/60 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
-                        >
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
+                        {personaLabel(session.persona)}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 font-sans text-fg max-w-md truncate">
+                      {session.task || "—"}
+                    </td>
+                    <td className="px-5 py-3.5 text-fg-3 text-[11px] max-w-[12rem] truncate">
+                      {session.model || "—"}
+                    </td>
+                    <td className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap">
+                      {formatTimestamp(session.timestamp)}
+                    </td>
+                    <td className="px-5 py-3.5 text-right text-fg-2">
+                      {session.tokens.total_tokens.toLocaleString()}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span
+                        title={`Outcome: ${session.stop_reason || "unknown"}${
+                          session.had_error ? " (error)" : " (success)"
+                        }`}
+                        aria-label={`Outcome: ${session.stop_reason || "unknown"}${
+                          session.had_error ? " (error)" : " (success)"
+                        }`}
+                        className={`inline-flex items-center gap-1 text-[11px] ${
+                          session.had_error ? "text-hue-rose" : "text-hue-emerald"
+                        }`}
+                      >
+                        {session.had_error ? (
+                          <AlertCircle className="h-3 w-3" aria-hidden />
+                        ) : (
+                          <CheckCircle2 className="h-3 w-3" aria-hidden />
+                        )}
+                        {session.stop_reason || "—"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      <button
+                        type="button"
+                        onClick={() => openDetail(session)}
+                        aria-label={`View transcript for ${session.task ? `task "${session.task}"` : session.id}`}
+                        title={`View transcript for ${session.task ? `task "${session.task}"` : session.id}`}
+                        className="text-[11px] px-2.5 py-1 rounded-lg bg-raised border border-line-strong text-hue-cyan hover:border-hue-cyan-line/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -313,7 +248,7 @@ export function SessionExplorer({
               disabled={page <= 1}
               aria-label="Previous page"
               title={page <= 1 ? "First page reached" : "Previous page"}
-              className="px-3 py-1.5 rounded-lg bg-panel border border-line disabled:opacity-40 disabled:cursor-not-allowed hover:border-line-strong transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+              className="px-3 py-1.5 rounded-lg bg-panel border border-line disabled:opacity-40 disabled:cursor-not-allowed hover:border-line-strong transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
             </button>
@@ -323,7 +258,7 @@ export function SessionExplorer({
               disabled={page >= totalPages}
               aria-label="Next page"
               title={page >= totalPages ? "Last page reached" : "Next page"}
-              className="px-3 py-1.5 rounded-lg bg-panel border border-line disabled:opacity-40 disabled:cursor-not-allowed hover:border-line-strong transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+              className="px-3 py-1.5 rounded-lg bg-panel border border-line disabled:opacity-40 disabled:cursor-not-allowed hover:border-line-strong transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               <ChevronRight className="h-3.5 w-3.5" aria-hidden />
             </button>
@@ -335,7 +270,7 @@ export function SessionExplorer({
         <Drawer
           title="Session transcript"
           subtitle={openSessionId}
-          icon={<Terminal className="h-4 w-4 text-hue-cyan" aria-hidden="true" />}
+          icon={<Terminal className="h-4 w-4 text-hue-cyan" />}
           onClose={closeDetail}
           data-testid="session-drawer"
         >
@@ -350,11 +285,7 @@ export function SessionExplorer({
                   </div>
                   <div>
                     <span className="text-[10px] uppercase text-fg-4 block">Model</span>
-                    <span
-                      title={openSummary.model ? `Configured model: ${openSummary.model}` : "Model not recorded"}
-                      aria-label={openSummary.model ? `Model: ${openSummary.model}` : "Model not recorded"}
-                      className="font-bold text-fg truncate block"
-                    >
+                    <span className="font-bold text-fg truncate block">
                       {openSummary.model || "—"}
                     </span>
                   </div>
@@ -401,7 +332,7 @@ export function SessionExplorer({
                       >
                         {msg.role}
                       </span>
-                      <p className="text-fg font-sans whitespace-pre-wrap wrap-break-word">
+                      <p className="text-fg font-sans whitespace-pre-wrap break-words">
                         {msg.content}
                       </p>
                     </div>
@@ -439,7 +370,7 @@ export function SessionExplorer({
               {detail?.result_text && (
                 <div className="p-3 rounded-xl bg-sunken/60 border border-line">
                   <span className="text-[10px] uppercase text-fg-4 block mb-1">Result</span>
-                  <p className="text-fg font-sans whitespace-pre-wrap wrap-break-word">
+                  <p className="text-fg font-sans whitespace-pre-wrap break-words">
                     {detail.result_text}
                   </p>
                 </div>

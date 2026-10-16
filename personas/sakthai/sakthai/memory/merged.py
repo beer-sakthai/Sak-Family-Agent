@@ -135,35 +135,6 @@ class FamilyMemoryView:
         obs.sort(key=lambda so: so.observation.weight, reverse=True)
         return facts[:limit], obs[:limit]
 
-    def find_facts(
-        self, query: str | None = None, tags: Sequence[str] = (), limit: int = 50
-    ) -> list[ShardedFact]:
-        """Facts from every shard matching ``query`` and carrying every tag in ``tags``.
-
-        ``query`` matches as in :meth:`search`; tags match exactly. Newest
-        first and not deduped, like :meth:`search`. This is how one persona
-        reads a note a sibling wrote to its own shard.
-        """
-        wanted = [t.strip() for t in tags if t.strip()]
-        if not query and not wanted:
-            raise ValueError("find_facts needs a query, a tag, or both")
-        # SQL applies one filter; when more remain to apply here, read every
-        # candidate (SQLite treats a negative LIMIT as no limit).
-        fetch = limit if bool(query) + len(wanted) == 1 else -1
-        found: list[ShardedFact] = []
-        for persona, store in self._stores.items():
-            if query:
-                candidates, _ = store.search_memory(query, limit=fetch)
-                rest = wanted
-            else:
-                candidates = store.search_by_tag(wanted[0], limit=fetch)
-                rest = wanted[1:]
-            found.extend(
-                ShardedFact(f, persona) for f in candidates if all(t in f.tags for t in rest)
-            )
-        found.sort(key=lambda sf: sf.fact.updated_at, reverse=True)
-        return found[:limit]
-
     def render_prompt_block(
         self,
         *,

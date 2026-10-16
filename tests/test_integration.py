@@ -1,8 +1,8 @@
 """Optional integration tests that exercise real provider endpoints.
 
-CI does not deselect them; they self-skip when the required endpoint/credential
-is absent, which is what keeps the default ``pytest tests/`` run (CI's included)
-fully hermetic. Run them deliberately with ``pytest -m integration`` once
+These are excluded from CI (``pytest -m "not integration"``) and self-skip when
+the required endpoint/credential is absent, so the default ``pytest tests/`` run
+stays fully hermetic. Run them deliberately with ``pytest -m integration`` once
 a credential (ANTHROPIC_API_KEY) or a local Ollama server (OLLAMA_HOST) is set.
 """
 

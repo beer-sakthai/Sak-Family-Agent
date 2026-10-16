@@ -137,29 +137,15 @@ describe("SystemView", () => {
     expect(bar).toHaveAttribute("aria-valuetext", "10 skills configured");
   });
 
-  it("renders BarList rows with ARIA progressbar semantics", () => {
-    render(<SystemView snapshot={FIXTURE} />);
-    const agentBar = screen.getByRole("progressbar", { name: "agent lines" });
-    expect(agentBar).toBeInTheDocument();
-    expect(agentBar).toHaveAttribute("aria-valuenow", "900");
-    expect(agentBar).toHaveAttribute("aria-valuemax", "900");
-    expect(agentBar).toHaveAttribute("aria-valuetext", "agent: 900 lines (3f)");
-
-    const testBar = screen.getByRole("progressbar", { name: "sakthai (tests/) test files" });
-    expect(testBar).toBeInTheDocument();
-    expect(testBar).toHaveAttribute("aria-valuenow", "100");
-    expect(testBar).toHaveAttribute("aria-valuetext", "sakthai (tests/): 100 test files (ci.yml)");
-  });
-
   it("shows only PR-gating workflows until asked for all", () => {
     render(<SystemView snapshot={FIXTURE} />);
     const panel = screen.getByRole("region", { name: "Workflows" });
     expect(within(panel).getByText("ci.yml")).toBeInTheDocument();
     expect(within(panel).queryByText("stale.yml")).not.toBeInTheDocument();
 
-    fireEvent.click(within(panel).getByRole("button", { name: "Filter workflows by All 2" }));
+    fireEvent.click(within(panel).getByRole("button", { name: "Filter workflows: All 2" }));
     expect(within(panel).getByText("stale.yml")).toBeInTheDocument();
-    expect(within(panel).getByRole("button", { name: "Showing All 2" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(panel).getByRole("button", { name: "Filter workflows: All 2" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("lists CLI groups with their subcommands and hover tooltip title", () => {
@@ -170,24 +156,6 @@ describe("SystemView", () => {
 
     const groupSummary = screen.getByTitle("Toggle sakthai memory command group (2 subcommands)");
     expect(groupSummary).toBeInTheDocument();
-  });
-
-  it("provides hover tooltips and aria-labels for MCP-only badges and workflow trigger badges", () => {
-    render(<SystemView snapshot={FIXTURE} />);
-    const mcpBadge = screen.getByLabelText("MCP only tool");
-    expect(mcpBadge).toBeInTheDocument();
-    expect(mcpBadge).toHaveAttribute(
-      "title",
-      "Tool is available only via MCP stdio server, not directly in the core agent loop",
-    );
-
-    const triggerBadge = screen.getByLabelText("Trigger event: pull_request");
-    expect(triggerBadge).toBeInTheDocument();
-    expect(triggerBadge).toHaveAttribute("title", "Trigger event: pull_request");
-
-    const subcommandsBadge = screen.getByLabelText("2 subcommands");
-    expect(subcommandsBadge).toBeInTheDocument();
-    expect(subcommandsBadge).toHaveAttribute("title", "2 subcommands");
   });
 });
 

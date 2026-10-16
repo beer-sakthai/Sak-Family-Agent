@@ -9,22 +9,12 @@ from typing import Any
 if "/opt/data/.venv/lib/python3.13/site-packages" not in sys.path:
     sys.path.insert(0, "/opt/data/.venv/lib/python3.13/site-packages")
 
-import os
-from pathlib import Path
-
 from huggingface_hub import HfApi
 
 
 def get_token() -> str:
-    if "HF_TOKEN" in os.environ:
-        return os.environ["HF_TOKEN"].strip()
-
-    token_path = Path.home() / ".cache" / "huggingface" / "token"
-    if token_path.exists():
-        with open(token_path) as f:
-            return f.read().strip()
-
-    return ""
+    with open("/opt/data/profiles/sakthai/home/.cache/huggingface/token") as f:
+        return f.read().strip()
 
 
 def poll(api: Any, max_polls: int = 15, sleep_time: int = 30) -> int:

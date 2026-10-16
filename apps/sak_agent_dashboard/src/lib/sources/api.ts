@@ -38,38 +38,19 @@ export class ApiSource implements DashboardSource {
   ) {}
 
   private async fetchJson<T>(pathname: string, params: Record<string, unknown> = {}): Promise<T> {
-    // Prevent double/multi-layered URL encoded relative path traversal bypasses
-    // Evaluate the path for safety by fully decoding it, without mutating the original path.
-    let validationPathname = pathname;
-    for (let i = 0; i < 5; i++) {
-      try {
-        const decoded = decodeURIComponent(validationPathname);
-        if (decoded === validationPathname) break;
-        validationPathname = decoded;
-      } catch {
-        // If it throws URIError due to malformed encoding, treat the original as safe
-        // for path traversal checking, since it cannot encode a valid `../` sequence.
-        break;
-      }
-    }
-
     // SSRF and Token Exfiltration protection:
     // Prevent protocol-relative URLs, absolute URLs with a scheme, and backslashes
     // that might bypass base URL prefixing.
-    if (validationPathname.includes("\\")) {
+    if (pathname.includes("\\")) {
       throw new Error("Invalid path format: protocol-relative and absolute paths are blocked");
     }
 
-    // The security check URL
-    const checkUrl = new URL(validationPathname, this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`);
+    const url = new URL(pathname, this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`);
     const baseUrlObj = new URL(this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`);
 
-    if (checkUrl.origin !== baseUrlObj.origin || !checkUrl.pathname.startsWith(baseUrlObj.pathname)) {
-      throw new Error("Invalid path format: protocol-relative, absolute, and traversal paths are blocked");
+    if (url.origin !== baseUrlObj.origin) {
+      throw new Error("Invalid path format: protocol-relative and absolute paths are blocked");
     }
-
-    // The actual execution URL must use the original unaltered pathname
-    const url = new URL(pathname, this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`);
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null && value !== "") {
         url.searchParams.set(key, String(value));

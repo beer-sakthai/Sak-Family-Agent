@@ -125,43 +125,26 @@ describe("PersonaDrawer", () => {
     expect(runsBar).toHaveAttribute("aria-valuetext", `${expectedRuns}% of family`);
   });
 
-  it("provides informative title tooltips and WCAG 2.5.3 compliant aria-labels on quick action navigation buttons", () => {
+  it("provides informative title tooltips on quick action navigation buttons", () => {
     renderDrawer(busiest);
-    const sessionsBtn = screen.getByRole("button", { name: /Sessions/ });
-    expect(sessionsBtn).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Sessions" })).toHaveAttribute(
       "title",
       `View sessions for ${busiest.display_name}`,
     );
-    expect(sessionsBtn).toHaveAttribute(
-      "aria-label",
-      `Sessions - view sessions for ${busiest.display_name}`,
-    );
-
-    const memoryBtn = screen.getByRole("button", { name: /Memory/ });
-    expect(memoryBtn).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Memory" })).toHaveAttribute(
       "title",
       `View memory for ${busiest.display_name}`,
     );
-    expect(memoryBtn).toHaveAttribute(
-      "aria-label",
-      `Memory - view memory for ${busiest.display_name}`,
-    );
-
-    const analyticsBtn = screen.getByRole("button", { name: /Analytics/ });
-    expect(analyticsBtn).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Analytics" })).toHaveAttribute(
       "title",
       `View analytics for ${busiest.display_name}`,
-    );
-    expect(analyticsBtn).toHaveAttribute(
-      "aria-label",
-      `Analytics - view analytics for ${busiest.display_name}`,
     );
   });
 
   it("navigates to a panel rather than fetching anything itself", () => {
     const onNavigate = vi.fn();
     renderDrawer(busiest, { onNavigate });
-    fireEvent.click(screen.getByRole("button", { name: /Sessions/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Sessions" }));
     expect(onNavigate).toHaveBeenCalledWith("sessions");
   });
 

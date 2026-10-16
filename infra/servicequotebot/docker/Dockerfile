@@ -1,6 +1,4 @@
-# Pinned by digest (Scorecard Pinned-Dependencies). The tag is kept alongside
-# the digest so Dependabot's docker ecosystem can bump both together.
-FROM python:3.14-slim@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170
+FROM python:3.11-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -21,20 +19,14 @@ RUN groupadd -g 10001 sakthai && \
     useradd -u 10001 -g sakthai -s /bin/bash -m sakthai
 
 # Copy project files
-COPY pyproject.toml uv.lock README.md /app/
+COPY pyproject.toml README.md /app/
 COPY personas/ /app/personas/
 COPY scripts/ /app/scripts/
 COPY infra/ /app/infra/
 
-# Install python package. Dependencies come from uv.lock with their hashes, so
-# the build installs exactly what CI tested and pip refuses anything else; the
-# package itself is then installed --no-deps on top. uv is only needed for the
-# export and is deleted afterwards.
-COPY --from=ghcr.io/astral-sh/uv:0.8.17@sha256:e4644cb5bd56fdc2c5ea3ee0525d9d21eed1603bccd6a21f887a938be7e85be1 /uv /tmp/uv
-RUN /tmp/uv export --frozen --no-emit-project --no-default-groups -o /tmp/requirements.txt && \
-    pip install --require-hashes -r /tmp/requirements.txt && \
-    pip install --no-deps -e /app && \
-    rm /tmp/uv /tmp/requirements.txt
+# Install python package
+RUN pip install --upgrade pip && \
+    pip install -e /app
 
 # Create persistent directories and set ownership
 RUN mkdir -p /app/data /app/logs && \

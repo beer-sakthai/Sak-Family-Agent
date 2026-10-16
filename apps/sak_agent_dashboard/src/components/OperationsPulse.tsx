@@ -95,29 +95,25 @@ function SignalCard({ signal, onNavigate }: { signal: Signal; onNavigate?: (tab:
         : {})}
       className={`group relative overflow-hidden rounded-2xl border p-4 text-left transition-all ${style.panel} ${
         interactive
-          ? "cursor-pointer hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-lg hover:shadow-accent/5 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+          ? "cursor-pointer hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-lg hover:shadow-accent/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           : ""
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-fg-4">
-            <Icon className={`h-3.5 w-3.5 ${style.text}`} aria-hidden="true" />
+            <Icon className={`h-3.5 w-3.5 ${style.text}`} aria-hidden />
             {signal.label}
           </p>
           <p className="mt-2 font-display text-2xl font-bold tracking-tight text-fg">{signal.value}</p>
           <p className="mt-1 min-h-8 text-xs leading-4 text-fg-3">{signal.detail}</p>
         </div>
-        {/* Not a live region: with `onNavigate` (as on the dashboard) the card
-            is a <button>, whose descendants are presentational, so a nested
-            role="status" never announces. The aria-label still names the
-            status at every width, where the visible label is 2xl-only. */}
         <span
           title={`Signal status: ${style.label}`}
           aria-label={`Status: ${style.label}`}
           className={`inline-flex shrink-0 items-center gap-1 rounded-full border border-current/20 bg-panel/40 px-2 py-1 font-mono text-[10px] ${style.text}`}
         >
-          <StatusIcon className="h-3 w-3" aria-hidden="true" />
+          <StatusIcon className="h-3 w-3" aria-hidden />
           <span className="hidden 2xl:inline">{style.label}</span>
         </span>
       </div>

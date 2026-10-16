@@ -19,19 +19,19 @@ const SOURCE_LABELS: Record<
   local: {
     label: "Live · local ~/.sakthai",
     title: "Data source: Local runtime directory (~/.sakthai)",
-    icon: <Database className="h-3 w-3" aria-hidden="true" />,
+    icon: <Database className="h-3 w-3" aria-hidden />,
     classes: "bg-hue-emerald/10 text-hue-emerald border-hue-emerald-line/30",
   },
   api: {
     label: "Live · SakThai API",
     title: "Data source: Remote SakThai API endpoint",
-    icon: <Cloud className="h-3 w-3" aria-hidden="true" />,
+    icon: <Cloud className="h-3 w-3" aria-hidden />,
     classes: "bg-hue-cyan/10 text-hue-cyan border-hue-cyan-line/30",
   },
   demo: {
     label: "Sample data",
     title: "Data source: Demonstration sample dataset",
-    icon: <FlaskConical className="h-3 w-3" aria-hidden="true" />,
+    icon: <FlaskConical className="h-3 w-3" aria-hidden />,
     classes: "bg-hue-amber/10 text-hue-amber border-hue-amber-line/30",
   },
 };
@@ -43,34 +43,26 @@ export function DemoModeToggle({ isDemo, onToggle, activeSource }: DemoModeToggl
     <div className="flex items-center gap-2">
       {/* The source badge reports what the data actually is. It can disagree
           with the toggle -- asking for live data on a host with no
-          ~/.sakthai falls back to demo, and this is how you find out.
-
-          The live region wraps the badge rather than being the badge: screen
-          readers announce changes to a region that already exists, so one
-          mounted already filled -- on the first response, the moment the
-          source matters most -- was usually read out by nobody. The wrapper
-          is there, empty, from the first render. */}
-      <span role="status" data-testid="active-source-status" className="inline-flex">
-        {source && (
-          <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border ${source.classes}`}
-            data-testid="active-source"
-            title={source.title}
-            aria-label={source.title}
-          >
-            {source.icon}
-            {source.label}
-          </span>
-        )}
-      </span>
+          ~/.sakthai falls back to demo, and this is how you find out. */}
+      {source && (
+        <span
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border ${source.classes}`}
+          data-testid="active-source"
+          title={source.title}
+          aria-label={source.title}
+        >
+          {source.icon}
+          {source.label}
+        </span>
+      )}
 
       <button
         type="button"
         onClick={() => onToggle(!isDemo)}
         aria-pressed={isDemo}
-        aria-label={`Sample: ${isDemo ? "ON - switch to live agent data" : "OFF - switch to sample dataset"}`}
+        aria-label="Toggle sample data"
         title={isDemo ? "Switch to live agent data" : "Switch to sample dataset"}
-        className={`px-3 py-1.5 rounded-xl text-[11px] font-mono border transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
+        className={`px-3 py-1.5 rounded-xl text-[11px] font-mono border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
           isDemo
             ? "bg-hue-amber-tint/40 text-hue-amber border-hue-amber-line/50"
             : "bg-panel/60 text-fg-3 border-line hover:border-line-strong"

@@ -135,7 +135,8 @@ test-mode dispatch is low-stakes, and making the user enumerate six tasks
 before anything runs is a worse failure than an imperfect guess.
 
 Look, in order: that persona's `personas/<name>/SOUL.md` for its domain, its
-`personas/<name>/PLAN.md` (every persona has one), the root `PLAN.md`,
+`personas/<name>/PLAN.md` if present (**only `saksee` and `sakjules` have
+one** — don't stall on a missing file for the other four), the root `PLAN.md`,
 and recent `docs/` changes. Ask the user only if that turns up nothing for a
 given persona, and dispatch the other five meanwhile.
 

@@ -286,8 +286,6 @@ export class LocalFsSource implements DashboardSource {
         input_tokens: 0,
         output_tokens: 0,
         last_run_at: null,
-        charge: null,
-        current_stage: null,
       });
     }
 

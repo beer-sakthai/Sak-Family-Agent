@@ -2,11 +2,12 @@
 
 import React, { useSyncExternalStore } from "react";
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
-  LabelList,
   Legend,
   Line,
   LineChart,
@@ -20,7 +21,6 @@ import {
 import { BarChart3, PieChart as PieIcon, TrendingUp, Zap } from "lucide-react";
 
 import { useChartTokens } from "@/lib/chart-theme";
-import { compactNumber } from "@/lib/format";
 import type { MetricsPayload, PersonasPayload } from "@/lib/contracts.generated";
 import { TREND_WINDOWS, trendWindowLabel, type TrendWindow } from "@/lib/url-state";
 
@@ -37,11 +37,7 @@ interface AnalyticsChartsProps {
 /** Rendered in place of a chart that has nothing real to show. */
 function EmptyChart({ label }: { label: string }) {
   return (
-    <div
-      role="status"
-      aria-label={label}
-      className="h-64 w-full flex items-center justify-center text-xs font-mono text-fg-4 border border-dashed border-line rounded-xl"
-    >
+    <div className="h-64 w-full flex items-center justify-center text-xs font-mono text-fg-4 border border-dashed border-line rounded-xl">
       {label}
     </div>
   );
@@ -64,16 +60,10 @@ function Panel({
     <div className="glass-panel p-5 rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className={`p-2 rounded-lg border ${accent}`} aria-hidden="true">
-            {icon}
-          </div>
+          <div className={`p-2 rounded-lg border ${accent}`}>{icon}</div>
           <h4 className="text-sm font-bold font-display text-fg">{title}</h4>
         </div>
-        <span
-          title={`Data source: ${source}`}
-          aria-label={`Data source: ${source}`}
-          className="text-[10px] font-mono text-fg-4 uppercase tracking-wider"
-        >
+        <span className="text-[10px] font-mono text-fg-4 uppercase tracking-wider">
           {source}
         </span>
       </div>
@@ -180,7 +170,7 @@ export function AnalyticsCharts({
               aria-pressed={trend === days}
               aria-label={`Set trend window to ${trendWindowLabel(days)}`}
               title={`Set trend window to ${trendWindowLabel(days)}`}
-              className={`px-2.5 py-1 font-mono text-xs transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
+              className={`px-2.5 py-1 font-mono text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 trend === days ? "bg-raised/80 text-fg" : "text-fg-3 hover:text-fg"
               }`}
             >
@@ -206,30 +196,18 @@ export function AnalyticsCharts({
           title="Success Rate by Persona (%)"
           source="eval.jsonl"
           accent="bg-hue-cyan/10 text-hue-cyan border-hue-cyan-line/20"
-          icon={<BarChart3 className="h-4 w-4" aria-hidden="true" />}
+          icon={<BarChart3 className="h-4 w-4" />}
         >
           {!isMounted ? null : successData.length === 0 ? (
             <EmptyChart label="No attributed runs yet" />
           ) : (
             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-              <BarChart data={successData} margin={{ top: 18, right: 10, left: -20, bottom: 0 }}>
+              <BarChart data={successData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
                 <XAxis dataKey="name" stroke={chart.axis} fontSize={11} tickLine={false} />
                 <YAxis stroke={chart.axis} fontSize={11} domain={[0, 100]} tickLine={false} />
                 <Tooltip contentStyle={tooltipStyle} />
-                {/* Every bar sits in the high 90s, so on a zero-based axis they
-                    look identical. The axis stays at zero (a cut-off axis would
-                    exaggerate a one-point gap); the exact value rides on each
-                    bar instead. */}
-                <Bar dataKey="success" fill={chart.series[0]} radius={[4, 4, 0, 0]} name="Success %">
-                  <LabelList
-                    dataKey="success"
-                    position="top"
-                    formatter={(value) => `${value}%`}
-                    fill={chart.axis}
-                    fontSize={11}
-                  />
-                </Bar>
+                <Bar dataKey="success" fill={chart.series[0]} radius={[6, 6, 0, 0]} name="Success %" />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -239,40 +217,37 @@ export function AnalyticsCharts({
           title="Token Usage by Persona"
           source="eval.jsonl"
           accent="bg-hue-emerald/10 text-hue-emerald border-hue-emerald-line/20"
-          icon={<Zap className="h-4 w-4" aria-hidden="true" />}
+          icon={<Zap className="h-4 w-4" />}
         >
           {!isMounted ? null : tokenData.length === 0 ? (
             <EmptyChart label="No attributed runs yet" />
           ) : (
-            // Stacked bars, not an area: the personas are separate categories,
-            // and a curve through them drew a trend between neighbours that
-            // does not exist. The 2px stroke in the panel colour keeps the two
-            // segments of a bar apart.
             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-              <BarChart data={tokenData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <AreaChart data={tokenData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
                 <XAxis dataKey="name" stroke={chart.axis} fontSize={11} tickLine={false} />
-                <YAxis stroke={chart.axis} fontSize={11} tickLine={false} tickFormatter={compactNumber} />
+                <YAxis stroke={chart.axis} fontSize={11} tickLine={false} />
                 <Tooltip contentStyle={tooltipStyle} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar
+                <Area
+                  type="monotone"
                   dataKey="input"
-                  stackId="tokens"
+                  stackId="1"
+                  stroke={chart.series[0]}
                   fill={chart.series[0]}
-                  stroke={chart.tooltipBackground}
-                  strokeWidth={2}
+                  fillOpacity={0.3}
                   name="Input"
                 />
-                <Bar
+                <Area
+                  type="monotone"
                   dataKey="output"
-                  stackId="tokens"
+                  stackId="1"
+                  stroke={chart.series[1]}
                   fill={chart.series[1]}
-                  stroke={chart.tooltipBackground}
-                  strokeWidth={2}
-                  radius={[4, 4, 0, 0]}
+                  fillOpacity={0.3}
                   name="Output"
                 />
-              </BarChart>
+              </AreaChart>
             </ResponsiveContainer>
           )}
         </Panel>
@@ -281,68 +256,41 @@ export function AnalyticsCharts({
           title="Runs & Latency Over Time"
           source="eval.jsonl"
           accent="bg-hue-violet/10 text-hue-violet border-hue-violet-line/20"
-          icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}
+          icon={<TrendingUp className="h-4 w-4" />}
         >
           {!isMounted ? null : trendData.length === 0 ? (
             <EmptyChart label="No runs recorded yet" />
           ) : (
-            // Runs and errors are counts in the tens; latency is hundreds of
-            // milliseconds. On one axis the counts were squashed flat against
-            // zero, so each unit gets its own chart. `syncId` keeps one shared
-            // hover across both, and only the lower chart labels the dates.
-            <div className="flex h-full flex-col gap-1">
-              <div className="min-h-0 flex-[3]">
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                  <LineChart
-                    data={trendData}
-                    syncId="trend"
-                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
-                    <XAxis dataKey="date" hide />
-                    <YAxis stroke={chart.axis} fontSize={11} tickLine={false} allowDecimals={false} />
-                    <Tooltip contentStyle={tooltipStyle} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Line type="monotone" dataKey="runs" stroke={chart.series[0]} strokeWidth={2} dot={false} name="Runs" />
-                    {/* `errors` was computed into trendData and never drawn. It is
-                        the one series here that says whether the runs beside it
-                        actually worked. */}
-                    <Line
-                      type="monotone"
-                      dataKey="errors"
-                      stroke={chart.series[4]}
-                      strokeWidth={2}
-                      strokeDasharray="4 3"
-                      dot={false}
-                      name="Errors"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-              <p className="font-mono text-[10px] uppercase tracking-wider text-fg-4">Avg latency (ms)</p>
-              <div className="min-h-0 flex-[2]">
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                  <LineChart
-                    data={trendData}
-                    syncId="trend"
-                    margin={{ top: 4, right: 10, left: -20, bottom: 0 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
-                    <XAxis dataKey="date" stroke={chart.axis} fontSize={11} tickLine={false} />
-                    <YAxis stroke={chart.axis} fontSize={11} tickLine={false} />
-                    <Tooltip contentStyle={tooltipStyle} />
-                    <Line
-                      type="monotone"
-                      dataKey="latency"
-                      stroke={chart.series[3]}
-                      strokeWidth={2}
-                      dot={false}
-                      name="Latency (ms)"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+              <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+                <XAxis dataKey="date" stroke={chart.axis} fontSize={11} tickLine={false} />
+                <YAxis stroke={chart.axis} fontSize={11} tickLine={false} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Line type="monotone" dataKey="runs" stroke={chart.series[0]} strokeWidth={2} dot={false} name="Runs" />
+                <Line
+                  type="monotone"
+                  dataKey="latency"
+                  stroke={chart.series[3]}
+                  strokeWidth={2}
+                  dot={false}
+                  name="Latency (ms)"
+                />
+                {/* `errors` was computed into trendData and never drawn. It is
+                    the one series here that says whether the runs beside it
+                    actually worked. */}
+                <Line
+                  type="monotone"
+                  dataKey="errors"
+                  stroke={chart.series[4]}
+                  strokeWidth={2}
+                  strokeDasharray="4 3"
+                  dot={false}
+                  name="Errors"
+                />
+              </LineChart>
+            </ResponsiveContainer>
           )}
         </Panel>
 
@@ -350,7 +298,7 @@ export function AnalyticsCharts({
           title="Stop Reason Breakdown"
           source="eval.jsonl"
           accent="bg-hue-amber/10 text-hue-amber border-hue-amber-line/20"
-          icon={<PieIcon className="h-4 w-4" aria-hidden="true" />}
+          icon={<PieIcon className="h-4 w-4" />}
         >
           {!isMounted ? null : stopReasonData.length === 0 ? (
             <EmptyChart label="No runs recorded yet" />

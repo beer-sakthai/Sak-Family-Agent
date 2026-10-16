@@ -94,10 +94,10 @@ export function Drawer({
     <div className="fixed inset-0 z-50 flex justify-end" data-testid={testId}>
       <button
         type="button"
-        aria-label="Close detail panel backdrop"
+        aria-label="Close detail"
         title="Close detail panel"
         onClick={onClose}
-        className="absolute inset-0 h-full w-full animate-scrim-in bg-canvas/70 backdrop-blur-sm focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+        className="absolute inset-0 h-full w-full animate-scrim-in bg-canvas/70 backdrop-blur-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
       />
 
       <div
@@ -109,7 +109,7 @@ export function Drawer({
       >
         <header className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
           <div className="flex min-w-0 items-start gap-2.5">
-            {icon && <span className="mt-0.5 shrink-0" aria-hidden="true">{icon}</span>}
+            {icon && <span className="mt-0.5 shrink-0">{icon}</span>}
             <div className="min-w-0">
               <h2 className="truncate font-display font-bold text-fg">{title}</h2>
               {subtitle && (
@@ -123,9 +123,9 @@ export function Drawer({
             onClick={onClose}
             aria-label="Close detail panel"
             title="Close detail panel (Esc)"
-            className="shrink-0 rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-raised hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+            className="shrink-0 rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-raised hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
-            <X className="h-4 w-4" aria-hidden="true" />
+            <X className="h-4 w-4" aria-hidden />
           </button>
         </header>
 

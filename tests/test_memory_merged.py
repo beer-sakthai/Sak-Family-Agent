@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import itertools
 from pathlib import Path
 
 import pytest
@@ -198,62 +197,6 @@ def test_personas_filter_narrows_which_shards_open(
 
     assert len(facts) == 1
     assert facts[0].fact.value == "only in sakthai"
-
-
-@pytest.fixture
-def ticking_clock(monkeypatch: pytest.MonkeyPatch) -> None:
-    """One second per write, so "newest" never rests on a same-second tie."""
-    ticks = itertools.count(1_700_000_000)
-    monkeypatch.setattr("sakthai.memory.store._now", lambda: next(ticks))
-
-
-@pytest.mark.usefixtures("ticking_clock")
-def test_find_facts_reads_a_tagged_note_from_a_siblings_shard(
-    tmp_path: Path, shard_paths: dict[str, Path]
-) -> None:
-    """The SOUL hand-off case: SakKing reads the summary SakThai wrote to its own shard."""
-    with MemoryStore(shard_paths["sakthai"]) as store:
-        store.add_fact("HOUSEHOLD CHARGE SUMMARY | old", tags=["charge-summary"])
-        store.add_fact("HOUSEHOLD CHARGE SUMMARY | new", tags=["charge-summary"])
-        store.add_fact("HOUSEHOLD CHARGE SUMMARY | untagged")
-    with MemoryStore(shard_paths["sakking"]) as store:
-        store.add_fact("CHARGE: sakking | 80%", tags=["charge-report"])
-
-    with FamilyMemoryView(shard_paths=shard_paths) as view:
-        newest = view.find_facts("HOUSEHOLD CHARGE SUMMARY", ["charge-summary"], limit=1)
-        by_tag = view.find_facts(tags=["charge-summary"])
-
-    assert [(f.persona, f.fact.value) for f in newest] == [
-        ("sakthai", "HOUSEHOLD CHARGE SUMMARY | new")
-    ]
-    assert {f.fact.value for f in by_tag} == {
-        "HOUSEHOLD CHARGE SUMMARY | old",
-        "HOUSEHOLD CHARGE SUMMARY | new",
-    }
-
-
-def test_find_facts_requires_every_tag_even_past_the_limit(
-    tmp_path: Path, shard_paths: dict[str, Path]
-) -> None:
-    """Later tags are applied after SQL's LIMIT would have cut the candidates short."""
-    with MemoryStore(shard_paths["sakking"]) as store:
-        store.add_fact(
-            "CYCLE INTERRUPTED: sakking | resumable", tags=["cycle-interrupted", "resumable"]
-        )
-        for i in range(3):
-            store.add_fact(f"CYCLE INTERRUPTED: sakking | done {i}", tags=["cycle-interrupted"])
-
-    with FamilyMemoryView(shard_paths=shard_paths) as view:
-        found = view.find_facts(tags=["cycle-interrupted", "resumable"], limit=1)
-        by_query = view.find_facts("CYCLE INTERRUPTED", ["resumable"], limit=1)
-
-    assert [f.fact.value for f in found] == ["CYCLE INTERRUPTED: sakking | resumable"]
-    assert [f.fact.value for f in by_query] == ["CYCLE INTERRUPTED: sakking | resumable"]
-
-
-def test_find_facts_needs_a_filter(tmp_path: Path, shard_paths: dict[str, Path]) -> None:
-    with FamilyMemoryView(shard_paths=shard_paths) as view, pytest.raises(ValueError):
-        view.find_facts(tags=["  "])
 
 
 def test_rejects_unknown_persona_name(tmp_path: Path) -> None:

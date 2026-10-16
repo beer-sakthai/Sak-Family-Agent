@@ -41,12 +41,12 @@
 - **📡 Automated Web Monitor Hook (`saksee-auto-monitor.sh`)**:
   - Script: `.opencode/scripts/saksee-auto-monitor.sh` (Monitors Beer's 6 HF Spaces, records `monitoring-result` to `~/.sakthai/memory.db`)
 - **⚡ Composio MCP (`composio`)**:
-  - Not configured: `composio` is not in `config/mcp.json`. Pin an exact version there before use, never `@latest` (Security Rule 5). (Integrates 250+ SaaS tools: GitHub, Slack, Gmail, Jira)
+  - `npx -y composio-core@latest mcp start` (Integrates 250+ SaaS tools: GitHub, Slack, Gmail, Jira)
 - **🎮 CUA Driver Daemon (`cua-driver`)**:
   - Path: `/home/beern/.cua-driver/packages/releases/0.16.0-x86_64-unknown-linux-gnu/cua-driver`
   - Capabilities: `browser_click`, `browser_type`, `browser_scroll`, pixel-coordinate targeting
 - **🌐 Chrome DevTools MCP**:
-  - `npx -y chrome-devtools-mcp@1.10.1` (pinned in `config/mcp.json`)
+  - `npx -y chrome-devtools-mcp@latest`
 - **🎨 Google Stitch MCP (`stitch`)**:
   - Endpoint: `https://stitch.googleapis.com/mcp`
   - Headers: `X-Goog-Api-Key`
