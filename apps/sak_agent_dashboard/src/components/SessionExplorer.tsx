@@ -126,6 +126,7 @@ export function SessionExplorer({
           onKeyDown={(e) => {
             if (e.key === "Escape" && search) {
               e.preventDefault();
+              e.stopPropagation();
               onSearchChange("");
             }
           }}
@@ -201,13 +202,17 @@ export function SessionExplorer({
                 </tr>
               ) : (
                 sessions.map((session) => {
+                  const isSelected = session.id === openSessionId;
                   const label = `View transcript for ${session.task ? `task "${session.task}"` : session.id}`;
                   return (
                     <tr
                       key={session.id}
+                      aria-selected={isSelected}
                       onClick={() => openDetail(session)}
                       title={label}
-                      className="cursor-pointer hover:bg-raised/60 transition-colors"
+                      className={`cursor-pointer transition-colors ${
+                        isSelected ? "bg-raised/80 font-medium" : "hover:bg-raised/60"
+                      }`}
                     >
                       <td className="px-5 py-3.5">
                         <span
@@ -233,7 +238,11 @@ export function SessionExplorer({
                       <td className="px-5 py-3.5 font-sans text-fg max-w-md truncate">
                         {session.task || "—"}
                       </td>
-                      <td className="px-5 py-3.5 text-fg-3 text-[11px] max-w-[12rem] truncate">
+                      <td
+                        title={session.model ? `Configured model: ${session.model}` : "Model not recorded"}
+                        aria-label={session.model ? `Model: ${session.model}` : "Model not recorded"}
+                        className="px-5 py-3.5 text-fg-3 text-[11px] max-w-[12rem] truncate"
+                      >
                         {session.model || "—"}
                       </td>
                       <td className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap">
@@ -324,7 +333,7 @@ export function SessionExplorer({
         <Drawer
           title="Session transcript"
           subtitle={openSessionId}
-          icon={<Terminal className="h-4 w-4 text-hue-cyan" />}
+          icon={<Terminal className="h-4 w-4 text-hue-cyan" aria-hidden="true" />}
           onClose={closeDetail}
           data-testid="session-drawer"
         >
@@ -339,7 +348,11 @@ export function SessionExplorer({
                   </div>
                   <div>
                     <span className="text-[10px] uppercase text-fg-4 block">Model</span>
-                    <span className="font-bold text-fg truncate block">
+                    <span
+                      title={openSummary.model ? `Configured model: ${openSummary.model}` : "Model not recorded"}
+                      aria-label={openSummary.model ? `Model: ${openSummary.model}` : "Model not recorded"}
+                      className="font-bold text-fg truncate block"
+                    >
                       {openSummary.model || "—"}
                     </span>
                   </div>

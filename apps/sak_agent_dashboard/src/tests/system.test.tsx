@@ -157,9 +157,9 @@ describe("SystemView", () => {
     expect(within(panel).getByText("ci.yml")).toBeInTheDocument();
     expect(within(panel).queryByText("stale.yml")).not.toBeInTheDocument();
 
-    fireEvent.click(within(panel).getByRole("button", { name: "Filter workflows: All 2" }));
+    fireEvent.click(within(panel).getByRole("button", { name: "Filter workflows by All 2" }));
     expect(within(panel).getByText("stale.yml")).toBeInTheDocument();
-    expect(within(panel).getByRole("button", { name: "Filter workflows: All 2" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(panel).getByRole("button", { name: "Showing All 2" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("lists CLI groups with their subcommands and hover tooltip title", () => {
@@ -170,6 +170,24 @@ describe("SystemView", () => {
 
     const groupSummary = screen.getByTitle("Toggle sakthai memory command group (2 subcommands)");
     expect(groupSummary).toBeInTheDocument();
+  });
+
+  it("provides hover tooltips and aria-labels for MCP-only badges and workflow trigger badges", () => {
+    render(<SystemView snapshot={FIXTURE} />);
+    const mcpBadge = screen.getByLabelText("MCP only tool");
+    expect(mcpBadge).toBeInTheDocument();
+    expect(mcpBadge).toHaveAttribute(
+      "title",
+      "Tool is available only via MCP stdio server, not directly in the core agent loop",
+    );
+
+    const triggerBadge = screen.getByLabelText("Trigger event: pull_request");
+    expect(triggerBadge).toBeInTheDocument();
+    expect(triggerBadge).toHaveAttribute("title", "Trigger event: pull_request");
+
+    const subcommandsBadge = screen.getByLabelText("2 subcommands");
+    expect(subcommandsBadge).toBeInTheDocument();
+    expect(subcommandsBadge).toHaveAttribute("title", "2 subcommands");
   });
 });
 

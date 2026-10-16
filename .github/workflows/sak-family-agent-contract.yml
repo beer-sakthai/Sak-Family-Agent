@@ -19,6 +19,7 @@ on:
       - "tests/test_compose_persona.py"
       - "tests/test_export_agent_repo.py"
       - "tests/test_persona_guardrails_parity.py"
+      - "tests/test_persona_security_config.py"
       - ".github/workflows/sak-family-agent-contract.yml"
   pull_request:
     branches: ["main"]
@@ -38,6 +39,7 @@ on:
       - "tests/test_compose_persona.py"
       - "tests/test_export_agent_repo.py"
       - "tests/test_persona_guardrails_parity.py"
+      - "tests/test_persona_security_config.py"
       - ".github/workflows/sak-family-agent-contract.yml"
   workflow_dispatch:
 
@@ -55,7 +57,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Harden the runner
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
         with:
           use-policy-store: true
           api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
@@ -72,7 +74,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
 
       - name: Install dependencies
         run: uv sync --all-extras
@@ -110,3 +112,4 @@ jobs:
           tests/test_compose_persona.py
           tests/test_export_agent_repo.py
           tests/test_persona_guardrails_parity.py
+          tests/test_persona_security_config.py

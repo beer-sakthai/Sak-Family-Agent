@@ -19,6 +19,7 @@ import {
   demoWorkflows,
 } from "@/lib/demo";
 import { DemoSource } from "@/lib/sources/demo";
+import { SYSTEM_SNAPSHOT } from "@/lib/system";
 
 describe("determinism", () => {
   it.each([
@@ -55,6 +56,18 @@ describe("demoPersonas", () => {
       expect(persona.model.length).toBeGreaterThan(0);
     }
   });
+
+  // The sample data kept naming Gemini models after the personas moved off
+  // them. The System snapshot is regenerated from each persona's
+  // config/config.yaml (`make system-snapshot`), so it is the reference.
+  it.each(SYSTEM_SNAPSHOT.personas.map((p) => [p.name, p] as const))(
+    "runs %s on the model its config names",
+    (name, configured) => {
+      const demo = demoPersonas().personas.find((p) => p.name === name);
+      expect(demo?.provider).toBe(configured.provider);
+      expect(demo?.model).toBe(configured.model);
+    },
+  );
 });
 
 describe("demoMetrics", () => {

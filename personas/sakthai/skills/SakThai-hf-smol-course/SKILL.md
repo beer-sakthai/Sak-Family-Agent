@@ -7,7 +7,7 @@ description: "Fine-tune LLMs with TRL, PEFT, and alignment methods."
 
 Reference for the [HF smol course](https://huggingface.co/learn/smol-course). Covers instruction tuning, preference alignment (DPO, GRPO), vision-language models, and model evaluation.
 
-> **For a comprehensive deep-dive on the TRL library** — all 8 trainers (SFT, DPO, GRPO, PPO, Reward, KTO, ORPO, CPO), advanced config, PEFT interop, vLLM integration, and production best practices — see sibling skill [`hf-trl-deep-dive`](../hf-trl-deep-dive/SKILL.md). This one is the course portal overview; that one is the authoritative library reference.
+> **For a comprehensive deep-dive on the TRL library** — all 8 trainers (SFT, DPO, GRPO, PPO, Reward, KTO, ORPO, CPO), advanced config, PEFT interop, vLLM integration, and production best practices — see sibling skill [`hf-trl-deep-dive`](../SakThai-hf-trl-deep-dive/SKILL.md). This one is the course portal overview; that one is the authoritative library reference.
 
 ## When to Use
 
@@ -426,4 +426,4 @@ print(pipe("Explain transformers simply:", max_new_tokens=100)[0]["generated_tex
 - [TRL Documentation](https://huggingface.co/docs/trl) — all trainers and configs
 - [PEFT Documentation](https://huggingface.co/docs/peft) — LoRA, QLoRA, IA3, etc.
 - [TRL GitHub Examples](https://github.com/huggingface/trl/tree/main/examples) — complete training scripts
-- [Sibling skill: hf-trl-deep-dive](../hf-trl-deep-dive/SKILL.md) — comprehensive TRL library reference
+- [Sibling skill: hf-trl-deep-dive](../SakThai-hf-trl-deep-dive/SKILL.md) — comprehensive TRL library reference

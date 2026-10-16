@@ -19,17 +19,42 @@ findings and how each is prevented going forward.
 
 ## Operational action required (not fixable in code)
 
-**Rotate two credentials.** `.gitleaks.toml` previously allowlisted, by exact
-value, a `ck_…` consumer key and the token `H9hhwS50qwxJIORLdXbIgFHMUeMKyn4h`.
-Its own comment noted these were scrubbed from the working tree but **remain in
-git history**. Scrubbing a secret from the tree does not invalidate it — if it
-was ever pushed, it is compromised.
+**Revoke three credentials.** Each was committed, pushed, and later scrubbed from
+the working tree, so each **remains in git history**. Scrubbing a secret from
+the tree does not invalidate it: if it was ever pushed, it is compromised.
 
-- **Action:** rotate/revoke both at their providers. This is the only real fix.
-- The exact-value allowlist entries were **removed** so gitleaks will flag them
-  if they are ever reintroduced. History was **not** rewritten (a separate,
-  riskier operation — decide explicitly if the values must be purged from
-  history via `git filter-repo`/BFG, and rotate first regardless).
+| Credential | Where it was committed | Revoke at |
+|---|---|---|
+| Composio consumer key (`ck_…`) | `config/config.yaml`, the `composio` MCP server's `x-consumer-api-key` header (2026-06-21) | the Composio dashboard |
+| Mistral API key (`H9hh…`) | `default/config.yaml`, the `api_key` of the model provider and of the `mistral-code208` custom provider (2026-06-20) | the Mistral console, API keys |
+| Kaggle API token (`KGAT…`) | `scripts/family-status.sh`, `KAGGLE_API_TOKEN` (2026-07-25, commit `130d5492`) | Kaggle, Settings → API |
+
+Earlier revisions of this section, `.gitleaks.toml` and
+`security/SECURITY_FIXES_PLAN.md` called the first two a "Stripe" key and a
+"Twilio" token. The headers and config keys they sit under show they are
+Composio and Mistral keys. This section and `.gitleaks.toml` also quoted the
+Mistral key in full. It is now shortened to its first four characters
+everywhere in the tree.
+
+- **Action:** revoke all three at their providers. This is the only real fix.
+- `.gitleaks.toml` no longer allowlists any value, so gitleaks flags these if
+  they are ever committed again. The scheduled full-history scan in
+  `secret-scan.yml` is kept green by `.gitleaksignore`. That file lists the
+  exact historical fingerprints (commit, file, rule, line) of these hits and of
+  19 false positives. A fingerprint matches one historical line only, so any
+  new commit carrying the same value still fails the scan.
+- History was **not** rewritten. Purging the values with `git filter-repo`/BFG
+  is a separate and riskier operation: it breaks every existing clone. Decide
+  on it explicitly, and revoke first either way.
+
+**Rotate (or delete) `GH_PAT_FOR_ACTIONS`.** Until finding 17 was fixed, the
+nightly `continuous-security.yml` agent held this token in its environment and
+every command it ran inherited it, alongside an allow-list that included
+`python` and `uv`. Nothing in the repository uses it any more.
+
+- **Action:** revoke it, then delete the repository secret. If something
+  outside this repo still needs it, replace it with a fine-grained,
+  single-repository token with an expiry.
 
 ---
 
@@ -115,7 +140,8 @@ was ever pushed, it is compromised.
   (or `true`/`all`/`*`) keeps the legacy "any program" behavior; any other
   value is an `os.pathsep`-separated list of permitted program names, and only
   those may run. Used by `continuous-security.yml`
-  (`SAKTHAI_SHELL_ALLOW="ruff:bandit:mypy:pytest:uv:git:python:python3"`).
+  (`SAKTHAI_SHELL_ALLOW="ruff:bandit:mypy:pytest"`; see finding 17 for why
+  `python`, `python3`, `uv` and `git` were later dropped).
 - **Prevention pattern:** prefer an explicit allow-list over an on/off switch
   for powerful capabilities.
 - **Regression tests:** `tests/test_tools.py::test_run_command_allowlist_permits_named_program`,
@@ -333,6 +359,154 @@ was ever pushed, it is compromised.
   `tests/test_guardrails_sentinel_bypasses.py::TestShellTokenizerParserDifferential`
   (blocked, separator parity, and the backslash-free no-op control).
 
+### 17. The nightly agent could hand a push token to the commands it ran
+- **Where:** `.github/workflows/continuous-security.yml`;
+  `personas/sakthai/sakthai/agent/tools.py` — `_run_command`, `_command_env`.
+- **Risk:** the nightly security agent ran with
+  `GITHUB_TOKEN: ${{ secrets.GH_PAT_FOR_ACTIONS }}`, `contents: write` and
+  `pull-requests: write`, and an allow-list of
+  `ruff:bandit:mypy:pytest:uv:git:python:python3`. `run_command` passed no
+  `env=`, so every child inherited the PAT and `ANTHROPIC_API_KEY`. `python -c`
+  and `uv run` execute arbitrary code by design, and `git -c core.pager=<cmd>`
+  or `git -c alias.x='!<cmd>'` do the same, so a prompt injection in anything
+  the agent read (a file, a tool result) was one tool call away from sending
+  either secret off the runner. The write scopes served a patching stage that
+  was never built.
+- **Fix:** the job is read-only (`contents: read`, no PAT); the allow-list is
+  `ruff:bandit:mypy:pytest`; and `run_command` now builds its child's
+  environment with `_command_env()`, which drops every variable whose
+  `_`-separated name segments include `TOKEN`, `SECRET`, `PASSWORD`, `PASSWD`,
+  `KEY`, `APIKEY`, `PAT`, `CREDENTIAL` or `CREDENTIALS`. Segment matching
+  keeps `PATH` and `SSH_AUTH_SOCK`.
+- **Limits:** the environment filter is defense in depth, not a sandbox. A
+  child that does get arbitrary code execution can still read its parent's
+  `/proc/<ppid>/environ`, which is why the allow-list cut is the primary fix.
+  A local user who allows `gh` or `huggingface-cli` through `run_command` now
+  has to authenticate those tools by other means than `GH_TOKEN`/`HF_TOKEN`.
+- **Prevention pattern:** an autonomous agent gets the least privilege its
+  task needs: read-only tokens, no interpreters on the allow-list, and no
+  credentials in the environment of anything it launches. Treat "can run
+  program X" as "can do anything X's flags allow".
+- **Regression tests:** `tests/test_tools.py::test_run_command_withholds_credential_env_vars`,
+  `::test_run_command_keeps_ordinary_env_vars`.
+
+### 18. Persona configs ran floating npm packages and pre-approved dangerous commands
+- **Where:** `personas/*/config/mcp.json`, `personas/*/config/config.yaml`;
+  `tests/test_cli.py::test_run_persona_uses_persona_store_and_soul`.
+- **Risk:** `sakthai run --persona X` launches the stdio MCP servers in that
+  persona's `mcp.json`. SakKing, SakSee and SakSit launched them as
+  `npx -y @playwright/mcp@latest`, `chrome-devtools-mcp@latest` and an
+  unversioned `@llmindset/mcp-hfspace`: whatever was published last, installed
+  and run on every launch, with no review. One compromised release would have
+  run on every persona at once. A unit test ran `run --persona sakking` without
+  `--no-mcp`, so CI did the same on every push. Five personas also listed
+  `npx -y @huggingface/mcp-server`, a package that does not exist on npm; it
+  failed on every launch. Separately, Hermes writes an "always allow" answer
+  into `command_allowlist`, and an entry there skips the approval prompt for
+  that command category for good. SakThai pre-approved `recursive delete` and
+  `stop/restart system service`. SakSee pre-approved those plus
+  `stop/restart hermes gateway` and `script execution via -e/-c flag`. SakSit
+  pre-approved `script execution via -e/-c flag`. That last one is
+  `python -c`, the class finding 17 removed from the nightly agent.
+- **Fix:** every `npx` server is pinned to an exact version
+  (`@playwright/mcp@0.0.83`, `chrome-devtools-mcp@1.10.1`,
+  `@llmindset/mcp-hfspace@0.5.4`). The non-existent `huggingface` entries are
+  removed. All three `command_allowlist`s are emptied, so those commands ask
+  again. The test passes `--no-mcp`. Run under an `npx` shim that logs each
+  call, the full suite now makes none; before the fix it made four.
+- **Parity:** SakJules and SakTan shipped a model-only `config.yaml`, so they
+  ran on Hermes's defaults. They now carry the same fail-closed `security`,
+  manual `approvals` and empty `command_allowlist` blocks as the other four.
+  Three SOULs (SakKing, SakThai, SakTan) had no security rules at all, and the
+  SOUL is the system prompt each persona runs with. All six now end with one
+  identical `## Security Rules` section: keep secrets out of output, treat
+  content as data, wait for Beer on irreversible actions, never work around a
+  guardrail, install nothing at runtime.
+- **Limits:** a pinned version is only as good as the release it names, so a
+  bump is a reviewed change, not an automatic one. Dependabot does not read
+  these files. SOUL rules steer the model, but they do not enforce anything;
+  the guardrails do. With `tirith_fail_open: false`, a host without `tirith`
+  on `PATH` blocks the guarded actions instead of allowing them.
+- **Prevention pattern:** runtime config is code. Pin what it installs,
+  pre-approve nothing destructive, and let a test hold every persona to it,
+  because the runtime edits these files itself.
+- **Regression tests:** `tests/test_persona_security_config.py` checks all six
+  personas. Each `npx` server must be version-pinned and `command_allowlist`
+  must be empty. The `security` block must be present and fail closed, and
+  approvals stay manual. Remote MCP headers may hold only `${VAR}` references,
+  not literal credentials.
+  `tests/test_soul_consistency.py::test_soul_carries_the_shared_security_rules`
+  checks that all six SOULs, and the Hermes profile SOULs that link to them,
+  carry the same Security Rules.
+
+
+### 19. Five security checks no test could fail
+- **Where:** `telegram/bot.py` (`_is_authorized`), `web/server.py`
+  (`_token_matches`, `_is_authenticated`), `agent/guardrails.py`
+  (`_is_sensitive_path`).
+- **Risk:** sixteen hand-written mutants were run against the security seams,
+  each against the test files that own it. Five survived, so each of these
+  regressions would have shipped with CI green:
+  - **T1:** the Telegram bots answer any Telegram user. The bots are public,
+    and their handles are listed in `docs/SOUL.md`.
+  - **T2:** the bots answer everyone when the allowlist is empty.
+  - **M5:** web auth accepts any token that matches the first 8 characters.
+  - **M6:** web auth lets every request in when no token is configured.
+  - **M3:** `_is_sensitive_path` stops splitting on commas, so
+    `--mount src=/etc,dst=/x` passes.
+
+  M3, M5 and M6 were first reported in
+  [`test-coverage-audit-2026-09-01.md`](./test-coverage-audit-2026-09-01.md)
+  and were still alive. Every Telegram test sent its message as the one
+  allowlisted user. The only wrong-token test differed from the real token in
+  its first character.
+- **Fix:** tests only, since the code was correct.
+  - The Telegram tests send from an unlisted user and from an empty allowlist
+    to all eight gated handlers. They check that the user gets the refusal and
+    that the agent never runs.
+  - The web tests send five near-miss tokens over the header, query and cookie
+    channels: last character changed, truncated, an 8-character prefix,
+    extended by one, case changed. They also check that an unconfigured token
+    lets nothing in, an empty credential included.
+  - The guardrail tests check `docker --mount` comma specs.
+
+  All five mutants are now killed. The other eleven were already killed:
+  public bind, any auth scheme, MCP child env, `run_command` env filter and its
+  `KEY`/`PAT` segments, `read_file` roots, MCP tool-name validation and
+  description labelling, and git `ext::` and leading-dash rejection.
+- **Prevention pattern:** for every security check, write the test that would
+  fail if the check were deleted: an attacker-shaped input, not only the happy
+  path. Coverage cannot show this: a line can be covered and still have no
+  test that fails when it changes. `telegram/bot.py` is not measured at all.
+- **Regression tests:** `tests/test_telegram_bot.py::test_unauthorized_user_gets_only_the_refusal`,
+  `tests/test_web_auth.py::test_near_miss_token_is_rejected`,
+  `::test_unconfigured_token_fails_closed`,
+  `tests/test_guardrails_normalization.py::test_comma_separated_mount_spec_is_sensitive`.
+
+### 20. The VM bundle wrote every bot token world-readable
+- **Where:** `scripts/setup_vm_telegram_agents.py`, `infra/vm-agents/README.md`.
+- **Risk:** the script builds the deployment bundle for all six Telegram bots.
+  It wrote `common.env` (the OpenAI key) and the six `<agent>.env` files (the
+  bot tokens) with `write_text`. Under the usual `022` umask that is `0644`
+  inside a `0755` directory, readable by every local user, and the README's
+  `cp` step carried that mode into `~/.config/`. The script also required all
+  seven secrets as command-line flags, which show up in `ps` and shell history.
+  The README said it prompted for them; it did not.
+- **Fix:** both secret files and the `config/` directory are created owner-only
+  (`0600` and `0700`), and a re-run tightens a file left world-readable by an
+  older run. Each secret now comes from its flag, else its environment variable
+  (`OPENAI_API_KEY`, `<AGENT>_TELEGRAM_BOT_TOKEN`), else a hidden `getpass`
+  prompt. A missing secret, or one with no terminal to prompt on, exits with a
+  clear message. The README example passes no secrets, and the copy step uses
+  `install -m 600`.
+- **Prevention pattern:** a file that holds a secret is created with its final
+  mode, not `chmod`ed after the fact. Secrets travel by environment or prompt,
+  never by argv.
+- **Regression tests:** `tests/test_setup_vm_telegram_agents.py::test_env_files_holding_secrets_are_owner_only`,
+  `::test_rerun_tightens_a_world_readable_env_file`,
+  `::test_secret_prefers_flag_then_environment_then_prompt`,
+  `::test_missing_secret_exits_cleanly`,
+  `::test_parser_does_not_require_secrets_on_the_command_line`.
 
 ## CI / supply-chain hardening
 

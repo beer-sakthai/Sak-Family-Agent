@@ -95,3 +95,20 @@ def test_windows_separators_are_split(path):
 def test_ordinary_paths_stay_allowed(path):
     """Folding and splitting must not start blocking ordinary project paths."""
     assert not _is_sensitive_path(path, allow_local=True), f"Path {path} should be allowed"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "src=/etc,dst=/x",
+        "type=bind,source=/etc,target=/mnt",
+        "type=bind,src=/root/.ssh,dst=/keys",
+    ],
+)
+def test_comma_separated_mount_spec_is_sensitive(value):
+    """``docker run --mount`` takes comma-joined key=value pairs; each one is checked.
+
+    Without the comma split, ``/etc,dst`` reads as one path component and the
+    bind mount of ``/etc`` passes.
+    """
+    assert _is_sensitive_path(value), f"{value!r} mounts a sensitive path"
