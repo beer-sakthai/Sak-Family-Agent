@@ -1190,6 +1190,43 @@ describe("DisplayMenu", () => {
     fireEvent.keyDown(menuItems[4], { key: "Home" });
     expect(menuItems[0]).toHaveFocus();
   });
+
+  it("closes menu popover and restores focus to trigger upon theme or density option selection", () => {
+    const onThemeChange = vi.fn();
+    const onDensityChange = vi.fn();
+
+    render(
+      <DisplayMenu
+        theme="system"
+        onThemeChange={onThemeChange}
+        density="comfortable"
+        onDensityChange={onDensityChange}
+        prefersLight={false}
+      />
+    );
+
+    const trigger = screen.getByRole("button", { name: "Display settings" });
+
+    // Test theme selection closes menu and focuses trigger
+    fireEvent.click(trigger);
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    const lightItem = screen.getByRole("menuitemradio", { name: /Light/ });
+    fireEvent.click(lightItem);
+
+    expect(onThemeChange).toHaveBeenCalledWith("light");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+
+    // Test density selection closes menu and focuses trigger
+    fireEvent.click(trigger);
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    const compactItem = screen.getByRole("menuitemradio", { name: /Compact/ });
+    fireEvent.click(compactItem);
+
+    expect(onDensityChange).toHaveBeenCalledWith("compact");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
 });
 
 describe("ToastStack", () => {
