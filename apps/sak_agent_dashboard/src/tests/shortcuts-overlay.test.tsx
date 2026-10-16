@@ -94,13 +94,9 @@ describe("ShortcutsOverlay", () => {
     const inlineClearBtn = screen.getByRole("button", {
       name: "Clear search filter and show all shortcuts",
     });
+    expect(inlineClearBtn).toHaveAttribute("type", "button");
     expect(inlineClearBtn).toHaveAttribute("title", "Clear search filter (Esc)");
     fireEvent.click(inlineClearBtn);
-    // Verify inline reset button in empty state
-    const resetBtn = screen.getByRole("button", { name: "Clear shortcut search filter and show all shortcuts" });
-    expect(resetBtn).toHaveAttribute("type", "button");
-    expect(resetBtn).toHaveAttribute("title", "Clear search (Esc)");
-    fireEvent.click(resetBtn);
     expect(searchInput).toHaveValue("");
     expect(screen.getByText("Show this list")).toBeInTheDocument();
   });

@@ -127,7 +127,9 @@ export function WorkflowRuns({
                 <th className="px-5 py-3">Started</th>
                 <th className="px-5 py-3 text-right">Duration</th>
                 <th className="px-5 py-3 text-right">Steps</th>
-                <th className="px-5 py-3" />
+                <th className="px-5 py-3 text-right" aria-label="Actions">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line/60 text-fg-2">
