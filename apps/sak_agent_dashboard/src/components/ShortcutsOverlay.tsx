@@ -192,18 +192,9 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
               <div
                 role="status"
                 aria-label={`No shortcuts match "${query}"`}
-                className="flex flex-col items-center justify-center gap-2 py-8 text-center font-mono text-xs text-fg-4"
+                className="py-8 text-center font-mono text-xs text-fg-4"
               >
-                <span>No shortcuts match &quot;{query}&quot;</span>
-                <button
-                  type="button"
-                  onClick={() => setQuery("")}
-                  aria-label="Clear shortcut search filter and show all shortcuts"
-                  title="Clear search (Esc)"
-                  className="mt-1 rounded-lg border border-line bg-raised px-2.5 py-1 font-sans text-xs text-fg-3 transition-colors hover:bg-raised/80 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  Clear search query
-                </button>
+                No shortcuts match &quot;{query}&quot;
               </div>
             );
           }
