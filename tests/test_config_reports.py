@@ -20,10 +20,6 @@ def test_sessions_dir_honours_home(sakthai_home: Path) -> None:
     assert config.sessions_dir() == sakthai_home / "sessions"
 
 
-def test_telegram_session_db_path_honours_home(sakthai_home: Path) -> None:
-    assert config.telegram_session_db_path(123) == sakthai_home / "telegram" / "123" / "memory.db"
-
-
 def test_telegram_allowed_user_ids_parses_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123, 456 789")
     assert config.telegram_allowed_user_ids() == [123, 456, 789]
@@ -275,14 +271,17 @@ def test_persona_soul_path() -> None:
     assert config.persona_soul_path("sakking") == config.PERSONAS_DIR / "sakking" / "SOUL.md"
 
 
-def test_persona_memory_db_path_respects_sakthai_home_override(
+def test_persona_memory_db_path_ignores_sakthai_home(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The per-persona shard path respects the SAKTHAI_HOME environment variable."""
-    """The per-persona shard path respects SAKTHAI_HOME override."""
+    """A persona's shard does not move with SAKTHAI_HOME.
+
+    The VM sets SAKTHAI_HOME=$HOME/.sakthai/<self> per persona; following it put
+    every sibling at ~/.sakthai/<self>/<sibling>/memory.db, a path that never exists.
+    """
     monkeypatch.setenv("SAKTHAI_HOME", "/somewhere/unrelated")
     assert config.persona_memory_db_path("sakking") == (
-        Path("/somewhere/unrelated") / "sakking" / "memory.db"
+        Path.home() / ".sakthai" / "sakking" / "memory.db"
     )
 
 

@@ -38,7 +38,7 @@ sakking) export SAKTHAI_MODEL=model-router ;;
 sakthai) export SAKTHAI_MODEL=gpt-4o-mini ;;
 saksee)
 	export SAKTHAI_MODEL=gpt-5.4-mini
-	export SAKTHAI_WITH_SKILLS=playwright
+	export SAKTHAI_WITH_SKILLS=SakSee-playwright
 	;;
 saksit) export SAKTHAI_MODEL=Phi-4-mini-reasoning ;;
 saktan) export SAKTHAI_MODEL=gpt-4o-mini ;;

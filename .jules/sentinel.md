@@ -547,3 +547,7 @@
 **Vulnerability:** The error handlers in `docs/index.html` and `scripts/saksee/dashboard.html` rendered the raw exception message `e.message` directly into the DOM using `.innerHTML`. If an error message could be manipulated to contain malicious HTML or script tags, this would lead to a Cross-Site Scripting (XSS) execution when the application attempted to render the error.
 **Learning:** Error messages, just like user input or external data, must be treated as untrusted and properly escaped before being inserted into the DOM. Developers often overlook error boundaries, assuming exceptions only contain benign system text.
 **Prevention:** Always wrap variables containing potentially untrusted strings with a robust HTML escaping function (like `escapeHtml()`) before concatenating them into strings destined for `.innerHTML`, or prefer assigning directly to `.textContent` when HTML rendering is unnecessary.
+## 2026-10-16 - Prevent XSS in Dashboard and Index Error Messages
+**Vulnerability:** Cross-Site Scripting (XSS) via `e.message` injection into DOM using `.innerHTML`.
+**Learning:** Even internal API error messages can contain reflected user input if the backend echoes bad input in the error response. Directly inserting these into the DOM using `.innerHTML` creates an XSS vulnerability.
+**Prevention:** Always wrap dynamically generated error strings with an HTML escaper (like the local `escapeHtml` function) before injecting them into `.innerHTML`.
