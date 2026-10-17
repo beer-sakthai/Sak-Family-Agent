@@ -127,51 +127,73 @@ export function WorkflowRuns({
                 <th className="px-5 py-3">Started</th>
                 <th className="px-5 py-3 text-right">Duration</th>
                 <th className="px-5 py-3 text-right">Steps</th>
-                <th className="px-5 py-3" />
+                <th className="px-5 py-3 text-right" aria-label="Actions">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line/60 text-fg-2">
               {runs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-8 text-center text-fg-4 italic">
-                    No workflow runs recorded yet.
+                  <td colSpan={6} className="px-5 py-8 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2 font-sans">
+                      <GitBranch className="h-6 w-6 text-fg-4/80" aria-hidden />
+                      <p className="text-fg-4 text-xs">
+                        No workflow runs recorded yet.
+                      </p>
+                    </div>
                   </td>
                 </tr>
               ) : (
-                runs.map((run) => (
-                  <tr key={run.run_id} className="hover:bg-raised/40 transition-colors">
-                    <td className="px-5 py-3.5">
-                      <span className="font-bold text-fg">{run.workflow_name || "—"}</span>
-                      <span className="block text-[10px] text-fg-4">{run.run_id}</span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <StatusPill status={run.status} />
-                    </td>
-                    <td className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap">
-                      {started(run.started_at)}
-                    </td>
-                    <td className="px-5 py-3.5 text-right text-fg-2">
-                      {duration(run.duration_seconds)}
-                    </td>
-                    <td className="px-5 py-3.5 text-right">
-                      <span className="text-fg-2">{run.step_count}</span>
-                      {run.failed_steps > 0 && (
-                        <span className="text-hue-rose"> ({run.failed_steps} failed)</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5 text-right">
-                      <button
-                        type="button"
-                        onClick={() => open(run.run_id)}
-                        aria-label={`View steps for ${run.workflow_name || run.run_id}`}
-                        title={`View steps for ${run.workflow_name || run.run_id}`}
-                        className="text-[11px] px-2.5 py-1 rounded-lg bg-raised border border-line-strong text-hue-violet hover:border-hue-violet-line/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                      >
-                        Steps
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                runs.map((run) => {
+                  const isSelected = run.run_id === openRunId;
+                  const label = `View steps for ${run.workflow_name || run.run_id}`;
+                  return (
+                    <tr
+                      key={run.run_id}
+                      aria-selected={isSelected}
+                      onClick={() => open(run.run_id)}
+                      title={label}
+                      className={`cursor-pointer transition-colors ${
+                        isSelected ? "bg-raised/80 font-medium" : "hover:bg-raised/60"
+                      }`}
+                    >
+                      <td className="px-5 py-3.5">
+                        <span className="font-bold text-fg">{run.workflow_name || "—"}</span>
+                        <span className="block text-[10px] text-fg-4">{run.run_id}</span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <StatusPill status={run.status} />
+                      </td>
+                      <td className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap">
+                        {started(run.started_at)}
+                      </td>
+                      <td className="px-5 py-3.5 text-right text-fg-2">
+                        {duration(run.duration_seconds)}
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <span className="text-fg-2">{run.step_count}</span>
+                        {run.failed_steps > 0 && (
+                          <span className="text-hue-rose"> ({run.failed_steps} failed)</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            open(run.run_id);
+                          }}
+                          aria-label={label}
+                          title={label}
+                          className="text-[11px] px-2.5 py-1 rounded-lg bg-raised border border-line-strong text-hue-violet hover:border-hue-violet-line/60 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+                        >
+                          Steps
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -182,7 +204,7 @@ export function WorkflowRuns({
         <Drawer
           title={detail?.summary.workflow_name ?? openRunId}
           subtitle={openRunId}
-          icon={<GitBranch className="h-4 w-4 text-hue-violet" />}
+          icon={<GitBranch className="h-4 w-4 text-hue-violet" aria-hidden="true" />}
           onClose={close}
           data-testid="workflow-drawer"
         >
@@ -210,7 +232,7 @@ export function WorkflowRuns({
                       </span>
                     </div>
                     {step.error && (
-                      <p className="text-hue-rose font-sans break-words">{step.error}</p>
+                      <p className="text-hue-rose font-sans wrap-break-word">{step.error}</p>
                     )}
                   </div>
                 ))

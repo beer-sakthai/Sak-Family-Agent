@@ -12,6 +12,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import ErrorBoundary from "@/app/error";
+import GlobalError from "@/app/global-error";
 import AgentCard from "@/components/AgentCard";
 import CommandPalette from "@/components/CommandPalette";
 import AgentOverview from "@/components/AgentOverview";
@@ -144,6 +145,18 @@ describe("AgentCard", () => {
     const tokenBadge = screen.getByText("2,000 tokens");
     expect(tokenBadge).toBeInTheDocument();
     expect(tokenBadge).toHaveAttribute("title", "Total token usage: 2,000 tokens");
+  });
+
+  it("renders provider and model badges with title tooltips and aria-label attributes", () => {
+    const agent = { ...active, provider: "anthropic", model: "claude-3-5-sonnet-20241022" };
+    render(<AgentCard agent={agent} />);
+    const providerBadge = screen.getByLabelText("Provider: anthropic");
+    expect(providerBadge).toBeInTheDocument();
+    expect(providerBadge).toHaveAttribute("title", "Model provider: anthropic");
+
+    const modelBadge = screen.getByLabelText("Model: claude-3-5-sonnet-20241022");
+    expect(modelBadge).toBeInTheDocument();
+    expect(modelBadge).toHaveAttribute("title", "Configured model: claude-3-5-sonnet-20241022");
   });
 
   it("renders success rate progressbar with full ARIA progressbar attributes", () => {
@@ -280,6 +293,19 @@ describe("AnalyticsCharts", () => {
       ).toHaveAttribute("title", `Set trend window to ${trendWindowLabel(days)}`);
     }
   });
+
+  it("renders data source badges with title tooltips and aria-labels", () => {
+    renderCharts();
+    const sourceBadges = screen.getAllByLabelText("Data source: eval.jsonl");
+    expect(sourceBadges.length).toBeGreaterThan(0);
+    expect(sourceBadges[0]).toHaveAttribute("title", "Data source: eval.jsonl");
+  });
+
+  it("renders empty chart state containers with role='status' and aria-label", () => {
+    renderCharts({ metrics: { ...demoMetrics(), trends: [], stop_reasons: {} } });
+    const emptyStatuses = screen.getAllByRole("status", { name: "No runs recorded yet" });
+    expect(emptyStatuses.length).toBeGreaterThan(0);
+  });
 });
 
 describe("MemoryExplorer", () => {
@@ -400,10 +426,38 @@ describe("MemoryExplorer", () => {
     expect(shardBadges.length).toBeGreaterThan(0);
   });
 
-  it("renders an empty state", () => {
-    const empty = { ...demoMemory(), facts: [] };
+  it("provides title tooltips and aria-labels on observation weight and confidence cells", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+    fireEvent.click(obsTab);
+
+    const firstObs = demoMemory().observations[0];
+    const weightText = firstObs.weight.toFixed(2);
+    const confidenceText = `${(firstObs.confidence * 100).toFixed(0)}%`;
+
+    const weightCell = screen.getByLabelText(`Observation weight: ${weightText}`);
+    expect(weightCell).toBeInTheDocument();
+    expect(weightCell).toHaveAttribute("title", `Observation weight: ${weightText}`);
+
+    const confidenceCell = screen.getByLabelText(`Confidence score: ${confidenceText}`);
+    expect(confidenceCell).toBeInTheDocument();
+    expect(confidenceCell).toHaveAttribute("title", `Confidence score: ${confidenceText}`);
+  });
+
+  it("renders empty state guidance and icons for facts and observations", () => {
+    const empty = { ...demoMemory(), facts: [], observations: [] };
     render(<MemoryExplorer memory={empty} />);
-    expect(screen.getByText("No memory facts found.")).toBeInTheDocument();
+    expect(screen.getByText("No memory facts recorded yet.")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Facts are extracted during agent runs/i),
+    ).toBeInTheDocument();
+
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+    fireEvent.click(obsTab);
+    expect(screen.getByText("No observations recorded yet.")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Observations summarize learned behaviors/i),
+    ).toBeInTheDocument();
   });
 
   it("sets tabIndex=0 on the active tab and tabIndex=-1 on inactive tabs", () => {
@@ -487,21 +541,44 @@ describe("AuditLogs", () => {
     expect(onChange).toHaveBeenCalledWith("critical");
   });
 
-  it("marks the active severity and provides title tooltips describing selection state", () => {
-    render(<AuditLogs audit={demoAudit()} severity="high" onSeverityChange={vi.fn()} />);
-    const highBtn = screen.getByRole("button", { name: /high severity/ });
-    expect(highBtn).toHaveAttribute("aria-pressed", "true");
-    expect(highBtn).toHaveAttribute("title", "Showing high severity events");
+  it("marks the active severity and provides title tooltips describing selection state and counts", () => {
+    const audit = demoAudit();
+    const highCount = audit.severity_counts["high"] ?? 0;
+    const criticalCount = audit.severity_counts["critical"] ?? 0;
 
-    const criticalBtn = screen.getByRole("button", { name: /critical severity/ });
+    render(<AuditLogs audit={audit} severity="high" onSeverityChange={vi.fn()} />);
+    const highBtn = screen.getByRole("button", { name: new RegExp(`Showing high severity events \\(${highCount} total\\)`) });
+    expect(highBtn).toHaveAttribute("aria-pressed", "true");
+    expect(highBtn).toHaveAttribute("title", `Showing high severity events (${highCount} total)`);
+
+    const criticalBtn = screen.getByRole("button", { name: new RegExp(`Filter audit log by critical severity \\(${criticalCount} total\\)`) });
     expect(criticalBtn).toHaveAttribute("aria-pressed", "false");
-    expect(criticalBtn).toHaveAttribute("title", "Filter audit log by critical severity");
+    expect(criticalBtn).toHaveAttribute("title", `Filter audit log by critical severity (${criticalCount} total)`);
+
+    const allBtn = screen.getByRole("button", { name: "Filter audit log by all severities" });
+    expect(allBtn).toHaveAttribute("aria-pressed", "false");
+    expect(allBtn).toHaveAttribute("title", "Filter audit log by all severities");
   });
 
   it("explains an empty log rather than looking broken", () => {
     const empty = { events: [], severity_counts: {}, total: 0 };
     render(<AuditLogs audit={empty} severity="ALL" onSeverityChange={vi.fn()} />);
     expect(screen.getByText(/An empty audit log is a normal state/)).toBeInTheDocument();
+  });
+
+  it("offers an inline reset filter button when severity filter yields no events and calls onSeverityChange", () => {
+    const onChange = vi.fn();
+    const empty = { events: [], severity_counts: { critical: 0 }, total: 0 };
+    render(<AuditLogs audit={empty} severity="critical" onSeverityChange={onChange} />);
+
+    expect(screen.getByText("No critical severity events recorded.")).toBeInTheDocument();
+    const resetBtn = screen.getByRole("button", { name: "Reset severity filter to show all events" });
+    expect(resetBtn).toBeInTheDocument();
+    expect(resetBtn).toHaveAttribute("title", "Reset severity filter to show all events");
+    expect(resetBtn).toHaveAttribute("type", "button");
+
+    fireEvent.click(resetBtn);
+    expect(onChange).toHaveBeenCalledWith("ALL");
   });
 });
 
@@ -539,6 +616,13 @@ describe("SessionExplorer", () => {
       "title",
       `Total recorded sessions: ${sessions.total.toLocaleString()}`,
     );
+  });
+
+  it("renders accessible Actions column header in session table", () => {
+    renderExplorer();
+    const actionsHeader = screen.getByRole("columnheader", { name: "Actions" });
+    expect(actionsHeader).toBeInTheDocument();
+    expect(actionsHeader).toHaveAttribute("aria-label", "Actions");
   });
 
   it("lists sessions", () => {
@@ -580,6 +664,25 @@ describe("SessionExplorer", () => {
     const badge = screen.getByLabelText("Unattributed session (no persona recorded)");
     expect(badge).toBeInTheDocument();
     expect(badge).toHaveAttribute("title", "Unattributed session (no persona recorded)");
+  });
+
+  it("renders model table cells and drawer model badge with title hover tooltips and aria-label attributes", () => {
+    const firstSession = sessions.sessions[0];
+    const expectedModel = firstSession.model || "—";
+    const expectedTitle = firstSession.model ? `Configured model: ${firstSession.model}` : "Model not recorded";
+    const expectedAriaLabel = firstSession.model ? `Model: ${firstSession.model}` : "Model not recorded";
+
+    renderExplorer({ openSessionId: firstSession.id });
+
+    const modelCell = screen.getAllByLabelText(expectedAriaLabel)[0];
+    expect(modelCell).toBeInTheDocument();
+    expect(modelCell).toHaveAttribute("title", expectedTitle);
+    expect(modelCell).toHaveTextContent(expectedModel);
+
+    const drawerModel = screen.getAllByLabelText(expectedAriaLabel)[1];
+    expect(drawerModel).toBeInTheDocument();
+    expect(drawerModel).toHaveAttribute("title", expectedTitle);
+    expect(drawerModel).toHaveTextContent(expectedModel);
   });
 
   it("sends search upward for a server-side query", () => {
@@ -626,7 +729,7 @@ describe("SessionExplorer", () => {
   it("reports a close upward instead of closing itself", () => {
     const onSessionSelect = vi.fn();
     renderExplorer({ openSessionId: sessions.sessions[0].id, onSessionSelect });
-    fireEvent.click(screen.getByLabelText("Close detail panel"));
+    fireEvent.click(screen.getByRole("dialog").querySelector('button[aria-label="Close detail panel"]')!);
     expect(onSessionSelect).toHaveBeenCalledWith(null);
   });
 
@@ -674,18 +777,32 @@ describe("SessionExplorer", () => {
     expect(onSearchChange).toHaveBeenCalledWith("");
   });
 
-  it("clears search query when Escape key is pressed in search input", () => {
+  it("clears search query and stops event propagation when Escape key is pressed in search input", () => {
     const onSearchChange = vi.fn();
     renderExplorer({ search: "deploy", onSearchChange });
     const searchInput = screen.getByLabelText("Search sessions");
-    fireEvent.keyDown(searchInput, { key: "Escape" });
+    const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    const stopPropagationSpy = vi.spyOn(event, "stopPropagation");
+    fireEvent(searchInput, event);
+    expect(stopPropagationSpy).toHaveBeenCalled();
     expect(onSearchChange).toHaveBeenCalledWith("");
   });
 
-  it("offers a reset action from the empty state", () => {
+  it("focuses search input when / shortcut key is pressed", () => {
+    renderExplorer();
+    const searchInput = screen.getByLabelText("Search sessions");
+    expect(document.activeElement).not.toBe(searchInput);
+
+    fireEvent.keyDown(window, { key: "/" });
+    expect(document.activeElement).toBe(searchInput);
+  });
+
+  it("offers a reset action from the empty state with title tooltip", () => {
     const onSearchChange = vi.fn();
     renderExplorer({ sessions: [], total: 0, search: "nothing", onSearchChange });
-    fireEvent.click(screen.getByRole("button", { name: /Clear search and filters/i }));
+    const resetButton = screen.getByRole("button", { name: /Clear search and filters/i });
+    expect(resetButton).toHaveAttribute("title", "Reset search query");
+    fireEvent.click(resetButton);
     expect(onSearchChange).toHaveBeenCalledWith("");
   });
 
@@ -716,6 +833,14 @@ describe("SessionExplorer", () => {
     expect(screen.getByText("No sessions recorded yet.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Clear search/i })).not.toBeInTheDocument();
   });
+
+  it("marks active selected row with aria-selected='true' and active background class", () => {
+    const selectedSession = sessions.sessions[0];
+    const { container } = renderExplorer({ openSessionId: selectedSession.id });
+    const selectedRow = container.querySelector(`tr[aria-selected="true"]`);
+    expect(selectedRow).toBeInTheDocument();
+    expect(selectedRow).toHaveClass("bg-raised/80");
+  });
 });
 
 describe("WorkflowRuns", () => {
@@ -734,6 +859,13 @@ describe("WorkflowRuns", () => {
       "title",
       `Total workflow runs recorded: ${workflows.runs.length}`,
     );
+  });
+
+  it("renders accessible Actions column header in workflow runs table", () => {
+    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
+    const actionsHeader = screen.getByRole("columnheader", { name: "Actions" });
+    expect(actionsHeader).toBeInTheDocument();
+    expect(actionsHeader).toHaveAttribute("aria-label", "Actions");
   });
 
   it("lists runs with their status", () => {
@@ -793,9 +925,14 @@ describe("WorkflowRuns", () => {
     expect(screen.getByText("3 attempts")).toBeInTheDocument();
   });
 
-  it("renders an empty state", () => {
-    render(<WorkflowRuns runs={[]} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
+  it("renders an empty state with contextual icon and message", () => {
+    const { container } = render(
+      <WorkflowRuns runs={[]} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
+    );
     expect(screen.getByText("No workflow runs recorded yet.")).toBeInTheDocument();
+    const svgIcon = container.querySelector("td svg");
+    expect(svgIcon).toBeInTheDocument();
+    expect(svgIcon).toHaveAttribute("aria-hidden", "true");
   });
 
   // Workflow runs record no persona, so this panel cannot honour the global
@@ -819,6 +956,16 @@ describe("WorkflowRuns", () => {
     );
     expect(screen.queryByTestId("workflows-family-wide")).not.toBeInTheDocument();
   });
+
+  it("marks active selected row with aria-selected='true' and active background class", () => {
+    const selectedRun = workflows.runs[0];
+    const { container } = render(
+      <WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={selectedRun.run_id} detail={null} />,
+    );
+    const selectedRow = container.querySelector(`tr[aria-selected="true"]`);
+    expect(selectedRow).toBeInTheDocument();
+    expect(selectedRow).toHaveClass("bg-raised/80");
+  });
 });
 
 describe("PersonaFilter", () => {
@@ -829,6 +976,23 @@ describe("PersonaFilter", () => {
 
     rerender(<PersonaFilter selected={["sakthai"]} onChange={vi.fn()} />);
     expect(trigger).toHaveAttribute("title", "Filter by persona (Selected: SakThai)");
+  });
+
+  it("renders trigger and clear filter controls as separate non-nested buttons when filter is active", () => {
+    const onChange = vi.fn();
+    const { container } = render(<PersonaFilter selected={["sakthai"]} onChange={onChange} />);
+
+    const triggerButton = screen.getByTestId("persona-filter");
+    const clearButton = screen.getByRole("button", { name: "Clear persona filter" });
+
+    expect(triggerButton).toBeInTheDocument();
+    expect(clearButton).toBeInTheDocument();
+
+    // Verify there are no nested <button> elements inside another <button>
+    expect(container.querySelector("button button")).toBeNull();
+
+    fireEvent.click(clearButton);
+    expect(onChange).toHaveBeenCalledWith([]);
   });
 
   it("opens menu on trigger click, auto-focuses first item, provides menu item title tooltips, and navigates items via Arrow keys and Home/End", () => {
@@ -892,16 +1056,49 @@ describe("StitchStudio", () => {
     const previewTab = screen.getByRole("tab", { name: /Live Preview/ });
     const codeTab = screen.getByRole("tab", { name: /TSX Code/ });
     const specTab = screen.getByRole("tab", { name: /Stitch JSON Spec/ });
-    const copyButton = screen.getByRole("button", { name: "Copy TSX code" });
+    const copyButton = screen.getByRole("button", { name: "Copy Code snippet" });
 
     expect(previewTab).toHaveAttribute("title", "Viewing Live Preview");
     expect(codeTab).toHaveAttribute("title", "Switch to TSX Code view");
     expect(specTab).toHaveAttribute("title", "Switch to Stitch JSON Spec view");
-    expect(copyButton).toHaveAttribute("title", "Copy TSX code");
+    expect(copyButton).toHaveAttribute("title", "Copy Code snippet");
+
+    expect(previewTab).toHaveAttribute("aria-controls", "stitch-tabpanel");
+    expect(codeTab).toHaveAttribute("aria-controls", "stitch-tabpanel");
+    expect(specTab).toHaveAttribute("aria-controls", "stitch-tabpanel");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("id", "stitch-tabpanel");
 
     fireEvent.click(codeTab);
     expect(previewTab).toHaveAttribute("title", "Switch to Live Preview view");
     expect(codeTab).toHaveAttribute("title", "Viewing TSX Code");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("id", "stitch-tabpanel");
+  });
+
+  it("renders matching Security Audit Event Pill live preview when security-badge preset is selected", () => {
+    render(<StitchStudio />);
+    const securityPresetButton = screen.getByRole("button", {
+      name: "Select preset Security Audit Event Pill",
+    });
+    fireEvent.click(securityPresetButton);
+
+    expect(screen.getByText("Unauthorized API Access Blocked")).toBeInTheDocument();
+    expect(screen.getByText("HIGH")).toBeInTheDocument();
+  });
+
+  it("renders matching Multi-Agent System Architecture flow diagram live preview when mermaid-arch preset is selected", () => {
+    render(<StitchStudio />);
+    const mermaidPresetButton = screen.getByRole("button", {
+      name: "Select preset Multi-Agent System Architecture",
+    });
+    fireEvent.click(mermaidPresetButton);
+
+    expect(screen.getAllByText("Multi-Agent System Architecture")).toHaveLength(2);
+    expect(screen.getByText("Live Flow Diagram")).toBeInTheDocument();
+    expect(screen.getByText("SakThai (Primary Orchestrator)")).toBeInTheDocument();
+    expect(screen.getByText("SakKing")).toBeInTheDocument();
+    expect(screen.getByText("SakSee")).toBeInTheDocument();
+    expect(screen.getByText("SakSit")).toBeInTheDocument();
+    expect(screen.getByText("SakJules")).toBeInTheDocument();
   });
 
   it("uses roving tabIndex for active and inactive tabs", () => {
@@ -952,7 +1149,7 @@ describe("StitchStudio", () => {
     });
 
     render(<StitchStudio />);
-    const copyBtn = screen.getByRole("button", { name: "Copy TSX code" });
+    const copyBtn = screen.getByRole("button", { name: "Copy Code snippet" });
     fireEvent.click(copyBtn);
 
     expect(writeTextMock).toHaveBeenCalledTimes(1);
@@ -1119,10 +1316,21 @@ describe("HostedNotice", () => {
 });
 
 describe("DemoModeToggle", () => {
-  it("reports the source actually in use", () => {
+  it("includes visible label text in button aria-label for WCAG 2.5.3 compliance", () => {
+    const { rerender } = render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="local" />);
+    const offButton = screen.getByRole("button", { name: /^Sample: OFF/ });
+    expect(offButton).toHaveAttribute("aria-label", "Sample: OFF - switch to sample dataset");
+
+    rerender(<DemoModeToggle isDemo={true} onToggle={vi.fn()} activeSource="demo" />);
+    const onButton = screen.getByRole("button", { name: /^Sample: ON/ });
+    expect(onButton).toHaveAttribute("aria-label", "Sample: ON - switch to live agent data");
+  });
+
+  it("reports the source actually in use, inside a live region", () => {
     render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="local" />);
     const activeSource = screen.getByTestId("active-source");
     expect(activeSource).toHaveTextContent("Live · local ~/.sakthai");
+    expect(activeSource.closest('[role="status"]')).toBe(screen.getByTestId("active-source-status"));
     expect(activeSource).toHaveAttribute(
       "title",
       "Data source: Local runtime directory (~/.sakthai)",
@@ -1131,6 +1339,19 @@ describe("DemoModeToggle", () => {
       "aria-label",
       "Data source: Local runtime directory (~/.sakthai)",
     );
+  });
+
+  it("mounts the live region empty before the source is known, then fills it", () => {
+    // Screen readers announce changes to a region that already exists; one
+    // mounted already filled on the first response is usually read by nobody.
+    const { rerender } = render(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource={null} />);
+    const region = screen.getByTestId("active-source-status");
+    expect(region).toHaveAttribute("role", "status");
+    expect(region).toBeEmptyDOMElement();
+
+    rerender(<DemoModeToggle isDemo={false} onToggle={vi.fn()} activeSource="demo" />);
+    expect(screen.getByTestId("active-source-status")).toBe(region);
+    expect(region).toHaveTextContent("Sample data");
   });
 
   it("can report demo even while the toggle is off", () => {
@@ -1146,7 +1367,7 @@ describe("DemoModeToggle", () => {
       "aria-label",
       "Data source: Demonstration sample dataset",
     );
-    expect(screen.getByRole("button", { name: /Toggle sample data/ })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: /switch to sample dataset/i })).toHaveAttribute(
       "aria-pressed",
       "false",
     );
@@ -1166,7 +1387,7 @@ describe("DemoModeToggle", () => {
   it("toggles", () => {
     const onToggle = vi.fn();
     render(<DemoModeToggle isDemo={false} onToggle={onToggle} activeSource="local" />);
-    fireEvent.click(screen.getByRole("button", { name: /Toggle sample data/ }));
+    fireEvent.click(screen.getByRole("button", { name: /switch to sample dataset/i }));
     expect(onToggle).toHaveBeenCalledWith(true);
   });
 
@@ -1191,6 +1412,21 @@ describe("Route Error Boundary", () => {
   });
 });
 
+describe("Global Error Boundary", () => {
+  it("renders retry button with type='button', aria-label, and title attributes", () => {
+    const reset = vi.fn();
+    render(<GlobalError error={new Error("Root layout failure")} reset={reset} />);
+
+    const button = screen.getByRole("button", { name: "Try again - re-render the dashboard" });
+    expect(button).toBeInTheDocument();
+    expect(button).toHaveAttribute("type", "button");
+    expect(button).toHaveAttribute("title", "Try re-rendering the dashboard");
+
+    fireEvent.click(button);
+    expect(reset).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("CommandPalette", () => {
   it("renders combobox search input with complete WAI-ARIA combobox accessibility attributes", () => {
     render(<CommandPalette onClose={vi.fn()} onNavigate={vi.fn()} actions={[]} />);
@@ -1200,5 +1436,22 @@ describe("CommandPalette", () => {
     expect(combobox).toHaveAttribute("aria-autocomplete", "list");
     expect(combobox).toHaveAttribute("aria-controls", "command-palette-listbox");
     expect(combobox).toHaveAttribute("aria-activedescendant", `cmd-option-nav-${NAV_ITEMS[0].id}`);
+  });
+
+  it("renders inline clear search button when no commands match and resets query on click", () => {
+    render(<CommandPalette onClose={vi.fn()} onNavigate={vi.fn()} actions={[]} />);
+    const combobox = screen.getByRole("combobox", { name: "Search commands" });
+
+    fireEvent.change(combobox, { target: { value: "nonexistentquery123" } });
+    expect(screen.getByText("Nothing matches “nonexistentquery123”.")).toBeInTheDocument();
+
+    const clearButton = screen.getByRole("button", { name: "Clear command palette search query" });
+    expect(clearButton).toBeInTheDocument();
+    expect(clearButton).toHaveAttribute("type", "button");
+    expect(clearButton).toHaveAttribute("title", "Reset search query (Esc)");
+
+    fireEvent.click(clearButton);
+    expect(combobox).toHaveValue("");
+    expect(screen.queryByText(/Nothing matches/)).not.toBeInTheDocument();
   });
 });

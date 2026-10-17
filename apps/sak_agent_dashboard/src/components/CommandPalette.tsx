@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { CornerDownLeft, Search, X } from "lucide-react";
+import { CornerDownLeft, Search, SearchX, X } from "lucide-react";
 
 import { useFocusTrap } from "@/lib/focus";
 import { highlightSegments, rankBy, type FuzzyMatch } from "@/lib/fuzzy";
@@ -130,18 +130,23 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
       runAt(clampedHighlight);
     } else if (event.key === "Escape") {
       event.preventDefault();
-      onClose();
+      if (query) {
+        setQuery("");
+        setHighlight(0);
+      } else {
+        onClose();
+      }
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[12vh]">
+    <div className="fixed inset-0 z-60 flex items-start justify-center p-4 pt-[12vh]">
       <button
         type="button"
         aria-label="Close command palette"
         title="Close command palette (Esc)"
         onClick={onClose}
-        className="absolute inset-0 h-full w-full bg-sunken/80 backdrop-blur-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+        className="absolute inset-0 h-full w-full bg-sunken/80 backdrop-blur-sm focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
       />
       <div
         ref={dialogRef}
@@ -157,6 +162,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
             // The palette is a modal opened by an explicit ⌘K; focusing its
             // only field is the whole point of opening it.
             autoFocus
+            type="search"
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
@@ -164,6 +170,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
             }}
             placeholder="Jump to a section or run a command…"
             aria-label="Search commands"
+            title="Search commands or filter actions (Esc to clear)"
             role="combobox"
             aria-expanded="true"
             aria-autocomplete="list"
@@ -171,7 +178,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
             aria-activedescendant={
               results.length > 0 ? `cmd-option-${results[clampedHighlight]?.command.id}` : undefined
             }
-            className="w-full bg-transparent text-sm text-fg placeholder:text-fg-5 outline-none"
+            className="w-full bg-transparent text-sm text-fg placeholder:text-fg-5 outline-hidden [&::-webkit-search-cancel-button]:hidden"
           />
           {query && (
             <button
@@ -182,7 +189,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
                 setQuery("");
                 setHighlight(0);
               }}
-              className="rounded-lg p-1 text-fg-4 transition-colors hover:bg-raised/80 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="rounded-lg p-1 text-fg-4 transition-colors hover:bg-raised/80 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
             >
               <X className="h-3.5 w-3.5" aria-hidden />
             </button>
@@ -203,8 +210,23 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
           aria-label="Commands"
         >
           {results.length === 0 && (
-            <li className="px-3 py-6 text-center font-mono text-xs text-fg-4" role="status">
-              Nothing matches “{query}”.
+            <li className="flex flex-col items-center justify-center gap-2 px-3 py-6 text-center font-mono text-xs text-fg-4" role="status">
+              <p>{`Nothing matches \u201C${query}\u201D.`}</p>
+            <li className="flex flex-col items-center justify-center gap-2 px-3 py-8 text-center font-mono text-xs text-fg-4" role="status">
+              <SearchX className="h-5 w-5 text-fg-4/80" aria-hidden="true" />
+              <span>Nothing matches “{query}”.</span>
+              <button
+                type="button"
+                aria-label="Clear command palette search query"
+                title="Reset search query (Esc)"
+                onClick={() => {
+                  setQuery("");
+                  setHighlight(0);
+                }}
+                className="mt-1 rounded-lg border border-line-strong bg-raised px-2.5 py-1 text-xs text-hue-cyan hover:bg-raised-2 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                Clear search
+              </button>
             </li>
           )}
           {results.map(({ command, match, startsGroup }, index) => {
@@ -229,7 +251,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
                     onMouseEnter={() => setHighlight(index)}
                     onClick={() => runAt(index)}
                     title={command.shortcut ? `${command.label} (${command.shortcut})` : command.label}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
                       index === clampedHighlight
                         ? "bg-raised/80 text-fg"
                         : "text-fg-2 hover:bg-raised/40"
