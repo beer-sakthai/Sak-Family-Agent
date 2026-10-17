@@ -192,8 +192,9 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
               <div
                 role="status"
                 aria-label={`No shortcuts match "${query}"`}
-                className="flex flex-col items-center justify-center gap-2 py-8 text-center font-mono text-xs text-fg-4"
+                className="py-8 text-center font-mono text-xs text-fg-4"
               >
+                {`No shortcuts match \u201C${query}\u201D.`}
                 <SearchX className="h-5 w-5 text-fg-4/80" aria-hidden="true" />
                 <span>No shortcuts match &quot;{query}&quot;</span>
                 <button
