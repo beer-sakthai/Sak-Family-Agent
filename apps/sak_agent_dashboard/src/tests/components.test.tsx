@@ -1107,6 +1107,22 @@ describe("StitchStudio", () => {
     expect(screen.getByText("HIGH")).toBeInTheDocument();
   });
 
+  it("renders matching Multi-Agent System Architecture flow diagram live preview when mermaid-arch preset is selected", () => {
+    render(<StitchStudio />);
+    const mermaidPresetButton = screen.getByRole("button", {
+      name: "Select preset Multi-Agent System Architecture",
+    });
+    fireEvent.click(mermaidPresetButton);
+
+    expect(screen.getAllByText("Multi-Agent System Architecture")).toHaveLength(2);
+    expect(screen.getByText("Live Flow Diagram")).toBeInTheDocument();
+    expect(screen.getByText("SakThai (Primary Orchestrator)")).toBeInTheDocument();
+    expect(screen.getByText("SakKing")).toBeInTheDocument();
+    expect(screen.getByText("SakSee")).toBeInTheDocument();
+    expect(screen.getByText("SakSit")).toBeInTheDocument();
+    expect(screen.getByText("SakJules")).toBeInTheDocument();
+  });
+
   it("uses roving tabIndex for active and inactive tabs", () => {
     render(<StitchStudio />);
     const previewTab = screen.getByRole("tab", { name: /Live Preview/ });

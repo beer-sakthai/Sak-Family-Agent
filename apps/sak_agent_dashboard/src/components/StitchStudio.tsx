@@ -327,12 +327,43 @@ export function StitchStudio() {
               ) : null}
 
               {activePreset.displayMode === "MERMAID" && (
-                <div className="w-full max-w-lg p-6 rounded-xl bg-panel/90 border border-hue-cyan-line/30 space-y-3 font-mono text-xs text-hue-cyan">
-                  <div className="text-fg-3 border-b border-line pb-2 flex items-center justify-between">
-                    <span>Mermaid Architecture Spec</span>
-                    <span className="text-[10px] text-hue-emerald">Rendered</span>
+                <div className="w-full max-w-lg p-5 rounded-xl bg-panel/90 border border-hue-cyan-line/30 space-y-4">
+                  <div className="text-fg-3 border-b border-line pb-2 flex items-center justify-between text-xs font-mono">
+                    <span className="flex items-center gap-1.5 text-hue-cyan font-semibold">
+                      Multi-Agent System Architecture
+                    </span>
+                    <span className="text-[10px] text-hue-emerald font-mono bg-hue-emerald-tint/60 px-2 py-0.5 rounded border border-hue-emerald-line/40">
+                      Live Flow Diagram
+                    </span>
                   </div>
-                  <pre className="whitespace-pre-wrap leading-relaxed">{activePreset.codeSnippet}</pre>
+                  <div className="flex flex-col items-center gap-2.5 text-xs font-mono">
+                    <div className="px-3 py-1 rounded-lg bg-raised border border-line text-fg font-medium">
+                      User Request
+                    </div>
+                    <span className="text-hue-cyan/70 text-xs" aria-hidden="true">↓</span>
+                    <div className="px-4 py-2 rounded-xl bg-hue-cyan-tint/60 border border-hue-cyan-line/60 text-hue-cyan font-bold shadow-md shadow-hue-cyan/10">
+                      SakThai (Primary Orchestrator)
+                    </div>
+                    <span className="text-hue-cyan/70 text-xs" aria-hidden="true">↓</span>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full text-center text-[11px]">
+                      <div className="p-2 rounded-lg bg-panel border border-line text-fg-2">
+                        <span className="block text-hue-cyan font-bold">SakKing</span>
+                        <span className="text-[10px] text-fg-4">Reasoning 7B</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-panel border border-line text-fg-2">
+                        <span className="block text-hue-amber font-bold">SakSee</span>
+                        <span className="text-[10px] text-fg-4">Vision</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-panel border border-line text-fg-2">
+                        <span className="block text-hue-rose font-bold">SakSit</span>
+                        <span className="text-[10px] text-fg-4">Auditor</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-panel border border-line text-fg-2">
+                        <span className="block text-hue-violet font-bold">SakJules</span>
+                        <span className="text-[10px] text-fg-4">Async Worker</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
