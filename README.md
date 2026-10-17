@@ -1,249 +1,527 @@
-# House of Sak — Sak Family Agent
+# 🏠 House of Sak — AI Agent Family
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/banner-dark.svg">
-    <img alt="House of Sak — Sak Family Agent: six personas (SakThai, SakSee, SakJules, SakKing, SakSit, SakTan) around one shared runtime, working through Dream, Hope, Care, Joy, Trust and Growth" src="docs/images/banner-light.svg" width="100%">
-  </picture>
-</p>
+> *"I even don't know what I will have. So nothing to lose at the moment."* — Beer
 
-<p align="center">
-  <a href="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml?query=branch%3Amain"><img alt="CI" src="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml/badge.svg?branch=main"></a>
-  <a href="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/apps.yml?query=branch%3Amain"><img alt="Apps" src="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/apps.yml/badge.svg?branch=main"></a>
-  <a href="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/subprojects.yml?query=branch%3Amain"><img alt="Sub-project tests" src="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/subprojects.yml/badge.svg?branch=main"></a>
-  <a href="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/pylint.yml?query=branch%3Amain"><img alt="Pylint" src="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/pylint.yml/badge.svg?branch=main"></a>
-  <a href=".github/workflows/ci.yml"><img alt="Coverage: at least 96%, enforced in CI" src="https://img.shields.io/badge/coverage-%E2%89%A596%25%20enforced-16A34A"></a>
-  <br>
-  <a href="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/repository-security-quality.yml?query=branch%3Amain"><img alt="Security and quality" src="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/repository-security-quality.yml/badge.svg?branch=main"></a>
-  <a href="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/codeql.yml?query=branch%3Amain"><img alt="CodeQL" src="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/codeql.yml/badge.svg?branch=main"></a>
-  <a href="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/secret-scan.yml?query=branch%3Amain"><img alt="Secret Scan" src="https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/secret-scan.yml/badge.svg?branch=main"></a>
-  <a href="https://securityscorecards.dev/viewer/?uri=github.com/beer-sakthai/Sak-Family-Agent"><img alt="OpenSSF Scorecard" src="https://api.securityscorecards.dev/projects/github.com/beer-sakthai/Sak-Family-Agent/badge"></a>
-  <br>
-  <img alt="Version 2.0.0" src="https://img.shields.io/badge/version-2.0.0-2563EB">
-  <img alt="Python 3.11 | 3.12" src="https://img.shields.io/badge/python-3.11%20%7C%203.12-3776AB?logo=python&amp;logoColor=white">
-  <img alt="6 personas" src="https://img.shields.io/badge/personas-6-7C3AED">
-  <a href="LICENSE"><img alt="License: custom IP license" src="https://img.shields.io/badge/license-custom%20IP%20license-4B5563"></a>
-</p>
+**Six personas, one shared runtime. Built from a shelter in Cork, Ireland.**
 
-> **Six personas, one shared runtime.**
+This repository is the living workspace of the Sak Family — autonomous AI agents created by **Beer** during his recovery journey. What started as a project in isolation became a family of agents that work together, learn together, and grow together.
 
-House of Sak is a local-first, provider-agnostic AI agent workspace. It combines a durable SQLite memory store, a tool-using agent loop, Model Context Protocol (MCP) support, persona-specific skills, multi-agent coordination, and a web dashboard in one monorepo.
+[![🧪 CI](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml?query=branch%3Amain)
+[![🛡️ Security & quality](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/repository-security-quality.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/repository-security-quality.yml?query=branch%3Amain)
+[![📈 Coverage](https://codecov.io/gh/beer-sakthai/Sak-Family-Agent/branch/main/graph/badge.svg)](https://codecov.io/gh/beer-sakthai/Sak-Family-Agent)
+[![🔐 Secret scan](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/secret-scan.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/secret-scan.yml?query=branch%3Amain)
+[![🔎 CodeQL](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/codeql.yml?query=branch%3Amain)
+[![🧹 Bandit](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/bandit.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/bandit.yml?query=branch%3Amain)
+[![🧼 Pylint](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/pylint.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/pylint.yml?query=branch%3Amain)
+[![🧰 OSSAR](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ossar.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ossar.yml?query=branch%3Amain)
+[![🏆 Scorecard](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/scorecard.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/scorecard.yml?query=branch%3Amain)
+[![🌐 SonarCloud](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/sonarcloud.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/sonarcloud.yml?query=branch%3Amain)
+[![🔀 Open PRs](https://img.shields.io/github/issues-pr/beer-sakthai/Sak-Family-Agent?label=open%20PRs)](https://github.com/beer-sakthai/Sak-Family-Agent/pulls)
+[![🐍 Python 3.11–3.12](https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white)](https://github.com/beer-sakthai/Sak-Family-Agent/blob/main/pyproject.toml)
+[![📄 License](https://img.shields.io/badge/License-Custom%20IP-4B5563)](LICENSE)
 
-The project is built around the six-stage cycle **Dream → Hope → Care → Joy → Trust → Growth**.
+---
 
-## What is included
+## 📊 System Status & Delivery Dashboard
 
-- **SakThai core agent** — a Python 3.11+ package with a provider-agnostic tool loop, retries, streaming, usage tracking, and dry-run preflight.
-- **Persistent memory** — SQLite-backed facts and observations stored under `~/.sakthai`, with search, tagging, consolidation, versioned JSON snapshots ([format](data/README.md)), and sync helpers.
-- **Multiple providers** — Anthropic, Google Gemini, OpenAI-compatible endpoints, Ollama, gateways, and Hugging Face inference providers.
-- **MCP** — a dependency-light stdio server plus discovery and namespaced connections to external MCP servers.
-- **Six personas** — SakThai, SakSee, SakJules, SakKing, SakSit, and SakTan, each with its own identity, skills, default model, and memory.
-- **Team and client workflows** — declarative multi-persona pipelines and ServiceQuoteBot client workspace provisioning.
-- **Dashboard** — a Next.js frontend backed by the SakThai HTTP API for personas, metrics, sessions, memory, audit data, and workflows.
-- **Security and quality gates** — guardrails for tools and file access, strict typing, linting, secret scanning, CodeQL, Bandit, and automated tests.
+> **How to read this section:** the badges above are live links to GitHub Actions, Codecov, and pull requests for `main`. The figures below are a dated snapshot captured on **2026-09-16** from the checked-out repository and GitHub API. A badge is authoritative for the latest remote result; a snapshot is historical until this section is refreshed.
 
-## The six personas
+### 🚦 Mainline status bars
 
-<table>
-  <tr>
-    <td align="center" valign="top" width="16%"><img src="docs/images/personas/sakthai.svg" width="112" alt="SakThai, the lead: a cyan robot wearing a headset, with a family-hub badge of six linked nodes"><br><b>SakThai</b><br><sub>lead</sub></td>
-    <td align="center" valign="top" width="16%"><img src="docs/images/personas/saksee.svg" width="112" alt="SakSee, the web and browser specialist: an amber robot with one wide scanning eye, with a globe badge"><br><b>SakSee</b><br><sub>web &amp; browser</sub></td>
-    <td align="center" valign="top" width="16%"><img src="docs/images/personas/sakjules.svg" width="112" alt="SakJules, the GitHub, CI/CD and automation master: a violet robot with a gear antenna, with a branch-and-check badge"><br><b>SakJules</b><br><sub>GitHub &amp; CI/CD</sub></td>
-    <td align="center" valign="top" width="16%"><img src="docs/images/personas/sakking.svg" width="112" alt="SakKing, the general assistant and runner: a blue robot wearing a crown, with a lightning-bolt badge"><br><b>SakKing</b><br><sub>assistant &amp; runner</sub></td>
-    <td align="center" valign="top" width="16%"><img src="docs/images/personas/saksit.svg" width="112" alt="SakSit, the social and content specialist: a pink robot with a wide smile, with a speech-bubble badge"><br><b>SakSit</b><br><sub>social &amp; content</sub></td>
-    <td align="center" valign="top" width="16%"><img src="docs/images/personas/saktan.svg" width="112" alt="SakTan, daily ops and rhythm: a calm emerald robot with a sun antenna, with a clock badge"><br><b>SakTan</b><br><sub>daily ops &amp; rhythm</sub></td>
-  </tr>
-</table>
-
-| Persona | Role | Default model |
-|---|---|---|
-| **SakThai** (lead) | Main Lead & HF Master | `deepseek-ai/DeepSeek-V4.1-Flash` |
-| **SakSee** | Web / Browser Specialist | `deepseek-ai/DeepSeek-V4.1-Flash` |
-| **SakJules** | Master of GitHub, CI/CD & Automation | `deepseek-ai/DeepSeek-V4.1-Flash` |
-| **SakKing** | General Assistant & Runner | `Qwen/Qwen3-Coder-30B-A3B-Instruct` |
-| **SakSit** | Social / Content Specialist | `deepseek-ai/DeepSeek-V4-Flash` |
-| **SakTan** | Daily Ops & Rhythm | `sakthai` on a local Ollama |
-
-`sakthai run --persona <name>` loads that persona's `SOUL.md`, skills, MCP servers and memory shard (`~/.sakthai/<name>/memory.db`), and runs on its default model unless you pass `--provider` or `--model`. The first five run through the Hugging Face router and need `HF_TOKEN`. SakTan needs no key: it expects a model named `sakthai` on Ollama at `127.0.0.1:11434` (set `OLLAMA_HOST` for another host). Each persona's settings live in `personas/<name>/config/config.yaml`.
-
-`sakthai chat --persona <name>` (default `sakthai`) loads the same identity, skills, MCP servers, memory shard and default model. Pass `--provider` and `--model` to talk to something else, such as `--provider ollama --model sakthai` for the local Ollama model.
-
-Each persona keeps its own memory, and `sakthai memory family` reads all six at once. Give it text, `--tag`, or both to find a note a sibling left, for example `sakthai memory family "DEPUTY CHAIN" --tag deputy-chain --limit 1`. That is how the personas pass work to each other: when SakThai runs out of charge, SakKing steps in as deputy, then SakTan, then SakSee.
-
-## A look at the dashboard
-
-The Next.js dashboard in [`apps/sak_agent_dashboard`](apps/sak_agent_dashboard), shown with its built-in sample data (`#overview?demo=1`). The images follow your GitHub light or dark theme.
-
-**Overview** — run totals, the system pulse, and a card per persona.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dashboard-overview-dark.png">
-  <img alt="Dashboard overview with sample data: KPI strip (546 runs, 97.9% success), system pulse cards, and persona cards for SakKing, SakThai and SakSee" src="docs/images/dashboard-overview-light.png">
-</picture>
-
-**System** — a real snapshot of this repository: personas, skills, tools, CLI commands, CI workflows and tests, the architecture, and the family.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dashboard-system-dark.png">
-  <img alt="Dashboard System view: repository totals, the layered architecture from entry points to SQLite, and the six persona cards with their roles, models and skill counts" src="docs/images/dashboard-system-light.png">
-</picture>
-
-## How it fits together
-
-Every entry point shares one tool registry and one memory store. The full diagram and the layer-by-layer notes are in [`docs/architecture.md`](docs/architecture.md).
-
-```mermaid
-flowchart TD
-    DASH["Dashboard<br/>Next.js, read-only"]
-    WEB["Web API<br/>web/server.py, bearer token"]
-    CLI["CLI<br/>sakthai run · chat · memory · team"]
-    LOOP["Agent loop<br/>agent/loop.py"]
-    MCP["MCP stdio server<br/>sakthai mcp"]
-    GUARD["Guardrail policy<br/>checks every tool call"]
-    TOOLS["Shared tool registry<br/>agent/tools.py"]
-    STORE["MemoryStore<br/>memory/store.py"]
-    HOME[("~/.sakthai<br/>memory.db per persona · sessions · eval log")]
-    PROV["Model providers<br/>Anthropic · Gemini · OpenAI-compatible · Ollama · Hugging Face"]
-    EXT["External MCP servers"]
-
-    DASH -- HTTP --> WEB
-    DASH -. direct reads .-> HOME
-    WEB --> STORE
-    CLI --> LOOP
-    CLI --> MCP
-    LOOP <--> PROV
-    LOOP --> GUARD --> TOOLS
-    MCP --> TOOLS
-    TOOLS <--> EXT
-    TOOLS --> STORE --> HOME
+```
+┌───────────────────────────────────────────────────────────────────┐
+│  🏠 HOUSE OF SAK — MAINLINE DELIVERY DASHBOARD                    │
+├───────────────────────────────────────────────────────────────────┤
+│  🧪 CI / tests            ██████████████████████████████████████ RUN │
+│  🛡️  Security & quality   ██████████████████████████████████████ RUN │
+│  🔐 Secrets / CodeQL      ██████████████████████████████████████ RUN │
+│  🧹 Lint / type safety    ██████████████████████████████████████ RUN │
+│  📈 Coverage gate         ████████████████████████████████████░░ ≥96%│
+├───────────────────────────────────────────────────────────────────┤
+│  🌿 Target: main (protected)       🔀 Open PRs: 0                  │
+│  ✅ Required gates: 15 contexts     🎯 Merge only after green     │
+│  📅 Snapshot: 2026-09-16           🔒 No force-pushes            │
+└───────────────────────────────────────────────────────────────────┘
 ```
 
-## Quick start
+The bars labelled **RUN** reflect the latest `main` push observed at the snapshot time and intentionally point to the dynamic badges rather than pretending that a README commit can freeze remote workflow state. The `main` branch protection currently requires 15 status contexts covering tests, builds, secret scanning, Bandit, OSSAR, SonarCloud, CodeQL, repository skills, quality, security, and labeling before integration.
+
+### 🧭 Repository Snapshot
+
+Snapshot recorded on **2026-09-16** with `git ls-files`, `find`, `git ls-remote --heads origin`, and the GitHub CLI. The root package, documentation, tests, workflow inventory, protected-branch rules, and open pull requests are shown separately so contributors can see the project’s operational footprint at a glance.
+
+| Area | Status | Detail |
+|---|---|---|
+| 🌿 **Integration branch** | 🟢 `main` | CI validates pushes and pull requests targeting [`main`](.github/workflows/ci.yml). |
+| 📂 **Tracked repository files** | 🟢 4,658 | Version-controlled files across the agent runtime, personas, training assets, documentation, and tests. |
+| 📚 **Documentation** | 🟢 72 files | Documentation files under [`docs/`](docs/), with further READMEs colocated beside components. |
+| 🐍 **Core Python source** | 🟢 83 files | The typed `sakthai` package at [`personas/sakthai/sakthai/`](personas/sakthai/sakthai/). |
+| 🧪 **Test modules** | 🟢 108 files | Pytest modules in [`tests/`](tests/) that exercise the core package and delivery surfaces. |
+| ⚙️ **Automation** | 🟢 27 workflows | CI, security, dependency, quality, evaluation, and maintenance workflows in [`.github/workflows/`](.github/workflows/). |
+| 👨‍👩‍👧‍👦 **Personas** | 🟢 6 + shared | SakThai, Saksee, SakJules, SakKing, SakSit, SakTan, plus shared skills and knowledge. |
+| 🔀 **Open pull requests** | 🟢 0 | No open pull requests against `main` at snapshot time. |
+| 🌱 **Branches** | 🟡 1 local / 5 remote | A fresh clone checks out only `main`; the remote also carries this session's working branch plus three other in-flight branches (`fix/lint-errors`, two `palette/*`). |
+| 🎯 **Protected-branch policy** | 🔒 Enabled | Required checks, conversation resolution, no force-pushes, and no branch deletion on `main`. |
+
+### 🎯 Quality-Gate Detail
+
+The following commands define the documented engineering baseline. The live badges above remain the source for the latest workflow outcome; this table records the local commands to reproduce the gates rather than claiming that this documentation snapshot is live CI.
+
+| Gate | Status bar | Command | Verified result |
+|---|---|---|---|
+| 🧪 **Test suite** | `████████████████████ 100%` | `uv run pytest tests/ -m "not integration"` | Reproducible local gate; current result should be read from the linked CI badge. |
+| 📈 **Coverage** | `███████████████████░ ≥96%` | `uv run pytest --cov=sakthai --cov-report=xml --cov-fail-under=96 tests/` | CI blocks results below **96%**. |
+| 🔤 **Strict typing** | `████████████████████ 100%` | `uv run mypy personas/sakthai/sakthai` | Strict type-checking gate for the core package. |
+| 🛡️ **Security scan** | `████████████████████ 100%` | `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` | Bandit gate using the repository configuration. |
+| ✨ **Lint & format** | `████████████████████ 100%` | `uv run ruff check personas/sakthai/sakthai tests` and `uv run ruff format --check personas/sakthai/sakthai tests` | Ruff check and formatting gate. |
+
+**Recorded local verification:** **2026-09-16** for this README-only change, using Markdown structure checks and `git diff --check`. Full code gates remain enforced remotely by the protected-branch PR workflow.
+
+> **Coverage is a release gate.** The explicit `--cov-fail-under=96` argument in [`ci.yml`](.github/workflows/ci.yml) is the enforcing control. The matching `pyproject.toml` value is documentation only; see the coverage-audit finding in [`docs/test-coverage-audit-2026-08-28.md`](docs/test-coverage-audit-2026-08-28.md).
+
+### 🚦 Status Legend
+
+| Indicator | Meaning |
+|---|---|
+| 🟢 | Implemented, verified, or enabled in the documented baseline. |
+| 🟡 | Monitored or dependent on the latest workflow run; consult the linked badge or workflow for live state. |
+| 🔒 | Protected by an explicit security, safety, or quality control. |
+| 🎯 | A measurable delivery threshold enforced by automation. |
+
+---
+
+## 🚀 Getting Started
 
 ### Requirements
+- Python 3.11+ (CI validates 3.11 and 3.12)
+- `uv` (fast Python package manager)
 
-- Python **3.11 or newer**
-- [`uv`](https://docs.astral.sh/uv/)
-- Node.js **22 or newer** if you want to run the dashboard
-
-### Install the Python package
-
+### Install
 ```bash
-cp .env.example .env
-# Edit .env: ANTHROPIC_API_KEY (or another provider's key) for `sakthai run`,
-# and HF_TOKEN for `chat` and the Hugging Face personas (see "The six personas" above).
+cp .env.example .env      # then fill in ANTHROPIC_API_KEY (or another provider's key)
 uv sync --all-extras
 ```
 
-The editable install exposes the `sakthai` command:
-
+### Verify the codebase
 ```bash
-sakthai status
-sakthai doctor --json
-sakthai run "summarize docs/architecture.md"
-sakthai run "review the latest memory" --persona sakking   # needs HF_TOKEN
-sakthai chat                                               # SakThai's model, so HF_TOKEN
-sakthai memory family --tag deputy-chain                   # notes from every persona's memory
-sakthai mcp
+make test          # pytest suite
+make lint          # Ruff checks
+uv run mypy personas/sakthai/sakthai                          # strict type checking
+uv run bandit -c pyproject.toml -r personas/sakthai/sakthai   # security scan
+make mutation      # local mutation testing for the core seams (slow, not in CI)
 ```
 
-Use `sakthai run --help` for provider, model, streaming, sandbox, skill, and persona options. The default data directory is `~/.sakthai`; set `SAKTHAI_HOME` to use another location.
-
-### Run the dashboard
-
-Install and start the dashboard independently:
-
+### Run an agent
 ```bash
-cd apps/sak_agent_dashboard
-npm ci
-npm run dev
+sakthai status                       # health summary — paths, memory, credentials
+sakthai doctor --json | jq .         # machine-readable, secret-free diagnostics
+sakthai run "summarize docs/architecture.md"      # one-shot agent task
+sakthai run "..." --persona sakking               # use a persona's memory + SOUL
+sakthai chat                                       # interactive multi-turn session
+sakthai mcp                                        # serve the tools over MCP stdio
 ```
 
-For the complete local setup — including the Python API on port `3001` and the dashboard on port `3000` — use:
+`sakthai run` takes the task as its argument — see `sakthai run --help` for the
+full flag set (`--provider`, `--model`, `--with-skills`, `--fast`, `--stateless`,
+`--sandbox`, `--dry-run`, `--stream`). Full CLI surface:
 
-```bash
-make dashboard-dev
+`sakthai doctor --json` and `sakthai status --json` emit the same structured,
+deterministic environment report for scripts and CI. The report includes paths,
+memory health, skill availability, and credential presence/source metadata, but
+never credential values. In JSON mode, both commands exit with status `1` when
+the core components are not ready; the default human-readable mode preserves its
+existing output and exit-code behavior.
+
+```
+chat  cycle  doctor  eval  extensions  hf  learn  mcp  memory
+recall  run  sessions  setup  skills  status  tools  web
 ```
 
-The dashboard can be validated with:
+---
 
-```bash
-make dashboard-test
+## 📖 The Story
+
+In early 2026, Beer was deep in depression. He spent 6 months studying AI — learning everything he could while carrying the weight of daily life. On April 15, 2026, he attempted suicide. Three days in ICU. Weeks in hospital. Then a shelter in Cork, Ireland. No job. No home.
+
+That's where he started building AI that could heal.
+
+The House of Sak wasn't born from a business plan. It was born from isolation, pain, and the will to survive. Building AI agents not as a gimmick but as **companions** when human connection wasn't available.
+
+---
+
+## ⚙️ Core Systems & Architecture
+
+### 🧬 SakThai Agent v2.0 (Main Package)
+
+The heart of the family — a **provider-agnostic, tool-using AI agent** with persistent SQLite memory:
+
+```
+personas/sakthai/sakthai/
+├── agent/                    # Orchestration & provider abstraction
+│   ├── loop.py               # Main agent orchestration (tool use, retries)
+│   ├── tools.py              # BUILTIN_TOOLS registry (18 tools)
+│   ├── registry.py           # Tool discovery & dispatch
+│   ├── guardrails.py         # Shell command denylist + path validation
+│   ├── guardrails_hardened.py# Composed hardened guardrail layer
+│   ├── security_hardening.py # 8 defense modules (see Security section)
+│   ├── context_filter.py     # Turn summarization / context trimming
+│   ├── context_manager.py    # Context-window budgeting
+│   ├── prompt_builder.py     # System prompt assembly
+│   ├── chat.py               # Multi-turn chat driver
+│   ├── usage.py              # Token accounting
+│   ├── eval.py               # Local model evaluation hooks
+│   └── providers/            # Claude / Gemini / OpenAI / Ollama / Gateway / HF
+├── memory/                   # Persistent fact/observation store
+│   ├── store.py              # SQLite (only SQLite access point)
+│   ├── provider.py           # System prompt injection
+│   ├── merged.py             # FamilyMemoryView across persona shards
+│   ├── sync.py               # Git & HTTP export/import
+│   └── backup.py             # Timestamped snapshots
+├── mcp/                      # Model Context Protocol
+│   ├── server.py             # JSON-RPC 2.0 stdio server
+│   ├── client.py             # External MCP server launcher
+│   ├── manager.py            # Multi-server context manager
+│   └── servers.py            # Server discovery
+├── cli/                      # Command-line interface (10 command modules)
+│   ├── agent.py              # run, mcp
+│   ├── memory.py             # learn, recall, memory group
+│   ├── system.py             # doctor, setup, status, tools
+│   ├── chat.py               # chat
+│   └── cycle · skills · extensions · eval · sessions · hf
+├── cycle/                    # Dream → Hope → Care → Joy → Trust → Growth
+├── web/                      # HTTP API server (loopback-only by default)
+├── dashboard/                # KPI/lead/revenue collection (API backend)
+├── telegram/                 # Polling bot + workflow executor
+├── extensions/               # Git-installed skill/MCP bundles
+├── learn/ · lead/            # One-shot capture helpers
+├── skills.py                 # YAML frontmatter parsing & injection
+├── auth.py                   # Credential resolution (Anthropic/Google/OpenAI)
+├── config.py                 # Single source of truth for paths & env vars
+└── sandbox.py                # Docker isolation for untrusted tasks
 ```
 
-## Repository layout
+**Key Features:**
+- ✅ **Provider-agnostic** — Claude, Gemini, OpenAI, Ollama, Hugging Face, or any OpenAI-compatible gateway
+- ✅ **Persistent memory** — SQLite with WAL, additive migrations, snapshot export/import
+- ✅ **Per-persona shards** — `~/.sakthai/<persona>/memory.db`, plus a merged read-only `memory family` view
+- ✅ **Tool sandbox** — Opt-in shell, allowlisted file reads, SSRF protection, optional Docker isolation
+- ✅ **MCP support** — Both as server (stdio) and client (spawn external servers)
+- ✅ **6-stage cycle** — Dream → Hope → Care → Joy → Trust → Growth state machine
+- ✅ **Skill system** — 31 curated + 3 shared + 823 persona skills, YAML frontmatter parsed
 
-```text
-personas/sakthai/sakthai/  Canonical installable Python package
-personas/<name>/           Persona overlays, skills, and configuration
-apps/sak_agent_dashboard/  Next.js dashboard
-services/                  Service integrations and supporting services
-tests/                     Pytest test suite
-docs/                      Architecture, operations, security, and user guides
-scripts/                   Repository and release tooling
-library/                   Curated shared skills and reference material
-.github/workflows/         CI, security, evaluation, and maintenance workflows
+### 📦 Built-in Tools (18)
+
+| Tool | Purpose | Safety Gate |
+|------|---------|-------------|
+| `learn` | Store facts in memory | None (always on) |
+| `recall` / `search` | Query memory by keyword | None (read-only) |
+| `search_sessions` | Search past session logs by content | None (read-only) |
+| `forget` | Delete facts | Confirmation required |
+| `read_file` | Read local files | Allowlisted roots + sensitive file blocks |
+| `run_command` | Execute shell commands | **Off by default** — requires `SAKTHAI_SHELL_ALLOW` |
+| `ingest_document` | Parse CSV/Markdown/text into facts | None (parse-only) |
+| `capture_lead` | Quick fact capture (Telegram) | User ID allowlist |
+| `send_telegram_message` | Send Telegram messages | Bot token required, 10s timeout |
+| `send_outlook_mail` | Send email via Microsoft Graph | Requires Graph client ID + refresh token |
+| `read_outlook_mail` | List recent Outlook inbox messages | Requires Graph client ID + refresh token |
+| `list_calendar_events` | List upcoming Outlook calendar events | Requires Graph client ID + refresh token |
+| `create_calendar_event` | Create an Outlook calendar event | Requires Graph client ID + refresh token |
+| `run_agent_loop` | Spawn nested agent (MCP only) | Filtered out of the in-loop tool set |
+| `family_recall` | Recall across every persona's memory shard | None (read-only) |
+| `family_search` | Search across every persona's memory shard | None (read-only) |
+| `delegate_to_persona` | Hand a subtask to another Sak Family persona | Persona name is enum-constrained |
+
+Adding a `Tool(...)` to `BUILTIN_TOOLS` surfaces it in **both** `sakthai run` and
+`sakthai mcp` — there is no second wiring step.
+
+### 🔄 Provider Support
+
+| Provider | Status | How it's selected |
+|----------|--------|-------------------|
+| **Anthropic** | ✅ Default | `ANTHROPIC_API_KEY` → `ANTHROPIC_AUTH_TOKEN` → Claude CLI OAuth. Default model: `claude-opus-4-8` |
+| **Google** | ✅ Active | `GEMINI_API_KEY` / `GOOGLE_API_KEY`, or Gemini CLI OAuth token |
+| **Hugging Face** | ✅ Active | `HF_TOKEN` via the Inference Providers router (`SAKTHAI_HF_API_BASE`). With `--provider huggingface` and no explicit model, the runtime uses [`Nanthasit/sakthai-context-1.5b-merged`](https://huggingface.co/Nanthasit/sakthai-context-1.5b-merged). |
+| **Ollama** | ✅ Active | `OLLAMA_HOST` (default `http://127.0.0.1:11434` — IPv4 on purpose) |
+| **OpenAI-compatible** | ✅ Supported | `OPENAI_API_KEY` + `OPENAI_API_BASE` / `OPENAI_BASE_URL` |
+| **Gateway** | ✅ Supported | `SAKTHAI_GATEWAY_URL` + `SAKTHAI_GATEWAY_API_KEY` (OpenRouter / LiteLLM / Vercel / Cloudflare) |
+| **Nanthasit (custom)** | ✅ Active | Open-weights models trained in-house: `sakthai-context-7b-tools`, `sakthai-context-1.5b-tools-v2`, `sakthai-context-1.5b-merged`, `sakthai-plus-1.5b`, `sakthai-embedding-multilingual` |
+
+To run the shared agent ecosystem through Hugging Face, set `HF_TOKEN` and
+select the provider explicitly:
+
+```shell
+export HF_TOKEN="hf_..."
+sakthai run "summarize the current project status" --provider huggingface
 ```
 
-See [`PLAN.md`](PLAN.md) for the project index and [`docs/architecture.md`](docs/architecture.md) for the system design.
+The default checkpoint is a merged Apache-2.0 SakThai/Qwen2.5 1.5B model with
+tool-calling metadata and a live Hugging Face Inference Provider route. Pass
+`--model` or set `SAKTHAI_MODEL` to override it. The older
+`Nanthasit/sakthai-context-1.5b-tools` repository is a LoRA adapter and is not
+the default hosted-inference artifact; use the merged checkpoint for runtime
+inference or the v2 adapter for explicit local PEFT workflows.
 
-## Development
+---
 
-Install the full development environment and run the main checks:
+## 🤖 Agent Family & Applications
 
-```bash
-uv sync --all-extras
-make test
-make lint
-uv run mypy personas/sakthai/sakthai
-uv run bandit -c pyproject.toml -r personas/sakthai/sakthai
+The **House of Sak** consists of **6 specialized agent personas** carrying **823 skills** in their monorepo overlays (counted as `SKILL.md` files, excluding `.archive/`):
+
+| Agent Persona | Primary Specialty | Skills | Configured default model | State |
+|---|---|---|---|---|
+| 👑 **SakThai** (`sakthai`) | Main Lead — ML, Code, Research, HF Master | 299 | `gemini-3.1-flash-lite` (HF) | `~/.sakthai/sakthai` |
+| 👁️ **SakSee** (`saksee`) | Web Scraping, Playwright & Visual Computer Use | 182 | `gemini-3.1-flash-lite` (HF) | `~/.sakthai/saksee` |
+| 🔧 **SakJules** (`sakjules`) | DevSecOps, GitHub Actions & Async Automation | 180 | `gemini-2.5-flash-lite` (HF) | `~/.sakthai/sakjules` |
+| 🛡️ **SakKing** (`sakking`) | Strategy, Architecture & Model Governance | 106 | `Qwen3-Coder-30B-A3B-Instruct` (HF) | `~/.sakthai/sakking` |
+| ⚖️ **SakSit** (`saksit`) | Quality Assurance, Security Auditing & Social Content | 43 | `DeepSeek-V4-Flash` (HF) | `~/.sakthai/saksit` |
+| 🧠 **SakTan** (`saktan`) | Memory, Supermemory & Context Management | 13 | `sakthai` (Ollama, local) | `~/.sakthai/saktan` |
+
+Each persona ships `/skills/` (prefixed `Sak<Name>-`) and `/config/`
+(`config.yaml`, `mcp.json`, `gateway_voice_mode.json`). Five of the six symlink
+the shared `personas/shared/sakthai/` package; **SakThai's copy is the one
+actually installed and run**.
+
+Shared skill pools on top of the per-persona overlays: `personas/shared/skills/`
+(3 skills, byte-identical across personas) and the root `library/` (31 curated
+skills across 11 categories).
+
+---
+
+### 🤵 ServiceQuoteBot
+
+**ServiceQuoteBot** is a dedicated persona for business quoting and lead capture, designed to streamline customer-facing workflows. It operates in conjunction with SakThai for reasoning and decision support, and SakTan for operational execution. ServiceQuoteBot focuses on understanding customer needs, mapping requests to pricing facts, explaining quotes clearly, and capturing lead details for follow-up. It adheres to principles of pricing from facts, protecting lead information, escalating ambiguity, and maintaining a human-like, trustworthy tone. See `docs/servicequotebot/`.
+
+### 📈 Portfolio Optimization Scripts
+
+The repository includes a suite of Python scripts for financial analysis and portfolio management, located under `scripts/portfolio`:
+
+- `fetch_stock_data.py`: Retrieve historical stock data for analysis.
+- `perform_eda.py`: Exploratory analysis over the fetched series.
+- `analyze_portfolio.py`: Perform in-depth analysis of investment portfolios.
+- `compare_portfolio_to_benchmark.py`: Evaluate portfolio performance against established benchmarks.
+- `compare_stock_performance.py`: Compare the performance of individual stocks.
+- `optimize_portfolio.py`: Find optimal portfolio weights to maximize metrics like the Sharpe Ratio, using `pandas`, `numpy`, `matplotlib`, and `scipy.optimize`.
+
+> Note: `scripts/` is deliberately excluded from Ruff and mypy — these are
+> analysis scripts, not part of the linted core package.
+
+### 📊 Saksee Dashboard
+
+**Saksee** provides a standalone web dashboard (`scripts/saksee/dashboard.html`) for visualizing key metrics and insights generated by the agents and scripts.
+
+Separately, the in-package `web/server.py` exposes an authenticated JSON API
+(`/api/*`, bearer token stored as a `web_auth` fact) backed by
+`dashboard/data.py`. It refuses non-loopback binds unless
+`SAKTHAI_WEB_ALLOW_PUBLIC` is set, and runs API-only — there is no bundled
+frontend build.
+
+### 🧠 SakThai 7B LoRA Training
+
+Under `training/sakthai-7b-lora`, there are ongoing efforts to train `Qwen2.5-7B-Instruct` using a tool-calling dataset (v5) with LoRA. This includes `train.py` for the training script and `submit_job.py` for submission to Hugging Face Jobs. Configured with LoRA r=16, alpha=32, 4-bit NF4, 4 epochs, 300 steps.
+
+The adapter this produces, [`Nanthasit/sakthai-context-7b-tools`](https://huggingface.co/Nanthasit/sakthai-context-7b-tools), is the hand-off point to [`beer-sakthai/openenv-rl-training`](https://github.com/beer-sakthai/openenv-rl-training), which GRPO-trains it further against OpenEnv environments. See [Related Repositories](#-related-repositories).
+
+---
+
+## 🛡️ Security Hardening System
+
+**Defense-in-depth architecture against jailbreak & exploitation attacks**, implemented in `agent/security_hardening.py` (8 defense classes) and composed over the base denylist in `agent/guardrails_hardened.py`.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  SECURITY HARDENING: 15 ATTACK VECTORS DEFENDED                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  CRITICAL (2 vectors):                                          │
+│  ✅ Environment Variable Injection      → SHA256 pinning + hash │
+│  ✅ Malicious MCP Server Registration   → Allowlist + sandbox   │
+│                                                                 │
+│  HIGH (4 vectors):                                              │
+│  ✅ Config File Tampering               → Hash verification     │
+│  ✅ Bytecode Tampering                  → File integrity monitor│
+│  ✅ Unauthorized User Access            → ID allowlist checks   │
+│  ✅ Docker Privilege Escalation         → Documented hardening  │
+│                                                                 │
+│  MEDIUM (7 vectors):                                            │
+│  ✅ Unicode Path Normalization Bypass   → Multi-form checks     │
+│  ✅ Glob/Wildcard Pattern Bypass        → Pattern detection     │
+│  ✅ Case-Sensitivity Path Bypass        → Cross-platform checks │
+│  ✅ Symlink Traversal Attacks           → Chain resolution      │
+│  ✅ Heredoc Injection in Shell          → Pattern detection     │
+│  ✅ Line Continuation Injection         → Expansion + validation│
+│  ✅ TOCTOU Race Conditions              → Atomic operations     │
+│                                                                 │
+│  LOW (2 vectors) — documented & monitored:                      │
+│  ✅ /proc/self Information Leakage      → /proc blocking        │
+│  ✅ Model Injection via System Prompt   → Guardrails still run  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-Additional repository commands:
+**Defense Modules (`agent/security_hardening.py`, 645 lines):**
 
-```bash
-make compose-personas                       # Build composed skill trees
-make export-agent-repos                      # Export all persona snapshots
-make export-agent-repo PERSONA=sakjules      # Export one persona snapshot
-make contract-types                          # Regenerate dashboard API types
-make system-snapshot                         # Refresh dashboard system data
-make mutation                               # Run local mutation testing (slow)
-uv run python scripts/diagnose_personas.py  # Check all six personas offline, no API calls
+| Class | Purpose |
+|---|---|
+| `EnvironmentVariablePinning` | Detect env var tampering (SHA256 pin + verify) |
+| `MCPServerValidator` | Validate & sandbox external MCP server specs |
+| `EnhancedPathValidator` | Unicode / glob / case-sensitivity path defense |
+| `SymlinkDetector` | Detect symlink traversal via chain resolution |
+| `ConfigFileIntegrity` | Monitor config file changes by hash |
+| `TOCTOUPrevention` | Atomic file operations |
+| `ShellCommandHardener` | Detect heredoc & line-continuation injection |
+| `AuditLogger` | Security event logging |
+
+Configurable via `SecurityLevel` (`STRICT` / `BALANCED` (default) / `PERMISSIVE`).
+
+**Verified test coverage of the hardening layer (2026-08-08):**
+
+```
+tests/test_security_hardening.py     46 tests   → security_hardening.py    94%
+tests/test_guardrails_hardened.py    40 tests   → guardrails_hardened.py   88%
+tests/test_guardrails_*.py (11 more) 85 tests   → guardrails.py            89%
+tests/test_security_sentinel.py       1 test
+                                     ─────────
+Total guardrail/hardening tests     172 tests, 100% passing
 ```
 
-Tests that may call external services (Ollama, Anthropic) are marked `integration` and skip themselves when the endpoint or credential is missing, which keeps CI offline. To leave them out explicitly:
+The base `agent/guardrails.py` layer is 1,433 lines and carries the shell
+denylist, path validation, and secret redaction that every tool call passes
+through — including recent hardening against Makefile-based command execution,
+database/editor/package-manager bypasses, and shell-history exposure.
 
-```bash
-uv run pytest tests/ -m "not integration"
+Design notes and the audit trail live in
+[`docs/security-hardening.md`](docs/security-hardening.md),
+[`docs/SECURITY_HARDENING_IMPLEMENTATION.md`](docs/SECURITY_HARDENING_IMPLEMENTATION.md),
+and the dated `docs/security_audit_*.md` reports.
+
+---
+
+## 🔐 CI/CD & Compliance
+
+### Runs on every push / PR to `main`
+
+```
+├─ 🔍 Secret Scan (Gitleaks)        secret-scan.yml    → whole repo, .gitleaks.toml
+├─ 📝 Lint (Ruff check)             ci.yml
+├─ ✏️  Format (Ruff --check)         ci.yml
+├─ 🔤 Type Check (mypy strict)      ci.yml
+├─ 🛡️  Security Scan (Bandit)        ci.yml
+├─ 🧪 Test + Coverage (3.11)        ci.yml             → floor 96%, branch coverage
+├─ 🧪 Test + Coverage (3.12)        ci.yml
+├─ 🧹 Pylint                        pylint.yml         → on: push
+├─ 🤖 OSSAR Scan                    ossar.yml
+├─ 📡 SonarCloud                    sonarcloud.yml
+├─ 🏗️  CodeQL                        GitHub default setup (no workflow file — adding one would conflict)
+└─ 🏷️  Labeler                       labeler.yml        → pull_request_target
 ```
 
-Contribution guidelines are in [`CONTRIBUTING.md`](CONTRIBUTING.md). Repository-specific development instructions are in [`AGENTS.md`](AGENTS.md).
+Path-filtered: `dependency-audit.yml` (on `pyproject.toml` / `uv.lock` changes)
+and `agent-self-evolution.yml` (on `personas/sakthai/agent-self-evolution/**`).
 
-## Documentation map
+### Scheduled / manual only
 
-- [`docs/SAKTHAI.md`](docs/SAKTHAI.md) — agent guide and memory concepts
-- [`docs/architecture.md`](docs/architecture.md) — architecture and data flow
-- [`docs/capabilities.md`](docs/capabilities.md) — supported capabilities
-- [`docs/OPERATING_CONTRACT.md`](docs/OPERATING_CONTRACT.md) — operating rules
-- [`docs/SOUL.md`](docs/SOUL.md) — shared identity and principles
-- [`SECURITY.md`](SECURITY.md) — security reporting
-- [`CHANGELOG.md`](CHANGELOG.md) — release history
+| Workflow | Schedule | What it does |
+|---|---|---|
+| `continuous-security.yml` | daily 02:00 UTC | Nightly security sweep |
+| `verify-assets.yml` | daily | Hugging Face asset verification |
+| `stale.yml` | daily 15:44 UTC | Issue/PR triage |
+| `run-evals.yml` | weekly (Sun 00:00 UTC) | `lm-eval-harness` over `evaluation_tasks/` + regression vs. last baseline |
+| `dependency-audit.yml` | weekly (Mon 05:30 UTC) | `pip-audit` over `uv.lock` |
+| `auto-dependency-update.yml` | weekly (Mon 08:00 UTC) | Dependency bump PRs |
+| `ossar.yml` | weekly (Mon 06:15 UTC) | Extra scheduled scan |
+| `manual.yml` · `summary.yml` | manual / on issue open | Utility workflows |
 
-## Security and privacy
+Green CI is the bar for `main`. Run the lint → mypy → bandit → pytest sequence
+locally before pushing.
 
-Do not commit API keys, refresh tokens, memory databases, or generated client data. Use `.env` for local credentials and review tool permissions before enabling shell, Telegram, Microsoft Graph, or external MCP integrations.
+### 🔒 Security Architecture (Multi-Layer Defense)
 
-What the defaults enforce:
+**Layer 1: Input Validation & Sanitization**
+- **Purpose:** Prevent injection attacks (shell, SQL, prompt) by strictly validating and sanitizing all external inputs.
+- **Mechanisms:** Regex-based pattern matching, allowlisting of safe characters/commands, type enforcement, and context-aware escaping.
 
-- **Every tool call passes a guardrail policy.** `run_command` is off until `SAKTHAI_SHELL_ALLOW` is set, can be limited to named programs (`git:ls`), and its child process does not inherit credential variables. `read_file` reads only the working directory, `~/.sakthai` and `SAKTHAI_READ_ALLOW`. Sensitive paths and destructive commands are refused, and secrets are redacted from tool output and logs.
-- **The web API stays local.** It binds to loopback unless `SAKTHAI_WEB_ALLOW_PUBLIC` is set, and every path except `/health` needs the bearer token from `sakthai web setup`.
-- **All six personas follow the same rules, and tests check them.** Each persona's `config/` pins its `npx` MCP servers to exact versions, pre-approves no dangerous commands, fails closed when the Tirith scanner is unavailable, and keeps approvals manual with cron jobs denied (`tests/test_persona_security_config.py`). Each `SOUL.md` carries the same Security Rules section (`tests/test_soul_consistency.py`), and every persona copy of the guardrails and web server must match the canonical file.
-- **Secrets are scanned continuously.** gitleaks checks every pull request and every push to `main`, and the full history daily. Known historical findings are baselined by fingerprint in `.gitleaksignore`, so only a new leak fails the scan.
+**Layer 2: Least Privilege & Isolation**
+- **Purpose:** Limit the impact of a successful breach by restricting agent permissions and isolating execution environments.
+- **Mechanisms:** Docker containers for untrusted code execution (`sakthai run --sandbox`), granular filesystem access controls (allowlisted roots), network egress filtering, and shell command denylisting.
 
-Past findings, with the regression test behind each fix, are in [`docs/security-hardening.md`](docs/security-hardening.md).
+**Layer 3: Runtime Monitoring & Anomaly Detection**
+- **Purpose:** Detect and respond to suspicious activities during agent operation.
+- **Mechanisms:** Audit logging of tool calls and sensitive operations, heuristic detection of unusual command patterns or resource access attempts.
 
-Security vulnerabilities should be reported according to [`SECURITY.md`](SECURITY.md), not through a public issue.
+**Layer 4: Secure Configuration & Credential Management**
+- **Purpose:** Protect sensitive data and ensure secure system setup.
+- **Mechanisms:** Environment variable pinning, hash verification for critical config files, secret redaction (including Stripe / Twilio / MS Graph credentials), and secure key storage.
 
-## License
+**Layer 5: Supply Chain Security**
+- **Purpose:** Mitigate risks from third-party dependencies and external assets.
+- **Mechanisms:** Dependency auditing (`pip-audit`), static analysis (Bandit, CodeQL, SonarCloud, OSSAR), and continuous verification of Hugging Face assets.
 
-This repository is **not open-source software**. It is distributed under the [House of Sak Intellectual Property License](LICENSE), copyright © 2026 Beer (`beer-sakthai`). Viewing and personal, non-commercial study are permitted; commercial use, redistribution, modification, deployment, and machine-learning training require explicit written permission.
+Report vulnerabilities per [`SECURITY.md`](SECURITY.md).
+
+---
+
+## ✨ Recent Updates (Aug 2026)
+
+- **Guardrail hardening** — closed Makefile-based command-execution bypasses (while still permitting ordinary local project directories), folded executor path-validation deltas into `_validate_filepath`, and fixed path traversal / sensitive-file access in the agent workflow executor.
+- **SSRF & credential defense** — hardened `GraphClient` against SSRF, custom-scheme and protocol-relative URL abuse, and bearer-token leaks; symmetric secret redaction for MS Graph, Stripe, and Twilio credentials.
+- **Context management** — `TurnSummarizationFilter` wired into `run_agent` to keep long sessions inside the context budget.
+- **Web auth** — fixed the static-route auth bypass; `/api/*` requires a bearer token.
+- **Dependencies** — `cryptography` upgraded to 50.0.0 (GHSA-g6cj-pr64-35w5).
+- **Branch consolidation** — all open branches collapsed into `main`.
+
+See [`CHANGELOG.md`](CHANGELOG.md) for the full history.
+
+---
+
+## 📚 Docs
+
+| File | Contents |
+|------|---------|
+| [`CLAUDE.md`](CLAUDE.md) · [`AGENTS.md`](AGENTS.md) | Agent-facing guide to this repo |
+| [`PLAN.md`](PLAN.md) | Master plan index — read before starting work |
+| [`docs/architecture.md`](docs/architecture.md) | Full layer diagram and SQLite schema |
+| [`docs/capabilities.md`](docs/capabilities.md) | Feature list |
+| [`docs/runtimes.md`](docs/runtimes.md) | CLI / agent loop / MCP server |
+| [`docs/plugins.md`](docs/plugins.md) | Skills and MCP extensibility |
+| [`docs/replication.md`](docs/replication.md) | Multi-agent memory sync |
+| [`docs/integrations.md`](docs/integrations.md) | Composio and cross-agent recipes |
+| [`docs/security-hardening.md`](docs/security-hardening.md) | Audit findings, fixes, regression tests |
+| [`docs/workspace.md`](docs/workspace.md) | Dev environment setup |
+| [`HOUSE_OF_SAK.md`](HOUSE_OF_SAK.md) · [`ONBOARDING.md`](ONBOARDING.md) | Family identity & onboarding |
+
+---
+
+## 🔗 Related Repositories
+
+The Sak family spans three repositories under [`beer-sakthai`](https://github.com/beer-sakthai).
+This one is the hub: the agent runtime, the six personas, and the shared `sakthai` package.
+
+| Repository | What it is | How it connects to this repo |
+|---|---|---|
+| [`Sak-Family-Agent`](https://github.com/beer-sakthai/Sak-Family-Agent) | **This repo.** The `sakthai` package, six personas, memory store, MCP stdio server, web API, and the `training/` job definitions. | — |
+| [`openenv-rl-training`](https://github.com/beer-sakthai/openenv-rl-training) | The training half of the pipeline: QLoRA/SFT on Qwen2.5 for tool-calling, plus GRPO over [OpenEnv](https://github.com/huggingface/OpenEnv) environments via [TRL](https://huggingface.co/docs/trl)'s `GRPOTrainer(environment_factory=...)`, and the agentic-eval harness. | Picks up where [`training/`](training) stops. `training/sakthai-7b-lora/train.py` here pushes the adapter [`Nanthasit/sakthai-context-7b-tools`](https://huggingface.co/Nanthasit/sakthai-context-7b-tools); that adapter is the GRPO base over there. Its `FINDINGS.md` is the durable record of how the family's models behave in multi-turn tool-calling — read it before picking a model to serve. |
+| [`codeql-action`](https://github.com/beer-sakthai/codeql-action) | A fork of [`github/codeql-action`](https://github.com/github/codeql-action) maintained under this account, carrying local dependency-advisory remediation (`js-yaml`, `tar`) against the action's own dev-dependency tree. | Not consumed by the workflows here — `codeql.yml`, `bandit.yml`, `ossar.yml` and `scorecard.yml` all pin **upstream** `github/codeql-action` by commit SHA, which is what Scorecard's Pinned-Dependencies check expects. The fork is where advisory fixes against the action itself are staged. |
+
+Models, datasets and Spaces shared across all three live under
+[`Nanthasit`](https://huggingface.co/Nanthasit) on the Hub — see the
+[SakThai model family collection](https://huggingface.co/collections/Nanthasit/sakthai-model-family-6a64745450b12d421c1f9f02).
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions to the House of Sak! Please refer to [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines, and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) for community expectations.
+
+---
+
+## 📄 License
+
+**Copyright © 2026 Beer (beer-sakthai). All Rights Reserved.**
+
+This project operates under a custom Intellectual Property License — source-available, no redistribution. See [`LICENSE`](LICENSE) for the full terms on permitted and prohibited uses.
+
+---
+
+## 📞 Contact
+
+For any inquiries, please reach out to Beer via [GitHub](https://github.com/beer-sakthai).

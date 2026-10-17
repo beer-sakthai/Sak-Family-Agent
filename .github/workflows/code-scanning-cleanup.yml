@@ -13,8 +13,7 @@
 #
 # Manual only, and read-only unless asked otherwise: with no inputs it just
 # reports what is on the dashboard. Deleting requires naming a tool *and*
-# ticking `apply`. Dismissing an alert no commit can close (accepted risk, see
-# docs/scorecard-accepted-risks.md) requires its number, a comment *and* `apply`.
+# ticking `apply`.
 name: Code scanning cleanup
 
 on:
@@ -24,20 +23,8 @@ on:
         description: "Tool whose analyses to delete, exactly as the report spells it. Leave blank to only list."
         required: false
         type: string
-      category:
-        description: "Only delete this category of the tool, as the report's by-category table spells it ('(none)' for uncategorized). Leave blank for every category."
-        required: false
-        type: string
-      dismiss_alert:
-        description: "Alert number to dismiss as won't fix. Leave blank to dismiss nothing."
-        required: false
-        type: string
-      dismiss_comment:
-        description: "Why it is dismissed (at most 280 characters). Required with dismiss_alert."
-        required: false
-        type: string
       apply:
-        description: "Actually delete or dismiss. Leave unchecked for a dry run."
+        description: "Actually delete. Leave unchecked for a dry run."
         required: false
         default: false
         type: boolean
@@ -62,7 +49,7 @@ jobs:
       security-events: write
     steps:
       - name: Harden the runner
-        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           use-policy-store: true
           api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
@@ -84,25 +71,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          TOOL: ${{ inputs.tool }}
-        run: python scripts/code_scanning_analyses.py list --alerts ${TOOL:+--tool "$TOOL"}
-
-      # Before the closed-alert report: that listing pages through thousands of
-      # alerts and can fail on a transient 503, which must not block this.
-      - name: Dismiss the named alert
-        if: ${{ inputs.dismiss_alert != '' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          ALERT: ${{ inputs.dismiss_alert }}
-          COMMENT: ${{ inputs.dismiss_comment }}
-          APPLY: ${{ inputs.apply }}
-        run: |
-          if [ "$APPLY" = "true" ]; then
-            python scripts/code_scanning_analyses.py dismiss --alert "$ALERT" --comment "$COMMENT" --apply
-          else
-            python scripts/code_scanning_analyses.py dismiss --alert "$ALERT" --comment "$COMMENT"
-          fi
+        run: python scripts/code_scanning_analyses.py list --alerts
 
       # An alert that stops appearing under `open` has either been fixed by a
       # diff, dropped by a re-scoring scan, or dismissed as accepted risk, and
@@ -115,8 +84,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          TOOL: ${{ inputs.tool }}
-        run: python scripts/code_scanning_analyses.py list --alerts --state closed ${TOOL:+--tool "$TOOL"}
+        run: python scripts/code_scanning_analyses.py list --alerts --state closed
 
       - name: Delete the named tool's analyses
         if: ${{ inputs.tool != '' }}
@@ -124,13 +92,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           TOOL: ${{ inputs.tool }}
-          CATEGORY: ${{ inputs.category }}
           APPLY: ${{ inputs.apply }}
         run: |
           if [ "$APPLY" = "true" ]; then
-            python scripts/code_scanning_analyses.py delete --tool "$TOOL" ${CATEGORY:+--category "$CATEGORY"} --apply
+            python scripts/code_scanning_analyses.py delete --tool "$TOOL" --apply
           else
-            python scripts/code_scanning_analyses.py delete --tool "$TOOL" ${CATEGORY:+--category "$CATEGORY"}
+            python scripts/code_scanning_analyses.py delete --tool "$TOOL"
           fi
 
       - name: Report what remains

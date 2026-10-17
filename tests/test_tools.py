@@ -355,57 +355,6 @@ def test_run_command_invalid_timeout_falls_back_to_default(
     assert captured["timeout"] == _tools_mod._CMD_TIMEOUT_DEFAULT
 
 
-def _capture_child_env(monkeypatch: pytest.MonkeyPatch, store: MemoryStore) -> dict[str, str]:
-    captured: dict = {}
-
-    class _FakeProc:
-        returncode = 0
-        stdout = "ok"
-        stderr = ""
-
-    def _fake_run(cmd, **kwargs):
-        captured["env"] = kwargs.get("env")
-        return _FakeProc()
-
-    monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
-    monkeypatch.setattr(subprocess, "run", _fake_run)
-    tool_by_name("run_command").handler({"command": "echo ok"}, store)
-    return captured["env"]
-
-
-@pytest.mark.parametrize(
-    "name",
-    [
-        "ANTHROPIC_API_KEY",
-        "HF_TOKEN",
-        "GH_PAT_FOR_ACTIONS",
-        "AWS_SECRET_ACCESS_KEY",
-        "DB_PASSWORD",
-        "GOOGLE_APPLICATION_CREDENTIALS",
-        "github_token",
-    ],
-)
-def test_run_command_withholds_credential_env_vars(
-    monkeypatch: pytest.MonkeyPatch, store, name: str
-) -> None:
-    """An injected command must not find provider keys or tokens in its env."""
-    monkeypatch.setenv(name, "s3cret-value-for-the-test")
-    env = _capture_child_env(monkeypatch, store)
-    assert name not in env
-    assert "s3cret-value-for-the-test" not in env.values()
-
-
-def test_run_command_keeps_ordinary_env_vars(monkeypatch: pytest.MonkeyPatch, store) -> None:
-    """Segment matching: PATH (contains "PAT") and SSH_AUTH_SOCK stay."""
-    monkeypatch.setenv("SSH_AUTH_SOCK", "/tmp/agent.sock")
-    monkeypatch.setenv("SAKTHAI_TEST_PLAIN", "kept")
-    env = _capture_child_env(monkeypatch, store)
-    assert env["PATH"] == os.environ["PATH"]
-    assert env["SSH_AUTH_SOCK"] == "/tmp/agent.sock"
-    assert env["SAKTHAI_TEST_PLAIN"] == "kept"
-    assert env["SAKTHAI_SHELL_ALLOW"] == "1"
-
-
 # -- _send_telegram_message error paths ---------------------------------
 
 

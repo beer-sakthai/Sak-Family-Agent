@@ -4,13 +4,11 @@ Provides WorkflowExecutor to run DAG workflow definitions with parallel task sch
 state interpolation, step retries, downstream failure short-circuiting, and action handlers.
 """
 
+import ast
 import asyncio
 import json
 import os
 import shlex
-import sys
-import time
-import ast
 import urllib.parse
 import urllib.request
 import uuid
@@ -44,7 +42,7 @@ def _validate_url(url_str: str) -> str:
 
     # Strip fragment identifiers prior to parsing
     if "#" in url_str:
-        url_str = url_str[:url_str.index("#")]
+        url_str = url_str[: url_str.index("#")]
 
     # Prevent option smuggling
     if url_str.startswith("-"):
@@ -65,9 +63,7 @@ def _validate_url(url_str: str) -> str:
 
     scheme = (parsed.scheme or "").lower()
     if scheme not in ("http", "https"):
-        raise ValueError(
-            f"Forbidden URL scheme '{scheme}'. Only HTTP and HTTPS are allowed."
-        )
+        raise ValueError(f"Forbidden URL scheme '{scheme}'. Only HTTP and HTTPS are allowed.")
 
     host = parsed.hostname
     if not host:
@@ -90,7 +86,7 @@ def _validate_url(url_str: str) -> str:
                 continue
 
             # Unwrap IPv4-mapped IPv6 bypasses
-            if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
+            if getattr(ip, "ipv4_mapped", None):
                 ip = ip.ipv4_mapped
 
             if not ip.is_global or ip.is_multicast:
@@ -103,6 +99,7 @@ def _validate_url(url_str: str) -> str:
         raise RuntimeError(f"DNS Resolution failed for host '{host}': {e}") from e
 
     return url_str
+
 
 def _validate_filepath(filepath: Any) -> Path:
     """Validate a filepath to prevent path traversal and access to sensitive/system directories/files."""
@@ -258,6 +255,46 @@ def _validate_filepath(filepath: Any) -> Path:
     return target
 
 
+def _validate_shell_command(cmd_str: str) -> str:
+    """Validate shell command to prevent process substitution bypasses via interpreters."""
+    cmd_str = str(cmd_str).strip()
+
+    # Block process substitution with interpreter evaluation
+    # This prevents e.g. `eval <(...)`, `exec <(...)`, `source <(...)`, `. <(...)`
+    import re
+
+    interpreters = (
+        "eval",
+        "exec",
+        "source",
+        ".",
+        "bash",
+        "sh",
+        "python",
+        "node",
+        "php",
+        "ruby",
+        "perl",
+    )
+
+    # Process substitution pattern like <( ... )
+    if re.search(r"<\s*\(", cmd_str):
+        # Check if the command starts with one of our interpreters, accounting for env vars and absolute paths
+        parts = cmd_str.split()
+        # Skip env vars (e.g., VAR=val) to find the actual binary
+        binary_token = next((p for p in parts if "=" not in p), "")
+        # Extract basename to handle absolute paths (e.g. /bin/bash)
+        import os
+
+        binary_name = os.path.basename(binary_token)
+        if binary_name in interpreters:
+            raise ValueError(
+                f"Process substitution for interpreter execution is prohibited: {binary_name}"
+            )
+
+    return cmd_str
+
+
 def _safe_python_eval(source_code: str) -> Any:
     """Evaluate a Python expression safely with length limits and AST literal parsing."""
     if len(source_code) > 10000:
@@ -285,6 +322,8 @@ class WorkflowExecutor:
 
         elif act in ("shell", "command", "bash", "sh"):
             cmd = params.get("cmd") or params.get("command") or params.get("script") or ""
+            if cmd:
+                cmd = _validate_shell_command(cmd)
             if not cmd:
                 raise ValueError(
                     f"Step '{step_id}' action '{action}' missing 'cmd' or 'command' parameter."

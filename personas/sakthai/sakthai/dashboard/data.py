@@ -2,46 +2,58 @@
 
 from __future__ import annotations
 
-import contextlib
 import json
 import logging
 import time
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
-import yaml
-
-from .. import config
 from ..memory.store import MemoryStore
 
 logger = logging.getLogger(__name__)
 
 
-def _team_roster() -> list[dict[str, str]]:
-    """One row per persona, read from that persona's own config files.
+def _parse_team_roster(soul_path: Path | None = None) -> list[dict[str, str]]:
+    """Parse the team roster dynamically from docs/SOUL.md."""
+    try:
+        if soul_path is None:
+            repo_root = Path(__file__).resolve().parents[4]
+            soul_path = repo_root / "docs" / "SOUL.md"
+        if not soul_path.exists():
+            return []
 
-    Name and role come from ``config/workspace.yaml`` and the model from
-    ``config/config.yaml``. A missing or unreadable file leaves its fields
-    at their fallbacks instead of dropping the persona from the roster.
-    """
-    roster = []
-    for name in config.PERSONA_NAMES:
-        workspace: object = {}
-        with contextlib.suppress(OSError, yaml.YAMLError):
-            path = config.PERSONAS_DIR / name / "config" / "workspace.yaml"
-            workspace = yaml.safe_load(path.read_text(encoding="utf-8"))
-        if not isinstance(workspace, dict):
-            workspace = {}
-        provider, model = config.persona_model_defaults(name)
-        roster.append(
-            {
-                "agent": str(workspace.get("agent_name") or name),
-                "handle": f"@{name}_agent_bot",
-                "role": str(workspace.get("role") or ""),
-                "model": f"{model} ({provider})" if provider and model else "",
-            }
-        )
-    return roster
+        content = soul_path.read_text(encoding="utf-8")
+        lines = content.splitlines()
+
+        roster = []
+        in_table = False
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            if "|Agent|Handle|Role|Model|" in line.replace(" ", ""):
+                in_table = True
+                continue
+            if in_table:
+                # Separator rows are made only of pipes, dashes, colons, spaces.
+                if line.startswith("|") and set(line) <= {"|", "-", ":", " "}:
+                    continue
+                if not line.startswith("|"):
+                    in_table = False
+                    continue
+                # Parse row
+                parts = [p.strip() for p in line.split("|")[1:-1]]
+                if len(parts) >= 4:
+                    agent = parts[0].replace("**", "")
+                    handle = parts[1].replace("`", "")
+                    role = parts[2]
+                    model = parts[3].replace("`", "")
+                    roster.append({"agent": agent, "handle": handle, "role": role, "model": model})
+        return roster
+    except Exception as e:
+        logger.warning("Failed to parse team roster from SOUL.md: %s", e)
+        return []
 
 
 def collect_dashboard_data(days: int = 30, store: MemoryStore | None = None) -> dict[str, Any]:
@@ -231,7 +243,7 @@ def _collect(store: MemoryStore, days: int) -> dict[str, Any]:
         timeline_labels.append(d)
         timeline_values.append(cumulative)
 
-    team_roster = _team_roster()
+    team_roster = _parse_team_roster()
 
     return {
         "generated_at": datetime.now(UTC).isoformat(),

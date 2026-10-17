@@ -11,8 +11,8 @@ These run automatically and are the controls actually enforced on this repositor
 | Lint + static analysis | `ci.yml` | `ruff`, strict `mypy`, and `bandit` over the core `sakthai` package on every push/PR to `main` |
 | Secret scanning | `secret-scan.yml` | `gitleaks` over the full git history (config: `.gitleaks.toml`) on pushes to `main` and every pull request |
 | Dependency vulnerability audit | `dependency-audit.yml` | `pip-audit` over the locked dependency set (`uv.lock`) — weekly, on dependency changes, and on demand |
-| Code scanning (SAST) | `codeql.yml` | GitHub CodeQL, advanced setup (Python, JavaScript/TypeScript, Actions); default setup must stay off in repository settings or every run fails |
-| Container and dependency scanning | `ossar.yml` | Microsoft Security DevOps running Trivy, results uploaded to the Security tab |
+| Code scanning (SAST) | CodeQL default setup | GitHub CodeQL analysis, managed in repository settings (no workflow file — do not add a conflicting `codeql.yml`) |
+| Multi-tool SAST | `ossar.yml` | Microsoft Security DevOps (MSDO), results uploaded to the Security tab |
 | Quality/security hotspots | `sonarcloud.yml`, `pylint.yml` | SonarCloud analysis and pylint |
 | Dependency updates | `.github/dependabot.yml` | Weekly update PRs for Python (uv), npm (`infra/pw-poc`), and pinned GitHub Actions versions |
 
@@ -34,7 +34,6 @@ The workflow currently covers the first of three intended stages:
 2. **Automated Triage and Patching** (aspirational — not yet implemented):
     - The intent is for the agent to trigger an `automated-vulnerability-patching` skill for each actionable finding, following a 5-step isolate/reproduce/generate-fix/test-fix/surface-for-review pipeline.
     - No skill by that name currently exists in this repository (there is no `automated-vulnerability-patching` skill under any persona or the shared library), so this stage does not run yet. Until it's authored, the nightly scan surfaces findings in the run log rather than opening patch PRs automatically.
-    - The scanning job is deliberately read-only: it holds no push credential and only `contents: read`, and its shell allow-list is `ruff:bandit:mypy:pytest`. A patching stage would need its own, separately reviewed job rather than write access granted to the agent that reads untrusted input.
 
 3. **Human-in-the-Loop**:
     - **No code is ever merged automatically.**
@@ -48,12 +47,7 @@ We take all security reports seriously. If you discover a security vulnerability
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-Instead, report it privately through GitHub: open
-**[Report a vulnerability](https://github.com/beer-sakthai/Sak-Family-Agent/security/advisories/new)**
-(Security tab → Advisories → Report a vulnerability). Only the maintainer and
-you can see the report. To report by email instead, use the address in
-[`docs/SECURITY.md`](docs/SECURITY.md); the `users.noreply.github.com`
-address on commits does not receive mail.
+Instead, please send an email directly to **<beer-sakthai@users.noreply.github.com>**.
 
 In your report, please include:
 
