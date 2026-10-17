@@ -134,11 +134,7 @@ export function DisplayMenu({
                 type="button"
                 role="menuitemradio"
                 aria-checked={selected}
-                onClick={() => {
-                  onThemeChange(option);
-                  setOpen(false);
-                  triggerRef.current?.focus();
-                }}
+                onClick={() => onThemeChange(option)}
                 title={`Switch theme to ${THEME_LABELS[option]}`}
                 className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
                   selected ? "bg-raised text-fg" : "text-fg-3 hover:bg-raised/60 hover:text-fg-2"
@@ -174,11 +170,7 @@ export function DisplayMenu({
                 type="button"
                 role="menuitemradio"
                 aria-checked={selected}
-                onClick={() => {
-                  onDensityChange(option);
-                  setOpen(false);
-                  triggerRef.current?.focus();
-                }}
+                onClick={() => onDensityChange(option)}
                 title={`Switch display density to ${label}`}
                 className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
                   selected ? "bg-raised text-fg" : "text-fg-3 hover:bg-raised/60 hover:text-fg-2"

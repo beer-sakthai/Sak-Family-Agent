@@ -33,7 +33,3 @@
 ## 2026-10-16 - Stable target IDs for single dynamic tabpanel containers
 **Learning:** In tablist components where multiple tabs switch content inside a single dynamic `<div role="tabpanel">` container, tab controls (`role="tab"`) should reference a stable container ID (`aria-controls="stitch-tabpanel"`) rather than tab-specific IDs, ensuring `aria-controls` always resolves to a valid DOM node regardless of active tab state.
 **Action:** Assign a stable `id` to single dynamic `<div role="tabpanel">` containers and set matching `aria-controls` on all member `role="tab"` buttons.
-
-## 2026-10-18 - Popover dismissal and trigger focus restoration on option selection
-**Learning:** Selecting a menu item radio or option button inside a preference popover menu (`role="menuitemradio"`) should dismiss the popover (`setOpen(false)`) and restore focus to the trigger element (`triggerRef.current?.focus()`) to maintain a predictable ARIA focus flow and avoid leaving users stuck inside a fulfilled menu.
-**Action:** Call `setOpen(false)` and `triggerRef.current?.focus()` inside click handlers for preference option items in popover menus.
