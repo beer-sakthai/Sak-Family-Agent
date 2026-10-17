@@ -1,20 +1,9 @@
 "use client";
 
 import React from "react";
-import {
-  Activity,
-  ArrowUpRight,
-  Award,
-  Brain,
-  Clock,
-  Cpu,
-  Eye,
-  Shield,
-  Sparkles,
-  Terminal,
-  Zap,
-} from "lucide-react";
+import { Activity, ArrowUpRight, Award, Brain, Clock, Cpu } from "lucide-react";
 
+import { PersonaAvatar } from "@/components/PersonaAvatar";
 import type { PersonaSummary } from "@/lib/contracts.generated";
 
 interface AgentCardProps {
@@ -29,23 +18,20 @@ interface AgentCardProps {
   onOpenDetail?: () => void;
 }
 
-/** Keyed by the canonical lowercase persona name, all six of them. */
-const personaIcons: Record<string, React.ReactNode> = {
-  sakthai: <Terminal className="h-5 w-5 text-hue-cyan" />,
-  sakking: <Zap className="h-5 w-5 text-hue-purple" />,
-  saksee: <Eye className="h-5 w-5 text-hue-amber" />,
-  saksit: <Shield className="h-5 w-5 text-hue-emerald" />,
-  sakjules: <Activity className="h-5 w-5 text-hue-rose" />,
-  saktan: <Sparkles className="h-5 w-5 text-hue-sky" />,
-};
-
+/**
+ * Keyed by the canonical lowercase persona name, all six of them.
+ *
+ * Each accent is the nearest hue token to the persona's portrait (and the
+ * README banner): SakThai cyan, SakSee amber, SakJules violet, SakKing blue
+ * (sky), SakSit pink (rose), SakTan emerald.
+ */
 const personaGlows: Record<string, string> = {
   sakthai: "border-hue-cyan-line/30 hover:border-hue-cyan-line/60 shadow-hue-cyan-tint/40",
-  sakking: "border-hue-purple-line/30 hover:border-hue-purple-line/60 shadow-hue-purple-tint/40",
+  sakking: "border-hue-sky-line/30 hover:border-hue-sky-line/60 shadow-hue-sky-tint/40",
   saksee: "border-hue-amber-line/30 hover:border-hue-amber-line/60 shadow-hue-amber-tint/40",
-  saksit: "border-hue-emerald-line/30 hover:border-hue-emerald-line/60 shadow-hue-emerald-tint/40",
-  sakjules: "border-hue-rose-line/30 hover:border-hue-rose-line/60 shadow-hue-rose-tint/40",
-  saktan: "border-hue-sky-line/30 hover:border-hue-sky-line/60 shadow-hue-sky-tint/40",
+  saksit: "border-hue-rose-line/30 hover:border-hue-rose-line/60 shadow-hue-rose-tint/40",
+  sakjules: "border-hue-violet-line/30 hover:border-hue-violet-line/60 shadow-hue-violet-tint/40",
+  saktan: "border-hue-emerald-line/30 hover:border-hue-emerald-line/60 shadow-hue-emerald-tint/40",
 };
 
 const DAY_SECONDS = 86_400;
@@ -76,7 +62,6 @@ export function AgentCard({
 }: AgentCardProps) {
   const status = deriveStatus(agent);
   const glowClass = personaGlows[agent.name] ?? "border-line hover:border-line-strong";
-  const icon = personaIcons[agent.name] ?? <Cpu className="h-5 w-5 text-hue-cyan" />;
 
   // Real, derived from recorded runs and errors -- not the `?? 92.5` default
   // and `Math.random()` fallback this replaces. Undefined with no runs, and
@@ -109,7 +94,7 @@ export function AgentCard({
   return (
     <Root
       {...interactive}
-      className={`glass-card p-5 rounded-2xl bg-panel/80 border backdrop-blur-xl shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4 relative overflow-hidden group text-left w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${glowClass} ${
+      className={`glass-card p-5 rounded-2xl bg-panel/80 border backdrop-blur-xl shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4 relative overflow-hidden group text-left w-full focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${glowClass} ${
         status === "Idle" ? "opacity-70" : ""
       } ${dimmed ? "opacity-40 saturate-50" : ""} ${
         selected ? "ring-2 ring-accent ring-offset-2 ring-offset-canvas" : ""
@@ -125,11 +110,11 @@ export function AgentCard({
           aria-pressed={selected}
           aria-label={toggleLabel}
           title={toggleLabel}
-          className="absolute inset-0 z-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+          className="absolute inset-0 z-0 rounded-2xl focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
         />
       )}
 
-      <div className={overlayToggle ? "pointer-events-none relative z-[1]" : undefined}>
+      <div className={overlayToggle ? "pointer-events-none relative z-1" : undefined}>
         {/* items-start: the text column is three lines tall, so centring the
             icon and the status pill against it leaves the name floating alone
             above both. */}
@@ -140,16 +125,18 @@ export function AgentCard({
               `truncate` gave up first. min-w-0 on every level so the card can
               still narrow to whatever column the auto-fill grid gives it. */}
           <div className="flex min-w-0 flex-1 items-start space-x-2.5">
-            <div className="p-2 rounded-xl bg-raised/80 border border-line-strong/50 shrink-0">
-              {icon}
-            </div>
+            <PersonaAvatar name={agent.name} size={38} />
             <div className="min-w-0 flex-1">
               <h4 className="truncate text-lg font-bold font-display text-fg tracking-tight">
                 {agent.display_name}
               </h4>
               <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 font-mono text-xs leading-snug text-fg-3">
                 {agent.provider && (
-                  <span className="rounded bg-hue-cyan-tint px-1.5 py-0.5 text-[10px] text-hue-cyan border border-hue-cyan-line/50">
+                  <span
+                    title={`Model provider: ${agent.provider}`}
+                    aria-label={`Provider: ${agent.provider}`}
+                    className="rounded bg-hue-cyan-tint px-1.5 py-0.5 text-[10px] text-hue-cyan border border-hue-cyan-line/50"
+                  >
                     {agent.provider}
                   </span>
                 )}
@@ -194,8 +181,12 @@ export function AgentCard({
         </div>
 
         <div className="mt-3 flex items-center gap-2">
-          <span className="text-[11px] font-mono text-fg-2 px-2.5 py-1 rounded-md bg-raised/90 border border-line-strong/60 inline-flex items-center gap-1.5 max-w-full">
-            <Cpu className="h-3 w-3 text-hue-cyan shrink-0" aria-hidden />
+          <span
+            title={`Configured model: ${agent.model || "no configured model"}`}
+            aria-label={`Model: ${agent.model || "no configured model"}`}
+            className="text-[11px] font-mono text-fg-2 px-2.5 py-1 rounded-md bg-raised/90 border border-line-strong/60 inline-flex items-center gap-1.5 max-w-full"
+          >
+            <Cpu className="h-3 w-3 text-hue-cyan shrink-0" aria-hidden="true" />
             <span className="truncate">{agent.model || "no configured model"}</span>
           </span>
         </div>
@@ -203,12 +194,12 @@ export function AgentCard({
 
       <div
         className={`grid grid-cols-2 gap-2 py-2 px-3 rounded-xl bg-sunken/60 border border-line/80 font-mono text-xs ${
-          overlayToggle ? "pointer-events-none relative z-[1]" : ""
+          overlayToggle ? "pointer-events-none relative z-1" : ""
         }`}
       >
         <div>
           <span className="text-[10px] uppercase text-fg-3 mb-0.5 flex items-center gap-1">
-            <Clock className="h-3 w-3 text-hue-cyan" aria-hidden /> Avg latency
+            <Clock className="h-3 w-3 text-hue-cyan" aria-hidden="true" /> Avg latency
           </span>
           <span className="font-bold text-hue-cyan">
             {agent.runs > 0 ? `${Math.round(agent.avg_latency_ms)}ms` : "—"}
@@ -216,7 +207,7 @@ export function AgentCard({
         </div>
         <div>
           <span className="text-[10px] uppercase text-fg-3 mb-0.5 flex items-center gap-1">
-            <Activity className="h-3 w-3 text-hue-emerald" aria-hidden /> Executions
+            <Activity className="h-3 w-3 text-hue-emerald" aria-hidden="true" /> Executions
           </span>
           <span className="font-bold text-hue-emerald">
             {agent.runs} {agent.runs === 1 ? "run" : "runs"}
@@ -224,10 +215,10 @@ export function AgentCard({
         </div>
       </div>
 
-      <div className={`space-y-1.5 ${overlayToggle ? "pointer-events-none relative z-[1]" : ""}`}>
+      <div className={`space-y-1.5 ${overlayToggle ? "pointer-events-none relative z-1" : ""}`}>
         <div className="flex items-center justify-between text-xs font-mono">
           <span className="text-fg-3 text-[11px] flex items-center gap-1">
-            <Award className="h-3 w-3 text-hue-amber" aria-hidden /> Success rate
+            <Award className="h-3 w-3 text-hue-amber" aria-hidden="true" /> Success rate
           </span>
           <span className="font-bold text-hue-emerald">
             {successRate === null ? "no runs yet" : `${successRate.toFixed(1)}%`}
@@ -245,14 +236,14 @@ export function AgentCard({
           }
         >
           <div
-            className="h-full bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]"
+            className="h-full bg-linear-to-r from-cyan-500 via-teal-400 to-emerald-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]"
             style={{ width: `${successRate ?? 0}%` }}
           />
         </div>
       </div>
 
       <div
-        className={`relative z-[2] flex flex-wrap items-center gap-1.5 pt-1 font-mono text-[10px] ${
+        className={`relative z-2 flex flex-wrap items-center gap-1.5 pt-1 font-mono text-[10px] ${
           overlayToggle ? "pointer-events-none" : ""
         }`}
       >
@@ -260,7 +251,7 @@ export function AgentCard({
           title={`Total token usage: ${(agent.input_tokens + agent.output_tokens).toLocaleString()} tokens`}
           className="px-2 py-0.5 rounded-full bg-hue-cyan-tint/40 text-hue-cyan border border-hue-cyan-line/30 inline-flex items-center gap-1"
         >
-          <Brain className="h-2.5 w-2.5" aria-hidden />
+          <Brain className="h-2.5 w-2.5" aria-hidden="true" />
           {(agent.input_tokens + agent.output_tokens).toLocaleString()} tokens
         </span>
         {agent.errors > 0 && (
@@ -277,10 +268,10 @@ export function AgentCard({
             onClick={onOpenDetail}
             aria-label={`Open details for ${agent.display_name}`}
             title={`Open details for ${agent.display_name}`}
-            className="pointer-events-auto ml-auto inline-flex items-center gap-1 rounded-full border border-line-strong bg-raised/90 px-2 py-0.5 text-[10px] text-fg-2 transition-colors hover:border-accent/50 hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="pointer-events-auto ml-auto inline-flex items-center gap-1 rounded-full border border-line-strong bg-raised/90 px-2 py-0.5 text-[10px] text-fg-2 transition-colors hover:border-accent/50 hover:text-accent focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
             Details
-            <ArrowUpRight className="h-2.5 w-2.5" aria-hidden />
+            <ArrowUpRight className="h-2.5 w-2.5" aria-hidden="true" />
           </button>
         )}
       </div>

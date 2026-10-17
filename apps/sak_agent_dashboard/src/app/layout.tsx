@@ -116,7 +116,7 @@ export default function RootLayout({
             focused. */}
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:border focus:border-accent/50 focus:bg-panel focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-fg focus:shadow-glass"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-100 focus:rounded-xl focus:border focus:border-accent/50 focus:bg-panel focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-fg focus:shadow-glass"
         >
           Skip to content
         </a>
@@ -125,8 +125,8 @@ export default function RootLayout({
             click, and never shows up in the tab order. Opacity is a token, so
             the light theme gets a wash that reads as tint rather than haze. */}
         <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-          <div className="absolute -left-40 -top-40 h-[32rem] w-[32rem] rounded-full bg-hue-cyan opacity-[var(--wash-alpha)] blur-[120px]" />
-          <div className="absolute -right-40 top-1/3 h-[28rem] w-[28rem] rounded-full bg-hue-violet opacity-[var(--wash-alpha)] blur-[120px]" />
+          <div className="absolute -left-40 -top-40 h-[32rem] w-[32rem] rounded-full bg-hue-cyan opacity-(--wash-alpha) blur-[120px]" />
+          <div className="absolute -right-40 top-1/3 h-[28rem] w-[28rem] rounded-full bg-hue-violet opacity-(--wash-alpha) blur-[120px]" />
           <div className="absolute bottom-0 left-1/3 h-[24rem] w-[24rem] rounded-full bg-hue-emerald opacity-[calc(var(--wash-alpha)*0.6)] blur-[120px]" />
           <div className="absolute inset-0 bg-grid" />
         </div>

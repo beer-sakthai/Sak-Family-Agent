@@ -7,7 +7,6 @@ import {
   Award,
   Brain,
   Clock,
-  Cpu,
   Database,
   Filter,
   MessageSquare,
@@ -18,6 +17,7 @@ import { compactNumber, duration, relativeTime } from "@/lib/format";
 import type { TabId } from "@/lib/nav";
 
 import { Drawer } from "./Drawer";
+import { PersonaAvatar } from "./PersonaAvatar";
 
 interface PersonaDrawerProps {
   persona: PersonaSummary;
@@ -143,7 +143,7 @@ export function PersonaDrawer({
           {persona.last_run_at !== null && ` · last run ${relativeTime(persona.last_run_at * 1000)}`}
         </span>
       }
-      icon={<Cpu className="h-5 w-5 text-accent" aria-hidden />}
+      icon={<PersonaAvatar name={persona.name} size={40} />}
       onClose={onClose}
       data-testid="persona-drawer"
     >
@@ -248,7 +248,7 @@ export function PersonaDrawer({
             onClick={onToggleFilter}
             aria-pressed={filtered}
             title={filtered ? `Clear filter for ${persona.display_name}` : `Filter dashboard to ${persona.display_name}`}
-            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 font-mono text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 font-mono text-xs transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
               filtered
                 ? "border-accent/50 bg-accent/10 text-accent"
                 : "border-line-strong bg-raised/80 text-fg-2 hover:bg-raised-2"
@@ -260,8 +260,9 @@ export function PersonaDrawer({
           <button
             type="button"
             onClick={() => onNavigate("sessions")}
+            aria-label={`Sessions - view sessions for ${persona.display_name}`}
             title={`View sessions for ${persona.display_name}`}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-raised/80 px-3 py-1.5 font-mono text-xs text-fg-2 transition-colors hover:bg-raised-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-raised/80 px-3 py-1.5 font-mono text-xs text-fg-2 transition-colors hover:bg-raised-2 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
             <MessageSquare className="h-3 w-3" aria-hidden />
             Sessions
@@ -269,8 +270,9 @@ export function PersonaDrawer({
           <button
             type="button"
             onClick={() => onNavigate("memory")}
+            aria-label={`Memory - view memory for ${persona.display_name}`}
             title={`View memory for ${persona.display_name}`}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-raised/80 px-3 py-1.5 font-mono text-xs text-fg-2 transition-colors hover:bg-raised-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-raised/80 px-3 py-1.5 font-mono text-xs text-fg-2 transition-colors hover:bg-raised-2 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
             <Database className="h-3 w-3" aria-hidden />
             Memory
@@ -278,8 +280,9 @@ export function PersonaDrawer({
           <button
             type="button"
             onClick={() => onNavigate("analytics")}
+            aria-label={`Analytics - view analytics for ${persona.display_name}`}
             title={`View analytics for ${persona.display_name}`}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-raised/80 px-3 py-1.5 font-mono text-xs text-fg-2 transition-colors hover:bg-raised-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-raised/80 px-3 py-1.5 font-mono text-xs text-fg-2 transition-colors hover:bg-raised-2 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
             <Clock className="h-3 w-3" aria-hidden />
             Analytics

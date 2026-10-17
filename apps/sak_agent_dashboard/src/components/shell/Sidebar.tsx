@@ -49,7 +49,7 @@ function NavButton({
       tabIndex={active ? 0 : -1}
       title={collapsed ? item.label : `Switch to ${item.label} section`}
       onClick={() => onSelect(item.id)}
-      className={`group relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+      className={`group relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
         active
           ? "bg-raised/70 text-fg"
           : "text-fg-3 hover:bg-raised/40 hover:text-fg"
@@ -117,7 +117,7 @@ export function Sidebar({
       <div
         className={`flex items-center gap-2.5 px-2 pb-5 ${isCollapsed ? "justify-center" : ""}`}
       >
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-lg shadow-hue-cyan/20">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-linear-to-br from-cyan-500 to-blue-600 shadow-lg shadow-hue-cyan/20">
           <Terminal className="h-[18px] w-[18px] text-fg" aria-hidden />
         </div>
         {!isCollapsed && (
@@ -156,7 +156,7 @@ export function Sidebar({
         onClick={() => onCollapsedChange(!collapsed)}
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         title={collapsed ? "Expand sidebar ([)" : "Collapse sidebar ([)"}
-        className="mt-4 hidden w-full items-center justify-center gap-2 rounded-xl border border-line bg-panel/60 px-3 py-2 font-mono text-[11px] text-fg-3 transition-colors hover:border-line-strong hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:flex"
+        className="mt-4 hidden w-full items-center justify-center gap-2 rounded-xl border border-line bg-panel/60 px-3 py-2 font-mono text-[11px] text-fg-3 transition-colors hover:border-line-strong hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent lg:flex"
       >
         {collapsed ? (
           <ChevronRight className="h-3.5 w-3.5" aria-hidden />
@@ -190,7 +190,7 @@ export function Sidebar({
             aria-label="Close navigation"
             title="Close navigation menu"
             onClick={onMobileClose}
-            className="absolute inset-0 h-full w-full bg-sunken/80 backdrop-blur-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+            className="absolute inset-0 h-full w-full bg-sunken/80 backdrop-blur-sm focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
           />
           <aside className="absolute left-0 top-0 flex h-full w-[260px] flex-col border-r border-line/70 bg-sunken/95 p-4">
             <button
@@ -198,7 +198,7 @@ export function Sidebar({
               onClick={onMobileClose}
               aria-label="Close navigation menu"
               title="Close navigation menu"
-              className="absolute right-3 top-3 rounded-lg p-1.5 text-fg-3 hover:bg-raised/60 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="absolute right-3 top-3 rounded-lg p-1.5 text-fg-3 hover:bg-raised/60 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
             >
               <X className="h-4 w-4" aria-hidden />
             </button>

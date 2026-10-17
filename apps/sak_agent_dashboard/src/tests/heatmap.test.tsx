@@ -165,8 +165,26 @@ describe("ActivityHeatmap", () => {
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
 
-  it("provides title tooltips on legend level swatches", () => {
+  it("provides title tooltips on summary metric blocks and legend level swatches", () => {
     const { container } = render(<ActivityHeatmap trends={trends} days={7} today={TODAY} />);
+
+    expect(screen.getByText("Active days").parentElement).toHaveAttribute(
+      "title",
+      "Active days: 3 of 7 calendar days with at least one run",
+    );
+    expect(screen.getByText("Longest streak").parentElement).toHaveAttribute(
+      "title",
+      "Longest streak: 3 consecutive days with run activity",
+    );
+    expect(screen.getByText("Busiest day").parentElement).toHaveAttribute(
+      "title",
+      "Busiest day: 2026-08-30 with 8 runs",
+    );
+    expect(screen.getByText("Per active day").parentElement).toHaveAttribute(
+      "title",
+      "Average execution rate: ~4 runs per active day",
+    );
+
     const legendSwatches = container.querySelectorAll(".mt-3 span[title]");
     expect(legendSwatches).toHaveLength(5);
     expect(legendSwatches[0].getAttribute("title")).toBe("No activity");

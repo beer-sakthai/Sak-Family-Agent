@@ -469,13 +469,18 @@ export default function Home() {
     [exportable, activeTab, pushToast],
   );
 
-  const handleCopyLink = useCallback(() => {
+  const handleCopyLink = useCallback(async (): Promise<boolean> => {
     // The fragment already carries the whole view, so the current href is the
-    // shareable link with no assembly needed.
-    navigator.clipboard
-      .writeText(window.location.href)
-      .then(() => pushToast("success", "Link to this view copied."))
-      .catch(() => pushToast("error", "Could not copy to the clipboard."));
+    // shareable link with no assembly needed. Resolves whether the write
+    // landed, so the TopBar button can mirror it without writing again.
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      pushToast("success", "Link to this view copied.");
+      return true;
+    } catch {
+      pushToast("error", "Could not copy to the clipboard.");
+      return false;
+    }
   }, [pushToast]);
 
   // Keyboard. ⌘K/Ctrl+K for the palette, digits for sections, `r` refresh,
@@ -768,7 +773,7 @@ export default function Home() {
         <main
           id="main"
           tabIndex={-1}
-          className="mx-auto w-full max-w-[110rem] flex-1 space-y-gap px-4 py-6 focus:outline-none sm:px-6 lg:px-8"
+          className="mx-auto w-full max-w-[110rem] flex-1 space-y-gap px-4 py-6 focus:outline-hidden sm:px-6 lg:px-8"
         >
           {/* Announces each completed refresh to a screen reader without
               moving focus or rendering anything. */}
@@ -793,7 +798,7 @@ export default function Home() {
                 onClick={() => setError(null)}
                 aria-label="Dismiss error message"
                 title="Dismiss error message"
-                className="shrink-0 rounded-lg border border-hue-rose-line px-2 py-0.5 font-mono text-[11px] text-hue-rose hover:bg-hue-rose-tint focus:outline-none focus-visible:ring-2 focus-visible:ring-hue-rose"
+                className="shrink-0 rounded-lg border border-hue-rose-line px-2 py-0.5 font-mono text-[11px] text-hue-rose hover:bg-hue-rose-tint focus:outline-hidden focus-visible:ring-2 focus-visible:ring-hue-rose"
               >
                 Dismiss
               </button>
@@ -817,7 +822,7 @@ export default function Home() {
                 disabled={isLoading}
                 aria-label="Retry fetching live data"
                 title={isLoading ? "Retrying data fetch…" : "Retry fetching live data"}
-                className="shrink-0 rounded-lg border border-hue-amber-line px-2.5 py-1 font-mono text-[11px] text-hue-amber transition-colors hover:bg-hue-amber-tint disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-hue-amber"
+                className="shrink-0 rounded-lg border border-hue-amber-line px-2.5 py-1 font-mono text-[11px] text-hue-amber transition-colors hover:bg-hue-amber-tint disabled:cursor-not-allowed disabled:opacity-50 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-hue-amber"
               >
                 Retry now
               </button>
@@ -842,17 +847,22 @@ export default function Home() {
                 />
               )}
 
-              {awaitingFirstLoad ? (
-                <PanelSkeleton label="Loading operational signals" />
-              ) : (
-                <OperationsPulse
-                  personas={personasPayload}
-                  metrics={metrics}
-                  audit={audit}
-                  workflows={workflows}
-                  onNavigate={goToTab}
-                />
-              )}
+              {/* The pulse is Overview's briefing: four cards that each point
+                  at another tab. Above every tab it was ~250px of the same
+                  four cards standing between the reader and the tab they
+                  opened, and on the tab a card points at it says nothing new. */}
+              {activeTab === "overview" &&
+                (awaitingFirstLoad ? (
+                  <PanelSkeleton label="Loading operational signals" />
+                ) : (
+                  <OperationsPulse
+                    personas={personasPayload}
+                    metrics={metrics}
+                    audit={audit}
+                    workflows={workflows}
+                    onNavigate={goToTab}
+                  />
+                ))}
             </>
           )}
 

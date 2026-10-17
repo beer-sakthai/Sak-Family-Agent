@@ -62,8 +62,55 @@ describe("ShortcutsOverlay", () => {
   it("renders key badges with accessible spoken labels for special key symbols", () => {
     renderShortcutsOverlay();
     expect(screen.getByText("(Command + K)")).toBeInTheDocument();
+    expect(screen.getByText("(Slash)")).toBeInTheDocument();
     expect(screen.getByText("(Question mark)")).toBeInTheDocument();
     expect(screen.getByText("(Left bracket)")).toBeInTheDocument();
     expect(screen.getByText("(Escape)")).toBeInTheDocument();
+  });
+
+  it("filters shortcuts by search query and allows clearing the search", () => {
+    renderShortcutsOverlay();
+    const searchInput = screen.getByRole("searchbox", { name: "Filter keyboard shortcuts" });
+    expect(searchInput).toBeInTheDocument();
+
+    // Search for "command"
+    fireEvent.change(searchInput, { target: { value: "command" } });
+    expect(screen.getByText("Open the command palette")).toBeInTheDocument();
+    expect(screen.queryByText("Show this list")).not.toBeInTheDocument();
+
+    // Clear search button
+    const clearBtn = screen.getByRole("button", { name: "Clear shortcut search filter" });
+    expect(clearBtn).toHaveAttribute("title", "Clear search (Esc)");
+    fireEvent.click(clearBtn);
+    expect(searchInput).toHaveValue("");
+    expect(screen.getByText("Show this list")).toBeInTheDocument();
+
+    // Search for unmatched query
+    fireEvent.change(searchInput, { target: { value: "nonexistent query" } });
+    const emptyState = screen.getByRole("status", { name: 'No shortcuts match "nonexistent query"' });
+    expect(emptyState).toBeInTheDocument();
+
+    // Inline clear button in empty state
+    const inlineClearBtn = screen.getByRole("button", {
+      name: "Clear search filter and show all shortcuts",
+    });
+    expect(inlineClearBtn).toHaveAttribute("type", "button");
+    expect(inlineClearBtn).toHaveAttribute("title", "Clear search filter (Esc)");
+    fireEvent.click(inlineClearBtn);
+    expect(searchInput).toHaveValue("");
+    expect(screen.getByText("Show this list")).toBeInTheDocument();
+  });
+
+  it("clears active search query on Escape keypress inside search input without closing overlay", () => {
+    const { onClose } = renderShortcutsOverlay();
+    const searchInput = screen.getByRole("searchbox", { name: "Filter keyboard shortcuts" });
+
+    fireEvent.change(searchInput, { target: { value: "command" } });
+    expect(searchInput).toHaveValue("command");
+
+    fireEvent.keyDown(searchInput, { key: "Escape" });
+
+    expect(searchInput).toHaveValue("");
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

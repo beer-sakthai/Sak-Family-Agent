@@ -36,10 +36,10 @@ const DAY = 86_400;
 
 const MODELS: Record<string, [string, string]> = {
   sakking: ["huggingface", "Qwen/Qwen3-Coder-30B-A3B-Instruct"],
-  sakthai: ["huggingface", "gemini-3.1-flash-lite"],
-  saksee: ["huggingface", "gemini-3.1-flash-lite"],
-  saksit: ["huggingface", "DeepSeek-V4-Flash"],
-  sakjules: ["huggingface", "gemini-2.5-flash-lite"],
+  sakthai: ["huggingface", "deepseek-ai/DeepSeek-V4.1-Flash"],
+  saksee: ["huggingface", "deepseek-ai/DeepSeek-V4.1-Flash"],
+  saksit: ["huggingface", "deepseek-ai/DeepSeek-V4-Flash"],
+  sakjules: ["huggingface", "deepseek-ai/DeepSeek-V4.1-Flash"],
   saktan: ["ollama", "sakthai"],
 };
 
@@ -77,6 +77,8 @@ export function demoPersonas(): PersonasPayload {
       input_tokens: runs * 820,
       output_tokens: runs * 310,
       last_run_at: runs > 0 ? EPOCH - index * 900 : null,
+      charge: null,
+      current_stage: null,
     };
   });
   return { personas, unattributed_runs: 37 };
@@ -132,7 +134,7 @@ export function demoMetrics(query?: { personas?: string[] | null }): MetricsPayl
     // Clamped, since a small enough share leaves no remainder to give.
     stop_reasons: stopReasons,
     per_model: {
-      "gemini-3.1-flash-lite": {
+      "deepseek-ai/DeepSeek-V4.1-Flash": {
         count: scale(351),
         input_tokens: scale(288_000),
         output_tokens: scale(109_000),
@@ -144,7 +146,7 @@ export function demoMetrics(query?: { personas?: string[] | null }): MetricsPayl
         output_tokens: scale(25_000),
         avg_latency_s: 0.62,
       },
-      "DeepSeek-V4-Flash": {
+      "deepseek-ai/DeepSeek-V4-Flash": {
         count: scale(46),
         input_tokens: scale(37_000),
         output_tokens: scale(14_000),

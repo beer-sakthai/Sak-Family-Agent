@@ -159,7 +159,7 @@ export function ActivityHeatmap({ trends, days = 90, today }: ActivityHeatmapPro
     >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-1.5 font-display text-sm font-bold text-fg-2">
-          <CalendarDays className="h-4 w-4 text-hue-emerald" aria-hidden />
+          <CalendarDays className="h-4 w-4 text-hue-emerald" aria-hidden="true" />
           Activity
         </h3>
         <p className="font-mono text-[11px] text-fg-4">{summary}</p>
@@ -169,7 +169,7 @@ export function ActivityHeatmap({ trends, days = 90, today }: ActivityHeatmapPro
         <div className="flex gap-2 overflow-x-auto pb-1">
           <div
             className="grid shrink-0 grid-rows-[repeat(7,11px)] gap-[3px] pt-0.5 font-mono text-[9px] text-fg-5"
-            aria-hidden
+            aria-hidden="true"
           >
             {WEEKDAY_LABELS.map((label, index) => (
               // Every other row is labelled: seven 11px rows cannot carry seven
@@ -180,7 +180,7 @@ export function ActivityHeatmap({ trends, days = 90, today }: ActivityHeatmapPro
             ))}
           </div>
 
-          <div className="flex gap-[3px]" aria-hidden>
+          <div className="flex gap-[3px]" aria-hidden="true">
             {columns.map((week, weekIndex) => (
               <div key={weekIndex} className="grid grid-rows-[repeat(7,11px)] gap-[3px]">
                 {week.map((cell, dayIndex) =>
@@ -210,14 +210,14 @@ export function ActivityHeatmap({ trends, days = 90, today }: ActivityHeatmapPro
             width a thirteen-week grid leaves over on a wide panel, and they
             are the numbers someone reads the calendar to find. */}
         <dl className="grid grid-cols-2 gap-x-6 gap-y-3 font-mono text-[11px] sm:grid-cols-4">
-          <div>
+          <div title={`Active days: ${activeDays} of ${days} calendar days with at least one run`}>
             <dt className="text-[10px] uppercase tracking-wider text-fg-4">Active days</dt>
             <dd className="font-display text-base font-bold text-fg">
               {activeDays}
               <span className="ml-1 font-mono text-[10px] font-normal text-fg-4">of {days}</span>
             </dd>
           </div>
-          <div>
+          <div title={`Longest streak: ${streak} consecutive day${streak === 1 ? "" : "s"} with run activity`}>
             <dt className="text-[10px] uppercase tracking-wider text-fg-4">Longest streak</dt>
             <dd className="font-display text-base font-bold text-fg">
               {streak}
@@ -226,7 +226,7 @@ export function ActivityHeatmap({ trends, days = 90, today }: ActivityHeatmapPro
               </span>
             </dd>
           </div>
-          <div>
+          <div title={busiest ? `Busiest day: ${busiest.date} with ${busiest.runs.toLocaleString()} runs` : "Busiest day: no activity recorded"}>
             <dt className="text-[10px] uppercase tracking-wider text-fg-4">Busiest day</dt>
             <dd className="font-display text-base font-bold text-fg">
               {busiest ? busiest.runs.toLocaleString() : "—"}
@@ -237,7 +237,7 @@ export function ActivityHeatmap({ trends, days = 90, today }: ActivityHeatmapPro
               )}
             </dd>
           </div>
-          <div>
+          <div title={activeDays > 0 ? `Average execution rate: ~${Math.round(totalRuns / activeDays).toLocaleString()} runs per active day` : "Average execution rate: no active days"}>
             <dt className="text-[10px] uppercase tracking-wider text-fg-4">Per active day</dt>
             <dd className="font-display text-base font-bold text-fg">
               {activeDays > 0 ? Math.round(totalRuns / activeDays).toLocaleString() : "—"}
@@ -248,7 +248,7 @@ export function ActivityHeatmap({ trends, days = 90, today }: ActivityHeatmapPro
       </div>
 
       <div className="mt-3 flex items-center justify-end gap-1.5 font-mono text-[10px] text-fg-5">
-        <span aria-hidden>Less</span>
+        <span aria-hidden="true">Less</span>
         {LEVEL_CLASS.map((className, level) => {
           const label = level === 0 ? "No activity" : `Activity level ${level} of 4`;
           return (
@@ -261,7 +261,7 @@ export function ActivityHeatmap({ trends, days = 90, today }: ActivityHeatmapPro
             />
           );
         })}
-        <span aria-hidden>More</span>
+        <span aria-hidden="true">More</span>
       </div>
     </section>
   );

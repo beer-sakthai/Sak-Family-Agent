@@ -100,7 +100,7 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
     // the figure rather than striking through the hint beneath it.
     <Root
       {...interactive}
-      className={`group relative w-full overflow-hidden rounded-2xl border border-line/80 bg-panel/70 p-4 pb-9 text-left backdrop-blur-xl transition-colors hover:border-line-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+      className={`group relative w-full overflow-hidden rounded-2xl border border-line/80 bg-panel/70 p-4 pb-9 text-left backdrop-blur-xl transition-colors hover:border-line-strong focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
         target && onNavigate ? "cursor-pointer hover:border-accent/40" : ""
       }`}
     >
@@ -136,6 +136,13 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
           </span>
         )}
       </div>
+      {/* Out of flow, in the bottom strip pb-9 reserves: the hint is invisible
+          until hover or focus, so it must not take width from the hint line. */}
+      {target && onNavigate && (
+        <span className="pointer-events-none absolute bottom-2.5 right-4 font-mono text-[10px] text-fg-5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+          Open →
+        </span>
+      )}
     </Root>
   );
 }

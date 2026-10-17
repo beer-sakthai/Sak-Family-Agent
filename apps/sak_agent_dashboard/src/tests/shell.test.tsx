@@ -7,7 +7,7 @@
  * data directly.
  */
 
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import CommandPalette, { type Command } from "@/components/CommandPalette";
@@ -181,7 +181,7 @@ describe("TopBar", () => {
       personaCounts: {},
       canExport: true,
       onExport: vi.fn(),
-      onCopyLink: vi.fn(),
+      onCopyLink: vi.fn().mockResolvedValue(true),
       presenting: false,
       onPresentingChange: vi.fn(),
       ...overrides,
@@ -218,7 +218,7 @@ describe("TopBar", () => {
 
   it("provides informative tooltip on sample data toggle button", () => {
     renderTopBar({ isDemo: false });
-    const toggle = screen.getByLabelText("Toggle sample data");
+    const toggle = screen.getByLabelText(/Sample: OFF - switch to sample dataset/);
     expect(toggle).toHaveAttribute("title", "Switch to sample dataset");
   });
 
@@ -230,13 +230,24 @@ describe("TopBar", () => {
 
   it("opens the palette and the mobile nav", () => {
     const { props } = renderTopBar();
-    const paletteBtn = screen.getByLabelText("Open command palette");
-    expect(paletteBtn).toBeInTheDocument();
-    expect(paletteBtn).toHaveAttribute("type", "button");
-    expect(paletteBtn).toHaveAttribute("title", "Open command palette (Command + K)");
+    const paletteBtns = screen.getAllByLabelText("Open command palette");
+    expect(paletteBtns).toHaveLength(2);
+    // Mobile search button (sm:hidden)
+    expect(paletteBtns[0]).toHaveAttribute("type", "button");
+    expect(paletteBtns[0]).toHaveAttribute("title", "Open command palette");
+    expect(paletteBtns[0]).toHaveClass("sm:hidden");
 
-    fireEvent.click(paletteBtn);
-    expect(props.onOpenPalette).toHaveBeenCalled();
+    // Desktop search button (hidden sm:flex)
+    expect(paletteBtns[1]).toHaveAttribute("type", "button");
+    expect(paletteBtns[1]).toHaveAttribute("title", "Open command palette (Command + K)");
+    expect(paletteBtns[1]).toHaveClass("sm:flex");
+
+    fireEvent.click(paletteBtns[0]);
+    expect(props.onOpenPalette).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(paletteBtns[1]);
+    expect(props.onOpenPalette).toHaveBeenCalledTimes(2);
+
     fireEvent.click(screen.getByLabelText("Open navigation menu"));
     expect(props.onOpenMobileNav).toHaveBeenCalled();
   });
@@ -270,19 +281,52 @@ describe("TopBar", () => {
   it("ensures top bar interactive triggers carry explicit type button attributes and shortcut tooltips", () => {
     renderTopBar();
     const openMobileNavBtn = screen.getByLabelText("Open navigation menu");
-    const openPaletteBtn = screen.getByLabelText("Open command palette");
+    const openPaletteBtns = screen.getAllByLabelText("Open command palette");
     const copyLinkBtn = screen.getByLabelText("Copy a link to this view");
     const presentBtn = screen.getByLabelText("Enter presentation mode");
     const refreshBtn = screen.getByLabelText("Refresh dashboard data");
-    const sampleToggleBtn = screen.getByLabelText("Toggle sample data");
+    const sampleToggleBtn = screen.getByLabelText(/Sample: OFF - switch to sample dataset/);
 
     expect(openMobileNavBtn).toHaveAttribute("type", "button");
-    expect(openPaletteBtn).toHaveAttribute("type", "button");
+    expect(openPaletteBtns[0]).toHaveAttribute("type", "button");
+    expect(openPaletteBtns[1]).toHaveAttribute("type", "button");
     expect(copyLinkBtn).toHaveAttribute("type", "button");
     expect(presentBtn).toHaveAttribute("type", "button");
     expect(refreshBtn).toHaveAttribute("type", "button");
     expect(refreshBtn).toHaveAttribute("title", "Refresh dashboard data (R)");
     expect(sampleToggleBtn).toHaveAttribute("type", "button");
+  });
+
+  it("updates aria-label and title on copy link button click", async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextMock,
+      },
+    });
+
+    const { props } = renderTopBar();
+    const copyLinkBtn = screen.getByLabelText("Copy a link to this view");
+    expect(copyLinkBtn).toHaveAttribute("title", "Copy a link to this view");
+
+    fireEvent.click(copyLinkBtn);
+
+    const copiedBtn = await screen.findByLabelText("Copied link to clipboard");
+    expect(copiedBtn).toBeInTheDocument();
+    expect(copiedBtn).toHaveAttribute("title", "Copied link to clipboard");
+    expect(props.onCopyLink).toHaveBeenCalledTimes(1);
+    // The caller owns the clipboard write; the button must not write again.
+    expect(writeTextMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps the copy link button unconfirmed when the copy fails", async () => {
+    const { props } = renderTopBar({ onCopyLink: vi.fn().mockResolvedValue(false) });
+
+    fireEvent.click(screen.getByLabelText("Copy a link to this view"));
+
+    await waitFor(() => expect(props.onCopyLink).toHaveBeenCalledTimes(1));
+    expect(screen.queryByLabelText("Copied link to clipboard")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Copy a link to this view")).toBeInTheDocument();
   });
 
   it("ensures dropdown menu option items carry explicit type button attributes", () => {
@@ -414,7 +458,7 @@ describe("KpiStrip", () => {
     });
   });
 
-  it("provides hover title tooltips on interactive KPI tiles when onNavigate is passed", () => {
+  it("provides hover title tooltips and visual navigation indicators on interactive KPI tiles when onNavigate is passed", () => {
     const onNavigate = vi.fn();
     render(
       <KpiStrip
@@ -428,6 +472,7 @@ describe("KpiStrip", () => {
     const analyticsButtons = screen.getAllByTitle("Open the analytics panel");
     expect(analyticsButtons.length).toBeGreaterThan(0);
     expect(analyticsButtons[0]).toHaveAttribute("title", "Open the analytics panel");
+    expect(within(analyticsButtons[0]).getByText("Open →")).toBeInTheDocument();
     fireEvent.click(analyticsButtons[0]);
     expect(onNavigate).toHaveBeenCalledWith("analytics");
   });
@@ -513,6 +558,16 @@ describe("CommandPalette", () => {
 
     expect(input).toHaveValue("");
     expect(screen.getAllByRole("option")).toHaveLength(NAV_ITEMS.length + actions.length);
+  });
+
+  it("clears search query on Escape when query is non-empty without closing palette", () => {
+    const { props } = renderPalette();
+    const input = screen.getByLabelText("Search commands");
+    fireEvent.change(input, { target: { value: "guardrail" } });
+    expect(input).toHaveValue("guardrail");
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    expect(input).toHaveValue("");
+    expect(props.onClose).not.toHaveBeenCalled();
   });
 });
 

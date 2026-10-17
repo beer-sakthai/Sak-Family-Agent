@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { Download, Link2, Maximize2, Menu, Minimize2, RefreshCw, Search } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Check, Download, Link2, Maximize2, Menu, Minimize2, RefreshCw, Search } from "lucide-react";
 
 import DemoModeToggle from "@/components/DemoModeToggle";
 import DisplayMenu from "@/components/DisplayMenu";
@@ -43,7 +43,12 @@ interface TopBarProps {
   /** False when the active panel holds no rows — the button says so. */
   canExport: boolean;
   onExport: (format: "json" | "csv") => void;
-  onCopyLink: () => void;
+  /**
+   * Copies the link and reports the result. The caller owns the clipboard
+   * write (and its toast); the button only mirrors the outcome, so one click
+   * is exactly one write.
+   */
+  onCopyLink: () => Promise<boolean>;
   /** Presentation mode hides the chrome for a wall-mounted display. */
   presenting: boolean;
   onPresentingChange: (next: boolean) => void;
@@ -80,7 +85,23 @@ export function TopBar({
   presenting,
   onPresentingChange,
 }: TopBarProps) {
+  const [copied, setCopied] = useState(false);
+  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const item = navItem(active);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
+
+  const handleCopyLink = async () => {
+    if (await onCopyLink()) {
+      setCopied(true);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-line/70 bg-canvas/85 backdrop-blur-xl">
@@ -90,7 +111,7 @@ export function TopBar({
           onClick={onOpenMobileNav}
           aria-label="Open navigation menu"
           title="Open navigation menu"
-          className="rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:hidden"
+          className="rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent lg:hidden"
         >
           <Menu className="h-4 w-4" aria-hidden />
         </button>
@@ -103,6 +124,18 @@ export function TopBar({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Mobile palette trigger: icon-only button so mobile users can open the command palette without a physical keyboard */}
+          <button
+            type="button"
+            onClick={onOpenPalette}
+            aria-label="Open command palette"
+            title="Open command palette"
+            data-chrome="secondary"
+            className="rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent sm:hidden"
+          >
+            <Search className="h-3.5 w-3.5" aria-hidden />
+          </button>
+
           {/* A palette trigger that looks like a search field: the shortcut is
               discoverable without a tour, and it still works on touch. */}
           <button
@@ -111,7 +144,7 @@ export function TopBar({
             aria-label="Open command palette"
             title="Open command palette (Command + K)"
             data-chrome="secondary"
-            className="hidden items-center gap-2 rounded-xl border border-line bg-panel/60 px-3 py-1.5 text-[11px] text-fg-4 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:flex"
+            className="hidden items-center gap-2 rounded-xl border border-line bg-panel/60 px-3 py-1.5 text-[11px] text-fg-4 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent sm:flex"
           >
             <Search className="h-3.5 w-3.5" aria-hidden />
             Jump to…
@@ -169,7 +202,7 @@ export function TopBar({
               onChange={(event) =>
                 onRefreshIntervalChange(Number(event.target.value) as RefreshInterval)
               }
-              className="cursor-pointer rounded bg-transparent text-fg outline-none focus-visible:ring-2 focus-visible:ring-hue-cyan"
+              className="cursor-pointer rounded bg-transparent text-fg outline-hidden focus-visible:ring-2 focus-visible:ring-hue-cyan"
             >
               {REFRESH_INTERVALS.map((seconds) => (
                 <option key={seconds} value={seconds} className="bg-panel text-fg">
@@ -181,13 +214,17 @@ export function TopBar({
 
           <button
             type="button"
-            onClick={onCopyLink}
+            onClick={handleCopyLink}
             data-chrome="secondary"
-            aria-label="Copy a link to this view"
-            title="Copy a link to this view"
-            className="hidden rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:block"
+            aria-label={copied ? "Copied link to clipboard" : "Copy a link to this view"}
+            title={copied ? "Copied link to clipboard" : "Copy a link to this view"}
+            className="hidden rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent sm:block"
           >
-            <Link2 className="h-3.5 w-3.5" aria-hidden />
+            {copied ? (
+              <Check className="h-3.5 w-3.5 text-hue-emerald" aria-hidden />
+            ) : (
+              <Link2 className="h-3.5 w-3.5" aria-hidden />
+            )}
           </button>
 
           {/* A select rather than two buttons: export is a rare action, and
@@ -213,7 +250,7 @@ export function TopBar({
                 // in a row still fires a change event.
                 event.target.value = "";
               }}
-              className="bg-transparent text-fg-2 outline-none disabled:cursor-not-allowed enabled:cursor-pointer"
+              className="bg-transparent text-fg-2 outline-hidden disabled:cursor-not-allowed enabled:cursor-pointer"
             >
               <option value="" className="bg-panel">
                 {canExport ? "Export" : "No rows"}
@@ -243,7 +280,7 @@ export function TopBar({
             aria-pressed={presenting}
             aria-label={presenting ? "Exit presentation mode" : "Enter presentation mode"}
             title={presenting ? "Exit presentation mode" : "Enter presentation mode"}
-            className="rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="rounded-xl border border-line bg-panel/60 p-2 text-fg-3 transition-colors hover:border-line-strong hover:text-fg-2 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
             {presenting ? (
               <Minimize2 className="h-3.5 w-3.5" aria-hidden />
@@ -258,7 +295,7 @@ export function TopBar({
             disabled={isLoading}
             aria-label="Refresh dashboard data"
             title={isLoading ? "Refreshing dashboard data…" : "Refresh dashboard data (R)"}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-3 py-1.5 font-mono text-[11px] text-fg-2 transition-colors hover:border-line-strong disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel/60 px-3 py-1.5 font-mono text-[11px] text-fg-2 transition-colors hover:border-line-strong disabled:opacity-50 disabled:cursor-not-allowed focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
             <RefreshCw className={`h-3 w-3 ${isLoading ? "animate-spin" : ""}`} aria-hidden />
             <span className="hidden sm:inline">
