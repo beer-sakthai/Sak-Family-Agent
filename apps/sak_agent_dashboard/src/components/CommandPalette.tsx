@@ -212,7 +212,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
           {results.length === 0 && (
             <li className="flex flex-col items-center justify-center gap-2 px-3 py-8 text-center font-mono text-xs text-fg-4" role="status">
               <SearchX className="h-5 w-5 text-fg-4/80" aria-hidden="true" />
-              <span>Nothing matches “{query}”.</span>
+              <span>Nothing matches &ldquo;{query}&rdquo;.</span>
               <button
                 type="button"
                 onClick={() => {

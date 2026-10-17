@@ -37,3 +37,7 @@
 ## 2026-10-18 - Popover dismissal and trigger focus restoration on option selection
 **Learning:** Selecting a menu item radio or option button inside a preference popover menu (`role="menuitemradio"`) should dismiss the popover (`setOpen(false)`) and restore focus to the trigger element (`triggerRef.current?.focus()`) to maintain a predictable ARIA focus flow and avoid leaving users stuck inside a fulfilled menu.
 **Action:** Call `setOpen(false)` and `triggerRef.current?.focus()` inside click handlers for preference option items in popover menus.
+
+## 2026-10-21 - Dedicated visual live previews for workbench preset selections
+**Learning:** In UI workbench showcase components like StitchStudio, preset selections (such as `mermaid-arch` architecture diagrams) should render dedicated visual live preview components in the preview panel rather than falling through to raw code text.
+**Action:** Render styled visual flow diagrams or card previews for diagram and UI presets in workbench preview panels.
