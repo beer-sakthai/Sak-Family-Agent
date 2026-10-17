@@ -580,6 +580,30 @@ describe("AuditLogs", () => {
     fireEvent.click(resetBtn);
     expect(onChange).toHaveBeenCalledWith("ALL");
   });
+
+  it("renders table cell title hover tooltips and empty state ShieldX visual icon", () => {
+    const audit = demoAudit();
+    const firstEvent = audit.events[0];
+    const { container, rerender } = render(<AuditLogs audit={audit} severity="ALL" onSeverityChange={vi.fn()} />);
+
+    const timestampCell = screen.getByText(
+      new Date(firstEvent.timestamp * 1000).toISOString().replace("T", " ").slice(0, 19)
+    ).closest("td");
+    expect(timestampCell).toHaveAttribute("title", expect.stringContaining("Recorded at:"));
+
+    const typeCell = screen.getByText(firstEvent.type).closest("td");
+    expect(typeCell).toHaveAttribute("title", `Event type: ${firstEvent.type}`);
+
+    const messageCell = screen.getByText(firstEvent.message).closest("td");
+    expect(messageCell).toHaveAttribute("title", `Event message: ${firstEvent.message}`);
+
+    const empty = { events: [], severity_counts: { high: 0 }, total: 0 };
+    rerender(<AuditLogs audit={empty} severity="high" onSeverityChange={vi.fn()} />);
+
+    const emptyIcon = container.querySelector("td svg");
+    expect(emptyIcon).toBeInTheDocument();
+    expect(emptyIcon).toHaveAttribute("aria-hidden", "true");
+  });
 });
 
 describe("SessionExplorer", () => {
