@@ -204,6 +204,29 @@ class TestWorkflowExecutor(unittest.TestCase):
                     f"Unexpected error message for URL '{url}': {step_res.error}",
                 )
 
+    def test_ssrf_url_blocks_control_characters(self):
+        """Verify that URLs containing ASCII control characters are blocked."""
+        urls = [
+            "http://example.com/api?\nfoo",
+            "http://example.com/api?\rfoo",
+            "http://example.com/api?\tfoo",
+            "http://example.com/api?\0foo",
+        ]
+        for url in urls:
+            with self.subTest(url=url):
+                wf = WorkflowDefinition(
+                    name="ssrf_control_char_test",
+                    steps=[
+                        StepDefinition(id="fetch_step", action="fetch", params={"url": url}),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(history.status, RunStatus.FAILED)
+                step_res = history.step_results["fetch_step"]
+                self.assertEqual(step_res.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res.error)
+                self.assertIn("ascii control characters", step_res.error.lower())
+
     def test_ssrf_url_fragment_stripping(self):
         """Verify that URL fragments are stripped before DNS resolution."""
         # The URL has a fragment that might confuse a naive parser or SSRF filter,
