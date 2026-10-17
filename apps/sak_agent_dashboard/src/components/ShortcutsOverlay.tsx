@@ -194,7 +194,7 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
                 aria-label={`No shortcuts match "${query}"`}
                 className="py-8 text-center font-mono text-xs text-fg-4"
               >
-                No shortcuts match &quot;{query}&quot;
+                {"No shortcuts match \u201C" + query + "\u201D."}
               </div>
             );
           }
