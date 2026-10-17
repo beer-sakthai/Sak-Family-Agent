@@ -7,6 +7,8 @@ import stat
 import sys
 from pathlib import Path
 
+import pytest
+
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "setup_vm_telegram_agents.py"
 SCRIPT_SPEC = importlib.util.spec_from_file_location("setup_vm_telegram_agents", SCRIPT_PATH)
 assert SCRIPT_SPEC is not None and SCRIPT_SPEC.loader is not None
