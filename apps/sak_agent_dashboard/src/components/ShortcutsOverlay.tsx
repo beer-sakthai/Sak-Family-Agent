@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Search, X } from "lucide-react";
+import { Search, SearchX, X } from "lucide-react";
 
 import { useFocusTrap } from "@/lib/focus";
 import { NAV_ITEMS } from "@/lib/nav";
@@ -195,6 +195,7 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
                 className="py-8 text-center font-mono text-xs text-fg-4"
               >
                 {`No shortcuts match \u201C${query}\u201D.`}
+                <SearchX className="h-5 w-5 text-fg-4/80" aria-hidden="true" />
                 <span>No shortcuts match &quot;{query}&quot;</span>
                 <button
                   type="button"

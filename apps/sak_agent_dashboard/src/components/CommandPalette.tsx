@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { CornerDownLeft, Search, X } from "lucide-react";
+import { CornerDownLeft, Search, SearchX, X } from "lucide-react";
 
 import { useFocusTrap } from "@/lib/focus";
 import { highlightSegments, rankBy, type FuzzyMatch } from "@/lib/fuzzy";
@@ -212,6 +212,9 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
           {results.length === 0 && (
             <li className="flex flex-col items-center justify-center gap-2 px-3 py-6 text-center font-mono text-xs text-fg-4" role="status">
               <p>{`Nothing matches \u201C${query}\u201D.`}</p>
+            <li className="flex flex-col items-center justify-center gap-2 px-3 py-8 text-center font-mono text-xs text-fg-4" role="status">
+              <SearchX className="h-5 w-5 text-fg-4/80" aria-hidden="true" />
+              <span>Nothing matches “{query}”.</span>
               <button
                 type="button"
                 aria-label="Clear command palette search query"
