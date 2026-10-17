@@ -866,7 +866,13 @@ export default function Home() {
             </>
           )}
 
-          <section key={activeTab} className="animate-panel-in">
+          <section
+            key={activeTab}
+            id="dashboard-tabpanel"
+            role="tabpanel"
+            aria-label={`${navItem(activeTab).label} section`}
+            className="animate-panel-in"
+          >
             {activeTab === "system" && <SystemView />}
 
             {activeTab === "overview" &&

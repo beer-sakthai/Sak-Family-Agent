@@ -82,9 +82,13 @@ describe("Sidebar", () => {
     return { props, ...render(<Sidebar {...props} />) };
   }
 
-  it("renders one tab per section", () => {
+  it("renders one tab per section with aria-controls referencing the main tabpanel container ID", () => {
     renderSidebar();
-    expect(screen.getAllByRole("tab")).toHaveLength(NAV_ITEMS.length);
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs).toHaveLength(NAV_ITEMS.length);
+    for (const tab of tabs) {
+      expect(tab).toHaveAttribute("aria-controls", "dashboard-tabpanel");
+    }
   });
 
   it("marks the active section", () => {
