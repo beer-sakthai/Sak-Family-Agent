@@ -166,6 +166,35 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
 
         {(() => {
           const q = query.trim().toLowerCase();
+          const g = GENERAL.filter(
+            (s) =>
+              !q ||
+              s.description.toLowerCase().includes(q) ||
+              s.keys.some(
+                (k) =>
+                  k.toLowerCase().includes(q) ||
+                  (KEY_NAMES[k] && KEY_NAMES[k].toLowerCase().includes(q))
+              )
+          ).length;
+          const sec = NAV_ITEMS.map((item, index) => ({
+            shortcut: { keys: [String(index + 1)], description: item.label },
+          })).filter(
+            ({ shortcut }) =>
+              !q ||
+              shortcut.description.toLowerCase().includes(q) ||
+              shortcut.keys.some((k) => k.toLowerCase().includes(q))
+          ).length;
+          const total = g + sec;
+          const statusText = q ? `${total} ${total === 1 ? "shortcut" : "shortcuts"} found` : "";
+          return (
+            <span className="sr-only" role="status" aria-live="polite">
+              {statusText}
+            </span>
+          );
+        })()}
+
+        {(() => {
+          const q = query.trim().toLowerCase();
           const filteredGeneral = GENERAL.filter(
             (s) =>
               !q ||

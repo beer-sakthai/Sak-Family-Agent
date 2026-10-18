@@ -41,3 +41,7 @@
 ## 2026-10-21 - Dedicated visual live previews for workbench preset selections
 **Learning:** In UI workbench showcase components like StitchStudio, preset selections (such as `mermaid-arch` architecture diagrams) should render dedicated visual live preview components in the preview panel rather than falling through to raw code text.
 **Action:** Render styled visual flow diagrams or card previews for diagram and UI presets in workbench preview panels.
+
+## 2026-10-24 - Persistently mounted ARIA polite live region for overlay search filter results
+**Learning:** Overlay search tools (like `ShortcutsOverlay`) benefit from a persistently mounted `<span className="sr-only" role="status" aria-live="polite">` live region that updates its text content with match counts as users type, ensuring screen readers announce dynamic search filter results in real time.
+**Action:** Add a persistently mounted off-screen polite live region updating match count text inside overlay search modals.
