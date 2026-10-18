@@ -19,3 +19,7 @@
 **Vulnerability:** The API dashboard `fetchJson` used single validation but allowed recursively decoded URLs, exposing the system to Server-Side Request Forgery via double-encoding (e.g. `%252F%252F`).
 **Learning:** Defending against SSRF requires deep, bounded unquoting in `try/catch` blocks to catch encoding tricks without blocking legitimate queries containing raw `%` symbols.
 **Prevention:** Apply a robust bounding unquote mechanism that defaults safely when decoding fails.
+## 2026-10-18 - DoS via Unhandled TypeError in compare_digest
+**Vulnerability:** The API server in `scripts/serve_api.py` called `secrets.compare_digest(val, expected_token)` directly. Since `compare_digest` only supports ASCII string operands, feeding it a string with a non-ASCII character (e.g., in an `Authorization` header or `?token=` parameter) raised a `TypeError`, crashing the connection handler.
+**Learning:** Security functions like `compare_digest` often have strict input constraints. Exposing them directly to unvalidated network input (like headers) can inadvertently create Denial of Service (DoS) vectors.
+**Prevention:** Always encode user-provided strings to bytes (e.g., `.encode("utf-8")`) before using them with `secrets.compare_digest` to ensure type safety and prevent unhandled exceptions.
