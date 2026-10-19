@@ -36,6 +36,11 @@ function NavButton({
   register: (index: number) => (element: HTMLElement | null) => void;
 }) {
   const Icon = item.icon;
+  const countLabel = count !== undefined ? ` (${count})` : "";
+  const fullLabel = `${item.label}${countLabel}`;
+  const titleText = collapsed
+    ? fullLabel
+    : `Switch to ${item.label} section${count !== undefined ? ` (${count})` : ""}`;
   return (
     <button
       ref={register(index)}
@@ -43,12 +48,12 @@ function NavButton({
       role="tab"
       aria-selected={active}
       aria-controls="dashboard-tabpanel"
-      aria-label={item.label}
+      aria-label={fullLabel}
       // Roving tabindex: the tablist is one tab stop and the arrow keys move
       // within it, per the WAI-ARIA authoring practice. Seven tab stops
       // between the page start and the panel is the alternative.
       tabIndex={active ? 0 : -1}
-      title={collapsed ? item.label : `Switch to ${item.label} section`}
+      title={titleText}
       onClick={() => onSelect(item.id)}
       className={`group relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
         active
