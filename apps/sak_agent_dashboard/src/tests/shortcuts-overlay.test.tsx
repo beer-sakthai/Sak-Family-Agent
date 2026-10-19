@@ -113,4 +113,17 @@ describe("ShortcutsOverlay", () => {
     expect(searchInput).toHaveValue("");
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it("announces matching result count in an off-screen polite live region as user searches shortcuts", () => {
+    renderShortcutsOverlay();
+    const searchInput = screen.getByRole("searchbox", { name: "Filter keyboard shortcuts" });
+
+    fireEvent.change(searchInput, { target: { value: "command" } });
+    const liveRegion = screen.getByRole("status", {
+      name: (content) => content.includes("shortcut") || content.includes("shortcuts"),
+    });
+    expect(liveRegion).toBeInTheDocument();
+    expect(liveRegion).toHaveAttribute("aria-live", "polite");
+    expect(liveRegion).toHaveTextContent("1 shortcut found.");
+  });
 });

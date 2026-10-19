@@ -573,6 +573,22 @@ describe("CommandPalette", () => {
     expect(input).toHaveValue("");
     expect(props.onClose).not.toHaveBeenCalled();
   });
+
+  it("announces match result counts in an off-screen polite live region as the query changes", () => {
+    renderPalette();
+    const liveRegion = screen.getByRole("status", {
+      name: (content) => content.includes("commands") || content.includes("command"),
+    });
+    expect(liveRegion).toBeInTheDocument();
+    expect(liveRegion).toHaveAttribute("aria-live", "polite");
+    expect(liveRegion).toHaveTextContent(`${NAV_ITEMS.length + actions.length} commands available.`);
+
+    fireEvent.change(screen.getByLabelText("Search commands"), { target: { value: "guardrail" } });
+    expect(liveRegion).toHaveTextContent("1 command found.");
+
+    fireEvent.change(screen.getByLabelText("Search commands"), { target: { value: "nonexistent" } });
+    expect(liveRegion).toHaveTextContent('No commands match "nonexistent".');
+  });
 });
 
 describe("HostedNotice", () => {
