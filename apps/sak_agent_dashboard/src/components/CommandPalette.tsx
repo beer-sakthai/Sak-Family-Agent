@@ -202,6 +202,12 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
           </kbd>
         </div>
 
+        <span className="sr-only" role="status" aria-live="polite">
+          {query.trim()
+            ? `${results.length} ${results.length === 1 ? "command" : "commands"} found`
+            : ""}
+        </span>
+
         <ul
           id="command-palette-listbox"
           ref={listRef}
