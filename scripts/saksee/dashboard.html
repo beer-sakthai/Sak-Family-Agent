@@ -119,8 +119,8 @@ async function searchRAG() {
     results.innerHTML = d.results.map(r => 
       '<div style=\"padding:8px;margin-bottom:8px;background:#0d1117;border-radius:6px;font-size:13px\">' +
       '<div style=\"color:' + (r.score > 0.5 ? '#3fb950' : '#d29922') + ';font-size:11px;margin-bottom:4px\">' +
-      r.score + ' · ' + r.agent + ' · ' + r.source.split('/').slice(-2).join('/') + '</div>' +
-      '<div>' + r.text + '</div></div>'
+      r.score + ' · ' + escapeHtml(r.agent) + ' · ' + escapeHtml(r.source.split('/').slice(-2).join('/')) + '</div>' +
+      '<div>' + escapeHtml(r.text) + '</div></div>'
     ).join('');
   } catch(e) {
     results.innerHTML = '<div style=\"color:#f85149\">Error: ' + escapeHtml(e.message) + '</div>';

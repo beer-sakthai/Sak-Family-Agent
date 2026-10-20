@@ -41,14 +41,30 @@ export class ApiSource implements DashboardSource {
     // SSRF and Token Exfiltration protection:
     // Prevent protocol-relative URLs, absolute URLs with a scheme, and backslashes
     // that might bypass base URL prefixing.
-    if (pathname.includes("\\")) {
+    let validationPath = pathname;
+    for (let i = 0; i < 5; i++) {
+      try {
+        const decoded = decodeURIComponent(validationPath);
+        if (decoded === validationPath) break;
+        validationPath = decoded;
+      } catch {
+        // If URI is malformed, stop decoding and use what we have
+        break;
+      }
+    }
+
+    if (validationPath.includes("\\")) {
       throw new Error("Invalid path format: protocol-relative and absolute paths are blocked");
     }
 
     const url = new URL(pathname, this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`);
+    const validationUrl = new URL(
+      validationPath,
+      this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`,
+    );
     const baseUrlObj = new URL(this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`);
 
-    if (url.origin !== baseUrlObj.origin) {
+    if (validationUrl.origin !== baseUrlObj.origin) {
       throw new Error("Invalid path format: protocol-relative and absolute paths are blocked");
     }
     for (const [key, value] of Object.entries(params)) {
