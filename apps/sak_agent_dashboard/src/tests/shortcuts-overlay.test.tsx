@@ -113,4 +113,15 @@ describe("ShortcutsOverlay", () => {
     expect(searchInput).toHaveValue("");
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it("announces match count updates to screen readers via polite live region", () => {
+    renderShortcutsOverlay();
+    const searchInput = screen.getByRole("searchbox", { name: "Filter keyboard shortcuts" });
+
+    fireEvent.change(searchInput, { target: { value: "command" } });
+    expect(screen.getByText("1 shortcut found")).toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "nonexistent query" } });
+    expect(screen.getByText("0 shortcuts found")).toBeInTheDocument();
+  });
 });

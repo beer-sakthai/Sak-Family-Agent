@@ -426,6 +426,35 @@ describe("MemoryExplorer", () => {
     expect(shardBadges.length).toBeGreaterThan(0);
   });
 
+  it("provides hover title tooltips on fact and observation table cells", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const firstFact = demoMemory().facts[0];
+    const factIdCell = screen.getByTitle(`Fact ID: ${firstFact.id}`);
+    expect(factIdCell).toBeInTheDocument();
+    expect(factIdCell.tagName.toLowerCase()).toBe("td");
+
+    const factKindTitle = `Fact kind: ${firstFact.kind}${firstFact.key ? ` / key: ${firstFact.key}` : ""}`;
+    const factKindCell = screen.getByTitle(factKindTitle);
+    expect(factKindCell).toBeInTheDocument();
+    expect(factKindCell.tagName.toLowerCase()).toBe("td");
+
+    const factValueCell = screen.getByTitle(`Fact value: ${firstFact.value}`);
+    expect(factValueCell).toBeInTheDocument();
+    expect(factValueCell.tagName.toLowerCase()).toBe("td");
+
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+    fireEvent.click(obsTab);
+
+    const firstObs = demoMemory().observations[0];
+    const obsIdCell = screen.getByTitle(`Observation ID: ${firstObs.id}`);
+    expect(obsIdCell).toBeInTheDocument();
+    expect(obsIdCell.tagName.toLowerCase()).toBe("td");
+
+    const obsSummaryCell = screen.getByTitle(`Observation summary: ${firstObs.summary}`);
+    expect(obsSummaryCell).toBeInTheDocument();
+    expect(obsSummaryCell.tagName.toLowerCase()).toBe("td");
+  });
+
   it("provides title tooltips and aria-labels on observation weight and confidence cells", () => {
     render(<MemoryExplorer memory={demoMemory()} />);
     const obsTab = screen.getByRole("tab", { name: /Observations/ });
@@ -707,6 +736,25 @@ describe("SessionExplorer", () => {
     expect(drawerModel).toBeInTheDocument();
     expect(drawerModel).toHaveAttribute("title", expectedTitle);
     expect(drawerModel).toHaveTextContent(expectedModel);
+  });
+
+  it("provides hover title tooltips on Task, When, and Tokens table cells", () => {
+    const firstSession = sessions.sessions[0];
+    renderExplorer();
+
+    const taskTitle = firstSession.task ? `Task: ${firstSession.task}` : "Task not recorded";
+    const taskCell = screen.getByTitle(taskTitle);
+    expect(taskCell).toBeInTheDocument();
+    expect(taskCell.tagName.toLowerCase()).toBe("td");
+
+    const isoWhen = new Date(firstSession.timestamp * 1000).toISOString().replace("T", " ").slice(0, 19);
+    const whenCell = screen.getByTitle(`Recorded at: ${isoWhen}`);
+    expect(whenCell).toBeInTheDocument();
+    expect(whenCell.tagName.toLowerCase()).toBe("td");
+
+    const tokensCell = screen.getByTitle(`Total tokens: ${firstSession.tokens.total_tokens.toLocaleString()}`);
+    expect(tokensCell).toBeInTheDocument();
+    expect(tokensCell.tagName.toLowerCase()).toBe("td");
   });
 
   it("sends search upward for a server-side query", () => {
