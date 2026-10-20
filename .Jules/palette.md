@@ -40,4 +40,12 @@
 
 ## 2026-10-21 - Dedicated visual live previews for workbench preset selections
 **Learning:** In UI workbench showcase components like StitchStudio, preset selections (such as `mermaid-arch` architecture diagrams) should render dedicated visual live preview components in the preview panel rather than falling through to raw code text.
-**Action:** Render styled visual flow diagrams or card previews for diagram and UI presets in workbench preview panels.
+**Action:** Render styled visual flow diagrams or card previews for diagram and UI presets in workbench preset panels.
+
+## 2026-10-24 - Section badge count metrics in tablist aria-label and collapsed hover tooltips
+**Learning:** Navigation tab buttons carrying badge counts (e.g. `Sessions` with badge `42`) should include the count metric in `aria-label` and hover `title` tooltips so screen readers announce section metrics during tablist navigation and collapsed sidebar hover tooltips expose metrics to desktop users.
+**Action:** Include section count metrics in `aria-label` and `title` attributes on navigation tab buttons when count metrics are defined.
+
+## 2026-10-27 - Explicit top-full vertical anchor class on absolute popovers
+**Learning:** Popover menus rendered inside `relative` trigger containers require an explicit `top-full` (`top: 100%`) CSS positioning utility class so the popover panel anchors directly below the trigger button rather than overlapping it with browser-default static top positioning.
+**Action:** Include `top-full` on `absolute` popover containers alongside `right-0` and `mt-2` when positioned inside relative trigger wrappers.
