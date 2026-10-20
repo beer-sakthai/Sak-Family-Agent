@@ -738,6 +738,25 @@ describe("SessionExplorer", () => {
     expect(drawerModel).toHaveTextContent(expectedModel);
   });
 
+  it("provides hover title tooltips on Task, When, and Tokens table cells", () => {
+    const firstSession = sessions.sessions[0];
+    renderExplorer();
+
+    const taskTitle = firstSession.task ? `Task: ${firstSession.task}` : "Task not recorded";
+    const taskCell = screen.getByTitle(taskTitle);
+    expect(taskCell).toBeInTheDocument();
+    expect(taskCell.tagName.toLowerCase()).toBe("td");
+
+    const isoWhen = new Date(firstSession.timestamp * 1000).toISOString().replace("T", " ").slice(0, 19);
+    const whenCell = screen.getByTitle(`Recorded at: ${isoWhen}`);
+    expect(whenCell).toBeInTheDocument();
+    expect(whenCell.tagName.toLowerCase()).toBe("td");
+
+    const tokensCell = screen.getByTitle(`Total tokens: ${firstSession.tokens.total_tokens.toLocaleString()}`);
+    expect(tokensCell).toBeInTheDocument();
+    expect(tokensCell.tagName.toLowerCase()).toBe("td");
+  });
+
   it("sends search upward for a server-side query", () => {
     const onSearchChange = vi.fn();
     renderExplorer({ onSearchChange });
