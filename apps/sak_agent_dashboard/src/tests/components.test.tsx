@@ -991,6 +991,18 @@ describe("WorkflowRuns", () => {
     expect(statusPill).toHaveAttribute("title", "Workflow run status: completed");
   });
 
+  it("provides hover title tooltips on Workflow, Started, Duration, and Steps table cells", () => {
+    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
+    const run = workflows.runs[0];
+    const workflowTitle = `Workflow: ${run.workflow_name || run.run_id} (${run.run_id})`;
+    expect(screen.getByTitle(workflowTitle)).toBeInTheDocument();
+
+    const isoStarted = run.started_at ? run.started_at.replace("T", " ").slice(0, 19) : "—";
+    expect(screen.getByTitle(`Started: ${isoStarted}`)).toBeInTheDocument();
+    expect(screen.getAllByTitle(/Duration:/).length).toBeGreaterThan(0);
+    expect(screen.getAllByTitle(/Total steps:/).length).toBeGreaterThan(0);
+  });
+
   it("marks failed steps", () => {
     render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
     expect(screen.getByText("(1 failed)")).toBeInTheDocument();
@@ -1007,7 +1019,7 @@ describe("WorkflowRuns", () => {
     expect(onRunSelect).toHaveBeenCalledWith(workflows.runs[0].run_id);
   });
 
-  it("shows step detail in the drawer", () => {
+  it("shows step detail in the drawer with metric title tooltips", () => {
     const detail = {
       summary: workflows.runs[0],
       steps: [
@@ -1018,7 +1030,7 @@ describe("WorkflowRuns", () => {
           error: "boom",
           started_at: null,
           finished_at: null,
-          duration_seconds: null,
+          duration_seconds: 1.5,
         },
       ],
     };
@@ -1033,13 +1045,16 @@ describe("WorkflowRuns", () => {
     expect(screen.getByText("fetch")).toBeInTheDocument();
     expect(screen.getByText("boom")).toBeInTheDocument();
     expect(screen.getByText("3 attempts")).toBeInTheDocument();
+    expect(screen.getByTitle("Step duration: 1.5s")).toBeInTheDocument();
+    expect(screen.getByTitle("Execution attempts: 3")).toBeInTheDocument();
   });
 
-  it("renders an empty state with contextual icon and message", () => {
+  it("renders an empty state with contextual icon, message, and explanatory guidance", () => {
     const { container } = render(
       <WorkflowRuns runs={[]} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
     );
     expect(screen.getByText("No workflow runs recorded yet.")).toBeInTheDocument();
+    expect(screen.getByText(/are logged here when running multi-step agent workflows/)).toBeInTheDocument();
     const svgIcon = container.querySelector("td svg");
     expect(svgIcon).toBeInTheDocument();
     expect(svgIcon).toHaveAttribute("aria-hidden", "true");
