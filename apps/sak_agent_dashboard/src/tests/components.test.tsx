@@ -171,6 +171,22 @@ describe("AgentCard", () => {
     expect(progressbar).toHaveAttribute("aria-valuemax", "100");
     expect(progressbar).toHaveAttribute("aria-valuetext", "80.0% success rate");
   });
+
+  it("renders average latency, executions metric blocks, and token/error badges with title tooltips", () => {
+    const agent: PersonaSummary = { ...active, runs: 10, avg_latency_ms: 250, input_tokens: 500, output_tokens: 500, errors: 1 };
+    render(<AgentCard agent={agent} />);
+    const latencyBlock = screen.getByTitle("Average latency: 250ms");
+    expect(latencyBlock).toBeInTheDocument();
+
+    const execBlock = screen.getByTitle("Total executions: 10 runs");
+    expect(execBlock).toBeInTheDocument();
+
+    const tokenBadge = screen.getByTitle("Total token usage: 1,000 tokens");
+    expect(tokenBadge).toBeInTheDocument();
+
+    const errorBadge = screen.getByTitle("Recorded errors: 1");
+    expect(errorBadge).toBeInTheDocument();
+  });
 });
 
 describe("AgentOverview", () => {
