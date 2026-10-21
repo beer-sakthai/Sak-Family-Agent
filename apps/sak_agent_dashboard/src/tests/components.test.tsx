@@ -237,6 +237,28 @@ describe("AgentOverview", () => {
     render(<AgentOverview personas={{ ...personas, unattributed_runs: 0 }} />);
     expect(screen.queryByText(/unattributed/)).not.toBeInTheDocument();
   });
+
+  it("renders inline Clear filter button when persona filtering is active and calls onSelect([]) on click", () => {
+    const onSelect = vi.fn();
+    const { rerender } = render(
+      <AgentOverview personas={personas} selected={["sakthai"]} onSelect={onSelect} />,
+    );
+
+    const clearButton = screen.getByRole("button", {
+      name: "Clear persona filter and show all personas",
+    });
+    expect(clearButton).toBeInTheDocument();
+    expect(clearButton).toHaveAttribute("type", "button");
+    expect(clearButton).toHaveAttribute("title", "Clear filter");
+
+    fireEvent.click(clearButton);
+    expect(onSelect).toHaveBeenCalledWith([]);
+
+    rerender(<AgentOverview personas={personas} selected={[]} onSelect={onSelect} />);
+    expect(
+      screen.queryByRole("button", { name: "Clear persona filter and show all personas" }),
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe("AnalyticsCharts", () => {
