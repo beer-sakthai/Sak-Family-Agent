@@ -119,6 +119,7 @@ describe("ShortcutsOverlay", () => {
     const searchInput = screen.getByRole("searchbox", { name: "Filter keyboard shortcuts" });
 
     fireEvent.change(searchInput, { target: { value: "command" } });
+    expect(screen.getByText("1 shortcut found")).toHaveClass("sr-only");
     expect(screen.getByText("1 shortcut found")).toBeInTheDocument();
 
     fireEvent.change(searchInput, { target: { value: "nonexistent query" } });

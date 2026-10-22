@@ -207,6 +207,9 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
         </div>
 
         <span className="sr-only" role="status" aria-live="polite">
+          {query.trim()
+            ? `${results.length} ${results.length === 1 ? "command" : "commands"} found`
+            : ""}
           {liveStatus}
         </span>
 

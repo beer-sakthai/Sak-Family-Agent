@@ -573,6 +573,13 @@ describe("CommandPalette", () => {
     expect(input).toHaveValue("");
     expect(props.onClose).not.toHaveBeenCalled();
   });
+
+  it("announces match count updates to screen readers via polite live region", () => {
+    renderPalette();
+    const input = screen.getByLabelText("Search commands");
+    fireEvent.change(input, { target: { value: "guardrail" } });
+    expect(screen.getByText("1 command found")).toHaveClass("sr-only");
+  });
 });
 
 describe("HostedNotice", () => {

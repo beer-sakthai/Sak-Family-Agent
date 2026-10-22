@@ -187,6 +187,13 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
               shortcut.keys.some((k) => k.toLowerCase().includes(q))
           );
 
+          const totalCount = filteredGeneral.length + filteredSections.length;
+
+          if (filteredGeneral.length === 0 && filteredSections.length === 0) {
+            return (
+              <React.Fragment>
+                <span className="sr-only" role="status" aria-live="polite">
+                  No shortcuts found
           const totalMatches = filteredGeneral.length + filteredSections.length;
           const liveStatus = query.trim()
             ? `${totalMatches} shortcut${totalMatches === 1 ? "" : "s"} found`
@@ -215,11 +222,20 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
                     Clear search filter
                   </button>
                 </div>
+              </React.Fragment>
               </>
             );
           }
 
           return (
+            <React.Fragment>
+              <span className="sr-only" role="status" aria-live="polite">
+                {query.trim()
+                  ? `${totalCount} ${totalCount === 1 ? "shortcut" : "shortcuts"} found`
+                  : ""}
+              </span>
+              <div className="grid gap-6 sm:grid-cols-2">
+              {filteredGeneral.length > 0 && (
             <>
               <span className="sr-only" role="status" aria-live="polite">
                 {liveStatus}
@@ -249,6 +265,9 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
                     ))}
                   </ul>
                 </section>
+              )}
+            </div>
+          </React.Fragment>
                 )}
               </div>
             </>
