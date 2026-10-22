@@ -171,6 +171,22 @@ describe("AgentCard", () => {
     expect(progressbar).toHaveAttribute("aria-valuemax", "100");
     expect(progressbar).toHaveAttribute("aria-valuetext", "80.0% success rate");
   });
+
+  it("renders average latency, executions metric blocks, and token/error badges with title tooltips", () => {
+    const agent: PersonaSummary = { ...active, runs: 10, avg_latency_ms: 250, input_tokens: 500, output_tokens: 500, errors: 1 };
+    render(<AgentCard agent={agent} />);
+    const latencyBlock = screen.getByTitle("Average latency: 250ms");
+    expect(latencyBlock).toBeInTheDocument();
+
+    const execBlock = screen.getByTitle("Total executions: 10 runs");
+    expect(execBlock).toBeInTheDocument();
+
+    const tokenBadge = screen.getByTitle("Total token usage: 1,000 tokens");
+    expect(tokenBadge).toBeInTheDocument();
+
+    const errorBadge = screen.getByTitle("Recorded errors: 1");
+    expect(errorBadge).toBeInTheDocument();
+  });
 });
 
 describe("AgentOverview", () => {
@@ -235,6 +251,26 @@ describe("AgentOverview", () => {
 
     fireEvent.click(clearButton);
     expect(onSelect).toHaveBeenCalledWith([]);
+  it("renders inline Clear filter button when persona filtering is active and calls onSelect([]) on click", () => {
+    const onSelect = vi.fn();
+    const { rerender } = render(
+      <AgentOverview personas={personas} selected={["sakthai"]} onSelect={onSelect} />,
+    );
+
+    const clearButton = screen.getByRole("button", {
+      name: "Clear persona filter and show all personas",
+    });
+    expect(clearButton).toBeInTheDocument();
+    expect(clearButton).toHaveAttribute("type", "button");
+    expect(clearButton).toHaveAttribute("title", "Clear filter");
+
+    fireEvent.click(clearButton);
+    expect(onSelect).toHaveBeenCalledWith([]);
+
+    rerender(<AgentOverview personas={personas} selected={[]} onSelect={onSelect} />);
+    expect(
+      screen.queryByRole("button", { name: "Clear persona filter and show all personas" }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -968,6 +1004,18 @@ describe("WorkflowRuns", () => {
     expect(statusPill).toHaveAttribute("title", "Workflow run status: completed");
   });
 
+  it("provides hover title tooltips on Workflow, Started, Duration, and Steps table cells", () => {
+    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
+    const run = workflows.runs[0];
+    const workflowTitle = `Workflow: ${run.workflow_name || run.run_id} (${run.run_id})`;
+    expect(screen.getByTitle(workflowTitle)).toBeInTheDocument();
+
+    const isoStarted = run.started_at ? run.started_at.replace("T", " ").slice(0, 19) : "—";
+    expect(screen.getByTitle(`Started: ${isoStarted}`)).toBeInTheDocument();
+    expect(screen.getAllByTitle(/Duration:/).length).toBeGreaterThan(0);
+    expect(screen.getAllByTitle(/Total steps:/).length).toBeGreaterThan(0);
+  });
+
   it("marks failed steps", () => {
     render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
     expect(screen.getByText("(1 failed)")).toBeInTheDocument();
@@ -984,7 +1032,7 @@ describe("WorkflowRuns", () => {
     expect(onRunSelect).toHaveBeenCalledWith(workflows.runs[0].run_id);
   });
 
-  it("shows step detail in the drawer", () => {
+  it("shows step detail in the drawer with metric title tooltips", () => {
     const detail = {
       summary: workflows.runs[0],
       steps: [
@@ -995,7 +1043,7 @@ describe("WorkflowRuns", () => {
           error: "boom",
           started_at: null,
           finished_at: null,
-          duration_seconds: null,
+          duration_seconds: 1.5,
         },
       ],
     };
@@ -1010,13 +1058,16 @@ describe("WorkflowRuns", () => {
     expect(screen.getByText("fetch")).toBeInTheDocument();
     expect(screen.getByText("boom")).toBeInTheDocument();
     expect(screen.getByText("3 attempts")).toBeInTheDocument();
+    expect(screen.getByTitle("Step duration: 1.5s")).toBeInTheDocument();
+    expect(screen.getByTitle("Execution attempts: 3")).toBeInTheDocument();
   });
 
-  it("renders an empty state with contextual icon and message", () => {
+  it("renders an empty state with contextual icon, message, and explanatory guidance", () => {
     const { container } = render(
       <WorkflowRuns runs={[]} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
     );
     expect(screen.getByText("No workflow runs recorded yet.")).toBeInTheDocument();
+    expect(screen.getByText(/are logged here when running multi-step agent workflows/)).toBeInTheDocument();
     const svgIcon = container.querySelector("td svg");
     expect(svgIcon).toBeInTheDocument();
     expect(svgIcon).toHaveAttribute("aria-hidden", "true");
@@ -1573,5 +1624,16 @@ describe("CommandPalette", () => {
     fireEvent.click(clearButton);
     expect(combobox).toHaveValue("");
     expect(screen.queryByText(/Nothing matches/)).not.toBeInTheDocument();
+  });
+
+  it("announces match count updates to screen readers via polite live region", () => {
+    render(<CommandPalette onClose={vi.fn()} onNavigate={vi.fn()} actions={[]} />);
+    const combobox = screen.getByRole("combobox", { name: "Search commands" });
+
+    fireEvent.change(combobox, { target: { value: "Overview" } });
+    expect(screen.getByText("1 command found")).toBeInTheDocument();
+
+    fireEvent.change(combobox, { target: { value: "nonexistentquery123" } });
+    expect(screen.getByText("0 commands found")).toBeInTheDocument();
   });
 });
