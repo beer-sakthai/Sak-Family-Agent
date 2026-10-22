@@ -66,7 +66,7 @@ function Sparkline({ values, className }: { values: number[]; className: string 
     <svg
       viewBox="0 0 100 28"
       preserveAspectRatio="none"
-      aria-hidden
+      aria-hidden="true"
       className={`absolute inset-x-0 bottom-0 h-7 w-full opacity-30 ${className}`}
     >
       <polyline points={points} fill="none" stroke="currentColor" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
@@ -93,7 +93,9 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
           "aria-label": `${tile.label}: ${tile.value}. Open the ${target} panel.`,
           title: `Open the ${target} panel`,
         }
-      : {};
+      : {
+          title: `${tile.label}: ${tile.value}${tile.hint ? ` (${tile.hint})` : ""}`,
+        };
 
   return (
     // pb-9 reserves the strip the sparkline occupies, so the line sits under
