@@ -139,6 +139,13 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
     }
   };
 
+  const liveStatus =
+    query.trim() === ""
+      ? `${results.length} commands available.`
+      : results.length === 0
+        ? `No commands match "${query}".`
+        : `${results.length} command${results.length === 1 ? "" : "s"} found`;
+
   return (
     <div className="fixed inset-0 z-60 flex items-start justify-center p-4 pt-[12vh]">
       <button
@@ -202,35 +209,8 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
           </kbd>
         </div>
 
-        <span className="sr-only" role="status" aria-live="polite">
+        <span className="sr-only" role="status" aria-live="polite" aria-label={liveStatus}>
           {liveStatus}
-        </span>
-
-        <span
-          className="sr-only"
-          role="status"
-          aria-live="polite"
-          aria-label={
-            query.trim() !== "" && results.length > 0
-              ? `${results.length} command${results.length === 1 ? "" : "s"} found`
-              : undefined
-          }
-        >
-          {query.trim() !== "" && results.length > 0
-            ? `${results.length} command${results.length === 1 ? "" : "s"} found`
-            : ""}
-            query.trim() === ""
-              ? `${results.length} commands available.`
-              : results.length === 0
-                ? `No commands match "${query}".`
-                : `${results.length} command${results.length === 1 ? "" : "s"} found.`
-          }
-        >
-          {query.trim() === ""
-            ? `${results.length} commands available.`
-            : results.length === 0
-              ? `No commands match "${query}".`
-              : `${results.length} command${results.length === 1 ? "" : "s"} found.`}
         </span>
 
         <ul
