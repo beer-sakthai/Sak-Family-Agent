@@ -1612,4 +1612,15 @@ describe("CommandPalette", () => {
     expect(combobox).toHaveValue("");
     expect(screen.queryByText(/Nothing matches/)).not.toBeInTheDocument();
   });
+
+  it("announces match count updates to screen readers via polite live region", () => {
+    render(<CommandPalette onClose={vi.fn()} onNavigate={vi.fn()} actions={[]} />);
+    const combobox = screen.getByRole("combobox", { name: "Search commands" });
+
+    fireEvent.change(combobox, { target: { value: "Overview" } });
+    expect(screen.getByText("1 command found")).toBeInTheDocument();
+
+    fireEvent.change(combobox, { target: { value: "nonexistentquery123" } });
+    expect(screen.getByText("0 commands found")).toBeInTheDocument();
+  });
 });
