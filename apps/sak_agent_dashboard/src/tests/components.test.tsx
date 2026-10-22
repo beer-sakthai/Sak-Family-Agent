@@ -1345,6 +1345,7 @@ describe("DisplayMenu", () => {
     expect(menuItems[0]).toHaveFocus();
   });
 
+  it("closes popover and restores trigger focus on selecting a theme or density option", () => {
   it("dismisses popover and restores focus to trigger button when theme or density is selected", () => {
     const onThemeChange = vi.fn();
     const onDensityChange = vi.fn();
@@ -1360,6 +1361,11 @@ describe("DisplayMenu", () => {
     );
 
     const trigger = screen.getByRole("button", { name: "Display settings" });
+
+    // Test theme selection closes popover and restores trigger focus
+    fireEvent.click(trigger);
+    const darkThemeItem = screen.getByRole("menuitemradio", { name: /Dark/ });
+    fireEvent.click(darkThemeItem);
     fireEvent.click(trigger);
 
     const darkThemeOption = screen.getByRole("menuitemradio", { name: "Dark" });
@@ -1369,6 +1375,10 @@ describe("DisplayMenu", () => {
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
 
+    // Test density selection closes popover and restores trigger focus
+    fireEvent.click(trigger);
+    const compactDensityItem = screen.getByRole("menuitemradio", { name: /Compact/ });
+    fireEvent.click(compactDensityItem);
     fireEvent.click(trigger);
     const compactDensityOption = screen.getByRole("menuitemradio", { name: "Compact" });
     fireEvent.click(compactDensityOption);
