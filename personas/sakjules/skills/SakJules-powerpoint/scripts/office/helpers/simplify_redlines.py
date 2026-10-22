@@ -10,10 +10,10 @@ Rules:
 - Only merges if truly adjacent (only whitespace between them)
 """
 
-import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
 
+import defusedxml.ElementTree as ET
 import defusedxml.minidom
 
 WORD_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
@@ -192,6 +192,5 @@ def infer_author(modified_dir: Path, original_docx: Path, default: str = "Claude
         return next(iter(new_changes))
 
     raise ValueError(
-        f"Multiple authors added new changes: {new_changes}. "
-        "Cannot infer which author to validate."
+        f"Multiple authors added new changes: {new_changes}. Cannot infer which author to validate."
     )
