@@ -40,6 +40,11 @@
 
 ## 2026-10-21 - Dedicated visual live previews for workbench preset selections
 **Learning:** In UI workbench showcase components like StitchStudio, preset selections (such as `mermaid-arch` architecture diagrams) should render dedicated visual live preview components in the preview panel rather than falling through to raw code text.
+**Action:** Render styled visual flow diagrams or card previews for diagram and UI presets in workbench preview panels.
+
+## 2026-10-25 - Screen reader live status announcements for overlay search query results
+**Learning:** In overlay search tools (such as CommandPalette and ShortcutsOverlay), adding an off-screen `role="status"` polite live region when a search query is active and matches exist ensures screen reader users receive immediate verbal feedback on matching result counts as they type.
+**Action:** Include a `<span className="sr-only" role="status" aria-live="polite">` element reporting the match count when search queries are active in overlay modal filters.
 **Action:** Render styled visual flow diagrams or card previews for diagram and UI presets in workbench preset panels.
 
 ## 2026-10-24 - Section badge count metrics in tablist aria-label and collapsed hover tooltips
