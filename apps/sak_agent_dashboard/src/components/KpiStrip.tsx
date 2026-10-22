@@ -93,7 +93,9 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
           "aria-label": `${tile.label}: ${tile.value}. Open the ${target} panel.`,
           title: `Open the ${target} panel`,
         }
-      : {};
+      : {
+          title: `${tile.label}: ${tile.value}${tile.hint ? ` (${tile.hint})` : ""}`,
+        };
 
   return (
     // pb-9 reserves the strip the sparkline occupies, so the line sits under

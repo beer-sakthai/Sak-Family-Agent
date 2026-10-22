@@ -480,6 +480,21 @@ describe("KpiStrip", () => {
     fireEvent.click(analyticsButtons[0]);
     expect(onNavigate).toHaveBeenCalledWith("analytics");
   });
+
+  it("renders descriptive title hover tooltips on non-interactive KPI tiles", () => {
+    render(
+      <KpiStrip
+        metrics={metrics}
+        memory={demoMemory()}
+        sessions={demoSessions()}
+        audit={demoAudit()}
+      />,
+    );
+    const successTile = screen.getByTitle(/Success rate:/);
+    expect(successTile).toBeInTheDocument();
+    const latencyTile = screen.getByTitle(/Avg latency:/);
+    expect(latencyTile).toBeInTheDocument();
+  });
 });
 
 describe("CommandPalette", () => {
