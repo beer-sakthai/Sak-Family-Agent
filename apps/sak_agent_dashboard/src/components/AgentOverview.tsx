@@ -1,8 +1,6 @@
 "use client";
 
 import React from "react";
-import { RotateCcw } from "lucide-react";
-import { X } from "lucide-react";
 
 import type { PersonasPayload, TrendPoint } from "@/lib/contracts.generated";
 import ActivityHeatmap from "./ActivityHeatmap";

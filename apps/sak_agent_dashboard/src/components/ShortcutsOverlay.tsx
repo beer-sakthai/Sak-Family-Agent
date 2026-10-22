@@ -166,6 +166,35 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
 
         {(() => {
           const q = query.trim().toLowerCase();
+          const g = GENERAL.filter(
+            (s) =>
+              !q ||
+              s.description.toLowerCase().includes(q) ||
+              s.keys.some(
+                (k) =>
+                  k.toLowerCase().includes(q) ||
+                  (KEY_NAMES[k] && KEY_NAMES[k].toLowerCase().includes(q))
+              )
+          ).length;
+          const sec = NAV_ITEMS.map((item, index) => ({
+            shortcut: { keys: [String(index + 1)], description: item.label },
+          })).filter(
+            ({ shortcut }) =>
+              !q ||
+              shortcut.description.toLowerCase().includes(q) ||
+              shortcut.keys.some((k) => k.toLowerCase().includes(q))
+          ).length;
+          const total = g + sec;
+          const statusText = q ? `${total} ${total === 1 ? "shortcut" : "shortcuts"} found` : "";
+          return (
+            <span className="sr-only" role="status" aria-live="polite">
+              {statusText}
+            </span>
+          );
+        })()}
+
+        {(() => {
+          const q = query.trim().toLowerCase();
           const filteredGeneral = GENERAL.filter(
             (s) =>
               !q ||
@@ -196,32 +225,29 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
 
           if (filteredGeneral.length === 0 && filteredSections.length === 0) {
             return (
-              <>
-                <span className="sr-only" role="status" aria-live="polite">
-                  {liveStatus}
-                </span>
-                <div
-                  role="status"
-                  aria-label={`No shortcuts match "${query}"`}
-                  className="flex flex-col items-center justify-center gap-2 py-8 text-center font-mono text-xs text-fg-4"
+              <div
+                role="status"
+                aria-label={`No shortcuts match "${query}"`}
+                className="flex flex-col items-center justify-center gap-2 py-8 text-center font-mono text-xs text-fg-4"
+              >
+                <SearchX className="h-5 w-5 text-fg-4/80" aria-hidden="true" />
+                <span>No shortcuts match &quot;{query}&quot;</span>
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label="Clear search filter and show all shortcuts"
+                  title="Clear search filter (Esc)"
+                  className="mt-1 rounded-lg border border-line bg-raised px-2.5 py-1 font-sans text-xs text-hue-cyan transition-colors hover:bg-raised/80 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
                 >
-                  <SearchX className="h-5 w-5 text-fg-4/80" aria-hidden="true" />
-                  <span>No shortcuts match &quot;{query}&quot;</span>
-                  <button
-                    type="button"
-                    onClick={() => setQuery("")}
-                    aria-label="Clear search filter and show all shortcuts"
-                    title="Clear search filter (Esc)"
-                    className="mt-1 rounded-lg border border-line bg-raised px-2.5 py-1 font-sans text-xs text-hue-cyan transition-colors hover:bg-raised/80 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
-                  >
-                    Clear search filter
-                  </button>
-                </div>
-              </>
+                  Clear search filter
+                </button>
+              </div>
             );
           }
 
           return (
+            <div className="grid gap-6 sm:grid-cols-2">
+              {filteredGeneral.length > 0 && (
             <>
               <span
                 className="sr-only"
@@ -290,9 +316,8 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
                     ))}
                   </ul>
                 </section>
-                )}
-              </div>
-            </>
+              )}
+            </div>
           );
         })()}
       </div>
