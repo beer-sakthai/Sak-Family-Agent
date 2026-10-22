@@ -2,7 +2,6 @@
 
 import React from "react";
 import { RotateCcw } from "lucide-react";
-import { X } from "lucide-react";
 
 import type { PersonasPayload, TrendPoint } from "@/lib/contracts.generated";
 import ActivityHeatmap from "./ActivityHeatmap";
@@ -79,7 +78,6 @@ export function AgentOverview({
             <button
               type="button"
               onClick={() => onSelect([])}
-              aria-label="Clear filter - show all personas"
               aria-label="Clear persona filter and show all personas"
               title="Clear filter"
               className="inline-flex items-center gap-1 text-xs font-mono text-hue-cyan bg-raised hover:bg-raised/80 border border-line-strong px-2.5 py-1 rounded-full transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
