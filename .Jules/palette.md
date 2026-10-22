@@ -49,3 +49,7 @@
 ## 2026-10-27 - Explicit top-full vertical anchor class on absolute popovers
 **Learning:** Popover menus rendered inside `relative` trigger containers require an explicit `top-full` (`top: 100%`) CSS positioning utility class so the popover panel anchors directly below the trigger button rather than overlapping it with browser-default static top positioning.
 **Action:** Include `top-full` on `absolute` popover containers alongside `right-0` and `mt-2` when positioned inside relative trigger wrappers.
+
+## 2026-10-30 - Real-time match count announcements via off-screen polite live regions
+**Learning:** In overlay search tools like `CommandPalette`, maintaining a persistently mounted off-screen `<span className="sr-only" role="status" aria-live="polite">` live region element that updates its text content (e.g. `5 commands found`) as search queries change ensures screen readers reliably announce real-time match count updates to the user as they type.
+**Action:** Add a persistently mounted `<span className="sr-only" role="status" aria-live="polite">` inside modal search overlays that reflects active result counts when search queries are present.
