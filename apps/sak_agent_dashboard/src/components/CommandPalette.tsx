@@ -93,10 +93,6 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
     }));
   }, [commands, query]);
 
-  const liveStatus = query.trim()
-    ? `${results.length} command${results.length === 1 ? "" : "s"} found`
-    : "";
-
   const clampedHighlight = results.length === 0 ? 0 : Math.min(highlight, results.length - 1);
 
   useEffect(() => {
@@ -205,10 +201,6 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
             esc
           </kbd>
         </div>
-
-        <span className="sr-only" role="status" aria-live="polite">
-          {liveStatus}
-        </span>
 
         <ul
           id="command-palette-listbox"

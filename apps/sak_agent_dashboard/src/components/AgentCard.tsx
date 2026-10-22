@@ -197,9 +197,7 @@ export function AgentCard({
           overlayToggle ? "pointer-events-none relative z-1" : ""
         }`}
       >
-        <div
-          title={`Average latency: ${agent.runs > 0 ? `${Math.round(agent.avg_latency_ms)}ms` : "no recorded runs"}`}
-        >
+        <div>
           <span className="text-[10px] uppercase text-fg-3 mb-0.5 flex items-center gap-1">
             <Clock className="h-3 w-3 text-hue-cyan" aria-hidden="true" /> Avg latency
           </span>
@@ -207,9 +205,7 @@ export function AgentCard({
             {agent.runs > 0 ? `${Math.round(agent.avg_latency_ms)}ms` : "—"}
           </span>
         </div>
-        <div
-          title={`Total executions: ${agent.runs} ${agent.runs === 1 ? "run" : "runs"}`}
-        >
+        <div>
           <span className="text-[10px] uppercase text-fg-3 mb-0.5 flex items-center gap-1">
             <Activity className="h-3 w-3 text-hue-emerald" aria-hidden="true" /> Executions
           </span>
