@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Poll endpoint until running."""
 
+import os
 import sys
 import time
+from pathlib import Path
 from typing import Any
 
 # Ensure we can import huggingface_hub
@@ -13,7 +15,12 @@ from huggingface_hub import HfApi
 
 
 def get_token() -> str:
-    with open("/opt/data/profiles/sakthai/home/.cache/huggingface/token") as f:
+    token = os.environ.get("HF_TOKEN")
+    if token:
+        return token
+
+    token_path = Path.home() / ".cache/huggingface/token"
+    with open(token_path) as f:
         return f.read().strip()
 
 

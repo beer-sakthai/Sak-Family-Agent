@@ -82,9 +82,13 @@ describe("Sidebar", () => {
     return { props, ...render(<Sidebar {...props} />) };
   }
 
-  it("renders one tab per section", () => {
+  it("renders one tab per section with aria-controls referencing the main tabpanel container ID", () => {
     renderSidebar();
-    expect(screen.getAllByRole("tab")).toHaveLength(NAV_ITEMS.length);
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs).toHaveLength(NAV_ITEMS.length);
+    for (const tab of tabs) {
+      expect(tab).toHaveAttribute("aria-controls", "dashboard-tabpanel");
+    }
   });
 
   it("marks the active section", () => {
@@ -108,10 +112,10 @@ describe("Sidebar", () => {
   it("hides labels and counts when collapsed and provides informative title tooltips", () => {
     renderSidebar({ collapsed: true, counts: { sessions: 42 } });
     // The accessible name survives via aria-label; the visible text does not.
-    const sessionsTab = screen.getByRole("tab", { name: "Sessions" });
+    const sessionsTab = screen.getByRole("tab", { name: "Sessions (42)" });
     expect(sessionsTab).toBeInTheDocument();
     expect(sessionsTab).toHaveAttribute("type", "button");
-    expect(sessionsTab).toHaveAttribute("title", "Sessions");
+    expect(sessionsTab).toHaveAttribute("title", "Sessions (42)");
     expect(screen.queryByText("42")).not.toBeInTheDocument();
   });
 
@@ -476,6 +480,21 @@ describe("KpiStrip", () => {
     fireEvent.click(analyticsButtons[0]);
     expect(onNavigate).toHaveBeenCalledWith("analytics");
   });
+
+  it("renders descriptive title hover tooltips on non-interactive KPI tiles", () => {
+    render(
+      <KpiStrip
+        metrics={metrics}
+        memory={demoMemory()}
+        sessions={demoSessions()}
+        audit={demoAudit()}
+      />,
+    );
+    const successTile = screen.getByTitle(/Success rate:/);
+    expect(successTile).toBeInTheDocument();
+    const latencyTile = screen.getByTitle(/Avg latency:/);
+    expect(latencyTile).toBeInTheDocument();
+  });
 });
 
 describe("CommandPalette", () => {
@@ -504,6 +523,11 @@ describe("CommandPalette", () => {
     // Only the Audit section's description mentions the guardrail policy.
     expect(screen.getAllByRole("option")).toHaveLength(1);
     expect(screen.getByRole("option")).toHaveTextContent("Audit");
+
+    // Live status announcement for matching commands count
+    const liveStatus = screen.getByRole("status", { name: /command.*found/i });
+    expect(liveStatus).toBeInTheDocument();
+    expect(liveStatus).toHaveTextContent("1 command found");
   });
 
   it("explains an empty result instead of showing a blank list", () => {

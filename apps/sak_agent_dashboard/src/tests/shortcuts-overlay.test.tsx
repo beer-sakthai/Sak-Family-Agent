@@ -78,6 +78,11 @@ describe("ShortcutsOverlay", () => {
     expect(screen.getByText("Open the command palette")).toBeInTheDocument();
     expect(screen.queryByText("Show this list")).not.toBeInTheDocument();
 
+    // Live status announcement for non-zero match count
+    const liveStatus = screen.getByRole("status", { name: /shortcut.*found/i });
+    expect(liveStatus).toBeInTheDocument();
+    expect(liveStatus).toHaveTextContent("1 shortcut found");
+
     // Clear search button
     const clearBtn = screen.getByRole("button", { name: "Clear shortcut search filter" });
     expect(clearBtn).toHaveAttribute("title", "Clear search (Esc)");
@@ -112,5 +117,16 @@ describe("ShortcutsOverlay", () => {
 
     expect(searchInput).toHaveValue("");
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("announces match count updates to screen readers via polite live region", () => {
+    renderShortcutsOverlay();
+    const searchInput = screen.getByRole("searchbox", { name: "Filter keyboard shortcuts" });
+
+    fireEvent.change(searchInput, { target: { value: "command" } });
+    expect(screen.getByText("1 shortcut found")).toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "nonexistent query" } });
+    expect(screen.getByText("0 shortcuts found")).toBeInTheDocument();
   });
 });

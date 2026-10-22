@@ -93,6 +93,10 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
     }));
   }, [commands, query]);
 
+  const liveStatus = query.trim()
+    ? `${results.length} command${results.length === 1 ? "" : "s"} found`
+    : "";
+
   const clampedHighlight = results.length === 0 ? 0 : Math.min(highlight, results.length - 1);
 
   useEffect(() => {
@@ -202,6 +206,37 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
           </kbd>
         </div>
 
+        <span className="sr-only" role="status" aria-live="polite">
+          {liveStatus}
+        </span>
+
+        <span
+          className="sr-only"
+          role="status"
+          aria-live="polite"
+          aria-label={
+            query.trim() !== "" && results.length > 0
+              ? `${results.length} command${results.length === 1 ? "" : "s"} found`
+              : undefined
+          }
+        >
+          {query.trim() !== "" && results.length > 0
+            ? `${results.length} command${results.length === 1 ? "" : "s"} found`
+            : ""}
+            query.trim() === ""
+              ? `${results.length} commands available.`
+              : results.length === 0
+                ? `No commands match "${query}".`
+                : `${results.length} command${results.length === 1 ? "" : "s"} found.`
+          }
+        >
+          {query.trim() === ""
+            ? `${results.length} commands available.`
+            : results.length === 0
+              ? `No commands match "${query}".`
+              : `${results.length} command${results.length === 1 ? "" : "s"} found.`}
+        </span>
+
         <ul
           id="command-palette-listbox"
           ref={listRef}
@@ -240,7 +275,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
                     {command.group}
                   </li>
                 )}
-                <li>
+                <li role="presentation">
                   <button
                     id={optionId}
                     type="button"

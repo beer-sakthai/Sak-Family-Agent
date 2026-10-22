@@ -41,3 +41,24 @@
 ## 2026-10-21 - Dedicated visual live previews for workbench preset selections
 **Learning:** In UI workbench showcase components like StitchStudio, preset selections (such as `mermaid-arch` architecture diagrams) should render dedicated visual live preview components in the preview panel rather than falling through to raw code text.
 **Action:** Render styled visual flow diagrams or card previews for diagram and UI presets in workbench preview panels.
+
+## 2026-10-25 - Screen reader live status announcements for overlay search query results
+**Learning:** In overlay search tools (such as CommandPalette and ShortcutsOverlay), adding an off-screen `role="status"` polite live region when a search query is active and matches exist ensures screen reader users receive immediate verbal feedback on matching result counts as they type.
+**Action:** Include a `<span className="sr-only" role="status" aria-live="polite">` element reporting the match count when search queries are active in overlay modal filters.
+**Action:** Render styled visual flow diagrams or card previews for diagram and UI presets in workbench preset panels.
+
+## 2026-10-24 - Section badge count metrics in tablist aria-label and collapsed hover tooltips
+**Learning:** Navigation tab buttons carrying badge counts (e.g. `Sessions` with badge `42`) should include the count metric in `aria-label` and hover `title` tooltips so screen readers announce section metrics during tablist navigation and collapsed sidebar hover tooltips expose metrics to desktop users.
+**Action:** Include section count metrics in `aria-label` and `title` attributes on navigation tab buttons when count metrics are defined.
+
+## 2026-10-27 - Explicit top-full vertical anchor class on absolute popovers
+**Learning:** Popover menus rendered inside `relative` trigger containers require an explicit `top-full` (`top: 100%`) CSS positioning utility class so the popover panel anchors directly below the trigger button rather than overlapping it with browser-default static top positioning.
+**Action:** Include `top-full` on `absolute` popover containers alongside `right-0` and `mt-2` when positioned inside relative trigger wrappers.
+
+## 2026-10-30 - Real-time match count announcements via off-screen polite live regions
+**Learning:** In overlay search tools like `CommandPalette`, maintaining a persistently mounted off-screen `<span className="sr-only" role="status" aria-live="polite">` live region element that updates its text content (e.g. `5 commands found`) as search queries change ensures screen readers reliably announce real-time match count updates to the user as they type.
+**Action:** Add a persistently mounted `<span className="sr-only" role="status" aria-live="polite">` inside modal search overlays that reflects active result counts when search queries are present.
+
+## 2026-11-02 - Descriptive hover tooltips on non-interactive KPI summary tiles
+**Learning:** Non-interactive KPI summary tiles (such as Success rate or Avg latency) benefit from explicit `title` attributes incorporating label, value, and hint text so desktop mouse users can inspect metric details on hover without adding unnecessary `tabIndex={0}` tab stops to non-interactive elements.
+**Action:** Set `title={`${tile.label}: ${tile.value}${tile.hint ? ` (${tile.hint})` : ""}`}` on non-interactive KPI summary cards.

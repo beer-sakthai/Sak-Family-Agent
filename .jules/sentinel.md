@@ -1,13 +1,4 @@
-## 2024-10-18 - XSS in RAG Search Results
-**Vulnerability:** The RAG search results in `docs/index.html` and `scripts/saksee/dashboard.html` rendered user-controlled properties (`r.agent`, `r.source`, `r.text`) directly into the DOM using `.innerHTML` without escaping.
-**Learning:** Even data coming from internal APIs (like RAG results) can contain untrusted data that leads to Cross-Site Scripting (XSS) if not properly escaped before insertion into the DOM using `.innerHTML`.
-**Prevention:** Always wrap variables containing potentially untrusted strings with an HTML escaping function (like `escapeHtml()`) before concatenating them into strings destined for `.innerHTML`, or assign directly to `.textContent`.
-## 2026-10-18 - XSS in RAG Search Results
-**Vulnerability:** The RAG search results in `docs/index.html` and `scripts/saksee/dashboard.html` rendered user-controlled properties (`r.agent`, `r.source`, `r.text`) directly into the DOM using `.innerHTML` without escaping.
-**Learning:** Even data coming from internal APIs (like RAG results) can contain untrusted data that leads to Cross-Site Scripting (XSS) if not properly escaped before insertion into the DOM using `.innerHTML`.
-**Prevention:** Always wrap variables containing potentially untrusted strings with an HTML escaping function (like `escapeHtml()`) before concatenating them into strings destined for `.innerHTML`, or assign directly to `.textContent`.
-
-## 2026-10-18 - XSS in RAG Search Results
-**Vulnerability:** The RAG search results in `docs/index.html` and `scripts/saksee/dashboard.html` rendered user-controlled properties (`r.agent`, `r.source`, `r.text`) directly into the DOM using `.innerHTML` without escaping.
-**Learning:** Even data coming from internal APIs (like RAG results) can contain untrusted data that leads to Cross-Site Scripting (XSS) if not properly escaped before insertion into the DOM using `.innerHTML`.
-**Prevention:** Always wrap variables containing potentially untrusted strings with an HTML escaping function (like `escapeHtml()`) before concatenating them into strings destined for `.innerHTML`, or assign directly to `.textContent`.
+## 2024-10-22 - Replace xml.etree.ElementTree with defusedxml to prevent XML attacks
+**Vulnerability:** The standard library `xml.etree.ElementTree` is vulnerable to XML attacks such as Billion Laughs and XXE (flagged by Bandit B405/B314).
+**Learning:** `xml.etree.ElementTree` was used extensively in skills for parsing arXiv results and modifying Office Open XML documents (PowerPoint redlines).
+**Prevention:** Always use `defusedxml.ElementTree` (or `defusedxml.minidom`) when parsing untrusted XML, as it is a drop-in replacement that safely defuses malicious entities. Ensure updates are applied symmetrically across duplicated persona skill files.

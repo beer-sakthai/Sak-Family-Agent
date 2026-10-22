@@ -255,4 +255,24 @@ describe("ApiSource SSRF protections", () => {
       "Invalid path format: protocol-relative and absolute paths are blocked",
     );
   });
+
+  it("blocks double-encoded protocol-relative URLs", async () => {
+    const { ApiSource } = await import("@/lib/sources/api");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const source = new ApiSource("http://127.0.0.1:3000") as any;
+    // "%252f" is double encoded "/"
+    await expect(source.fetchJson("%252f%252fattacker.com")).rejects.toThrow(
+      "Invalid path format: protocol-relative and absolute paths are blocked",
+    );
+  });
+
+  it("blocks double-encoded backslashes", async () => {
+    const { ApiSource } = await import("@/lib/sources/api");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const source = new ApiSource("http://127.0.0.1:3000") as any;
+    // "%255c" is double encoded "\"
+    await expect(source.fetchJson("api%255cpersonas")).rejects.toThrow(
+      "Invalid path format: protocol-relative and absolute paths are blocked",
+    );
+  });
 });

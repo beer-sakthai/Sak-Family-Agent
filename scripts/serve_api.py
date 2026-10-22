@@ -129,6 +129,16 @@ def _ecosystem_status() -> dict[str, Any]:
     }
 
 
+def _token_matches(candidate: str, expected: str) -> bool:
+    """True if ``candidate`` matches ``expected`` in constant time.
+
+    ``secrets.compare_digest`` raises ``TypeError`` when either ``str`` operand
+    carries a non-ASCII character. Encoding to bytes prevents an unhandled
+    exception from crashing the handler thread on a malformed request.
+    """
+    return secrets.compare_digest(candidate.encode("utf-8"), expected.encode("utf-8"))
+
+
 def _recursive_unquote(path: str, max_depth: int = 5) -> str:
     """Recursively decode URL-encoded path segments up to max_depth."""
     current = path
@@ -182,7 +192,7 @@ class _Handler(SimpleHTTPRequestHandler):
         auth_header = self.headers.get("Authorization", "")
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header[7:]
-            if secrets.compare_digest(token, expected_token):
+            if _token_matches(token, expected_token):
                 return True
 
         # 2. Check query parameter 'token' or 'bearer_token'
@@ -194,7 +204,7 @@ class _Handler(SimpleHTTPRequestHandler):
                     k, v = item.split("=", 1)
                     if k in ("token", "bearer_token"):
                         val = unquote(v)
-                        if secrets.compare_digest(val, expected_token):
+                        if _token_matches(val, expected_token):
                             return True
 
         # 3. Check Cookie header
@@ -205,7 +215,7 @@ class _Handler(SimpleHTTPRequestHandler):
                     k, v = item.strip().split("=", 1)
                     if k in ("token", "bearer_token"):
                         val = unquote(v)
-                        if secrets.compare_digest(val, expected_token):
+                        if _token_matches(val, expected_token):
                             return True
 
         return False
@@ -228,7 +238,7 @@ class _Handler(SimpleHTTPRequestHandler):
                     k, v = item.split("=", 1)
                     if k in ("token", "bearer_token"):
                         val = unquote(v)
-                        if secrets.compare_digest(val, expected_token):
+                        if _token_matches(val, expected_token):
                             self.send_header(
                                 "Set-Cookie",
                                 f"token={expected_token}; Path=/; HttpOnly; SameSite=Strict",
