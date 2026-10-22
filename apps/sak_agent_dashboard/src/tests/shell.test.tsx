@@ -112,10 +112,10 @@ describe("Sidebar", () => {
   it("hides labels and counts when collapsed and provides informative title tooltips", () => {
     renderSidebar({ collapsed: true, counts: { sessions: 42 } });
     // The accessible name survives via aria-label; the visible text does not.
-    const sessionsTab = screen.getByRole("tab", { name: "Sessions" });
+    const sessionsTab = screen.getByRole("tab", { name: "Sessions (42)" });
     expect(sessionsTab).toBeInTheDocument();
     expect(sessionsTab).toHaveAttribute("type", "button");
-    expect(sessionsTab).toHaveAttribute("title", "Sessions");
+    expect(sessionsTab).toHaveAttribute("title", "Sessions (42)");
     expect(screen.queryByText("42")).not.toBeInTheDocument();
   });
 
@@ -572,22 +572,6 @@ describe("CommandPalette", () => {
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
     expect(input).toHaveValue("");
     expect(props.onClose).not.toHaveBeenCalled();
-  });
-
-  it("announces match result counts in an off-screen polite live region as the query changes", () => {
-    renderPalette();
-    const liveRegion = screen.getByRole("status", {
-      name: (content) => content.includes("commands") || content.includes("command"),
-    });
-    expect(liveRegion).toBeInTheDocument();
-    expect(liveRegion).toHaveAttribute("aria-live", "polite");
-    expect(liveRegion).toHaveTextContent(`${NAV_ITEMS.length + actions.length} commands available.`);
-
-    fireEvent.change(screen.getByLabelText("Search commands"), { target: { value: "guardrail" } });
-    expect(liveRegion).toHaveTextContent("1 command found.");
-
-    fireEvent.change(screen.getByLabelText("Search commands"), { target: { value: "nonexistent" } });
-    expect(liveRegion).toHaveTextContent('No commands match "nonexistent".');
   });
 });
 

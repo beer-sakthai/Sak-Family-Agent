@@ -171,6 +171,22 @@ describe("AgentCard", () => {
     expect(progressbar).toHaveAttribute("aria-valuemax", "100");
     expect(progressbar).toHaveAttribute("aria-valuetext", "80.0% success rate");
   });
+
+  it("renders average latency, executions metric blocks, and token/error badges with title tooltips", () => {
+    const agent: PersonaSummary = { ...active, runs: 10, avg_latency_ms: 250, input_tokens: 500, output_tokens: 500, errors: 1 };
+    render(<AgentCard agent={agent} />);
+    const latencyBlock = screen.getByTitle("Average latency: 250ms");
+    expect(latencyBlock).toBeInTheDocument();
+
+    const execBlock = screen.getByTitle("Total executions: 10 runs");
+    expect(execBlock).toBeInTheDocument();
+
+    const tokenBadge = screen.getByTitle("Total token usage: 1,000 tokens");
+    expect(tokenBadge).toBeInTheDocument();
+
+    const errorBadge = screen.getByTitle("Recorded errors: 1");
+    expect(errorBadge).toBeInTheDocument();
+  });
 });
 
 describe("AgentOverview", () => {
@@ -220,6 +236,28 @@ describe("AgentOverview", () => {
   it("omits the unattributed badge when there are none", () => {
     render(<AgentOverview personas={{ ...personas, unattributed_runs: 0 }} />);
     expect(screen.queryByText(/unattributed/)).not.toBeInTheDocument();
+  });
+
+  it("renders inline Clear filter button when persona filtering is active and calls onSelect([]) on click", () => {
+    const onSelect = vi.fn();
+    const { rerender } = render(
+      <AgentOverview personas={personas} selected={["sakthai"]} onSelect={onSelect} />,
+    );
+
+    const clearButton = screen.getByRole("button", {
+      name: "Clear persona filter and show all personas",
+    });
+    expect(clearButton).toBeInTheDocument();
+    expect(clearButton).toHaveAttribute("type", "button");
+    expect(clearButton).toHaveAttribute("title", "Clear filter");
+
+    fireEvent.click(clearButton);
+    expect(onSelect).toHaveBeenCalledWith([]);
+
+    rerender(<AgentOverview personas={personas} selected={[]} onSelect={onSelect} />);
+    expect(
+      screen.queryByRole("button", { name: "Clear persona filter and show all personas" }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -424,6 +462,35 @@ describe("MemoryExplorer", () => {
     const firstFact = demoMemory().facts[0];
     const shardBadges = screen.getAllByTitle(`Persona shard: ${firstFact.persona}`);
     expect(shardBadges.length).toBeGreaterThan(0);
+  });
+
+  it("provides hover title tooltips on fact and observation table cells", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const firstFact = demoMemory().facts[0];
+    const factIdCell = screen.getByTitle(`Fact ID: ${firstFact.id}`);
+    expect(factIdCell).toBeInTheDocument();
+    expect(factIdCell.tagName.toLowerCase()).toBe("td");
+
+    const factKindTitle = `Fact kind: ${firstFact.kind}${firstFact.key ? ` / key: ${firstFact.key}` : ""}`;
+    const factKindCell = screen.getByTitle(factKindTitle);
+    expect(factKindCell).toBeInTheDocument();
+    expect(factKindCell.tagName.toLowerCase()).toBe("td");
+
+    const factValueCell = screen.getByTitle(`Fact value: ${firstFact.value}`);
+    expect(factValueCell).toBeInTheDocument();
+    expect(factValueCell.tagName.toLowerCase()).toBe("td");
+
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+    fireEvent.click(obsTab);
+
+    const firstObs = demoMemory().observations[0];
+    const obsIdCell = screen.getByTitle(`Observation ID: ${firstObs.id}`);
+    expect(obsIdCell).toBeInTheDocument();
+    expect(obsIdCell.tagName.toLowerCase()).toBe("td");
+
+    const obsSummaryCell = screen.getByTitle(`Observation summary: ${firstObs.summary}`);
+    expect(obsSummaryCell).toBeInTheDocument();
+    expect(obsSummaryCell.tagName.toLowerCase()).toBe("td");
   });
 
   it("provides title tooltips and aria-labels on observation weight and confidence cells", () => {
@@ -709,6 +776,25 @@ describe("SessionExplorer", () => {
     expect(drawerModel).toHaveTextContent(expectedModel);
   });
 
+  it("provides hover title tooltips on Task, When, and Tokens table cells", () => {
+    const firstSession = sessions.sessions[0];
+    renderExplorer();
+
+    const taskTitle = firstSession.task ? `Task: ${firstSession.task}` : "Task not recorded";
+    const taskCell = screen.getByTitle(taskTitle);
+    expect(taskCell).toBeInTheDocument();
+    expect(taskCell.tagName.toLowerCase()).toBe("td");
+
+    const isoWhen = new Date(firstSession.timestamp * 1000).toISOString().replace("T", " ").slice(0, 19);
+    const whenCell = screen.getByTitle(`Recorded at: ${isoWhen}`);
+    expect(whenCell).toBeInTheDocument();
+    expect(whenCell.tagName.toLowerCase()).toBe("td");
+
+    const tokensCell = screen.getByTitle(`Total tokens: ${firstSession.tokens.total_tokens.toLocaleString()}`);
+    expect(tokensCell).toBeInTheDocument();
+    expect(tokensCell.tagName.toLowerCase()).toBe("td");
+  });
+
   it("sends search upward for a server-side query", () => {
     const onSearchChange = vi.fn();
     renderExplorer({ onSearchChange });
@@ -865,6 +951,27 @@ describe("SessionExplorer", () => {
     expect(selectedRow).toBeInTheDocument();
     expect(selectedRow).toHaveClass("bg-raised/80");
   });
+
+  it("announces session search match count updates to screen readers via polite live region", () => {
+    const { rerender } = renderExplorer({ search: "deploy", sessions: [sessions.sessions[0]] });
+    expect(screen.getByText("1 session found")).toBeInTheDocument();
+
+    rerender(
+      <SessionExplorer
+        sessions={[]}
+        total={0}
+        search="nonexistent"
+        onSearchChange={vi.fn()}
+        page={1}
+        pageSize={10}
+        onPageChange={vi.fn()}
+        onSessionSelect={vi.fn()}
+        openSessionId={null}
+        detail={null}
+      />,
+    );
+    expect(screen.getByText("0 sessions found")).toBeInTheDocument();
+  });
 });
 
 describe("WorkflowRuns", () => {
@@ -905,6 +1012,18 @@ describe("WorkflowRuns", () => {
     expect(statusPill).toHaveAttribute("title", "Workflow run status: completed");
   });
 
+  it("provides hover title tooltips on Workflow, Started, Duration, and Steps table cells", () => {
+    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
+    const run = workflows.runs[0];
+    const workflowTitle = `Workflow: ${run.workflow_name || run.run_id} (${run.run_id})`;
+    expect(screen.getByTitle(workflowTitle)).toBeInTheDocument();
+
+    const isoStarted = run.started_at ? run.started_at.replace("T", " ").slice(0, 19) : "—";
+    expect(screen.getByTitle(`Started: ${isoStarted}`)).toBeInTheDocument();
+    expect(screen.getAllByTitle(/Duration:/).length).toBeGreaterThan(0);
+    expect(screen.getAllByTitle(/Total steps:/).length).toBeGreaterThan(0);
+  });
+
   it("marks failed steps", () => {
     render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
     expect(screen.getByText("(1 failed)")).toBeInTheDocument();
@@ -921,7 +1040,7 @@ describe("WorkflowRuns", () => {
     expect(onRunSelect).toHaveBeenCalledWith(workflows.runs[0].run_id);
   });
 
-  it("shows step detail in the drawer", () => {
+  it("shows step detail in the drawer with metric title tooltips", () => {
     const detail = {
       summary: workflows.runs[0],
       steps: [
@@ -932,7 +1051,7 @@ describe("WorkflowRuns", () => {
           error: "boom",
           started_at: null,
           finished_at: null,
-          duration_seconds: null,
+          duration_seconds: 1.5,
         },
       ],
     };
@@ -947,13 +1066,16 @@ describe("WorkflowRuns", () => {
     expect(screen.getByText("fetch")).toBeInTheDocument();
     expect(screen.getByText("boom")).toBeInTheDocument();
     expect(screen.getByText("3 attempts")).toBeInTheDocument();
+    expect(screen.getByTitle("Step duration: 1.5s")).toBeInTheDocument();
+    expect(screen.getByTitle("Execution attempts: 3")).toBeInTheDocument();
   });
 
-  it("renders an empty state with contextual icon and message", () => {
+  it("renders an empty state with contextual icon, message, and explanatory guidance", () => {
     const { container } = render(
       <WorkflowRuns runs={[]} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
     );
     expect(screen.getByText("No workflow runs recorded yet.")).toBeInTheDocument();
+    expect(screen.getByText(/are logged here when running multi-step agent workflows/)).toBeInTheDocument();
     const svgIcon = container.querySelector("td svg");
     expect(svgIcon).toBeInTheDocument();
     expect(svgIcon).toHaveAttribute("aria-hidden", "true");
@@ -1510,5 +1632,16 @@ describe("CommandPalette", () => {
     fireEvent.click(clearButton);
     expect(combobox).toHaveValue("");
     expect(screen.queryByText(/Nothing matches/)).not.toBeInTheDocument();
+  });
+
+  it("announces match count updates to screen readers via polite live region", () => {
+    render(<CommandPalette onClose={vi.fn()} onNavigate={vi.fn()} actions={[]} />);
+    const combobox = screen.getByRole("combobox", { name: "Search commands" });
+
+    fireEvent.change(combobox, { target: { value: "Overview" } });
+    expect(screen.getByText("1 command found")).toBeInTheDocument();
+
+    fireEvent.change(combobox, { target: { value: "nonexistentquery123" } });
+    expect(screen.getByText("0 commands found")).toBeInTheDocument();
   });
 });
