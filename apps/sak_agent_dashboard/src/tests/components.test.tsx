@@ -221,6 +221,28 @@ describe("AgentOverview", () => {
     render(<AgentOverview personas={{ ...personas, unattributed_runs: 0 }} />);
     expect(screen.queryByText(/unattributed/)).not.toBeInTheDocument();
   });
+
+  it("renders inline Clear filter button when persona filtering is active and calls onSelect([]) on click", () => {
+    const onSelect = vi.fn();
+    const { rerender } = render(
+      <AgentOverview personas={personas} selected={["sakthai"]} onSelect={onSelect} />,
+    );
+
+    const clearButton = screen.getByRole("button", {
+      name: "Clear filter - show all personas",
+    });
+    expect(clearButton).toBeInTheDocument();
+    expect(clearButton).toHaveAttribute("type", "button");
+    expect(clearButton).toHaveAttribute("title", "Clear filter");
+
+    fireEvent.click(clearButton);
+    expect(onSelect).toHaveBeenCalledWith([]);
+
+    rerender(<AgentOverview personas={personas} selected={[]} onSelect={onSelect} />);
+    expect(
+      screen.queryByRole("button", { name: "Clear filter - show all personas" }),
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe("AnalyticsCharts", () => {
@@ -864,6 +886,27 @@ describe("SessionExplorer", () => {
     const selectedRow = container.querySelector(`tr[aria-selected="true"]`);
     expect(selectedRow).toBeInTheDocument();
     expect(selectedRow).toHaveClass("bg-raised/80");
+  });
+
+  it("announces session search match count updates to screen readers via polite live region", () => {
+    const { rerender } = renderExplorer({ search: "deploy", sessions: [sessions.sessions[0]] });
+    expect(screen.getByText("1 session found")).toBeInTheDocument();
+
+    rerender(
+      <SessionExplorer
+        sessions={[]}
+        total={0}
+        search="nonexistent"
+        onSearchChange={vi.fn()}
+        page={1}
+        pageSize={10}
+        onPageChange={vi.fn()}
+        onSessionSelect={vi.fn()}
+        openSessionId={null}
+        detail={null}
+      />,
+    );
+    expect(screen.getByText("0 sessions found")).toBeInTheDocument();
   });
 });
 

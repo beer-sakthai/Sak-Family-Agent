@@ -73,6 +73,19 @@ export function AgentOverview({
               ? `${selected.length} of ${agents.length} personas`
               : `${agents.length} Personas Registered`}
           </div>
+          {filtering && onSelect && (
+            <button
+              type="button"
+              onClick={() => onSelect([])}
+              aria-label="Clear filter - show all personas"
+              aria-label="Clear persona filter and show all personas"
+              title="Clear filter"
+              className="inline-flex items-center gap-1 text-xs font-mono text-hue-cyan bg-raised hover:bg-raised/80 border border-line-strong px-2.5 py-1 rounded-full transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              <RotateCcw className="h-3 w-3 text-hue-cyan" aria-hidden="true" />
+              <span>Clear filter</span>
+            </button>
+          )}
         </div>
       </div>
 

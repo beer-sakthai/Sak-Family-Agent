@@ -78,6 +78,11 @@ describe("ShortcutsOverlay", () => {
     expect(screen.getByText("Open the command palette")).toBeInTheDocument();
     expect(screen.queryByText("Show this list")).not.toBeInTheDocument();
 
+    // Live status announcement for non-zero match count
+    const liveStatus = screen.getByRole("status", { name: /shortcut.*found/i });
+    expect(liveStatus).toBeInTheDocument();
+    expect(liveStatus).toHaveTextContent("1 shortcut found");
+
     // Clear search button
     const clearBtn = screen.getByRole("button", { name: "Clear shortcut search filter" });
     expect(clearBtn).toHaveAttribute("title", "Clear search (Esc)");

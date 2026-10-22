@@ -480,6 +480,21 @@ describe("KpiStrip", () => {
     fireEvent.click(analyticsButtons[0]);
     expect(onNavigate).toHaveBeenCalledWith("analytics");
   });
+
+  it("renders descriptive title hover tooltips on non-interactive KPI tiles", () => {
+    render(
+      <KpiStrip
+        metrics={metrics}
+        memory={demoMemory()}
+        sessions={demoSessions()}
+        audit={demoAudit()}
+      />,
+    );
+    const successTile = screen.getByTitle(/Success rate:/);
+    expect(successTile).toBeInTheDocument();
+    const latencyTile = screen.getByTitle(/Avg latency:/);
+    expect(latencyTile).toBeInTheDocument();
+  });
 });
 
 describe("CommandPalette", () => {
@@ -508,6 +523,11 @@ describe("CommandPalette", () => {
     // Only the Audit section's description mentions the guardrail policy.
     expect(screen.getAllByRole("option")).toHaveLength(1);
     expect(screen.getByRole("option")).toHaveTextContent("Audit");
+
+    // Live status announcement for matching commands count
+    const liveStatus = screen.getByRole("status", { name: /command.*found/i });
+    expect(liveStatus).toBeInTheDocument();
+    expect(liveStatus).toHaveTextContent("1 command found");
   });
 
   it("explains an empty result instead of showing a blank list", () => {
