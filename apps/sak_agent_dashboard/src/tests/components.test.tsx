@@ -951,6 +951,27 @@ describe("SessionExplorer", () => {
     expect(selectedRow).toBeInTheDocument();
     expect(selectedRow).toHaveClass("bg-raised/80");
   });
+
+  it("announces session search match count updates to screen readers via polite live region", () => {
+    const { rerender } = renderExplorer({ search: "deploy", sessions: [sessions.sessions[0]] });
+    expect(screen.getByText("1 session found")).toBeInTheDocument();
+
+    rerender(
+      <SessionExplorer
+        sessions={[]}
+        total={0}
+        search="nonexistent"
+        onSearchChange={vi.fn()}
+        page={1}
+        pageSize={10}
+        onPageChange={vi.fn()}
+        onSessionSelect={vi.fn()}
+        openSessionId={null}
+        detail={null}
+      />,
+    );
+    expect(screen.getByText("0 sessions found")).toBeInTheDocument();
+  });
 });
 
 describe("WorkflowRuns", () => {
