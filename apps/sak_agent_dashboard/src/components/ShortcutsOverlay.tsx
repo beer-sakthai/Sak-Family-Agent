@@ -187,7 +187,9 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
               shortcut.keys.some((k) => k.toLowerCase().includes(q))
           );
 
-          if (filteredGeneral.length === 0 && filteredSections.length === 0) {
+          const totalMatches = filteredGeneral.length + filteredSections.length;
+
+          if (totalMatches === 0) {
             return (
               <div
                 role="status"
@@ -210,33 +212,49 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
           }
 
           return (
-            <div className="grid gap-6 sm:grid-cols-2">
-              {filteredGeneral.length > 0 && (
-                <section>
-                  <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
-                    General
-                  </h3>
-                  <ul className="divide-y divide-line">
-                    {filteredGeneral.map((shortcut) => (
-                      <Row key={shortcut.description} shortcut={shortcut} />
-                    ))}
-                  </ul>
-                </section>
-              )}
+            <>
+              <span
+                className="sr-only"
+                role="status"
+                aria-live="polite"
+                aria-label={
+                  q !== "" && totalMatches > 0
+                    ? `${totalMatches} shortcut${totalMatches === 1 ? "" : "s"} found`
+                    : undefined
+                }
+              >
+                {q !== "" && totalMatches > 0
+                  ? `${totalMatches} shortcut${totalMatches === 1 ? "" : "s"} found`
+                  : ""}
+              </span>
+              <div className="grid gap-6 sm:grid-cols-2">
+                {filteredGeneral.length > 0 && (
+                  <section>
+                    <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
+                      General
+                    </h3>
+                    <ul className="divide-y divide-line">
+                      {filteredGeneral.map((shortcut) => (
+                        <Row key={shortcut.description} shortcut={shortcut} />
+                      ))}
+                    </ul>
+                  </section>
+                )}
 
-              {filteredSections.length > 0 && (
-                <section>
-                  <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
-                    Sections
-                  </h3>
-                  <ul className="divide-y divide-line">
-                    {filteredSections.map(({ id, shortcut }) => (
-                      <Row key={id} shortcut={shortcut} />
-                    ))}
-                  </ul>
-                </section>
-              )}
-            </div>
+                {filteredSections.length > 0 && (
+                  <section>
+                    <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
+                      Sections
+                    </h3>
+                    <ul className="divide-y divide-line">
+                      {filteredSections.map(({ id, shortcut }) => (
+                        <Row key={id} shortcut={shortcut} />
+                      ))}
+                    </ul>
+                  </section>
+                )}
+              </div>
+            </>
           );
         })()}
       </div>

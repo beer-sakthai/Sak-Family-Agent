@@ -508,6 +508,11 @@ describe("CommandPalette", () => {
     // Only the Audit section's description mentions the guardrail policy.
     expect(screen.getAllByRole("option")).toHaveLength(1);
     expect(screen.getByRole("option")).toHaveTextContent("Audit");
+
+    // Live status announcement for matching commands count
+    const liveStatus = screen.getByRole("status", { name: /command.*found/i });
+    expect(liveStatus).toBeInTheDocument();
+    expect(liveStatus).toHaveTextContent("1 command found");
   });
 
   it("explains an empty result instead of showing a blank list", () => {
