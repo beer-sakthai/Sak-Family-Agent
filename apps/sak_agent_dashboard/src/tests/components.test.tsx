@@ -238,19 +238,6 @@ describe("AgentOverview", () => {
     expect(screen.queryByText(/unattributed/)).not.toBeInTheDocument();
   });
 
-  it("offers an inline reset filter button when filter is active and calls onSelect([]) on click", () => {
-    const onSelect = vi.fn();
-    render(<AgentOverview personas={personas} selected={["sakthai"]} onSelect={onSelect} />);
-
-    const clearButton = screen.getByRole("button", {
-      name: "Reset persona filter to show all personas",
-    });
-    expect(clearButton).toBeInTheDocument();
-    expect(clearButton).toHaveAttribute("title", "Reset persona filter to show all personas");
-    expect(clearButton).toHaveAttribute("type", "button");
-
-    fireEvent.click(clearButton);
-    expect(onSelect).toHaveBeenCalledWith([]);
   it("renders inline Clear filter button when persona filtering is active and calls onSelect([]) on click", () => {
     const onSelect = vi.fn();
     const { rerender } = render(
@@ -258,7 +245,7 @@ describe("AgentOverview", () => {
     );
 
     const clearButton = screen.getByRole("button", {
-      name: "Clear persona filter and show all personas",
+      name: "Clear filter - show all personas",
     });
     expect(clearButton).toBeInTheDocument();
     expect(clearButton).toHaveAttribute("type", "button");
@@ -269,7 +256,7 @@ describe("AgentOverview", () => {
 
     rerender(<AgentOverview personas={personas} selected={[]} onSelect={onSelect} />);
     expect(
-      screen.queryByRole("button", { name: "Clear persona filter and show all personas" }),
+      screen.queryByRole("button", { name: "Clear filter - show all personas" }),
     ).not.toBeInTheDocument();
   });
 });

@@ -53,3 +53,7 @@
 ## 2026-10-30 - Real-time match count announcements via off-screen polite live regions
 **Learning:** In overlay search tools like `CommandPalette`, maintaining a persistently mounted off-screen `<span className="sr-only" role="status" aria-live="polite">` live region element that updates its text content (e.g. `5 commands found`) as search queries change ensures screen readers reliably announce real-time match count updates to the user as they type.
 **Action:** Add a persistently mounted `<span className="sr-only" role="status" aria-live="polite">` inside modal search overlays that reflects active result counts when search queries are present.
+
+## 2026-11-02 - Descriptive hover tooltips on non-interactive KPI summary tiles
+**Learning:** Non-interactive KPI summary tiles (such as Success rate or Avg latency) benefit from explicit `title` attributes incorporating label, value, and hint text so desktop mouse users can inspect metric details on hover without adding unnecessary `tabIndex={0}` tab stops to non-interactive elements.
+**Action:** Set `title={`${tile.label}: ${tile.value}${tile.hint ? ` (${tile.hint})` : ""}`}` on non-interactive KPI summary cards.
