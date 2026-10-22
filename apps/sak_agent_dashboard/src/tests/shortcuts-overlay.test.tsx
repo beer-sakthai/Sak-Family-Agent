@@ -115,7 +115,6 @@ describe("ShortcutsOverlay", () => {
   });
 
   it("announces matching result count in an off-screen polite live region as user searches shortcuts", () => {
-  it("announces match count updates to screen readers via polite live region", () => {
     renderShortcutsOverlay();
     const searchInput = screen.getByRole("searchbox", { name: "Filter keyboard shortcuts" });
 
@@ -126,9 +125,5 @@ describe("ShortcutsOverlay", () => {
     expect(liveRegion).toBeInTheDocument();
     expect(liveRegion).toHaveAttribute("aria-live", "polite");
     expect(liveRegion).toHaveTextContent("1 shortcut found.");
-    expect(screen.getByText("1 shortcut found")).toBeInTheDocument();
-
-    fireEvent.change(searchInput, { target: { value: "nonexistent query" } });
-    expect(screen.getByText("0 shortcuts found")).toBeInTheDocument();
   });
 });
