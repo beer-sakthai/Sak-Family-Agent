@@ -109,13 +109,13 @@ describe("Sidebar", () => {
     expect(within(screen.getByRole("tab", { name: "Memory" })).queryByText(/\d/)).toBeNull();
   });
 
-  it("hides labels and counts when collapsed and provides informative title tooltips", () => {
+  it("hides labels and counts when collapsed and provides informative title tooltips including metrics", () => {
     renderSidebar({ collapsed: true, counts: { sessions: 42 } });
     // The accessible name survives via aria-label; the visible text does not.
-    const sessionsTab = screen.getByRole("tab", { name: "Sessions" });
+    const sessionsTab = screen.getByRole("tab", { name: "Sessions (42)" });
     expect(sessionsTab).toBeInTheDocument();
     expect(sessionsTab).toHaveAttribute("type", "button");
-    expect(sessionsTab).toHaveAttribute("title", "Sessions");
+    expect(sessionsTab).toHaveAttribute("title", "Sessions (42)");
     expect(screen.queryByText("42")).not.toBeInTheDocument();
   });
 
