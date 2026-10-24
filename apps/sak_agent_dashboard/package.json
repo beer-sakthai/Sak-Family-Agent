@@ -15,7 +15,7 @@
     "better-sqlite3": "13.0.3",
     "lucide-react": "^1.55.0",
     "next": "^16.4.0",
-    "react": "^19.3.0",
+    "react": "^19.3.1",
     "react-dom": "^19.2.8",
     "recharts": "^3.10.1"
   },
