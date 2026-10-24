@@ -217,10 +217,11 @@ def test_cmd(client_id: str, verbose: bool, as_json: bool) -> None:
             "summary": result.summary,
         }
         click.echo(json.dumps(payload, indent=2))
-    else:
-        console.print("\n" + "=" * 60)
-        console.print(result.summary)
-        console.print("=" * 60 + "\n")
+        return
+
+    console.print("\n" + "=" * 60)
+    console.print(result.summary)
+    console.print("=" * 60 + "\n")
 
     if not result.all_passed:
         sys.exit(1)

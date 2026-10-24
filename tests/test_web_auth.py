@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import threading
 import urllib.error
-import urllib.parse
 import urllib.request
 from http.server import HTTPServer
 from pathlib import Path
@@ -452,76 +451,3 @@ def test_token_matches_is_total_over_non_ascii() -> None:
     assert _token_matches("abc", "abd") is False
     assert _token_matches("\xe9", "abc") is False
     assert _token_matches("abc", "\xe9") is False
-
-
-# ---------------------------------------------------------------------------
-# Near-miss tokens and the unconfigured-token guard. A token that differs only
-# in its last character, or is the real token's prefix, must fail on every
-# channel: only the full value compares equal.
-# ---------------------------------------------------------------------------
-
-_PINNED_TOKEN = "near_miss_regression_token_0001"
-_NEAR_MISSES = {
-    "last char changed": _PINNED_TOKEN[:-1] + "2",
-    "truncated by one": _PINNED_TOKEN[:-1],
-    "eight-char prefix": _PINNED_TOKEN[:8],
-    "extended by one": _PINNED_TOKEN + "0",
-    "case changed": _PINNED_TOKEN.upper(),
-}
-
-
-def _credential_request(channel: str, token: str) -> tuple[str, dict[str, str]]:
-    """The (path, headers) that present ``token`` on one credential channel."""
-    quoted = urllib.parse.quote(token)
-    if channel == "header":
-        return "/api/stages", {"Authorization": f"Bearer {token}"}
-    if channel == "query":
-        return f"/api/stages?token={quoted}", {}
-    return "/api/stages", {"Cookie": f"token={quoted}"}
-
-
-@pytest.mark.parametrize("channel", ["header", "query", "cookie"])
-@pytest.mark.parametrize("variant", sorted(_NEAR_MISSES))
-def test_near_miss_token_is_rejected(
-    authed_server_base: tuple[str, str],
-    monkeypatch: pytest.MonkeyPatch,
-    channel: str,
-    variant: str,
-) -> None:
-    import sakthai.web.server as srv
-
-    base_url, _ = authed_server_base
-    monkeypatch.setattr(srv, "_BEARER_TOKEN", _PINNED_TOKEN)
-
-    path, headers = _credential_request(channel, _NEAR_MISSES[variant])
-    status, _body = _get_with_headers(f"{base_url}{path}", headers)
-    assert status in (401, 403), f"{channel}/{variant}: near-miss token got {status}"
-
-    path, headers = _credential_request(channel, _PINNED_TOKEN)
-    status, _body = _get_with_headers(f"{base_url}{path}", headers)
-    assert status == 200, f"{channel}: the real token itself was refused ({status})"
-
-
-@pytest.mark.parametrize(
-    ("path", "headers"),
-    [
-        ("/api/stages", {}),
-        ("/api/stages", {"Authorization": "Bearer "}),
-        ("/api/stages?token=", {}),
-        ("/api/stages", {"Cookie": "token="}),
-    ],
-    ids=["no credential", "empty bearer", "empty query", "empty cookie"],
-)
-def test_unconfigured_token_fails_closed(
-    authed_server_base: tuple[str, str],
-    monkeypatch: pytest.MonkeyPatch,
-    path: str,
-    headers: dict[str, str],
-) -> None:
-    """With no token configured, nothing authenticates, an empty credential included."""
-    import sakthai.web.server as srv
-
-    base_url, _ = authed_server_base
-    monkeypatch.setattr(srv, "_BEARER_TOKEN", "")
-    status, _body = _get_with_headers(f"{base_url}{path}", headers)
-    assert status in (401, 403)

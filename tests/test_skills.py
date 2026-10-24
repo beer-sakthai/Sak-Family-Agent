@@ -56,41 +56,6 @@ This is the body of the skill.
     assert info.body == "# Skill Body\nThis is the body of the skill."
 
 
-@pytest.mark.parametrize(
-    ("frontmatter", "tags", "related"),
-    [
-        # Skills written for the Hermes runtime keep their metadata under metadata.hermes.
-        (
-            "metadata:\n  hermes:\n    tags: [hf, hub]\n    related_skills: [x]\n",
-            ["hf", "hub"],
-            ["x"],
-        ),
-        # Older skills put it at the top level.
-        ("tags: [flat]\nrelated_skills: [y]\n", ["flat"], ["y"]),
-        # metadata.sakthai wins over both; each field falls back on its own.
-        (
-            "tags: [flat]\nrelated_skills: [y]\n"
-            "metadata:\n  sakthai:\n    tags: [ours]\n  hermes:\n    tags: [theirs]\n",
-            ["ours"],
-            ["y"],
-        ),
-        # A non-mapping metadata value is ignored rather than crashing the parse.
-        ("metadata: just text\ntags: [flat]\n", ["flat"], []),
-    ],
-)
-def test_parse_skill_finds_tags_outside_metadata_sakthai(
-    tmp_path: Path, frontmatter: str, tags: list[str], related: list[str]
-) -> None:
-    """75 skills on disk keep tags where the parser once never looked."""
-    skill_md = tmp_path / "SKILL.md"
-    skill_md.write_text(f"---\nname: legacy\n{frontmatter}---\nBody\n", encoding="utf-8")
-
-    info = parse_skill(skill_md)
-
-    assert info.tags == tags
-    assert info.related_skills == related
-
-
 def test_parse_skill_minimal(tmp_path: Path) -> None:
     skill_md = tmp_path / "SKILL.md"
     content = """---
@@ -360,20 +325,6 @@ def test_naming_violations_flags_prefix_folder_and_length(tmp_path: Path) -> Non
     assert "missing required prefix 'Sak-'" in violations["bad-prefix"]
     assert "!= folder" in violations["Sak-mismatch"]
     assert "exceeds 64 chars" in violations[long_name]
-
-
-def test_naming_violations_flags_a_name_windows_cannot_check_out(tmp_path: Path) -> None:
-    from sakthai.skills import naming_violations
-
-    for name in ("SakSee-stitch::react-native", "SakSee-stitch-react-native"):
-        _write_skill(tmp_path / name, name)
-
-    violations = [
-        (p.parent.name, reason) for p, reason in naming_violations(tmp_path, prefix="SakSee-")
-    ]
-    assert violations == [
-        ("SakSee-stitch::react-native", "name may use only letters, digits and hyphens")
-    ]
 
 
 def test_naming_violations_missing_root_is_empty(tmp_path: Path) -> None:

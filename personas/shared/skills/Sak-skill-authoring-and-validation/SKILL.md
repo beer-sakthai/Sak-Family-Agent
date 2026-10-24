@@ -34,8 +34,6 @@ The leaf directory must equal the SKILL.md `name`. Names use letters, numbers, a
 
 Use YAML frontmatter with `name` and `description`. Start the description with `Use when...` and describe triggers, not workflow. Add searchable terms, an overview, useful quick reference, common mistakes, and “when not to use” guidance when needed. Put heavy references or reusable tools in separate files.
 
-Optional `tags` and `related_skills` go under `metadata.sakthai`. The parser also reads them from `metadata.hermes` and the top level, but only so older skills keep theirs.
-
 ## Validation
 
 From the repository root, run:

@@ -145,20 +145,18 @@ def _run_in_sandbox(
 @click.command()
 @click.argument("task")
 @click.option("--model", default=DEFAULT_MODEL, show_default=True, help="Model identifier.")
-@click.option(
-    "--max-tokens", default=DEFAULT_MAX_TOKENS, show_default=True, type=click.IntRange(min=1)
-)
+@click.option("--max-tokens", default=DEFAULT_MAX_TOKENS, show_default=True, type=int)
 @click.option(
     "--max-iterations",
     default=DEFAULT_MAX_ITERATIONS,
     show_default=True,
-    type=click.IntRange(min=1),
+    type=int,
     help="Tool-use loop cap.",
 )
 @click.option(
     "--max-seconds",
     default=None,
-    type=click.FloatRange(min=0, min_open=True),
+    type=float,
     help="Wall-clock time budget in seconds (off by default).",
 )
 @click.option(

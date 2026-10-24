@@ -8,7 +8,7 @@ Sample data and the on-disk format of a memory snapshot.
 
 ```json
 {
-  "version": 2,
+  "version": 1,
   "exported_at": 1718450000,
   "db_path": "/home/you/.sakthai/memory.db",
   "facts": [ { "id": 1, "kind": "pref", "key": "theme", "value": "dark",
@@ -22,10 +22,6 @@ Sample data and the on-disk format of a memory snapshot.
 
 `memory import <file>` restores it (`--replace` preserves IDs; default merges
 with fresh IDs). `--format csv|jsonl` produces flat exports instead.
-
-Every version 2 fact carries `tags`, a list of strings. Version 1 snapshots
-still import: a v1 fact may omit `tags` and gets none. Any other version, or
-`tags` that is not a list of strings, is rejected before anything is written.
 
 ## Files
 

@@ -13,6 +13,7 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     HfArgumentParser,
+    TrainingArguments,
 )
 from trl import SFTConfig, SFTTrainer
 
@@ -40,19 +41,17 @@ class ScriptArguments:
 
 
 def main():
-    # ScriptArguments alone: it repeats output_dir, learning_rate, bf16 and
-    # other TrainingArguments fields, so parsing both dataclasses made argparse
-    # reject the duplicate --output_dir before the script could start.
-    parser = HfArgumentParser(ScriptArguments)
-    (args,) = parser.parse_args_into_dataclasses()
+    parser = HfArgumentParser((ScriptArguments, TrainingArguments))
+    args, training_args = parser.parse_args_into_dataclasses()
 
+    # Patch TrainingArguments with SFT-specific fields via SFTConfig
     sft_config = SFTConfig(
         output_dir=args.output_dir,
         num_train_epochs=args.num_train_epochs,
         per_device_train_batch_size=args.per_device_train_batch_size,
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         learning_rate=args.learning_rate,
-        warmup_steps=0.03,  # a float below 1 is a ratio of total steps
+        warmup_ratio=0.03,
         lr_scheduler_type="cosine",
         logging_steps=10,
         save_strategy="epoch",
@@ -63,10 +62,15 @@ def main():
         report_to=args.report_to if args.report_to != "none" else [],
         push_to_hub=args.push_to_hub,
         hub_model_id=args.hub_model_id,
-        max_length=args.max_seq_length,
+        max_seq_length=args.max_seq_length,
         packing=False,
         dataset_text_field="messages",
     )
+
+    # Merge any explicit TrainingArguments CLI overrides that SFTConfig didn't capture
+    for k, v in vars(training_args).items():
+        if hasattr(sft_config, k) and v is not None:
+            setattr(sft_config, k, v)
 
     print(f"Loading model: {args.model_name}")
     # model_name/dataset_name default to this project's own repos and are
@@ -74,13 +78,13 @@ def main():
     # repo, so there is no fixed commit to pin here (bandit B615).
     model = AutoModelForCausalLM.from_pretrained(  # nosec B615
         args.model_name,
-        trust_remote_code=False,  # never run code shipped in the model repo
-        dtype="auto",
+        trust_remote_code=True,
+        torch_dtype="auto",
         device_map=None,  # let DeepSpeed / Accelerate handle placement
     )
 
     tokenizer = AutoTokenizer.from_pretrained(  # nosec B615
-        args.model_name, trust_remote_code=False
+        args.model_name, trust_remote_code=True
     )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -103,7 +107,7 @@ def main():
 
     trainer = SFTTrainer(
         model=model,
-        processing_class=tokenizer,
+        tokenizer=tokenizer,
         train_dataset=dataset,
         args=sft_config,
         peft_config=peft_config,

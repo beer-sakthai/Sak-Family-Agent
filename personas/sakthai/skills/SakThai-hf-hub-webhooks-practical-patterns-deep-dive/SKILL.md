@@ -1,7 +1,7 @@
 ---
 name: SakThai-hf-hub-webhooks-practical-patterns-deep-dive
 version: 1.0.0
-description: Practical guide to Hugging Face Hub webhooks — event payloads, building receivers, handling delivery failures, and wiring webhooks into agent automation.
+description: # HF Hub Webhooks — Practical Patterns
 ---
 
 # HF Hub Webhooks — Practical Patterns

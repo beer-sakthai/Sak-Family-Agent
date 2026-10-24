@@ -372,4 +372,4 @@ hf spaces info namespace/repo
 - [hf-spaces-lifecycle-sleep-pause-billing-duration](../hf-spaces-lifecycle-sleep-pause-billing-duration/SKILL.md)
 - [hf-spaces-logs-monitoring-and-debugging-deep-dive](../hf-spaces-logs-monitoring-and-debugging-deep-dive/SKILL.md)
 - [hf-spaces-docker-custom](../hf-spaces-docker-custom/SKILL.md)
-- [hf-hub-spaces-build-runtime-api](../SakThai-hf-hub-spaces-build-runtime-api/SKILL.md)
+- [hf-hub-spaces-build-runtime-api](../hf-hub-spaces-build-runtime-api/SKILL.md)

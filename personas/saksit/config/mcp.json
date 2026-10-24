@@ -1,14 +1,18 @@
 {
-  "_comment": "SakSit — Master of Social Media. Image/video generation via Hugging Face Spaces (mcp-hfspace). Swap the Space ids for your preferred models. Spawned servers do not inherit HF_TOKEN or any other host secret (docs/security-hardening.md, finding 2).",
+  "_comment": "SakSit — Master of Social Media. Image/video generation via Hugging Face Spaces (mcp-hfspace). Swap the Space ids for your preferred models. HF_TOKEN is inherited from the process env.",
   "mcpServers": {
     "hf-media": {
       "command": "npx",
       "args": [
         "-y",
-        "@llmindset/mcp-hfspace@0.5.4",
+        "@llmindset/mcp-hfspace",
         "black-forest-labs/FLUX.1-schnell",
         "Lightricks/LTX-Video"
       ]
+    },
+    "huggingface": {
+      "command": "npx",
+      "args": ["-y", "@huggingface/mcp-server"]
     }
   }
 }

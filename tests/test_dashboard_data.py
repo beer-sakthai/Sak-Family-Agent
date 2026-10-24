@@ -11,10 +11,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-import pytest
-
-from sakthai.config import PERSONA_NAMES, persona_model_defaults
-from sakthai.dashboard.data import _team_roster, collect_dashboard_data
+from sakthai.dashboard.data import _parse_team_roster, collect_dashboard_data
 from sakthai.memory.store import MemoryStore
 
 
@@ -255,32 +252,45 @@ def test_broken_store_yields_fallback_stub() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Team roster
+# Team roster parsing
 # ---------------------------------------------------------------------------
 
+_SOUL_WITH_TABLE = """\
+# Souls
 
-def test_team_roster_lists_every_persona_from_its_own_config() -> None:
-    """The roster follows the persona configs, not a hand-kept table that drifts."""
-    roster = _team_roster()
+| Agent | Handle | Role | Model |
+| --- | --- | --- | --- |
+| **SakThai** | `@sakthai` | Lead & Orchestrator | `claude` |
+| **SakKing** | `@sakking` | Strategist | `gemini` |
 
-    assert [row["handle"] for row in roster] == [f"@{p}_agent_bot" for p in PERSONA_NAMES]
-    for name, row in zip(PERSONA_NAMES, roster, strict=True):
-        provider, model = persona_model_defaults(name)
-        assert row["model"] == f"{model} ({provider})"
-        assert row["agent"].lower() == name
-        assert row["role"], f"{name} has no role in config/workspace.yaml"
+Some trailing prose that ends the table.
+"""
 
 
-def test_team_roster_keeps_a_persona_whose_config_is_missing_or_broken(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    (tmp_path / "saktan" / "config").mkdir(parents=True)
-    (tmp_path / "saktan" / "config" / "workspace.yaml").write_text("role: [unclosed\n")
-    (tmp_path / "sakking" / "config").mkdir(parents=True)
-    (tmp_path / "sakking" / "config" / "workspace.yaml").write_text("- a list, not a mapping\n")
-    monkeypatch.setattr("sakthai.config.PERSONAS_DIR", tmp_path)
+def test_parse_team_roster_reads_table_rows(tmp_path: Path) -> None:
+    soul = tmp_path / "SOUL.md"
+    soul.write_text(_SOUL_WITH_TABLE, encoding="utf-8")
+    roster = _parse_team_roster(soul)
+    assert roster == [
+        {
+            "agent": "SakThai",
+            "handle": "@sakthai",
+            "role": "Lead & Orchestrator",
+            "model": "claude",
+        },
+        {"agent": "SakKing", "handle": "@sakking", "role": "Strategist", "model": "gemini"},
+    ]
 
-    roster = _team_roster()
 
-    assert [row["agent"] for row in roster] == list(PERSONA_NAMES)
-    assert all(row["role"] == "" and row["model"] == "" for row in roster)
+def test_parse_team_roster_missing_file_returns_empty(tmp_path: Path) -> None:
+    assert _parse_team_roster(tmp_path / "nope.md") == []
+
+
+def test_parse_team_roster_unreadable_path_returns_empty(tmp_path: Path) -> None:
+    # A directory exists but read_text() raises; the helper swallows it.
+    assert _parse_team_roster(tmp_path) == []
+
+
+def test_parse_team_roster_default_path_is_repo_soul() -> None:
+    # Resolves docs/SOUL.md relative to the package; must never raise.
+    assert isinstance(_parse_team_roster(), list)

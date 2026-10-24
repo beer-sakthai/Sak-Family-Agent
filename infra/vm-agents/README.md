@@ -25,21 +25,27 @@ Follow these steps on the target VM to deploy the agents.
 
 ### Step 1: Generate the Deployment Bundle
 
-Run the `setup_vm_telegram_agents.py` script to create a directory containing all necessary configuration files. Paths and settings are flags. Each secret comes from its environment variable (`OPENAI_API_KEY`, `<AGENT>_TELEGRAM_BOT_TOKEN`, e.g. `SAKKING_TELEGRAM_BOT_TOKEN`), and the script prompts, without echo, for any that is unset. Don't pass secrets as flags: a flag's value shows up in `ps` for every local user and in your shell history. The `--openai-api-key` and `--<agent>-telegram-bot-token` flags still work, but only for compatibility.
+Run the `setup_vm_telegram_agents.py` script to create a directory containing all necessary configuration files. This script prompts for all required tokens and paths.
 
 **Example Command:**
 
 ```bash
 # Ensure you are in the repository root
-# Replace placeholders with your actual paths
+# Replace placeholders with your actual credentials and paths
 
 python scripts/setup_vm_telegram_agents.py \
   --repo-root ~/Sak-Family-Agent \
   --target-dir ~/sak-family-agents-deployment \
   --openai-base-url "https://api.openai.com/v1" \
+  --openai-api-key "sk-..." \
   --telegram-allowed-user-ids "123456789" \
-  --shared-sakthai-home ~/.sakthai
-# Prompts for the OpenAI key and the six bot tokens unless they are exported.
+  --shared-sakthai-home ~/.sakthai \
+  --sakking-telegram-bot-token "..." \
+  --sakthai-telegram-bot-token "..." \
+  --saksee-telegram-bot-token "..." \
+  --saksit-telegram-bot-token "..." \
+  --saktan-telegram-bot-token "..." \
+  --sakjules-telegram-bot-token "..."
 ```
 
 This command will create a `~/sak-family-agents-deployment` directory with the following structure:
@@ -64,12 +70,11 @@ Copy the generated files to the standard locations for user-level configuration 
 
 ```bash
 # Create destination directories if they don't exist
-mkdir -p -m 700 ~/.config/sak-family-agents
+mkdir -p ~/.config/sak-family-agents
 mkdir -p ~/.config/systemd/user
 
-# Copy the environment files. They hold the API key and bot tokens, so they
-# stay owner-only: the script writes them 0600, and install -m 600 keeps it so.
-install -m 600 ~/sak-family-agents-deployment/config/*.env ~/.config/sak-family-agents/
+# Copy the environment files
+cp ~/sak-family-agents-deployment/config/*.env ~/.config/sak-family-agents/
 
 # Copy the systemd service file
 cp ~/sak-family-agents-deployment/systemd/sakthai-telegram@.service ~/.config/systemd/user/
