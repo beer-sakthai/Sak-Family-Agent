@@ -120,7 +120,7 @@ export function DisplayMenu({
         <div
           role="menu"
           aria-label="Display settings"
-          className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-line bg-panel p-2 shadow-glass backdrop-blur-xl"
+          className="absolute top-full right-0 z-50 mt-2 w-56 rounded-2xl border border-line bg-panel p-2 shadow-glass backdrop-blur-xl"
         >
           <p className="px-2 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
             Theme
