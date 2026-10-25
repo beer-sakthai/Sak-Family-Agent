@@ -731,6 +731,25 @@ describe("SessionExplorer", () => {
     expect(drawerModel).toHaveTextContent(expectedModel);
   });
 
+  it("renders task, timestamp, and token count table cells with title hover tooltips", () => {
+    const firstSession = sessions.sessions[0];
+    renderExplorer();
+
+    const expectedTaskTitle = firstSession.task ? `Task: ${firstSession.task}` : "Task not recorded";
+    const taskCell = screen.getByTitle(expectedTaskTitle);
+    expect(taskCell).toBeInTheDocument();
+    expect(taskCell).toHaveTextContent(firstSession.task || "—");
+
+    const formattedTime = new Date(firstSession.timestamp * 1000).toISOString().replace("T", " ").slice(0, 19);
+    const timestampCell = screen.getByTitle(`Recorded at: ${formattedTime}`);
+    expect(timestampCell).toBeInTheDocument();
+    expect(timestampCell).toHaveTextContent(formattedTime);
+
+    const tokenCell = screen.getByTitle(`Total tokens: ${firstSession.tokens.total_tokens.toLocaleString()}`);
+    expect(tokenCell).toBeInTheDocument();
+    expect(tokenCell).toHaveTextContent(firstSession.tokens.total_tokens.toLocaleString());
+  });
+
   it("sends search upward for a server-side query", () => {
     const onSearchChange = vi.fn();
     renderExplorer({ onSearchChange });

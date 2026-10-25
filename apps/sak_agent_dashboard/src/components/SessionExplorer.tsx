@@ -243,7 +243,10 @@ export function SessionExplorer({
                           {personaLabel(session.persona)}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 font-sans text-fg max-w-md truncate">
+                      <td
+                        title={session.task ? `Task: ${session.task}` : "Task not recorded"}
+                        className="px-5 py-3.5 font-sans text-fg max-w-md truncate"
+                      >
                         {session.task || "—"}
                       </td>
                       <td
@@ -253,10 +256,16 @@ export function SessionExplorer({
                       >
                         {session.model || "—"}
                       </td>
-                      <td className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap">
+                      <td
+                        title={`Recorded at: ${formatTimestamp(session.timestamp)}`}
+                        className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap"
+                      >
                         {formatTimestamp(session.timestamp)}
                       </td>
-                      <td className="px-5 py-3.5 text-right text-fg-2">
+                      <td
+                        title={`Total tokens: ${session.tokens.total_tokens.toLocaleString()}`}
+                        className="px-5 py-3.5 text-right text-fg-2"
+                      >
                         {session.tokens.total_tokens.toLocaleString()}
                       </td>
                       <td className="px-5 py-3.5">
