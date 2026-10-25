@@ -1033,6 +1033,19 @@ describe("WorkflowRuns", () => {
     expect(selectedRow).toBeInTheDocument();
     expect(selectedRow).toHaveClass("bg-raised/80");
   });
+
+  it("renders table cell title hover tooltips for Workflow, Started, Duration, and Steps", () => {
+    const run = workflows.runs[0];
+    const { container } = render(
+      <WorkflowRuns runs={[run]} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
+    );
+
+    const workflowCell = container.querySelector(`td[title="Workflow: ${run.workflow_name || "—"} (${run.run_id})"]`);
+    expect(workflowCell).toBeInTheDocument();
+
+    const stepsCell = container.querySelector(`td[title="Total steps: ${run.step_count}${run.failed_steps > 0 ? ` (${run.failed_steps} failed)` : ""}"]`);
+    expect(stepsCell).toBeInTheDocument();
+  });
 });
 
 describe("PersonaFilter", () => {
