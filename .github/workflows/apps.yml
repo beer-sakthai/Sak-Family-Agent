@@ -15,18 +15,12 @@ on:
       - "apps/**"
       - "personas/sakthai/sakthai/web/contracts.py"
       - "scripts/gen_dashboard_types.py"
-      # The dashboard serves copies of the README's persona portraits;
-      # persona-avatar.test.tsx fails when the two sets drift.
-      - "docs/images/personas/**"
       - ".github/workflows/apps.yml"
   pull_request:
     paths:
       - "apps/**"
       - "personas/sakthai/sakthai/web/contracts.py"
       - "scripts/gen_dashboard_types.py"
-      # The dashboard serves copies of the README's persona portraits;
-      # persona-avatar.test.tsx fails when the two sets drift.
-      - "docs/images/personas/**"
       - ".github/workflows/apps.yml"
 
 permissions:
@@ -45,7 +39,7 @@ jobs:
       run:
         working-directory: apps/sak_agent_dashboard
     steps:
-      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           egress-policy: audit
 
@@ -53,7 +47,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22"
           cache: npm
@@ -85,7 +79,7 @@ jobs:
       run:
         working-directory: apps/agent_workflow_framework
     steps:
-      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           egress-policy: audit
 
@@ -123,7 +117,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           egress-policy: audit
 

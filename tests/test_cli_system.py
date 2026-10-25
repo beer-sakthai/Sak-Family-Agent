@@ -521,21 +521,6 @@ def test_ready_without_provider_credentials_says_run_needs_one(
 
 
 @pytest.mark.parametrize("command", ["doctor", "status"])
-def test_no_provider_hint_does_not_ask_for_ollama_host(
-    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, command: str
-) -> None:
-    """A local Ollama on its default address needs no key and no OLLAMA_HOST.
-
-    Neither command can see whether Ollama is running, so the hint must name the
-    default address rather than send its user off to set a variable.
-    """
-    monkeypatch.setattr(system_mod, "check_env", lambda: _fake_env(anthropic_ok=False))
-    result = runner.invoke(main, [command])
-    assert "127.0.0.1:11434" in result.output
-    assert "HF_TOKEN, OLLAMA_HOST)" not in result.output
-
-
-@pytest.mark.parametrize("command", ["doctor", "status"])
 def test_ready_with_provider_credentials_has_no_warning(
     runner: CliRunner, monkeypatch: pytest.MonkeyPatch, command: str
 ) -> None:

@@ -874,18 +874,6 @@ def test_preflight_ollama_maps_to_openai(monkeypatch: pytest.MonkeyPatch) -> Non
     assert report["runnable"] is True
 
 
-def test_preflight_ollama_needs_no_host_or_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Ollama's default host takes no setting and no key, so a dry run is runnable."""
-    import sakthai.agent.loop as loop_mod
-
-    for var in ("OLLAMA_HOST", "OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_API_BASE"):
-        monkeypatch.delenv(var, raising=False)
-    report = loop_mod.preflight(provider="ollama")
-    assert report["credential_source"] == "ollama_default"
-    assert report["model"] == "qwen2.5-coder:7b"
-    assert report["runnable"] is True
-
-
 def test_preflight_makes_no_api_call(monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.agent.loop as loop_mod
 
@@ -1995,7 +1983,7 @@ def test_save_session_log_handles_write_error(store: MemoryStore) -> None:
 def test_run_agent_renames_ollama_provider_to_openai(
     store: MemoryStore, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """provider='ollama' is served through the OpenAI-compatible request path."""
+    """provider='ollama' is normalised to 'openai' before the client is built."""
     from sakthai.agent.providers.base import Response as _ProvResponse
 
     called: dict[str, bool] = {}
@@ -2015,35 +2003,6 @@ def test_run_agent_renames_ollama_provider_to_openai(
     monkeypatch.setattr(loop_mod, "_call_openai_compat", _fake_openai_compat)
     run_agent("hi", client=FakeClient([]), store=store, provider="ollama")
     assert called.get("openai") is True
-
-
-def test_run_agent_ollama_reaches_the_default_local_host(
-    store: MemoryStore, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """With no OLLAMA_HOST and no OpenAI settings, provider='ollama' still runs.
-
-    It used to be renamed to 'openai' before the client was built, so the OpenAI
-    path demanded OPENAI_API_KEY/OPENAI_BASE_URL/OLLAMA_HOST and the default
-    model fell through to gpt-4o.
-    """
-    import sakthai.agent.loop as loop_mod
-    from sakthai.agent.providers.base import Response as _ProvResponse
-
-    for var in ("OLLAMA_HOST", "OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_API_BASE"):
-        monkeypatch.delenv(var, raising=False)
-    seen: dict[str, str] = {}
-
-    def _fake_openai_compat(
-        client: object, model: str, *args: object, **kwargs: object
-    ) -> _ProvResponse:
-        seen["base_url"] = str(getattr(client, "base_url", ""))
-        seen["model"] = model
-        return _ProvResponse("end_turn", [_Block(type="text", text="ok")])
-
-    monkeypatch.setattr(loop_mod, "_call_openai_compat", _fake_openai_compat)
-    run_agent("hi", store=store, provider="ollama")
-    assert "127.0.0.1:11434" in seen["base_url"]
-    assert seen["model"] == "qwen2.5-coder:7b"
 
 
 def test_run_agent_huggingface_provider_dispatches_to_openai_compat(

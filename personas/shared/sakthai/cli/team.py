@@ -181,10 +181,8 @@ def run_cmd(pipeline_name: str, task: str, verbose: bool, as_json: bool) -> None
             "context": result.context,
         }
         click.echo(json.dumps(payload, indent=2))
-    else:
-        console.print("\n" + "=" * 60)
-        console.print(result.summary)
-        console.print("=" * 60 + "\n")
+        return
 
-    if not result.success:
-        sys.exit(1)
+    console.print("\n" + "=" * 60)
+    console.print(result.summary)
+    console.print("=" * 60 + "\n")

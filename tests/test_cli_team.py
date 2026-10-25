@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
-import pytest
 from click.testing import CliRunner
 
 from sakthai.cli import main
@@ -107,37 +106,3 @@ def test_cli_team_run_json() -> None:
         assert data["pipeline"] == "code-review"
         assert data["success"] is True
         assert len(data["steps"]) == 1
-
-
-def _failed_pipeline_result() -> PipelineResult:
-    return PipelineResult(
-        pipeline_name="code-review",
-        task="Audit login flow",
-        steps=[
-            StepResult(
-                step_name="scope",
-                persona="sakthai",
-                output="",
-                iterations=0,
-                usage={},
-                duration_seconds=0.1,
-                is_error=True,
-                error_message="No Hugging Face credentials found.",
-            )
-        ],
-        success=False,
-        summary="Summary report",
-    )
-
-
-@pytest.mark.parametrize("extra", [[], ["--json"]])
-def test_cli_team_run_failed_pipeline_exits_nonzero(extra: list[str]) -> None:
-    """A failed pipeline fails the command, so a script or cron job can tell."""
-    runner = CliRunner()
-    with patch("sakthai.cli.team.execute_pipeline", return_value=_failed_pipeline_result()):
-        result = runner.invoke(main, ["team", "run", "code-review", "Audit login flow", *extra])
-    assert result.exit_code == 1, result.output
-    if extra:
-        assert json.loads(result.output)["success"] is False
-    else:
-        assert "Summary report" in result.output

@@ -31,6 +31,41 @@ class TestWorkflowExecutor(unittest.TestCase):
         self.assertEqual(history.status, RunStatus.COMPLETED)
         self.assertEqual(history.step_results["s1"].output.get("msg"), "hello world")
 
+    def test_validate_shell_command_process_substitution(self):
+        """Verify that shell commands with process substitution to interpreters are blocked."""
+        malicious_commands = [
+            "eval <(echo 'cat /etc/passwd')",
+            "exec <(echo 'cat /etc/passwd')",
+            "source <(echo 'cat /etc/passwd')",
+            ". <(echo 'cat /etc/passwd')",
+            "bash <(echo 'cat /etc/passwd')",
+            "sh < (echo 'cat /etc/passwd')",
+            "python <(echo 'import os; os.system(\"cat /etc/passwd\")')",
+            "ENV_VAR=1 python <(echo 'cat /etc/passwd')",
+            "/bin/bash <(echo 'cat /etc/passwd')",
+        ]
+
+        for cmd in malicious_commands:
+            with self.subTest(cmd=cmd):
+                wf = WorkflowDefinition(
+                    name="test_shell_security",
+                    steps=[
+                        StepDefinition(
+                            id="shell_step",
+                            action="shell",
+                            params={"cmd": cmd},
+                        ),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(history.status, RunStatus.FAILED)
+                step_res = history.step_results["shell_step"]
+                self.assertEqual(step_res.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res.error)
+                self.assertIn(
+                    "Process substitution for interpreter execution is prohibited", step_res.error
+                )
+
     def test_shell_action(self):
         """Test shell action handler."""
         wf = WorkflowDefinition(
@@ -115,7 +150,10 @@ class TestWorkflowExecutor(unittest.TestCase):
             name="test_retry_fail",
             steps=[
                 StepDefinition(
-                    id="fail_step", action="shell", params={"cmd": "bash -c 'exit 1'", "check": True}, retry=1
+                    id="fail_step",
+                    action="shell",
+                    params={"cmd": "bash -c 'exit 1'", "check": True},
+                    retry=1,
                 ),
                 StepDefinition(
                     id="blocked_step",

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from functools import lru_cache
@@ -65,24 +64,6 @@ def _as_str_list(value: Any) -> list[str]:
     return [str(v) for v in value] if isinstance(value, list) else []
 
 
-def _metadata_list(front: dict[str, Any], field: str) -> list[str]:
-    """FIELD from ``metadata.sakthai``, else ``metadata.hermes``, else the top level.
-
-    ``metadata.sakthai`` is where new skills belong; skills written for the
-    Hermes runtime keep their metadata under ``metadata.hermes``, and older
-    ones put it at the top level. Reading all three keeps those visible.
-    """
-    metadata = front.get("metadata")
-    sections = (
-        [metadata.get(k) for k in ("sakthai", "hermes")] if isinstance(metadata, dict) else []
-    )
-    for section in [*sections, front]:
-        values = _as_str_list(section.get(field)) if isinstance(section, dict) else []
-        if values:
-            return values
-    return []
-
-
 @lru_cache(maxsize=1024)
 def _load_skill_file(path: Path) -> tuple[dict[str, Any], str]:
     """Read and parse a SKILL.md file, caching the results."""
@@ -106,6 +87,7 @@ def parse_skill(path: Path) -> SkillInfo:
     if not name or not isinstance(name, str):
         raise SkillParseError(f"{path}: missing required field: name")
 
+    sakthai_meta = (front.get("metadata") or {}).get("sakthai") or {}
     return SkillInfo(
         name=name,
         path=path,
@@ -113,8 +95,8 @@ def parse_skill(path: Path) -> SkillInfo:
         description=front.get("description"),
         version=front.get("version"),
         platforms=_as_str_list(front.get("platforms")),
-        tags=_metadata_list(front, "tags"),
-        related_skills=_metadata_list(front, "related_skills"),
+        tags=_as_str_list(sakthai_meta.get("tags")),
+        related_skills=_as_str_list(sakthai_meta.get("related_skills")),
         body=body,
     )
 
@@ -333,18 +315,12 @@ def target_skill_name(current: str, prefix: str) -> str:
     return f"{prefix}{strip_known_prefix(current)}"
 
 
-# The folder must equal the name, so this rules out a ':' in a folder name too:
-# eight skills once had "stitch::…" folders, which Windows cannot check out.
-_PORTABLE_SKILL_NAME = re.compile(r"[A-Za-z0-9-]+")
-
-
 def naming_violations(root: Path, *, prefix: str) -> list[tuple[Path, str]]:
     """Report skills under ``root`` that break the naming convention.
 
     Each parseable ``SKILL.md`` is checked for: a ``name`` ≤ ``SKILL_NAME_MAX``
-    chars, a ``name`` of letters, digits and hyphens only, a ``name`` that matches
-    its leaf folder, and the required ``prefix`` for this layer (``Sak-`` shared,
-    ``Sak<Name>-`` for a persona). Parse errors
+    chars, a ``name`` that matches its leaf folder, and the required ``prefix``
+    for this layer (``Sak-`` shared, ``Sak<Name>-`` for a persona). Parse errors
     are left to :func:`validate_tree`; this only judges *naming*.
     """
     violations: list[tuple[Path, str]] = []
@@ -359,8 +335,6 @@ def naming_violations(root: Path, *, prefix: str) -> list[tuple[Path, str]]:
         issues: list[str] = []
         if len(skill.name) > SKILL_NAME_MAX:
             issues.append(f"name exceeds {SKILL_NAME_MAX} chars")
-        if not _PORTABLE_SKILL_NAME.fullmatch(skill.name):
-            issues.append("name may use only letters, digits and hyphens")
         if not skill.name.startswith(prefix):
             issues.append(f"missing required prefix '{prefix}'")
         if skill.name != folder:

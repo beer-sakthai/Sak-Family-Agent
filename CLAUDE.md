@@ -134,22 +134,12 @@ sakjules, saktan); **SakThai is lead**. Each persona directory has:
   `gateway_voice_mode.json`, and for some personas `workspace.yaml`.
 - `agent-self-evolution` — symlink to `../shared/agent-self-evolution` for every
   persona except SakThai, whose copy is real and is the one CI builds.
-- `PLAN.md`, `CYCLE.md`, `MEMORY.md`, `HANDOFF.md`, `BACKPACK.md` — working
-  notes beside the SOUL: task roadmap, cycle record, how its memory is read and
-  written, the hand-offs it receives and sends, and its equipment. SakJules' and
-  SakSee's describe Beer's machine; the other four were filled from their own
-  SOUL and config files. No code reads them, but the auto-cycle skill dispatches
-  from `PLAN.md`, and `tests/test_soul_consistency.py` fails if one is missing or
-  tells an agent to `npx -y` a package `@latest`.
 
 Configured default models (`config/config.yaml`, consumed by
-`config.persona_model_defaults()`): SakThai, SakSee and SakJules `huggingface` /
-`deepseek-ai/DeepSeek-V4.1-Flash`, SakKing `huggingface` /
-`Qwen/Qwen3-Coder-30B-A3B-Instruct`, SakSit `huggingface` /
-`deepseek-ai/DeepSeek-V4-Flash`, SakTan `ollama` / `sakthai`. The Hugging Face
-router needs the full `org/model` repo ID, and only models published on the Hub
-can be served (no Gemini). The VM deployment overrides all of these with Azure
-OpenAI models in `infra/vm-agents/sakthai-agent-run.sh`.
+`config.persona_model_defaults()`): SakThai and SakSee `huggingface` /
+`gemini-3.1-flash-lite`, SakKing `huggingface` /
+`Qwen/Qwen3-Coder-30B-A3B-Instruct`, SakSit `huggingface` / `DeepSeek-V4-Flash`,
+SakJules `huggingface` / `gemini-2.5-flash-lite`, SakTan `ollama` / `sakthai`.
 
 **Shared resources:** `personas/shared/` holds `sakthai/` (the shared package
 copy), `agent-self-evolution/` (template), `skills/` (3 `Sak-*` skills, identical
@@ -214,7 +204,7 @@ deploy; deliberately not a CI gate, since skills land constantly),
 
 ### CI
 
-Twenty-seven workflows live in `.github/workflows/`. The ones that gate a change:
+Twenty-eight workflows live in `.github/workflows/`. The ones that gate a change:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
@@ -222,8 +212,8 @@ Twenty-seven workflows live in `.github/workflows/`. The ones that gate a change
 | `pylint.yml` | push/PR to `main` | pylint over `personas/sakthai/sakthai` + `tests` |
 | `repository-security-quality.yml` | PR to `main` | skill validation (library frontmatter + persona `skills validate --naming`) + `make compose-personas`; `Quality gates` (a **required status check** — see below); zizmor over **every** workflow; tracked-secret-file check |
 | `dependency-review.yml` | PR to `main` | blocks PRs introducing known-vulnerable deps (`fail-on-severity: high`) |
-| `secret-scan.yml` | push to `main`, all PRs, daily | gitleaks (config `.gitleaks.toml`, which allowlists persona docs). The daily run scans full history; its known historical hits are baselined by fingerprint in `.gitleaksignore`, so only a new leak turns it red |
-| `dependency-audit.yml` | PRs touching `pyproject.toml`/`uv.lock`/the training locks/`training/**/*.py`, weekly | pip-audit over `uv.lock`, the three `infra/sakthai-training-space/*.lock` files, and every PEP 723 script under `training/` (Dependabot reads neither of the last two). Local version tags (`+cpu`, `+cuNNN`) are stripped first: pip-audit skips `torch==…+cpu` as "not found on PyPI" and still reports clean |
+| `secret-scan.yml` | push to `main`, all PRs | gitleaks (config `.gitleaks.toml`, which allowlists persona docs) |
+| `dependency-audit.yml` | PRs touching `pyproject.toml`/`uv.lock`, weekly | pip-audit over `uv.lock` |
 | `ossar.yml` | push/PR to `main`, weekly | open-source static analysis |
 | `sonarcloud.yml` | push to `main` | SonarCloud analysis |
 | `agent-self-evolution.yml` | push/PR touching `personas/sakthai/agent-self-evolution/**` | that subproject's own suite |
@@ -234,9 +224,9 @@ Twenty-seven workflows live in `.github/workflows/`. The ones that gate a change
 | `codeql.yml` | push/PR to `main`, weekly | CodeQL (advanced setup) |
 
 Scheduled / manual only, so they never block a PR: `continuous-security.yml`
-(`workflow_dispatch` only; needs an `ANTHROPIC_API_KEY` repository secret),
-`verify-assets.yml` (daily HF asset check), `run-evals.yml` (weekly lm-eval,
-installs the `evals` dependency group), `stale.yml` (daily), `summary.yml` (on new issues), `manual.yml`,
+(nightly), `verify-assets.yml` (daily HF asset check), `run-evals.yml` (weekly
+lm-eval, installs the `evals` dependency group), `auto-dependency-update.yml`
+(weekly), `stale.yml` (daily), `summary.yml` (on new issues), `manual.yml`,
 `scorecard.yml` (push to `main` + weekly), `code-scanning-cleanup.yml`
 (`workflow_dispatch` only), `branch-cleanup.yml` (`workflow_dispatch` only —
 deletes branches whose merge into `main` would change nothing, dry-run unless
@@ -526,9 +516,7 @@ two things possible that weren't before:
   that persona's own skill overlay instead of SakThai's, auto-load its own
   `config/mcp.json` when `SAKTHAI_MCP_CONFIG` isn't already set, and default
   `--model`/`--provider` from its own `config/config.yaml` when those flags are
-  left at their CLI defaults (for `chat`, as a pair and only when neither flag
-  is passed, so one explicit flag never mixes Ollama with a Hub model).
-  `memory sync`/`memory pull` reject `--persona`
+  left at their CLI defaults. `memory sync`/`memory pull` reject `--persona`
   (they always target the unscoped `memory.db` — no per-persona git/HTTP sync
   exists). `run --persona` can't combine with `--sandbox` (the sandbox only
   bind-mounts the unscoped `memory.db`).
@@ -537,10 +525,7 @@ two things possible that weren't before:
   `memory.db` at once, regardless of which single persona the current process
   would otherwise be scoped to, and merges/dedups facts and observations across
   them. `sakthai memory family [--personas a,b,c] [--limit N] [--json]` is the
-  CLI surface for it. Give it a `QUERY` and/or repeated `--tag` to find the
-  newest matching facts in any shard instead (`find_facts`, not deduped): this
-  is how a persona reads a hand-off note a sibling wrote to its own shard, and
-  what the SOULs' charge/deputy/conservation reads use.
+  CLI surface for it.
 
 A persona's shard file only comes into existence on first write (`learn
 --persona X`, or any `run`/`chat --persona X` that calls a memory-writing
@@ -647,19 +632,16 @@ moment any copy drifts from `personas/sakthai/sakthai/agent/guardrails.py`
 (`test_guardrails_*.py`, `test_sentinel_*.py`, `test_security_*.py`) cover this
 area; add a regression test for every new bypass you close.
 
-**`web/server.py` has the same copy-per-persona property, and now its own
-parity test.** It carries the bearer-token auth and took two code-scanning
-autofixes (#1214, #1219) for cookie construction from user-supplied input —
-exactly the class of fix that must not land in one copy only. The copies had
-drifted 147 lines behind (no CORS, no dashboard routes) before they were synced;
-`tests/test_persona_web_server_parity.py` now fails CI the moment any of
-sakjules, saktan (both via the shared symlink), sakking, saksee or saksit
-differs from the canonical file. Copy it to all four real copies (`shared`,
-`sakking`, `saksee`, `saksit`) whenever you change it. In those trees the
-dashboard routes import `web/api.py` lazily and only the canonical tree has
-that module — harmless, since none of them is installed or run.
-`memory/merged.py` has already drifted between the canonical and shared copies
-for want of the same check.
+**`web/server.py` has the same copy-per-persona property and no parity test.**
+It carries the bearer-token auth, it is copied into the same five trees, and it
+took two code-scanning autofixes this week (#1214, #1219) for cookie
+construction from user-supplied input — exactly the class of fix that must not
+land in one copy only. The auth block is byte-identical across all five right
+now, so there is no live vulnerability, but nothing keeps it that way, and the
+suite only ever imports the canonical copy. **Sync `web/server.py` by hand
+across every persona copy when you touch its auth, and diff before you finish** —
+CI will not catch you. `memory/merged.py` has already drifted between the
+canonical and shared copies for want of the same check.
 
 ### MCP subsystem (`mcp/`)
 
@@ -836,11 +818,8 @@ Key test areas:
   `test_provider_contracts.py`, `test_provider_resilience.py`
 - **Security** — `test_guardrails*.py` (10 files), `test_sentinel_*.py` (6 files),
   `test_security_hardening.py`, `test_security_sentinel.py`,
-  `test_persona_guardrails_parity.py`, `test_persona_web_server_parity.py`,
-  `test_persona_security_config.py` (all six personas' `config/` files: `npx`
-  MCP servers version-pinned, no pre-approved dangerous commands, a fail-closed
-  `security` block),
-  `test_sakking_skill_security.py`, `test_giturl.py`, `test_web_auth.py`
+  `test_persona_guardrails_parity.py`, `test_sakking_skill_security.py`,
+  `test_giturl.py`, `test_web_auth.py`
 - **MCP** — `test_mcp_server.py`, `test_mcp_client.py`,
   `test_mcp_client_resilience.py`, `test_mcp_manager.py`, `test_mcp_servers.py`,
   `test_mcp_main.py`
@@ -876,7 +855,7 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 - **Guardrail changes must be synced across personas.** Copy the canonical
   `personas/sakthai/sakthai/agent/guardrails.py` to every persona copy, or
   `tests/test_persona_guardrails_parity.py` fails CI. `web/server.py` needs the
-  same sync, enforced by `tests/test_persona_web_server_parity.py`.
+  same sync and has **no** test enforcing it — diff the copies yourself.
 - **Not linted / not type-checked:** ruff excludes `library/` and `scripts/`;
   mypy covers only `personas/sakthai/sakthai`. Don't "fix" lint/types in the
   other trees.
@@ -992,10 +971,9 @@ Skill body goes here. This is injected into the agent system prompt when the
 skill is active.
 ```
 
-Note: `tags`/`related_skills` belong under `metadata.sakthai`. The parser in
-`skills.py` falls back to `metadata.hermes` (skills written for the Hermes
-runtime) and then to flat top-level fields, so older skills still show theirs;
-it used to ignore both, which hid the tags of 75 skills.
+Note: `tags`/`related_skills` must be nested under `metadata.sakthai` — a flat
+top-level `tags:`/`related_skills:` is silently ignored by the parser in
+`skills.py`.
 
 Discovery roots are listed under "Other subsystems" above. Run
 `sakthai skills list` to see everything discovered, and `sakthai skills validate

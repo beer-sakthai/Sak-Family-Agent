@@ -65,11 +65,7 @@ def search_place(query: str, api_key: str | None = None) -> str:
         clean_data = _redact_sensitive_data(data)
         return json.dumps(clean_data, indent=2, ensure_ascii=False)
     except Exception as e:
-        error_msg = str(e)
-        key_to_redact = locals().get("key") or api_key
-        if key_to_redact:
-            error_msg = error_msg.replace(key_to_redact, "***REDACTED***")
-        return f"Error searching place: {error_msg}"
+        return f"Error searching place: {e}"
 
 
 if __name__ == "__main__":

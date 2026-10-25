@@ -208,8 +208,6 @@ def _resolve_model_name(model: str, provider: str) -> str:
     if model != DEFAULT_MODEL:
         return model
 
-    if provider == "ollama":
-        return "qwen2.5-coder:7b"
     if provider == "openai":
         return "qwen2.5-coder:7b" if os.environ.get("OLLAMA_HOST") else "gpt-4o"
     if provider == "google":
@@ -446,12 +444,12 @@ def run_agent(
         command_system, task = parsed
 
     provider = provider or _detect_provider(client, model)
-    model = _resolve_model_name(model, provider)
-    client = _build_client(provider, client)
     if provider == "ollama":
-        # Built as an Ollama client (default local host, no key), then served
-        # through the OpenAI-compatible request path like any other.
         provider = "openai"
+
+    model = _resolve_model_name(model, provider)
+
+    client = _build_client(provider, client)
 
     own_store = store is None
     store = store or MemoryStore()
@@ -600,10 +598,10 @@ def preflight(
     ``runnable`` is True when a usable credential for the resolved provider exists.
     """
     resolved = provider or _detect_provider(client, model)
+    if resolved == "ollama":
+        resolved = "openai"
     effective_model = _resolve_model_name(model, resolved)
     cred_source = get_credential_source(resolved)
-    if resolved == "ollama":
-        resolved = "openai"  # as run_agent does once the client is built
 
     registry = ToolRegistry(tools)
     return {

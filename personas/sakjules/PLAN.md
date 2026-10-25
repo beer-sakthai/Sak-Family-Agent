@@ -1,7 +1,6 @@
 # PLAN.md — SakJules 🔧 Deep-Dive Task-by-Task Roadmap
 > *DevSecOps, GitHub Actions & Asynchronous Model Training Execution Plan*
 > *Status: Active Step-by-Step Execution*
-> *Each task's **Status** follows the root PLAN.md: `[ ]` open → `[/]` in progress → `[x] YYYY-MM-DD` done.*
 
 ---
 
@@ -22,14 +21,12 @@ flowchart TD
 ### Phase 1: Foundation & Infrastructure Verification
 
 #### 🔹 Task 1.1: Environment Variable & API Credential Audit
-- **Status**: [ ]
 - **Goal**: Verify all API keys (`JULES_API_KEY`, `OPENCODE_GO_API_KEY`, `SUPERMEMORY_API_KEY`, `RENDER_API_KEY`, `GOOGLE_API_KEY`) are present in `/home/beern/.env` and exported in `~/.bashrc`.
 - **Estimated Time**: 2 minutes
-- **Command**: `for k in JULES_API_KEY OPENCODE_GO_API_KEY SUPERMEMORY_API_KEY RENDER_API_KEY GOOGLE_API_KEY; do grep -qE "^(export )?$k=." /home/beern/.env && echo "$k set" || echo "$k MISSING"; done`
-- **Acceptance Criteria**: All 5 names print `set`. The check prints key names only, never a value (the earlier `grep` echoed every matching key into the log).
+- **Command**: `grep -E "JULES_API_KEY|OPENCODE_GO_API_KEY|SUPERMEMORY_API_KEY" /home/beern/.env`
+- **Acceptance Criteria**: All 5 credentials return non-empty values.
 
 #### 🔹 Task 1.2: Local Supermemory Daemon Health Check
-- **Status**: [ ]
 - **Goal**: Verify local Supermemory daemon is running on port 6767 with ONNX `Xenova/bge-base-en-v1.5` embeddings.
 - **Estimated Time**: 2 minutes
 - **Command**: `curl -s http://localhost:6767/healthcheck || pgrep -f supermemory-server`
@@ -40,7 +37,6 @@ flowchart TD
 ### Phase 2: OpenCode & Custom Model Binding Audit
 
 #### 🔹 Task 2.1: OpenCode Model Matrix Verification
-- **Status**: [ ]
 - **Goal**: Audit [`/home/beern/opencode.json`](file:///home/beern/opencode.json) to ensure zero Gemini API quota dependencies.
 - **Estimated Time**: 3 minutes
 - **Matrix**:
@@ -51,7 +47,6 @@ flowchart TD
 - **Acceptance Criteria**: `opencode.json` contains 100% custom `Nanthasit/*` models.
 
 #### 🔹 Task 2.2: Google ADK Zero-Cost Specification Audit
-- **Status**: [ ]
 - **Goal**: Verify [`/home/beern/.agents-cli-spec.md`](file:///home/beern/.agents-cli-spec.md) is configured for $0.00 USD spend.
 - **Estimated Time**: 2 minutes
 - **Command**: `agents-cli info`
@@ -62,14 +57,12 @@ flowchart TD
 ### Phase 3: Jules Asynchronous Remote Automation
 
 #### 🔹 Task 3.1: Remote Jules Session List & Status Audit
-- **Status**: [ ]
 - **Goal**: Query active remote sessions on Jules server.
 - **Estimated Time**: 5 minutes
 - **Command**: `jules remote list --session` or via `julesServer` MCP
 - **Acceptance Criteria**: List of remote sessions returned cleanly.
 
 #### 🔹 Task 3.2: Jules Remote Patch Pull & Git Merge
-- **Status**: [ ]
 - **Goal**: Pull completed patches from remote Jules sessions and apply to `Sak-Family-Agent` or target repos.
 - **Estimated Time**: 5 minutes
 - **Command**: `jules remote pull --session <SESSION_ID> --apply`
@@ -80,59 +73,44 @@ flowchart TD
 ### Phase 4: Custom Model Training & Benchmark Pipeline
 
 #### 🔹 Task 4.1: Dataset Synthesis (`sakthai-bench-v3`)
-- **Status**: [ ]
 - **Goal**: Run `.opencode/scripts/run-benchmark-v3.py` to generate 25,000 synthetic task routing prompts.
 - **Estimated Time**: 15 minutes
 - **Command**: `uv run .opencode/scripts/run-benchmark-v3.py`
 - **Acceptance Criteria**: Dataset saved under `Nanthasit/sakthai-triage-dataset`.
-- **Owner**: SakThai. This writes to the Hugging Face Hub, so SakJules prepares it and SakThai runs it only through its Hub write triple gate, which needs Beer's `hub-approved` tag.
-- **Note**: `.opencode/scripts/` is not in this repository; confirm the script exists before running.
 
 #### 🔹 Task 4.2: Hugging Face Job GPU Fine-Tuning
-- **Status**: [ ]
 - **Goal**: Dispatch QLoRA SFT training for `Nanthasit/sakthai-triage-1.5b` on HF Jobs.
 - **Estimated Time**: 45 minutes
 - **Command**: `hf jobs run python:3.11 "uv run SakThai-Training/train.py" --secrets HF_TOKEN --flavor t4-small`
 - **Acceptance Criteria**: Job status `COMPLETED` and weights published to HF Hub.
-- **Owner**: SakThai. This writes to the Hugging Face Hub, so SakJules prepares it and SakThai runs it only through its Hub write triple gate, which needs Beer's `hub-approved` tag.
-- **Note**: `SakThai-Training/` is not in this repository (this repository's HF Jobs definitions live under `training/`); confirm the script exists before running.
 
 ---
 
 ### Phase 5: Evaluation & Documentation Publishing
 
 #### 🔹 Task 5.1: Benchmark Evaluation Run
-- **Status**: [ ]
 - **Goal**: Evaluate model accuracy on `Nanthasit/sakthai-bench-v2`.
 - **Estimated Time**: 10 minutes
 - **Command**: `uv run .opencode/scripts/run-eval.py --model Nanthasit/sakthai-triage-1.5b --publish`
 - **Acceptance Criteria**: Cross-model YAML uploaded to `Nanthasit/eval_results`.
-- **Owner**: SakThai. This writes to the Hugging Face Hub, so SakJules prepares it and SakThai runs it only through its Hub write triple gate, which needs Beer's `hub-approved` tag.
-- **Note**: `.opencode/scripts/` is not in this repository; confirm the script exists before running.
 
 #### 🔹 Task 5.2: Model Cards & Dataset Card Synchronization
-- **Status**: [ ]
 - **Goal**: Update README tables across all model repos and dataset cards.
 - **Estimated Time**: 5 minutes
 - **Command**: `uv run .opencode/scripts/update-model-cards.py`
 - **Acceptance Criteria**: Model card tables updated on Hugging Face Hub.
-- **Owner**: SakThai. This writes to the Hugging Face Hub, so SakJules prepares it and SakThai runs it only through its Hub write triple gate, which needs Beer's `hub-approved` tag.
-- **Note**: `.opencode/scripts/` is not in this repository; confirm the script exists before running.
 
 ---
 
 ### Phase 6: GGUF Quantization & Local Ollama Binding
 
 #### 🔹 Task 6.1: GGUF Quantization & Upload
-- **Status**: [ ]
 - **Goal**: Convert model weights to GGUF format (Q4_K_M) for local sub-100ms inference.
 - **Estimated Time**: 15 minutes
 - **Command**: `hf upload Nanthasit/sakthai-triage-1.5b-gguf ./model.gguf`
 - **Acceptance Criteria**: GGUF file available on HF Hub.
-- **Owner**: SakThai. This writes to the Hugging Face Hub, so SakJules prepares it and SakThai runs it only through its Hub write triple gate, which needs Beer's `hub-approved` tag.
 
 #### 🔹 Task 6.2: Local Ollama Pull & Verification
-- **Status**: [ ]
 - **Goal**: Pull GGUF into local Ollama instance and run inference test.
 - **Estimated Time**: 5 minutes
 - **Command**: `ollama run hf.co/Nanthasit/sakthai-triage-1.5b-gguf "Task triage test"`

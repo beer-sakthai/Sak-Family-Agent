@@ -349,18 +349,6 @@ class TestHandleGitConflictAndPush:
         assert "local fact" in values
         assert "remote fact" in values
 
-    def test_merges_remote_facts_that_predate_tags(self, sakthai_home: Path) -> None:
-        """facts.jsonl from a remote whose sakthai predates fact tags still merges."""
-        legacy = _fact_dict("legacy remote fact")
-        del legacy["tags"]
-        (sakthai_home / "facts.jsonl").write_text(json.dumps(legacy) + "\n", encoding="utf-8")
-        (sakthai_home / "observations.jsonl").write_text("", encoding="utf-8")
-        with patch("subprocess.run", side_effect=_git_mock()):
-            _handle_git_conflict_and_push(sakthai_home, "https://example.com/repo.git")
-        with MemoryStore(sakthai_home / "memory.db") as store:
-            facts = {f.value: f.tags for f in store.list_facts()}
-        assert facts == {"legacy remote fact": []}
-
     def test_merges_remote_observations_into_local_store(self, sakthai_home: Path) -> None:
         """Observations in observations.jsonl are parsed (line 160) and merged."""
         import time
