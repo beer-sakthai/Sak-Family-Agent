@@ -1105,6 +1105,7 @@ describe("PersonaFilter", () => {
     fireEvent.click(trigger);
     const menu = screen.getByRole("menu", { name: "Filter by persona" });
     expect(menu).toBeInTheDocument();
+    expect(menu).toHaveClass("top-full");
     expect(menu.className).toContain("top-full");
 
     const allPersonasItem = screen.getByRole("menuitem", { name: /All personas/ });
@@ -1278,6 +1279,7 @@ describe("DisplayMenu", () => {
     fireEvent.click(trigger);
     const menu = screen.getByRole("menu", { name: "Display settings" });
     expect(menu).toBeInTheDocument();
+    expect(menu).toHaveClass("top-full");
     expect(menu.className).toContain("top-full");
 
     const menuItems = screen.getAllByRole("menuitemradio");
