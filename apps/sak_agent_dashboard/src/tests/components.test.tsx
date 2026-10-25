@@ -731,6 +731,25 @@ describe("SessionExplorer", () => {
     expect(drawerModel).toHaveTextContent(expectedModel);
   });
 
+  it("renders task, timestamp, and token count table cells with title hover tooltips", () => {
+    const firstSession = sessions.sessions[0];
+    renderExplorer();
+
+    const expectedTaskTitle = firstSession.task ? `Task: ${firstSession.task}` : "Task not recorded";
+    const taskCell = screen.getByTitle(expectedTaskTitle);
+    expect(taskCell).toBeInTheDocument();
+    expect(taskCell).toHaveTextContent(firstSession.task || "—");
+
+    const formattedTime = new Date(firstSession.timestamp * 1000).toISOString().replace("T", " ").slice(0, 19);
+    const timestampCell = screen.getByTitle(`Recorded at: ${formattedTime}`);
+    expect(timestampCell).toBeInTheDocument();
+    expect(timestampCell).toHaveTextContent(formattedTime);
+
+    const tokenCell = screen.getByTitle(`Total tokens: ${firstSession.tokens.total_tokens.toLocaleString()}`);
+    expect(tokenCell).toBeInTheDocument();
+    expect(tokenCell).toHaveTextContent(firstSession.tokens.total_tokens.toLocaleString());
+  });
+
   it("sends search upward for a server-side query", () => {
     const onSearchChange = vi.fn();
     renderExplorer({ onSearchChange });
@@ -1033,6 +1052,19 @@ describe("WorkflowRuns", () => {
     expect(selectedRow).toBeInTheDocument();
     expect(selectedRow).toHaveClass("bg-raised/80");
   });
+
+  it("renders table cell title hover tooltips for Workflow, Started, Duration, and Steps", () => {
+    const run = workflows.runs[0];
+    const { container } = render(
+      <WorkflowRuns runs={[run]} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
+    );
+
+    const workflowCell = container.querySelector(`td[title="Workflow: ${run.workflow_name || "—"} (${run.run_id})"]`);
+    expect(workflowCell).toBeInTheDocument();
+
+    const stepsCell = container.querySelector(`td[title="Total steps: ${run.step_count}${run.failed_steps > 0 ? ` (${run.failed_steps} failed)` : ""}"]`);
+    expect(stepsCell).toBeInTheDocument();
+  });
 });
 
 describe("PersonaFilter", () => {
@@ -1074,6 +1106,7 @@ describe("PersonaFilter", () => {
     const menu = screen.getByRole("menu", { name: "Filter by persona" });
     expect(menu).toBeInTheDocument();
     expect(menu).toHaveClass("top-full");
+    expect(menu.className).toContain("top-full");
 
     const allPersonasItem = screen.getByRole("menuitem", { name: /All personas/ });
     expect(allPersonasItem).toHaveAttribute("title", "Show all personas");
@@ -1247,6 +1280,7 @@ describe("DisplayMenu", () => {
     const menu = screen.getByRole("menu", { name: "Display settings" });
     expect(menu).toBeInTheDocument();
     expect(menu).toHaveClass("top-full");
+    expect(menu.className).toContain("top-full");
 
     const menuItems = screen.getAllByRole("menuitemradio");
     expect(menuItems).toHaveLength(5); // 3 themes + 2 densities
