@@ -66,3 +66,7 @@
 ## 2026-11-02 - Descriptive hover tooltips on non-interactive KPI summary tiles
 **Learning:** Non-interactive KPI summary tiles (such as Success rate or Avg latency) benefit from explicit `title` attributes incorporating label, value, and hint text so desktop mouse users can inspect metric details on hover without adding unnecessary `tabIndex={0}` tab stops to non-interactive elements.
 **Action:** Set `title={`${tile.label}: ${tile.value}${tile.hint ? ` (${tile.hint})` : ""}`}` on non-interactive KPI summary cards.
+
+## 2026-11-05 - Interactive footer shortcut badge controls
+**Learning:** Visual shortcut badges and hint labels in page footers (such as `⌘K commands` and `? shortcuts`) should be rendered as interactive `<button>` controls with `type="button"`, explicit `aria-label`, focus-visible rings, and `title` tooltips so desktop and touch users can click them to trigger modal overlays directly alongside keyboard power users.
+**Action:** Convert static footer shortcut badge hints into interactive buttons that invoke corresponding modal triggers.
