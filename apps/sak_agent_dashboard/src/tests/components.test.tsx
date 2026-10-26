@@ -1139,6 +1139,21 @@ describe("PersonaFilter", () => {
     fireEvent.keyDown(menuItems[menuItems.length - 1], { key: "Home" });
     expect(menuItems[0]).toHaveFocus();
   });
+
+  it("dismisses popover and restores focus to trigger button when 'All personas' is selected", () => {
+    const onChange = vi.fn();
+    render(<PersonaFilter selected={["sakthai"]} onChange={onChange} />);
+
+    const trigger = screen.getByTestId("persona-filter");
+    fireEvent.click(trigger);
+
+    const allPersonasOption = screen.getByRole("menuitem", { name: /All personas/ });
+    fireEvent.click(allPersonasOption);
+
+    expect(onChange).toHaveBeenCalledWith([]);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
 });
 
 describe("StitchStudio", () => {
