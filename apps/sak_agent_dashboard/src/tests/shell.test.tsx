@@ -7,9 +7,10 @@
  * data directly.
  */
 
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import Home from "@/app/page";
 import CommandPalette, { type Command } from "@/components/CommandPalette";
 import HostedNotice from "@/components/HostedNotice";
 import KpiStrip from "@/components/KpiStrip";
@@ -643,5 +644,36 @@ describe("Skeletons", () => {
   it("announces what a panel is loading", () => {
     render(<PanelSkeleton label="Loading sessions" />);
     expect(screen.getByRole("status", { name: "Loading sessions" })).toBeInTheDocument();
+  });
+});
+
+describe("Home Footer", () => {
+  it("renders interactive command palette and keyboard shortcut buttons in footer", async () => {
+    await act(async () => {
+      render(<Home />);
+    });
+
+    const paletteBtn = screen.getByRole("button", {
+      name: "Open command palette (Command + K)",
+    });
+    expect(paletteBtn).toBeInTheDocument();
+    expect(paletteBtn).toHaveAttribute("type", "button");
+    expect(paletteBtn).toHaveAttribute("title", "Open command palette (⌘K)");
+
+    const shortcutsBtn = screen.getByRole("button", {
+      name: "Open keyboard shortcuts (?)",
+    });
+    expect(shortcutsBtn).toBeInTheDocument();
+    expect(shortcutsBtn).toHaveAttribute("type", "button");
+    expect(shortcutsBtn).toHaveAttribute("title", "Open keyboard shortcuts (?)");
+
+    fireEvent.click(paletteBtn);
+    expect(screen.getByRole("dialog", { name: "Command palette" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Close command palette"));
+    expect(screen.queryByRole("dialog", { name: "Command palette" })).not.toBeInTheDocument();
+
+    fireEvent.click(shortcutsBtn);
+    expect(screen.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeInTheDocument();
   });
 });
