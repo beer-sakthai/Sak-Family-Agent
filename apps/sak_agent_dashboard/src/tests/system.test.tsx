@@ -193,6 +193,37 @@ describe("SystemView", () => {
     expect(subcommandsBadge).toBeInTheDocument();
     expect(subcommandsBadge).toHaveAttribute("title", "2 subcommands");
   });
+
+  it("provides hover title tooltips on StatTiles, ArchitectureFlow, ToolsPanel, and WorkflowsPanel cards", () => {
+    render(<SystemView snapshot={FIXTURE} />);
+
+    // StatTiles
+    expect(screen.getByTitle("Personas: 2 (SakThai leads)")).toBeInTheDocument();
+    expect(
+      screen.getByTitle("Skills: 20 (14 persona · 1 shared · 5 library)"),
+    ).toBeInTheDocument();
+
+    // ArchitectureFlow
+    expect(
+      screen.getByTitle("Entry points: CLI · chat REPL · MCP stdio · web API"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTitle("Agent loop: providers, context filter, eval log (900 lines)"),
+    ).toBeInTheDocument();
+
+    // ToolsPanel
+    expect(
+      screen.getByTitle("learn: Store a fact."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTitle("run_agent_loop: Run a nested loop. (MCP only)"),
+    ).toBeInTheDocument();
+
+    // WorkflowsPanel
+    expect(
+      screen.getByTitle("CI (ci.yml): triggered by pull_request, push, 1 job"),
+    ).toBeInTheDocument();
+  });
 });
 
 describe("navigation", () => {
