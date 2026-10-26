@@ -373,33 +373,37 @@ function BarList({ rows, unit }: { rows: BarRow[]; unit: string }) {
   const max = Math.max(1, ...sorted.map((r) => r.value));
   return (
     <ol className="space-y-1.5">
-      {sorted.map((row) => (
-        <li
-          key={row.label}
-          className="grid grid-cols-[minmax(0,9rem)_1fr_auto] items-center gap-3 rounded-md px-1 py-0.5 text-xs hover:bg-raised/40"
-          title={`${row.label}: ${row.value.toLocaleString()} ${unit}${row.note ? ` · ${row.note}` : ""}`}
-        >
-          <span className="truncate font-mono text-fg-2">{row.label}</span>
-          <div
-            role="progressbar"
-            aria-label={`${row.label} ${unit}`}
-            aria-valuenow={row.value}
-            aria-valuemin={0}
-            aria-valuemax={max}
-            aria-valuetext={`${row.label}: ${row.value.toLocaleString()} ${unit}${row.note ? ` (${row.note})` : ""}`}
-            className="h-2 overflow-hidden rounded-full bg-sunken"
+      {sorted.map((row) => {
+        const accessibleLabel = `${row.label}: ${row.value.toLocaleString()} ${unit}${row.note ? ` (${row.note})` : ""}`;
+        return (
+          <li
+            key={row.label}
+            aria-label={accessibleLabel}
+            className="grid grid-cols-[minmax(0,9rem)_1fr_auto] items-center gap-3 rounded-md px-1 py-0.5 text-xs hover:bg-raised/40"
+            title={`${row.label}: ${row.value.toLocaleString()} ${unit}${row.note ? ` · ${row.note}` : ""}`}
           >
-            <span
-              className="block h-full rounded-full bg-accent"
-              style={{ width: `${Math.max(2, (row.value / max) * 100)}%` }}
-            />
-          </div>
-          <span className="text-right font-mono tabular-nums text-fg-3">
-            {row.value.toLocaleString()}
-            {row.note && <span className="ml-1.5 text-fg-5">{row.note}</span>}
-          </span>
-        </li>
-      ))}
+            <span className="truncate font-mono text-fg-2">{row.label}</span>
+            <div
+              role="progressbar"
+              aria-label={`${row.label} ${unit}`}
+              aria-valuenow={row.value}
+              aria-valuemin={0}
+              aria-valuemax={max}
+              aria-valuetext={accessibleLabel}
+              className="h-2 overflow-hidden rounded-full bg-sunken"
+            >
+              <span
+                className="block h-full rounded-full bg-accent"
+                style={{ width: `${Math.max(2, (row.value / max) * 100)}%` }}
+              />
+            </div>
+            <span className="text-right font-mono tabular-nums text-fg-3">
+              {row.value.toLocaleString()}
+              {row.note && <span className="ml-1.5 text-fg-5">{row.note}</span>}
+            </span>
+          </li>
+        );
+      })}
     </ol>
   );
 }
