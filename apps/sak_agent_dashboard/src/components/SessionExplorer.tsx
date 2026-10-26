@@ -157,7 +157,7 @@ export function SessionExplorer({
         </div>
       </div>
 
-      <span className="sr-only" role="status" aria-live="polite">
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
         {search.trim()
           ? `${sessions.length} session${sessions.length === 1 ? "" : "s"} found`
           : ""}
