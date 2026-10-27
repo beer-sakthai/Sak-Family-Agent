@@ -455,7 +455,10 @@ describe("KpiStrip", () => {
         audit={demoAudit()}
       />,
     );
-    const svgs = container.querySelectorAll("svg");
+    // Exclude sparkline role="img" svgs, checking Lucide icon svgs
+    const svgs = Array.from(container.querySelectorAll("svg")).filter(
+      (svg) => svg.getAttribute("role") !== "img",
+    );
     expect(svgs.length).toBeGreaterThan(0);
     svgs.forEach((svg) => {
       expect(svg).toHaveAttribute("aria-hidden", "true");
@@ -494,6 +497,24 @@ describe("KpiStrip", () => {
     expect(successTile).toBeInTheDocument();
     const latencyTile = screen.getByTitle(/Avg latency:/);
     expect(latencyTile).toBeInTheDocument();
+  });
+
+  it("renders KPI sparklines with role='img', title hover tooltips, and aria-labels", () => {
+    render(
+      <KpiStrip
+        metrics={metrics}
+        memory={demoMemory()}
+        sessions={demoSessions()}
+        audit={demoAudit()}
+      />,
+    );
+    const sparklines = screen.getAllByRole("img", { name: /Trend sparkline for/ });
+    expect(sparklines.length).toBeGreaterThan(0);
+    const totalRunsSparkline = screen.getByRole("img", { name: /Trend sparkline for Total runs:/ });
+    expect(totalRunsSparkline).toBeInTheDocument();
+    const titleElement = totalRunsSparkline.querySelector("title");
+    expect(titleElement).toBeInTheDocument();
+    expect(titleElement?.textContent).toContain("Trend sparkline for Total runs");
   });
 });
 
