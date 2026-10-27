@@ -512,8 +512,9 @@ describe("KpiStrip", () => {
     expect(sparklines.length).toBeGreaterThan(0);
     const totalRunsSparkline = screen.getByRole("img", { name: /Trend sparkline for Total runs:/ });
     expect(totalRunsSparkline).toBeInTheDocument();
-    expect(totalRunsSparkline).toHaveAttribute("title");
-    expect(totalRunsSparkline.getAttribute("title")).toContain("Trend sparkline for Total runs");
+    const titleElement = totalRunsSparkline.querySelector("title");
+    expect(titleElement).toBeInTheDocument();
+    expect(titleElement?.textContent).toContain("Trend sparkline for Total runs");
   });
 });
 
