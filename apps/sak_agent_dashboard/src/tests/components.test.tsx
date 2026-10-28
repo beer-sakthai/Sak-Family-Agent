@@ -1068,13 +1068,15 @@ describe("WorkflowRuns", () => {
 });
 
 describe("PersonaFilter", () => {
-  it("renders dynamic title tooltips on trigger based on selection state", () => {
+  it("renders dynamic title tooltips and WCAG 2.5.3 compliant aria-label on trigger based on selection state", () => {
     const { rerender } = render(<PersonaFilter selected={[]} onChange={vi.fn()} />);
     const trigger = screen.getByTestId("persona-filter");
     expect(trigger).toHaveAttribute("title", "Filter dashboard by persona");
+    expect(trigger).toHaveAttribute("aria-label", "All personas - Filter by persona");
 
     rerender(<PersonaFilter selected={["sakthai"]} onChange={vi.fn()} />);
     expect(trigger).toHaveAttribute("title", "Filter by persona (Selected: SakThai)");
+    expect(trigger).toHaveAttribute("aria-label", "SakThai - Filter by persona");
   });
 
   it("renders trigger and clear filter controls as separate non-nested buttons when filter is active", () => {
