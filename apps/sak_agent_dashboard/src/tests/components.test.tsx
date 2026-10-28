@@ -448,6 +448,39 @@ describe("MemoryExplorer", () => {
     expect(shardBadges.length).toBeGreaterThan(0);
   });
 
+  it("renders title hover tooltips on Fact table cells", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const firstFact = demoMemory().facts[0];
+
+    const idCell = screen.getByTitle(`Fact ID: ${firstFact.id}`);
+    expect(idCell).toBeInTheDocument();
+
+    const kindTitle = `Kind: ${firstFact.kind}${firstFact.key ? `, Key: ${firstFact.key}` : ""}`;
+    const kindCell = screen.getByTitle(kindTitle);
+    expect(kindCell).toBeInTheDocument();
+
+    const valueCell = screen.getByTitle(`Fact value: ${firstFact.value}`);
+    expect(valueCell).toBeInTheDocument();
+
+    const formattedTime = new Date(firstFact.updated_at * 1000).toISOString().replace("T", " ").slice(0, 16);
+    const updatedCell = screen.getByTitle(`Updated at: ${formattedTime}`);
+    expect(updatedCell).toBeInTheDocument();
+  });
+
+  it("renders title hover tooltips on Observation table cells", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+    fireEvent.click(obsTab);
+
+    const firstObs = demoMemory().observations[0];
+
+    const idCell = screen.getByTitle(`Observation ID: ${firstObs.id}`);
+    expect(idCell).toBeInTheDocument();
+
+    const summaryCell = screen.getByTitle(`Observation: ${firstObs.summary}`);
+    expect(summaryCell).toBeInTheDocument();
+  });
+
   it("provides title tooltips and aria-labels on observation weight and confidence cells", () => {
     render(<MemoryExplorer memory={demoMemory()} />);
     const obsTab = screen.getByRole("tab", { name: /Observations/ });
