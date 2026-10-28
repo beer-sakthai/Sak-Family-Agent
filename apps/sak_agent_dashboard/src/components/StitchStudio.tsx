@@ -179,8 +179,8 @@ export function StitchStudio() {
               key={preset.id}
               type="button"
               aria-pressed={isSelected}
-              aria-label={isSelected ? `Active preset: ${preset.title}` : `Select preset ${preset.title}`}
-              title={isSelected ? `Active preset: ${preset.title}` : `Select preset ${preset.title}`}
+              aria-label={isSelected ? `${preset.title} - active preset` : `${preset.title} - select preset`}
+              title={isSelected ? `${preset.title} (active preset)` : `Select ${preset.title}`}
               onClick={() => setActivePreset(preset)}
               className={`text-left p-4 rounded-xl transition-all border focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-canvas ${
                 isSelected
