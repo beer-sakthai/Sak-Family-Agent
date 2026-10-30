@@ -109,7 +109,7 @@ export function PersonaFilter({ selected, onChange, counts }: PersonaFilterProps
           onClick={() => setOpen((value) => !value)}
           aria-expanded={open}
           aria-haspopup="menu"
-          aria-label="Filter by persona"
+          aria-label={`${label} - Filter by persona`}
           title={
             selected.length === 0
               ? "Filter dashboard by persona"
