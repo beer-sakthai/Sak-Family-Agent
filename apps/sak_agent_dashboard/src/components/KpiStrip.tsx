@@ -116,7 +116,9 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
           <p className="mt-1.5 font-display text-2xl font-bold tracking-tight text-fg">
             {tile.value}
           </p>
-          <p className="mt-0.5 truncate font-mono text-[11px] text-fg-4">{tile.hint}</p>
+          <p className="mt-0.5 truncate font-mono text-[11px] text-fg-4" title={tile.hint}>
+            {tile.hint}
+          </p>
         </div>
         {delta && Number.isFinite(delta.value) && delta.value !== 0 && (
           <span

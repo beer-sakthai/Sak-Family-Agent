@@ -108,7 +108,9 @@ function SignalCard({ signal, onNavigate }: { signal: Signal; onNavigate?: (tab:
             {signal.label}
           </p>
           <p className="mt-2 font-display text-2xl font-bold tracking-tight text-fg">{signal.value}</p>
-          <p className="mt-1 min-h-8 text-xs leading-4 text-fg-3">{signal.detail}</p>
+          <p className="mt-1 min-h-8 text-xs leading-4 text-fg-3" title={signal.detail}>
+            {signal.detail}
+          </p>
         </div>
         {/* Not a live region: with `onNavigate` (as on the dashboard) the card
             is a <button>, whose descendants are presentational, so a nested
