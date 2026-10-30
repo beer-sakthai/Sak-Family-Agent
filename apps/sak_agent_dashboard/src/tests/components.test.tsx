@@ -1068,6 +1068,18 @@ describe("WorkflowRuns", () => {
 });
 
 describe("PersonaFilter", () => {
+  it("includes visible label text in trigger button aria-label for WCAG 2.5.3 compliance", () => {
+    const { rerender } = render(<PersonaFilter selected={[]} onChange={vi.fn()} />);
+    const trigger = screen.getByTestId("persona-filter");
+    expect(trigger).toHaveAttribute("aria-label", "All personas - Filter by persona");
+
+    rerender(<PersonaFilter selected={["sakthai"]} onChange={vi.fn()} />);
+    expect(trigger).toHaveAttribute("aria-label", "SakThai - Filter by persona");
+
+    rerender(<PersonaFilter selected={["sakthai", "sakjules"]} onChange={vi.fn()} />);
+    expect(trigger).toHaveAttribute("aria-label", "2 personas - Filter by persona");
+  });
+
   it("renders dynamic title tooltips on trigger based on selection state", () => {
     const { rerender } = render(<PersonaFilter selected={[]} onChange={vi.fn()} />);
     const trigger = screen.getByTestId("persona-filter");
