@@ -626,6 +626,30 @@ describe("AuditLogs", () => {
     expect(emptyIcon).toBeInTheDocument();
     expect(emptyIcon).toHaveAttribute("aria-hidden", "true");
   });
+
+  it("renders table header cells with descriptive title hover tooltips", () => {
+    render(<AuditLogs audit={demoAudit()} severity="ALL" onSeverityChange={vi.fn()} />);
+    expect(screen.getByRole("columnheader", { name: "Timestamp" })).toHaveAttribute(
+      "title",
+      "Event timestamp (UTC)",
+    );
+    expect(screen.getByRole("columnheader", { name: "Severity" })).toHaveAttribute(
+      "title",
+      "Security event severity level",
+    );
+    expect(screen.getByRole("columnheader", { name: "Type" })).toHaveAttribute(
+      "title",
+      "Audit event classification type",
+    );
+    expect(screen.getByRole("columnheader", { name: "Message" })).toHaveAttribute(
+      "title",
+      "Audit log event description",
+    );
+    expect(screen.getByRole("columnheader", { name: "Details" })).toHaveAttribute(
+      "title",
+      "Structured event metadata and attributes",
+    );
+  });
 });
 
 describe("SessionExplorer", () => {

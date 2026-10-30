@@ -126,11 +126,11 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
           <table className="w-full text-left font-mono text-xs">
             <thead className="bg-sunken/80 text-fg-3 border-b border-line/80 uppercase text-[10px] tracking-wider">
               <tr>
-                <th className="px-5 py-3">Timestamp</th>
-                <th className="px-5 py-3">Severity</th>
-                <th className="px-5 py-3">Type</th>
-                <th className="px-5 py-3">Message</th>
-                <th className="px-5 py-3">Details</th>
+                <th title="Event timestamp (UTC)" className="px-5 py-3">Timestamp</th>
+                <th title="Security event severity level" className="px-5 py-3">Severity</th>
+                <th title="Audit event classification type" className="px-5 py-3">Type</th>
+                <th title="Audit log event description" className="px-5 py-3">Message</th>
+                <th title="Structured event metadata and attributes" className="px-5 py-3">Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line/60 text-fg-2">
