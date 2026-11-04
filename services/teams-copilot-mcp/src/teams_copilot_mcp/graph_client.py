@@ -90,6 +90,12 @@ class GraphClient:
         full URLs — pass those straight through).
         """
         # SSRF and Token Exfiltration protection:
+        # Prevent ASCII control character injection
+        if any(ord(c) < 32 for c in path):
+            raise ValueError(f"ASCII control characters detected in URL: {path}")
+
+        path = str(path).strip()
+
         # Prevent protocol-relative URLs (e.g., //attacker.com)
         if path.startswith(("//", "\\\\", "/\\", "\\/")):
             raise ValueError("Invalid path format: protocol-relative paths are blocked")
