@@ -137,6 +137,7 @@ describe("Sidebar", () => {
     expect(expandButton).toHaveAttribute("title", "Expand sidebar ([)");
   });
 
+
   it("keeps the mobile drawer unmounted until it is opened and includes accessible backdrop attributes and explicit type button", () => {
     const { rerender, props } = renderSidebar({ mobileOpen: false });
     expect(screen.queryByLabelText("Close navigation menu")).not.toBeInTheDocument();
