@@ -342,7 +342,7 @@ describe("TopBar", () => {
       expect(opt).toHaveAttribute("type", "button");
     }
 
-    fireEvent.click(screen.getByLabelText("Filter by persona"));
+    fireEvent.click(screen.getByTestId("persona-filter"));
     const personaAllOption = screen.getByRole("menuitem");
     expect(personaAllOption).toHaveAttribute("type", "button");
   });
