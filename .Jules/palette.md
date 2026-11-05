@@ -66,3 +66,7 @@
 ## 2026-11-02 - Descriptive hover tooltips on non-interactive KPI summary tiles
 **Learning:** Non-interactive KPI summary tiles (such as Success rate or Avg latency) benefit from explicit `title` attributes incorporating label, value, and hint text so desktop mouse users can inspect metric details on hover without adding unnecessary `tabIndex={0}` tab stops to non-interactive elements.
 **Action:** Set `title={`${tile.label}: ${tile.value}${tile.hint ? ` (${tile.hint})` : ""}`}` on non-interactive KPI summary cards.
+
+## 2026-11-05 - Accessible SVG sparklines with summary statistics
+**Learning:** SVG sparkline graphs rendered as visual decorations inside summary tiles benefit from `role="img"`, an explicit `aria-label` summarizing key statistics (min, max, current value), and a child `<title>` element so assistive technologies and desktop hover tooltips convey underlying trend data.
+**Action:** Set `role="img"`, `aria-label`, and an inner `<title>` tag on SVG sparklines detailing min, max, and current data points.
