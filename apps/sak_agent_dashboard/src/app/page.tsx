@@ -962,9 +962,28 @@ export default function Home() {
               {isDemo && " · sample data requested"}
               {personas.length > 0 && ` · filtered to ${personas.length} persona${personas.length === 1 ? "" : "s"}`}
             </span>
-            <span className="hidden sm:inline">
-              <kbd className="rounded border border-line px-1 py-0.5" aria-hidden="true" title="Command + K">⌘K</kbd> commands ·{" "}
-              <kbd className="rounded border border-line px-1 py-0.5" aria-hidden="true" title="Question mark">?</kbd> shortcuts
+            <span className="hidden sm:inline-flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setPaletteOpen(true)}
+                aria-label="Open command palette (Command + K)"
+                title="Open command palette (⌘K)"
+                className="inline-flex items-center gap-1 rounded hover:text-fg focus:outline-hidden focus-visible:ring-1 focus-visible:ring-accent transition-colors cursor-pointer"
+              >
+                <kbd className="rounded border border-line bg-sunken px-1 py-0.5 text-fg-4" aria-hidden="true">⌘K</kbd>
+                <span>commands</span>
+              </button>
+              <span aria-hidden="true">·</span>
+              <button
+                type="button"
+                onClick={() => setShortcutsOpen(true)}
+                aria-label="Open keyboard shortcuts (?)"
+                title="Open keyboard shortcuts (?)"
+                className="inline-flex items-center gap-1 rounded hover:text-fg focus:outline-hidden focus-visible:ring-1 focus-visible:ring-accent transition-colors cursor-pointer"
+              >
+                <kbd className="rounded border border-line bg-sunken px-1 py-0.5 text-fg-4" aria-hidden="true">?</kbd>
+                <span>shortcuts</span>
+              </button>
             </span>
           </footer>
         </main>
