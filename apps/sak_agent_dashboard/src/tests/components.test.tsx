@@ -466,6 +466,36 @@ describe("MemoryExplorer", () => {
     expect(confidenceCell).toHaveAttribute("title", `Confidence score: ${confidenceText}`);
   });
 
+  it("renders table cell title hover tooltips for fact ID, kind/key, value, timestamp, observation ID, and summary", () => {
+    const memory = demoMemory();
+    const firstFact = memory.facts[0];
+    const firstObs = memory.observations[0];
+
+    render(<MemoryExplorer memory={memory} />);
+
+    const idCell = screen.getByTitle(`Fact ID: ${firstFact.id}`);
+    expect(idCell).toBeInTheDocument();
+
+    const kindTitle = `Kind: ${firstFact.kind}${firstFact.key ? `, Key: ${firstFact.key}` : ""}`;
+    const kindCell = screen.getByTitle(kindTitle);
+    expect(kindCell).toBeInTheDocument();
+
+    const valueCell = screen.getByTitle(`Fact value: ${firstFact.value}`);
+    expect(valueCell).toBeInTheDocument();
+
+    const updatedCells = screen.getAllByTitle(/^Updated at:/);
+    expect(updatedCells.length).toBeGreaterThan(0);
+
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+    fireEvent.click(obsTab);
+
+    const obsIdCell = screen.getByTitle(`Observation ID: ${firstObs.id}`);
+    expect(obsIdCell).toBeInTheDocument();
+
+    const obsSummaryCell = screen.getByTitle(`Observation summary: ${firstObs.summary}`);
+    expect(obsSummaryCell).toBeInTheDocument();
+  });
+
   it("renders empty state guidance and icons for facts and observations", () => {
     const empty = { ...demoMemory(), facts: [], observations: [] };
     render(<MemoryExplorer memory={empty} />);
