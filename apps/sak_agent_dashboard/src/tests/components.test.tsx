@@ -1160,14 +1160,14 @@ describe("StitchStudio", () => {
   it("renders preset buttons and view tab buttons with explicit title tooltip attributes", () => {
     render(<StitchStudio />);
     const activePresetButton = screen.getByRole("button", {
-      name: "Active preset: SakThai Interactive Agent Drawer",
+      name: "SakThai Interactive Agent Drawer - active preset",
     });
-    expect(activePresetButton).toHaveAttribute("title", "Active preset: SakThai Interactive Agent Drawer");
+    expect(activePresetButton).toHaveAttribute("title", "SakThai Interactive Agent Drawer (active preset)");
 
     const inactivePresetButton = screen.getByRole("button", {
-      name: "Select preset Multi-Agent System Architecture",
+      name: "Multi-Agent System Architecture - select preset",
     });
-    expect(inactivePresetButton).toHaveAttribute("title", "Select preset Multi-Agent System Architecture");
+    expect(inactivePresetButton).toHaveAttribute("title", "Select Multi-Agent System Architecture");
 
     const previewTab = screen.getByRole("tab", { name: /Live Preview/ });
     const codeTab = screen.getByRole("tab", { name: /TSX Code/ });
@@ -1193,7 +1193,7 @@ describe("StitchStudio", () => {
   it("renders matching Security Audit Event Pill live preview when security-badge preset is selected", () => {
     render(<StitchStudio />);
     const securityPresetButton = screen.getByRole("button", {
-      name: "Select preset Security Audit Event Pill",
+      name: "Security Audit Event Pill - select preset",
     });
     fireEvent.click(securityPresetButton);
 
@@ -1204,7 +1204,7 @@ describe("StitchStudio", () => {
   it("renders matching Multi-Agent System Architecture flow diagram live preview when mermaid-arch preset is selected", () => {
     render(<StitchStudio />);
     const mermaidPresetButton = screen.getByRole("button", {
-      name: "Select preset Multi-Agent System Architecture",
+      name: "Multi-Agent System Architecture - select preset",
     });
     fireEvent.click(mermaidPresetButton);
 
