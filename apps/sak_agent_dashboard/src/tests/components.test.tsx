@@ -791,6 +791,27 @@ describe("SessionExplorer", () => {
     expect(screen.getByTestId("session-drawer")).toBeInTheDocument();
   });
 
+  it("renders tool call badges in session drawer with title tooltips and aria-label attributes describing outcome", () => {
+    const detailWithToolCalls = {
+      summary: sessions.sessions[0],
+      messages: [],
+      tool_calls: [
+        { name: "read_file", is_error: false },
+        { name: "run_bash", is_error: true },
+      ],
+      result_text: "Done",
+    };
+    renderExplorer({ openSessionId: sessions.sessions[0].id, detail: detailWithToolCalls });
+
+    const successBadge = screen.getByLabelText("Tool call: read_file (succeeded)");
+    expect(successBadge).toBeInTheDocument();
+    expect(successBadge).toHaveAttribute("title", "Tool call: read_file (succeeded)");
+
+    const errorBadge = screen.getByLabelText("Tool call: run_bash (failed)");
+    expect(errorBadge).toBeInTheDocument();
+    expect(errorBadge).toHaveAttribute("title", "Tool call: run_bash (failed)");
+  });
+
   it("reports a close upward instead of closing itself", () => {
     const onSessionSelect = vi.fn();
     renderExplorer({ openSessionId: sessions.sessions[0].id, onSessionSelect });
