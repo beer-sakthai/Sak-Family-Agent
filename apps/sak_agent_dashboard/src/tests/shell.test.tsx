@@ -481,7 +481,7 @@ describe("KpiStrip", () => {
     expect(onNavigate).toHaveBeenCalledWith("analytics");
   });
 
-  it("renders descriptive title hover tooltips on non-interactive KPI tiles", () => {
+  it("renders descriptive title hover tooltips and aria-labels on non-interactive KPI tiles", () => {
     render(
       <KpiStrip
         metrics={metrics}
@@ -492,8 +492,14 @@ describe("KpiStrip", () => {
     );
     const successTile = screen.getByTitle(/Success rate:/);
     expect(successTile).toBeInTheDocument();
+    expect(successTile).toHaveAttribute("aria-label");
     const latencyTile = screen.getByTitle(/Avg latency:/);
     expect(latencyTile).toBeInTheDocument();
+    expect(latencyTile).toHaveAttribute("aria-label");
+
+    // Off-screen polite status live region for KPI metrics
+    const politeStatus = screen.getByRole("status");
+    expect(politeStatus).toHaveTextContent(/KPI summary:/);
   });
 });
 
