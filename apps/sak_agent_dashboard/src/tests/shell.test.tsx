@@ -645,3 +645,31 @@ describe("Skeletons", () => {
     expect(screen.getByRole("status", { name: "Loading sessions" })).toBeInTheDocument();
   });
 });
+
+describe("Footer Shortcut Buttons", () => {
+  it("renders interactive command and shortcut buttons in footer with accessible names and tooltips", async () => {
+    const Home = (await import("@/app/page")).default;
+    await waitFor(() => {
+      render(<Home />);
+    });
+
+    const commandPaletteBtn = screen.getByRole("button", { name: "Open command palette (⌘K)" });
+    expect(commandPaletteBtn).toBeInTheDocument();
+    expect(commandPaletteBtn).toHaveAttribute("type", "button");
+    expect(commandPaletteBtn).toHaveAttribute("title", "Open command palette (Command + K)");
+
+    const shortcutsBtn = screen.getByRole("button", { name: "Open keyboard shortcuts overlay (?)" });
+    expect(shortcutsBtn).toBeInTheDocument();
+    expect(shortcutsBtn).toHaveAttribute("type", "button");
+    expect(shortcutsBtn).toHaveAttribute("title", "Open keyboard shortcuts overlay (?)" );
+
+    fireEvent.click(commandPaletteBtn);
+    expect(screen.getByRole("dialog", { name: "Command palette" })).toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Command palette" })).not.toBeInTheDocument();
+
+    fireEvent.click(shortcutsBtn);
+    expect(screen.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeInTheDocument();
+  });
+});
