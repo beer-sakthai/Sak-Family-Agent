@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CheckCircle2, CircleDashed, GitBranch, Info, Loader2, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, CircleDashed, GitBranch, Info, Loader2, XCircle } from "lucide-react";
 
 import type { WorkflowRunDetail, WorkflowRunSummary } from "@/lib/contracts.generated";
 import Drawer from "./Drawer";
@@ -238,13 +238,25 @@ export function WorkflowRuns({
                       <StatusPill status={step.status} />
                     </div>
                     <div className="flex items-center gap-4 text-[11px] text-fg-4">
-                      <span>{duration(step.duration_seconds)}</span>
-                      <span>
+                      <span title={`Step duration: ${duration(step.duration_seconds)}`}>
+                        {duration(step.duration_seconds)}
+                      </span>
+                      <span
+                        title={`Execution attempts: ${step.attempts} (${step.attempts === 1 ? "initial attempt" : `${step.attempts} attempts`})`}
+                      >
                         {step.attempts} {step.attempts === 1 ? "attempt" : "attempts"}
                       </span>
                     </div>
                     {step.error && (
-                      <p className="text-hue-rose font-sans wrap-break-word">{step.error}</p>
+                      <div
+                        role="alert"
+                        aria-label="Step execution error"
+                        title={`Step error: ${step.error}`}
+                        className="flex items-start gap-1.5 rounded-lg border border-hue-rose-line/30 bg-hue-rose-tint/20 px-2.5 py-1.5 text-xs text-hue-rose"
+                      >
+                        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-hue-rose" aria-hidden="true" />
+                        <p className="font-sans wrap-break-word">{step.error}</p>
+                      </div>
                     )}
                   </div>
                 ))

@@ -66,3 +66,7 @@
 ## 2026-11-02 - Descriptive hover tooltips on non-interactive KPI summary tiles
 **Learning:** Non-interactive KPI summary tiles (such as Success rate or Avg latency) benefit from explicit `title` attributes incorporating label, value, and hint text so desktop mouse users can inspect metric details on hover without adding unnecessary `tabIndex={0}` tab stops to non-interactive elements.
 **Action:** Set `title={`${tile.label}: ${tile.value}${tile.hint ? ` (${tile.hint})` : ""}`}` on non-interactive KPI summary cards.
+
+## 2026-11-08 - Semantic error callout and metric tooltips in workflow step cards
+**Learning:** In step execution lists within detail drawers, error strings benefit from being wrapped in a dedicated semantic `role="alert"` container with an `AlertCircle` icon, `aria-label`, and `title` tooltip rather than bare text, while execution metrics (duration and attempts count) benefit from descriptive hover tooltips.
+**Action:** Wrap step execution errors in `role="alert"` containers with status icons and attach contextual `title` tooltips to step duration and attempt metrics.
