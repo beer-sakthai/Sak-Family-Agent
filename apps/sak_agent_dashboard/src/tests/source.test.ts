@@ -275,4 +275,19 @@ describe("ApiSource SSRF protections", () => {
       "Invalid path format: protocol-relative and absolute paths are blocked",
     );
   });
+
+  it("blocks ASCII control characters", async () => {
+    const { ApiSource } = await import("@/lib/sources/api");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const source = new ApiSource("http://127.0.0.1:3000") as any;
+    await expect(source.fetchJson("\r//attacker.com")).rejects.toThrow(
+      "Invalid path format: control characters are not allowed",
+    );
+    await expect(source.fetchJson("\n//attacker.com")).rejects.toThrow(
+      "Invalid path format: control characters are not allowed",
+    );
+    await expect(source.fetchJson("\x00//attacker.com")).rejects.toThrow(
+      "Invalid path format: control characters are not allowed",
+    );
+  });
 });
