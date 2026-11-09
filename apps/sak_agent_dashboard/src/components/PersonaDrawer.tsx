@@ -148,20 +148,36 @@ export function PersonaDrawer({
       data-testid="persona-drawer"
     >
       <div className="space-y-6">
-        <section className="grid grid-cols-2 gap-2 font-mono text-xs">
-          <div className="rounded-xl border border-line/80 bg-sunken/60 p-3">
+        <section
+          aria-label="Persona summary metrics"
+          className="grid grid-cols-2 gap-2 font-mono text-xs"
+        >
+          <div
+            title={`Provider: ${persona.provider || "unset"}`}
+            className="rounded-xl border border-line/80 bg-sunken/60 p-3"
+          >
             <span className="mb-1 block text-[10px] uppercase tracking-wider text-fg-4">
               Provider
             </span>
             <span className="block truncate text-fg-2">{persona.provider || "unset"}</span>
           </div>
-          <div className="rounded-xl border border-line/80 bg-sunken/60 p-3">
+          <div
+            title={`Configured model: ${persona.model || "unset"}`}
+            className="rounded-xl border border-line/80 bg-sunken/60 p-3"
+          >
             <span className="mb-1 block text-[10px] uppercase tracking-wider text-fg-4">Model</span>
-            <span className="block truncate text-fg-2" title={persona.model || undefined}>
+            <span className="block truncate text-fg-2">
               {persona.model || "unset"}
             </span>
           </div>
-          <div className="rounded-xl border border-line/80 bg-sunken/60 p-3">
+          <div
+            title={
+              persona.runs > 0
+                ? `Average latency: ${duration(persona.avg_latency_ms)}`
+                : "Average latency: no runs recorded"
+            }
+            className="rounded-xl border border-line/80 bg-sunken/60 p-3"
+          >
             <span className="mb-1 block text-[10px] uppercase tracking-wider text-fg-4">
               Avg latency
             </span>
@@ -169,7 +185,14 @@ export function PersonaDrawer({
               {persona.runs > 0 ? duration(persona.avg_latency_ms) : "—"}
             </span>
           </div>
-          <div className="rounded-xl border border-line/80 bg-sunken/60 p-3">
+          <div
+            title={
+              successRate === null
+                ? "Success rate: no runs recorded"
+                : `Success rate: ${successRate.toFixed(1)}%`
+            }
+            className="rounded-xl border border-line/80 bg-sunken/60 p-3"
+          >
             <span className="mb-1 block text-[10px] uppercase tracking-wider text-fg-4">
               Success rate
             </span>
