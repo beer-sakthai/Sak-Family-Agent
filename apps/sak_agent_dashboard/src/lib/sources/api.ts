@@ -41,7 +41,13 @@ export class ApiSource implements DashboardSource {
     // SSRF and Token Exfiltration protection:
     // Prevent protocol-relative URLs, absolute URLs with a scheme, and backslashes
     // that might bypass base URL prefixing.
-    let validationPath = pathname;
+    for (let i = 0; i < pathname.length; i++) {
+      if (pathname.charCodeAt(i) < 32) {
+        throw new Error("Invalid path format: ASCII control characters are blocked");
+      }
+    }
+
+    let validationPath = pathname.trim();
     for (let i = 0; i < 5; i++) {
       try {
         const decoded = decodeURIComponent(validationPath);

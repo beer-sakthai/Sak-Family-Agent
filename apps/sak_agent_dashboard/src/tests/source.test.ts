@@ -275,4 +275,22 @@ describe("ApiSource SSRF protections", () => {
       "Invalid path format: protocol-relative and absolute paths are blocked",
     );
   });
+
+  it("blocks paths with ASCII control characters", async () => {
+    const { ApiSource } = await import("@/lib/sources/api");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const source = new ApiSource("http://127.0.0.1:3000") as any;
+    await expect(source.fetchJson("\r//attacker.com")).rejects.toThrow(
+      "Invalid path format: ASCII control characters are blocked",
+    );
+  });
+
+  it("blocks paths with leading whitespace that evade SSRF checks", async () => {
+    const { ApiSource } = await import("@/lib/sources/api");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const source = new ApiSource("http://127.0.0.1:3000") as any;
+    await expect(source.fetchJson(" //attacker.com")).rejects.toThrow(
+      "Invalid path format: protocol-relative and absolute paths are blocked",
+    );
+  });
 });
