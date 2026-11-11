@@ -1073,6 +1073,7 @@ describe("PersonaFilter", () => {
     fireEvent.click(trigger);
     const menu = screen.getByRole("menu", { name: "Filter by persona" });
     expect(menu).toBeInTheDocument();
+    expect(menu).toHaveClass("top-full");
 
     const allPersonasItem = screen.getByRole("menuitem", { name: /All personas/ });
     expect(allPersonasItem).toHaveAttribute("title", "Show all personas");
@@ -1245,6 +1246,7 @@ describe("DisplayMenu", () => {
     fireEvent.click(trigger);
     const menu = screen.getByRole("menu", { name: "Display settings" });
     expect(menu).toBeInTheDocument();
+    expect(menu).toHaveClass("top-full");
 
     const menuItems = screen.getAllByRole("menuitemradio");
     expect(menuItems).toHaveLength(5); // 3 themes + 2 densities
