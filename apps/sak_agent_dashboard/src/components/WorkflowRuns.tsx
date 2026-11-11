@@ -158,20 +158,32 @@ export function WorkflowRuns({
                         isSelected ? "bg-raised/80 font-medium" : "hover:bg-raised/60"
                       }`}
                     >
-                      <td className="px-5 py-3.5">
+                      <td
+                        title={`Workflow: ${run.workflow_name || "—"} (${run.run_id})`}
+                        className="px-5 py-3.5"
+                      >
                         <span className="font-bold text-fg">{run.workflow_name || "—"}</span>
                         <span className="block text-[10px] text-fg-4">{run.run_id}</span>
                       </td>
                       <td className="px-5 py-3.5">
                         <StatusPill status={run.status} />
                       </td>
-                      <td className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap">
+                      <td
+                        title={run.started_at ? `Started at: ${started(run.started_at)}` : "Start time unknown"}
+                        className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap"
+                      >
                         {started(run.started_at)}
                       </td>
-                      <td className="px-5 py-3.5 text-right text-fg-2">
+                      <td
+                        title={`Execution duration: ${duration(run.duration_seconds)}`}
+                        className="px-5 py-3.5 text-right text-fg-2"
+                      >
                         {duration(run.duration_seconds)}
                       </td>
-                      <td className="px-5 py-3.5 text-right">
+                      <td
+                        title={`Total steps: ${run.step_count}${run.failed_steps > 0 ? ` (${run.failed_steps} failed)` : ""}`}
+                        className="px-5 py-3.5 text-right"
+                      >
                         <span className="text-fg-2">{run.step_count}</span>
                         {run.failed_steps > 0 && (
                           <span className="text-hue-rose"> ({run.failed_steps} failed)</span>
