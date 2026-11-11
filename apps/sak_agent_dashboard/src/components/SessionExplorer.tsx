@@ -157,12 +157,6 @@ export function SessionExplorer({
         </div>
       </div>
 
-      <span className="sr-only" role="status" aria-live="polite">
-        {search.trim()
-          ? `${sessions.length} session${sessions.length === 1 ? "" : "s"} found`
-          : ""}
-      </span>
-
       <div className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left font-mono text-xs">
@@ -243,10 +237,7 @@ export function SessionExplorer({
                           {personaLabel(session.persona)}
                         </span>
                       </td>
-                      <td
-                        title={session.task ? `Task: ${session.task}` : "Task not recorded"}
-                        className="px-5 py-3.5 font-sans text-fg max-w-md truncate"
-                      >
+                      <td className="px-5 py-3.5 font-sans text-fg max-w-md truncate">
                         {session.task || "—"}
                       </td>
                       <td
@@ -256,16 +247,10 @@ export function SessionExplorer({
                       >
                         {session.model || "—"}
                       </td>
-                      <td
-                        title={`Recorded at: ${formatTimestamp(session.timestamp)}`}
-                        className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap"
-                      >
+                      <td className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap">
                         {formatTimestamp(session.timestamp)}
                       </td>
-                      <td
-                        title={`Total tokens: ${session.tokens.total_tokens.toLocaleString()}`}
-                        className="px-5 py-3.5 text-right text-fg-2"
-                      >
+                      <td className="px-5 py-3.5 text-right text-fg-2">
                         {session.tokens.total_tokens.toLocaleString()}
                       </td>
                       <td className="px-5 py-3.5">

@@ -1,9 +1,25 @@
-## 2026-11-20 - [Sentinel] SSRF Protection Bypass via Whitespace and Control Characters
-**Vulnerability:** The Microsoft Graph API client (`services/teams-copilot-mcp/src/teams_copilot_mcp/graph_client.py`) implemented SSRF and protocol-relative URL protections (e.g., blocking `//attacker.com`) using `path.startswith(...)`. However, an attacker could bypass this check by prepending whitespace (e.g., `" //attacker.com"`) or ASCII control characters (e.g., `"\rhttps://attacker.com"`) to the path. Since the underlying HTTP libraries (`httpx` or `urllib.request`) typically strip or ignore leading whitespace and specific control characters during request building, the malicious payload would still be executed against the attacker's server, circumventing the intended restriction to `graph.microsoft.com`.
-**Learning:** Security checks that rely on exact prefix matching (like `.startswith()`) are inherently brittle when dealing with network inputs that will subsequently be parsed or normalized by lower-level libraries. The divergence between the security validation logic (strict string matching) and the operational logic (tolerant parsing) creates a parsing differential vulnerability.
-**Prevention:** Always normalize (e.g., `.strip()`) and sanitize (e.g., reject ASCII control characters) input *before* performing security validation. Validation logic must operate on the exact same representation of the data that will be consumed by the execution sink.
+## 2024-10-18 - XSS in RAG Search Results
+**Vulnerability:** The RAG search results in `docs/index.html` and `scripts/saksee/dashboard.html` rendered user-controlled properties (`r.agent`, `r.source`, `r.text`) directly into the DOM using `.innerHTML` without escaping.
+**Learning:** Even data coming from internal APIs (like RAG results) can contain untrusted data that leads to Cross-Site Scripting (XSS) if not properly escaped before insertion into the DOM using `.innerHTML`.
+**Prevention:** Always wrap variables containing potentially untrusted strings with an HTML escaping function (like `escapeHtml()`) before concatenating them into strings destined for `.innerHTML`, or assign directly to `.textContent`.
+## 2026-10-18 - XSS in RAG Search Results
+**Vulnerability:** The RAG search results in `docs/index.html` and `scripts/saksee/dashboard.html` rendered user-controlled properties (`r.agent`, `r.source`, `r.text`) directly into the DOM using `.innerHTML` without escaping.
+**Learning:** Even data coming from internal APIs (like RAG results) can contain untrusted data that leads to Cross-Site Scripting (XSS) if not properly escaped before insertion into the DOM using `.innerHTML`.
+**Prevention:** Always wrap variables containing potentially untrusted strings with an HTML escaping function (like `escapeHtml()`) before concatenating them into strings destined for `.innerHTML`, or assign directly to `.textContent`.
 
-## 2026-11-10 - [Sentinel] Command Injection in Agent Skill Documentation
-**Vulnerability:** Agent skill documentation (`personas/sakking/skills/SakKing-smolagents/SKILL.md`) contained code examples that used `eval()` to parse math expressions in a `calculator` tool example.
-**Learning:** Code examples in agent instructions act as active behavioral templates. Since agents read instructions and often execute the code examples exactly as written, providing unsafe examples (like `eval()`) turns documentation into an active threat vector. Relying on `eval()` for string evaluation, even with restricted `__builtins__`, is unsafe for untrusted input.
-**Prevention:** Replace insecure `eval()` usage in documentation examples with secure alternatives like `simpleeval.simple_eval()` or `ast.literal_eval()`. Always include the required dependency installation notes (e.g., `# Requires: pip install simpleeval`) to ensure the secure alternative is actionable.
+## 2026-10-18 - XSS in RAG Search Results
+**Vulnerability:** The RAG search results in `docs/index.html` and `scripts/saksee/dashboard.html` rendered user-controlled properties (`r.agent`, `r.source`, `r.text`) directly into the DOM using `.innerHTML` without escaping.
+**Learning:** Even data coming from internal APIs (like RAG results) can contain untrusted data that leads to Cross-Site Scripting (XSS) if not properly escaped before insertion into the DOM using `.innerHTML`.
+**Prevention:** Always wrap variables containing potentially untrusted strings with an HTML escaping function (like `escapeHtml()`) before concatenating them into strings destined for `.innerHTML`, or assign directly to `.textContent`.
+## 2024-10-18 - Hardcoded Cache Path for HuggingFace Token
+**Vulnerability:** A hardcoded, user-specific absolute path (`/opt/data/profiles/sakthai/home/.cache/huggingface/token`) was used to load the Hugging Face token in `services/inference-endpoint/poll_endpoint.py`.
+**Learning:** Hardcoding absolute paths, especially those tied to a specific user profile or environment (`sakthai`), leads to brittle code and potential security risks if secrets are improperly exposed or shared. It also breaks execution in different environments.
+**Prevention:** Prioritize retrieving credentials from established environment variables (like `HF_TOKEN`). As a fallback, dynamically construct paths relative to the current user's home directory (e.g., using `Path.home() / ".cache/huggingface/token"`).
+## 2026-10-18 - SSRF via Multiple Encoding
+**Vulnerability:** The API dashboard `fetchJson` used single validation but allowed recursively decoded URLs, exposing the system to Server-Side Request Forgery via double-encoding (e.g. `%252F%252F`).
+**Learning:** Defending against SSRF requires deep, bounded unquoting in `try/catch` blocks to catch encoding tricks without blocking legitimate queries containing raw `%` symbols.
+**Prevention:** Apply a robust bounding unquote mechanism that defaults safely when decoding fails.
+## 2026-10-18 - DoS via Unhandled TypeError in compare_digest
+**Vulnerability:** The API server in `scripts/serve_api.py` called `secrets.compare_digest(val, expected_token)` directly. Since `compare_digest` only supports ASCII string operands, feeding it a string with a non-ASCII character (e.g., in an `Authorization` header or `?token=` parameter) raised a `TypeError`, crashing the connection handler.
+**Learning:** Security functions like `compare_digest` often have strict input constraints. Exposing them directly to unvalidated network input (like headers) can inadvertently create Denial of Service (DoS) vectors.
+**Prevention:** Always encode user-provided strings to bytes (e.g., `.encode("utf-8")`) before using them with `secrets.compare_digest` to ensure type safety and prevent unhandled exceptions.
