@@ -7,3 +7,11 @@
 **Vulnerability:** The documentation for `SakKing-smolagents` (`personas/sakking/skills/SakKing-smolagents/SKILL.md`) provided an example code snippet that used the built-in `eval()` function to calculate math expressions.
 **Learning:** Code snippets and examples in documentation, markdown files, and SKILL instructions must be secured against vulnerabilities. Agents that evaluate code directly from their instructions will execute insecure examples exactly as written, turning documentation into an active threat vector. Attempting to restrict `__builtins__` in `eval()` is a known anti-pattern and does not prevent sandbox escapes.
 **Prevention:** Safe alternatives like `simpleeval` or `ast.literal_eval` must be used for arbitrary string evaluation. When introducing third-party alternatives in markdown snippets, explicitly document the dependency (e.g., `# Requires: pip install simpleeval`) to prevent user friction.
+## 2024-10-22 - Replace xml.etree.ElementTree with defusedxml to prevent XML attacks
+**Vulnerability:** The standard library `xml.etree.ElementTree` is vulnerable to XML attacks such as Billion Laughs and XXE (flagged by Bandit B405/B314).
+**Learning:** `xml.etree.ElementTree` was used extensively in skills for parsing arXiv results and modifying Office Open XML documents (PowerPoint redlines).
+**Prevention:** Always use `defusedxml.ElementTree` (or `defusedxml.minidom`) when parsing untrusted XML, as it is a drop-in replacement that safely defuses malicious entities. Ensure updates are applied symmetrically across duplicated persona skill files.
+## 2024-10-23 - Avoid restricted eval anti-pattern
+**Vulnerability:** Command Injection via `eval()`. Attempting to secure `eval()` by restricting globals/locals (e.g., `eval(expr, {"__builtins__": {}})`) is an anti-pattern and does NOT prevent sandbox escapes.
+**Learning:** Python's object introspection allows traversing `().__class__.__bases__[0].__subclasses__()` to bypass the restricted dictionary and execute arbitrary commands.
+**Prevention:** Never use `eval()` on user input. Use secure evaluators like `ast.literal_eval` for literals, or dedicated safe-parsing libraries like `simpleeval` for mathematical expressions.
