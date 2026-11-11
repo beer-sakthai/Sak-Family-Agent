@@ -229,7 +229,7 @@ describe("AgentOverview", () => {
     );
 
     const clearButton = screen.getByRole("button", {
-      name: "Clear filter - show all personas",
+      name: "Clear persona filter and show all personas",
     });
     expect(clearButton).toBeInTheDocument();
     expect(clearButton).toHaveAttribute("type", "button");
@@ -240,7 +240,7 @@ describe("AgentOverview", () => {
 
     rerender(<AgentOverview personas={personas} selected={[]} onSelect={onSelect} />);
     expect(
-      screen.queryByRole("button", { name: "Clear filter - show all personas" }),
+      screen.queryByRole("button", { name: "Clear persona filter and show all personas" }),
     ).not.toBeInTheDocument();
   });
 });
@@ -464,6 +464,36 @@ describe("MemoryExplorer", () => {
     const confidenceCell = screen.getByLabelText(`Confidence score: ${confidenceText}`);
     expect(confidenceCell).toBeInTheDocument();
     expect(confidenceCell).toHaveAttribute("title", `Confidence score: ${confidenceText}`);
+  });
+
+  it("renders table cell title hover tooltips for fact ID, kind/key, value, timestamp, observation ID, and summary", () => {
+    const memory = demoMemory();
+    const firstFact = memory.facts[0];
+    const firstObs = memory.observations[0];
+
+    render(<MemoryExplorer memory={memory} />);
+
+    const idCell = screen.getByTitle(`Fact ID: ${firstFact.id}`);
+    expect(idCell).toBeInTheDocument();
+
+    const kindTitle = `Kind: ${firstFact.kind}${firstFact.key ? `, Key: ${firstFact.key}` : ""}`;
+    const kindCell = screen.getByTitle(kindTitle);
+    expect(kindCell).toBeInTheDocument();
+
+    const valueCell = screen.getByTitle(`Fact value: ${firstFact.value}`);
+    expect(valueCell).toBeInTheDocument();
+
+    const updatedCells = screen.getAllByTitle(/^Updated at:/);
+    expect(updatedCells.length).toBeGreaterThan(0);
+
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+    fireEvent.click(obsTab);
+
+    const obsIdCell = screen.getByTitle(`Observation ID: ${firstObs.id}`);
+    expect(obsIdCell).toBeInTheDocument();
+
+    const obsSummaryCell = screen.getByTitle(`Observation summary: ${firstObs.summary}`);
+    expect(obsSummaryCell).toBeInTheDocument();
   });
 
   it("renders empty state guidance and icons for facts and observations", () => {
@@ -1073,6 +1103,7 @@ describe("PersonaFilter", () => {
     fireEvent.click(trigger);
     const menu = screen.getByRole("menu", { name: "Filter by persona" });
     expect(menu).toBeInTheDocument();
+    expect(menu).toHaveClass("top-full");
 
     const allPersonasItem = screen.getByRole("menuitem", { name: /All personas/ });
     expect(allPersonasItem).toHaveAttribute("title", "Show all personas");
@@ -1245,6 +1276,7 @@ describe("DisplayMenu", () => {
     fireEvent.click(trigger);
     const menu = screen.getByRole("menu", { name: "Display settings" });
     expect(menu).toBeInTheDocument();
+    expect(menu).toHaveClass("top-full");
 
     const menuItems = screen.getAllByRole("menuitemradio");
     expect(menuItems).toHaveLength(5); // 3 themes + 2 densities

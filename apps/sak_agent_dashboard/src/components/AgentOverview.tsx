@@ -77,6 +77,7 @@ export function AgentOverview({
             <button
               type="button"
               onClick={() => onSelect([])}
+              aria-label="Clear persona filter and show all personas"
               aria-label="Clear filter - show all personas"
               aria-label="Clear persona filter and show all personas"
               title="Clear filter"
