@@ -79,7 +79,6 @@ function Sparkline({
       preserveAspectRatio="none"
       role="img"
       aria-label={`Trend sparkline for ${label}: min ${min}, max ${max}, latest ${latest}`}
-      aria-hidden
       className={`absolute inset-x-0 bottom-0 h-7 w-full opacity-30 ${className}`}
     >
       <title>{titleText}</title>
