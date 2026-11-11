@@ -963,6 +963,7 @@ export default function Home() {
               {personas.length > 0 && ` · filtered to ${personas.length} persona${personas.length === 1 ? "" : "s"}`}
             </span>
             <span className="hidden items-center gap-1.5 sm:inline-flex">
+            <span className="hidden sm:inline">
               <button
                 type="button"
                 onClick={() => setPaletteOpen(true)}
@@ -979,6 +980,11 @@ export default function Home() {
                 <span>commands</span>
               </button>
               <span>·</span>
+                className="cursor-pointer transition-colors hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <kbd className="rounded border border-line px-1 py-0.5" aria-hidden="true">⌘K</kbd> commands
+              </button>
+              {" · "}
               <button
                 type="button"
                 onClick={() => setShortcutsOpen(true)}
@@ -993,6 +999,10 @@ export default function Home() {
                   ?
                 </kbd>
                 <span>shortcuts</span>
+                title="Open keyboard shortcuts (?)"
+                className="cursor-pointer transition-colors hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <kbd className="rounded border border-line px-1 py-0.5" aria-hidden="true">?</kbd> shortcuts
               </button>
             </span>
           </footer>
