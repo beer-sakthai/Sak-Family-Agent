@@ -92,7 +92,9 @@ function SignalCard({ signal, onNavigate }: { signal: Signal; onNavigate?: (tab:
             "aria-label": `${signal.label}: ${signal.value}. ${signal.detail}. Open ${signal.label} details.`,
             title: `Open ${signal.label} details`,
           }
-        : {})}
+        : {
+            title: `${signal.label}: ${signal.value}${signal.detail ? ` (${signal.detail})` : ""}`,
+          })}
       className={`group relative overflow-hidden rounded-2xl border p-4 text-left transition-all ${style.panel} ${
         interactive
           ? "cursor-pointer hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-lg hover:shadow-accent/5 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
