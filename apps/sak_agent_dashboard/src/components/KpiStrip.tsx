@@ -79,6 +79,7 @@ function Sparkline({
       preserveAspectRatio="none"
       role="img"
       aria-label={`Trend sparkline for ${label}: min ${min}, max ${max}, latest ${latest}`}
+      aria-hidden
       className={`absolute inset-x-0 bottom-0 h-7 w-full opacity-30 ${className}`}
     >
       <title>{titleText}</title>
@@ -123,7 +124,7 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
       <div className="relative flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-fg-4">
-            <Icon className={`h-3 w-3 ${tile.accent}`} aria-hidden="true" />
+            <Icon className={`h-3 w-3 ${tile.accent}`} aria-hidden />
             {tile.label}
           </p>
           <p className="mt-1.5 font-display text-2xl font-bold tracking-tight text-fg">
@@ -143,9 +144,9 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
             }`}
           >
             {delta.value >= 0 ? (
-              <TrendingUp className="h-2.5 w-2.5" aria-hidden="true" />
+              <TrendingUp className="h-2.5 w-2.5" aria-hidden />
             ) : (
-              <TrendingDown className="h-2.5 w-2.5" aria-hidden="true" />
+              <TrendingDown className="h-2.5 w-2.5" aria-hidden />
             )}
             {Math.abs(delta.value).toFixed(0)}%
           </span>
