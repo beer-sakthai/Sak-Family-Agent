@@ -962,6 +962,15 @@ export default function Home() {
               {isDemo && " · sample data requested"}
               {personas.length > 0 && ` · filtered to ${personas.length} persona${personas.length === 1 ? "" : "s"}`}
             </span>
+            <span className="hidden sm:inline-flex sm:items-center sm:gap-1.5">
+              <button
+                type="button"
+                onClick={() => setPaletteOpen(true)}
+                aria-label="Open command palette (⌘K)"
+                title="Open command palette (Command + K)"
+                className="inline-flex items-center gap-1 rounded-sm text-fg-4 transition-colors hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <kbd className="rounded border border-line px-1 py-0.5 text-fg-3" aria-hidden="true" title="Command + K">
             <div className="hidden sm:inline-flex items-center gap-1.5">
             <div className="hidden sm:flex items-center gap-1.5">
             <span className="hidden items-center gap-1.5 sm:inline-flex">
@@ -990,12 +999,19 @@ export default function Home() {
                 </kbd>
                 <span>commands</span>
               </button>
+              <span aria-hidden="true">·</span>
               <span>·</span>
               <button
                 type="button"
                 onClick={() => setShortcutsOpen(true)}
                 aria-label="Open keyboard shortcuts overlay (?)"
                 title="Open keyboard shortcuts overlay (?)"
+                className="inline-flex items-center gap-1 rounded-sm text-fg-4 transition-colors hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <kbd className="rounded border border-line px-1 py-0.5 text-fg-3" aria-hidden="true" title="Question mark">
+                  ?
+                </kbd>
+                <span>shortcuts</span>
                 className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors hover:bg-raised/60 hover:text-fg-3 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
               >
                 <kbd className="rounded border border-line px-1 py-0.5" aria-hidden="true">?</kbd>
