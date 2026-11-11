@@ -95,13 +95,6 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
 
   const clampedHighlight = results.length === 0 ? 0 : Math.min(highlight, results.length - 1);
 
-  const liveStatus =
-    query.trim() === ""
-      ? `${results.length} commands available.`
-      : results.length === 0
-        ? `No commands match "${query}".`
-        : `${results.length} command${results.length === 1 ? "" : "s"} found`;
-
   useEffect(() => {
     if (!listRef.current) return;
     const selectedOption = listRef.current.querySelector<HTMLElement>(
@@ -145,13 +138,6 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
       }
     }
   };
-
-  const liveStatus =
-    query.trim() === ""
-      ? `${results.length} commands available.`
-      : results.length === 0
-        ? `No commands match "${query}".`
-        : `${results.length} command${results.length === 1 ? "" : "s"} found`;
 
   return (
     <div className="fixed inset-0 z-60 flex items-start justify-center p-4 pt-[12vh]">
@@ -216,14 +202,23 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
           </kbd>
         </div>
 
+        <span className="sr-only" role="status" aria-live="polite" aria-label={liveStatus}>
+          {liveStatus}
         <span
           className="sr-only"
           role="status"
           aria-live="polite"
-          aria-label={liveStatus}
+          aria-label={
+            query.trim() !== "" && results.length > 0
+              ? `${results.length} command${results.length === 1 ? "" : "s"} found`
+              : undefined
+          }
         >
-        <span className="sr-only" role="status" aria-live="polite" aria-label={liveStatus}>
-          {liveStatus}
+          {query.trim() === ""
+            ? `${results.length} commands available.`
+            : results.length === 0
+              ? `No commands match "${query}".`
+              : `${results.length} command${results.length === 1 ? "" : "s"} found.`}
         </span>
 
         <ul
