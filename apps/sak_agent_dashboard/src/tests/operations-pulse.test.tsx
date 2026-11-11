@@ -74,6 +74,25 @@ describe("OperationsPulse", () => {
     expect(runQualityBar).toHaveAttribute("aria-valuetext", "98%");
   });
 
+  it("renders descriptive title hover tooltips on non-interactive signal cards when onNavigate is omitted", () => {
+    render(
+      <OperationsPulse
+        personas={demoPersonas()}
+        metrics={demoMetrics()}
+        audit={demoAudit()}
+        workflows={demoWorkflows()}
+      />,
+    );
+
+    const runQualityTile = screen.getByTitle(/Run quality: 97\.9%/);
+    expect(runQualityTile).toBeInTheDocument();
+    expect(runQualityTile).toHaveAttribute("title", "Run quality: 97.9% (11 errors across 546 runs)");
+
+    const securityTile = screen.getByTitle(/Security queue: 2/);
+    expect(securityTile).toBeInTheDocument();
+    expect(securityTile).toHaveAttribute("title", "Security queue: 2 (2 high or critical events require review)");
+  });
+
   it("gives each status pill a tooltip and accessible name", () => {
     render(
       <OperationsPulse
