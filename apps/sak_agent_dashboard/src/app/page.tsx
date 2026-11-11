@@ -963,6 +963,8 @@ export default function Home() {
               {personas.length > 0 && ` · filtered to ${personas.length} persona${personas.length === 1 ? "" : "s"}`}
             </span>
             <div className="hidden sm:flex items-center gap-1.5">
+            <span className="hidden items-center gap-1.5 sm:inline-flex">
+            <span className="hidden sm:inline-flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setPaletteOpen(true)}
@@ -974,6 +976,14 @@ export default function Home() {
                 <span>commands</span>
               </button>
               <span aria-hidden="true" className="text-fg-5">·</span>
+                className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors hover:bg-raised hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <kbd className="rounded border border-line px-1 py-0.5" aria-hidden="true">
+                  ⌘K
+                </kbd>
+                <span>commands</span>
+              </button>
+              <span>·</span>
               <button
                 type="button"
                 onClick={() => setShortcutsOpen(true)}
@@ -985,6 +995,28 @@ export default function Home() {
                 <span>shortcuts</span>
               </button>
             </div>
+                className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors hover:bg-raised hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <kbd className="rounded border border-line px-1 py-0.5" aria-hidden="true">
+                  ?
+                </kbd>
+                <span>shortcuts</span>
+                title="Open command palette (⌘K)"
+                className="inline-flex items-center gap-1 rounded hover:text-fg focus:outline-hidden focus-visible:ring-1 focus-visible:ring-accent transition-colors cursor-pointer"
+              >
+                <kbd className="rounded border border-line bg-sunken px-1 py-0.5 text-fg-4" aria-hidden="true">⌘K</kbd>
+                <span>commands</span>
+              </button>
+              <span aria-hidden="true">·</span>
+              <button
+                type="button"
+                onClick={() => setShortcutsOpen(true)}
+                aria-label="Open keyboard shortcuts (?)"
+                title="Open keyboard shortcuts (?)"
+                className="inline-flex items-center gap-1 rounded hover:text-fg focus:outline-hidden focus-visible:ring-1 focus-visible:ring-accent transition-colors cursor-pointer"
+              >
+                <kbd className="rounded border border-line bg-sunken px-1 py-0.5 text-fg-4" aria-hidden="true">?</kbd>
+                <span>shortcuts</span>
             <span className="hidden sm:inline">
               <button
                 type="button"
