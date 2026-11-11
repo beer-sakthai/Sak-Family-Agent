@@ -148,6 +148,24 @@ describe("PersonaDrawer", () => {
     );
   });
 
+  it("provides descriptive title hover tooltips and accessible region label on summary metric tiles", () => {
+    renderDrawer(busiest);
+    expect(screen.getByRole("region", { name: "Persona summary metrics" })).toBeInTheDocument();
+
+    const providerTile = screen.getByText("Provider").closest("div[title]");
+    expect(providerTile).toHaveAttribute("title", `Provider: ${busiest.provider || "unset"}`);
+
+    const modelTile = screen.getByText("Model").closest("div[title]");
+    expect(modelTile).toHaveAttribute("title", `Configured model: ${busiest.model || "unset"}`);
+
+    const latencyTile = screen.getByText("Avg latency").closest("div[title]");
+    expect(latencyTile).toHaveAttribute("title", `Average latency: ${busiest.avg_latency_ms.toFixed(0)}ms`);
+
+    const successRate = ((busiest.runs - busiest.errors) / busiest.runs) * 100;
+    const successTile = screen.getByText("Success rate").closest("div[title]");
+    expect(successTile).toHaveAttribute("title", `Success rate: ${successRate.toFixed(1)}%`);
+  });
+
   it("renders progressbars with proper ARIA accessibility attributes", () => {
     renderDrawer(busiest);
     const familyRuns = family.reduce((sum, persona) => sum + persona.runs, 0);

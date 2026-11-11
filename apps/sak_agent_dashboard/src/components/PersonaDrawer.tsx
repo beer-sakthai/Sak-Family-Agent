@@ -152,6 +152,10 @@ export function PersonaDrawer({
           <div
             className="rounded-xl border border-line/80 bg-sunken/60 p-3"
             title={`Model provider: ${persona.provider || "unset"}`}
+        <section className="grid grid-cols-2 gap-2 font-mono text-xs" aria-label="Persona summary metrics">
+          <div
+            className="rounded-xl border border-line/80 bg-sunken/60 p-3"
+            title={`Provider: ${persona.provider || "unset"}`}
           >
             <span className="mb-1 block text-[10px] uppercase tracking-wider text-fg-4">
               Provider
@@ -170,6 +174,7 @@ export function PersonaDrawer({
           <div
             className="rounded-xl border border-line/80 bg-sunken/60 p-3"
             title={`Average latency: ${persona.runs > 0 ? duration(persona.avg_latency_ms) : "no runs yet"}`}
+            title={`Average latency: ${persona.runs > 0 ? duration(persona.avg_latency_ms) : "no recorded runs"}`}
           >
             <span className="mb-1 block text-[10px] uppercase tracking-wider text-fg-4">
               Avg latency
