@@ -361,6 +361,7 @@ describe("TopBar", () => {
       expect(opt).toHaveAttribute("type", "button");
     }
 
+    fireEvent.click(screen.getByTestId("persona-filter"));
     fireEvent.click(screen.getByRole("button", { name: /Filter by persona/i }));
     const personaAllOption = screen.getByRole("menuitem");
     expect(personaAllOption).toHaveAttribute("type", "button");
