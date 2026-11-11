@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 """Workbench test: 7B merged model via Inference Endpoint."""
-
-import json
-import os
-import sys
-import time
-
+import json, time, os, sys
 import requests
 
 MODEL = "Nanthasit/sakthai-context-7b-merged"
@@ -25,7 +20,10 @@ TOKEN_PATH = "/opt/data/profiles/sakthai/home/.cache/huggingface/token"
 with open(TOKEN_PATH) as f:
     HF_TOKEN = f.read().strip()
 
-HEADERS = {"Authorization": f"Bearer {HF_TOKEN}", "Content-Type": "application/json"}
+HEADERS = {
+    "Authorization": f"Bearer {HF_TOKEN}",
+    "Content-Type": "application/json"
+}
 
 tests = [
     {
@@ -33,21 +31,18 @@ tests = [
         "desc": "Say hello in one sentence",
         "messages": [
             {"role": "system", "content": "You are SakThai, a helpful assistant. Be concise."},
-            {"role": "user", "content": "Say hello in one sentence."},
+            {"role": "user", "content": "Say hello in one sentence."}
         ],
-        "checks": ["non_empty", "substantial"],
+        "checks": ["non_empty", "substantial"]
     },
     {
         "name": "tool_call_intent",
         "desc": "Tool-use intent",
         "messages": [
-            {
-                "role": "system",
-                "content": "You are SakThai with tools: search(query), read_file(path), run_command(command).",
-            },
-            {"role": "user", "content": "Search for the latest AI news"},
+            {"role": "system", "content": "You are SakThai with tools: search(query), read_file(path), run_command(command)."},
+            {"role": "user", "content": "Search for the latest AI news"}
         ],
-        "checks": ["non_empty", "substantial"],
+        "checks": ["non_empty", "substantial"]
     },
     {
         "name": "name_recall",
@@ -56,64 +51,58 @@ tests = [
             {"role": "system", "content": "You are SakThai."},
             {"role": "user", "content": "My name is Beer."},
             {"role": "assistant", "content": "Nice to meet you, Beer!"},
-            {"role": "user", "content": "What's my name?"},
+            {"role": "user", "content": "What's my name?"}
         ],
-        "checks": ["non_empty", "name_recall"],
+        "checks": ["non_empty", "name_recall"]
     },
     {
         "name": "factual_qa",
         "desc": "Simple factual question",
         "messages": [
             {"role": "system", "content": "You are SakThai. Be concise."},
-            {"role": "user", "content": "What is the capital of Japan?"},
+            {"role": "user", "content": "What is the capital of Japan?"}
         ],
-        "checks": ["non_empty", "correct"],
+        "checks": ["non_empty", "correct"]
     },
     {
         "name": "json_output",
         "desc": "Structured JSON",
         "messages": [
             {"role": "system", "content": "You are SakThai. Only respond with valid JSON."},
-            {"role": "user", "content": 'List 3 ML frameworks: {"frameworks": ["a","b","c"]}'},
+            {"role": "user", "content": 'List 3 ML frameworks: {"frameworks": ["a","b","c"]}'}
         ],
-        "checks": ["non_empty", "valid_json"],
+        "checks": ["non_empty", "valid_json"]
     },
     {
         "name": "instruction_following",
         "desc": "Follow formatting instruction",
         "messages": [
             {"role": "system", "content": "You are SakThai. Exactly one sentence."},
-            {"role": "user", "content": "Explain what a transformer is."},
+            {"role": "user", "content": "Explain what a transformer is."}
         ],
-        "checks": ["non_empty", "substantial"],
+        "checks": ["non_empty", "substantial"]
     },
     {
         "name": "multi_step_reasoning",
         "desc": "Multi-step reasoning",
         "messages": [
             {"role": "system", "content": "You are SakThai, a helpful assistant."},
-            {
-                "role": "user",
-                "content": "If you have 3 apples and give away 1, then buy 5 more, how many do you have? Show your work.",
-            },
+            {"role": "user", "content": "If you have 3 apples and give away 1, then buy 5 more, how many do you have? Show your work."}
         ],
-        "checks": ["non_empty", "substantial"],
+        "checks": ["non_empty", "substantial"]
     },
     {
         "name": "context_window",
         "desc": "Longer context understanding",
         "messages": [
             {"role": "system", "content": "You are SakThai. Be concise."},
-            {
-                "role": "user",
-                "content": "The transformer architecture introduced in 'Attention Is All You Need' revolutionized NLP by replacing recurrent layers with multi-head self-attention. It uses positional encodings, layer normalization, and feed-forward networks in an encoder-decoder structure. BERT, GPT, and T5 all build on this foundation. What year was the original transformer paper published?",
-            },
+            {"role": "user", "content": "The transformer architecture introduced in 'Attention Is All You Need' revolutionized NLP by replacing recurrent layers with multi-head self-attention. It uses positional encodings, layer normalization, and feed-forward networks in an encoder-decoder structure. BERT, GPT, and T5 all build on this foundation. What year was the original transformer paper published?"}
         ],
-        "checks": ["non_empty", "correct_answer"],
-    },
+        "checks": ["non_empty", "correct_answer"]
+    }
 ]
 
-print("🧪 WORKBENCH TEST — SakThai Context 7B")
+print(f"🧪 WORKBENCH TEST — SakThai Context 7B")
 print(f"   Endpoint: {ENDPOINT_URL}")
 print(f"   Model: {MODEL}")
 print(f"   Time: {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}")
@@ -121,8 +110,8 @@ print()
 
 results = []
 for i, test in enumerate(tests):
-    print(f"{'─' * 60}")
-    print(f"TEST {i + 1}: {test['name']} — {test['desc']}")
+    print(f"{'─'*60}")
+    print(f"TEST {i+1}: {test['name']} — {test['desc']}")
     print(f"  Turns: {len(test['messages'])}", flush=True)
 
     try:
@@ -136,7 +125,7 @@ for i, test in enumerate(tests):
                 "max_tokens": 256,
                 "temperature": 0.1,
             },
-            timeout=120,
+            timeout=120
         )
         elapsed = time.time() - t0
 
@@ -166,7 +155,7 @@ for i, test in enumerate(tests):
             try:
                 json.loads(content)
                 checks.append("valid_json")
-            except (json.JSONDecodeError, TypeError):
+            except:
                 pass
 
         result = {
@@ -178,7 +167,7 @@ for i, test in enumerate(tests):
             "prompt_tokens": usage.get("prompt_tokens"),
             "completion_tokens": usage.get("completion_tokens"),
             "finish_reason": finish,
-            "checks": checks,
+            "checks": checks
         }
 
         print(f"  {'✅' if result['passed'] else '❌'} Response: {content[:150]}")
@@ -187,14 +176,18 @@ for i, test in enumerate(tests):
             print(f"  📝 {result['prompt_tokens']}→{result['completion_tokens']}")
 
     except Exception as e:
-        result = {"name": test["name"], "passed": False, "error": str(e)[:300]}
+        result = {
+            "name": test["name"],
+            "passed": False,
+            "error": str(e)[:300]
+        }
         print(f"  ❌ FAIL: {e}")
 
     results.append(result)
     sys.stdout.flush()
 
 # Summary
-print(f"\n{'=' * 60}")
+print(f"\n{'='*60}")
 passed = sum(1 for r in results if r.get("passed"))
 total = len(results)
 print(f"📊 WORKBENCH SUMMARY — 7B ({MODEL})")
@@ -215,7 +208,7 @@ record = {
     "endpoint_url": ENDPOINT_URL,
     "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     "results": results,
-    "summary": f"{passed}/{total} passed",
+    "summary": f"{passed}/{total} passed"
 }
 
 output_path = "/opt/data/sakthai-7b-workbench-test-record.json"

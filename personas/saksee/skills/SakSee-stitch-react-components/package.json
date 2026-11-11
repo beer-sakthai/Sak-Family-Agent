@@ -8,8 +8,7 @@
     "fetch": "bash scripts/fetch-stitch.sh"
   },
   "dependencies": {
-    "@swc/core": "^1.16.18"
-    "@swc/core": "^1.16.22"
+    "@swc/core": "^1.16.21"
   },
   "engines": {
     "node": ">=18.0.0"

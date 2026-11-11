@@ -35,9 +35,6 @@ model = TransformersModel(
 
 ## Example agent
 ```python
-import simpleeval
-
-
 @tool
 def get_weather(city: str) -> str:
     """Get weather for a city. Args: city: name of the city."""
@@ -47,11 +44,6 @@ def get_weather(city: str) -> str:
 def calculator(expression: str) -> float:
     """Calculate math expression. Args: expression: math to evaluate."""
     return eval(expression)
-    return simpleeval.simple_eval(expression)
-    import simpleeval
-
-    return float(simpleeval.simple_eval(expression))
-
 
 agent = CodeAgent(tools=[get_weather, calculator], model=model)
 agent.run("What's the weather in Bangkok and what's 42 * 7?")
