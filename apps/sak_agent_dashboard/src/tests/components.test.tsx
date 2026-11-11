@@ -1047,6 +1047,41 @@ describe("WorkflowRuns", () => {
     expect(screen.getByText("3 attempts")).toBeInTheDocument();
   });
 
+  it("renders step metrics with hover tooltips and step error in an accessible alert container", () => {
+    const detail = {
+      summary: workflows.runs[0],
+      steps: [
+        {
+          step_id: "fetch",
+          status: "failed",
+          attempts: 3,
+          error: "API timeout",
+          started_at: null,
+          finished_at: null,
+          duration_seconds: 4.5,
+        },
+      ],
+    };
+    render(
+      <WorkflowRuns
+        runs={workflows.runs}
+        onRunSelect={vi.fn()}
+        openRunId={workflows.runs[0].run_id}
+        detail={detail}
+      />,
+    );
+    const durationSpan = screen.getByText("4.5s");
+    expect(durationSpan).toHaveAttribute("title", "Step duration: 4.5s");
+
+    const attemptsSpan = screen.getByText("3 attempts");
+    expect(attemptsSpan).toHaveAttribute("title", "Execution attempts: 3 (3 attempts)");
+
+    const errorAlert = screen.getByRole("alert", { name: "Step execution error" });
+    expect(errorAlert).toBeInTheDocument();
+    expect(errorAlert).toHaveAttribute("title", "Step error: API timeout");
+    expect(errorAlert).toHaveTextContent("API timeout");
+  });
+
   it("renders an empty state with contextual icon and message", () => {
     const { container } = render(
       <WorkflowRuns runs={[]} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
