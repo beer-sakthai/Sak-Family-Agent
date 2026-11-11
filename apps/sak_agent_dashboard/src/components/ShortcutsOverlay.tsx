@@ -197,8 +197,6 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
               <>
                 <span className="sr-only" role="status" aria-live="polite" aria-label={liveStatus}>
                   {liveStatus}
-                <span className="sr-only" role="status" aria-live="polite">
-                  0 shortcuts found
                 </span>
                 <div
                   role="status"
@@ -224,16 +222,6 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
           return (
             <>
               <span className="sr-only" role="status" aria-live="polite" aria-label={liveStatus}>
-              <span
-                className="sr-only"
-                role="status"
-                aria-live="polite"
-                aria-label={
-                  q !== "" && totalMatches > 0
-                    ? `${totalMatches} shortcut${totalMatches === 1 ? "" : "s"} found`
-                    : undefined
-                }
-              >
                 {liveStatus}
               </span>
               <div className="grid gap-6 sm:grid-cols-2">
