@@ -670,6 +670,15 @@ describe("AuditLogs", () => {
     );
     expect(screen.getByRole("columnheader", { name: "Type" })).toHaveAttribute(
       "title",
+      "Audit event classification type",
+    );
+    expect(screen.getByRole("columnheader", { name: "Message" })).toHaveAttribute(
+      "title",
+      "Audit log event description",
+    );
+    expect(screen.getByRole("columnheader", { name: "Details" })).toHaveAttribute(
+      "title",
+      "Structured event metadata and attributes",
       "Event classification type",
     );
     expect(screen.getByRole("columnheader", { name: "Message" })).toHaveAttribute(
