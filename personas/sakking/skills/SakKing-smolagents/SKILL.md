@@ -45,6 +45,10 @@ def get_weather(city: str) -> str:
     return f"Weather in {city}: sunny, 32°C"
 
 
+@tool
+def calculator(expression: str) -> float:
+    """Calculate math expression. Args: expression: math to evaluate."""
+    # Requires: pip install simpleeval
 # Requires: pip install simpleeval
 import simpleeval
 
