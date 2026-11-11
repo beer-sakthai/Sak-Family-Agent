@@ -93,7 +93,9 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
           "aria-label": `${tile.label}: ${tile.value}. Open the ${target} panel.`,
           title: `Open the ${target} panel`,
         }
-      : {};
+      : {
+          title: `${tile.label}: ${tile.value}${tile.hint ? ` (${tile.hint})` : ""}`,
+        };
 
   return (
     // pb-9 reserves the strip the sparkline occupies, so the line sits under
@@ -108,7 +110,7 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
       <div className="relative flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-fg-4">
-            <Icon className={`h-3 w-3 ${tile.accent}`} aria-hidden />
+            <Icon className={`h-3 w-3 ${tile.accent}`} aria-hidden="true" />
             {tile.label}
           </p>
           <p className="mt-1.5 font-display text-2xl font-bold tracking-tight text-fg">
@@ -128,9 +130,9 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
             }`}
           >
             {delta.value >= 0 ? (
-              <TrendingUp className="h-2.5 w-2.5" aria-hidden />
+              <TrendingUp className="h-2.5 w-2.5" aria-hidden="true" />
             ) : (
-              <TrendingDown className="h-2.5 w-2.5" aria-hidden />
+              <TrendingDown className="h-2.5 w-2.5" aria-hidden="true" />
             )}
             {Math.abs(delta.value).toFixed(0)}%
           </span>

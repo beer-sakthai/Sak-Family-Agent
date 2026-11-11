@@ -195,15 +195,15 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
                 <span className="sr-only" role="status" aria-live="polite">
                   No shortcuts found
           const totalMatches = filteredGeneral.length + filteredSections.length;
-          const liveStatus = query.trim()
+          const liveStatus = q
             ? `${totalMatches} shortcut${totalMatches === 1 ? "" : "s"} found`
             : "";
 
-          if (filteredGeneral.length === 0 && filteredSections.length === 0) {
+          if (totalMatches === 0) {
             return (
               <>
                 <span className="sr-only" role="status" aria-live="polite">
-                  {liveStatus}
+                  0 shortcuts found
                 </span>
                 <div
                   role="status"
@@ -237,22 +237,31 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
               <div className="grid gap-6 sm:grid-cols-2">
               {filteredGeneral.length > 0 && (
             <>
-              <span className="sr-only" role="status" aria-live="polite">
+              <span
+                className="sr-only"
+                role="status"
+                aria-live="polite"
+                aria-label={
+                  q !== "" && totalMatches > 0
+                    ? `${totalMatches} shortcut${totalMatches === 1 ? "" : "s"} found`
+                    : undefined
+                }
+              >
                 {liveStatus}
               </span>
               <div className="grid gap-6 sm:grid-cols-2">
                 {filteredGeneral.length > 0 && (
-                <section>
-                  <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
-                    General
-                  </h3>
-                  <ul className="divide-y divide-line">
-                    {filteredGeneral.map((shortcut) => (
-                      <Row key={shortcut.description} shortcut={shortcut} />
-                    ))}
-                  </ul>
-                </section>
-              )}
+                  <section>
+                    <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
+                      General
+                    </h3>
+                    <ul className="divide-y divide-line">
+                      {filteredGeneral.map((shortcut) => (
+                        <Row key={shortcut.description} shortcut={shortcut} />
+                      ))}
+                    </ul>
+                  </section>
+                )}
 
               {filteredSections.length > 0 && (
                 <section>
@@ -268,6 +277,17 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
               )}
             </div>
           </React.Fragment>
+                {filteredSections.length > 0 && (
+                  <section>
+                    <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
+                      Sections
+                    </h3>
+                    <ul className="divide-y divide-line">
+                      {filteredSections.map(({ id, shortcut }) => (
+                        <Row key={id} shortcut={shortcut} />
+                      ))}
+                    </ul>
+                  </section>
                 )}
               </div>
             </>

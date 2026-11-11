@@ -137,18 +137,22 @@ describe("SystemView", () => {
     expect(bar).toHaveAttribute("aria-valuetext", "10 skills configured");
   });
 
-  it("renders BarList rows with ARIA progressbar semantics", () => {
+  it("renders BarList rows with ARIA progressbar semantics and accessible row labels", () => {
     render(<SystemView snapshot={FIXTURE} />);
     const agentBar = screen.getByRole("progressbar", { name: "agent lines" });
     expect(agentBar).toBeInTheDocument();
     expect(agentBar).toHaveAttribute("aria-valuenow", "900");
+    expect(agentBar).toHaveAttribute("aria-valuemin", "0");
     expect(agentBar).toHaveAttribute("aria-valuemax", "900");
     expect(agentBar).toHaveAttribute("aria-valuetext", "agent: 900 lines (3f)");
+    expect(agentBar.closest("li")).toHaveAttribute("aria-label", "agent: 900 lines (3f)");
 
     const testBar = screen.getByRole("progressbar", { name: "sakthai (tests/) test files" });
     expect(testBar).toBeInTheDocument();
     expect(testBar).toHaveAttribute("aria-valuenow", "100");
+    expect(testBar).toHaveAttribute("aria-valuemin", "0");
     expect(testBar).toHaveAttribute("aria-valuetext", "sakthai (tests/): 100 test files (ci.yml)");
+    expect(testBar.closest("li")).toHaveAttribute("aria-label", "sakthai (tests/): 100 test files (ci.yml)");
   });
 
   it("shows only PR-gating workflows until asked for all", () => {
@@ -188,6 +192,37 @@ describe("SystemView", () => {
     const subcommandsBadge = screen.getByLabelText("2 subcommands");
     expect(subcommandsBadge).toBeInTheDocument();
     expect(subcommandsBadge).toHaveAttribute("title", "2 subcommands");
+  });
+
+  it("provides hover title tooltips on StatTiles, ArchitectureFlow, ToolsPanel, and WorkflowsPanel cards", () => {
+    render(<SystemView snapshot={FIXTURE} />);
+
+    // StatTiles
+    expect(screen.getByTitle("Personas: 2 (SakThai leads)")).toBeInTheDocument();
+    expect(
+      screen.getByTitle("Skills: 20 (14 persona · 1 shared · 5 library)"),
+    ).toBeInTheDocument();
+
+    // ArchitectureFlow
+    expect(
+      screen.getByTitle("Entry points: CLI · chat REPL · MCP stdio · web API"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTitle("Agent loop: providers, context filter, eval log (900 lines)"),
+    ).toBeInTheDocument();
+
+    // ToolsPanel
+    expect(
+      screen.getByTitle("learn: Store a fact."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTitle("run_agent_loop: Run a nested loop. (MCP only)"),
+    ).toBeInTheDocument();
+
+    // WorkflowsPanel
+    expect(
+      screen.getByTitle("CI (ci.yml): triggered by pull_request, push, 1 job"),
+    ).toBeInTheDocument();
   });
 });
 
