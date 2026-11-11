@@ -35,6 +35,9 @@ model = TransformersModel(
 
 ## Example agent
 ```python
+import simpleeval
+
+
 @tool
 def get_weather(city: str) -> str:
     """Get weather for a city. Args: city: name of the city."""
@@ -44,6 +47,7 @@ def get_weather(city: str) -> str:
 @tool
 def calculator(expression: str) -> float:
     """Calculate math expression. Args: expression: math to evaluate."""
+    return simpleeval.simple_eval(expression)
     import simpleeval
 
     return float(simpleeval.simple_eval(expression))
