@@ -127,9 +127,11 @@ function StatTiles({ snapshot }: { snapshot: SystemSnapshot }) {
     >
       {stats.map((stat) => {
         const Icon = stat.icon;
+        const tooltip = `${stat.label}: ${stat.value}${stat.hint ? ` (${stat.hint})` : ""}`;
         return (
           <li
             key={stat.label}
+            title={tooltip}
             className="rounded-2xl border border-line/80 bg-panel/70 p-4 backdrop-blur-xl"
           >
             <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-fg-4">
@@ -223,7 +225,10 @@ function ArchitectureFlow({ snapshot }: { snapshot: SystemSnapshot }) {
           const lines = layer.modules.reduce((sum, name) => sum + linesOf(snapshot, name), 0);
           return (
             <li key={layer.title} className="flex flex-col items-center gap-2 lg:flex-1 lg:flex-row">
-              <div className="w-full rounded-xl border border-line bg-raised/40 p-3 transition-colors hover:border-line-strong">
+              <div
+                title={`${layer.title}: ${layer.detail}${lines > 0 ? ` (${compactNumber(lines)} lines)` : ""}`}
+                className="w-full rounded-xl border border-line bg-raised/40 p-3 transition-colors hover:border-line-strong"
+              >
                 <p className="flex items-center gap-2 text-sm font-semibold text-fg">
                   <Icon className={`h-4 w-4 shrink-0 ${layer.accent}`} aria-hidden />
                   {layer.title}
@@ -368,33 +373,37 @@ function BarList({ rows, unit }: { rows: BarRow[]; unit: string }) {
   const max = Math.max(1, ...sorted.map((r) => r.value));
   return (
     <ol className="space-y-1.5">
-      {sorted.map((row) => (
-        <li
-          key={row.label}
-          className="grid grid-cols-[minmax(0,9rem)_1fr_auto] items-center gap-3 rounded-md px-1 py-0.5 text-xs hover:bg-raised/40"
-          title={`${row.label}: ${row.value.toLocaleString()} ${unit}${row.note ? ` · ${row.note}` : ""}`}
-        >
-          <span className="truncate font-mono text-fg-2">{row.label}</span>
-          <div
-            role="progressbar"
-            aria-label={`${row.label} ${unit}`}
-            aria-valuenow={row.value}
-            aria-valuemin={0}
-            aria-valuemax={max}
-            aria-valuetext={`${row.label}: ${row.value.toLocaleString()} ${unit}${row.note ? ` (${row.note})` : ""}`}
-            className="h-2 overflow-hidden rounded-full bg-sunken"
+      {sorted.map((row) => {
+        const accessibleLabel = `${row.label}: ${row.value.toLocaleString()} ${unit}${row.note ? ` (${row.note})` : ""}`;
+        return (
+          <li
+            key={row.label}
+            aria-label={accessibleLabel}
+            className="grid grid-cols-[minmax(0,9rem)_1fr_auto] items-center gap-3 rounded-md px-1 py-0.5 text-xs hover:bg-raised/40"
+            title={`${row.label}: ${row.value.toLocaleString()} ${unit}${row.note ? ` · ${row.note}` : ""}`}
           >
-            <span
-              className="block h-full rounded-full bg-accent"
-              style={{ width: `${Math.max(2, (row.value / max) * 100)}%` }}
-            />
-          </div>
-          <span className="text-right font-mono tabular-nums text-fg-3">
-            {row.value.toLocaleString()}
-            {row.note && <span className="ml-1.5 text-fg-5">{row.note}</span>}
-          </span>
-        </li>
-      ))}
+            <span className="truncate font-mono text-fg-2">{row.label}</span>
+            <div
+              role="progressbar"
+              aria-label={`${row.label} ${unit}`}
+              aria-valuenow={row.value}
+              aria-valuemin={0}
+              aria-valuemax={max}
+              aria-valuetext={accessibleLabel}
+              className="h-2 overflow-hidden rounded-full bg-sunken"
+            >
+              <span
+                className="block h-full rounded-full bg-accent"
+                style={{ width: `${Math.max(2, (row.value / max) * 100)}%` }}
+              />
+            </div>
+            <span className="text-right font-mono tabular-nums text-fg-3">
+              {row.value.toLocaleString()}
+              {row.note && <span className="ml-1.5 text-fg-5">{row.note}</span>}
+            </span>
+          </li>
+        );
+      })}
     </ol>
   );
 }
@@ -440,7 +449,11 @@ function ToolsPanel({ snapshot }: { snapshot: SystemSnapshot }) {
       </h4>
       <ul className="grid gap-2 sm:grid-cols-2">
         {snapshot.tools.map((tool) => (
-          <li key={tool.name} className="rounded-lg border border-line bg-raised/30 px-3 py-2">
+          <li
+            key={tool.name}
+            title={`${tool.name}: ${tool.summary}${tool.mcp_only ? " (MCP only)" : ""}`}
+            className="rounded-lg border border-line bg-raised/30 px-3 py-2"
+          >
             <p className="flex items-center gap-2">
               <code className="truncate font-mono text-xs text-fg">{tool.name}</code>
               {tool.mcp_only && (
@@ -577,7 +590,11 @@ function WorkflowsPanel({ snapshot }: { snapshot: SystemSnapshot }) {
       </h4>
       <ul className="max-h-[28rem] space-y-1.5 overflow-y-auto pr-1">
         {shown.map((workflow) => (
-          <li key={workflow.file} className="rounded-lg border border-line bg-raised/30 px-3 py-2">
+          <li
+            key={workflow.file}
+            title={`${workflow.name} (${workflow.file}): triggered by ${workflow.triggers.join(", ")}, ${workflow.jobs.length} job${workflow.jobs.length === 1 ? "" : "s"}`}
+            className="rounded-lg border border-line bg-raised/30 px-3 py-2"
+          >
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <p className="min-w-0 truncate text-xs font-medium text-fg" title={workflow.name}>
                 {workflow.name}
