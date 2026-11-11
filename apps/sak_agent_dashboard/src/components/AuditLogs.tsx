@@ -139,6 +139,13 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
                   Message
                 </th>
                 <th title="Structured event details" className="px-5 py-3">
+                <th title="Event classification type" className="px-5 py-3">
+                  Type
+                </th>
+                <th title="Security event summary message" className="px-5 py-3">
+                  Message
+                </th>
+                <th title="Additional event key-value parameters" className="px-5 py-3">
                   Details
                 </th>
               </tr>
