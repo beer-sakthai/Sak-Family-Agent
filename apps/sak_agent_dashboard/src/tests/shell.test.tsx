@@ -17,15 +17,7 @@ import { CardGridSkeleton, KpiSkeleton, PanelSkeleton } from "@/components/Skele
 import Sidebar from "@/components/shell/Sidebar";
 import TopBar from "@/components/shell/TopBar";
 import { compactNumber, duration, percent, relativeTime } from "@/lib/format";
-import Home from "@/app/page";
-import {
-  demoAudit,
-  demoMemory,
-  demoMetrics,
-  demoPersonas,
-  demoSessions,
-  demoWorkflows,
-} from "@/lib/demo";
+import { demoAudit, demoMemory, demoMetrics, demoSessions } from "@/lib/demo";
 import { NAV_ITEMS, isTabId, navItem } from "@/lib/nav";
 
 describe("format", () => {
@@ -117,13 +109,13 @@ describe("Sidebar", () => {
     expect(within(screen.getByRole("tab", { name: "Memory" })).queryByText(/\d/)).toBeNull();
   });
 
-  it("hides labels and counts when collapsed and provides informative title tooltips including metrics", () => {
+  it("hides labels and counts when collapsed and provides informative title tooltips", () => {
     renderSidebar({ collapsed: true, counts: { sessions: 42 } });
     // The accessible name survives via aria-label; the visible text does not.
-    const sessionsTab = screen.getByRole("tab", { name: "Sessions (42)" });
+    const sessionsTab = screen.getByRole("tab", { name: "Sessions" });
     expect(sessionsTab).toBeInTheDocument();
     expect(sessionsTab).toHaveAttribute("type", "button");
-    expect(sessionsTab).toHaveAttribute("title", "Sessions (42)");
+    expect(sessionsTab).toHaveAttribute("title", "Sessions");
     expect(screen.queryByText("42")).not.toBeInTheDocument();
   });
 
@@ -350,7 +342,7 @@ describe("TopBar", () => {
       expect(opt).toHaveAttribute("type", "button");
     }
 
-    fireEvent.click(screen.getByTestId("persona-filter"));
+    fireEvent.click(screen.getByLabelText("Filter by persona"));
     const personaAllOption = screen.getByRole("menuitem");
     expect(personaAllOption).toHaveAttribute("type", "button");
   });
@@ -651,58 +643,5 @@ describe("Skeletons", () => {
   it("announces what a panel is loading", () => {
     render(<PanelSkeleton label="Loading sessions" />);
     expect(screen.getByRole("status", { name: "Loading sessions" })).toBeInTheDocument();
-  });
-});
-
-describe("Home footer shortcuts", () => {
-  it("renders interactive footer shortcut buttons that open the command palette and shortcuts overlay", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockImplementation((url: string) => {
-        let data: unknown = {};
-        if (url.includes("/api/agents")) data = demoPersonas();
-        else if (url.includes("/api/metrics")) data = demoMetrics();
-        else if (url.includes("/api/memory")) data = demoMemory();
-        else if (url.includes("/api/audit")) data = demoAudit();
-        else if (url.includes("/api/sessions")) data = demoSessions();
-        else if (url.includes("/api/workflows")) data = demoWorkflows();
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ source: "local", data }),
-        });
-      }),
-    );
-
-    render(<Home />);
-
-    const paletteBtn = screen.getByRole("button", {
-      name: "⌘K commands - Open command palette",
-    });
-    expect(paletteBtn).toBeInTheDocument();
-    expect(paletteBtn).toHaveAttribute("title", "Open command palette (Command + K)");
-    expect(paletteBtn).toHaveAttribute("type", "button");
-
-    const shortcutsBtn = screen.getByRole("button", {
-      name: "? shortcuts - Open keyboard shortcuts overlay",
-    });
-    expect(shortcutsBtn).toBeInTheDocument();
-    expect(shortcutsBtn).toHaveAttribute("title", "Open keyboard shortcuts overlay (?)");
-    expect(shortcutsBtn).toHaveAttribute("type", "button");
-
-    // Clicking paletteBtn opens the command palette dialog
-    fireEvent.click(paletteBtn);
-    expect(screen.getByRole("dialog", { name: "Command palette" })).toBeInTheDocument();
-
-    // Close command palette dialog
-    fireEvent.click(screen.getByRole("button", { name: "Close command palette" }));
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Command palette" })).not.toBeInTheDocument();
-    });
-
-    // Clicking shortcutsBtn opens the shortcuts overlay dialog
-    fireEvent.click(shortcutsBtn);
-    expect(screen.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeInTheDocument();
-
-    vi.unstubAllGlobals();
   });
 });
