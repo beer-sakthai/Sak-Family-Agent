@@ -7,9 +7,10 @@
  * data directly.
  */
 
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import Home from "@/app/page";
 import CommandPalette, { type Command } from "@/components/CommandPalette";
 import HostedNotice from "@/components/HostedNotice";
 import KpiStrip from "@/components/KpiStrip";
@@ -17,7 +18,14 @@ import { CardGridSkeleton, KpiSkeleton, PanelSkeleton } from "@/components/Skele
 import Sidebar from "@/components/shell/Sidebar";
 import TopBar from "@/components/shell/TopBar";
 import { compactNumber, duration, percent, relativeTime } from "@/lib/format";
-import { demoAudit, demoMemory, demoMetrics, demoSessions } from "@/lib/demo";
+import {
+  demoAudit,
+  demoMemory,
+  demoMetrics,
+  demoPersonas,
+  demoSessions,
+  demoWorkflows,
+} from "@/lib/demo";
 import { NAV_ITEMS, isTabId, navItem } from "@/lib/nav";
 
 describe("format", () => {
@@ -342,7 +350,7 @@ describe("TopBar", () => {
       expect(opt).toHaveAttribute("type", "button");
     }
 
-    fireEvent.click(screen.getByLabelText("Filter by persona"));
+    fireEvent.click(screen.getByRole("button", { name: /Filter by persona/i }));
     const personaAllOption = screen.getByRole("menuitem");
     expect(personaAllOption).toHaveAttribute("type", "button");
   });
@@ -643,5 +651,54 @@ describe("Skeletons", () => {
   it("announces what a panel is loading", () => {
     render(<PanelSkeleton label="Loading sessions" />);
     expect(screen.getByRole("status", { name: "Loading sessions" })).toBeInTheDocument();
+  });
+});
+
+describe("Home Footer Shortcut Buttons", () => {
+  it("renders interactive footer shortcut buttons that open palette and shortcuts overlay on click", async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      let data: unknown = {};
+      if (url.includes("/api/agents")) data = demoPersonas();
+      else if (url.includes("/api/metrics")) data = demoMetrics();
+      else if (url.includes("/api/memory")) data = demoMemory();
+      else if (url.includes("/api/audit")) data = demoAudit();
+      else if (url.includes("/api/sessions")) data = demoSessions();
+      else if (url.includes("/api/workflows")) data = demoWorkflows();
+
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ source: "demo", data }),
+      });
+    });
+
+    try {
+      await act(async () => {
+        render(<Home />);
+      });
+
+      const paletteBtn = screen.getByRole("button", {
+        name: "⌘K commands - Open command palette",
+      });
+      expect(paletteBtn).toBeInTheDocument();
+      expect(paletteBtn).toHaveAttribute("title", "Open command palette (⌘K)");
+
+      const shortcutsBtn = screen.getByRole("button", {
+        name: "? shortcuts - Open keyboard shortcuts overlay",
+      });
+      expect(shortcutsBtn).toBeInTheDocument();
+      expect(shortcutsBtn).toHaveAttribute("title", "Open keyboard shortcuts (?)");
+
+      fireEvent.click(paletteBtn);
+      expect(screen.getByRole("combobox", { name: "Search commands" })).toBeInTheDocument();
+
+      fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+      expect(screen.queryByRole("combobox", { name: "Search commands" })).not.toBeInTheDocument();
+
+      fireEvent.click(shortcutsBtn);
+      expect(screen.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 });
