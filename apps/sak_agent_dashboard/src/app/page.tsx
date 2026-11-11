@@ -962,24 +962,12 @@ export default function Home() {
               {isDemo && " · sample data requested"}
               {personas.length > 0 && ` · filtered to ${personas.length} persona${personas.length === 1 ? "" : "s"}`}
             </span>
-            <span className="hidden items-center gap-1.5 sm:inline-flex">
             <span className="hidden sm:inline">
               <button
                 type="button"
                 onClick={() => setPaletteOpen(true)}
                 aria-label="⌘K commands - Open command palette"
                 title="Open command palette (⌘K)"
-                className="inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 transition-colors hover:bg-raised/80 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                <kbd
-                  className="rounded border border-line bg-sunken px-1 py-0.5 text-fg-3"
-                  aria-hidden="true"
-                >
-                  ⌘K
-                </kbd>
-                <span>commands</span>
-              </button>
-              <span>·</span>
                 className="cursor-pointer transition-colors hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
               >
                 <kbd className="rounded border border-line px-1 py-0.5" aria-hidden="true">⌘K</kbd> commands
@@ -989,16 +977,6 @@ export default function Home() {
                 type="button"
                 onClick={() => setShortcutsOpen(true)}
                 aria-label="? shortcuts - Open keyboard shortcuts overlay"
-                title="Open keyboard shortcuts overlay (?)"
-                className="inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 transition-colors hover:bg-raised/80 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                <kbd
-                  className="rounded border border-line bg-sunken px-1 py-0.5 text-fg-3"
-                  aria-hidden="true"
-                >
-                  ?
-                </kbd>
-                <span>shortcuts</span>
                 title="Open keyboard shortcuts (?)"
                 className="cursor-pointer transition-colors hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
               >
