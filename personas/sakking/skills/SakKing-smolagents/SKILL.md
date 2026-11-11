@@ -49,6 +49,11 @@ def get_weather(city: str) -> str:
 def calculator(expression: str) -> float:
     """Calculate math expression. Args: expression: math to evaluate."""
     return simpleeval.simple_eval(expression)
+    return eval(expression)
+    return simpleeval.simple_eval(expression)
+    import simpleeval
+
+    return float(simpleeval.simple_eval(expression))
 
 
 agent = CodeAgent(tools=[get_weather, calculator], model=model)
