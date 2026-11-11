@@ -179,4 +179,8 @@ def find(action_id: str) -> ActionSpec | None:
 
 def search(query: str) -> list[ActionSpec]:
     q = query.lower()
-    return [spec for spec in CATALOG if q in spec.id.lower() or q in spec.description.lower()]
+    return [
+        spec
+        for spec in CATALOG
+        if q in spec.id.lower() or q in spec.description.lower()
+    ]
