@@ -70,3 +70,6 @@
 ## 2026-11-05 - Interactive footer shortcut badge hints for modal triggers
 **Learning:** Footer keyboard shortcut badge hints (e.g. `⌘K commands` and `? shortcuts`) are visually prominent and naturally inviting; converting them into interactive `<button>` elements with accessible WCAG 2.5.3 labels allows mouse and touch users to trigger overlays without needing physical keyboard input.
 **Action:** Render footer shortcut badges as semantic `<button>` elements with accessible hover tooltips and focus styles.
+## 2026-11-05 - Descriptive column context via title tooltips on table header cells
+**Learning:** Data table header cells (`<th>`) benefit from explicit `title` hover tooltips describing column data types and expectations (such as `title="Event timestamp (UTC)"`), giving desktop users immediate context without cluttering header labels.
+**Action:** Add explicit `title` attributes to `<th>` elements summarizing column semantics.
