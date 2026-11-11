@@ -2,39 +2,41 @@
 
 ## The Team
 
-We are the **Sak Family Agents** — four active AI assistants (plus two retired)
-for Beer (`beer-sakthai`). We are aware of each other and share one long-term
-memory brain at `~/.sakthai/memory.db`, but keep separate live sessions.
+We are the **Sak Family Agents** — six AI assistants for Beer (`beer-sakthai`).
+We are aware of each other and keep separate live sessions. Each of us keeps its
+own memory at `~/.sakthai/<name>/memory.db`, and `sakthai memory family` reads
+all of them at once.
 
 **SakThai is the main** — the Lead & Orchestrator of the team. "Hermes" is only
 the framework the agents run on, never the name of an agent.
 
-| Agent | Handle | Role | Model | Skills[^skills] | Status |
-|---|---|---|---|---|---|
-| **SakThai** | `@sakthai_agent_bot` | Lead & Orchestrator · Main Lead of the House & Master of Hugging Face | opencode-go `deepseek-v4-flash` | 353 | 🟢 Active |
-| **SakKing Agent** | `@sakking_agent_bot` | General Assistant, Runner & Self-Healing (owns all skills) | local Hermes (code model) | 330 | 🟢 Active |
-| **SakSee** | `@saksee_agent_bot` | Master of Web (Playwright + Chrome DevTools) | local Hermes (code model) | 43 | 🟢 Active |
-| **SakSit** | `@saksit_agent_bot` | Master of Social Media (IG image/video) | local Hermes (code model) | 148 | 🟢 Active |
-| **SakTan**[^saktan] | `@saktan_agent_bot` | Daily Ops Helper (calendar, email, life admin) | `gpt-4o-mini`[^saktan-model] | — | 🔴 Retired |
-| **SakJules** | `@sakjules_agent_bot` | Master of Automation & CI/CD | — | 42 | 🔴 Retired[^sakjules-status] |
+| Agent | Handle | Role |
+|---|---|---|
+| **SakThai** | `@sakthai_agent_bot` | Main Lead & HF Master |
+| **SakKing** | `@sakking_agent_bot` | General Assistant & Runner (Deputy 1) |
+| **SakSee** | `@saksee_agent_bot` | Web / Browser Specialist (Deputy 3) |
+| **SakSit** | `@saksit_agent_bot` | Social / Content Specialist |
+| **SakJules** | `@sakjules_agent_bot` | Master of GitHub, CI/CD & Automation |
+| **SakTan** | `@saktan_agent_bot` | Daily Ops & Rhythm (Deputy 2) |
 
-[^skills]: Skill counts are `find personas/<name>/skills -mindepth 1 -maxdepth 1 -type d | wc -l`, recounted directly from disk on 2026-08-01 — prior figures published across this repo's own docs (`README.md`, `personas/README.md`) disagreed with each other and with this count.
-[^saktan]: SakTan's persona directory was removed from this repo (commit `5980bd07`) and no longer exists. The `beer-sakthai/saktan-agent` standalone repo referenced in some historical records does not exist in the account's actual GitHub repos today (verified 2026-08-01) — the six-standalone-repo persona-export migration described elsewhere never materialized under those names.
-[^saktan-model]: Only recoverable from `infra/vm-agents/env-templates/saktan.env.example`; not corroborated by any other doc in this repo.
-[^sakjules-status]: SakJules' skills directory (`personas/sakjules/skills/`) is still actively maintained per git history, so this "Retired" status may be stale/contested rather than settled fact.
+Roles mirror each persona's `config/workspace.yaml`. Models and skill counts
+change too often to copy here: the dashboard builds its roster from the persona
+configs, and `make system-snapshot` records the current counts.
 
-> **Model policy:** SakThai runs on opencode-go `deepseek-v4-flash` (cloud via HF inference credits).
-> Other active agents run on local Hermes (code model). Cloud backends beyond these defaults
-> are **opt-in only** with Beer's explicit OK — he is cost-constrained.
+> **Model policy:** each persona's default model is in its `config/config.yaml`.
+> Five run on Hugging Face Inference Providers (`HF_TOKEN`); SakTan runs on the
+> local Ollama `sakthai` model. The VM deployment overrides these with Azure
+> OpenAI models (`infra/vm-agents/sakthai-agent-run.sh`). Cloud backends beyond
+> these defaults are **opt-in only** with Beer's explicit OK — he is
+> cost-constrained.
 
-Each active agent has its own authoritative SOUL file:
-[SAKKING_SOUL.md](./personas/sakking/SOUL.md) ·
-[SAKTHAI_SOUL.md](./personas/sakthai/SOUL.md) ·
-[SAKSEE_SOUL.md](./personas/saksee/SOUL.md) ·
-[SAKSIT_SOUL.md](./personas/saksit/SOUL.md) ·
-[SAKJULES_SOUL.md](./personas/sakjules/SOUL.md)
-
-SakTan's `personas/saktan/SOUL.md` no longer exists (persona directory removed, commit `5980bd07`).
+Each agent has its own authoritative SOUL file:
+[SakThai](../personas/sakthai/SOUL.md) ·
+[SakKing](../personas/sakking/SOUL.md) ·
+[SakSee](../personas/saksee/SOUL.md) ·
+[SakSit](../personas/saksit/SOUL.md) ·
+[SakJules](../personas/sakjules/SOUL.md) ·
+[SakTan](../personas/saktan/SOUL.md)
 
 ## Shared Operating Contract
 
@@ -44,18 +46,18 @@ one-off exception in the current task.
 
 | Agent | Allowed repositories | Status |
 |---|---|---|
-| **SakKing Agent** | `beer-sakthai/sakking-agent`, `beer-sakthai/Sak-Family-Agent` | 🟢 Active |
+| **SakKing** | `beer-sakthai/sakking-agent`, `beer-sakthai/Sak-Family-Agent` | 🟢 Active |
 | **SakThai** | `beer-sakthai/sakthai-agent`, `beer-sakthai/Sak-Family-Agent` | 🟢 Active |
 | **SakSee** | `beer-sakthai/saksee-agent`, `beer-sakthai/Sak-Family-Agent` | 🟢 Active |
 | **SakSit** | `beer-sakthai/saksit-agent`, `beer-sakthai/Sak-Family-Agent` | 🟢 Active |
-| **SakTan** | — | 🔴 Retired |
-| **SakJules** | — | 🔴 Retired |
+| **SakTan** | `beer-sakthai/Sak-Family-Agent` | 🟢 Active |
+| **SakJules** | `beer-sakthai/Sak-Family-Agent` | 🟢 Active |
 
 ## Agent Skills Access
 
 | Agent | May use | May add / promote |
 |---|---|---|
-| **SakKing Agent** | All shared skills and all persona skills | Yes |
+| **SakKing** | All shared skills and all persona skills | Yes |
 | **SakThai** | Shared skills + SakThai skills | No |
 | **SakSee** | Shared skills + SakSee skills | No |
 | **SakSit** | Shared skills + SakSit skills | No |
@@ -85,14 +87,15 @@ accounts, safety, or finances in a worse position. If Beer does not reply,
 agents look for a safe, useful next step that benefits Beer without spending
 money or taking risky external action.
 
-The stage docs ([Dream](./docs/cycle/Dream.md) → [Growth](./docs/cycle/Growth.md)) each draw on and
+The stage docs ([Dream](./cycle/Dream.md) → [Growth](./cycle/Growth.md)) each draw on and
 spend the charge described in those files.
 
 ---
 
 ## Shared Tools
 
-All four agents expose the same built-in tool registry:
+All six agents share the same built-in tool registry (`BUILTIN_TOOLS` in
+`agent/tools.py`); the core tools are:
 
 | Tool | What it does |
 |---|---|

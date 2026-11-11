@@ -8,8 +8,11 @@ end and confirms the family can *improve*:
 For every persona it verifies, offline and with zero token spend:
   1. its skill tree composes (shared + overlay) via scripts/compose_persona.py;
   2. its model is configured (personas/<name>/config/config.yaml);
-  3. its MCP servers load from personas/<name>/config/mcp.json;
-  4. the zero-cost agent preflight resolves (`run --dry-run --no-mcp`);
+  3. the MCP servers its personas/<name>/config/mcp.json configures all load
+     (a persona that configures none, by design, passes);
+  4. the zero-cost agent preflight resolves to the persona's own configured
+     model (`run --persona <name> --dry-run --no-mcp`); missing provider
+     credentials are reported, not failed, since they belong to the machine;
   5. shared memory round-trips (`learn` -> `recall`);
   6. its Hermes profile scaffold exists (infra/hermes-agents/default/ for
      SakKing's reserved default profile, infra/hermes-agents/profiles/<name>/
@@ -31,6 +34,7 @@ Usage:
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -43,6 +47,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))
 sys.path.insert(0, str(REPO_ROOT))
 
+from sakthai.config import persona_model_defaults  # noqa: E402  (path bootstrap above)
 from sakthai.skills import (  # noqa: E402  (path bootstrap above)
     PERSONA_SKILL_PREFIXES,
     naming_violations,
@@ -111,6 +116,26 @@ def model_summary(persona: str) -> str:
     return f"{primary}  (fallback {fallback})"
 
 
+def configured_mcp_servers(persona: str) -> list[str]:
+    """Names of the stdio servers PERSONA's mcp.json configures (none is a valid choice)."""
+    try:
+        data = json.loads(persona_mcp_config_path(persona).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    servers = data.get("mcpServers") if isinstance(data, dict) else None
+    if not isinstance(servers, dict):
+        return []
+    return [name for name, entry in servers.items() if isinstance(entry, dict) and entry.get("command")]
+
+
+def dry_run_field(output: str, field: str) -> str:
+    """The value of one ``[dry-run] <field>:`` line, or "" when absent."""
+    for line in output.splitlines():
+        if line.startswith(f"[dry-run] {field}:"):
+            return line.split(":", 1)[1].strip()
+    return ""
+
+
 def mcp_server_names(persona: str, env: dict[str, str]) -> list[str]:
     cfg = persona_mcp_config_path(persona)
     if not cfg.is_file():
@@ -157,13 +182,31 @@ def diagnose_persona(persona: str) -> None:
             info("model", "(no config.yaml)")
             check("model configured", False, "missing config.yaml")
 
-        # 3. MCP servers load
-        names = mcp_server_names(persona, env)
-        check("mcp servers load", bool(names), ", ".join(names) or "none")
+        # 3. MCP servers load — every one the persona configures
+        configured = configured_mcp_servers(persona)
+        if configured:
+            loaded = set(mcp_server_names(persona, env))
+            unloaded = [name for name in configured if name not in loaded]
+            check(
+                "mcp servers load",
+                not unloaded,
+                ", ".join(configured) + (f" (not loaded: {', '.join(unloaded)})" if unloaded else ""),
+            )
+        else:
+            info("mcp servers", "none configured")
 
-        # 4. agent preflight (no API call)
-        rc, out = run(["run", "ping", "--dry-run", "--no-mcp"], env)
-        check("agent preflight (--dry-run)", rc == 0 and "runnable:" in out)
+        # 4. agent preflight (no API call), as this persona
+        rc, out = run(["run", "ping", "--persona", persona, "--dry-run", "--no-mcp"], env)
+        _provider, expected_model = persona_model_defaults(persona)
+        resolved_model = dry_run_field(out, "model")
+        credentials = dry_run_field(out, "credentials")
+        no_credentials = "no credentials found" in out
+        check(
+            "agent preflight (--dry-run)",
+            (rc == 0 or no_credentials) and resolved_model == expected_model,
+            f"model {resolved_model or '?'}" + ("" if resolved_model == expected_model else f", expected {expected_model}"),
+        )
+        info("provider credentials", credentials if credentials and credentials != "none" else "none on this machine")
 
         # 5. shared memory round-trip
         rc, _ = run(["learn", f"{persona} was here", "--kind", "note"], env)

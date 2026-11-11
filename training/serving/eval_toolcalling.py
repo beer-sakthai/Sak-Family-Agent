@@ -1,10 +1,10 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#     "torch==2.5.1",
-#     "transformers==4.46.3",
-#     "peft==0.13.2",
-#     "accelerate==1.1.1",
+#     "torch==2.14.1",
+#     "transformers==5.19.0",
+#     "peft==0.21.2",
+#     "accelerate==1.15.0",
 # ]
 # ///
 """
@@ -74,7 +74,7 @@ def main() -> None:
     base = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
         revision=BASE_MODEL_REVISION,
-        torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
+        dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
         device_map="auto" if torch.cuda.is_available() else None,
     )
     model = PeftModel.from_pretrained(base, ADAPTER_REPO)
@@ -90,6 +90,7 @@ def main() -> None:
             tools=TOOLS,
             add_generation_prompt=True,
             return_tensors="pt",
+            return_dict=False,
         ).to(model.device)
         with torch.no_grad():
             out = model.generate(

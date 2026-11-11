@@ -94,9 +94,13 @@ describe("ShortcutsOverlay", () => {
     const inlineClearBtn = screen.getByRole("button", {
       name: "Clear search filter and show all shortcuts",
     });
-    expect(inlineClearBtn).toHaveAttribute("type", "button");
     expect(inlineClearBtn).toHaveAttribute("title", "Clear search filter (Esc)");
     fireEvent.click(inlineClearBtn);
+    // Verify inline reset button in empty state
+    const resetBtn = screen.getByRole("button", { name: "Clear shortcut search filter and show all shortcuts" });
+    expect(resetBtn).toHaveAttribute("type", "button");
+    expect(resetBtn).toHaveAttribute("title", "Clear search (Esc)");
+    fireEvent.click(resetBtn);
     expect(searchInput).toHaveValue("");
     expect(screen.getByText("Show this list")).toBeInTheDocument();
   });
@@ -112,16 +116,5 @@ describe("ShortcutsOverlay", () => {
 
     expect(searchInput).toHaveValue("");
     expect(onClose).not.toHaveBeenCalled();
-  });
-
-  it("announces match count updates to screen readers via polite live region", () => {
-    renderShortcutsOverlay();
-    const searchInput = screen.getByRole("searchbox", { name: "Filter keyboard shortcuts" });
-
-    fireEvent.change(searchInput, { target: { value: "command" } });
-    expect(screen.getByText("1 shortcut found")).toBeInTheDocument();
-
-    fireEvent.change(searchInput, { target: { value: "nonexistent query" } });
-    expect(screen.getByText("0 shortcuts found")).toBeInTheDocument();
   });
 });

@@ -24,6 +24,11 @@ def verify_url(url: str, resource_name: str) -> bool:
         print(f"ERROR: URL {url!r} starts with '-' (option smuggling is blocked).")
         return False
 
+    # Prevent ASCII control character injection
+    if any(ord(c) < 32 for c in url):
+        print(f"ERROR: URL {url!r} contains ASCII control characters.")
+        return False
+
     try:
         parsed = urllib.parse.urlparse(url)
         scheme = parsed.scheme.lower()
@@ -50,6 +55,10 @@ def verify_url(url: str, resource_name: str) -> bool:
                 ip = ipaddress.ip_address(ip_str)
             except ValueError:
                 continue
+
+            # Unwrap IPv4-mapped IPv6 addresses
+            if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
+                ip = ip.ipv4_mapped
 
             # Check if IP is global, multicast or private
             if not ip.is_global or ip.is_multicast:

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import json
+import re
 import sqlite3
+from typing import Any
 
 import pytest
 
@@ -655,3 +658,170 @@ def test_fact_kind_counts_respects_limit(store: MemoryStore) -> None:
         store.add_fact("x", kind="note")
     counts = store.get_fact_kind_counts(limit=2)
     assert counts == {"note": 2}
+
+
+# -- snapshot v2: fact tags -------------------------------------------------
+
+
+def _snapshot_fact(fact_id: int = 1, value: str = "tea", **extra: Any) -> dict[str, Any]:
+    row: dict[str, Any] = {
+        "id": fact_id,
+        "kind": "note",
+        "key": None,
+        "value": value,
+        "source_session": None,
+        "created_at": 100,
+        "updated_at": 100,
+    }
+    row.update(extra)
+    return row
+
+
+def _snapshot(
+    version: Any, *facts: dict[str, Any], observations: tuple[dict[str, Any], ...] = ()
+) -> dict[str, Any]:
+    return {"version": version, "facts": list(facts), "observations": list(observations)}
+
+
+def _without_ids(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [{k: v for k, v in row.items() if k != "id"} for row in rows]
+
+
+def test_snapshot_version_is_2() -> None:
+    assert SNAPSHOT_VERSION == 2
+
+
+def test_export_writes_v2_with_a_tags_list_on_every_fact(store: MemoryStore) -> None:
+    store.add_fact("tagged", tags=["a", "b"])
+    store.add_fact("untagged")
+    snapshot = store.export_to_dict()
+    assert snapshot["version"] == 2
+    assert sorted((f["value"], f["tags"]) for f in snapshot["facts"]) == [
+        ("tagged", ["a", "b"]),
+        ("untagged", []),
+    ]
+
+
+@pytest.mark.parametrize("mode", ["merge", "replace"])
+def test_v1_fact_without_tags_imports_with_no_tags(store: MemoryStore, mode: str) -> None:
+    store.import_from_dict(_snapshot(1, _snapshot_fact()), mode=mode)
+    [fact] = store.list_facts()
+    assert (fact.value, fact.tags) == ("tea", [])
+
+
+def test_v1_fact_with_tags_keeps_them(store: MemoryStore) -> None:
+    # Exports made before v2 already carried tags, labelled version 1.
+    store.import_from_dict(_snapshot(1, _snapshot_fact(tags=["ui", "work"])))
+    assert store.list_facts()[0].tags == ["ui", "work"]
+
+
+@pytest.mark.parametrize("mode", ["merge", "replace"])
+def test_v2_fact_tags_are_imported(store: MemoryStore, mode: str) -> None:
+    snapshot = _snapshot(
+        2, _snapshot_fact(tags=["ui", "work"]), _snapshot_fact(2, "coffee", tags=[])
+    )
+    store.import_from_dict(snapshot, mode=mode)
+    assert {f.value: f.tags for f in store.list_facts()} == {
+        "tea": ["ui", "work"],
+        "coffee": [],
+    }
+
+
+def test_v2_fact_without_tags_is_rejected(store: MemoryStore) -> None:
+    with pytest.raises(ValueError, match=re.escape("fact row missing fields: ['tags']")):
+        store.import_from_dict(_snapshot(2, _snapshot_fact()))
+    assert store.list_facts() == []
+
+
+@pytest.mark.parametrize("version", [1, 2])
+@pytest.mark.parametrize(
+    ("tags", "got"),
+    [
+        ("work", "str"),
+        (None, "NoneType"),
+        ({"work": True}, "dict"),
+        ([1], "a list containing int"),
+        (["ok", None], "a list containing NoneType"),
+        ([["nested"]], "a list containing list"),
+        ([True], "a list containing bool"),
+    ],
+)
+def test_malformed_tags_are_rejected(store: MemoryStore, version: int, tags: Any, got: str) -> None:
+    # Before v2 these were dropped or str()-coerced into tags without a word.
+    expected = f"fact row 0: tags must be a list of strings, got {got}"
+    with pytest.raises(ValueError, match=re.escape(expected)):
+        store.import_from_dict(_snapshot(version, _snapshot_fact(tags=tags)))
+    assert store.list_facts() == []
+
+
+@pytest.mark.parametrize("version", [None, 0, 3, 999, "2", 2.0, True])
+def test_unsupported_snapshot_version_is_rejected(store: MemoryStore, version: Any) -> None:
+    # True and 2.0 compare equal to 1 and 2; only the ints themselves are versions.
+    with pytest.raises(ValueError, match="unsupported snapshot version"):
+        store.import_from_dict(_snapshot(version, _snapshot_fact(tags=[])))
+    assert store.list_facts() == []
+
+
+def test_snapshot_without_a_version_is_rejected(store: MemoryStore) -> None:
+    with pytest.raises(ValueError, match="unsupported snapshot version: None"):
+        store.import_from_dict({"facts": [], "observations": []})
+
+
+@pytest.mark.parametrize("mode", ["merge", "replace"])
+def test_v2_round_trip_through_json_keeps_tags(tmp_path, store: MemoryStore, mode: str) -> None:
+    store.add_fact("tagged", kind="pref", key="k", tags=["ui", "work"])
+    store.add_fact("untagged")
+    store.add_observation("watch", weight=2.0)
+    snapshot = json.loads(json.dumps(store.export_to_dict()))
+
+    with MemoryStore(tmp_path / "other.db") as other:
+        other.import_from_dict(snapshot, mode=mode)
+        again = other.export_to_dict()
+
+    assert again["version"] == 2
+    assert _without_ids(again["facts"]) == _without_ids(snapshot["facts"])
+    assert _without_ids(again["observations"]) == _without_ids(snapshot["observations"])
+
+
+def test_v1_snapshot_re_exports_as_v2(tmp_path, store: MemoryStore) -> None:
+    store.import_from_dict(_snapshot(1, _snapshot_fact(), _snapshot_fact(2, "coffee", tags=["x"])))
+    again = store.export_to_dict()
+    assert again["version"] == 2
+    assert {f["value"]: f["tags"] for f in again["facts"]} == {"tea": [], "coffee": ["x"]}
+
+
+def test_invalid_row_late_in_snapshot_leaves_store_untouched(store: MemoryStore) -> None:
+    # Validation runs before the transaction: a bad last row must neither let
+    # the earlier rows in nor let replace mode wipe what was there.
+    store.add_fact("existing")
+    bad = _snapshot(2, _snapshot_fact(tags=[]), _snapshot_fact(2, "coffee", tags="work"))
+    with pytest.raises(ValueError, match="fact row 1: tags"):
+        store.import_from_dict(bad, mode="replace")
+    assert [f.value for f in store.list_facts()] == ["existing"]
+
+
+def test_replace_rolls_back_when_an_insert_fails(store: MemoryStore) -> None:
+    store.add_fact("existing", tags=["keep"])
+    store.add_observation("kept")
+    duplicate_ids = _snapshot(2, _snapshot_fact(1, "a", tags=[]), _snapshot_fact(1, "b", tags=[]))
+    with pytest.raises(sqlite3.IntegrityError):
+        store.import_from_dict(duplicate_ids, mode="replace")
+    assert [(f.value, f.tags) for f in store.list_facts()] == [("existing", ["keep"])]
+    assert [o.summary for o in store.top_observations()] == ["kept"]
+
+
+def test_merge_rolls_back_facts_when_an_observation_insert_fails(store: MemoryStore) -> None:
+    store.add_fact("existing")
+    null_weight = {
+        "id": 1,
+        "summary": "s",
+        "evidence_session_id": None,
+        "weight": None,
+        "confidence": 0.5,
+        "created_at": 100,
+    }
+    snapshot = _snapshot(2, _snapshot_fact(tags=["new"]), observations=(null_weight,))
+    with pytest.raises(sqlite3.IntegrityError):
+        store.import_from_dict(snapshot, mode="merge")
+    assert [f.value for f in store.list_facts()] == ["existing"]
+    assert store.top_observations() == []

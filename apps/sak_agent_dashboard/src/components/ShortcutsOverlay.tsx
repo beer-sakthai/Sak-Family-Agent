@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Search, SearchX, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 
 import { useFocusTrap } from "@/lib/focus";
 import { NAV_ITEMS } from "@/lib/nav";
@@ -187,45 +187,35 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
               shortcut.keys.some((k) => k.toLowerCase().includes(q))
           );
 
-          const totalMatches = filteredGeneral.length + filteredSections.length;
-          const liveStatus = query.trim()
-            ? `${totalMatches} shortcut${totalMatches === 1 ? "" : "s"} found`
-            : "";
-
           if (filteredGeneral.length === 0 && filteredSections.length === 0) {
             return (
-              <>
-                <span className="sr-only" role="status" aria-live="polite">
-                  {liveStatus}
-                </span>
-                <div
-                  role="status"
-                  aria-label={`No shortcuts match "${query}"`}
-                  className="flex flex-col items-center justify-center gap-2 py-8 text-center font-mono text-xs text-fg-4"
+              <div
+                role="status"
+                aria-label={`No shortcuts match "${query}"`}
+                className="flex flex-col items-center justify-center gap-2 py-8 text-center font-mono text-xs text-fg-4"
+              >
+                <span>No shortcuts match &quot;{query}&quot;</span>
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label="Clear search filter and show all shortcuts"
+                  title="Clear search filter (Esc)"
+                  className="mt-1 rounded-lg border border-line bg-raised px-2.5 py-1 font-sans text-xs text-fg-3 transition-colors hover:bg-raised/80 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
                 >
-                  <SearchX className="h-5 w-5 text-fg-4/80" aria-hidden="true" />
-                  <span>No shortcuts match &quot;{query}&quot;</span>
-                  <button
-                    type="button"
-                    onClick={() => setQuery("")}
-                    aria-label="Clear search filter and show all shortcuts"
-                    title="Clear search filter (Esc)"
-                    className="mt-1 rounded-lg border border-line bg-raised px-2.5 py-1 font-sans text-xs text-hue-cyan transition-colors hover:bg-raised/80 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
-                  >
-                    Clear search filter
-                  </button>
-                </div>
-              </>
+                  Clear search filter
+                  aria-label="Clear shortcut search filter and show all shortcuts"
+                  title="Clear search (Esc)"
+                  className="mt-1 rounded-lg border border-line bg-raised px-2.5 py-1 font-sans text-xs text-fg-3 transition-colors hover:bg-raised/80 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  Clear search query
+                </button>
+              </div>
             );
           }
 
           return (
-            <>
-              <span className="sr-only" role="status" aria-live="polite">
-                {liveStatus}
-              </span>
-              <div className="grid gap-6 sm:grid-cols-2">
-                {filteredGeneral.length > 0 && (
+            <div className="grid gap-6 sm:grid-cols-2">
+              {filteredGeneral.length > 0 && (
                 <section>
                   <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
                     General
@@ -249,9 +239,8 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
                     ))}
                   </ul>
                 </section>
-                )}
-              </div>
-            </>
+              )}
+            </div>
           );
         })()}
       </div>

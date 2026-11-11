@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" role="img" aria-labelledby="title-saktan desc-saktan">
+<title id="title-saktan">SakTan</title>
+<desc id="desc-saktan">SakTan, daily ops and rhythm: a calm emerald robot with a sun antenna, with a clock badge.</desc>
+<defs><linearGradient id="bg-saktan" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#047857"/></linearGradient></defs>
+<rect width="240" height="240" rx="48" fill="url(#bg-saktan)"/>
+<circle cx="120" cy="116" r="86" fill="#ffffff" fill-opacity="0.12"/>
+<path d="M52 240 C52 196 82 180 120 180 C158 180 188 196 188 240 Z" fill="#ffffff" fill-opacity="0.92"/>
+<rect x="108" y="166" width="24" height="18" rx="6" fill="#0f172a" fill-opacity="0.85"/>
+<rect x="62" y="64" width="116" height="106" rx="38" fill="#ffffff"/>
+<rect x="76" y="84" width="88" height="64" rx="24" fill="#0f172a"/>
+<line x1="120" y1="64" x2="120" y2="46" stroke="#0f172a" stroke-width="5" stroke-linecap="round"/><line x1="120" y1="20" x2="120" y2="14" stroke="#fde047" stroke-width="3.5" stroke-linecap="round" transform="rotate(0 120 34)"/><line x1="120" y1="20" x2="120" y2="14" stroke="#fde047" stroke-width="3.5" stroke-linecap="round" transform="rotate(45 120 34)"/><line x1="120" y1="20" x2="120" y2="14" stroke="#fde047" stroke-width="3.5" stroke-linecap="round" transform="rotate(90 120 34)"/><line x1="120" y1="20" x2="120" y2="14" stroke="#fde047" stroke-width="3.5" stroke-linecap="round" transform="rotate(135 120 34)"/><line x1="120" y1="20" x2="120" y2="14" stroke="#fde047" stroke-width="3.5" stroke-linecap="round" transform="rotate(180 120 34)"/><line x1="120" y1="20" x2="120" y2="14" stroke="#fde047" stroke-width="3.5" stroke-linecap="round" transform="rotate(225 120 34)"/><line x1="120" y1="20" x2="120" y2="14" stroke="#fde047" stroke-width="3.5" stroke-linecap="round" transform="rotate(270 120 34)"/><line x1="120" y1="20" x2="120" y2="14" stroke="#fde047" stroke-width="3.5" stroke-linecap="round" transform="rotate(315 120 34)"/><circle cx="120" cy="34" r="10" fill="#fde047" stroke="#0f172a" stroke-width="3"/>
+<path d="M92 108 Q101 118 110 108" fill="none" stroke="#a7f3d0" stroke-width="6" stroke-linecap="round"/><path d="M130 108 Q139 118 148 108" fill="none" stroke="#a7f3d0" stroke-width="6" stroke-linecap="round"/><path d="M112 130 Q120 135 128 130" fill="none" stroke="#a7f3d0" stroke-width="5" stroke-linecap="round"/>
+<circle cx="72" cy="140" r="6" fill="#34d399" fill-opacity="0.55"/><circle cx="168" cy="140" r="6" fill="#34d399" fill-opacity="0.55"/>
+<circle cx="188" cy="188" r="30" fill="#ffffff" stroke="#0f172a" stroke-opacity="0.15" stroke-width="2"/>
+<circle cx="188" cy="188" r="15" fill="none" stroke="#047857" stroke-width="3"/><path d="M188 179 V188 L195 192" fill="none" stroke="#047857" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -84,6 +84,8 @@ Every push to `main` and every pull request runs the following pipeline (`.githu
 
 Bandit skips: `B101` (assert in non-test code), `B404`/`B603`/`B606`/`B607` (subprocess flags — all subprocess calls use `shell=False` with fixed/parsed argument arrays).
 
+Three OpenSSF Scorecard findings are accepted rather than fixed: Code-Review and Branch-Protection need a second reviewer, and CII-Best-Practices needs an open-source licence. See [`scorecard-accepted-risks.md`](scorecard-accepted-risks.md).
+
 ## Environment Variables Controlling Security Gates
 
 | Variable | Effect | Recommendation |

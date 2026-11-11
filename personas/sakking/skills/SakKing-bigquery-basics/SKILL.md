@@ -89,6 +89,6 @@ Developer Knowledge MCP server `search_documents` tool.*
 
 ## Related Skills
 
-- [BigQuery AI & ML Skill](../bigquery-ai-ml):
+- [BigQuery AI & ML Skill](../SakKing-bigquery-ai-ml):
   SKILL.md file for BigQuery AI and ML capabilities (forecast, anomaly
   detection, text generation).

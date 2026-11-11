@@ -56,7 +56,7 @@ What it drives (all in a throwaway `SAKTHAI_HOME`):
 | memory CLI | `status`, `learn`, `recall`, `memory stats`, `tools` (exit codes + output) |
 | system & state machine | `doctor`, `cycle status` → `cycle next` (Dream→Hope transition persists), `sessions list`, `skills list` (library discovery) |
 | memory snapshots | `memory export` → `memory import` into a **second** fresh home, then `recall` proves the fact survived the roundtrip |
-| agent loop | `run "..." --dry-run --no-mcp` — resolves provider/creds/model/tools, **no API call**; repeated with `--with-skills` to prove skill injection preflights |
+| agent loop | `run "..." --dry-run --no-mcp` with a placeholder `ANTHROPIC_API_KEY` — resolves provider/creds/model/tools, **no API call**; repeated with `--with-skills` to prove skill injection preflights |
 | web API | spawns `python -m sakthai.web.server`, asserts `GET /api/stages` (KPI JSON) and `GET /api/ecosystem` (integration status JSON) |
 | MCP server | spawns `sakthai mcp`, pipes JSON-RPC `initialize` → `tools/list` → `tools/call learn` → `tools/call recall`, asserts the fact round-trips through the live server |
 
@@ -84,7 +84,7 @@ source .venv/bin/activate
 export SAKTHAI_HOME=$(mktemp -d)            # isolate from your real ~/.sakthai
 sakthai learn "prefers dark mode" --kind pref --key ui   # → learned (id=1)
 sakthai recall "dark"                                     # → [pref] ui: prefers dark mode
-sakthai run "say hi" --dry-run --no-mcp                  # → preflight report, exit 0, no tokens spent
+sakthai run "say hi" --dry-run --no-mcp                  # → preflight report, no tokens spent; exit 1 if no credential is set
 ```
 
 ### Web API server
@@ -150,6 +150,8 @@ self-skip when no credential/endpoint is set.
   era — `serve()` used to `chdir` into the removed dist unconditionally;
   fixed to skip it when absent.
 - **`sakthai run` exits with "Missing credentials …" / AuthError**: expected
-  with no provider credential. Use `--dry-run`, or set `ANTHROPIC_API_KEY`.
+  with no provider credential. Set `ANTHROPIC_API_KEY` (or another provider's
+  credential). `--dry-run` reports the same problem as `runnable: no` and also
+  exits 1; it never calls the API, so a placeholder key is enough to preflight.
 - **pytest interrupted with dozens of collection errors**: you ran it from
   the repo root without scoping. Use `uv run pytest tests/ -q`.

@@ -265,11 +265,11 @@ consumers of your content.
 
 ## Related skills
 
-- [b2b-saas-content-distribution-2026](../b2b-saas-content-distribution-2026/SKILL.md)
+- [b2b-saas-content-distribution-2026](../SakSit-b2b-saas-content-distribution-2026/SKILL.md)
 - [b2b-saas-case-study-evidence-2026](../b2b-saas-case-study-evidence-2026/SKILL.md)
-- [b2b-saas-ai-content-generation-2026](../b2b-saas-ai-content-generation-2026/SKILL.md)
-- [b2b-saas-linkedin-thought-leadership-2026](../b2b-saas-linkedin-thought-leadership-2026/SKILL.md)
-- [b2b-saas-brand-differentiation-2026](../b2b-saas-brand-differentiation-2026/SKILL.md)
+- [b2b-saas-ai-content-generation-2026](../SakSit-b2b-saas-ai-content-generation-2026/SKILL.md)
+- [b2b-saas-linkedin-thought-leadership-2026](../SakSit-b2b-saas-linkedin-thought-leadership-2026/SKILL.md)
+- [b2b-saas-brand-differentiation-2026](../SakSit-b2b-saas-brand-differentiation-2026/SKILL.md)
 - [b2b-saas-video-marketing-2026](../b2b-saas-video-marketing-2026/SKILL.md)
 
 ---

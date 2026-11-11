@@ -83,6 +83,30 @@ def test_verify_url_blocks_option_smuggling() -> None:
     assert result is False
 
 
+def test_verify_url_blocks_control_characters() -> None:
+    # Contains a newline
+    result = verify_hf_upload.verify_url("https://example.com/api\nendpoint", "Resource")
+    assert result is False
+
+    # Contains a carriage return
+    result = verify_hf_upload.verify_url("https://example.com/api\rendpoint", "Resource")
+    assert result is False
+
+    # Contains a tab
+    result = verify_hf_upload.verify_url("https://example.com/api\tendpoint", "Resource")
+    assert result is False
+
+
+@patch("socket.getaddrinfo")
+def test_verify_url_blocks_ipv4_mapped_ipv6(mock_getaddrinfo: MagicMock) -> None:
+    # Resolve to an IPv4-mapped IPv6 address representing localhost (127.0.0.1)
+    mock_getaddrinfo.return_value = [
+        (socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("::ffff:127.0.0.1", 443))
+    ]
+    result = verify_hf_upload.verify_url("https://example.com", "Resource")
+    assert result is False
+
+
 def test_verify_url_blocks_invalid_scheme() -> None:
     result = verify_hf_upload.verify_url("ftp://example.com", "Resource")
     assert result is False

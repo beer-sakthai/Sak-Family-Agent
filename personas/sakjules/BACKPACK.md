@@ -47,11 +47,11 @@
 - **📊 Google Colab MCP (`colab-mcp`)**:
   - `uvx git+https://github.com/googlecolab/colab-mcp`
 - **⚡ Composio MCP (`composio`)**:
-  - `npx -y composio-core@latest mcp start` (Integrates 250+ SaaS tools: GitHub, Slack, Gmail, Jira)
+  - Not configured: `composio` is not in `config/mcp.json`. Pin an exact version there before use, never `@latest` (Security Rule 5). (Integrates 250+ SaaS tools: GitHub, Slack, Gmail, Jira)
 - **🎮 CUA Driver Daemon (`cua-driver`)**:
   - `/home/beern/.cua-driver/packages/releases/0.16.0-x86_64-unknown-linux-gnu/cua-driver`
 - **🌐 Chrome DevTools MCP**:
-  - `npx -y chrome-devtools-mcp@latest`
+  - `npx -y chrome-devtools-mcp@1.10.1`, the version SakSee's and SakKing's `config/mcp.json` pin (SakJules' own `config/mcp.json` lists no servers)
 
 ---
 

@@ -20,6 +20,17 @@ _PERSONA_OPTION_HELP = (
     "(~/.sakthai/<persona>/memory.db). Omit to use the default, unscoped memory.db."
 )
 
+_IMPORT_HINT = (
+    "Only `memory export --format json` files can be imported; csv and jsonl exports are one-way."
+)
+
+
+def _non_blank_kind(_ctx: click.Context, _param: click.Parameter, value: str) -> str:
+    kind = value.strip()
+    if not kind:
+        raise click.BadParameter("must not be blank.")
+    return kind
+
 
 def _open_store(persona: str | None) -> MemoryStore:
     """Open PERSONA's memory shard, or the default unscoped store if None."""
@@ -38,7 +49,9 @@ def _obs_line(o: Observation) -> str:
 
 @click.command()
 @click.argument("value", required=False)
-@click.option("--kind", default="note", show_default=True, help="Fact category.")
+@click.option(
+    "--kind", default="note", show_default=True, callback=_non_blank_kind, help="Fact category."
+)
 @click.option("--key", default=None, help="Optional key/name for the fact.")
 @click.option(
     "--tag",
@@ -311,8 +324,15 @@ def memory_import(ctx: click.Context, path: Path, replace: bool, yes: bool) -> N
     """Restore facts + observations from a JSON snapshot at PATH."""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+    except OSError as exc:
         raise click.ClickException(f"could not read snapshot: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise click.ClickException(f"could not read snapshot: {exc}. {_IMPORT_HINT}") from exc
+    # A one-record jsonl export parses as JSON too; only a json snapshot has a version.
+    if not isinstance(data, dict) or "version" not in data:
+        raise click.ClickException(
+            f"could not read snapshot: {path.name} is not a JSON snapshot. {_IMPORT_HINT}"
+        )
     if replace and not yes:
         click.confirm(
             "--replace will delete all existing facts and observations. Continue?",
@@ -329,7 +349,11 @@ def memory_import(ctx: click.Context, path: Path, replace: bool, yes: bool) -> N
 
 @memory.command("consolidate")
 @click.option(
-    "--age", default=86400, show_default=True, type=int, help="Fold facts older than AGE seconds."
+    "--age",
+    default=86400,
+    show_default=True,
+    type=click.IntRange(min=0),
+    help="Fold facts older than AGE seconds.",
 )
 @click.pass_context
 def memory_consolidate(ctx: click.Context, age: int) -> None:
@@ -476,6 +500,13 @@ def memory_deduplicate(ctx: click.Context, dry_run: bool, verbose: bool) -> None
 
 
 @memory.command("family")
+@click.argument("query", required=False)
+@click.option(
+    "--tag",
+    "tags",
+    multiple=True,
+    help="Only facts carrying this exact tag (repeatable; all must match).",
+)
 @click.option(
     "--limit",
     default=50,
@@ -490,7 +521,9 @@ def memory_deduplicate(ctx: click.Context, dry_run: bool, verbose: bool) -> None
     help="Comma-separated personas to include (default: all six).",
 )
 @click.option("--json", "as_json", is_flag=True, help="Emit the merged view as JSON.")
-def memory_family(limit: int, personas: str | None, as_json: bool) -> None:
+def memory_family(
+    query: str | None, tags: tuple[str, ...], limit: int, personas: str | None, as_json: bool
+) -> None:
     """Show the merged, deduplicated view across every persona's memory shard.
 
     Read-only: opens each persona's own shard (skipping any that don't exist
@@ -498,11 +531,27 @@ def memory_family(limit: int, personas: str | None, as_json: bool) -> None:
     merges facts/observations across all of them, tagging each with its
     origin persona. To write, use `sakthai learn --persona <name>` against a
     specific persona's own shard instead.
+
+    Give QUERY and/or --tag to find the newest matching facts in any shard
+    instead, e.g. a note a sibling wrote to its own memory. As with
+    `recall`, observations are only searched by QUERY alone.
     """
     persona_list = [p.strip() for p in personas.split(",") if p.strip()] if personas else None
+    unknown = [p for p in persona_list or [] if p not in config.PERSONA_NAMES]
+    if unknown:
+        raise click.BadParameter(
+            f"unknown persona(s) {', '.join(unknown)}; "
+            f"expected one of {', '.join(config.PERSONA_NAMES)}.",
+            param_hint="'--personas'",
+        )
+    filtered = bool(query) or any(t.strip() for t in tags)
     with FamilyMemoryView(personas=persona_list) as view:
-        facts = view.list_facts(limit=limit)
-        obs = view.top_observations(limit=limit)
+        if not filtered:
+            facts = view.list_facts(limit=limit)
+            obs = view.top_observations(limit=limit)
+        else:
+            facts = view.find_facts(query, tags, limit=limit)
+            obs = view.search(query, limit=limit)[1] if query and not tags else []
 
     if as_json:
         click.echo(
@@ -519,7 +568,7 @@ def memory_family(limit: int, personas: str | None, as_json: bool) -> None:
         return
 
     if not facts and not obs:
-        click.echo("(no persona has any memory yet)")
+        click.echo("no matches found" if filtered else "(no persona has any memory yet)")
         return
     if facts:
         click.echo(f"# Facts ({len(facts)})")

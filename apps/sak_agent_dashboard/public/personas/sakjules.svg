@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" role="img" aria-labelledby="title-sakjules desc-sakjules">
+<title id="title-sakjules">SakJules</title>
+<desc id="desc-sakjules">SakJules, the GitHub, CI/CD and automation master: a violet robot with a gear antenna, with a branch-and-check badge.</desc>
+<defs><linearGradient id="bg-sakjules" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a78bfa"/><stop offset="1" stop-color="#6d28d9"/></linearGradient></defs>
+<rect width="240" height="240" rx="48" fill="url(#bg-sakjules)"/>
+<circle cx="120" cy="116" r="86" fill="#ffffff" fill-opacity="0.12"/>
+<path d="M52 240 C52 196 82 180 120 180 C158 180 188 196 188 240 Z" fill="#ffffff" fill-opacity="0.92"/>
+<rect x="108" y="166" width="24" height="18" rx="6" fill="#0f172a" fill-opacity="0.85"/>
+<rect x="62" y="64" width="116" height="106" rx="38" fill="#ffffff"/>
+<rect x="76" y="84" width="88" height="64" rx="24" fill="#0f172a"/>
+<line x1="120" y1="64" x2="120" y2="46" stroke="#0f172a" stroke-width="5" stroke-linecap="round"/><rect x="116" y="18" width="8" height="10" rx="2" fill="#0f172a" transform="rotate(0 120 36)"/><rect x="116" y="18" width="8" height="10" rx="2" fill="#0f172a" transform="rotate(45 120 36)"/><rect x="116" y="18" width="8" height="10" rx="2" fill="#0f172a" transform="rotate(90 120 36)"/><rect x="116" y="18" width="8" height="10" rx="2" fill="#0f172a" transform="rotate(135 120 36)"/><rect x="116" y="18" width="8" height="10" rx="2" fill="#0f172a" transform="rotate(180 120 36)"/><rect x="116" y="18" width="8" height="10" rx="2" fill="#0f172a" transform="rotate(225 120 36)"/><rect x="116" y="18" width="8" height="10" rx="2" fill="#0f172a" transform="rotate(270 120 36)"/><rect x="116" y="18" width="8" height="10" rx="2" fill="#0f172a" transform="rotate(315 120 36)"/><circle cx="120" cy="36" r="11" fill="#0f172a"/><circle cx="120" cy="36" r="4.5" fill="#ddd6fe"/>
+<rect x="94" y="102" width="16" height="16" rx="3" fill="#ddd6fe"/><rect x="130" y="102" width="16" height="16" rx="3" fill="#ddd6fe"/><path d="M106 130 L114 136 L134 124" fill="none" stroke="#ddd6fe" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="72" cy="140" r="6" fill="#a78bfa" fill-opacity="0.55"/><circle cx="168" cy="140" r="6" fill="#a78bfa" fill-opacity="0.55"/>
+<circle cx="188" cy="188" r="30" fill="#ffffff" stroke="#0f172a" stroke-opacity="0.15" stroke-width="2"/>
+<path d="M178 174 V202 M178 186 C178 194 196 190 196 198" fill="none" stroke="#6d28d9" stroke-width="3" stroke-linecap="round"/><circle cx="178" cy="174" r="4" fill="#6d28d9"/><circle cx="178" cy="202" r="4" fill="#6d28d9"/><path d="M186 178 L191 183 L201 171" fill="none" stroke="#16a34a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

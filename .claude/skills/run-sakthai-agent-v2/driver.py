@@ -143,20 +143,26 @@ def main() -> int:
             shutil.rmtree(home2, ignore_errors=True)
 
         print("\nAgent preflight (no API call):")
-        rc, out = run(["run", "say hi", "--dry-run", "--no-mcp"], env)
-        check("run --dry-run", rc == 0 and "runnable:" in out)
+        # A dry run exits 1 when the provider has no credentials, so hand it a
+        # placeholder key: preflight only checks that one is present and never
+        # calls the API.
+        preflight_env = {**env, "ANTHROPIC_API_KEY": "sk-ant-placeholder"}
+        rc, out = run(["run", "say hi", "--dry-run", "--no-mcp", "-p", "anthropic"], preflight_env)
+        check("run --dry-run", rc == 0 and "runnable:    yes" in out)
         rc, out = run(
             [
                 "run",
                 "say hi",
                 "--dry-run",
                 "--no-mcp",
+                "-p",
+                "anthropic",
                 "--with-skills",
                 "sakthai-security-red-teaming",
             ],
-            env,
+            preflight_env,
         )
-        check("run --dry-run --with-skills", rc == 0 and "runnable:" in out)
+        check("run --dry-run --with-skills", rc == 0 and "runnable:    yes" in out)
 
         print("\nWeb API server (headless):")
         # The `dashboard` CLI command was removed (5de2c25); the JSON surface

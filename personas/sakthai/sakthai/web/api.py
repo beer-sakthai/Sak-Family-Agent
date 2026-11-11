@@ -200,6 +200,8 @@ def _blank_persona(persona: str) -> PersonaSummary:
         "input_tokens": 0,
         "output_tokens": 0,
         "last_run_at": None,
+        "charge": None,
+        "current_stage": None,
     }
 
 

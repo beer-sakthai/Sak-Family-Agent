@@ -14,12 +14,13 @@ remedy is to delete the orphaned analyses (or dismiss the alerts one by one).
 Security tab without clicking through the web UI, and it groups alerts by the
 tool that reported them so a dormant tool is obvious at a glance. ``delete`` is
 for the orphan case above, and no tool on this repository currently needs it —
-see ``docs/code-scanning-sweep-2026-08-12.md``.
+see ``docs/code-scanning-sweep-2026-08-12.md``. ``dismiss`` records an alert
+that no commit can close as accepted risk (``docs/scorecard-accepted-risks.md``).
 
 Usage
 -----
 ``list`` needs a token with **read** access to code-scanning alerts; ``delete``
-needs **write**. The fine-grained repository permission is
+and ``dismiss`` need **write**. The fine-grained repository permission is
 "Code scanning alerts"; a classic PAT needs ``security_events`` (or ``repo``
 for a private repository). A workflow can grant its own ``GITHUB_TOKEN`` the
 same permission per job — see ``.github/workflows/code-scanning-cleanup.yml``,
@@ -45,9 +46,14 @@ which is how this runs without a PAT.
     # Actually delete them
     python scripts/code_scanning_analyses.py delete --tool SomeDeadTool --apply
 
+    # Dismiss one alert as won't fix (drop --apply for a dry run)
+    python scripts/code_scanning_analyses.py dismiss --alert 123 --comment "why" --apply
+
 Deleting analyses is irreversible and removes the alerts derived from them.
 ``delete`` is a dry run unless ``--apply`` is passed, and it refuses to touch a
-tool whose name it did not find on the dashboard.
+tool whose name it did not find on the dashboard. ``dismiss`` is a dry run too,
+and only acts on an open alert; a dismissed alert can be reopened on the
+Security tab.
 
 Only the standard library is used, so this runs without installing the project.
 """
@@ -72,8 +78,22 @@ PER_PAGE = 100
 MAX_PAGES = 200
 
 
+# How `list --tool` shows an analysis uploaded without a category, and what
+# `delete --category` accepts to select exactly those.
+NO_CATEGORY = "(none)"
+
+# What the alerts API accepts for `dismissed_reason`, and its length limit for
+# `dismissed_comment`; a longer comment is rejected with a 422.
+DISMISS_REASONS = ("false positive", "won't fix", "used in tests")
+DISMISS_COMMENT_LIMIT = 280
+
+
 class ApiError(RuntimeError):
     """An API call failed in a way the caller should see verbatim."""
+
+
+class PageLimitError(ApiError):
+    """A list endpoint has more than ``MAX_PAGES`` pages."""
 
 
 def _get_next_url(link_header: str | None) -> str | None:
@@ -95,6 +115,7 @@ def _request(
     path: str,
     token: str,
     params: dict[str, Any] | None = None,
+    body: dict[str, Any] | None = None,
 ) -> tuple[int, Any, str | None]:
     """Perform one API call. Returns ``(status, parsed_body_or_None, next_url)``."""
     if path.startswith("http://") or path.startswith("https://"):
@@ -103,10 +124,13 @@ def _request(
         url = f"{API_ROOT}{path}"
     if params:
         url = f"{url}?{urllib.parse.urlencode(params)}"
-    req = urllib.request.Request(url, method=method)
+    data = json.dumps(body).encode("utf-8") if body is not None else None
+    req = urllib.request.Request(url, data=data, method=method)
     req.add_header("Authorization", f"Bearer {token}")
     req.add_header("Accept", "application/vnd.github+json")
     req.add_header("X-GitHub-Api-Version", "2022-11-28")
+    if data is not None:
+        req.add_header("Content-Type", "application/json")
     try:
         # nosec B310 — fixed https://api.github.com host assembled from module
         # constants; the scheme is never caller-supplied. The file already
@@ -150,7 +174,7 @@ def _paginate(path: str, token: str, params: dict[str, Any]) -> list[Any]:
             return out
         current_path = next_url
         current_params = None
-    raise ApiError(f"Refusing to page past {MAX_PAGES} pages of {path}")
+    raise PageLimitError(f"Refusing to page past {MAX_PAGES} pages of {path}")
 
 
 def _message(body: Any) -> str:
@@ -220,7 +244,20 @@ def _alert_state(alert: dict[str, Any]) -> str:
 def cmd_list(args: argparse.Namespace, token: str) -> int:
     state = getattr(args, "state", "open")
     alerts = fetch_alerts(args.repo, token, state)
-    analyses = fetch_analyses(args.repo, token, args.tool)
+    try:
+        analyses = fetch_analyses(args.repo, token, args.tool)
+    except PageLimitError:
+        if args.tool:
+            raise
+        # Every tool's whole upload history no longer fits under MAX_PAGES. The
+        # alerts are still worth reporting; one tool's analyses stay reachable
+        # through --tool, which the API filters server-side.
+        print(
+            f"Analysis history exceeds {MAX_PAGES} pages; the analyses column is "
+            "omitted. Pass --tool to list one tool's analyses.",
+            file=sys.stderr,
+        )
+        analyses = []
 
     by_tool_alerts = group_by_tool(alerts)
     by_tool_analyses = group_by_tool(analyses)
@@ -246,6 +283,29 @@ def cmd_list(args: argparse.Namespace, token: str) -> int:
         _print_table(rows, ("tool", count_header, "analyses", "latest analysis"))
     else:
         print("Nothing reported.")
+
+    if args.tool and analyses:
+        # A tool can upload under several categories (one per workflow/job or
+        # explicit `category:`), and GitHub tracks each as its own
+        # configuration. One that stops uploading is reported as a warning on
+        # the tool-status page even when the live category is clean, so show
+        # them apart: a stale category is the one whose latest analysis stopped.
+        print()
+        print(f"--- {args.tool} by category ---")
+        by_category: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for a in analyses:
+            by_category[str(a.get("category") or "")].append(a)
+        _print_table(
+            [
+                (
+                    cat or NO_CATEGORY,
+                    str(len(items)),
+                    max((a.get("created_at", "") for a in items), default="-") or "-",
+                )
+                for cat, items in sorted(by_category.items())
+            ],
+            ("category", "analyses", "latest analysis"),
+        )
 
     if args.alerts:
         print()
@@ -283,10 +343,20 @@ def cmd_list(args: argparse.Namespace, token: str) -> int:
 
 def cmd_delete(args: argparse.Namespace, token: str) -> int:
     analyses = fetch_analyses(args.repo, token, args.tool)
+    category = getattr(args, "category", None)
+    if category == NO_CATEGORY:
+        # `list --tool` prints an uncategorized analysis as NO_CATEGORY; a
+        # blank input can't select it, because blank means "every category".
+        category = ""
+    if category is not None:
+        # Retire one stale configuration without touching a live one that
+        # uploads under the same tool name.
+        analyses = [a for a in analyses if str(a.get("category") or "") == category]
     if not analyses:
+        scope = f"tool {args.tool!r}" + (f" category {category!r}" if category is not None else "")
         print(
-            f"No analyses found for tool {args.tool!r} on {args.repo}. "
-            "Run `list` to see the exact tool names as GitHub spells them.",
+            f"No analyses found for {scope} on {args.repo}. "
+            "Run `list --tool` to see the exact names as GitHub spells them.",
             file=sys.stderr,
         )
         return 1
@@ -297,6 +367,8 @@ def cmd_delete(args: argparse.Namespace, token: str) -> int:
     total_results = sum(int(a.get("results_count") or 0) for a in ordered)
 
     print(f"Tool:     {args.tool}")
+    if category is not None:
+        print(f"Category: {category or NO_CATEGORY}")
     print(f"Repo:     {args.repo}")
     print(f"Analyses: {len(ordered)}  (reporting {total_results} results in total)")
     print()
@@ -334,6 +406,49 @@ def cmd_delete(args: argparse.Namespace, token: str) -> int:
     print()
     print(f"Deleted {deleted} analysis/analyses for {args.tool}.")
     print("Re-run `list` to confirm the tool no longer appears.")
+    return 0
+
+
+def cmd_dismiss(args: argparse.Namespace, token: str) -> int:
+    comment = args.comment.strip()
+    if not comment:
+        print("A dismissal needs a comment saying why.", file=sys.stderr)
+        return 1
+    if len(comment) > DISMISS_COMMENT_LIMIT:
+        print(
+            f"The comment is {len(comment)} characters; GitHub accepts at most "
+            f"{DISMISS_COMMENT_LIMIT}.",
+            file=sys.stderr,
+        )
+        return 1
+
+    path = f"/repos/{args.repo}/code-scanning/alerts/{args.alert}"
+    status, alert, _ = _request("GET", path, token)
+    if status >= 400:
+        print(f"#{args.alert}: {status} {_message(alert)}", file=sys.stderr)
+        return 1
+    rule = (alert.get("rule") or {}).get("id", "?")
+    state = alert.get("state")
+    print(f"Alert #{args.alert}: {_tool_name(alert)} {rule}, state={state}")
+    if state == "dismissed":
+        print("Already dismissed; nothing to do.")
+        return 0
+    if state != "open":
+        print(f"Only an open alert can be dismissed, and this one is {state}.", file=sys.stderr)
+        return 1
+
+    print(f"Reason:  {args.reason}")
+    print(f"Comment: {comment}")
+    if not args.apply:
+        print("Dry run. Re-run with --apply to dismiss it.")
+        return 0
+
+    payload = {"state": "dismissed", "dismissed_reason": args.reason, "dismissed_comment": comment}
+    status, alert, _ = _request("PATCH", path, token, body=payload)
+    if status >= 400:
+        print(f"#{args.alert}: {status} {_message(alert)}", file=sys.stderr)
+        return 1
+    print(f"Alert #{args.alert} is now {alert.get('state')}.")
     return 0
 
 
@@ -376,11 +491,35 @@ def build_parser() -> argparse.ArgumentParser:
     p_del = sub.add_parser("delete", help="delete every analysis uploaded by one tool")
     p_del.add_argument("--tool", required=True, help="tool name exactly as `list` prints it")
     p_del.add_argument(
+        "--category",
+        help=(
+            "only delete this category's analyses, exactly as `list --tool` prints it "
+            f"(`{NO_CATEGORY}` selects analyses uploaded without a category)"
+        ),
+    )
+    p_del.add_argument(
         "--apply",
         action="store_true",
         help="perform the deletion (without this the command only reports)",
     )
     p_del.set_defaults(func=cmd_delete)
+
+    p_dis = sub.add_parser("dismiss", help="dismiss one open alert as accepted risk")
+    p_dis.add_argument("--alert", type=int, required=True, help="alert number, as `list --alerts` prints it")
+    p_dis.add_argument(
+        "--comment",
+        required=True,
+        help=f"why it is dismissed (at most {DISMISS_COMMENT_LIMIT} characters)",
+    )
+    p_dis.add_argument(
+        "--reason", choices=DISMISS_REASONS, default="won't fix", help="default: won't fix"
+    )
+    p_dis.add_argument(
+        "--apply",
+        action="store_true",
+        help="perform the dismissal (without this the command only reports)",
+    )
+    p_dis.set_defaults(func=cmd_dismiss)
 
     return parser
 

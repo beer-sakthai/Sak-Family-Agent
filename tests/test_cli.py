@@ -9,8 +9,10 @@ network or spawns a subprocess.
 
 from __future__ import annotations
 
+import itertools
 import json
 import sys
+import time
 import types
 from collections.abc import Iterator
 from pathlib import Path
@@ -336,8 +338,11 @@ def test_memory_consolidate_moves_old_facts(runner: CliRunner, sakthai_home: Pat
     from sakthai.memory.store import MemoryStore
 
     with MemoryStore() as store:
-        store.add_fact("very old fact")
-    result = runner.invoke(main, ["memory", "consolidate", "--age", "-1"])
+        fid = store.add_fact("very old fact")
+        two_days_ago = int(time.time()) - 2 * 86400
+        store._conn.execute("UPDATE facts SET updated_at = ? WHERE id = ?", (two_days_ago, fid))
+        store._conn.commit()
+    result = runner.invoke(main, ["memory", "consolidate"])
     assert result.exit_code == 0
     assert "consolidated" in result.output
     assert "1" in result.output
@@ -1434,6 +1439,58 @@ def test_memory_family_json(runner: CliRunner) -> None:
     )
 
 
+def test_memory_family_query_and_tags_find_a_siblings_note(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from sakthai.config import persona_memory_db_path
+
+    ticks = itertools.count(1_700_000_000)  # one second per write: no same-second ties
+    monkeypatch.setattr("sakthai.memory.store._now", lambda: next(ticks))
+
+    with MemoryStore(persona_memory_db_path("sakthai")) as store:
+        store.add_fact("DEPUTY CHAIN | old", tags=["deputy-chain"])
+        store.add_fact("DEPUTY CHAIN | sakking then saktan", tags=["deputy-chain"])
+        store.add_fact("DEPUTY CHAIN | draft")
+    with MemoryStore(persona_memory_db_path("sakking")) as store:
+        store.add_observation("deputy chain looked healthy", weight=0.9)
+
+    result = runner.invoke(
+        main, ["memory", "family", "DEPUTY CHAIN", "--tag", "deputy-chain", "--limit", "1"]
+    )
+    assert result.exit_code == 0, result.output
+    assert "# Facts (1)" in result.output
+    assert "[sakthai]" in result.output and "sakking then saktan" in result.output
+    assert "Observations" not in result.output  # a tag filter leaves observations out
+
+    by_query = runner.invoke(main, ["memory", "family", "deputy chain"])
+    assert "deputy chain looked healthy" in by_query.output
+
+
+def test_memory_family_filter_with_no_match_says_so(runner: CliRunner) -> None:
+    from sakthai.config import persona_memory_db_path
+
+    with MemoryStore(persona_memory_db_path("sakthai")) as store:
+        store.add_fact("unrelated", kind="note")
+
+    result = runner.invoke(main, ["memory", "family", "--tag", "conservation-mode"])
+    assert result.exit_code == 0
+    assert "no matches found" in result.output
+
+
+def test_memory_family_json_with_a_tag(runner: CliRunner) -> None:
+    from sakthai.config import persona_memory_db_path
+
+    with MemoryStore(persona_memory_db_path("saktan")) as store:
+        store.add_fact("SCHEDULE REQUEST | nightly", tags=["schedule-request"])
+
+    result = runner.invoke(main, ["memory", "family", "--tag", "schedule-request", "--json"])
+    data = json.loads(result.output)
+    assert [(f["persona"], f["value"]) for f in data["facts"]] == [
+        ("saktan", "SCHEDULE REQUEST | nightly")
+    ]
+    assert data["observations"] == []
+
+
 def test_run_persona_uses_persona_store_and_soul(
     runner: CliRunner, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1447,7 +1504,7 @@ def test_run_persona_uses_persona_store_and_soul(
         return types.SimpleNamespace(text="ok")
 
     monkeypatch.setattr(agent_mod, "run_agent", fake_run_agent)
-    result = runner.invoke(main, ["run", "hi", "--persona", "sakking"])
+    result = runner.invoke(main, ["run", "hi", "--persona", "sakking", "--no-mcp"])
     assert result.exit_code == 0
 
     store = captured["store"]
@@ -1498,6 +1555,63 @@ def test_chat_uses_persona_specific_memory_shard(
     store = captured["store"]
     assert isinstance(store, MemoryStore)
     assert store.db_path == persona_memory_db_path("sakking")
+
+
+@pytest.mark.parametrize(
+    ("args", "expected"),
+    [
+        # No --provider/--model: the persona's own config.yaml decides, as for `run`.
+        (["--persona", "sakking"], ("huggingface", "Qwen/Qwen3-Coder-30B-A3B-Instruct")),
+        ([], ("huggingface", "deepseek-ai/DeepSeek-V4.1-Flash")),  # the default persona
+        (["--persona", "saktan"], ("ollama", "sakthai")),
+        # Both flags given: they win, including a request for local Ollama.
+        (
+            ["--persona", "sakking", "--provider", "ollama", "--model", "sakthai"],
+            ("ollama", "sakthai"),
+        ),
+        # One flag given: the persona pair is not split, so an Ollama provider is
+        # never handed a Hub model name (or the reverse).
+        (["--persona", "sakking", "--provider", "ollama"], ("ollama", "sakthai")),
+        (["--persona", "sakking", "--model", "llama3"], ("ollama", "llama3")),
+    ],
+)
+def test_chat_model_follows_the_persona_unless_flags_say_otherwise(
+    runner: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+    args: list[str],
+    expected: tuple[str, str],
+) -> None:
+    import sakthai.cli.chat as chat_cli
+
+    captured: dict[str, object] = {}
+
+    def fake_run_chat(**kwargs: object) -> None:
+        captured["provider"] = kwargs.get("provider")
+        captured["model"] = kwargs.get("model")
+
+    monkeypatch.setattr(chat_cli, "run_chat", fake_run_chat)
+    result = runner.invoke(main, ["chat", *args, "--no-mcp"])
+    assert result.exit_code == 0, result.output
+    assert (captured["provider"], captured["model"]) == expected
+
+
+def test_chat_keeps_its_cli_defaults_for_a_persona_without_a_model(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A persona whose config.yaml names no model falls back to local Ollama."""
+    import sakthai.cli.chat as chat_cli
+
+    captured: dict[str, object] = {}
+
+    def fake_run_chat(**kwargs: object) -> None:
+        captured["provider"] = kwargs.get("provider")
+        captured["model"] = kwargs.get("model")
+
+    monkeypatch.setattr(chat_cli, "run_chat", fake_run_chat)
+    monkeypatch.setattr(chat_cli.config, "persona_model_defaults", lambda persona: (None, None))
+    result = runner.invoke(main, ["chat", "--persona", "sakking", "--no-mcp"])
+    assert result.exit_code == 0, result.output
+    assert (captured["provider"], captured["model"]) == ("ollama", "sakthai")
 
 
 def test_run_persona_threads_persona_into_run_agent(

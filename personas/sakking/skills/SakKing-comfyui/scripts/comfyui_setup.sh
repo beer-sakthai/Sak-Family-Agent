@@ -2,7 +2,7 @@
 # ComfyUI Setup — Install, launch, and verify using the official comfy-cli.
 #
 # Improvements over v1:
-#   - Prefers `pipx` / `uvx` over global `pip install` (avoids polluting system Python)
+#   - Installs comfy-cli with `uvx` / `pipx` only, never a global `pip install`
 #   - Idempotent: detects already-running server and skips re-launch
 #   - Configurable port via --port=N (default 8188)
 #   - Configurable workspace via --workspace=PATH
@@ -168,40 +168,13 @@ elif command -v pipx >/dev/null 2>&1; then
         fi
     fi
 else
-    log "Neither pipx nor uvx found. Falling back to pip install --user…"
-    log "  (Recommend installing pipx: https://pipx.pypa.io)"
-    if ! pip install --user comfy-cli >>"$LOG_FILE" 2>&1; then
-        # macOS: PEP 668 externally-managed-environment may block --user
-        log "pip install --user failed. Retrying with --break-system-packages…"
-        pip install --user --break-system-packages comfy-cli >>"$LOG_FILE" 2>&1 || {
-            err "Could not install comfy-cli. Install pipx or uv first."
-            exit 1
-        }
-    fi
-    # Resolve the actual `comfy` script — pip --user puts it in:
-    #   Linux: ~/.local/bin/comfy
-    #   macOS: ~/Library/Python/<ver>/bin/comfy  OR  ~/.local/bin/comfy
-    COMFY_BIN=""
-    for candidate in "$HOME/.local/bin/comfy" \
-                     "$HOME/Library/Python/3.13/bin/comfy" \
-                     "$HOME/Library/Python/3.12/bin/comfy" \
-                     "$HOME/Library/Python/3.11/bin/comfy" \
-                     "$HOME/Library/Python/3.10/bin/comfy"; do
-        if [ -x "$candidate" ]; then
-            COMFY_BIN="$candidate"
-            export PATH="$(dirname "$candidate"):$PATH"
-            break
-        fi
-    done
-    if [ -z "$COMFY_BIN" ]; then
-        if command -v comfy >/dev/null 2>&1; then
-            COMFY_BIN="comfy"
-        else
-            err "Installed comfy-cli but couldn't find the 'comfy' script."
-            err "Add the right Python user-bin directory to PATH and retry."
-            exit 1
-        fi
-    fi
+    # No `pip install --user` fallback: a bare global install of an unpinned
+    # package is what Scorecard's Pinned-Dependencies check flags, and uvx and
+    # pipx both keep comfy-cli in its own environment anyway.
+    err "comfy-cli needs uv (for uvx) or pipx. Install one and re-run:"
+    err "  uv:   https://docs.astral.sh/uv/getting-started/installation/"
+    err "  pipx: https://pipx.pypa.io/stable/installation/"
+    exit 1
 fi
 
 # --- Step 2: Disable analytics tracking (avoid interactive prompt) ---
@@ -235,7 +208,7 @@ fi
 if curl -fsS "http://127.0.0.1:$PORT/system_stats" >/dev/null 2>&1; then
     log "Server already running on port $PORT — skipping launch."
     log "Stop with \`$COMFY_BIN stop\` if you want a fresh start."
-    curl -fsS "http://127.0.0.1:$PORT/system_stats" | python3 -m json.tool 2>/dev/null || true
+    printf '%s' "$(curl -fsS "http://127.0.0.1:$PORT/system_stats")" | python3 -m json.tool 2>/dev/null || true
     log "Done."
     exit 0
 fi
@@ -257,7 +230,7 @@ ELAPSED=0
 while [ $ELAPSED -lt $MAX_WAIT ]; do
     if curl -fsS "http://127.0.0.1:$PORT/system_stats" >/dev/null 2>&1; then
         log "Server is running!"
-        curl -fsS "http://127.0.0.1:$PORT/system_stats" | python3 -m json.tool 2>/dev/null || true
+        printf '%s' "$(curl -fsS "http://127.0.0.1:$PORT/system_stats")" | python3 -m json.tool 2>/dev/null || true
         break
     fi
     sleep 2

@@ -44,13 +44,8 @@ def _validate_url(url_str: str) -> str:
     if "#" in url_str:
         url_str = url_str[: url_str.index("#")]
 
-    # Prevent option smuggling
     if url_str.startswith("-"):
         raise ValueError(f"Option smuggling detected in URL: {url_str}")
-
-    # Prevent ASCII control character injection
-    if any(ord(c) < 32 for c in url_str):
-        raise ValueError(f"ASCII control characters detected in URL: {url_str}")
 
     try:
         parsed = urllib.parse.urlparse(url_str)
@@ -86,7 +81,7 @@ def _validate_url(url_str: str) -> str:
                 continue
 
             # Unwrap IPv4-mapped IPv6 bypasses
-            if getattr(ip, "ipv4_mapped", None):
+            if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
                 ip = ip.ipv4_mapped
 
             if not ip.is_global or ip.is_multicast:

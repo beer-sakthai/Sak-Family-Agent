@@ -168,9 +168,7 @@ export function SessionExplorer({
                 <th className="px-5 py-3">When</th>
                 <th className="px-5 py-3 text-right">Tokens</th>
                 <th className="px-5 py-3">Outcome</th>
-                <th className="px-5 py-3 text-right" aria-label="Actions">
-                  <span className="sr-only">Actions</span>
-                </th>
+                <th className="px-5 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-line/60 text-fg-2">

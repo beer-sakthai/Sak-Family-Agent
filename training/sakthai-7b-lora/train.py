@@ -120,10 +120,10 @@ model = AutoModelForCausalLM.from_pretrained(
     quantization_config=bnb,
     device_map="auto",
     torch_dtype="auto",
-    trust_remote_code=True,
+    trust_remote_code=False,  # Qwen2 is native to transformers
 )
 tok = AutoTokenizer.from_pretrained(
-    BASE_MODEL, revision=BASE_MODEL_REVISION, trust_remote_code=True
+    BASE_MODEL, revision=BASE_MODEL_REVISION, trust_remote_code=False
 )
 tok.pad_token = tok.eos_token
 tok.padding_side = "right"

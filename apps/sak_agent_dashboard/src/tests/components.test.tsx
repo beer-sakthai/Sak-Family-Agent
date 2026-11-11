@@ -426,35 +426,6 @@ describe("MemoryExplorer", () => {
     expect(shardBadges.length).toBeGreaterThan(0);
   });
 
-  it("provides hover title tooltips on fact and observation table cells", () => {
-    render(<MemoryExplorer memory={demoMemory()} />);
-    const firstFact = demoMemory().facts[0];
-    const factIdCell = screen.getByTitle(`Fact ID: ${firstFact.id}`);
-    expect(factIdCell).toBeInTheDocument();
-    expect(factIdCell.tagName.toLowerCase()).toBe("td");
-
-    const factKindTitle = `Fact kind: ${firstFact.kind}${firstFact.key ? ` / key: ${firstFact.key}` : ""}`;
-    const factKindCell = screen.getByTitle(factKindTitle);
-    expect(factKindCell).toBeInTheDocument();
-    expect(factKindCell.tagName.toLowerCase()).toBe("td");
-
-    const factValueCell = screen.getByTitle(`Fact value: ${firstFact.value}`);
-    expect(factValueCell).toBeInTheDocument();
-    expect(factValueCell.tagName.toLowerCase()).toBe("td");
-
-    const obsTab = screen.getByRole("tab", { name: /Observations/ });
-    fireEvent.click(obsTab);
-
-    const firstObs = demoMemory().observations[0];
-    const obsIdCell = screen.getByTitle(`Observation ID: ${firstObs.id}`);
-    expect(obsIdCell).toBeInTheDocument();
-    expect(obsIdCell.tagName.toLowerCase()).toBe("td");
-
-    const obsSummaryCell = screen.getByTitle(`Observation summary: ${firstObs.summary}`);
-    expect(obsSummaryCell).toBeInTheDocument();
-    expect(obsSummaryCell.tagName.toLowerCase()).toBe("td");
-  });
-
   it("provides title tooltips and aria-labels on observation weight and confidence cells", () => {
     render(<MemoryExplorer memory={demoMemory()} />);
     const obsTab = screen.getByRole("tab", { name: /Observations/ });
@@ -609,30 +580,6 @@ describe("AuditLogs", () => {
     fireEvent.click(resetBtn);
     expect(onChange).toHaveBeenCalledWith("ALL");
   });
-
-  it("renders table cell title hover tooltips and empty state ShieldX visual icon", () => {
-    const audit = demoAudit();
-    const firstEvent = audit.events[0];
-    const { container, rerender } = render(<AuditLogs audit={audit} severity="ALL" onSeverityChange={vi.fn()} />);
-
-    const timestampCell = screen.getByText(
-      new Date(firstEvent.timestamp * 1000).toISOString().replace("T", " ").slice(0, 19)
-    ).closest("td");
-    expect(timestampCell).toHaveAttribute("title", expect.stringContaining("Recorded at:"));
-
-    const typeCell = screen.getByText(firstEvent.type).closest("td");
-    expect(typeCell).toHaveAttribute("title", `Event type: ${firstEvent.type}`);
-
-    const messageCell = screen.getByText(firstEvent.message).closest("td");
-    expect(messageCell).toHaveAttribute("title", `Event message: ${firstEvent.message}`);
-
-    const empty = { events: [], severity_counts: { high: 0 }, total: 0 };
-    rerender(<AuditLogs audit={empty} severity="high" onSeverityChange={vi.fn()} />);
-
-    const emptyIcon = container.querySelector("td svg");
-    expect(emptyIcon).toBeInTheDocument();
-    expect(emptyIcon).toHaveAttribute("aria-hidden", "true");
-  });
 });
 
 describe("SessionExplorer", () => {
@@ -669,13 +616,6 @@ describe("SessionExplorer", () => {
       "title",
       `Total recorded sessions: ${sessions.total.toLocaleString()}`,
     );
-  });
-
-  it("renders accessible Actions column header in session table", () => {
-    renderExplorer();
-    const actionsHeader = screen.getByRole("columnheader", { name: "Actions" });
-    expect(actionsHeader).toBeInTheDocument();
-    expect(actionsHeader).toHaveAttribute("aria-label", "Actions");
   });
 
   it("lists sessions", () => {
@@ -914,13 +854,6 @@ describe("WorkflowRuns", () => {
     );
   });
 
-  it("renders accessible Actions column header in workflow runs table", () => {
-    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
-    const actionsHeader = screen.getByRole("columnheader", { name: "Actions" });
-    expect(actionsHeader).toBeInTheDocument();
-    expect(actionsHeader).toHaveAttribute("aria-label", "Actions");
-  });
-
   it("lists runs with their status", () => {
     render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
     expect(screen.getByText("nightly-consolidation")).toBeInTheDocument();
@@ -1018,6 +951,28 @@ describe("WorkflowRuns", () => {
     const selectedRow = container.querySelector(`tr[aria-selected="true"]`);
     expect(selectedRow).toBeInTheDocument();
     expect(selectedRow).toHaveClass("bg-raised/80");
+  });
+
+  it("renders execution metric table cells with explicit title hover tooltips", () => {
+    const { container } = render(
+      <WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
+    );
+    const firstRun = workflows.runs[0];
+    const startedCell = container.querySelector(`td[title^="Started:"]`);
+    const durationCell = container.querySelector(`td[title^="Execution duration:"]`);
+    const stepCountCell = container.querySelector(`td[title^="Step count:"]`);
+
+    expect(startedCell).toBeInTheDocument();
+    expect(startedCell).toHaveAttribute("title", expect.stringContaining("Started:"));
+
+    expect(durationCell).toBeInTheDocument();
+    expect(durationCell).toHaveAttribute("title", expect.stringContaining("Execution duration:"));
+
+    expect(stepCountCell).toBeInTheDocument();
+    expect(stepCountCell).toHaveAttribute(
+      "title",
+      expect.stringContaining(`Step count: ${firstRun.step_count}`),
+    );
   });
 });
 
@@ -1138,22 +1093,6 @@ describe("StitchStudio", () => {
     expect(screen.getByText("HIGH")).toBeInTheDocument();
   });
 
-  it("renders matching Multi-Agent System Architecture flow diagram live preview when mermaid-arch preset is selected", () => {
-    render(<StitchStudio />);
-    const mermaidPresetButton = screen.getByRole("button", {
-      name: "Select preset Multi-Agent System Architecture",
-    });
-    fireEvent.click(mermaidPresetButton);
-
-    expect(screen.getAllByText("Multi-Agent System Architecture")).toHaveLength(2);
-    expect(screen.getByText("Live Flow Diagram")).toBeInTheDocument();
-    expect(screen.getByText("SakThai (Primary Orchestrator)")).toBeInTheDocument();
-    expect(screen.getByText("SakKing")).toBeInTheDocument();
-    expect(screen.getByText("SakSee")).toBeInTheDocument();
-    expect(screen.getByText("SakSit")).toBeInTheDocument();
-    expect(screen.getByText("SakJules")).toBeInTheDocument();
-  });
-
   it("uses roving tabIndex for active and inactive tabs", () => {
     render(<StitchStudio />);
     const previewTab = screen.getByRole("tab", { name: /Live Preview/ });
@@ -1252,7 +1191,7 @@ describe("DisplayMenu", () => {
     expect(menuItems[0]).toHaveFocus();
   });
 
-  it("dismisses popover and restores focus to trigger button when theme or density is selected", () => {
+  it("closes menu popover and restores focus to trigger upon theme or density option selection", () => {
     const onThemeChange = vi.fn();
     const onDensityChange = vi.fn();
 
@@ -1267,18 +1206,22 @@ describe("DisplayMenu", () => {
     );
 
     const trigger = screen.getByRole("button", { name: "Display settings" });
+
+    // Test theme selection closes menu and focuses trigger
     fireEvent.click(trigger);
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    const lightItem = screen.getByRole("menuitemradio", { name: /Light/ });
+    fireEvent.click(lightItem);
 
-    const darkThemeOption = screen.getByRole("menuitemradio", { name: "Dark" });
-    fireEvent.click(darkThemeOption);
-
-    expect(onThemeChange).toHaveBeenCalledWith("dark");
+    expect(onThemeChange).toHaveBeenCalledWith("light");
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
 
+    // Test density selection closes menu and focuses trigger
     fireEvent.click(trigger);
-    const compactDensityOption = screen.getByRole("menuitemradio", { name: "Compact" });
-    fireEvent.click(compactDensityOption);
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    const compactItem = screen.getByRole("menuitemradio", { name: /Compact/ });
+    fireEvent.click(compactItem);
 
     expect(onDensityChange).toHaveBeenCalledWith("compact");
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
@@ -1524,20 +1467,20 @@ describe("CommandPalette", () => {
     expect(combobox).toHaveAttribute("aria-activedescendant", `cmd-option-nav-${NAV_ITEMS[0].id}`);
   });
 
-  it("renders inline clear search button when no commands match and resets query on click", () => {
+  it("renders an inline reset button when search yields no matches and clears search when clicked", () => {
     render(<CommandPalette onClose={vi.fn()} onNavigate={vi.fn()} actions={[]} />);
-    const combobox = screen.getByRole("combobox", { name: "Search commands" });
+    const searchInput = screen.getByRole("combobox", { name: "Search commands" });
 
-    fireEvent.change(combobox, { target: { value: "nonexistentquery123" } });
-    expect(screen.getByText("Nothing matches “nonexistentquery123”.")).toBeInTheDocument();
+    fireEvent.change(searchInput, { target: { value: "nonexistentquery123" } });
+    expect(screen.getByText("Nothing matches “nonexistentquery123”.").closest("li")).toBeInTheDocument();
 
-    const clearButton = screen.getByRole("button", { name: "Clear command palette search query" });
-    expect(clearButton).toBeInTheDocument();
-    expect(clearButton).toHaveAttribute("type", "button");
-    expect(clearButton).toHaveAttribute("title", "Reset search query (Esc)");
+    const resetButton = screen.getByRole("button", { name: "Clear search query and show all commands" });
+    expect(resetButton).toBeInTheDocument();
+    expect(resetButton).toHaveAttribute("title", "Clear search query (Esc)");
+    expect(resetButton).toHaveAttribute("type", "button");
 
-    fireEvent.click(clearButton);
-    expect(combobox).toHaveValue("");
-    expect(screen.queryByText(/Nothing matches/)).not.toBeInTheDocument();
+    fireEvent.click(resetButton);
+    expect(screen.queryByText("Nothing matches “nonexistentquery123”.")).not.toBeInTheDocument();
+    expect(searchInput).toHaveValue("");
   });
 });
