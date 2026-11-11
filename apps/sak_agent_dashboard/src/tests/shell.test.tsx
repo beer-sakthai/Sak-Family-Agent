@@ -14,6 +14,7 @@ import Home from "@/app/page";
 import CommandPalette, { type Command } from "@/components/CommandPalette";
 import HostedNotice from "@/components/HostedNotice";
 import KpiStrip from "@/components/KpiStrip";
+import Home from "@/app/page";
 import { CardGridSkeleton, KpiSkeleton, PanelSkeleton } from "@/components/Skeletons";
 import Sidebar from "@/components/shell/Sidebar";
 import TopBar from "@/components/shell/TopBar";
@@ -144,6 +145,7 @@ describe("Sidebar", () => {
     expect(expandButton).toHaveAttribute("type", "button");
     expect(expandButton).toHaveAttribute("title", "Expand sidebar ([)");
   });
+
 
   it("keeps the mobile drawer unmounted until it is opened and includes accessible backdrop attributes and explicit type button", () => {
     const { rerender, props } = renderSidebar({ mobileOpen: false });
@@ -361,6 +363,7 @@ describe("TopBar", () => {
       expect(opt).toHaveAttribute("type", "button");
     }
 
+    fireEvent.click(screen.getByTestId("persona-filter"));
     fireEvent.click(screen.getByRole("button", { name: /Filter by persona/i }));
     const personaAllOption = screen.getByRole("menuitem");
     expect(personaAllOption).toHaveAttribute("type", "button");
@@ -474,7 +477,10 @@ describe("KpiStrip", () => {
         audit={demoAudit()}
       />,
     );
-    const svgs = container.querySelectorAll("svg");
+    // Exclude sparkline role="img" svgs, checking Lucide icon svgs
+    const svgs = Array.from(container.querySelectorAll("svg")).filter(
+      (svg) => svg.getAttribute("role") !== "img",
+    );
     expect(svgs.length).toBeGreaterThan(0);
     svgs.forEach((svg) => {
       expect(svg).toHaveAttribute("aria-hidden", "true");
@@ -513,6 +519,24 @@ describe("KpiStrip", () => {
     expect(successTile).toBeInTheDocument();
     const latencyTile = screen.getByTitle(/Avg latency:/);
     expect(latencyTile).toBeInTheDocument();
+  });
+
+  it("renders KPI sparklines with role='img', title hover tooltips, and aria-labels", () => {
+    render(
+      <KpiStrip
+        metrics={metrics}
+        memory={demoMemory()}
+        sessions={demoSessions()}
+        audit={demoAudit()}
+      />,
+    );
+    const sparklines = screen.getAllByRole("img", { name: /Trend sparkline for/ });
+    expect(sparklines.length).toBeGreaterThan(0);
+    const totalRunsSparkline = screen.getByRole("img", { name: /Trend sparkline for Total runs:/ });
+    expect(totalRunsSparkline).toBeInTheDocument();
+    const titleElement = totalRunsSparkline.querySelector("title");
+    expect(titleElement).toBeInTheDocument();
+    expect(titleElement?.textContent).toContain("Trend sparkline for Total runs");
   });
 });
 
@@ -639,6 +663,63 @@ describe("HostedNotice", () => {
   });
 });
 
+describe("Footer Shortcut Buttons", () => {
+  it("renders interactive footer shortcut buttons that open the palette and shortcuts overlay", async () => {
+    // Provide a mocked fetch so page.tsx mounts cleanly with valid payloads
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      let data: unknown = { personas: [], unattributed_runs: 0 };
+      if (url.includes("/api/agents")) {
+        data = { personas: [], unattributed_runs: 0 };
+      } else if (url.includes("/api/metrics")) {
+        data = demoMetrics();
+      } else if (url.includes("/api/memory")) {
+        data = demoMemory();
+      } else if (url.includes("/api/audit")) {
+        data = demoAudit();
+      } else if (url.includes("/api/sessions")) {
+        data = demoSessions();
+      } else if (url.includes("/api/workflows")) {
+        data = { runs: [] };
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ source: "demo", data }),
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<Home />);
+
+    const paletteBtn = screen.getByRole("button", { name: "Open command palette (Command + K)" });
+    expect(paletteBtn).toBeInTheDocument();
+    expect(paletteBtn).toHaveAttribute("type", "button");
+    expect(paletteBtn).toHaveAttribute("title", "Open command palette (Command + K)");
+
+    const shortcutsBtn = screen.getByRole("button", { name: "Open keyboard shortcuts overlay (?)" });
+    expect(shortcutsBtn).toBeInTheDocument();
+    expect(shortcutsBtn).toHaveAttribute("type", "button");
+    expect(shortcutsBtn).toHaveAttribute("title", "Open keyboard shortcuts overlay (?)" );
+
+    // Click shortcuts button -> opens shortcuts overlay dialog
+    expect(screen.queryByTestId("shortcuts-overlay")).not.toBeInTheDocument();
+    fireEvent.click(shortcutsBtn);
+    expect(await screen.findByTestId("shortcuts-overlay")).toBeInTheDocument();
+
+    // Dismiss shortcuts dialog
+    fireEvent.click(screen.getByLabelText("Close keyboard shortcuts"));
+    await waitFor(() => {
+      expect(screen.queryByTestId("shortcuts-overlay")).not.toBeInTheDocument();
+    });
+
+    // Click command palette button -> opens command palette dialog
+    expect(screen.queryByRole("dialog", { name: "Command palette" })).not.toBeInTheDocument();
+    fireEvent.click(paletteBtn);
+    expect(await screen.findByRole("dialog", { name: "Command palette" })).toBeInTheDocument();
+
+    vi.unstubAllGlobals();
+  });
+});
+
 describe("Skeletons", () => {
   it("holds the KPI layout with one placeholder per tile and status accessibility", () => {
     const { container } = render(<KpiSkeleton />);
@@ -665,6 +746,34 @@ describe("Skeletons", () => {
   });
 });
 
+describe("Home Footer", () => {
+  it("renders interactive command palette and keyboard shortcut buttons in footer", async () => {
+    await act(async () => {
+      render(<Home />);
+    });
+
+    const paletteBtn = screen.getByRole("button", {
+      name: "Open command palette (Command + K)",
+    });
+    expect(paletteBtn).toBeInTheDocument();
+    expect(paletteBtn).toHaveAttribute("type", "button");
+    expect(paletteBtn).toHaveAttribute("title", "Open command palette (⌘K)");
+
+    const shortcutsBtn = screen.getByRole("button", {
+      name: "Open keyboard shortcuts (?)",
+    });
+    expect(shortcutsBtn).toBeInTheDocument();
+    expect(shortcutsBtn).toHaveAttribute("type", "button");
+    expect(shortcutsBtn).toHaveAttribute("title", "Open keyboard shortcuts (?)");
+
+    fireEvent.click(paletteBtn);
+    expect(screen.getByRole("dialog", { name: "Command palette" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Close command palette"));
+    expect(screen.queryByRole("dialog", { name: "Command palette" })).not.toBeInTheDocument();
+
+    fireEvent.click(shortcutsBtn);
+    expect(screen.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeInTheDocument();
 describe("Home Footer Shortcut Buttons", () => {
   it("renders interactive footer shortcut buttons that open palette and shortcuts overlay on click", async () => {
     const originalFetch = global.fetch;
