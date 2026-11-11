@@ -963,8 +963,25 @@ export default function Home() {
               {personas.length > 0 && ` · filtered to ${personas.length} persona${personas.length === 1 ? "" : "s"}`}
             </span>
             <span className="hidden sm:inline">
-              <kbd className="rounded border border-line px-1 py-0.5" aria-hidden="true" title="Command + K">⌘K</kbd> commands ·{" "}
-              <kbd className="rounded border border-line px-1 py-0.5" aria-hidden="true" title="Question mark">?</kbd> shortcuts
+              <button
+                type="button"
+                onClick={() => setPaletteOpen(true)}
+                aria-label="⌘K commands - Open command palette"
+                title="Open command palette (⌘K)"
+                className="cursor-pointer transition-colors hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <kbd className="rounded border border-line px-1 py-0.5" aria-hidden="true">⌘K</kbd> commands
+              </button>
+              {" · "}
+              <button
+                type="button"
+                onClick={() => setShortcutsOpen(true)}
+                aria-label="? shortcuts - Open keyboard shortcuts overlay"
+                title="Open keyboard shortcuts (?)"
+                className="cursor-pointer transition-colors hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <kbd className="rounded border border-line px-1 py-0.5" aria-hidden="true">?</kbd> shortcuts
+              </button>
             </span>
           </footer>
         </main>
