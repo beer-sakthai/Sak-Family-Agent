@@ -664,6 +664,34 @@ describe("HostedNotice", () => {
 });
 
 describe("Footer Shortcut Buttons", () => {
+  it("renders interactive command palette and shortcut overlay trigger buttons with accessible names and tooltips", () => {
+    render(
+      <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-line-soft pt-4 font-mono text-[11px] text-fg-5">
+        <div className="hidden sm:inline-flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={vi.fn()}
+            aria-label="Open command palette (Command + K)"
+            title="Open command palette (Command + K)"
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors hover:bg-raised/60 hover:text-fg-3 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <kbd className="rounded border border-line px-1 py-0.5" aria-hidden="true">⌘K</kbd>
+            <span>commands</span>
+          </button>
+          <span aria-hidden="true">·</span>
+          <button
+            type="button"
+            onClick={vi.fn()}
+            aria-label="Open keyboard shortcuts overlay (?)"
+            title="Open keyboard shortcuts overlay (?)"
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors hover:bg-raised/60 hover:text-fg-3 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <kbd className="rounded border border-line px-1 py-0.5" aria-hidden="true">?</kbd>
+            <span>shortcuts</span>
+          </button>
+        </div>
+      </footer>
+    );
   it("renders interactive footer shortcut buttons that open the palette and shortcuts overlay", async () => {
     // Provide a mocked fetch so page.tsx mounts cleanly with valid payloads
     const fetchMock = vi.fn().mockImplementation((url: string) => {
@@ -698,6 +726,7 @@ describe("Footer Shortcut Buttons", () => {
     const shortcutsBtn = screen.getByRole("button", { name: "Open keyboard shortcuts overlay (?)" });
     expect(shortcutsBtn).toBeInTheDocument();
     expect(shortcutsBtn).toHaveAttribute("type", "button");
+    expect(shortcutsBtn).toHaveAttribute("title", "Open keyboard shortcuts overlay (?)");
     expect(shortcutsBtn).toHaveAttribute("title", "Open keyboard shortcuts overlay (?)" );
 
     // Click shortcuts button -> opens shortcuts overlay dialog
