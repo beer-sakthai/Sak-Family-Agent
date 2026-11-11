@@ -70,3 +70,18 @@
 ## 2026-11-05 - Interactive, accessible button controls for footer shortcut badges
 **Learning:** Footer shortcut badges (e.g. `⌘K commands` and `? shortcuts`) rendered as plain text spans miss an opportunity for user interaction. Converting them to interactive `<button>` elements with `type="button"`, focus-visible styles, explicit `aria-label` screen reader descriptions, and `title` tooltips allows mouse and keyboard users to click them to open overlays while preserving keyboard navigation.
 **Action:** Render shortcut badge hints in footers as interactive `<button>` elements with explicit `type="button"`, `aria-label`, hover `title`, and focus-visible styling.
+## 2026-11-05 - Interactive footer shortcut badge controls
+**Learning:** Visual shortcut badges and hint labels in page footers (such as `⌘K commands` and `? shortcuts`) should be rendered as interactive `<button>` controls with `type="button"`, explicit `aria-label`, focus-visible rings, and `title` tooltips so desktop and touch users can click them to trigger modal overlays directly alongside keyboard power users.
+**Action:** Convert static footer shortcut badge hints into interactive buttons that invoke corresponding modal triggers.
+## 2026-11-05 - Accessible SVG sparklines with summary statistics
+**Learning:** SVG sparkline graphs rendered as visual decorations inside summary tiles benefit from `role="img"`, an explicit `aria-label` summarizing key statistics (min, max, current value), and a child `<title>` element so assistive technologies and desktop hover tooltips convey underlying trend data.
+**Action:** Set `role="img"`, `aria-label`, and an inner `<title>` tag on SVG sparklines detailing min, max, and current data points.
+## 2026-11-08 - Semantic error callout and metric tooltips in workflow step cards
+**Learning:** In step execution lists within detail drawers, error strings benefit from being wrapped in a dedicated semantic `role="alert"` container with an `AlertCircle` icon, `aria-label`, and `title` tooltip rather than bare text, while execution metrics (duration and attempts count) benefit from descriptive hover tooltips.
+**Action:** Wrap step execution errors in `role="alert"` containers with status icons and attach contextual `title` tooltips to step duration and attempt metrics.
+## 2026-11-05 - Interactive footer shortcut badge hints for modal triggers
+**Learning:** Footer keyboard shortcut badge hints (e.g. `⌘K commands` and `? shortcuts`) are visually prominent and naturally inviting; converting them into interactive `<button>` elements with accessible WCAG 2.5.3 labels allows mouse and touch users to trigger overlays without needing physical keyboard input.
+**Action:** Render footer shortcut badges as semantic `<button>` elements with accessible hover tooltips and focus styles.
+## 2026-11-05 - Descriptive column context via title tooltips on table header cells
+**Learning:** Data table header cells (`<th>`) benefit from explicit `title` hover tooltips describing column data types and expectations (such as `title="Event timestamp (UTC)"`), giving desktop users immediate context without cluttering header labels.
+**Action:** Add explicit `title` attributes to `<th>` elements summarizing column semantics.
