@@ -42,7 +42,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="text-xl font-bold font-display text-fg tracking-tight flex items-center gap-2">
-            <Database className="h-5 w-5 text-hue-emerald" aria-hidden />
+            <Database className="h-5 w-5 text-hue-emerald" aria-hidden="true" />
             Memory Store Explorer
           </h3>
           <p className="text-xs text-fg-3 mt-0.5">
@@ -95,7 +95,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
               : "bg-panel/60 text-fg-3 border-line hover:border-line-strong"
           }`}
         >
-          <BookOpen className="h-3.5 w-3.5 inline mr-1.5" aria-hidden />
+          <BookOpen className="h-3.5 w-3.5 inline mr-1.5" aria-hidden="true" />
           Facts ({facts.length})
         </button>
         <button
@@ -113,7 +113,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
               : "bg-panel/60 text-fg-3 border-line hover:border-line-strong"
           }`}
         >
-          <Lightbulb className="h-3.5 w-3.5 inline mr-1.5" aria-hidden />
+          <Lightbulb className="h-3.5 w-3.5 inline mr-1.5" aria-hidden="true" />
           Observations ({observations.length})
         </button>
       </div>
@@ -154,6 +154,9 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
                   facts.map((f) => (
                     <tr key={`${f.persona}-${f.id}`} className="hover:bg-raised/40 transition-colors">
                       <td title={`Fact ID: ${f.id}`} className="px-5 py-3.5 text-fg-4">{f.id}</td>
+                      <td title={`Fact ID: ${f.id}`} className="px-5 py-3.5 text-fg-4">
+                        {f.id}
+                      </td>
                       <td
                         title={`Kind: ${f.kind}${f.key ? `, Key: ${f.key}` : ""}`}
                         className="px-5 py-3.5 font-bold text-hue-cyan"
@@ -231,6 +234,9 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
                   observations.map((o) => (
                     <tr key={`${o.persona}-${o.id}`} className="hover:bg-raised/40 transition-colors">
                       <td title={`Observation ID: ${o.id}`} className="px-5 py-3.5 text-fg-4">{o.id}</td>
+                      <td title={`Observation ID: ${o.id}`} className="px-5 py-3.5 text-fg-4">
+                        {o.id}
+                      </td>
                       <td className="px-5 py-3.5">
                         <span
                           title={`Persona shard: ${o.persona}`}
@@ -241,6 +247,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
                       </td>
                       <td
                         title={`Observation: ${o.summary}`}
+                        title={`Observation summary: ${o.summary}`}
                         className="px-5 py-3.5 font-sans text-xs text-fg leading-relaxed"
                       >
                         {o.summary}
@@ -271,7 +278,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
       {Object.keys(memory.kind_counts).length > 0 && (
         <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
           <span className="text-fg-4 flex items-center gap-1">
-            <Layers className="h-3 w-3" aria-hidden /> by kind:
+            <Layers className="h-3 w-3" aria-hidden="true" /> by kind:
           </span>
           {Object.entries(memory.kind_counts)
             .sort((a, b) => b[1] - a[1])

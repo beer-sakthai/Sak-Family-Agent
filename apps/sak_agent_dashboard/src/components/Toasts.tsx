@@ -112,7 +112,7 @@ export function ToastStack({
             role={toast.tone === "error" ? "alert" : "status"}
             className={`pointer-events-auto flex animate-toast-in items-start gap-2.5 rounded-xl border px-3.5 py-2.5 text-sm shadow-glass backdrop-blur-xl ${classes}`}
           >
-            <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+            <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span className="min-w-0 flex-1">{toast.message}</span>
             <button
               type="button"
@@ -121,7 +121,7 @@ export function ToastStack({
               title="Dismiss notification (Esc)"
               className="shrink-0 rounded p-0.5 opacity-60 transition-opacity hover:opacity-100 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
             >
-              <X className="h-3 w-3" aria-hidden />
+              <X className="h-3 w-3" aria-hidden="true" />
             </button>
           </div>
         );
