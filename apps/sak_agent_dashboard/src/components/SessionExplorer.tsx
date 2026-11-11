@@ -157,6 +157,12 @@ export function SessionExplorer({
         </div>
       </div>
 
+      <span className="sr-only" role="status" aria-live="polite">
+        {search.trim()
+          ? `${sessions.length} session${sessions.length === 1 ? "" : "s"} found`
+          : ""}
+      </span>
+
       <div className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left font-mono text-xs">

@@ -137,12 +137,9 @@ export function WorkflowRuns({
                 <tr>
                   <td colSpan={6} className="px-5 py-8 text-center">
                     <div className="flex flex-col items-center justify-center gap-2 font-sans">
-                      <GitBranch className="h-6 w-6 text-fg-4/80" aria-hidden="true" />
-                      <p className="text-fg-4 text-xs font-medium text-fg-3">
+                      <GitBranch className="h-6 w-6 text-fg-4/80" aria-hidden />
+                      <p className="text-fg-4 text-xs">
                         No workflow runs recorded yet.
-                      </p>
-                      <p className="text-[11px] text-fg-4 max-w-sm leading-relaxed">
-                        DAG executions from <code className="text-fg-3 font-mono">~/.sakthai/workflow_runs/</code> are logged here when running multi-step agent workflows.
                       </p>
                     </div>
                   </td>
@@ -162,7 +159,7 @@ export function WorkflowRuns({
                       }`}
                     >
                       <td
-                        title={`Workflow: ${run.workflow_name || run.run_id} (${run.run_id})`}
+                        title={`Workflow: ${run.workflow_name || "—"} (${run.run_id})`}
                         className="px-5 py-3.5"
                       >
                         <span className="font-bold text-fg">{run.workflow_name || "—"}</span>
@@ -172,13 +169,13 @@ export function WorkflowRuns({
                         <StatusPill status={run.status} />
                       </td>
                       <td
-                        title={`Started: ${started(run.started_at)}`}
+                        title={run.started_at ? `Started at: ${started(run.started_at)}` : "Start time unknown"}
                         className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap"
                       >
                         {started(run.started_at)}
                       </td>
                       <td
-                        title={`Duration: ${duration(run.duration_seconds)}`}
+                        title={`Execution duration: ${duration(run.duration_seconds)}`}
                         className="px-5 py-3.5 text-right text-fg-2"
                       >
                         {duration(run.duration_seconds)}
@@ -241,10 +238,8 @@ export function WorkflowRuns({
                       <StatusPill status={step.status} />
                     </div>
                     <div className="flex items-center gap-4 text-[11px] text-fg-4">
-                      <span title={`Step duration: ${duration(step.duration_seconds)}`}>
-                        {duration(step.duration_seconds)}
-                      </span>
-                      <span title={`Execution attempts: ${step.attempts}`}>
+                      <span>{duration(step.duration_seconds)}</span>
+                      <span>
                         {step.attempts} {step.attempts === 1 ? "attempt" : "attempts"}
                       </span>
                     </div>

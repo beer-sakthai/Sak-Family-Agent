@@ -40,6 +40,15 @@
 
 ## 2026-10-21 - Dedicated visual live previews for workbench preset selections
 **Learning:** In UI workbench showcase components like StitchStudio, preset selections (such as `mermaid-arch` architecture diagrams) should render dedicated visual live preview components in the preview panel rather than falling through to raw code text.
+**Action:** Render styled visual flow diagrams or card previews for diagram and UI presets in workbench preview panels.
+
+## 2026-10-24 - Persistently mounted ARIA polite live region for overlay search filter results
+**Learning:** Overlay search tools (like `ShortcutsOverlay`) benefit from a persistently mounted `<span className="sr-only" role="status" aria-live="polite">` live region that updates its text content with match counts as users type, ensuring screen readers announce dynamic search filter results in real time.
+**Action:** Add a persistently mounted off-screen polite live region updating match count text inside overlay search modals.
+
+## 2026-10-25 - Screen reader live status announcements for overlay search query results
+**Learning:** In overlay search tools (such as CommandPalette and ShortcutsOverlay), adding an off-screen `role="status"` polite live region when a search query is active and matches exist ensures screen reader users receive immediate verbal feedback on matching result counts as they type.
+**Action:** Include a `<span className="sr-only" role="status" aria-live="polite">` element reporting the match count when search queries are active in overlay modal filters.
 **Action:** Render styled visual flow diagrams or card previews for diagram and UI presets in workbench preset panels.
 
 ## 2026-10-24 - Section badge count metrics in tablist aria-label and collapsed hover tooltips
@@ -53,3 +62,7 @@
 ## 2026-10-30 - Real-time match count announcements via off-screen polite live regions
 **Learning:** In overlay search tools like `CommandPalette`, maintaining a persistently mounted off-screen `<span className="sr-only" role="status" aria-live="polite">` live region element that updates its text content (e.g. `5 commands found`) as search queries change ensures screen readers reliably announce real-time match count updates to the user as they type.
 **Action:** Add a persistently mounted `<span className="sr-only" role="status" aria-live="polite">` inside modal search overlays that reflects active result counts when search queries are present.
+
+## 2026-11-02 - Descriptive hover tooltips on non-interactive KPI summary tiles
+**Learning:** Non-interactive KPI summary tiles (such as Success rate or Avg latency) benefit from explicit `title` attributes incorporating label, value, and hint text so desktop mouse users can inspect metric details on hover without adding unnecessary `tabIndex={0}` tab stops to non-interactive elements.
+**Action:** Set `title={`${tile.label}: ${tile.value}${tile.hint ? ` (${tile.hint})` : ""}`}` on non-interactive KPI summary cards.

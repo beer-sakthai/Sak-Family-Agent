@@ -183,7 +183,7 @@ if metadata:
 ### Python Example: Get Full Metadata (Including XML)
 
 ```python
-import requests, base64, xml.etree.ElementTree as ET
+import requests, base64, defusedxml.ElementTree as ET
 
 def get_doi_metadata(doi: str) -> dict:
     """Fetch full DataCite metadata for an HF DOI."""

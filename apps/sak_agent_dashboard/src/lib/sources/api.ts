@@ -39,9 +39,17 @@ export class ApiSource implements DashboardSource {
 
   private async fetchJson<T>(pathname: string, params: Record<string, unknown> = {}): Promise<T> {
     // SSRF and Token Exfiltration protection:
+    // Prevent ASCII control character injection and whitespace padding that
+    // might bypass prefix matching.
+    for (let i = 0; i < pathname.length; i++) {
+      if (pathname.charCodeAt(i) < 32) {
+        throw new Error("Invalid path format: ASCII control characters are blocked");
+      }
+    }
+
     // Prevent protocol-relative URLs, absolute URLs with a scheme, and backslashes
     // that might bypass base URL prefixing.
-    let validationPath = pathname;
+    let validationPath = pathname.trim();
     for (let i = 0; i < 5; i++) {
       try {
         const decoded = decodeURIComponent(validationPath);
@@ -57,7 +65,9 @@ export class ApiSource implements DashboardSource {
       throw new Error("Invalid path format: protocol-relative and absolute paths are blocked");
     }
 
-    const url = new URL(pathname, this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`);
+    // We must use the trimmed/sanitized path for the final request as well,
+    // otherwise the same bypasses (e.g. leading whitespace) might take effect on the real fetch.
+    const url = new URL(pathname.trim(), this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`);
     const validationUrl = new URL(
       validationPath,
       this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`,
