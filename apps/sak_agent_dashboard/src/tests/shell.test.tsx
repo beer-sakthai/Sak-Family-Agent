@@ -109,13 +109,13 @@ describe("Sidebar", () => {
     expect(within(screen.getByRole("tab", { name: "Memory" })).queryByText(/\d/)).toBeNull();
   });
 
-  it("hides labels and counts when collapsed and provides informative title tooltips including metrics", () => {
+  it("hides labels and counts when collapsed and provides informative title tooltips", () => {
     renderSidebar({ collapsed: true, counts: { sessions: 42 } });
     // The accessible name survives via aria-label; the visible text does not.
-    const sessionsTab = screen.getByRole("tab", { name: "Sessions (42)" });
+    const sessionsTab = screen.getByRole("tab", { name: "Sessions" });
     expect(sessionsTab).toBeInTheDocument();
     expect(sessionsTab).toHaveAttribute("type", "button");
-    expect(sessionsTab).toHaveAttribute("title", "Sessions (42)");
+    expect(sessionsTab).toHaveAttribute("title", "Sessions");
     expect(screen.queryByText("42")).not.toBeInTheDocument();
   });
 
@@ -297,9 +297,20 @@ describe("TopBar", () => {
     expect(openPaletteBtns[1]).toHaveAttribute("type", "button");
     expect(copyLinkBtn).toHaveAttribute("type", "button");
     expect(presentBtn).toHaveAttribute("type", "button");
+    expect(presentBtn).toHaveAttribute("title", "Enter presentation mode");
     expect(refreshBtn).toHaveAttribute("type", "button");
     expect(refreshBtn).toHaveAttribute("title", "Refresh dashboard data (R)");
     expect(sampleToggleBtn).toHaveAttribute("type", "button");
+  });
+
+  it("toggles presentation mode title tooltip and keyboard shortcut hint", () => {
+    const { props, rerender } = renderTopBar({ presenting: false });
+    const enterBtn = screen.getByLabelText("Enter presentation mode");
+    expect(enterBtn).toHaveAttribute("title", "Enter presentation mode");
+
+    rerender(<TopBar {...props} presenting={true} />);
+    const exitBtn = screen.getByLabelText("Exit presentation mode");
+    expect(exitBtn).toHaveAttribute("title", "Exit presentation mode (Esc)");
   });
 
   it("updates aria-label and title on copy link button click", async () => {
