@@ -296,9 +296,20 @@ describe("TopBar", () => {
     expect(openPaletteBtns[1]).toHaveAttribute("type", "button");
     expect(copyLinkBtn).toHaveAttribute("type", "button");
     expect(presentBtn).toHaveAttribute("type", "button");
+    expect(presentBtn).toHaveAttribute("title", "Enter presentation mode");
     expect(refreshBtn).toHaveAttribute("type", "button");
     expect(refreshBtn).toHaveAttribute("title", "Refresh dashboard data (R)");
     expect(sampleToggleBtn).toHaveAttribute("type", "button");
+  });
+
+  it("toggles presentation mode title tooltip and keyboard shortcut hint", () => {
+    const { props, rerender } = renderTopBar({ presenting: false });
+    const enterBtn = screen.getByLabelText("Enter presentation mode");
+    expect(enterBtn).toHaveAttribute("title", "Enter presentation mode");
+
+    rerender(<TopBar {...props} presenting={true} />);
+    const exitBtn = screen.getByLabelText("Exit presentation mode");
+    expect(exitBtn).toHaveAttribute("title", "Exit presentation mode (Esc)");
   });
 
   it("updates aria-label and title on copy link button click", async () => {
@@ -342,7 +353,7 @@ describe("TopBar", () => {
       expect(opt).toHaveAttribute("type", "button");
     }
 
-    fireEvent.click(screen.getByLabelText("Filter by persona"));
+    fireEvent.click(screen.getByRole("button", { name: /Filter by persona/i }));
     const personaAllOption = screen.getByRole("menuitem");
     expect(personaAllOption).toHaveAttribute("type", "button");
   });
