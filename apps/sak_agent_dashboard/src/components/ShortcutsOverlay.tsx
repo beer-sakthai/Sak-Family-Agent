@@ -92,6 +92,33 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
+  const q = query.trim().toLowerCase();
+  const filteredGeneral = GENERAL.filter(
+    (s) =>
+      !q ||
+      s.description.toLowerCase().includes(q) ||
+      s.keys.some(
+        (k) =>
+          k.toLowerCase().includes(q) ||
+          (KEY_NAMES[k] && KEY_NAMES[k].toLowerCase().includes(q))
+      )
+  );
+
+  const filteredSections = NAV_ITEMS.map((item, index) => ({
+    id: item.id,
+    shortcut: { keys: [String(index + 1)], description: item.label },
+  })).filter(
+    ({ shortcut }) =>
+      !q ||
+      shortcut.description.toLowerCase().includes(q) ||
+      shortcut.keys.some((k) => k.toLowerCase().includes(q))
+  );
+
+  const totalMatches = filteredGeneral.length + filteredSections.length;
+  const liveStatus = q
+    ? `${totalMatches} shortcut${totalMatches === 1 ? "" : "s"} found`
+    : "";
+
   return (
     <div className="fixed inset-0 z-60 flex items-start justify-center p-4 pt-[10vh]">
       <button
@@ -188,7 +215,7 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
           );
 
           const totalMatches = filteredGeneral.length + filteredSections.length;
-          const liveStatus = q
+          const liveStatus = query.trim()
             ? `${totalMatches} shortcut${totalMatches === 1 ? "" : "s"} found`
             : "";
 
@@ -196,7 +223,7 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
             return (
               <>
                 <span className="sr-only" role="status" aria-live="polite">
-                  0 shortcuts found
+                  {liveStatus}
                 </span>
                 <div
                   role="status"
@@ -225,11 +252,7 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
                 className="sr-only"
                 role="status"
                 aria-live="polite"
-                aria-label={
-                  q !== "" && totalMatches > 0
-                    ? `${totalMatches} shortcut${totalMatches === 1 ? "" : "s"} found`
-                    : undefined
-                }
+                aria-label={liveStatus || undefined}
               >
                 {liveStatus}
               </span>
@@ -263,6 +286,62 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
             </>
           );
         })()}
+        <span
+          className="sr-only"
+          role="status"
+          aria-live="polite"
+          aria-label={liveStatus || undefined}
+        >
+          {liveStatus}
+        </span>
+
+        {totalMatches === 0 ? (
+          <div
+            role="status"
+            aria-label={`No shortcuts match "${query}"`}
+            className="flex flex-col items-center justify-center gap-2 py-8 text-center font-mono text-xs text-fg-4"
+          >
+            <SearchX className="h-5 w-5 text-fg-4/80" aria-hidden="true" />
+            <span>No shortcuts match &quot;{query}&quot;</span>
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              aria-label="Clear search filter and show all shortcuts"
+              title="Clear search filter (Esc)"
+              className="mt-1 rounded-lg border border-line bg-raised px-2.5 py-1 font-sans text-xs text-hue-cyan transition-colors hover:bg-raised/80 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              Clear search filter
+            </button>
+          </div>
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-2">
+            {filteredGeneral.length > 0 && (
+              <section>
+                <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
+                  General
+                </h3>
+                <ul className="divide-y divide-line">
+                  {filteredGeneral.map((shortcut) => (
+                    <Row key={shortcut.description} shortcut={shortcut} />
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {filteredSections.length > 0 && (
+              <section>
+                <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
+                  Sections
+                </h3>
+                <ul className="divide-y divide-line">
+                  {filteredSections.map(({ id, shortcut }) => (
+                    <Row key={id} shortcut={shortcut} />
+                  ))}
+                </ul>
+              </section>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
