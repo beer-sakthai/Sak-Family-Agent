@@ -39,6 +39,7 @@ export class ApiSource implements DashboardSource {
 
   private async fetchJson<T>(pathname: string, params: Record<string, unknown> = {}): Promise<T> {
     // SSRF and Token Exfiltration protection:
+    // Prevent ASCII control characters and whitespace evasion
     // Prevent ASCII control character injection and whitespace padding
     for (let i = 0; i < pathname.length; i++) {
       if (pathname.charCodeAt(i) < 32) {
