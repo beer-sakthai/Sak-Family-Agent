@@ -202,6 +202,8 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
           </kbd>
         </div>
 
+        <span className="sr-only" role="status" aria-live="polite" aria-label={liveStatus}>
+          {liveStatus}
         <span
           className="sr-only"
           role="status"
