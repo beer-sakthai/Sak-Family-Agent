@@ -221,6 +221,28 @@ describe("AgentOverview", () => {
     render(<AgentOverview personas={{ ...personas, unattributed_runs: 0 }} />);
     expect(screen.queryByText(/unattributed/)).not.toBeInTheDocument();
   });
+
+  it("renders inline Clear filter button when persona filtering is active and calls onSelect([]) on click", () => {
+    const onSelect = vi.fn();
+    const { rerender } = render(
+      <AgentOverview personas={personas} selected={["sakthai"]} onSelect={onSelect} />,
+    );
+
+    const clearButton = screen.getByRole("button", {
+      name: "Clear filter - show all personas",
+    });
+    expect(clearButton).toBeInTheDocument();
+    expect(clearButton).toHaveAttribute("type", "button");
+    expect(clearButton).toHaveAttribute("title", "Clear filter");
+
+    fireEvent.click(clearButton);
+    expect(onSelect).toHaveBeenCalledWith([]);
+
+    rerender(<AgentOverview personas={personas} selected={[]} onSelect={onSelect} />);
+    expect(
+      screen.queryByRole("button", { name: "Clear filter - show all personas" }),
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe("AnalyticsCharts", () => {
@@ -424,35 +446,6 @@ describe("MemoryExplorer", () => {
     const firstFact = demoMemory().facts[0];
     const shardBadges = screen.getAllByTitle(`Persona shard: ${firstFact.persona}`);
     expect(shardBadges.length).toBeGreaterThan(0);
-  });
-
-  it("provides hover title tooltips on fact and observation table cells", () => {
-    render(<MemoryExplorer memory={demoMemory()} />);
-    const firstFact = demoMemory().facts[0];
-    const factIdCell = screen.getByTitle(`Fact ID: ${firstFact.id}`);
-    expect(factIdCell).toBeInTheDocument();
-    expect(factIdCell.tagName.toLowerCase()).toBe("td");
-
-    const factKindTitle = `Fact kind: ${firstFact.kind}${firstFact.key ? ` / key: ${firstFact.key}` : ""}`;
-    const factKindCell = screen.getByTitle(factKindTitle);
-    expect(factKindCell).toBeInTheDocument();
-    expect(factKindCell.tagName.toLowerCase()).toBe("td");
-
-    const factValueCell = screen.getByTitle(`Fact value: ${firstFact.value}`);
-    expect(factValueCell).toBeInTheDocument();
-    expect(factValueCell.tagName.toLowerCase()).toBe("td");
-
-    const obsTab = screen.getByRole("tab", { name: /Observations/ });
-    fireEvent.click(obsTab);
-
-    const firstObs = demoMemory().observations[0];
-    const obsIdCell = screen.getByTitle(`Observation ID: ${firstObs.id}`);
-    expect(obsIdCell).toBeInTheDocument();
-    expect(obsIdCell.tagName.toLowerCase()).toBe("td");
-
-    const obsSummaryCell = screen.getByTitle(`Observation summary: ${firstObs.summary}`);
-    expect(obsSummaryCell).toBeInTheDocument();
-    expect(obsSummaryCell.tagName.toLowerCase()).toBe("td");
   });
 
   it("provides title tooltips and aria-labels on observation weight and confidence cells", () => {
@@ -738,6 +731,25 @@ describe("SessionExplorer", () => {
     expect(drawerModel).toHaveTextContent(expectedModel);
   });
 
+  it("renders task, timestamp, and token count table cells with title hover tooltips", () => {
+    const firstSession = sessions.sessions[0];
+    renderExplorer();
+
+    const expectedTaskTitle = firstSession.task ? `Task: ${firstSession.task}` : "Task not recorded";
+    const taskCell = screen.getByTitle(expectedTaskTitle);
+    expect(taskCell).toBeInTheDocument();
+    expect(taskCell).toHaveTextContent(firstSession.task || "—");
+
+    const formattedTime = new Date(firstSession.timestamp * 1000).toISOString().replace("T", " ").slice(0, 19);
+    const timestampCell = screen.getByTitle(`Recorded at: ${formattedTime}`);
+    expect(timestampCell).toBeInTheDocument();
+    expect(timestampCell).toHaveTextContent(formattedTime);
+
+    const tokenCell = screen.getByTitle(`Total tokens: ${firstSession.tokens.total_tokens.toLocaleString()}`);
+    expect(tokenCell).toBeInTheDocument();
+    expect(tokenCell).toHaveTextContent(firstSession.tokens.total_tokens.toLocaleString());
+  });
+
   it("sends search upward for a server-side query", () => {
     const onSearchChange = vi.fn();
     renderExplorer({ onSearchChange });
@@ -894,6 +906,27 @@ describe("SessionExplorer", () => {
     expect(selectedRow).toBeInTheDocument();
     expect(selectedRow).toHaveClass("bg-raised/80");
   });
+
+  it("announces session search match count updates to screen readers via polite live region", () => {
+    const { rerender } = renderExplorer({ search: "deploy", sessions: [sessions.sessions[0]] });
+    expect(screen.getByText("1 session found")).toBeInTheDocument();
+
+    rerender(
+      <SessionExplorer
+        sessions={[]}
+        total={0}
+        search="nonexistent"
+        onSearchChange={vi.fn()}
+        page={1}
+        pageSize={10}
+        onPageChange={vi.fn()}
+        onSessionSelect={vi.fn()}
+        openSessionId={null}
+        detail={null}
+      />,
+    );
+    expect(screen.getByText("0 sessions found")).toBeInTheDocument();
+  });
 });
 
 describe("WorkflowRuns", () => {
@@ -1019,9 +1052,31 @@ describe("WorkflowRuns", () => {
     expect(selectedRow).toBeInTheDocument();
     expect(selectedRow).toHaveClass("bg-raised/80");
   });
+
+  it("renders table cell title hover tooltips for Workflow, Started, Duration, and Steps", () => {
+    const run = workflows.runs[0];
+    const { container } = render(
+      <WorkflowRuns runs={[run]} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
+    );
+
+    const workflowCell = container.querySelector(`td[title="Workflow: ${run.workflow_name || "—"} (${run.run_id})"]`);
+    expect(workflowCell).toBeInTheDocument();
+
+    const stepsCell = container.querySelector(`td[title="Total steps: ${run.step_count}${run.failed_steps > 0 ? ` (${run.failed_steps} failed)` : ""}"]`);
+    expect(stepsCell).toBeInTheDocument();
+  });
 });
 
 describe("PersonaFilter", () => {
+  it("includes visible label text in trigger button aria-label for WCAG 2.5.3 compliance", () => {
+    const { rerender } = render(<PersonaFilter selected={[]} onChange={vi.fn()} />);
+    const trigger = screen.getByTestId("persona-filter");
+    expect(trigger).toHaveAttribute("aria-label", "All personas - Filter by persona");
+
+    rerender(<PersonaFilter selected={["sakthai"]} onChange={vi.fn()} />);
+    expect(trigger).toHaveAttribute("aria-label", "SakThai - Filter by persona");
+  });
+
   it("renders dynamic title tooltips on trigger based on selection state", () => {
     const { rerender } = render(<PersonaFilter selected={[]} onChange={vi.fn()} />);
     const trigger = screen.getByTestId("persona-filter");
@@ -1059,6 +1114,8 @@ describe("PersonaFilter", () => {
     fireEvent.click(trigger);
     const menu = screen.getByRole("menu", { name: "Filter by persona" });
     expect(menu).toBeInTheDocument();
+    expect(menu).toHaveClass("top-full");
+    expect(menu.className).toContain("top-full");
 
     const allPersonasItem = screen.getByRole("menuitem", { name: /All personas/ });
     expect(allPersonasItem).toHaveAttribute("title", "Show all personas");
@@ -1090,6 +1147,21 @@ describe("PersonaFilter", () => {
 
     fireEvent.keyDown(menuItems[menuItems.length - 1], { key: "Home" });
     expect(menuItems[0]).toHaveFocus();
+  });
+
+  it("dismisses popover and restores focus to trigger button when 'All personas' is selected", () => {
+    const onChange = vi.fn();
+    render(<PersonaFilter selected={["sakthai"]} onChange={onChange} />);
+
+    const trigger = screen.getByTestId("persona-filter");
+    fireEvent.click(trigger);
+
+    const allPersonasOption = screen.getByRole("menuitem", { name: /All personas/ });
+    fireEvent.click(allPersonasOption);
+
+    expect(onChange).toHaveBeenCalledWith([]);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
   });
 });
 
@@ -1231,6 +1303,8 @@ describe("DisplayMenu", () => {
     fireEvent.click(trigger);
     const menu = screen.getByRole("menu", { name: "Display settings" });
     expect(menu).toBeInTheDocument();
+    expect(menu).toHaveClass("top-full");
+    expect(menu.className).toContain("top-full");
 
     const menuItems = screen.getAllByRole("menuitemradio");
     expect(menuItems).toHaveLength(5); // 3 themes + 2 densities

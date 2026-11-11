@@ -202,10 +202,21 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
           </kbd>
         </div>
 
-        <span className="sr-only" role="status" aria-live="polite">
-          {query.trim()
-            ? `${results.length} ${results.length === 1 ? "command" : "commands"} found`
-            : ""}
+        <span
+          className="sr-only"
+          role="status"
+          aria-live="polite"
+          aria-label={
+            query.trim() !== "" && results.length > 0
+              ? `${results.length} command${results.length === 1 ? "" : "s"} found`
+              : undefined
+          }
+        >
+          {query.trim() === ""
+            ? `${results.length} commands available.`
+            : results.length === 0
+              ? `No commands match "${query}".`
+              : `${results.length} command${results.length === 1 ? "" : "s"} found.`}
         </span>
 
         <ul
@@ -246,7 +257,7 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
                     {command.group}
                   </li>
                 )}
-                <li>
+                <li role="presentation">
                   <button
                     id={optionId}
                     type="button"
