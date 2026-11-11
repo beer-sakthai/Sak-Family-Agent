@@ -35,6 +35,7 @@ model = TransformersModel(
 
 ## Example agent
 ```python
+import simpleeval  # Requires: pip install simpleeval
 # Requires: pip install simpleeval
 import simpleeval
 
