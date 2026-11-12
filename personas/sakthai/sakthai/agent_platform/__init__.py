@@ -5,6 +5,11 @@ from sakthai.agent_platform.agent_engine import (
     UnifiedAgentConfig,
     UnifiedAgentRuntime,
 )
+from sakthai.agent_platform.antigravity_agent import (
+    AI_STUDIO_KEY_URL,
+    AntigravityAgentRunner,
+    AntigravityRunnerConfig,
+)
 from sakthai.agent_platform.customizations import (
     CustomizationRegistry,
     RuleDocument,
@@ -31,7 +36,10 @@ from sakthai.agent_platform.safety import (
 )
 
 __all__ = [
+    "AI_STUDIO_KEY_URL",
     "AgentEngineMode",
+    "AntigravityAgentRunner",
+    "AntigravityRunnerConfig",
     "CustomizationRegistry",
     "DataLossGuardrail",
     "DependencyConfig",

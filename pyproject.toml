@@ -32,6 +32,10 @@ dev = [
     "bandit[toml]>=1.9.4",
 ]
 
+antigravity = [
+    "google-antigravity>=0.1.23",
+]
+
 # Mutation testing is a local quality gate, not a CI gate (a full run is far too
 # slow for CI). Kept out of `dev` so the CI install stays lean; `make mutation`
 # installs this extra on demand. See [tool.mutmut] below.
@@ -39,7 +43,7 @@ mutation = [
     "mutmut>=3.7.0",
 ]
 
-all = ["sakthai-agent[dev]"]
+all = ["sakthai-agent[dev,antigravity]"]
 
 [project.scripts]
 sakthai = "sakthai.cli:main"
