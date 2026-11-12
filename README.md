@@ -39,6 +39,7 @@ The project is built around the six-stage cycle **Dream → Hope → Care → Jo
 - **MCP** — a dependency-light stdio server plus discovery and namespaced connections to external MCP servers.
 - **Six personas** — SakThai, SakSee, SakJules, SakKing, SakSit, and SakTan, each with its own identity, skills, default model, and memory.
 - **Team and client workflows** — declarative multi-persona pipelines and ServiceQuoteBot client workspace provisioning.
+- **Unified Agent Platform** — core integration subsystems (`sakthai.agent_platform`) for accidental data loss prevention, reactive python dependency manager detection, progressive disclosure customizations, Jules remote task delegation, dual Antigravity/ADK execution engine, and Harness AI agent pipeline spec generation.
 - **Dashboard** — a Next.js frontend backed by the SakThai HTTP API for personas, metrics, sessions, memory, audit data, and workflows.
 - **Security and quality gates** — guardrails for tools and file access, strict typing, linting, secret scanning, CodeQL, Bandit, and automated tests.
 

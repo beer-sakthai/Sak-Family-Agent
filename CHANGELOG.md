@@ -41,6 +41,7 @@ carried forward here.
   decisions for the v1 skills, library corpus, and code modules.
 - Workflows & caveman integration audit (`docs/workflows_caveman_integration_audit.md`).
 - Unified extension discovery across `~/.sakthai/extensions` and `~/.gemini/extensions`.
+- Unified Agent Integration Platform (`sakthai.agent_platform`) — integrated modules for accidental data loss prevention (`safety.py`), reactive Python dependency manager detection (`dep_manager.py`), progressive disclosure customizations (`customizations.py`), Jules remote asynchronous task delegation (`jules_worker.py`), dual Antigravity/ADK execution engine (`agent_engine.py`), and Harness AI agent pipeline spec generator (`harness_exporter.py`) with 30 unit tests achieving 99.3% branch coverage.
 
 ### Removed
 - **Cloud runtime skeleton** — the lazy `sakthai/cloud/` Google ADK / Vertex AI
