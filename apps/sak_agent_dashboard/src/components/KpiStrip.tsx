@@ -52,23 +52,36 @@ interface Tile {
  * screen at once, and a ResponsiveContainer each would cost a measurement pass
  * apiece for a line nobody hovers.
  */
-function Sparkline({ values, className }: { values: number[]; className: string }) {
+function Sparkline({
+  values,
+  className,
+  label,
+}: {
+  values: number[];
+  className: string;
+  label: string;
+}) {
   if (values.length < 2) return null;
   const max = Math.max(...values);
   const min = Math.min(...values);
+  const latest = values[values.length - 1];
   const span = max - min || 1;
   const step = 100 / (values.length - 1);
   const points = values
     .map((value, index) => `${(index * step).toFixed(2)},${(28 - ((value - min) / span) * 24).toFixed(2)}`)
     .join(" ");
 
+  const titleText = `Trend sparkline for ${label} (${values.length} data points: min ${min}, max ${max}, current ${latest})`;
+
   return (
     <svg
       viewBox="0 0 100 28"
       preserveAspectRatio="none"
-      aria-hidden
+      role="img"
+      aria-label={`Trend sparkline for ${label}: min ${min}, max ${max}, latest ${latest}`}
       className={`absolute inset-x-0 bottom-0 h-7 w-full opacity-30 ${className}`}
     >
+      <title>{titleText}</title>
       <polyline points={points} fill="none" stroke="currentColor" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
     </svg>
   );
@@ -94,6 +107,7 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
           title: `Open the ${target} panel`,
         }
       : {
+          "aria-label": `${tile.label}: ${tile.value}${tile.hint ? ` (${tile.hint})` : ""}`,
           title: `${tile.label}: ${tile.value}${tile.hint ? ` (${tile.hint})` : ""}`,
         };
 
@@ -106,7 +120,7 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
         target && onNavigate ? "cursor-pointer hover:border-accent/40" : ""
       }`}
     >
-      {tile.series && <Sparkline values={tile.series} className={tile.accent} />}
+      {tile.series && <Sparkline values={tile.series} className={tile.accent} label={tile.label} />}
       <div className="relative flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-fg-4">
@@ -116,7 +130,9 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
           <p className="mt-1.5 font-display text-2xl font-bold tracking-tight text-fg">
             {tile.value}
           </p>
-          <p className="mt-0.5 truncate font-mono text-[11px] text-fg-4">{tile.hint}</p>
+          <p className="mt-0.5 truncate font-mono text-[11px] text-fg-4" title={tile.hint}>
+            {tile.hint}
+          </p>
         </div>
         {delta && Number.isFinite(delta.value) && delta.value !== 0 && (
           <span
@@ -246,6 +262,9 @@ export function KpiStrip({ metrics, memory, sessions, audit, onNavigate }: KpiSt
       data-testid="kpi-strip"
       className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6"
     >
+      <span className="sr-only" role="status" aria-live="polite">
+        {`KPI summary: ${tiles.map((t) => `${t.label}: ${t.value}`).join(", ")}`}
+      </span>
       {tiles.map((tile) => (
         <TileCard key={tile.label} tile={tile} onNavigate={onNavigate} />
       ))}
