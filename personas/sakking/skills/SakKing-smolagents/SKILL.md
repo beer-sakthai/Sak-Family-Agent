@@ -46,6 +46,7 @@ def get_weather(city: str) -> str:
     return f"Weather in {city}: sunny, 32°C"
 
 
+# Requires: pip install simpleeval
 import simpleeval  # Requires: pip install simpleeval
 @tool
 def calculator(expression: str) -> float:
