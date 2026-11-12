@@ -221,6 +221,28 @@ describe("AgentOverview", () => {
     render(<AgentOverview personas={{ ...personas, unattributed_runs: 0 }} />);
     expect(screen.queryByText(/unattributed/)).not.toBeInTheDocument();
   });
+
+  it("renders inline Clear filter button when persona filtering is active and calls onSelect([]) on click", () => {
+    const onSelect = vi.fn();
+    const { rerender } = render(
+      <AgentOverview personas={personas} selected={["sakthai"]} onSelect={onSelect} />,
+    );
+
+    const clearButton = screen.getByRole("button", {
+      name: "Clear persona filter and show all personas",
+    });
+    expect(clearButton).toBeInTheDocument();
+    expect(clearButton).toHaveAttribute("type", "button");
+    expect(clearButton).toHaveAttribute("title", "Clear filter");
+
+    fireEvent.click(clearButton);
+    expect(onSelect).toHaveBeenCalledWith([]);
+
+    rerender(<AgentOverview personas={personas} selected={[]} onSelect={onSelect} />);
+    expect(
+      screen.queryByRole("button", { name: "Clear persona filter and show all personas" }),
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe("AnalyticsCharts", () => {
@@ -444,6 +466,36 @@ describe("MemoryExplorer", () => {
     expect(confidenceCell).toHaveAttribute("title", `Confidence score: ${confidenceText}`);
   });
 
+  it("renders table cell title hover tooltips for fact ID, kind/key, value, timestamp, observation ID, and summary", () => {
+    const memory = demoMemory();
+    const firstFact = memory.facts[0];
+    const firstObs = memory.observations[0];
+
+    render(<MemoryExplorer memory={memory} />);
+
+    const idCell = screen.getByTitle(`Fact ID: ${firstFact.id}`);
+    expect(idCell).toBeInTheDocument();
+
+    const kindTitle = `Kind: ${firstFact.kind}${firstFact.key ? `, Key: ${firstFact.key}` : ""}`;
+    const kindCell = screen.getByTitle(kindTitle);
+    expect(kindCell).toBeInTheDocument();
+
+    const valueCell = screen.getByTitle(`Fact value: ${firstFact.value}`);
+    expect(valueCell).toBeInTheDocument();
+
+    const updatedCells = screen.getAllByTitle(/^Updated at:/);
+    expect(updatedCells.length).toBeGreaterThan(0);
+
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+    fireEvent.click(obsTab);
+
+    const obsIdCell = screen.getByTitle(`Observation ID: ${firstObs.id}`);
+    expect(obsIdCell).toBeInTheDocument();
+
+    const obsSummaryCell = screen.getByTitle(`Observation summary: ${firstObs.summary}`);
+    expect(obsSummaryCell).toBeInTheDocument();
+  });
+
   it("renders empty state guidance and icons for facts and observations", () => {
     const empty = { ...demoMemory(), facts: [], observations: [] };
     render(<MemoryExplorer memory={empty} />);
@@ -579,6 +631,64 @@ describe("AuditLogs", () => {
 
     fireEvent.click(resetBtn);
     expect(onChange).toHaveBeenCalledWith("ALL");
+  });
+
+  it("renders table cell title hover tooltips and empty state ShieldX visual icon", () => {
+    const audit = demoAudit();
+    const firstEvent = audit.events[0];
+    const { container, rerender } = render(<AuditLogs audit={audit} severity="ALL" onSeverityChange={vi.fn()} />);
+
+    const timestampCell = screen.getByText(
+      new Date(firstEvent.timestamp * 1000).toISOString().replace("T", " ").slice(0, 19)
+    ).closest("td");
+    expect(timestampCell).toHaveAttribute("title", expect.stringContaining("Recorded at:"));
+
+    const typeCell = screen.getByText(firstEvent.type).closest("td");
+    expect(typeCell).toHaveAttribute("title", `Event type: ${firstEvent.type}`);
+
+    const messageCell = screen.getByText(firstEvent.message).closest("td");
+    expect(messageCell).toHaveAttribute("title", `Event message: ${firstEvent.message}`);
+
+    const empty = { events: [], severity_counts: { high: 0 }, total: 0 };
+    rerender(<AuditLogs audit={empty} severity="high" onSeverityChange={vi.fn()} />);
+
+    const emptyIcon = container.querySelector("td svg");
+    expect(emptyIcon).toBeInTheDocument();
+    expect(emptyIcon).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("renders table header cells with descriptive title hover tooltips", () => {
+    render(<AuditLogs audit={demoAudit()} severity="ALL" onSeverityChange={vi.fn()} />);
+
+    expect(screen.getByRole("columnheader", { name: "Timestamp" })).toHaveAttribute(
+      "title",
+      "Event timestamp (UTC)",
+    );
+    expect(screen.getByRole("columnheader", { name: "Severity" })).toHaveAttribute(
+      "title",
+      "Security event severity level",
+    );
+    expect(screen.getByRole("columnheader", { name: "Type" })).toHaveAttribute(
+      "title",
+      "Audit event classification type",
+    );
+    expect(screen.getByRole("columnheader", { name: "Message" })).toHaveAttribute(
+      "title",
+      "Audit log event description",
+    );
+    expect(screen.getByRole("columnheader", { name: "Details" })).toHaveAttribute(
+      "title",
+      "Structured event metadata and attributes",
+      "Event classification type",
+    );
+    expect(screen.getByRole("columnheader", { name: "Message" })).toHaveAttribute(
+      "title",
+      "Security event summary message",
+    );
+    expect(screen.getByRole("columnheader", { name: "Details" })).toHaveAttribute(
+      "title",
+      "Additional event key-value parameters",
+    );
   });
 });
 
@@ -834,6 +944,27 @@ describe("SessionExplorer", () => {
     expect(selectedRow).toBeInTheDocument();
     expect(selectedRow).toHaveClass("bg-raised/80");
   });
+
+  it("announces session search match count updates to screen readers via polite live region", () => {
+    const { rerender } = renderExplorer({ search: "deploy", sessions: [sessions.sessions[0]] });
+    expect(screen.getByText("1 session found")).toBeInTheDocument();
+
+    rerender(
+      <SessionExplorer
+        sessions={[]}
+        total={0}
+        search="nonexistent"
+        onSearchChange={vi.fn()}
+        page={1}
+        pageSize={10}
+        onPageChange={vi.fn()}
+        onSessionSelect={vi.fn()}
+        openSessionId={null}
+        detail={null}
+      />,
+    );
+    expect(screen.getByText("0 sessions found")).toBeInTheDocument();
+  });
 });
 
 describe("WorkflowRuns", () => {
@@ -911,6 +1042,41 @@ describe("WorkflowRuns", () => {
     expect(screen.getByText("3 attempts")).toBeInTheDocument();
   });
 
+  it("renders step metrics with hover tooltips and step error in an accessible alert container", () => {
+    const detail = {
+      summary: workflows.runs[0],
+      steps: [
+        {
+          step_id: "fetch",
+          status: "failed",
+          attempts: 3,
+          error: "API timeout",
+          started_at: null,
+          finished_at: null,
+          duration_seconds: 4.5,
+        },
+      ],
+    };
+    render(
+      <WorkflowRuns
+        runs={workflows.runs}
+        onRunSelect={vi.fn()}
+        openRunId={workflows.runs[0].run_id}
+        detail={detail}
+      />,
+    );
+    const durationSpan = screen.getByText("4.5s");
+    expect(durationSpan).toHaveAttribute("title", "Step duration: 4.5s");
+
+    const attemptsSpan = screen.getByText("3 attempts");
+    expect(attemptsSpan).toHaveAttribute("title", "Execution attempts: 3 (3 attempts)");
+
+    const errorAlert = screen.getByRole("alert", { name: "Step execution error" });
+    expect(errorAlert).toBeInTheDocument();
+    expect(errorAlert).toHaveAttribute("title", "Step error: API timeout");
+    expect(errorAlert).toHaveTextContent("API timeout");
+  });
+
   it("renders an empty state with contextual icon and message", () => {
     const { container } = render(
       <WorkflowRuns runs={[]} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
@@ -977,13 +1143,15 @@ describe("WorkflowRuns", () => {
 });
 
 describe("PersonaFilter", () => {
-  it("renders dynamic title tooltips on trigger based on selection state", () => {
+  it("renders dynamic title tooltips and WCAG 2.5.3 compliant aria-label on trigger based on selection state", () => {
     const { rerender } = render(<PersonaFilter selected={[]} onChange={vi.fn()} />);
     const trigger = screen.getByTestId("persona-filter");
     expect(trigger).toHaveAttribute("title", "Filter dashboard by persona");
+    expect(trigger).toHaveAttribute("aria-label", "All personas - Filter by persona");
 
     rerender(<PersonaFilter selected={["sakthai"]} onChange={vi.fn()} />);
     expect(trigger).toHaveAttribute("title", "Filter by persona (Selected: SakThai)");
+    expect(trigger).toHaveAttribute("aria-label", "SakThai - Filter by persona");
   });
 
   it("renders trigger and clear filter controls as separate non-nested buttons when filter is active", () => {
@@ -1014,6 +1182,7 @@ describe("PersonaFilter", () => {
     fireEvent.click(trigger);
     const menu = screen.getByRole("menu", { name: "Filter by persona" });
     expect(menu).toBeInTheDocument();
+    expect(menu).toHaveClass("top-full");
 
     const allPersonasItem = screen.getByRole("menuitem", { name: /All personas/ });
     expect(allPersonasItem).toHaveAttribute("title", "Show all personas");
@@ -1052,14 +1221,14 @@ describe("StitchStudio", () => {
   it("renders preset buttons and view tab buttons with explicit title tooltip attributes", () => {
     render(<StitchStudio />);
     const activePresetButton = screen.getByRole("button", {
-      name: "Active preset: SakThai Interactive Agent Drawer",
+      name: "SakThai Interactive Agent Drawer - active preset",
     });
-    expect(activePresetButton).toHaveAttribute("title", "Active preset: SakThai Interactive Agent Drawer");
+    expect(activePresetButton).toHaveAttribute("title", "SakThai Interactive Agent Drawer (active preset)");
 
     const inactivePresetButton = screen.getByRole("button", {
-      name: "Select preset Multi-Agent System Architecture",
+      name: "Multi-Agent System Architecture - select preset",
     });
-    expect(inactivePresetButton).toHaveAttribute("title", "Select preset Multi-Agent System Architecture");
+    expect(inactivePresetButton).toHaveAttribute("title", "Select Multi-Agent System Architecture");
 
     const previewTab = screen.getByRole("tab", { name: /Live Preview/ });
     const codeTab = screen.getByRole("tab", { name: /TSX Code/ });
@@ -1085,12 +1254,28 @@ describe("StitchStudio", () => {
   it("renders matching Security Audit Event Pill live preview when security-badge preset is selected", () => {
     render(<StitchStudio />);
     const securityPresetButton = screen.getByRole("button", {
-      name: "Select preset Security Audit Event Pill",
+      name: "Security Audit Event Pill - select preset",
     });
     fireEvent.click(securityPresetButton);
 
     expect(screen.getByText("Unauthorized API Access Blocked")).toBeInTheDocument();
     expect(screen.getByText("HIGH")).toBeInTheDocument();
+  });
+
+  it("renders matching Multi-Agent System Architecture flow diagram live preview when mermaid-arch preset is selected", () => {
+    render(<StitchStudio />);
+    const mermaidPresetButton = screen.getByRole("button", {
+      name: "Multi-Agent System Architecture - select preset",
+    });
+    fireEvent.click(mermaidPresetButton);
+
+    expect(screen.getAllByText("Multi-Agent System Architecture")).toHaveLength(2);
+    expect(screen.getByText("Live Flow Diagram")).toBeInTheDocument();
+    expect(screen.getByText("SakThai (Primary Orchestrator)")).toBeInTheDocument();
+    expect(screen.getByText("SakKing")).toBeInTheDocument();
+    expect(screen.getByText("SakSee")).toBeInTheDocument();
+    expect(screen.getByText("SakSit")).toBeInTheDocument();
+    expect(screen.getByText("SakJules")).toBeInTheDocument();
   });
 
   it("uses roving tabIndex for active and inactive tabs", () => {
@@ -1170,6 +1355,7 @@ describe("DisplayMenu", () => {
     fireEvent.click(trigger);
     const menu = screen.getByRole("menu", { name: "Display settings" });
     expect(menu).toBeInTheDocument();
+    expect(menu).toHaveClass("top-full");
 
     const menuItems = screen.getAllByRole("menuitemradio");
     expect(menuItems).toHaveLength(5); // 3 themes + 2 densities

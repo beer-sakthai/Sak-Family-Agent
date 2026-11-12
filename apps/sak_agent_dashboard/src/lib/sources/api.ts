@@ -41,6 +41,36 @@ export class ApiSource implements DashboardSource {
     // Prevent double/multi-layered URL encoded relative path traversal bypasses
     // Evaluate the path for safety by fully decoding it, without mutating the original path.
     let validationPathname = pathname;
+    // SSRF and Token Exfiltration protection:
+    // Prevent ASCII control characters and whitespace evasion
+    // Prevent ASCII control character injection and whitespace padding
+    for (let i = 0; i < pathname.length; i++) {
+      if (pathname.charCodeAt(i) < 32) {
+        throw new Error("Invalid path format: ASCII control characters are blocked");
+      }
+    }
+    pathname = pathname.trim();
+
+    // Prevent protocol-relative URLs, absolute URLs with a scheme, and backslashes
+    // that might bypass base URL prefixing.
+
+    // Prevent ASCII control character injection which could bypass string-matching checks
+    for (let i = 0; i < pathname.length; i++) {
+      if (pathname.charCodeAt(i) < 32) {
+        throw new Error(`ASCII control characters detected in URL`);
+      }
+    }
+
+    pathname = pathname.trim();
+
+    let validationPath = pathname;
+    for (let i = 0; i < pathname.length; i++) {
+      if (pathname.charCodeAt(i) < 32) {
+        throw new Error("Invalid path format: ASCII control characters are blocked");
+      }
+    }
+
+    let validationPath = pathname.trim();
     for (let i = 0; i < 5; i++) {
       try {
         const decoded = decodeURIComponent(validationPathname);
