@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { RotateCcw } from "lucide-react";
 
 import type { PersonasPayload, TrendPoint } from "@/lib/contracts.generated";
 import ActivityHeatmap from "./ActivityHeatmap";
@@ -77,7 +78,6 @@ export function AgentOverview({
             <button
               type="button"
               onClick={() => onSelect([])}
-              aria-label="Clear persona filter and show all personas"
               aria-label="Clear filter - show all personas"
               aria-label="Clear persona filter and show all personas"
               title="Clear filter"
