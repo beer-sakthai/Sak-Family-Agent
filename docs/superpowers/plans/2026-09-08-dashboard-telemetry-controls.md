@@ -72,7 +72,7 @@ def test_new_contract_types_exist():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_web_contracts.py -v`  
+Run: `uv run pytest tests/test_web_contracts.py -v`
 Expected: FAIL with `ImportError: cannot import name 'ChargeReport'`
 
 - [ ] **Step 3: Implement contract definitions in `contracts.py` and update generator**
@@ -86,8 +86,8 @@ Run: `python3 scripts/gen_dashboard_types.py`
 
 - [ ] **Step 4: Run test to verify it passes and check generator**
 
-Run: `uv run pytest tests/test_web_contracts.py -v`  
-Run: `python3 scripts/gen_dashboard_types.py --check`  
+Run: `uv run pytest tests/test_web_contracts.py -v`
+Run: `python3 scripts/gen_dashboard_types.py --check`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -145,7 +145,7 @@ def test_build_and_record_charge(tmp_path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_web_api.py -k "test_build_cycle_payload_and_advance or test_build_and_record_charge" -v`  
+Run: `uv run pytest tests/test_web_api.py -k "test_build_cycle_payload_and_advance or test_build_and_record_charge" -v`
 Expected: FAIL with `ImportError: cannot import name 'build_cycle_payload'`
 
 - [ ] **Step 3: Implement builders in `web/api.py`**
@@ -159,7 +159,7 @@ In `personas/sakthai/sakthai/web/api.py`:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_web_api.py -v`  
+Run: `uv run pytest tests/test_web_api.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -207,7 +207,7 @@ def test_post_endpoints_succeed_with_auth(client, auth_headers):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_web_server.py -k "test_post_endpoints_require_auth" -v`  
+Run: `uv run pytest tests/test_web_server.py -k "test_post_endpoints_require_auth" -v`
 Expected: FAIL with 404 Not Found
 
 - [ ] **Step 3: Implement routes and Bearer auth checks in `web/server.py`**
@@ -220,7 +220,7 @@ In `personas/sakthai/sakthai/web/server.py`:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_web_server.py -v`  
+Run: `uv run pytest tests/test_web_server.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -282,7 +282,7 @@ describe("DemoSource live telemetry methods", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd apps/sak_agent_dashboard && npx vitest run src/lib/source.test.ts`  
+Run: `cd apps/sak_agent_dashboard && npx vitest run src/lib/source.test.ts`
 Expected: FAIL with TypeScript/Runtime error on `getCycle`
 
 - [ ] **Step 3: Implement methods on `DashboardSource`, `ApiSource`, `DemoSource`, and Next.js route handlers**
@@ -292,7 +292,7 @@ Create route handlers under `src/app/api/cycle/route.ts`, `src/app/api/charge/ro
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd apps/sak_agent_dashboard && npx vitest run src/lib/source.test.ts`  
+Run: `cd apps/sak_agent_dashboard && npx vitest run src/lib/source.test.ts`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -349,7 +349,7 @@ describe("CycleControlStrip", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd apps/sak_agent_dashboard && npx vitest run src/components/CycleControlStrip.test.tsx`  
+Run: `cd apps/sak_agent_dashboard && npx vitest run src/components/CycleControlStrip.test.tsx`
 Expected: FAIL (component doesn't exist)
 
 - [ ] **Step 3: Implement `CycleControlStrip.tsx` and integrate into `AgentOverview.tsx` and `AgentCard.tsx`**
@@ -363,7 +363,7 @@ Update `AgentCard.tsx` to render the Hermes Charge meter and badge using token c
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cd apps/sak_agent_dashboard && npx vitest run`  
+Run: `cd apps/sak_agent_dashboard && npx vitest run`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -406,7 +406,7 @@ describe("WorkflowRunnerModal", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd apps/sak_agent_dashboard && npx vitest run src/components/WorkflowRunnerModal.test.tsx`  
+Run: `cd apps/sak_agent_dashboard && npx vitest run src/components/WorkflowRunnerModal.test.tsx`
 Expected: FAIL
 
 - [ ] **Step 3: Implement `WorkflowRunnerModal.tsx` and `AgentIntercomModal.tsx`**
@@ -415,7 +415,7 @@ Implement the modals with status indicators, latency measuring, and connect to `
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cd apps/sak_agent_dashboard && npx vitest run`  
+Run: `cd apps/sak_agent_dashboard && npx vitest run`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -433,30 +433,30 @@ git commit -m "feat(dashboard/ui): add WorkflowRunnerModal and AgentIntercomModa
 
 - [ ] **Step 1: Verify TypeScript contract synchronization**
 
-Run: `python3 scripts/gen_dashboard_types.py --check`  
+Run: `python3 scripts/gen_dashboard_types.py --check`
 Expected: clean exit 0
 
 - [ ] **Step 2: Run Ruff lint and formatting check**
 
-Run: `uv run ruff check personas/sakthai/sakthai tests && uv run ruff format --check personas/sakthai/sakthai tests`  
+Run: `uv run ruff check personas/sakthai/sakthai tests && uv run ruff format --check personas/sakthai/sakthai tests`
 Expected: All checks passed!
 
 - [ ] **Step 3: Run Mypy strict type checking**
 
-Run: `uv run mypy personas/sakthai/sakthai`  
+Run: `uv run mypy personas/sakthai/sakthai`
 Expected: Success: no issues found
 
 - [ ] **Step 4: Run Bandit security scanner**
 
-Run: `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai`  
+Run: `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai`
 Expected: No issues identified
 
 - [ ] **Step 5: Run full Pytest suite with coverage check**
 
-Run: `uv run pytest --cov=sakthai --cov-fail-under=96 tests/`  
+Run: `uv run pytest --cov=sakthai --cov-fail-under=96 tests/`
 Expected: >= 96% coverage, all tests passing
 
 - [ ] **Step 6: Run Next.js dashboard tests, linting, and typecheck**
 
-Run: `cd apps/sak_agent_dashboard && npm run lint && npx tsc --noEmit && npm test`  
+Run: `cd apps/sak_agent_dashboard && npm run lint && npx tsc --noEmit && npm test`
 Expected: 0 errors, all tests pass
