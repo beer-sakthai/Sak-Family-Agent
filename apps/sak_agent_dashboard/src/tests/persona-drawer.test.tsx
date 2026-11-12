@@ -91,16 +91,51 @@ describe("PersonaDrawer", () => {
   it("reports the filter toggle upward instead of filtering itself", () => {
     const onToggleFilter = vi.fn();
     renderDrawer(busiest, { onToggleFilter });
-    fireEvent.click(screen.getByRole("button", { name: "Filter to this persona" }));
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(`^Filter to this persona`) }));
     expect(onToggleFilter).toHaveBeenCalledTimes(1);
   });
 
-  it("marks the toggle pressed when the persona is already in the filter", () => {
-    renderDrawer(busiest, { filtered: true });
-    expect(screen.getByRole("button", { name: "In the filter" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
+  it("marks the toggle pressed and provides WCAG 2.5.3 compliant aria-label when persona is already in filter", () => {
+    const { rerender } = renderDrawer(busiest, { filtered: true });
+    const inFilterBtn = screen.getByRole("button", { name: new RegExp(`^In the filter`) });
+    expect(inFilterBtn).toHaveAttribute("aria-pressed", "true");
+    expect(inFilterBtn).toHaveAttribute(
+      "aria-label",
+      `In the filter - clear filter for ${busiest.display_name}`,
     );
+
+    rerender(
+      <PersonaDrawer
+        persona={busiest}
+        family={family}
+        filtered={false}
+        onToggleFilter={vi.fn()}
+        onNavigate={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    const filterBtn = screen.getByRole("button", { name: new RegExp(`^Filter to this persona`) });
+    expect(filterBtn).toHaveAttribute("aria-pressed", "false");
+    expect(filterBtn).toHaveAttribute(
+      "aria-label",
+      `Filter to this persona - filter dashboard to ${busiest.display_name}`,
+    );
+  });
+
+  it("provides informative title hover tooltips on summary metric tiles", () => {
+    renderDrawer(busiest);
+    const providerTile = screen.getByTitle(`Model provider: ${busiest.provider || "unset"}`);
+    expect(providerTile).toBeInTheDocument();
+
+    const modelTile = screen.getByTitle(`Configured model: ${busiest.model || "unset"}`);
+    expect(modelTile).toBeInTheDocument();
+
+    const latencyTile = screen.getByTitle(new RegExp(`^Average latency:`));
+    expect(latencyTile).toBeInTheDocument();
+
+    const rate = ((busiest.runs - busiest.errors) / busiest.runs) * 100;
+    const successTile = screen.getByTitle(`Success rate: ${rate.toFixed(1)}%`);
+    expect(successTile).toBeInTheDocument();
   });
 
   it("provides informative title tooltips on share metric rows", () => {
@@ -111,6 +146,24 @@ describe("PersonaDrawer", () => {
       "title",
       `Runs: ${busiest.runs.toLocaleString()} (${expectedRuns}% of family total)`,
     );
+  });
+
+  it("provides descriptive title hover tooltips and accessible region label on summary metric tiles", () => {
+    renderDrawer(busiest);
+    expect(screen.getByRole("region", { name: "Persona summary metrics" })).toBeInTheDocument();
+
+    const providerTile = screen.getByText("Provider").closest("div[title]");
+    expect(providerTile).toHaveAttribute("title", `Provider: ${busiest.provider || "unset"}`);
+
+    const modelTile = screen.getByText("Model").closest("div[title]");
+    expect(modelTile).toHaveAttribute("title", `Configured model: ${busiest.model || "unset"}`);
+
+    const latencyTile = screen.getByText("Avg latency").closest("div[title]");
+    expect(latencyTile).toHaveAttribute("title", `Average latency: ${busiest.avg_latency_ms.toFixed(0)}ms`);
+
+    const successRate = ((busiest.runs - busiest.errors) / busiest.runs) * 100;
+    const successTile = screen.getByText("Success rate").closest("div[title]");
+    expect(successTile).toHaveAttribute("title", `Success rate: ${successRate.toFixed(1)}%`);
   });
 
   it("renders progressbars with proper ARIA accessibility attributes", () => {
