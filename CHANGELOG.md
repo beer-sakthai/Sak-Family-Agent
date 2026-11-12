@@ -42,7 +42,8 @@ carried forward here.
 - Workflows & caveman integration audit (`docs/workflows_caveman_integration_audit.md`).
 - Unified extension discovery across `~/.sakthai/extensions` and `~/.gemini/extensions`.
 - Unified Agent Integration Platform (`sakthai.agent_platform`) — integrated modules for accidental data loss prevention (`safety.py`) with HMAC approval bypass, reactive Python dependency manager detection (`dep_manager.py`), progressive disclosure customizations (`customizations.py`), Jules remote asynchronous task delegation (`jules_worker.py`), dual Antigravity/ADK execution engine (`agent_engine.py`), and Harness AI agent pipeline spec generator (`harness_exporter.py`).
-- Added `sakthai platform` CLI group (`detect-deps`, `check-safety`, `skills`, `export-harness`), expanded dangerous command detection (`git reset --hard`, `git clean -f`, `mkfs`, `dd`, `terraform destroy`, `kubectl delete ns/all`), tracked `GEMINI.md`, and updated architecture & capabilities documentation with 39 unit tests achieving 99.5% coverage.
+- Added `sakthai platform` CLI group (`detect-deps`, `check-safety`, `skills`, `export-harness`, `antigravity`), expanded dangerous command detection (`git reset --hard`, `git clean -f`, `mkfs`, `dd`, `terraform destroy`, `kubectl delete ns/all`), tracked `GEMINI.md`, and updated architecture & capabilities documentation with 39 unit tests achieving 99.5% coverage.
+- Integrated Google Antigravity SDK (`google-antigravity>=0.1.23`) optional dependency and lockfile (`uv.lock`), with standalone agent runner `AntigravityAgentRunner` (`antigravity_agent.py`), standalone runner script `scripts/antigravity_agent.py`, `sakthai platform antigravity` CLI command, dynamic backend selection (Gemini hosted, LiteRT on-device, and local Ollama), and 49 unit tests achieving 99.6% coverage.
 
 ### Removed
 - **Cloud runtime skeleton** — the lazy `sakthai/cloud/` Google ADK / Vertex AI

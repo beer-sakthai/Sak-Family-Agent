@@ -148,6 +148,7 @@ sakthai memory family --tag deputy-chain                   # notes from every pe
 sakthai mcp
 sakthai platform detect-deps                               # inspect workspace package manager
 sakthai platform check-safety "git reset --hard HEAD~1"    # verify command data loss safety
+sakthai platform antigravity "Inspect repo status"         # launch autonomous Antigravity agent
 ```
 
 Use `sakthai run --help` for provider, model, streaming, sandbox, skill, and persona options. The default data directory is `~/.sakthai`; set `SAKTHAI_HOME` to use another location.

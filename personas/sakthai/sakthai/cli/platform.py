@@ -7,6 +7,11 @@ from pathlib import Path
 
 import click
 
+from ..agent_platform.antigravity_agent import (
+    AI_STUDIO_KEY_URL,
+    AntigravityAgentRunner,
+    AntigravityRunnerConfig,
+)
 from ..agent_platform.customizations import CustomizationRegistry
 from ..agent_platform.dep_manager import detect_dependency_manager
 from ..agent_platform.harness_exporter import export_harness_agent_spec, generate_harness_uid
@@ -161,3 +166,59 @@ def export_harness(
         click.echo(f"✓ Harness agent spec written to {output_file} (UID: {uid})")
     else:
         click.echo(yaml_content)
+
+
+@platform_cmd.command("antigravity")
+@click.argument("prompt", type=str)
+@click.option(
+    "--backend",
+    "-b",
+    type=click.Choice(["hosted", "openai", "litert"]),
+    default="hosted",
+    help="Backend execution engine.",
+)
+@click.option("--model", "-m", default="gemini-2.5-flash", help="Model identifier.")
+@click.option("--base-url", default=None, help="Base URL for local OpenAI/Ollama server.")
+@click.option("--model-path", default=None, help="Filesystem path to local LiteRT model weights.")
+@click.option("--api-key", default=None, help="Explicit Gemini API key.")
+def run_antigravity_cmd(
+    prompt: str,
+    backend: str,
+    model: str,
+    base_url: str | None,
+    model_path: str | None,
+    api_key: str | None,
+) -> None:
+    """Run an autonomous Google Antigravity Agent with safety guardrails."""
+    import asyncio
+    import os
+    import sys
+
+    resolved_key = api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    if backend == "hosted" and not resolved_key:
+        click.echo("\n⚠️  [Authentication Required]")
+        click.echo("To run with hosted Gemini models, set GEMINI_API_KEY,")
+        click.echo(f"or create an API key at Google AI Studio: {AI_STUDIO_KEY_URL}")
+        click.echo("Alternatively, pass '--backend openai' to connect to local Ollama.\n")
+        sys.exit(1)
+
+    runner_cfg = AntigravityRunnerConfig(
+        backend=backend,
+        model=model,
+        api_key=resolved_key,
+        base_url=base_url,
+        model_path=model_path,
+    )
+    runner = AntigravityAgentRunner(config=runner_cfg)
+    click.echo(f"🚀 Initializing Antigravity Agent [{backend.upper()}: {model}]...")
+
+    async def _execute() -> None:
+        async for token in runner.stream_chat(prompt):
+            click.echo(token, nl=False)
+        click.echo()
+
+    try:
+        asyncio.run(_execute())
+    except Exception as exc:
+        click.echo(f"❌ Execution failed: {exc}", err=True)
+        sys.exit(1)
