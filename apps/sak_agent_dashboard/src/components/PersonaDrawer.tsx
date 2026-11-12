@@ -151,6 +151,8 @@ export function PersonaDrawer({
         <section className="grid grid-cols-2 gap-2 font-mono text-xs">
           <div
             className="rounded-xl border border-line/80 bg-sunken/60 p-3"
+            title={persona.provider ? `Model provider: ${persona.provider}` : "Provider unset"}
+            aria-label={persona.provider ? `Provider: ${persona.provider}` : "Provider unset"}
             title={`Model provider: ${persona.provider || "unset"}`}
         <section className="grid grid-cols-2 gap-2 font-mono text-xs" aria-label="Persona summary metrics">
           <div
@@ -164,6 +166,8 @@ export function PersonaDrawer({
           </div>
           <div
             className="rounded-xl border border-line/80 bg-sunken/60 p-3"
+            title={persona.model ? `Configured model: ${persona.model}` : "Model unset"}
+            aria-label={persona.model ? `Model: ${persona.model}` : "Model unset"}
             title={`Configured model: ${persona.model || "unset"}`}
           >
             <span className="mb-1 block text-[10px] uppercase tracking-wider text-fg-4">Model</span>
@@ -173,6 +177,16 @@ export function PersonaDrawer({
           </div>
           <div
             className="rounded-xl border border-line/80 bg-sunken/60 p-3"
+            title={
+              persona.runs > 0
+                ? `Average execution latency: ${Math.round(persona.avg_latency_ms)}ms across ${persona.runs} ${persona.runs === 1 ? "run" : "runs"}`
+                : "No recorded runs"
+            }
+            aria-label={
+              persona.runs > 0
+                ? `Average latency: ${Math.round(persona.avg_latency_ms)}ms across ${persona.runs} ${persona.runs === 1 ? "run" : "runs"}`
+                : "No recorded runs"
+            }
             title={`Average latency: ${persona.runs > 0 ? duration(persona.avg_latency_ms) : "no runs yet"}`}
             title={`Average latency: ${persona.runs > 0 ? duration(persona.avg_latency_ms) : "no recorded runs"}`}
           >
@@ -185,6 +199,16 @@ export function PersonaDrawer({
           </div>
           <div
             className="rounded-xl border border-line/80 bg-sunken/60 p-3"
+            title={
+              successRate === null
+                ? "No runs recorded yet"
+                : `${(persona.runs - persona.errors).toLocaleString()} of ${persona.runs.toLocaleString()} runs successful (${persona.errors} ${persona.errors === 1 ? "error" : "errors"})`
+            }
+            aria-label={
+              successRate === null
+                ? "No runs recorded yet"
+                : `${successRate.toFixed(1)}% success rate`
+            }
             title={`Success rate: ${successRate === null ? "no runs recorded yet" : `${successRate.toFixed(1)}%`}`}
           >
             <span className="mb-1 block text-[10px] uppercase tracking-wider text-fg-4">
