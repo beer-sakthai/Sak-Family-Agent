@@ -148,6 +148,19 @@ export function PersonaDrawer({
       data-testid="persona-drawer"
     >
       <div className="space-y-6">
+        <section
+          aria-label="Persona summary metrics"
+          className="grid grid-cols-2 gap-2 font-mono text-xs"
+        >
+          <div
+            title={`Provider: ${persona.provider || "unset"}`}
+            className="rounded-xl border border-line/80 bg-sunken/60 p-3"
+        <section className="grid grid-cols-2 gap-2 font-mono text-xs">
+          <div
+            className="rounded-xl border border-line/80 bg-sunken/60 p-3"
+            title={persona.provider ? `Model provider: ${persona.provider}` : "Provider unset"}
+            aria-label={persona.provider ? `Provider: ${persona.provider}` : "Provider unset"}
+            title={`Model provider: ${persona.provider || "unset"}`}
         <section className="grid grid-cols-2 gap-2 font-mono text-xs" aria-label="Persona summary metrics">
           <div
             className="rounded-xl border border-line/80 bg-sunken/60 p-3"
@@ -159,7 +172,11 @@ export function PersonaDrawer({
             <span className="block truncate text-fg-2">{persona.provider || "unset"}</span>
           </div>
           <div
+            title={`Configured model: ${persona.model || "unset"}`}
             className="rounded-xl border border-line/80 bg-sunken/60 p-3"
+            className="rounded-xl border border-line/80 bg-sunken/60 p-3"
+            title={persona.model ? `Configured model: ${persona.model}` : "Model unset"}
+            aria-label={persona.model ? `Model: ${persona.model}` : "Model unset"}
             title={`Configured model: ${persona.model || "unset"}`}
           >
             <span className="mb-1 block text-[10px] uppercase tracking-wider text-fg-4">Model</span>
@@ -168,7 +185,24 @@ export function PersonaDrawer({
             </span>
           </div>
           <div
+            title={
+              persona.runs > 0
+                ? `Average latency: ${duration(persona.avg_latency_ms)}`
+                : "Average latency: no runs recorded"
+            }
             className="rounded-xl border border-line/80 bg-sunken/60 p-3"
+            className="rounded-xl border border-line/80 bg-sunken/60 p-3"
+            title={
+              persona.runs > 0
+                ? `Average execution latency: ${Math.round(persona.avg_latency_ms)}ms across ${persona.runs} ${persona.runs === 1 ? "run" : "runs"}`
+                : "No recorded runs"
+            }
+            aria-label={
+              persona.runs > 0
+                ? `Average latency: ${Math.round(persona.avg_latency_ms)}ms across ${persona.runs} ${persona.runs === 1 ? "run" : "runs"}`
+                : "No recorded runs"
+            }
+            title={`Average latency: ${persona.runs > 0 ? duration(persona.avg_latency_ms) : "no runs yet"}`}
             title={`Average latency: ${persona.runs > 0 ? duration(persona.avg_latency_ms) : "no recorded runs"}`}
           >
             <span className="mb-1 block text-[10px] uppercase tracking-wider text-fg-4">
@@ -179,7 +213,23 @@ export function PersonaDrawer({
             </span>
           </div>
           <div
+            title={
+              successRate === null
+                ? "Success rate: no runs recorded"
+                : `Success rate: ${successRate.toFixed(1)}%`
+            }
             className="rounded-xl border border-line/80 bg-sunken/60 p-3"
+            className="rounded-xl border border-line/80 bg-sunken/60 p-3"
+            title={
+              successRate === null
+                ? "No runs recorded yet"
+                : `${(persona.runs - persona.errors).toLocaleString()} of ${persona.runs.toLocaleString()} runs successful (${persona.errors} ${persona.errors === 1 ? "error" : "errors"})`
+            }
+            aria-label={
+              successRate === null
+                ? "No runs recorded yet"
+                : `${successRate.toFixed(1)}% success rate`
+            }
             title={`Success rate: ${successRate === null ? "no runs recorded yet" : `${successRate.toFixed(1)}%`}`}
           >
             <span className="mb-1 block text-[10px] uppercase tracking-wider text-fg-4">
@@ -259,6 +309,11 @@ export function PersonaDrawer({
             type="button"
             onClick={onToggleFilter}
             aria-pressed={filtered}
+            aria-label={
+              filtered
+                ? `In the filter - clear filter for ${persona.display_name}`
+                : `Filter to this persona - filter dashboard to ${persona.display_name}`
+            }
             title={filtered ? `Clear filter for ${persona.display_name}` : `Filter dashboard to ${persona.display_name}`}
             className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 font-mono text-xs transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
               filtered

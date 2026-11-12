@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Search, SearchX, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 
 import { useFocusTrap } from "@/lib/focus";
 import { NAV_ITEMS } from "@/lib/nav";
@@ -243,6 +243,25 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
               shortcut.keys.some((k) => k.toLowerCase().includes(q))
           );
 
+          if (filteredGeneral.length === 0 && filteredSections.length === 0) {
+            return (
+              <div
+                role="status"
+                aria-label={`No shortcuts match "${query}"`}
+                className="flex flex-col items-center justify-center gap-2 py-8 text-center font-mono text-xs text-fg-4"
+              >
+                <span>No shortcuts match &quot;{query}&quot;</span>
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label="Clear search filter and show all shortcuts"
+                  title="Clear search filter (Esc)"
+                  className="mt-1 rounded-lg border border-line bg-raised px-2.5 py-1 font-sans text-xs text-fg-3 transition-colors hover:bg-raised/80 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  Clear search filter
+                  aria-label="Clear shortcut search filter and show all shortcuts"
+                  title="Clear search (Esc)"
+                  className="mt-1 rounded-lg border border-line bg-raised px-2.5 py-1 font-sans text-xs text-fg-3 transition-colors hover:bg-raised/80 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           const totalMatches = filteredGeneral.length + filteredSections.length;
           const liveStatus = q
             ? `${totalMatches} shortcut${totalMatches === 1 ? "" : "s"} found`
@@ -259,23 +278,40 @@ export function ShortcutsOverlay({ onClose }: ShortcutsOverlayProps) {
                   aria-label={`No shortcuts match "${query}"`}
                   className="flex flex-col items-center justify-center gap-2 py-8 text-center font-mono text-xs text-fg-4"
                 >
-                  <SearchX className="h-5 w-5 text-fg-4/80" aria-hidden="true" />
-                  <span>No shortcuts match &quot;{query}&quot;</span>
-                  <button
-                    type="button"
-                    onClick={() => setQuery("")}
-                    aria-label="Clear search filter and show all shortcuts"
-                    title="Clear search filter (Esc)"
-                    className="mt-1 rounded-lg border border-line bg-raised px-2.5 py-1 font-sans text-xs text-hue-cyan transition-colors hover:bg-raised/80 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
-                  >
-                    Clear search filter
-                  </button>
-                </div>
-              </>
+                  Clear search query
+                </button>
+              </div>
             );
           }
 
           return (
+            <div className="grid gap-6 sm:grid-cols-2">
+              {filteredGeneral.length > 0 && (
+                <section>
+                  <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
+                    General
+                  </h3>
+                  <ul className="divide-y divide-line">
+                    {filteredGeneral.map((shortcut) => (
+                      <Row key={shortcut.description} shortcut={shortcut} />
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {filteredSections.length > 0 && (
+                <section>
+                  <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
+                    Sections
+                  </h3>
+                  <ul className="divide-y divide-line">
+                    {filteredSections.map(({ id, shortcut }) => (
+                      <Row key={id} shortcut={shortcut} />
+                    ))}
+                  </ul>
+                </section>
+              )}
+            </div>
             <>
               <span
                 className="sr-only"
