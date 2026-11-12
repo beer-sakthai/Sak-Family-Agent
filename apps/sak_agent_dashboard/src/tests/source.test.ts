@@ -285,23 +285,13 @@ describe("ApiSource SSRF protections", () => {
       "Invalid path format: ASCII control characters are blocked",
     );
     await expect(source.fetchJson("https://attacker.com\t")).rejects.toThrow(
-    await expect(source.fetchJson("api\x00personas")).rejects.toThrow(
       "Invalid path format: ASCII control characters are blocked",
     );
-  it("blocks paths with ASCII control characters", async () => {
-    const { ApiSource } = await import("@/lib/sources/api");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const source = new ApiSource("http://127.0.0.1:3000") as any;
-    await expect(source.fetchJson("\r//attacker.com")).rejects.toThrow(
+    await expect(source.fetchJson("api\x00personas")).rejects.toThrow(
       "Invalid path format: ASCII control characters are blocked",
     );
   });
 
-  it("blocks whitespace padded protocol-relative URLs", async () => {
-    const { ApiSource } = await import("@/lib/sources/api");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const source = new ApiSource("http://127.0.0.1:3000") as any;
-    await expect(source.fetchJson(" //attacker.com/leak")).rejects.toThrow(
   it("blocks paths with leading whitespace that evade SSRF checks", async () => {
     const { ApiSource } = await import("@/lib/sources/api");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
