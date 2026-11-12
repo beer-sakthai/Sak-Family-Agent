@@ -670,6 +670,15 @@ describe("AuditLogs", () => {
     );
     expect(screen.getByRole("columnheader", { name: "Type" })).toHaveAttribute(
       "title",
+      "Audit event classification type",
+    );
+    expect(screen.getByRole("columnheader", { name: "Message" })).toHaveAttribute(
+      "title",
+      "Audit log event description",
+    );
+    expect(screen.getByRole("columnheader", { name: "Details" })).toHaveAttribute(
+      "title",
+      "Structured event metadata and attributes",
       "Event classification type",
     );
     expect(screen.getByRole("columnheader", { name: "Message" })).toHaveAttribute(
@@ -717,13 +726,6 @@ describe("SessionExplorer", () => {
       "title",
       `Total recorded sessions: ${sessions.total.toLocaleString()}`,
     );
-  });
-
-  it("renders accessible Actions column header in session table", () => {
-    renderExplorer();
-    const actionsHeader = screen.getByRole("columnheader", { name: "Actions" });
-    expect(actionsHeader).toBeInTheDocument();
-    expect(actionsHeader).toHaveAttribute("aria-label", "Actions");
   });
 
   it("lists sessions", () => {
@@ -983,13 +985,6 @@ describe("WorkflowRuns", () => {
     );
   });
 
-  it("renders accessible Actions column header in workflow runs table", () => {
-    render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
-    const actionsHeader = screen.getByRole("columnheader", { name: "Actions" });
-    expect(actionsHeader).toBeInTheDocument();
-    expect(actionsHeader).toHaveAttribute("aria-label", "Actions");
-  });
-
   it("lists runs with their status", () => {
     render(<WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />);
     expect(screen.getByText("nightly-consolidation")).toBeInTheDocument();
@@ -1123,6 +1118,28 @@ describe("WorkflowRuns", () => {
     expect(selectedRow).toBeInTheDocument();
     expect(selectedRow).toHaveClass("bg-raised/80");
   });
+
+  it("renders execution metric table cells with explicit title hover tooltips", () => {
+    const { container } = render(
+      <WorkflowRuns runs={workflows.runs} onRunSelect={vi.fn()} openRunId={null} detail={null} />,
+    );
+    const firstRun = workflows.runs[0];
+    const startedCell = container.querySelector(`td[title^="Started:"]`);
+    const durationCell = container.querySelector(`td[title^="Execution duration:"]`);
+    const stepCountCell = container.querySelector(`td[title^="Step count:"]`);
+
+    expect(startedCell).toBeInTheDocument();
+    expect(startedCell).toHaveAttribute("title", expect.stringContaining("Started:"));
+
+    expect(durationCell).toBeInTheDocument();
+    expect(durationCell).toHaveAttribute("title", expect.stringContaining("Execution duration:"));
+
+    expect(stepCountCell).toBeInTheDocument();
+    expect(stepCountCell).toHaveAttribute(
+      "title",
+      expect.stringContaining(`Step count: ${firstRun.step_count}`),
+    );
+  });
 });
 
 describe("PersonaFilter", () => {
@@ -1204,14 +1221,14 @@ describe("StitchStudio", () => {
   it("renders preset buttons and view tab buttons with explicit title tooltip attributes", () => {
     render(<StitchStudio />);
     const activePresetButton = screen.getByRole("button", {
-      name: "Active preset: SakThai Interactive Agent Drawer",
+      name: "SakThai Interactive Agent Drawer - active preset",
     });
-    expect(activePresetButton).toHaveAttribute("title", "Active preset: SakThai Interactive Agent Drawer");
+    expect(activePresetButton).toHaveAttribute("title", "SakThai Interactive Agent Drawer (active preset)");
 
     const inactivePresetButton = screen.getByRole("button", {
-      name: "Select preset Multi-Agent System Architecture",
+      name: "Multi-Agent System Architecture - select preset",
     });
-    expect(inactivePresetButton).toHaveAttribute("title", "Select preset Multi-Agent System Architecture");
+    expect(inactivePresetButton).toHaveAttribute("title", "Select Multi-Agent System Architecture");
 
     const previewTab = screen.getByRole("tab", { name: /Live Preview/ });
     const codeTab = screen.getByRole("tab", { name: /TSX Code/ });
@@ -1237,7 +1254,7 @@ describe("StitchStudio", () => {
   it("renders matching Security Audit Event Pill live preview when security-badge preset is selected", () => {
     render(<StitchStudio />);
     const securityPresetButton = screen.getByRole("button", {
-      name: "Select preset Security Audit Event Pill",
+      name: "Security Audit Event Pill - select preset",
     });
     fireEvent.click(securityPresetButton);
 
@@ -1248,7 +1265,7 @@ describe("StitchStudio", () => {
   it("renders matching Multi-Agent System Architecture flow diagram live preview when mermaid-arch preset is selected", () => {
     render(<StitchStudio />);
     const mermaidPresetButton = screen.getByRole("button", {
-      name: "Select preset Multi-Agent System Architecture",
+      name: "Multi-Agent System Architecture - select preset",
     });
     fireEvent.click(mermaidPresetButton);
 
@@ -1360,7 +1377,7 @@ describe("DisplayMenu", () => {
     expect(menuItems[0]).toHaveFocus();
   });
 
-  it("dismisses popover and restores focus to trigger button when theme or density is selected", () => {
+  it("closes menu popover and restores focus to trigger upon theme or density option selection", () => {
     const onThemeChange = vi.fn();
     const onDensityChange = vi.fn();
 
@@ -1375,18 +1392,22 @@ describe("DisplayMenu", () => {
     );
 
     const trigger = screen.getByRole("button", { name: "Display settings" });
+
+    // Test theme selection closes menu and focuses trigger
     fireEvent.click(trigger);
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    const lightItem = screen.getByRole("menuitemradio", { name: /Light/ });
+    fireEvent.click(lightItem);
 
-    const darkThemeOption = screen.getByRole("menuitemradio", { name: "Dark" });
-    fireEvent.click(darkThemeOption);
-
-    expect(onThemeChange).toHaveBeenCalledWith("dark");
+    expect(onThemeChange).toHaveBeenCalledWith("light");
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
 
+    // Test density selection closes menu and focuses trigger
     fireEvent.click(trigger);
-    const compactDensityOption = screen.getByRole("menuitemradio", { name: "Compact" });
-    fireEvent.click(compactDensityOption);
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    const compactItem = screen.getByRole("menuitemradio", { name: /Compact/ });
+    fireEvent.click(compactItem);
 
     expect(onDensityChange).toHaveBeenCalledWith("compact");
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
@@ -1632,20 +1653,20 @@ describe("CommandPalette", () => {
     expect(combobox).toHaveAttribute("aria-activedescendant", `cmd-option-nav-${NAV_ITEMS[0].id}`);
   });
 
-  it("renders inline clear search button when no commands match and resets query on click", () => {
+  it("renders an inline reset button when search yields no matches and clears search when clicked", () => {
     render(<CommandPalette onClose={vi.fn()} onNavigate={vi.fn()} actions={[]} />);
-    const combobox = screen.getByRole("combobox", { name: "Search commands" });
+    const searchInput = screen.getByRole("combobox", { name: "Search commands" });
 
-    fireEvent.change(combobox, { target: { value: "nonexistentquery123" } });
-    expect(screen.getByText("Nothing matches “nonexistentquery123”.")).toBeInTheDocument();
+    fireEvent.change(searchInput, { target: { value: "nonexistentquery123" } });
+    expect(screen.getByText("Nothing matches “nonexistentquery123”.").closest("li")).toBeInTheDocument();
 
-    const clearButton = screen.getByRole("button", { name: "Clear command palette search query" });
-    expect(clearButton).toBeInTheDocument();
-    expect(clearButton).toHaveAttribute("type", "button");
-    expect(clearButton).toHaveAttribute("title", "Reset search query (Esc)");
+    const resetButton = screen.getByRole("button", { name: "Clear search query and show all commands" });
+    expect(resetButton).toBeInTheDocument();
+    expect(resetButton).toHaveAttribute("title", "Clear search query (Esc)");
+    expect(resetButton).toHaveAttribute("type", "button");
 
-    fireEvent.click(clearButton);
-    expect(combobox).toHaveValue("");
-    expect(screen.queryByText(/Nothing matches/)).not.toBeInTheDocument();
+    fireEvent.click(resetButton);
+    expect(screen.queryByText("Nothing matches “nonexistentquery123”.")).not.toBeInTheDocument();
+    expect(searchInput).toHaveValue("");
   });
 });

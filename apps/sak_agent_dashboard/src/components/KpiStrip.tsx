@@ -107,6 +107,7 @@ function TileCard({ tile, onNavigate }: { tile: Tile; onNavigate?: (tab: TabId) 
           title: `Open the ${target} panel`,
         }
       : {
+          "aria-label": `${tile.label}: ${tile.value}${tile.hint ? ` (${tile.hint})` : ""}`,
           title: `${tile.label}: ${tile.value}${tile.hint ? ` (${tile.hint})` : ""}`,
         };
 
@@ -259,6 +260,9 @@ export function KpiStrip({ metrics, memory, sessions, audit, onNavigate }: KpiSt
       data-testid="kpi-strip"
       className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6"
     >
+      <span className="sr-only" role="status" aria-live="polite">
+        {`KPI summary: ${tiles.map((t) => `${t.label}: ${t.value}`).join(", ")}`}
+      </span>
       {tiles.map((tile) => (
         <TileCard key={tile.label} tile={tile} onNavigate={onNavigate} />
       ))}
