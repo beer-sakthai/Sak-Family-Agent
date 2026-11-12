@@ -229,7 +229,7 @@ describe("AgentOverview", () => {
     );
 
     const clearButton = screen.getByRole("button", {
-      name: "Clear filter - show all personas",
+      name: "Clear persona filter and show all personas",
     });
     expect(clearButton).toBeInTheDocument();
     expect(clearButton).toHaveAttribute("type", "button");
@@ -240,7 +240,7 @@ describe("AgentOverview", () => {
 
     rerender(<AgentOverview personas={personas} selected={[]} onSelect={onSelect} />);
     expect(
-      screen.queryByRole("button", { name: "Clear filter - show all personas" }),
+      screen.queryByRole("button", { name: "Clear persona filter and show all personas" }),
     ).not.toBeInTheDocument();
   });
 });
