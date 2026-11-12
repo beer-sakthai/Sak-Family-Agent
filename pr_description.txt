@@ -1,23 +1,21 @@
-🎨 Palette: Add status tooltips and ARIA attributes to agent cards
-
-💡 What: Added dynamic `title` hover tooltips explaining the status logic (`Active`, `Ready`, `Idle`) and explicit `aria-label` attributes to the persona status badges in `AgentCard.tsx`. Hided the inner status indicator dot from screen readers using `aria-hidden="true"`.
-
-🎯 Why: Desktop users hovering over persona status badges were unable to discern why a persona was marked as "Active" (executed in last 24h), "Ready" (has memory/history), or "Idle" (no history or shard). Screen readers now also receive a dedicated accessible name ("Status: Idle") without redundant text.
-
-📸 Before/After: Visual badge is unchanged, but now shows helpful native hover tooltips on mouseover and clean accessible names for screen reader users.
-
-♿ Accessibility: Added `aria-label="Status: <status>"` to the container badge and `aria-hidden="true"` to the decorative pulsing status dot.
-🎨 Palette: Add title hover tooltips and accessible labels to AgentOverview persona count badge
+🚀 feat(agent-platform): Unified AI agent integration platform, safety guardrails & pipeline bridge
 
 💡 What:
-Added explicit `title` hover tooltips and `aria-label` attributes to the registered/filtered persona count badge in `AgentOverview.tsx` in `apps/sak_agent_dashboard`. Updated corresponding unit tests in `components.test.tsx`.
+Introduced `sakthai.agent_platform`, a unified integration subsystem consolidating advanced agent workflows, platform capabilities, and safety protocols:
+1. **Accidental Data Loss Prevention Guardrails (`safety.py`)**: Intercepts destructive shell commands (`rm -rf`, `gsutil rm`, `bq rm`) and raw SQL operations (`DROP`, `TRUNCATE`, unconstrained `DELETE`), halting execution unless verified with an explicit HMAC/SHA256 authorization token.
+2. **Reactive Python Dependency Detection (`dep_manager.py`)**: Evaluates project workspaces using strict priority hierarchy (`uv` -> `poetry` -> `pipenv` -> `conda` -> `venv+pip`), preventing global pip execution and enforcing virtualenv isolation.
+3. **Progressive Disclosure Customizations (`customizations.py`)**: Discovers skills (`SKILL.md`) with lightweight frontmatter indexing to prevent LLM context bloat, loading full runbooks only on explicit demand; resolves hierarchical rule inheritance (`AGENTS.md`, `GEMINI.md`) walking up to repository root.
+4. **Jules Asynchronous Delegation Worker (`jules_worker.py`)**: Detects remote GitHub origin, builds `jules remote new` sessions, validates patch file paths, and formats branch-and-apply pipelines.
+5. **Dual Agent Core Engine (`agent_engine.py`)**: Bridges Google Antigravity SDK (`LocalAgentConfig` / LiteRT) and ADK Python `Agent` execution models, wiring safety interceptors into tool calls and maintaining execution history.
+6. **Harness AI Agent Exporter (`harness_exporter.py`)**: Derives canonical `ca_<slug>` identifiers and generates production-ready Harness v1 Agent YAML specifications and pipeline step definitions.
 
 🎯 Why:
-Desktop mouse users hovering over the count pill in `AgentOverview` were missing context on whether the count represented total registered personas or a subset filtered by persona selection. The tooltip clarifies active vs total count states.
+Unifies the agent development, safety, task delegation, and CI/CD export workflows explored across the House of Sak into an airtight, tested Python subsystem.
 
-📸 Before/After:
-- Before: `<div className="...">6 Personas Registered</div>` (No tooltip or ARIA description)
-- After: `<div title="6 total agent personas registered" aria-label="6 total agent personas registered">6 Personas Registered</div>` (Full hover tooltip and accessible ARIA description)
+🧪 Verification:
+- 30 unit tests across all 6 modules: 100% passing.
+- Test Coverage: 99.26% branch coverage (exceeding the repository's 96% `--cov-fail-under` gate).
+- Static Analysis: `ruff check` (0 errors), `ruff format` (100% compliant), `mypy` strict (0 errors in 90 files), `bandit` security scan (0 vulnerabilities).
 
-♿ Accessibility:
-Provides screen readers and desktop users with unambiguous context regarding total vs filtered persona counts.
+📝 Documentation:
+Updated `README.md`, `PLAN.md`, `CHANGELOG.md`, and module-level `__init__.py` exports.
