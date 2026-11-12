@@ -25,6 +25,7 @@ from .extensions import extensions as extensions_cmd
 from .hf import hf_cmd
 from .memory import learn, recall
 from .memory import memory as memory_cmd
+from .platform import platform_cmd
 from .sessions import sessions as sessions_cmd
 from .skills import skills as skills_cmd
 from .system import doctor, setup, status, tools, web
@@ -70,5 +71,6 @@ main.add_command(hf_cmd)
 main.add_command(eval_cmd, name="eval")
 main.add_command(team_cmd)
 main.add_command(client_cmd)
+main.add_command(platform_cmd, name="platform")
 
 __all__ = ["main"]

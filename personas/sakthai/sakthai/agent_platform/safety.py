@@ -25,6 +25,30 @@ class DataLossGuardrail:
             re.compile(r"\bbq\s+rm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+)?(.+)"),
             "BigQuery table/dataset deletion",
         ),
+        (
+            re.compile(r"\bgit\s+reset\s+--hard\b"),
+            "Destructive git worktree/commit reset",
+        ),
+        (
+            re.compile(r"\bgit\s+clean\s+-[a-zA-Z]*f[a-zA-Z]*\s*(.*)"),
+            "Destructive git untracked file removal",
+        ),
+        (
+            re.compile(r"\bmkfs(?:\.\w+)?\s+(.+)"),
+            "Destructive filesystem format operation",
+        ),
+        (
+            re.compile(r"\bdd\s+.*of=/dev/(.+)"),
+            "Destructive direct disk/device write",
+        ),
+        (
+            re.compile(r"\bterraform\s+destroy\b"),
+            "Infrastructure destruction (terraform destroy)",
+        ),
+        (
+            re.compile(r"\bkubectl\s+delete\s+(?:namespace|ns|all)\b"),
+            "Destructive Kubernetes cluster resource deletion",
+        ),
     ]
 
     DESTRUCTIVE_SQL_PATTERNS = [
@@ -52,9 +76,13 @@ class DataLossGuardrail:
         for pattern, desc in self.DESTRUCTIVE_SHELL_PATTERNS:
             match = pattern.search(cleaned)
             if match:
-                impact_target = (
-                    match.group(2) if len(match.groups()) >= 2 and match.group(2) else cleaned
-                )
+                groups = match.groups()
+                if len(groups) >= 2 and groups[1]:
+                    impact_target = groups[1]
+                elif len(groups) >= 1 and groups[0]:
+                    impact_target = groups[0]
+                else:
+                    impact_target = cleaned
                 return SafetyCheckResult(
                     is_destructive=True,
                     reason=desc,
