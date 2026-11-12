@@ -157,6 +157,12 @@ export function SessionExplorer({
         </div>
       </div>
 
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {search.trim()
+          ? `${sessions.length} session${sessions.length === 1 ? "" : "s"} found`
+          : ""}
+      </span>
+
       <div className="glass-panel rounded-2xl bg-panel/80 border border-line/80 backdrop-blur-xl overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left font-mono text-xs">
@@ -420,6 +426,8 @@ export function SessionExplorer({
                     {detail.tool_calls.map((call, idx) => (
                       <span
                         key={`${call.name}-${idx}`}
+                        title={`Tool call: ${call.name}${call.is_error ? " (failed)" : " (succeeded)"}`}
+                        aria-label={`Tool call: ${call.name}${call.is_error ? " (failed)" : " (succeeded)"}`}
                         className={`px-2 py-0.5 rounded-full text-[10px] border ${
                           call.is_error
                             ? "bg-hue-rose-tint/40 text-hue-rose border-hue-rose-line/40"

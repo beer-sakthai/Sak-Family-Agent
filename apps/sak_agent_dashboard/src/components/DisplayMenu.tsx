@@ -120,7 +120,8 @@ export function DisplayMenu({
         <div
           role="menu"
           aria-label="Display settings"
-          className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-line bg-panel p-2 shadow-glass backdrop-blur-xl"
+          className="absolute top-full right-0 z-50 mt-2 w-56 rounded-2xl border border-line bg-panel p-2 shadow-glass backdrop-blur-xl"
+          className="absolute right-0 top-full z-50 mt-2 w-56 rounded-2xl border border-line bg-panel p-2 shadow-glass backdrop-blur-xl"
         >
           <p className="px-2 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
             Theme
@@ -134,7 +135,11 @@ export function DisplayMenu({
                 type="button"
                 role="menuitemradio"
                 aria-checked={selected}
-                onClick={() => onThemeChange(option)}
+                onClick={() => {
+                  onThemeChange(option);
+                  setOpen(false);
+                  triggerRef.current?.focus();
+                }}
                 title={`Switch theme to ${THEME_LABELS[option]}`}
                 className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
                   selected ? "bg-raised text-fg" : "text-fg-3 hover:bg-raised/60 hover:text-fg-2"
@@ -170,7 +175,11 @@ export function DisplayMenu({
                 type="button"
                 role="menuitemradio"
                 aria-checked={selected}
-                onClick={() => onDensityChange(option)}
+                onClick={() => {
+                  onDensityChange(option);
+                  setOpen(false);
+                  triggerRef.current?.focus();
+                }}
                 title={`Switch display density to ${label}`}
                 className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
                   selected ? "bg-raised text-fg" : "text-fg-3 hover:bg-raised/60 hover:text-fg-2"

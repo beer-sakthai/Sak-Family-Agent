@@ -42,6 +42,7 @@ function NavButton({
       type="button"
       role="tab"
       aria-selected={active}
+      aria-controls="dashboard-tabpanel"
       aria-label={item.label}
       // Roving tabindex: the tablist is one tab stop and the arrow keys move
       // within it, per the WAI-ARIA authoring practice. Seven tab stops

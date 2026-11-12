@@ -91,16 +91,51 @@ describe("PersonaDrawer", () => {
   it("reports the filter toggle upward instead of filtering itself", () => {
     const onToggleFilter = vi.fn();
     renderDrawer(busiest, { onToggleFilter });
-    fireEvent.click(screen.getByRole("button", { name: "Filter to this persona" }));
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(`^Filter to this persona`) }));
     expect(onToggleFilter).toHaveBeenCalledTimes(1);
   });
 
-  it("marks the toggle pressed when the persona is already in the filter", () => {
-    renderDrawer(busiest, { filtered: true });
-    expect(screen.getByRole("button", { name: "In the filter" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
+  it("marks the toggle pressed and provides WCAG 2.5.3 compliant aria-label when persona is already in filter", () => {
+    const { rerender } = renderDrawer(busiest, { filtered: true });
+    const inFilterBtn = screen.getByRole("button", { name: new RegExp(`^In the filter`) });
+    expect(inFilterBtn).toHaveAttribute("aria-pressed", "true");
+    expect(inFilterBtn).toHaveAttribute(
+      "aria-label",
+      `In the filter - clear filter for ${busiest.display_name}`,
     );
+
+    rerender(
+      <PersonaDrawer
+        persona={busiest}
+        family={family}
+        filtered={false}
+        onToggleFilter={vi.fn()}
+        onNavigate={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    const filterBtn = screen.getByRole("button", { name: new RegExp(`^Filter to this persona`) });
+    expect(filterBtn).toHaveAttribute("aria-pressed", "false");
+    expect(filterBtn).toHaveAttribute(
+      "aria-label",
+      `Filter to this persona - filter dashboard to ${busiest.display_name}`,
+    );
+  });
+
+  it("provides informative title hover tooltips on summary metric tiles", () => {
+    renderDrawer(busiest);
+    const providerTile = screen.getByTitle(`Model provider: ${busiest.provider || "unset"}`);
+    expect(providerTile).toBeInTheDocument();
+
+    const modelTile = screen.getByTitle(`Configured model: ${busiest.model || "unset"}`);
+    expect(modelTile).toBeInTheDocument();
+
+    const latencyTile = screen.getByTitle(new RegExp(`^Average latency:`));
+    expect(latencyTile).toBeInTheDocument();
+
+    const rate = ((busiest.runs - busiest.errors) / busiest.runs) * 100;
+    const successTile = screen.getByTitle(`Success rate: ${rate.toFixed(1)}%`);
+    expect(successTile).toBeInTheDocument();
   });
 
   it("provides informative title tooltips on share metric rows", () => {
@@ -111,6 +146,24 @@ describe("PersonaDrawer", () => {
       "title",
       `Runs: ${busiest.runs.toLocaleString()} (${expectedRuns}% of family total)`,
     );
+  });
+
+  it("provides descriptive title hover tooltips and accessible region label on summary metric tiles", () => {
+    renderDrawer(busiest);
+    expect(screen.getByRole("region", { name: "Persona summary metrics" })).toBeInTheDocument();
+
+    const providerTile = screen.getByText("Provider").closest("div[title]");
+    expect(providerTile).toHaveAttribute("title", `Provider: ${busiest.provider || "unset"}`);
+
+    const modelTile = screen.getByText("Model").closest("div[title]");
+    expect(modelTile).toHaveAttribute("title", `Configured model: ${busiest.model || "unset"}`);
+
+    const latencyTile = screen.getByText("Avg latency").closest("div[title]");
+    expect(latencyTile).toHaveAttribute("title", `Average latency: ${busiest.avg_latency_ms.toFixed(0)}ms`);
+
+    const successRate = ((busiest.runs - busiest.errors) / busiest.runs) * 100;
+    const successTile = screen.getByText("Success rate").closest("div[title]");
+    expect(successTile).toHaveAttribute("title", `Success rate: ${successRate.toFixed(1)}%`);
   });
 
   it("renders progressbars with proper ARIA accessibility attributes", () => {
@@ -158,6 +211,41 @@ describe("PersonaDrawer", () => {
     );
   });
 
+  it("renders summary metrics section with accessible label and informative title tooltips", () => {
+    renderDrawer(busiest);
+    const summarySection = screen.getByRole("region", { name: "Persona summary metrics" });
+    expect(summarySection).toBeInTheDocument();
+
+    expect(screen.getByText("Provider").closest("div[title]")).toHaveAttribute(
+      "title",
+      `Provider: ${busiest.provider || "unset"}`,
+    );
+    expect(screen.getByText("Model").closest("div[title]")).toHaveAttribute(
+      "title",
+      `Configured model: ${busiest.model || "unset"}`,
+    );
+    expect(screen.getByText("Avg latency").closest("div[title]")).toHaveAttribute(
+      "title",
+      expect.stringContaining("Average latency:"),
+    );
+    expect(screen.getByText("Success rate").closest("div[title]")).toHaveAttribute(
+      "title",
+      expect.stringContaining("Success rate:"),
+    );
+  });
+
+  it("renders fallback tooltips on summary metrics for idle persona with no runs", () => {
+    renderDrawer(idle);
+    expect(screen.getByText("Avg latency").closest("div[title]")).toHaveAttribute(
+      "title",
+      "Average latency: no runs recorded",
+    );
+    expect(screen.getByText("Success rate").closest("div[title]")).toHaveAttribute(
+      "title",
+      "Success rate: no runs recorded",
+    );
+  });
+
   it("navigates to a panel rather than fetching anything itself", () => {
     const onNavigate = vi.fn();
     renderDrawer(busiest, { onNavigate });
@@ -170,5 +258,28 @@ describe("PersonaDrawer", () => {
     renderDrawer(busiest, { onClose });
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("provides informative title tooltips and accessible labels on summary metric tiles", () => {
+    renderDrawer(busiest);
+    const providerTile = screen.getByText("Provider").closest("div[title]");
+    expect(providerTile).toHaveAttribute("title", `Model provider: ${busiest.provider}`);
+    expect(providerTile).toHaveAttribute("aria-label", `Provider: ${busiest.provider}`);
+
+    const modelTile = screen.getByText("Model").closest("div[title]");
+    expect(modelTile).toHaveAttribute("title", `Configured model: ${busiest.model}`);
+    expect(modelTile).toHaveAttribute("aria-label", `Model: ${busiest.model}`);
+
+    const latencyTile = screen.getByText("Avg latency").closest("div[title]");
+    expect(latencyTile).toHaveAttribute(
+      "title",
+      `Average execution latency: ${Math.round(busiest.avg_latency_ms)}ms across ${busiest.runs} runs`,
+    );
+
+    const successTile = screen.getByText("Success rate").closest("div[title]");
+    expect(successTile).toHaveAttribute(
+      "title",
+      `${(busiest.runs - busiest.errors).toLocaleString()} of ${busiest.runs.toLocaleString()} runs successful (${busiest.errors} errors)`,
+    );
   });
 });

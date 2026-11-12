@@ -78,6 +78,11 @@ describe("ShortcutsOverlay", () => {
     expect(screen.getByText("Open the command palette")).toBeInTheDocument();
     expect(screen.queryByText("Show this list")).not.toBeInTheDocument();
 
+    // Live status announcement for non-zero match count
+    const liveStatus = screen.getByRole("status", { name: /shortcut.*found/i });
+    expect(liveStatus).toBeInTheDocument();
+    expect(liveStatus).toHaveTextContent("1 shortcut found");
+
     // Clear search button
     const clearBtn = screen.getByRole("button", { name: "Clear shortcut search filter" });
     expect(clearBtn).toHaveAttribute("title", "Clear search (Esc)");
@@ -96,6 +101,11 @@ describe("ShortcutsOverlay", () => {
     });
     expect(inlineClearBtn).toHaveAttribute("title", "Clear search filter (Esc)");
     fireEvent.click(inlineClearBtn);
+    // Verify inline reset button in empty state
+    const resetBtn = screen.getByRole("button", { name: "Clear shortcut search filter and show all shortcuts" });
+    expect(resetBtn).toHaveAttribute("type", "button");
+    expect(resetBtn).toHaveAttribute("title", "Clear search (Esc)");
+    fireEvent.click(resetBtn);
     expect(searchInput).toHaveValue("");
     expect(screen.getByText("Show this list")).toBeInTheDocument();
   });
@@ -111,5 +121,23 @@ describe("ShortcutsOverlay", () => {
 
     expect(searchInput).toHaveValue("");
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("announces match count updates to screen readers via polite live region when filtering", () => {
+    renderShortcutsOverlay();
+    const liveRegion = screen.getByRole("status", { hidden: true });
+    expect(liveRegion).toBeInTheDocument();
+    expect(liveRegion).toHaveAttribute("aria-live", "polite");
+    expect(liveRegion).toHaveTextContent("");
+
+    const searchInput = screen.getByRole("searchbox", { name: "Filter keyboard shortcuts" });
+
+    // Filter down to 1 shortcut ("command")
+    fireEvent.change(searchInput, { target: { value: "command" } });
+    expect(liveRegion).toHaveTextContent("1 shortcut found");
+
+    // Filter down to 0 shortcuts
+    fireEvent.change(searchInput, { target: { value: "nonexistent query" } });
+    expect(liveRegion).toHaveTextContent("0 shortcuts found");
   });
 });
