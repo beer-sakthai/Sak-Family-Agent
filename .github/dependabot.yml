@@ -1,134 +1,280 @@
-# Dependabot keeps dependencies and pinned action versions current.
-# Four ecosystems live in this repo: Python (uv), the npm projects, the GitHub
-# Actions used by the workflows, and the Docker base images. Everything here is
-# pinned by SHA/digest for OpenSSF Scorecard's Pinned-Dependencies check, so
-# Dependabot is what keeps those pins from going stale.
+# Dependabot configuration for Sak-Family-Agent.
+#
+# Dependency ecosystem types:
+# - Python (uv)
+# - npm
+# - GitHub Actions
+# - Docker
+#
+# Routine version updates use scheduled checks and controlled grouping.
+# Security updates are kept on a separate track so vulnerability fixes can
+# be proposed without being delayed by the version-update cooldown.
+#
+# IMPORTANT:
+# Dependabot Alerts and Dependabot Security Updates must also be enabled in:
+# Repository Settings -> Security and analysis / Advanced Security.
+#
+# Dependencies, GitHub Actions and container images are pinned where
+# practical to support supply-chain integrity and OpenSSF Scorecard checks.
+
 version: 2
+
 updates:
-  # Python dependencies — pyproject.toml + uv.lock at the repo root.
+
+  # ============================================================
+  # PYTHON / UV
+  # ============================================================
+  # pyproject.toml + uv.lock at repository root.
+
   - package-ecosystem: "uv"
     directory: "/"
+
     schedule:
-      interval: "weekly"
+      interval: "daily"
+
     open-pull-requests-limit: 5
-    # Let a newly published version age for a week before proposing it. The
-    # attack this defends against is a maintainer-account compromise that
-    # publishes a malicious release: those are typically caught and yanked
-    # within days, and a cooldown means Dependabot never opens the PR that
-    # would otherwise walk it straight into the lockfile. Dependabot exempts
-    # security updates from cooldown, so real advisories still arrive at once.
+
+    # Routine version updates must age for 7 days.
+    # Security updates are not delayed by this cooldown.
     cooldown:
       default-days: 7
-    # setuptools appears in pyproject.toml only under
-    # `[build-system] requires = ["setuptools>=83.0.0", "wheel"]`, never in
-    # `[project] dependencies`. Dependabot's uv FileUpdater does not write
-    # `[build-system] requires`, so every attempt produces no file change and
-    # the whole job dies:
+
+    # setuptools is only used as a build-system minimum:
     #
-    #     Updating setuptools from 83.0.0 to 84.0.0
-    #     ERROR Error processing setuptools (RuntimeError)
-    #     ERROR No files have changed!
-    #           /home/dependabot/uv/lib/dependabot/uv/file_updater.rb:26
+    # [build-system]
+    # requires = ["setuptools>=83.0.0", "wheel"]
     #
-    # There is nothing here for Dependabot to keep current anyway: that line is
-    # a floor (`>=`), not a pin, and the build backend is resolved at build time
-    # rather than from uv.lock. Bumping the floor by hand would not stop this
-    # recurring on the next setuptools release.
+    # It is not a normal project dependency pin, and attempting to update it
+    # through the uv updater can result in no dependency file change.
     ignore:
       - dependency-name: "setuptools"
-    groups:
-      python-minor-patch:
-        update-types: ["minor", "patch"]
 
-  # Playwright accessibility probe — the only npm project with real
-  # dependencies (the old /dashboard tree no longer exists).
+    groups:
+
+      # Routine minor/patch dependency updates.
+      python-minor-patch:
+        applies-to: "version-updates"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Security fixes remain separate from routine dependency maintenance.
+      python-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
+
+  # ============================================================
+  # PLAYWRIGHT ACCESSIBILITY PROBE
+  # ============================================================
+
   - package-ecosystem: "npm"
     directory: "/infra/pw-poc"
+
     schedule:
       interval: "daily"
-    open-pull-requests-limit: 5
-    groups:
-      npm-minor-patch:
-        update-types: ["minor", "patch"]
 
-  # Pinned action versions in .github/workflows/.
+    open-pull-requests-limit: 5
+
+    groups:
+
+      npm-minor-patch:
+        applies-to: "version-updates"
+        update-types:
+          - "minor"
+          - "patch"
+
+      npm-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
+
+  # ============================================================
+  # GITHUB ACTIONS
+  # ============================================================
+  # Actions referenced from .github/workflows/.
+
   - package-ecosystem: "github-actions"
     directory: "/"
+
     schedule:
       interval: "daily"
+
     open-pull-requests-limit: 5
-    # Same cooldown reasoning as the uv ecosystem above, and it matters most
-    # here: a workflow `uses:` runs with the job's token, so a compromised
-    # third-party action release is the highest-value supply-chain target in
-    # the repo. First-party `actions/*` are exempt — they are the ones whose
-    # security fixes we want immediately.
+
+    # Third-party action releases must age for 7 days before routine
+    # Dependabot version-update PRs are proposed.
+    #
+    # Official actions/* dependencies are excluded from that cooldown.
+    # Security updates are not delayed by the version-update cooldown.
     cooldown:
       default-days: 7
       exclude:
         - "actions/*"
+
     groups:
+
       actions:
-        patterns: ["*"]
+        applies-to: "version-updates"
+        patterns:
+          - "*"
 
-  - package-ecosystem: npm
-    directory: /apps/sak_agent_dashboard
+      actions-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
+
+  # ============================================================
+  # SAK AGENT DASHBOARD
+  # ============================================================
+
+  - package-ecosystem: "npm"
+    directory: "/apps/sak_agent_dashboard"
+
     schedule:
-      interval: daily
+      interval: "daily"
+
+    open-pull-requests-limit: 5
+
     ignore:
-      # The dashboard is written against Tailwind v3: globals.css uses the v3
-      # `@tailwind base/components/utilities` directives and tailwind.config.ts
-      # is a v3 JS config. A v4 major needs the PostCSS plugin move to
-      # `@tailwindcss/postcss` plus a directive/config migration, none of which
-      # has been done. The v4 bump has landed and broken the Vercel build twice
-      # already (reverted once in b330e2f, re-proposed as 23745ae) — hold the
-      # major until someone does the migration deliberately.
+
+      # Dashboard currently targets Tailwind CSS v3.
+      # Block routine v4 major upgrades until the dashboard is deliberately
+      # migrated to Tailwind CSS v4.
       - dependency-name: "tailwindcss"
-        update-types: ["version-update:semver-major"]
-      # Same story, different package. TypeScript 7 is incompatible with the
-      # typescript-eslint that eslint-config-next@16 pins (`typescript-eslint
-      # does not support TS 7.0.` — it declares `typescript@>=4.8.4 <6.1.0`),
-      # so a TS 7 major turns `npm run lint` into a hard crash and apps.yml red.
-      # This has already happened twice: 6f61479 pinned TypeScript back once,
-      # but added no ignore here, so Dependabot proposed 7.0.2 again and #1396
-      # merged it. The pin alone is not the fix — this entry is.
-      # Lift both together once eslint-config-next ships TS 7 support.
+        update-types:
+          - "version-update:semver-major"
+
+      # Block routine TypeScript major upgrades until the dashboard's
+      # ESLint/typescript-eslint dependency chain supports the new major.
       - dependency-name: "typescript"
-        update-types: ["version-update:semver-major"]
+        update-types:
+          - "version-update:semver-major"
 
-  # The two stitch skill trees. Both carry an explicit PR limit and grouping:
-  # without them each entry defaults to 5 ungrouped PRs, so these two alone
-  # could open 10 a day and bury everything else in the queue.
-  - package-ecosystem: npm
-    directory: /personas/saksee/skills/SakSee-stitch-react-components
-    schedule:
-      interval: daily
-    open-pull-requests-limit: 3
     groups:
+
+      dashboard-minor-patch:
+        applies-to: "version-updates"
+        update-types:
+          - "minor"
+          - "patch"
+
+      dashboard-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
+
+  # ============================================================
+  # SAKSEE STITCH REACT COMPONENTS
+  # ============================================================
+
+  - package-ecosystem: "npm"
+    directory: "/personas/saksee/skills/SakSee-stitch-react-components"
+
+    schedule:
+      interval: "daily"
+
+    open-pull-requests-limit: 3
+
+    groups:
+
       stitch-react-components:
-        update-types: ["minor", "patch"]
+        applies-to: "version-updates"
+        update-types:
+          - "minor"
+          - "patch"
 
-  - package-ecosystem: npm
-    directory: /personas/saksee/skills/SakSee-stitch-react-native
+      stitch-react-components-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
+
+  # ============================================================
+  # SAKSEE STITCH REACT NATIVE
+  # ============================================================
+
+  - package-ecosystem: "npm"
+    directory: "/personas/saksee/skills/SakSee-stitch-react-native"
+
     schedule:
-      interval: daily
+      interval: "daily"
+
     open-pull-requests-limit: 3
+
     groups:
+
       stitch-react-native:
-        update-types: ["minor", "patch"]
+        applies-to: "version-updates"
+        update-types:
+          - "minor"
+          - "patch"
 
-  # Docker base images. Every Dockerfile pins its base by digest, which only
-  # stays current if something bumps it — that something is this.
-  - package-ecosystem: docker
-    directory: /
-    schedule:
-      interval: weekly
+      stitch-react-native-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
 
-  - package-ecosystem: docker
-    directory: /infra/sakthai-training-space
-    schedule:
-      interval: weekly
 
-  - package-ecosystem: docker
-    directory: /infra/servicequotebot/docker
+  # ============================================================
+  # ROOT DOCKER IMAGES
+  # ============================================================
+
+  - package-ecosystem: "docker"
+    directory: "/"
+
     schedule:
-      interval: weekly
+      interval: "daily"
+
+    open-pull-requests-limit: 5
+
+    groups:
+
+      root-docker-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
+
+  # ============================================================
+  # SAKTHAI TRAINING SPACE DOCKER IMAGES
+  # ============================================================
+
+  - package-ecosystem: "docker"
+    directory: "/infra/sakthai-training-space"
+
+    schedule:
+      interval: "daily"
+
+    open-pull-requests-limit: 5
+
+    groups:
+
+      sakthai-docker-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
+
+  # ============================================================
+  # SERVICEQUOTEBOT DOCKER IMAGES
+  # ============================================================
+
+  - package-ecosystem: "docker"
+    directory: "/infra/servicequotebot/docker"
+
+    schedule:
+      interval: "daily"
+
+    open-pull-requests-limit: 5
+
+    groups:
+
+      servicequotebot-docker-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
