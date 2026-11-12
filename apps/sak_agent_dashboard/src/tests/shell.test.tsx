@@ -14,7 +14,6 @@ import Home from "@/app/page";
 import CommandPalette, { type Command } from "@/components/CommandPalette";
 import HostedNotice from "@/components/HostedNotice";
 import KpiStrip from "@/components/KpiStrip";
-import Home from "@/app/page";
 import { CardGridSkeleton, KpiSkeleton, PanelSkeleton } from "@/components/Skeletons";
 import Sidebar from "@/components/shell/Sidebar";
 import TopBar from "@/components/shell/TopBar";
@@ -360,7 +359,6 @@ describe("TopBar", () => {
     }
 
     fireEvent.click(screen.getByTestId("persona-filter"));
-    fireEvent.click(screen.getByRole("button", { name: /Filter by persona/i }));
     const personaAllOption = screen.getByRole("menuitem");
     expect(personaAllOption).toHaveAttribute("type", "button");
   });
@@ -665,92 +663,6 @@ describe("HostedNotice", () => {
   });
 });
 
-describe("Footer Shortcut Buttons", () => {
-  it("renders interactive command palette and shortcut overlay trigger buttons with accessible names and tooltips", () => {
-    render(
-      <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-line-soft pt-4 font-mono text-[11px] text-fg-5">
-        <div className="hidden sm:inline-flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={vi.fn()}
-            aria-label="Open command palette (Command + K)"
-            title="Open command palette (Command + K)"
-            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors hover:bg-raised/60 hover:text-fg-3 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            <kbd className="rounded border border-line px-1 py-0.5" aria-hidden="true">⌘K</kbd>
-            <span>commands</span>
-          </button>
-          <span aria-hidden="true">·</span>
-          <button
-            type="button"
-            onClick={vi.fn()}
-            aria-label="Open keyboard shortcuts overlay (?)"
-            title="Open keyboard shortcuts overlay (?)"
-            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors hover:bg-raised/60 hover:text-fg-3 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            <kbd className="rounded border border-line px-1 py-0.5" aria-hidden="true">?</kbd>
-            <span>shortcuts</span>
-          </button>
-        </div>
-      </footer>
-    );
-  it("renders interactive footer shortcut buttons that open the palette and shortcuts overlay", async () => {
-    // Provide a mocked fetch so page.tsx mounts cleanly with valid payloads
-    const fetchMock = vi.fn().mockImplementation((url: string) => {
-      let data: unknown = { personas: [], unattributed_runs: 0 };
-      if (url.includes("/api/agents")) {
-        data = { personas: [], unattributed_runs: 0 };
-      } else if (url.includes("/api/metrics")) {
-        data = demoMetrics();
-      } else if (url.includes("/api/memory")) {
-        data = demoMemory();
-      } else if (url.includes("/api/audit")) {
-        data = demoAudit();
-      } else if (url.includes("/api/sessions")) {
-        data = demoSessions();
-      } else if (url.includes("/api/workflows")) {
-        data = { runs: [] };
-      }
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ source: "demo", data }),
-      });
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
-    render(<Home />);
-
-    const paletteBtn = screen.getByRole("button", { name: "Open command palette (Command + K)" });
-    expect(paletteBtn).toBeInTheDocument();
-    expect(paletteBtn).toHaveAttribute("type", "button");
-    expect(paletteBtn).toHaveAttribute("title", "Open command palette (Command + K)");
-
-    const shortcutsBtn = screen.getByRole("button", { name: "Open keyboard shortcuts overlay (?)" });
-    expect(shortcutsBtn).toBeInTheDocument();
-    expect(shortcutsBtn).toHaveAttribute("type", "button");
-    expect(shortcutsBtn).toHaveAttribute("title", "Open keyboard shortcuts overlay (?)");
-    expect(shortcutsBtn).toHaveAttribute("title", "Open keyboard shortcuts overlay (?)" );
-
-    // Click shortcuts button -> opens shortcuts overlay dialog
-    expect(screen.queryByTestId("shortcuts-overlay")).not.toBeInTheDocument();
-    fireEvent.click(shortcutsBtn);
-    expect(await screen.findByTestId("shortcuts-overlay")).toBeInTheDocument();
-
-    // Dismiss shortcuts dialog
-    fireEvent.click(screen.getByLabelText("Close keyboard shortcuts"));
-    await waitFor(() => {
-      expect(screen.queryByTestId("shortcuts-overlay")).not.toBeInTheDocument();
-    });
-
-    // Click command palette button -> opens command palette dialog
-    expect(screen.queryByRole("dialog", { name: "Command palette" })).not.toBeInTheDocument();
-    fireEvent.click(paletteBtn);
-    expect(await screen.findByRole("dialog", { name: "Command palette" })).toBeInTheDocument();
-
-    vi.unstubAllGlobals();
-  });
-});
-
 describe("Skeletons", () => {
   it("holds the KPI layout with one placeholder per tile and status accessibility", () => {
     const { container } = render(<KpiSkeleton />);
@@ -777,55 +689,6 @@ describe("Skeletons", () => {
   });
 });
 
-describe("Footer Shortcut Buttons", () => {
-  it("renders interactive command and shortcut buttons in footer with accessible names and tooltips", async () => {
-    const Home = (await import("@/app/page")).default;
-    await waitFor(() => {
-      render(<Home />);
-    });
-
-    const commandPaletteBtn = screen.getByRole("button", { name: "Open command palette (⌘K)" });
-    expect(commandPaletteBtn).toBeInTheDocument();
-    expect(commandPaletteBtn).toHaveAttribute("type", "button");
-    expect(commandPaletteBtn).toHaveAttribute("title", "Open command palette (Command + K)");
-
-    const shortcutsBtn = screen.getByRole("button", { name: "Open keyboard shortcuts overlay (?)" });
-    expect(shortcutsBtn).toBeInTheDocument();
-    expect(shortcutsBtn).toHaveAttribute("type", "button");
-    expect(shortcutsBtn).toHaveAttribute("title", "Open keyboard shortcuts overlay (?)" );
-
-    fireEvent.click(commandPaletteBtn);
-    expect(screen.getByRole("dialog", { name: "Command palette" })).toBeInTheDocument();
-
-    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
-describe("Home Footer", () => {
-  it("renders interactive command palette and keyboard shortcut buttons in footer", async () => {
-    await act(async () => {
-      render(<Home />);
-    });
-
-    const paletteBtn = screen.getByRole("button", {
-      name: "Open command palette (Command + K)",
-    });
-    expect(paletteBtn).toBeInTheDocument();
-    expect(paletteBtn).toHaveAttribute("type", "button");
-    expect(paletteBtn).toHaveAttribute("title", "Open command palette (⌘K)");
-
-    const shortcutsBtn = screen.getByRole("button", {
-      name: "Open keyboard shortcuts (?)",
-    });
-    expect(shortcutsBtn).toBeInTheDocument();
-    expect(shortcutsBtn).toHaveAttribute("type", "button");
-    expect(shortcutsBtn).toHaveAttribute("title", "Open keyboard shortcuts (?)");
-
-    fireEvent.click(paletteBtn);
-    expect(screen.getByRole("dialog", { name: "Command palette" })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByLabelText("Close command palette"));
-    expect(screen.queryByRole("dialog", { name: "Command palette" })).not.toBeInTheDocument();
-
-    fireEvent.click(shortcutsBtn);
-    expect(screen.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeInTheDocument();
 describe("Home Footer Shortcut Buttons", () => {
   it("renders interactive footer shortcut buttons that open palette and shortcuts overlay on click", async () => {
     const originalFetch = global.fetch;
