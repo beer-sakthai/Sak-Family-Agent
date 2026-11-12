@@ -24,3 +24,10 @@ deepspeed==0.19.7
 trl[deepspeed]>=1.15.0,<1.16.0
 sentencepiece
 protobuf
+
+# Security constraints (CVE remediations)
+certifi>=2026.10.18
+filelock>=4.2.1
+gitpython>=3.2.1
+pillow>=13.0.0
+setuptools>=84.1.0
