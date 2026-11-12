@@ -130,11 +130,11 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
             <table className="w-full text-left font-mono text-xs">
               <thead className="bg-sunken/80 text-fg-3 border-b border-line/80 uppercase text-[10px] tracking-wider">
                 <tr>
-                  <th className="px-5 py-3">ID</th>
-                  <th className="px-5 py-3">Kind / Key</th>
-                  <th className="px-5 py-3">Value</th>
-                  <th className="px-5 py-3">Shard</th>
-                  <th className="px-5 py-3 text-right">Updated</th>
+                  <th title="Unique memory fact identifier" className="px-5 py-3">ID</th>
+                  <th title="Memory category kind and lookup key" className="px-5 py-3">Kind / Key</th>
+                  <th title="Stored fact content and associated tags" className="px-5 py-3">Value</th>
+                  <th title="Source persona database shard" className="px-5 py-3">Shard</th>
+                  <th title="Last updated timestamp (UTC)" className="px-5 py-3 text-right">Updated</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/60 text-fg-2">
@@ -210,11 +210,11 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
             <table className="w-full text-left font-mono text-xs">
               <thead className="bg-sunken/80 text-fg-3 border-b border-line/80 uppercase text-[10px] tracking-wider">
                 <tr>
-                  <th className="px-5 py-3">ID</th>
-                  <th className="px-5 py-3">Shard</th>
-                  <th className="px-5 py-3">Observation</th>
-                  <th className="px-5 py-3 text-right">Weight</th>
-                  <th className="px-5 py-3 text-right">Confidence</th>
+                  <th title="Unique observation identifier" className="px-5 py-3">ID</th>
+                  <th title="Source persona database shard" className="px-5 py-3">Shard</th>
+                  <th title="Synthesized behavioral observation summary" className="px-5 py-3">Observation</th>
+                  <th title="Relative observation weight (significance)" className="px-5 py-3 text-right">Weight</th>
+                  <th title="Statistical confidence score percentage" className="px-5 py-3 text-right">Confidence</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/60 text-fg-2">
