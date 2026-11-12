@@ -127,9 +127,7 @@ export function WorkflowRuns({
                 <th className="px-5 py-3">Started</th>
                 <th className="px-5 py-3 text-right">Duration</th>
                 <th className="px-5 py-3 text-right">Steps</th>
-                <th className="px-5 py-3 text-right" aria-label="Actions">
-                  <span className="sr-only">Actions</span>
-                </th>
+                <th className="px-5 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-line/60 text-fg-2">
@@ -165,13 +163,22 @@ export function WorkflowRuns({
                       <td className="px-5 py-3.5">
                         <StatusPill status={run.status} />
                       </td>
-                      <td className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap">
+                      <td
+                        title={`Started: ${started(run.started_at)}`}
+                        className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap"
+                      >
                         {started(run.started_at)}
                       </td>
-                      <td className="px-5 py-3.5 text-right text-fg-2">
+                      <td
+                        title={`Execution duration: ${duration(run.duration_seconds)}`}
+                        className="px-5 py-3.5 text-right text-fg-2"
+                      >
                         {duration(run.duration_seconds)}
                       </td>
-                      <td className="px-5 py-3.5 text-right">
+                      <td
+                        title={`Step count: ${run.step_count} total${run.failed_steps > 0 ? `, ${run.failed_steps} failed` : ""}`}
+                        className="px-5 py-3.5 text-right"
+                      >
                         <span className="text-fg-2">{run.step_count}</span>
                         {run.failed_steps > 0 && (
                           <span className="text-hue-rose"> ({run.failed_steps} failed)</span>
