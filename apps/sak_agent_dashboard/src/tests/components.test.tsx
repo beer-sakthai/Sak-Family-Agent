@@ -448,6 +448,52 @@ describe("MemoryExplorer", () => {
     expect(shardBadges.length).toBeGreaterThan(0);
   });
 
+  it("renders descriptive title hover tooltips on Facts and Observations table headers", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    expect(screen.getByRole("columnheader", { name: "ID" })).toHaveAttribute(
+      "title",
+      "Unique memory fact identifier",
+    );
+    expect(screen.getByRole("columnheader", { name: "Kind / Key" })).toHaveAttribute(
+      "title",
+      "Memory category kind and lookup key",
+    );
+    expect(screen.getByRole("columnheader", { name: "Value" })).toHaveAttribute(
+      "title",
+      "Stored fact content and associated tags",
+    );
+    expect(screen.getByRole("columnheader", { name: "Shard" })).toHaveAttribute(
+      "title",
+      "Source persona database shard",
+    );
+    expect(screen.getByRole("columnheader", { name: "Updated" })).toHaveAttribute(
+      "title",
+      "Last updated timestamp (UTC)",
+    );
+
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+    fireEvent.click(obsTab);
+
+    expect(screen.getByRole("columnheader", { name: "ID" })).toHaveAttribute(
+      "title",
+      "Unique observation identifier",
+    );
+    expect(screen.getByRole("columnheader", { name: "Shard" })).toHaveAttribute(
+      "title",
+      "Source persona database shard",
+    );
+    expect(screen.getByRole("columnheader", { name: "Observation" })).toHaveAttribute(
+      "title",
+      "Synthesized behavioral observation summary",
+    );
+    expect(screen.getByRole("columnheader", { name: "Weight" })).toHaveAttribute(
+      "title",
+      "Relative observation weight (significance)",
+    );
+    expect(screen.getByRole("columnheader", { name: "Confidence" })).toHaveAttribute(
+      "title",
+      "Statistical confidence score percentage",
+    );
   it("renders title hover tooltips on Fact table cells", () => {
     render(<MemoryExplorer memory={demoMemory()} />);
     const firstFact = demoMemory().facts[0];
