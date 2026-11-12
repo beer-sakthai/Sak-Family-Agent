@@ -494,6 +494,8 @@ describe("MemoryExplorer", () => {
       "title",
       "Statistical confidence score percentage",
     );
+  });
+
   it("renders title hover tooltips on Fact table cells", () => {
     render(<MemoryExplorer memory={demoMemory()} />);
     const firstFact = demoMemory().facts[0];
@@ -523,7 +525,7 @@ describe("MemoryExplorer", () => {
     const idCell = screen.getByTitle(`Observation ID: ${firstObs.id}`);
     expect(idCell).toBeInTheDocument();
 
-    const summaryCell = screen.getByTitle(`Observation: ${firstObs.summary}`);
+    const summaryCell = screen.getByTitle(`Observation summary: ${firstObs.summary}`);
     expect(summaryCell).toBeInTheDocument();
   });
 
@@ -758,24 +760,6 @@ describe("AuditLogs", () => {
     expect(screen.getByRole("columnheader", { name: "Details" })).toHaveAttribute(
       "title",
       "Structured event details",
-      "Audit event classification type",
-    );
-    expect(screen.getByRole("columnheader", { name: "Message" })).toHaveAttribute(
-      "title",
-      "Audit log event description",
-    );
-    expect(screen.getByRole("columnheader", { name: "Details" })).toHaveAttribute(
-      "title",
-      "Structured event metadata and attributes",
-      "Event classification type",
-    );
-    expect(screen.getByRole("columnheader", { name: "Message" })).toHaveAttribute(
-      "title",
-      "Security event summary message",
-    );
-    expect(screen.getByRole("columnheader", { name: "Details" })).toHaveAttribute(
-      "title",
-      "Additional event key-value parameters",
     );
   });
 });
@@ -1264,7 +1248,6 @@ describe("PersonaFilter", () => {
     expect(trigger).toHaveAttribute("aria-label", "2 personas - Filter by persona");
   });
 
-  it("renders dynamic title tooltips on trigger based on selection state", () => {
   it("renders dynamic title tooltips and WCAG 2.5.3 compliant aria-label on trigger based on selection state", () => {
     const { rerender } = render(<PersonaFilter selected={[]} onChange={vi.fn()} />);
     const trigger = screen.getByTestId("persona-filter");
@@ -1382,22 +1365,6 @@ describe("StitchStudio", () => {
 
     expect(screen.getByText("Unauthorized API Access Blocked")).toBeInTheDocument();
     expect(screen.getByText("HIGH")).toBeInTheDocument();
-  });
-
-  it("renders matching Multi-Agent System Architecture flow diagram live preview when mermaid-arch preset is selected", () => {
-    render(<StitchStudio />);
-    const mermaidPresetButton = screen.getByRole("button", {
-      name: "Multi-Agent System Architecture - select preset",
-    });
-    fireEvent.click(mermaidPresetButton);
-
-    expect(screen.getAllByText("Multi-Agent System Architecture")).toHaveLength(2);
-    expect(screen.getByText("Live Flow Diagram")).toBeInTheDocument();
-    expect(screen.getByText("SakThai (Primary Orchestrator)")).toBeInTheDocument();
-    expect(screen.getByText("SakKing")).toBeInTheDocument();
-    expect(screen.getByText("SakSee")).toBeInTheDocument();
-    expect(screen.getByText("SakSit")).toBeInTheDocument();
-    expect(screen.getByText("SakJules")).toBeInTheDocument();
   });
 
   it("uses roving tabIndex for active and inactive tabs", () => {

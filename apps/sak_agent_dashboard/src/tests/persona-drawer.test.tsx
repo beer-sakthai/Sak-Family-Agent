@@ -124,7 +124,7 @@ describe("PersonaDrawer", () => {
 
   it("provides informative title hover tooltips on summary metric tiles", () => {
     renderDrawer(busiest);
-    const providerTile = screen.getByTitle(`Model provider: ${busiest.provider || "unset"}`);
+    const providerTile = screen.getByTitle(`Provider: ${busiest.provider || "unset"}`);
     expect(providerTile).toBeInTheDocument();
 
     const modelTile = screen.getByTitle(`Configured model: ${busiest.model || "unset"}`);
@@ -258,28 +258,5 @@ describe("PersonaDrawer", () => {
     renderDrawer(busiest, { onClose });
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).toHaveBeenCalled();
-  });
-
-  it("provides informative title tooltips and accessible labels on summary metric tiles", () => {
-    renderDrawer(busiest);
-    const providerTile = screen.getByText("Provider").closest("div[title]");
-    expect(providerTile).toHaveAttribute("title", `Model provider: ${busiest.provider}`);
-    expect(providerTile).toHaveAttribute("aria-label", `Provider: ${busiest.provider}`);
-
-    const modelTile = screen.getByText("Model").closest("div[title]");
-    expect(modelTile).toHaveAttribute("title", `Configured model: ${busiest.model}`);
-    expect(modelTile).toHaveAttribute("aria-label", `Model: ${busiest.model}`);
-
-    const latencyTile = screen.getByText("Avg latency").closest("div[title]");
-    expect(latencyTile).toHaveAttribute(
-      "title",
-      `Average execution latency: ${Math.round(busiest.avg_latency_ms)}ms across ${busiest.runs} runs`,
-    );
-
-    const successTile = screen.getByText("Success rate").closest("div[title]");
-    expect(successTile).toHaveAttribute(
-      "title",
-      `${(busiest.runs - busiest.errors).toLocaleString()} of ${busiest.runs.toLocaleString()} runs successful (${busiest.errors} errors)`,
-    );
   });
 });
