@@ -42,7 +42,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="text-xl font-bold font-display text-fg tracking-tight flex items-center gap-2">
-            <Database className="h-5 w-5 text-hue-emerald" aria-hidden />
+            <Database className="h-5 w-5 text-hue-emerald" aria-hidden="true" />
             Memory Store Explorer
           </h3>
           <p className="text-xs text-fg-3 mt-0.5">
@@ -95,7 +95,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
               : "bg-panel/60 text-fg-3 border-line hover:border-line-strong"
           }`}
         >
-          <BookOpen className="h-3.5 w-3.5 inline mr-1.5" aria-hidden />
+          <BookOpen className="h-3.5 w-3.5 inline mr-1.5" aria-hidden="true" />
           Facts ({facts.length})
         </button>
         <button
@@ -113,7 +113,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
               : "bg-panel/60 text-fg-3 border-line hover:border-line-strong"
           }`}
         >
-          <Lightbulb className="h-3.5 w-3.5 inline mr-1.5" aria-hidden />
+          <Lightbulb className="h-3.5 w-3.5 inline mr-1.5" aria-hidden="true" />
           Observations ({observations.length})
         </button>
       </div>
@@ -130,11 +130,11 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
             <table className="w-full text-left font-mono text-xs">
               <thead className="bg-sunken/80 text-fg-3 border-b border-line/80 uppercase text-[10px] tracking-wider">
                 <tr>
-                  <th className="px-5 py-3">ID</th>
-                  <th className="px-5 py-3">Kind / Key</th>
-                  <th className="px-5 py-3">Value</th>
-                  <th className="px-5 py-3">Shard</th>
-                  <th className="px-5 py-3 text-right">Updated</th>
+                  <th title="Unique memory fact identifier" className="px-5 py-3">ID</th>
+                  <th title="Memory category kind and lookup key" className="px-5 py-3">Kind / Key</th>
+                  <th title="Stored fact content and associated tags" className="px-5 py-3">Value</th>
+                  <th title="Source persona database shard" className="px-5 py-3">Shard</th>
+                  <th title="Last updated timestamp (UTC)" className="px-5 py-3 text-right">Updated</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/60 text-fg-2">
@@ -153,8 +153,16 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
                 ) : (
                   facts.map((f) => (
                     <tr key={`${f.persona}-${f.id}`} className="hover:bg-raised/40 transition-colors">
+                      <td title={`Fact ID: ${f.id}`} className="px-5 py-3.5 text-fg-4">{f.id}</td>
                       <td className="px-5 py-3.5 text-fg-4">{f.id}</td>
                       <td className="px-5 py-3.5 font-bold text-hue-cyan">
+                      <td title={`Fact ID: ${f.id}`} className="px-5 py-3.5 text-fg-4">
+                        {f.id}
+                      </td>
+                      <td
+                        title={`Kind: ${f.kind}${f.key ? `, Key: ${f.key}` : ""}`}
+                        className="px-5 py-3.5 font-bold text-hue-cyan"
+                      >
                         {f.kind}
                         {f.key && <span className="text-fg-4 font-normal"> / {f.key}</span>}
                       </td>
@@ -175,6 +183,10 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
                         </span>
                       </td>
                       <td className="px-5 py-3.5 text-right text-fg-4 text-[11px]">
+                      <td
+                        title={`Updated at: ${timestamp(f.updated_at)}`}
+                        className="px-5 py-3.5 text-right text-fg-4 text-[11px]"
+                      >
                         {timestamp(f.updated_at)}
                       </td>
                     </tr>
@@ -198,11 +210,11 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
             <table className="w-full text-left font-mono text-xs">
               <thead className="bg-sunken/80 text-fg-3 border-b border-line/80 uppercase text-[10px] tracking-wider">
                 <tr>
-                  <th className="px-5 py-3">ID</th>
-                  <th className="px-5 py-3">Shard</th>
-                  <th className="px-5 py-3">Observation</th>
-                  <th className="px-5 py-3 text-right">Weight</th>
-                  <th className="px-5 py-3 text-right">Confidence</th>
+                  <th title="Unique observation identifier" className="px-5 py-3">ID</th>
+                  <th title="Source persona database shard" className="px-5 py-3">Shard</th>
+                  <th title="Synthesized behavioral observation summary" className="px-5 py-3">Observation</th>
+                  <th title="Relative observation weight (significance)" className="px-5 py-3 text-right">Weight</th>
+                  <th title="Statistical confidence score percentage" className="px-5 py-3 text-right">Confidence</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/60 text-fg-2">
@@ -221,7 +233,11 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
                 ) : (
                   observations.map((o) => (
                     <tr key={`${o.persona}-${o.id}`} className="hover:bg-raised/40 transition-colors">
+                      <td title={`Observation ID: ${o.id}`} className="px-5 py-3.5 text-fg-4">{o.id}</td>
                       <td className="px-5 py-3.5 text-fg-4">{o.id}</td>
+                      <td title={`Observation ID: ${o.id}`} className="px-5 py-3.5 text-fg-4">
+                        {o.id}
+                      </td>
                       <td className="px-5 py-3.5">
                         <span
                           title={`Persona shard: ${o.persona}`}
@@ -230,6 +246,11 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
                           {o.persona}
                         </span>
                       </td>
+                      <td
+                        title={`Observation: ${o.summary}`}
+                        title={`Observation summary: ${o.summary}`}
+                        className="px-5 py-3.5 font-sans text-xs text-fg leading-relaxed"
+                      >
                       <td className="px-5 py-3.5 font-sans text-xs text-fg leading-relaxed">
                         {o.summary}
                       </td>
@@ -259,7 +280,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
       {Object.keys(memory.kind_counts).length > 0 && (
         <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
           <span className="text-fg-4 flex items-center gap-1">
-            <Layers className="h-3 w-3" aria-hidden /> by kind:
+            <Layers className="h-3 w-3" aria-hidden="true" /> by kind:
           </span>
           {Object.entries(memory.kind_counts)
             .sort((a, b) => b[1] - a[1])
