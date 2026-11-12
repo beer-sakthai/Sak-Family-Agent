@@ -2,8 +2,11 @@
 
 from sakthai.agent_platform.agent_engine import (
     AgentEngineMode,
+    ModelPreset,
+    ModelTier,
     UnifiedAgentConfig,
     UnifiedAgentRuntime,
+    resolve_model_preset,
 )
 from sakthai.agent_platform.antigravity_agent import (
     AI_STUDIO_KEY_URL,
@@ -18,6 +21,7 @@ from sakthai.agent_platform.customizations import (
 from sakthai.agent_platform.dep_manager import (
     DependencyConfig,
     detect_dependency_manager,
+    wrap_with_isolated_runner,
 )
 from sakthai.agent_platform.harness_exporter import (
     export_harness_agent_spec,
@@ -43,6 +47,8 @@ __all__ = [
     "CustomizationRegistry",
     "DataLossGuardrail",
     "DependencyConfig",
+    "ModelPreset",
+    "ModelTier",
     "RuleDocument",
     "SafetyCheckResult",
     "SkillSummary",
@@ -55,5 +61,7 @@ __all__ = [
     "export_v1_pipeline_step",
     "generate_harness_uid",
     "parse_git_repo_url",
+    "resolve_model_preset",
     "validate_patch_targets",
+    "wrap_with_isolated_runner",
 ]

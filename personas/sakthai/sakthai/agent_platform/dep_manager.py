@@ -61,3 +61,81 @@ def detect_dependency_manager(workspace: Path, package: str | None = None) -> De
         sync_cmd=".venv/bin/pip install -r requirements.txt",
         isolated_exec=".venv/bin/python",
     )
+
+
+PYTHON_ENV_COMMANDS: frozenset[str] = frozenset(
+    {
+        "python",
+        "python3",
+        "py",
+        "pip",
+        "pytest",
+        "mypy",
+        "ruff",
+        "bandit",
+        "flake8",
+        "black",
+        "isort",
+        "pylint",
+        "coverage",
+        "flit",
+        "hatch",
+        "sphinx-build",
+    }
+)
+
+
+def wrap_with_isolated_runner(
+    command: str,
+    workspace: Path | None = None,
+    *,
+    force: bool = False,
+) -> str:
+    """Wrap a command with the appropriate isolated environment runner.
+
+    Detects the active dependency manager (uv, poetry, pipenv, conda, venv)
+    and prefixes the command to ensure execution occurs inside the isolated virtual environment.
+
+    Args:
+        command: Shell command string to execute.
+        workspace: Optional workspace directory. Defaults to Path.cwd().
+        force: If True, wrap the command regardless of whether the base binary
+            is recognized as a Python tool.
+
+    Returns:
+        The wrapped command string.
+    """
+    cmd = command.strip()
+    if not cmd:
+        return ""
+
+    # Avoid double-wrapping
+    if cmd.startswith(("uv run ", "poetry run ", "pipenv run ", "conda run ", ".venv/bin/")):
+        return cmd
+
+    # Parse primary executable token
+    parts = cmd.split(maxsplit=1)
+    base_exe = parts[0]
+    rest = f" {parts[1]}" if len(parts) > 1 else ""
+
+    is_py_file = base_exe.endswith(".py")
+    is_py_tool = base_exe in PYTHON_ENV_COMMANDS or is_py_file
+
+    if not force and not is_py_tool:
+        return cmd
+
+    ws = workspace or Path.cwd()
+    cfg = detect_dependency_manager(ws)
+
+    if cfg.manager in ("uv", "poetry", "pipenv", "conda"):
+        runner = f"{cfg.manager} run"
+        if is_py_file:
+            return f"{runner} python {cmd}"
+        return f"{runner} {cmd}"
+
+    # Venv fallback
+    if is_py_file:
+        return f".venv/bin/python {cmd}"
+    if base_exe in ("python", "python3"):
+        return f".venv/bin/{base_exe}{rest}"
+    return f".venv/bin/{base_exe}{rest}"

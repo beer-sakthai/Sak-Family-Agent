@@ -292,6 +292,53 @@ def render_skills_prompt_block(names: Sequence[str], roots: Sequence[Path] | Non
     return "## Active skills\n\n" + "\n\n".join(sections)
 
 
+def render_skills_progressive_summary(
+    names: Sequence[str] | None = None,
+    roots: Sequence[Path] | None = None,
+    persona: str | None = None,
+) -> str:
+    """Render a progressive disclosure summary of skills (metadata-only).
+
+    Instead of injecting full markdown bodies into the system prompt, this
+    produces a compact catalog of available skills with descriptions and
+    paths, allowing the model to load specific skills on-demand using read_file.
+
+    Args:
+        names: Optional sequence of skill names to filter by. If None, all discovered
+            skills are included.
+        roots: Directory roots to search. Defaults to :func:`default_skill_roots`.
+        persona: Persona overlay to apply if roots is None.
+
+    Returns:
+        Formatted markdown table of skills, or empty string if no skills found.
+    """
+    search = tuple(roots) if roots is not None else default_skill_roots(persona)
+    all_skills = collect_skills(*search)
+    if names is not None:
+        name_set = set(names)
+        skills = [s for s in all_skills if s.name in name_set]
+    else:
+        skills = all_skills
+
+    if not skills:
+        return ""
+
+    lines = [
+        "## Available Skills (Progressive Disclosure)",
+        "",
+        "The following skills are available. Read the full `SKILL.md` instructions using `read_file` only when relevant to the task:",
+        "",
+        "| Skill | Category | Path | Description |",
+        "| --- | --- | --- | --- |",
+    ]
+    for skill in skills:
+        desc = (skill.description or "").replace("|", "\\|").replace("\n", " ").strip()
+        cat = (skill.category or _UNCATEGORIZED).replace("|", "\\|").strip()
+        lines.append(f"| `{skill.name}` | {cat} | `{skill.path}` | {desc} |")
+
+    return "\n".join(lines)
+
+
 def validate_tree(*roots: Path) -> list[tuple[Path, str]]:
     """Validate every SKILL.md under each root, flagging empty skill folders too."""
     errors: list[tuple[Path, str]] = []
