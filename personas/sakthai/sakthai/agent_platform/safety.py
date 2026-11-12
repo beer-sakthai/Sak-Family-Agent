@@ -1,6 +1,7 @@
-from dataclasses import dataclass
 import hashlib
 import re
+from dataclasses import dataclass
+
 
 @dataclass(frozen=True)
 class SafetyCheckResult:
@@ -9,17 +10,36 @@ class SafetyCheckResult:
     impact: str
     blocked: bool
 
+
 class DataLossGuardrail:
     DESTRUCTIVE_SHELL_PATTERNS = [
-        (re.compile(r"\brm\s+(-[a-zA-Z]*r[a-zA-Z]*f?|-[a-zA-Z]*f[a-zA-Z]*r?)\s+(.+)"), "Destructive file deletion"),
-        (re.compile(r"\bgsutil\s+rm\s+(-[a-zA-Z]*r[a-zA-Z]*\s+)?(.+)"), "Cloud Storage bucket/object deletion"),
-        (re.compile(r"\bbq\s+rm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+)?(.+)"), "BigQuery table/dataset deletion"),
+        (
+            re.compile(r"\brm\s+(-[a-zA-Z]*r[a-zA-Z]*f?|-[a-zA-Z]*f[a-zA-Z]*r?)\s+(.+)"),
+            "Destructive file deletion",
+        ),
+        (
+            re.compile(r"\bgsutil\s+rm\s+(-[a-zA-Z]*r[a-zA-Z]*\s+)?(.+)"),
+            "Cloud Storage bucket/object deletion",
+        ),
+        (
+            re.compile(r"\bbq\s+rm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+)?(.+)"),
+            "BigQuery table/dataset deletion",
+        ),
     ]
 
     DESTRUCTIVE_SQL_PATTERNS = [
-        (re.compile(r"\bDROP\s+(TABLE|DATABASE|SCHEMA)\b", re.IGNORECASE), "Destructive database operation (DROP)"),
-        (re.compile(r"\bTRUNCATE\s+TABLE\b", re.IGNORECASE), "Destructive database operation (TRUNCATE)"),
-        (re.compile(r"\bDELETE\s+FROM\s+\w+\s*(?:;|$)", re.IGNORECASE), "Unbounded DELETE operation without WHERE clause"),
+        (
+            re.compile(r"\bDROP\s+(TABLE|DATABASE|SCHEMA)\b", re.IGNORECASE),
+            "Destructive database operation (DROP)",
+        ),
+        (
+            re.compile(r"\bTRUNCATE\s+TABLE\b", re.IGNORECASE),
+            "Destructive database operation (TRUNCATE)",
+        ),
+        (
+            re.compile(r"\bDELETE\s+FROM\s+\w+\s*(?:;|$)", re.IGNORECASE),
+            "Unbounded DELETE operation without WHERE clause",
+        ),
     ]
 
     def generate_approval_token(self, command: str) -> str:
@@ -32,7 +52,9 @@ class DataLossGuardrail:
         for pattern, desc in self.DESTRUCTIVE_SHELL_PATTERNS:
             match = pattern.search(cleaned)
             if match:
-                impact_target = match.group(2) if len(match.groups()) >= 2 and match.group(2) else cleaned
+                impact_target = (
+                    match.group(2) if len(match.groups()) >= 2 and match.group(2) else cleaned
+                )
                 return SafetyCheckResult(
                     is_destructive=True,
                     reason=desc,

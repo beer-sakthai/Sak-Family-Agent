@@ -1,6 +1,7 @@
+import re
 from dataclasses import dataclass
 from pathlib import Path
-import re
+
 
 @dataclass(frozen=True)
 class SkillSummary:
@@ -8,10 +9,12 @@ class SkillSummary:
     description: str
     path: str
 
+
 @dataclass(frozen=True)
 class RuleDocument:
     scope: str
     content: str
+
 
 class CustomizationRegistry:
     def __init__(self, workspace_root: Path):
@@ -39,7 +42,11 @@ class CustomizationRegistry:
             if desc_match:
                 description = desc_match.group(1).strip()
             else:
-                lines = [line.strip() for line in content.splitlines() if line.strip() and not line.startswith("#") and not line.startswith("---")]
+                lines = [
+                    line.strip()
+                    for line in content.splitlines()
+                    if line.strip() and not line.startswith("#") and not line.startswith("---")
+                ]
                 description = lines[0] if lines else "Custom agent skill"
 
             results.append(SkillSummary(name=name, description=description, path=str(path)))

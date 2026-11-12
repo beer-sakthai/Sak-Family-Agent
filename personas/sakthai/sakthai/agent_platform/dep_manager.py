@@ -1,12 +1,14 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+
 @dataclass(frozen=True)
 class DependencyConfig:
     manager: str
     install_cmd: str
     sync_cmd: str
     isolated_exec: str
+
 
 def detect_dependency_manager(workspace: Path, package: str | None = None) -> DependencyConfig:
     pkg = package or "<package>"

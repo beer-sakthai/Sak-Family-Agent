@@ -1,12 +1,15 @@
 from collections.abc import Callable
-from dataclasses import dataclass, field
-from enum import Enum
+from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any
+
 from sakthai.agent_platform.safety import DataLossGuardrail
 
-class AgentEngineMode(str, Enum):
+
+class AgentEngineMode(StrEnum):
     ANTIGRAVITY = "antigravity"
     ADK = "adk"
+
 
 @dataclass
 class UnifiedAgentConfig:
@@ -15,6 +18,7 @@ class UnifiedAgentConfig:
     model: str = "gemini-2.5-flash"
     max_turns: int = 150
     instruction: str = "You are an autonomous AI pair programming agent."
+
 
 class UnifiedAgentRuntime:
     def __init__(self, config: UnifiedAgentConfig, guardrail: DataLossGuardrail | None = None):
@@ -26,7 +30,9 @@ class UnifiedAgentRuntime:
     def register_tool(self, name: str, func: Callable[..., Any]) -> None:
         self._tools[name] = func
 
-    def execute_tool(self, tool_name: str, arguments: dict[str, Any], approval_token: str | None = None) -> dict[str, Any]:
+    def execute_tool(
+        self, tool_name: str, arguments: dict[str, Any], approval_token: str | None = None
+    ) -> dict[str, Any]:
         if tool_name not in self._tools:
             return {"status": "error", "error": f"Tool '{tool_name}' not registered"}
 

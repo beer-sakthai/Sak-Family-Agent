@@ -1,10 +1,12 @@
 import re
 
+
 def generate_harness_uid(name: str) -> str:
     cleaned = name.lower()
     cleaned = re.sub(r"[^a-z0-9]+", "_", cleaned)
     cleaned = re.sub(r"_+", "_", cleaned).strip("_")
     return f"ca_{cleaned}"
+
 
 def export_harness_agent_spec(
     name: str,
@@ -92,10 +94,11 @@ agent:
 {layout_yaml}
 """
 
+
 def export_v1_pipeline_step(agent_name: str, custom_inputs: dict[str, str]) -> str:
     uid = generate_harness_uid(agent_name)
     with_block = "\n".join(f"      {k}: {v}" for k, v in custom_inputs.items())
-    return f"""- name: {agent_name.lower().replace(' ', '_')}
+    return f"""- name: {agent_name.lower().replace(" ", "_")}
   template:
     uses: {uid}@1.0.0
     with:
