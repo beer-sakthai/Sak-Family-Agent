@@ -148,6 +148,13 @@ export function PersonaDrawer({
       data-testid="persona-drawer"
     >
       <div className="space-y-6">
+        <section
+          aria-label="Persona summary metrics"
+          className="grid grid-cols-2 gap-2 font-mono text-xs"
+        >
+          <div
+            title={`Provider: ${persona.provider || "unset"}`}
+            className="rounded-xl border border-line/80 bg-sunken/60 p-3"
         <section className="grid grid-cols-2 gap-2 font-mono text-xs">
           <div
             className="rounded-xl border border-line/80 bg-sunken/60 p-3"
@@ -165,6 +172,8 @@ export function PersonaDrawer({
             <span className="block truncate text-fg-2">{persona.provider || "unset"}</span>
           </div>
           <div
+            title={`Configured model: ${persona.model || "unset"}`}
+            className="rounded-xl border border-line/80 bg-sunken/60 p-3"
             className="rounded-xl border border-line/80 bg-sunken/60 p-3"
             title={persona.model ? `Configured model: ${persona.model}` : "Model unset"}
             aria-label={persona.model ? `Model: ${persona.model}` : "Model unset"}
@@ -176,6 +185,12 @@ export function PersonaDrawer({
             </span>
           </div>
           <div
+            title={
+              persona.runs > 0
+                ? `Average latency: ${duration(persona.avg_latency_ms)}`
+                : "Average latency: no runs recorded"
+            }
+            className="rounded-xl border border-line/80 bg-sunken/60 p-3"
             className="rounded-xl border border-line/80 bg-sunken/60 p-3"
             title={
               persona.runs > 0
@@ -198,6 +213,12 @@ export function PersonaDrawer({
             </span>
           </div>
           <div
+            title={
+              successRate === null
+                ? "Success rate: no runs recorded"
+                : `Success rate: ${successRate.toFixed(1)}%`
+            }
+            className="rounded-xl border border-line/80 bg-sunken/60 p-3"
             className="rounded-xl border border-line/80 bg-sunken/60 p-3"
             title={
               successRate === null

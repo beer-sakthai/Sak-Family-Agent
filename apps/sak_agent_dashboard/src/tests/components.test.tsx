@@ -229,7 +229,7 @@ describe("AgentOverview", () => {
     );
 
     const clearButton = screen.getByRole("button", {
-      name: "Clear persona filter and show all personas",
+      name: "Clear filter - show all personas",
     });
     expect(clearButton).toBeInTheDocument();
     expect(clearButton).toHaveAttribute("type", "button");
@@ -240,7 +240,7 @@ describe("AgentOverview", () => {
 
     rerender(<AgentOverview personas={personas} selected={[]} onSelect={onSelect} />);
     expect(
-      screen.queryByRole("button", { name: "Clear persona filter and show all personas" }),
+      screen.queryByRole("button", { name: "Clear filter - show all personas" }),
     ).not.toBeInTheDocument();
   });
 });
@@ -446,6 +446,39 @@ describe("MemoryExplorer", () => {
     const firstFact = demoMemory().facts[0];
     const shardBadges = screen.getAllByTitle(`Persona shard: ${firstFact.persona}`);
     expect(shardBadges.length).toBeGreaterThan(0);
+  });
+
+  it("renders title hover tooltips on Fact table cells", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const firstFact = demoMemory().facts[0];
+
+    const idCell = screen.getByTitle(`Fact ID: ${firstFact.id}`);
+    expect(idCell).toBeInTheDocument();
+
+    const kindTitle = `Kind: ${firstFact.kind}${firstFact.key ? `, Key: ${firstFact.key}` : ""}`;
+    const kindCell = screen.getByTitle(kindTitle);
+    expect(kindCell).toBeInTheDocument();
+
+    const valueCell = screen.getByTitle(`Fact value: ${firstFact.value}`);
+    expect(valueCell).toBeInTheDocument();
+
+    const formattedTime = new Date(firstFact.updated_at * 1000).toISOString().replace("T", " ").slice(0, 16);
+    const updatedCell = screen.getByTitle(`Updated at: ${formattedTime}`);
+    expect(updatedCell).toBeInTheDocument();
+  });
+
+  it("renders title hover tooltips on Observation table cells", () => {
+    render(<MemoryExplorer memory={demoMemory()} />);
+    const obsTab = screen.getByRole("tab", { name: /Observations/ });
+    fireEvent.click(obsTab);
+
+    const firstObs = demoMemory().observations[0];
+
+    const idCell = screen.getByTitle(`Observation ID: ${firstObs.id}`);
+    expect(idCell).toBeInTheDocument();
+
+    const summaryCell = screen.getByTitle(`Observation: ${firstObs.summary}`);
+    expect(summaryCell).toBeInTheDocument();
   });
 
   it("provides title tooltips and aria-labels on observation weight and confidence cells", () => {
@@ -670,6 +703,15 @@ describe("AuditLogs", () => {
     );
     expect(screen.getByRole("columnheader", { name: "Type" })).toHaveAttribute(
       "title",
+      "Event type classification",
+    );
+    expect(screen.getByRole("columnheader", { name: "Message" })).toHaveAttribute(
+      "title",
+      "Event message",
+    );
+    expect(screen.getByRole("columnheader", { name: "Details" })).toHaveAttribute(
+      "title",
+      "Structured event details",
       "Audit event classification type",
     );
     expect(screen.getByRole("columnheader", { name: "Message" })).toHaveAttribute(
@@ -827,6 +869,27 @@ describe("SessionExplorer", () => {
     renderExplorer({ openSessionId: sessions.sessions[0].id });
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByTestId("session-drawer")).toBeInTheDocument();
+  });
+
+  it("renders tool call badges in session drawer with title tooltips and aria-label attributes describing outcome", () => {
+    const detailWithToolCalls = {
+      summary: sessions.sessions[0],
+      messages: [],
+      tool_calls: [
+        { name: "read_file", is_error: false },
+        { name: "run_bash", is_error: true },
+      ],
+      result_text: "Done",
+    };
+    renderExplorer({ openSessionId: sessions.sessions[0].id, detail: detailWithToolCalls });
+
+    const successBadge = screen.getByLabelText("Tool call: read_file (succeeded)");
+    expect(successBadge).toBeInTheDocument();
+    expect(successBadge).toHaveAttribute("title", "Tool call: read_file (succeeded)");
+
+    const errorBadge = screen.getByLabelText("Tool call: run_bash (failed)");
+    expect(errorBadge).toBeInTheDocument();
+    expect(errorBadge).toHaveAttribute("title", "Tool call: run_bash (failed)");
   });
 
   it("reports a close upward instead of closing itself", () => {
@@ -1143,6 +1206,19 @@ describe("WorkflowRuns", () => {
 });
 
 describe("PersonaFilter", () => {
+  it("includes visible label text in trigger button aria-label for WCAG 2.5.3 compliance", () => {
+    const { rerender } = render(<PersonaFilter selected={[]} onChange={vi.fn()} />);
+    const trigger = screen.getByTestId("persona-filter");
+    expect(trigger).toHaveAttribute("aria-label", "All personas - Filter by persona");
+
+    rerender(<PersonaFilter selected={["sakthai"]} onChange={vi.fn()} />);
+    expect(trigger).toHaveAttribute("aria-label", "SakThai - Filter by persona");
+
+    rerender(<PersonaFilter selected={["sakthai", "sakjules"]} onChange={vi.fn()} />);
+    expect(trigger).toHaveAttribute("aria-label", "2 personas - Filter by persona");
+  });
+
+  it("renders dynamic title tooltips on trigger based on selection state", () => {
   it("renders dynamic title tooltips and WCAG 2.5.3 compliant aria-label on trigger based on selection state", () => {
     const { rerender } = render(<PersonaFilter selected={[]} onChange={vi.fn()} />);
     const trigger = screen.getByTestId("persona-filter");
