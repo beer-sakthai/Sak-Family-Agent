@@ -10,6 +10,9 @@
 #
 # Repository configuration used by this workflow:
 #   .github/codeql/codeql-config.yml
+# This file uses advanced CodeQL setup so the repository can control languages,
+# paths, build modes, and other analysis settings through the workflow and the
+# CodeQL configuration file.
 
 name: "CodeQL Advanced"
 
@@ -28,12 +31,14 @@ on:
 
   # Allow manual runs from GitHub Actions.
   workflow_dispatch:
+    - cron: "22 15 * * 0"
 
 permissions:
   contents: read
 
 # Cancel older runs for the same branch or pull request.
 # Never cancel an analysis already running on main.
+# Supersede in-flight runs for the same ref, but never cancel a run on main.
 concurrency:
   group: codeql-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -49,6 +54,10 @@ jobs:
       security-events: write
       packages: read
       actions: read
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
 
     strategy:
       fail-fast: false
@@ -71,6 +80,16 @@ jobs:
           - language: python
             build-mode: none
             queries: default
+          # These languages use build-mode none because no manual compilation
+          # step is required by this workflow.
+          - language: actions
+            build-mode: none
+
+          - language: javascript-typescript
+            build-mode: none
+
+          - language: python
+            build-mode: none
 
     steps:
       # Harden the GitHub-hosted runner.
@@ -104,6 +123,11 @@ jobs:
           queries: ${{ matrix.queries }}
 
           # Cache dependencies used by CodeQL where supported.
+          # Use the repository-specific CodeQL configuration to control
+          # which parts of the repository are included in analysis.
+          config-file: ./.github/codeql/codeql-config.yml
+
+          # Cache dependencies resolved by CodeQL where supported.
           dependency-caching: true
 
       # Analyze the CodeQL database and upload the results.
