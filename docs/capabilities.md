@@ -86,10 +86,11 @@ The frontend that consumes these lives at `apps/sak_agent_dashboard/` (Next.js).
 
 The `sakthai.agent_platform` subsystem unifies advanced agent engineering and enterprise orchestration capabilities:
 
-- **Accidental Data Loss Guardrails (`safety.py`)**: Real-time evaluation of destructive shell commands (`rm -rf`, `gsutil rm`, `bq rm`, `git reset --hard`, `git clean -f`) and raw SQL mutations (`DROP`, `TRUNCATE`, unconstrained `DELETE`) with HMAC-based authorization tokens.
-- **Reactive Python Dependency Detection (`dep_manager.py`)**: Environment introspection adhering to a strict hierarchy (`uv` → `poetry` → `pipenv` → `conda` → `venv+pip`), preventing global package pollution.
-- **Progressive Disclosure Customizations (`customizations.py`)**: Hierarchical instruction resolution (`AGENTS.md`, `GEMINI.md`, `.rules.md`) and lightweight frontmatter indexing for skills to minimize context usage.
+- **Accidental Data Loss Guardrails (`safety.py`, `guardrails_hardened.py`)**: Real-time evaluation of destructive shell commands (`rm -rf`, `gsutil rm`, `bq rm`, `git reset --hard`, `git clean -f`, `mkfs`, `dd`, `terraform destroy`, `kubectl delete ns/all`) and raw SQL mutations (`DROP`, `TRUNCATE`, unconstrained `DELETE`) with HMAC-based authorization tokens (`check_data_loss_guardrail`).
+- **Reactive Python Dependency Detection & Isolated Runner (`dep_manager.py`)**: Environment introspection adhering to a strict hierarchy (`uv` → `poetry` → `pipenv` → `conda` → `venv+pip`), preventing global package pollution, plus automatic command wrapping (`wrap_with_isolated_runner` / `sakthai platform wrap-cmd`).
+- **Progressive Disclosure Customizations & Skills (`customizations.py`, `skills.py`)**: Hierarchical instruction resolution (`AGENTS.md`, `GEMINI.md`, `.rules.md`) and lightweight progressive disclosure summary tables (`render_skills_progressive_summary` / `sakthai platform skills`) to minimize prompt bloat.
 - **Jules Task Delegation (`jules_worker.py`)**: GitHub remote resolution, asynchronous patch planning, and delegation session formatting.
-- **Dual Agent Core Engine (`agent_engine.py`)**: Abstraction layer unifying Google Antigravity SDK (`LocalAgentConfig` / LiteRT) and Google ADK execution models with built-in safety interception.
-- **Harness AI Agent Spec Exporter (`harness_exporter.py`)**: Deterministic canonical identifier generation (`ca_<slug>`) and declarative Harness v1 agent template and pipeline step export.
+- **Dual Agent Core Engine & Model Selection Presets (`agent_engine.py`)**: Abstraction layer unifying Google Antigravity SDK (`LocalAgentConfig` / LiteRT) and Google ADK execution models with built-in safety interception and standardized model tiers (`ModelTier.FAST`, `ModelTier.REASONING`, `ModelTier.LOCAL`, `ModelTier.LEAD`).
+- **Autonomous Antigravity Agent (`antigravity_agent.py`)**: Production-ready agent runner supporting hosted Gemini, on-device LiteRT, and local Ollama backends with streaming responses and data loss prevention guardrails (`sakthai platform antigravity`).
+- **Harness AI Agent Spec Exporter (`harness_exporter.py`)**: Deterministic canonical identifier generation (`ca_<slug>`) and declarative Harness v1 agent template and pipeline step export (`sakthai platform export-harness`).
 
