@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { AlertTriangle, Info, Shield, ShieldAlert, ShieldCheck, ShieldX } from "lucide-react";
+import { AlertTriangle, Info, Shield, ShieldAlert, ShieldCheck } from "lucide-react";
 
 import type { AuditEvent, AuditPayload } from "@/lib/contracts.generated";
 
@@ -126,12 +126,24 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
           <table className="w-full text-left font-mono text-xs">
             <thead className="bg-sunken/80 text-fg-3 border-b border-line/80 uppercase text-[10px] tracking-wider">
               <tr>
+                <th title="Event timestamp (UTC)" className="px-5 py-3">Timestamp</th>
+                <th title="Security event severity level" className="px-5 py-3">Severity</th>
+                <th title="Audit event classification type" className="px-5 py-3">Type</th>
+                <th title="Audit log event description" className="px-5 py-3">Message</th>
+                <th title="Structured event metadata and attributes" className="px-5 py-3">Details</th>
                 <th title="Event timestamp (UTC)" className="px-5 py-3">
                   Timestamp
                 </th>
                 <th title="Security event severity level" className="px-5 py-3">
                   Severity
                 </th>
+                <th title="Event type classification" className="px-5 py-3">
+                  Type
+                </th>
+                <th title="Event message" className="px-5 py-3">
+                  Message
+                </th>
+                <th title="Structured event details" className="px-5 py-3">
                 <th title="Event classification type" className="px-5 py-3">
                   Type
                 </th>
@@ -148,7 +160,6 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
                 <tr>
                   <td colSpan={5} className="px-5 py-8 text-center">
                     <div className="flex flex-col items-center justify-center gap-2 font-sans">
-                      <ShieldX className="h-6 w-6 text-fg-4/80" aria-hidden="true" />
                       <p className="text-fg-4 text-xs italic">
                         {severity === "ALL"
                           ? "No security audit events recorded."
@@ -169,44 +180,26 @@ export function AuditLogs({ audit, severity, onSeverityChange }: AuditLogsProps)
                   </td>
                 </tr>
               ) : (
-                events.map((event, index) => {
-                  const isoTime = new Date(event.timestamp * 1000).toISOString().replace("T", " ").slice(0, 19);
-                  const detailsText = formatDetails(event.details);
-                  return (
-                    <tr
-                      key={`${event.timestamp}-${event.type}-${index}`}
-                      className="hover:bg-raised/40 transition-colors"
-                    >
-                      <td
-                        title={`Recorded at: ${isoTime} UTC`}
-                        className="px-5 py-3.5 text-fg-3 whitespace-nowrap text-[11px]"
-                      >
-                        {isoTime}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <SeverityBadge severity={event.severity} />
-                      </td>
-                      <td
-                        title={`Event type: ${event.type || "—"}`}
-                        className="px-5 py-3.5 font-bold text-fg"
-                      >
-                        {event.type || "—"}
-                      </td>
-                      <td
-                        title={`Event message: ${event.message}`}
-                        className="px-5 py-3.5 font-sans font-medium text-fg"
-                      >
-                        {event.message}
-                      </td>
-                      <td
-                        title={`Event details: ${detailsText}`}
-                        className="px-5 py-3.5 text-fg-3 text-[11px] font-mono"
-                      >
-                        {detailsText}
-                      </td>
-                    </tr>
-                  );
-                })
+                events.map((event, index) => (
+                  <tr
+                    key={`${event.timestamp}-${event.type}-${index}`}
+                    className="hover:bg-raised/40 transition-colors"
+                  >
+                    <td className="px-5 py-3.5 text-fg-3 whitespace-nowrap text-[11px]">
+                      {new Date(event.timestamp * 1000).toISOString().replace("T", " ").slice(0, 19)}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <SeverityBadge severity={event.severity} />
+                    </td>
+                    <td className="px-5 py-3.5 font-bold text-fg">{event.type || "—"}</td>
+                    <td className="px-5 py-3.5 font-sans font-medium text-fg">
+                      {event.message}
+                    </td>
+                    <td className="px-5 py-3.5 text-fg-3 text-[11px] font-mono">
+                      {formatDetails(event.details)}
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>

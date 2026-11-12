@@ -38,7 +38,19 @@ export class ApiSource implements DashboardSource {
   ) {}
 
   private async fetchJson<T>(pathname: string, params: Record<string, unknown> = {}): Promise<T> {
+    // Prevent double/multi-layered URL encoded relative path traversal bypasses
+    // Evaluate the path for safety by fully decoding it, without mutating the original path.
+    let validationPathname = pathname;
     // SSRF and Token Exfiltration protection:
+    // Prevent ASCII control characters and whitespace evasion
+    // Prevent ASCII control character injection and whitespace padding
+    for (let i = 0; i < pathname.length; i++) {
+      if (pathname.charCodeAt(i) < 32) {
+        throw new Error("Invalid path format: ASCII control characters are blocked");
+      }
+    }
+    pathname = pathname.trim();
+
     // Prevent protocol-relative URLs, absolute URLs with a scheme, and backslashes
     // that might bypass base URL prefixing.
     for (let i = 0; i < pathname.length; i++) {
@@ -49,31 +61,53 @@ export class ApiSource implements DashboardSource {
 
     let validationPath = pathname.trim();
 
+
+    // Prevent ASCII control character injection which could bypass string-matching checks
+    for (let i = 0; i < pathname.length; i++) {
+      if (pathname.charCodeAt(i) < 32) {
+        throw new Error(`ASCII control characters detected in URL`);
+      }
+    }
+
+    pathname = pathname.trim();
+
+    let validationPath = pathname;
+    for (let i = 0; i < pathname.length; i++) {
+      if (pathname.charCodeAt(i) < 32) {
+        throw new Error("Invalid path format: ASCII control characters are blocked");
+      }
+    }
+
+    let validationPath = pathname.trim();
     for (let i = 0; i < 5; i++) {
       try {
-        const decoded = decodeURIComponent(validationPath);
-        if (decoded === validationPath) break;
-        validationPath = decoded;
+        const decoded = decodeURIComponent(validationPathname);
+        if (decoded === validationPathname) break;
+        validationPathname = decoded;
       } catch {
-        // If URI is malformed, stop decoding and use what we have
+        // If it throws URIError due to malformed encoding, treat the original as safe
+        // for path traversal checking, since it cannot encode a valid `../` sequence.
         break;
       }
     }
 
-    if (validationPath.includes("\\")) {
+    // SSRF and Token Exfiltration protection:
+    // Prevent protocol-relative URLs, absolute URLs with a scheme, and backslashes
+    // that might bypass base URL prefixing.
+    if (validationPathname.includes("\\")) {
       throw new Error("Invalid path format: protocol-relative and absolute paths are blocked");
     }
 
-    const url = new URL(pathname, this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`);
-    const validationUrl = new URL(
-      validationPath,
-      this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`,
-    );
+    // The security check URL
+    const checkUrl = new URL(validationPathname, this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`);
     const baseUrlObj = new URL(this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`);
 
-    if (validationUrl.origin !== baseUrlObj.origin) {
-      throw new Error("Invalid path format: protocol-relative and absolute paths are blocked");
+    if (checkUrl.origin !== baseUrlObj.origin || !checkUrl.pathname.startsWith(baseUrlObj.pathname)) {
+      throw new Error("Invalid path format: protocol-relative, absolute, and traversal paths are blocked");
     }
+
+    // The actual execution URL must use the original unaltered pathname
+    const url = new URL(pathname, this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`);
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null && value !== "") {
         url.searchParams.set(key, String(value));

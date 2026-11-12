@@ -35,14 +35,31 @@ model = TransformersModel(
 
 ## Example agent
 ```python
+import simpleeval  # Requires: pip install simpleeval
+# Requires: pip install simpleeval
+import simpleeval
+
+
 @tool
 def get_weather(city: str) -> str:
     """Get weather for a city. Args: city: name of the city."""
     return f"Weather in {city}: sunny, 32°C"
 
+
+# Requires: pip install simpleeval
+import simpleeval  # Requires: pip install simpleeval
 @tool
 def calculator(expression: str) -> float:
     """Calculate math expression. Args: expression: math to evaluate."""
+    # Requires: pip install simpleeval
+# Requires: pip install simpleeval
+import simpleeval
+
+
+@tool
+def calculator(expression: str) -> float:
+    """Calculate math expression. Args: expression: math to evaluate."""
+    return simpleeval.simple_eval(expression)
     return eval(expression)
 
 agent = CodeAgent(tools=[get_weather, calculator], model=model)

@@ -174,9 +174,7 @@ export function SessionExplorer({
                 <th className="px-5 py-3">When</th>
                 <th className="px-5 py-3 text-right">Tokens</th>
                 <th className="px-5 py-3">Outcome</th>
-                <th className="px-5 py-3 text-right" aria-label="Actions">
-                  <span className="sr-only">Actions</span>
-                </th>
+                <th className="px-5 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-line/60 text-fg-2">
@@ -437,6 +435,8 @@ export function SessionExplorer({
                     {detail.tool_calls.map((call, idx) => (
                       <span
                         key={`${call.name}-${idx}`}
+                        title={`Tool call: ${call.name}${call.is_error ? " (failed)" : " (succeeded)"}`}
+                        aria-label={`Tool call: ${call.name}${call.is_error ? " (failed)" : " (succeeded)"}`}
                         className={`px-2 py-0.5 rounded-full text-[10px] border ${
                           call.is_error
                             ? "bg-hue-rose-tint/40 text-hue-rose border-hue-rose-line/40"

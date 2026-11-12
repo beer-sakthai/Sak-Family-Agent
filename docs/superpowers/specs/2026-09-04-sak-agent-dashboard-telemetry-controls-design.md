@@ -1,9 +1,9 @@
 # Design Specification: Sak Agent Dashboard Live Telemetry & Controls
 
-**Date:** 2026-09-04  
-**Author:** SakJules (Master of Automation & CI/CD)  
-**Status:** Approved for Implementation Planning  
-**Target Repository:** `Sak-Family-Agent`  
+**Date:** 2026-09-04
+**Author:** SakJules (Master of Automation & CI/CD)
+**Status:** Approved for Implementation Planning
+**Target Repository:** `Sak-Family-Agent`
 **Subsystems Affected:**
 - Backend API Contracts: `personas/sakthai/sakthai/web/contracts.py`
 - Contract Type Generator: `scripts/gen_dashboard_types.py`
