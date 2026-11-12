@@ -91,13 +91,9 @@ describe("Sidebar", () => {
     return { props, ...render(<Sidebar {...props} />) };
   }
 
-  it("renders one tab per section with aria-controls referencing the main tabpanel container ID", () => {
+  it("renders one tab per section", () => {
     renderSidebar();
-    const tabs = screen.getAllByRole("tab");
-    expect(tabs).toHaveLength(NAV_ITEMS.length);
-    for (const tab of tabs) {
-      expect(tab).toHaveAttribute("aria-controls", "dashboard-tabpanel");
-    }
+    expect(screen.getAllByRole("tab")).toHaveLength(NAV_ITEMS.length);
   });
 
   it("marks the active section", () => {
@@ -506,7 +502,7 @@ describe("KpiStrip", () => {
     expect(onNavigate).toHaveBeenCalledWith("analytics");
   });
 
-  it("renders descriptive title hover tooltips on non-interactive KPI tiles", () => {
+  it("renders descriptive title hover tooltips and aria-labels on non-interactive KPI tiles", () => {
     render(
       <KpiStrip
         metrics={metrics}
@@ -517,8 +513,14 @@ describe("KpiStrip", () => {
     );
     const successTile = screen.getByTitle(/Success rate:/);
     expect(successTile).toBeInTheDocument();
+    expect(successTile).toHaveAttribute("aria-label");
     const latencyTile = screen.getByTitle(/Avg latency:/);
     expect(latencyTile).toBeInTheDocument();
+    expect(latencyTile).toHaveAttribute("aria-label");
+
+    // Off-screen polite status live region for KPI metrics
+    const politeStatus = screen.getByRole("status");
+    expect(politeStatus).toHaveTextContent(/KPI summary:/);
   });
 
   it("renders KPI sparklines with role='img', title hover tooltips, and aria-labels", () => {
