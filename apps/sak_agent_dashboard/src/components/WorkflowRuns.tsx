@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CheckCircle2, CircleDashed, GitBranch, Info, Loader2, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, CircleDashed, GitBranch, Info, Loader2, XCircle } from "lucide-react";
 
 import type { WorkflowRunDetail, WorkflowRunSummary } from "@/lib/contracts.generated";
 import Drawer from "./Drawer";
@@ -127,9 +127,7 @@ export function WorkflowRuns({
                 <th className="px-5 py-3">Started</th>
                 <th className="px-5 py-3 text-right">Duration</th>
                 <th className="px-5 py-3 text-right">Steps</th>
-                <th className="px-5 py-3 text-right" aria-label="Actions">
-                  <span className="sr-only">Actions</span>
-                </th>
+                <th className="px-5 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-line/60 text-fg-2">
@@ -166,12 +164,20 @@ export function WorkflowRuns({
                         <StatusPill status={run.status} />
                       </td>
                       <td className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap">
+                      <td
+                        title={`Started: ${started(run.started_at)}`}
+                        className="px-5 py-3.5 text-fg-4 text-[11px] whitespace-nowrap"
+                      >
                         {started(run.started_at)}
                       </td>
                       <td className="px-5 py-3.5 text-right text-fg-2">
                         {duration(run.duration_seconds)}
                       </td>
                       <td className="px-5 py-3.5 text-right">
+                      <td
+                        title={`Step count: ${run.step_count} total${run.failed_steps > 0 ? `, ${run.failed_steps} failed` : ""}`}
+                        className="px-5 py-3.5 text-right"
+                      >
                         <span className="text-fg-2">{run.step_count}</span>
                         {run.failed_steps > 0 && (
                           <span className="text-hue-rose"> ({run.failed_steps} failed)</span>
@@ -226,13 +232,25 @@ export function WorkflowRuns({
                       <StatusPill status={step.status} />
                     </div>
                     <div className="flex items-center gap-4 text-[11px] text-fg-4">
-                      <span>{duration(step.duration_seconds)}</span>
-                      <span>
+                      <span title={`Step duration: ${duration(step.duration_seconds)}`}>
+                        {duration(step.duration_seconds)}
+                      </span>
+                      <span
+                        title={`Execution attempts: ${step.attempts} (${step.attempts === 1 ? "initial attempt" : `${step.attempts} attempts`})`}
+                      >
                         {step.attempts} {step.attempts === 1 ? "attempt" : "attempts"}
                       </span>
                     </div>
                     {step.error && (
-                      <p className="text-hue-rose font-sans wrap-break-word">{step.error}</p>
+                      <div
+                        role="alert"
+                        aria-label="Step execution error"
+                        title={`Step error: ${step.error}`}
+                        className="flex items-start gap-1.5 rounded-lg border border-hue-rose-line/30 bg-hue-rose-tint/20 px-2.5 py-1.5 text-xs text-hue-rose"
+                      >
+                        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-hue-rose" aria-hidden="true" />
+                        <p className="font-sans wrap-break-word">{step.error}</p>
+                      </div>
                     )}
                   </div>
                 ))

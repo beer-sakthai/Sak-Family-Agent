@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { CornerDownLeft, Search, SearchX, X } from "lucide-react";
+import { CornerDownLeft, Search, X } from "lucide-react";
 
 import { useFocusTrap } from "@/lib/focus";
 import { highlightSegments, rankBy, type FuzzyMatch } from "@/lib/fuzzy";
@@ -139,6 +139,13 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
     }
   };
 
+  const liveStatus =
+    query.trim() === ""
+      ? `${results.length} commands available.`
+      : results.length === 0
+        ? `No commands match "${query}".`
+        : `${results.length} command${results.length === 1 ? "" : "s"} found`;
+
   return (
     <div className="fixed inset-0 z-60 flex items-start justify-center p-4 pt-[12vh]">
       <button
@@ -202,10 +209,15 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
           </kbd>
         </div>
 
+        <span className="sr-only" role="status" aria-live="polite" aria-label={liveStatus}>
+          {liveStatus}
         <span
           className="sr-only"
           role="status"
           aria-live="polite"
+          aria-label={liveStatus}
+        >
+          {liveStatus}
           aria-label={
             query.trim() !== "" && results.length > 0
               ? `${results.length} command${results.length === 1 ? "" : "s"} found`
@@ -228,19 +240,18 @@ export function CommandPalette({ onClose, onNavigate, actions }: CommandPaletteP
         >
           {results.length === 0 && (
             <li className="flex flex-col items-center justify-center gap-2 px-3 py-8 text-center font-mono text-xs text-fg-4" role="status">
-              <SearchX className="h-5 w-5 text-fg-4/80" aria-hidden="true" />
               <span>Nothing matches “{query}”.</span>
               <button
                 type="button"
-                aria-label="Clear command palette search query"
-                title="Reset search query (Esc)"
                 onClick={() => {
                   setQuery("");
                   setHighlight(0);
                 }}
-                className="mt-1 rounded-lg border border-line-strong bg-raised px-2.5 py-1 text-xs text-hue-cyan hover:bg-raised-2 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+                aria-label="Clear search query and show all commands"
+                title="Clear search query (Esc)"
+                className="mt-1 rounded-lg border border-line bg-raised px-2.5 py-1 font-sans text-xs text-fg-3 transition-colors hover:bg-raised/80 hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
               >
-                Clear search
+                Clear search query
               </button>
             </li>
           )}

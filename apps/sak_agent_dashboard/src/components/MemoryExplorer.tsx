@@ -130,11 +130,11 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
             <table className="w-full text-left font-mono text-xs">
               <thead className="bg-sunken/80 text-fg-3 border-b border-line/80 uppercase text-[10px] tracking-wider">
                 <tr>
-                  <th className="px-5 py-3">ID</th>
-                  <th className="px-5 py-3">Kind / Key</th>
-                  <th className="px-5 py-3">Value</th>
-                  <th className="px-5 py-3">Shard</th>
-                  <th className="px-5 py-3 text-right">Updated</th>
+                  <th title="Unique memory fact identifier" className="px-5 py-3">ID</th>
+                  <th title="Memory category kind and lookup key" className="px-5 py-3">Kind / Key</th>
+                  <th title="Stored fact content and associated tags" className="px-5 py-3">Value</th>
+                  <th title="Source persona database shard" className="px-5 py-3">Shard</th>
+                  <th title="Last updated timestamp (UTC)" className="px-5 py-3 text-right">Updated</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/60 text-fg-2">
@@ -153,6 +153,9 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
                 ) : (
                   facts.map((f) => (
                     <tr key={`${f.persona}-${f.id}`} className="hover:bg-raised/40 transition-colors">
+                      <td title={`Fact ID: ${f.id}`} className="px-5 py-3.5 text-fg-4">{f.id}</td>
+                      <td className="px-5 py-3.5 text-fg-4">{f.id}</td>
+                      <td className="px-5 py-3.5 font-bold text-hue-cyan">
                       <td title={`Fact ID: ${f.id}`} className="px-5 py-3.5 text-fg-4">
                         {f.id}
                       </td>
@@ -182,6 +185,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
                           {f.persona}
                         </span>
                       </td>
+                      <td className="px-5 py-3.5 text-right text-fg-4 text-[11px]">
                       <td
                         title={`Updated at: ${timestamp(f.updated_at)}`}
                         className="px-5 py-3.5 text-right text-fg-4 text-[11px]"
@@ -209,11 +213,11 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
             <table className="w-full text-left font-mono text-xs">
               <thead className="bg-sunken/80 text-fg-3 border-b border-line/80 uppercase text-[10px] tracking-wider">
                 <tr>
-                  <th className="px-5 py-3">ID</th>
-                  <th className="px-5 py-3">Shard</th>
-                  <th className="px-5 py-3">Observation</th>
-                  <th className="px-5 py-3 text-right">Weight</th>
-                  <th className="px-5 py-3 text-right">Confidence</th>
+                  <th title="Unique observation identifier" className="px-5 py-3">ID</th>
+                  <th title="Source persona database shard" className="px-5 py-3">Shard</th>
+                  <th title="Synthesized behavioral observation summary" className="px-5 py-3">Observation</th>
+                  <th title="Relative observation weight (significance)" className="px-5 py-3 text-right">Weight</th>
+                  <th title="Statistical confidence score percentage" className="px-5 py-3 text-right">Confidence</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/60 text-fg-2">
@@ -232,6 +236,8 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
                 ) : (
                   observations.map((o) => (
                     <tr key={`${o.persona}-${o.id}`} className="hover:bg-raised/40 transition-colors">
+                      <td title={`Observation ID: ${o.id}`} className="px-5 py-3.5 text-fg-4">{o.id}</td>
+                      <td className="px-5 py-3.5 text-fg-4">{o.id}</td>
                       <td title={`Observation ID: ${o.id}`} className="px-5 py-3.5 text-fg-4">
                         {o.id}
                       </td>
@@ -247,6 +253,11 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
                         title={`Observation summary: ${o.summary}`}
                         className="px-5 py-3.5 font-sans text-xs text-fg leading-relaxed"
                       >
+                        title={`Observation: ${o.summary}`}
+                        title={`Observation summary: ${o.summary}`}
+                        className="px-5 py-3.5 font-sans text-xs text-fg leading-relaxed"
+                      >
+                      <td className="px-5 py-3.5 font-sans text-xs text-fg leading-relaxed">
                         {o.summary}
                       </td>
                       <td
