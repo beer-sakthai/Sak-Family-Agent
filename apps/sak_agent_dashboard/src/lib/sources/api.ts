@@ -50,6 +50,17 @@ export class ApiSource implements DashboardSource {
 
     // Prevent protocol-relative URLs, absolute URLs with a scheme, and backslashes
     // that might bypass base URL prefixing.
+
+    // Prevent ASCII control character injection which could bypass string-matching checks
+    for (let i = 0; i < pathname.length; i++) {
+      if (pathname.charCodeAt(i) < 32) {
+        throw new Error(`ASCII control characters detected in URL`);
+      }
+    }
+
+    pathname = pathname.trim();
+
+    let validationPath = pathname;
     for (let i = 0; i < pathname.length; i++) {
       if (pathname.charCodeAt(i) < 32) {
         throw new Error("Invalid path format: ASCII control characters are blocked");
