@@ -20,14 +20,14 @@
     "recharts": "^3.10.1"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.3.3",
+    "@tailwindcss/postcss": "^4.3.5",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.2.7",
-    "@vitejs/plugin-react": "^6.2.1",
+    "@vitejs/plugin-react": "^6.3.0",
     "eslint": "^10.14.0",
     "eslint-config-next": "^16.4.5",
     "fast-check": "^4.10.2",
