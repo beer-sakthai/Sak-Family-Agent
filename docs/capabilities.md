@@ -81,3 +81,15 @@ revenue snapshot built from the memory store, served over HTTP by
 
 Every path except `/health` requires the bearer token from `sakthai web setup`.
 The frontend that consumes these lives at `apps/sak_agent_dashboard/` (Next.js).
+
+## Unified Agent Platform
+
+The `sakthai.agent_platform` subsystem unifies advanced agent engineering and enterprise orchestration capabilities:
+
+- **Accidental Data Loss Guardrails (`safety.py`)**: Real-time evaluation of destructive shell commands (`rm -rf`, `gsutil rm`, `bq rm`, `git reset --hard`, `git clean -f`) and raw SQL mutations (`DROP`, `TRUNCATE`, unconstrained `DELETE`) with HMAC-based authorization tokens.
+- **Reactive Python Dependency Detection (`dep_manager.py`)**: Environment introspection adhering to a strict hierarchy (`uv` → `poetry` → `pipenv` → `conda` → `venv+pip`), preventing global package pollution.
+- **Progressive Disclosure Customizations (`customizations.py`)**: Hierarchical instruction resolution (`AGENTS.md`, `GEMINI.md`, `.rules.md`) and lightweight frontmatter indexing for skills to minimize context usage.
+- **Jules Task Delegation (`jules_worker.py`)**: GitHub remote resolution, asynchronous patch planning, and delegation session formatting.
+- **Dual Agent Core Engine (`agent_engine.py`)**: Abstraction layer unifying Google Antigravity SDK (`LocalAgentConfig` / LiteRT) and Google ADK execution models with built-in safety interception.
+- **Harness AI Agent Spec Exporter (`harness_exporter.py`)**: Deterministic canonical identifier generation (`ca_<slug>`) and declarative Harness v1 agent template and pipeline step export.
+

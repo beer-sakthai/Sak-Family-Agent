@@ -146,6 +146,8 @@ sakthai run "review the latest memory" --persona sakking   # needs HF_TOKEN
 sakthai chat                                               # SakThai's model, so HF_TOKEN
 sakthai memory family --tag deputy-chain                   # notes from every persona's memory
 sakthai mcp
+sakthai platform detect-deps                               # inspect workspace package manager
+sakthai platform check-safety "git reset --hard HEAD~1"    # verify command data loss safety
 ```
 
 Use `sakthai run --help` for provider, model, streaming, sandbox, skill, and persona options. The default data directory is `~/.sakthai`; set `SAKTHAI_HOME` to use another location.

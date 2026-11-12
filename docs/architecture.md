@@ -94,6 +94,14 @@ session readers, `FamilyMemoryView`, `store.get_dashboard_aggregates` — and
 `SAKTHAI_WEB_ALLOW_PUBLIC` is set; every path except `/health` requires the
 bearer token. Started with `sakthai web serve`.
 
+**`agent_platform/`** — unified agent integration subsystem (`sakthai.agent_platform`).
+Provides accidental data loss guardrails (`safety.py`) with HMAC bypass, dependency
+manager detection (`dep_manager.py`), progressive disclosure rule/skill registry
+(`customizations.py`), Jules remote delegation worker (`jules_worker.py`), dual
+runtime bridging Google Antigravity and ADK (`agent_engine.py`), and Harness v1
+pipeline/spec generator (`harness_exporter.py`).
+
+
 ## Memory schema
 
 ```sql

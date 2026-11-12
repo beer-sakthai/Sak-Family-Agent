@@ -24,11 +24,13 @@ class CustomizationRegistry:
 
     def _index_skills(self) -> None:
         search_paths = [
+            self.workspace_root,
             self.workspace_root / ".agents" / "skills",
             self.workspace_root / ".gemini" / "skills",
+            self.workspace_root / "skills",
         ]
         for base in search_paths:
-            if base.exists():
+            if base.exists() and base.is_dir():
                 for skill_md in base.glob("*/SKILL.md"):
                     skill_name = skill_md.parent.name
                     self._skills_index[skill_name] = skill_md
