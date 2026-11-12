@@ -225,6 +225,32 @@ def check_shell_command_hardened(command: str) -> GuardrailResult:
     return GuardrailResult(GuardrailAction.ALLOW)
 
 
+def check_data_loss_guardrail(command: str, approval_token: str | None = None) -> GuardrailResult:
+    """Validate a shell or SQL command against data loss guardrail rules.
+
+    Args:
+        command: Shell or SQL command to inspect.
+        approval_token: Optional approval token (APPROVE_<digest>) to bypass.
+
+    Returns:
+        GuardrailResult denying if destructive operation detected without authorization.
+    """
+    from ..agent_platform.safety import DataLossGuardrail
+
+    guardrail = DataLossGuardrail()
+    check = guardrail.verify_or_halt(command, approval_token=approval_token)
+    if check.blocked:
+        expected = guardrail.generate_approval_token(command)
+        return GuardrailResult(
+            GuardrailAction.DENY,
+            reason=(
+                f"Data loss guardrail violation: {check.reason} ({check.impact}). "
+                f"Provide approval token '{expected}' to authorize."
+            ),
+        )
+    return GuardrailResult(GuardrailAction.ALLOW)
+
+
 def check_mcp_server_safety(
     server_spec: dict[str, Any], security_level: SecurityLevel = SecurityLevel.BALANCED
 ) -> GuardrailResult:
@@ -299,6 +325,11 @@ def create_pre_execution_guardrail_hardened() -> Callable[
             command = args.get("command", "")
             if isinstance(command, str):
                 result = check_shell_command_hardened(command)
+                if result.action == GuardrailAction.DENY:
+                    return result
+
+                approval_token = args.get("approval_token")
+                result = check_data_loss_guardrail(command, approval_token=approval_token)
                 if result.action == GuardrailAction.DENY:
                     return result
 

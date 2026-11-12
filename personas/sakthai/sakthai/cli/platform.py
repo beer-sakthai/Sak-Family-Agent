@@ -7,13 +7,14 @@ from pathlib import Path
 
 import click
 
+from ..agent_platform.agent_engine import ModelTier, resolve_model_preset
 from ..agent_platform.antigravity_agent import (
     AI_STUDIO_KEY_URL,
     AntigravityAgentRunner,
     AntigravityRunnerConfig,
 )
 from ..agent_platform.customizations import CustomizationRegistry
-from ..agent_platform.dep_manager import detect_dependency_manager
+from ..agent_platform.dep_manager import detect_dependency_manager, wrap_with_isolated_runner
 from ..agent_platform.harness_exporter import export_harness_agent_spec, generate_harness_uid
 from ..agent_platform.safety import DataLossGuardrail
 
@@ -52,6 +53,23 @@ def detect_deps(target_path: Path, as_json: bool) -> None:
     click.echo(f"Install cmd:   {detection.install_cmd}")
     click.echo(f"Sync cmd:      {detection.sync_cmd}")
     click.echo(f"Isolated exec: {detection.isolated_exec}")
+
+
+@platform_cmd.command("wrap-cmd")
+@click.argument("command", type=str)
+@click.option(
+    "--path",
+    "-p",
+    "target_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
+    default=Path.cwd,
+    help="Target workspace to detect runner from.",
+)
+@click.option("--force", "-f", is_flag=True, help="Force wrapping even for non-Python commands.")
+def wrap_cmd(command: str, target_path: Path, force: bool) -> None:
+    """Wrap command with detected isolated runner (uv, poetry, conda, etc.)."""
+    wrapped = wrap_with_isolated_runner(command, workspace=target_path, force=force)
+    click.echo(wrapped)
 
 
 @platform_cmd.command("check-safety")
@@ -178,6 +196,13 @@ def export_harness(
     help="Backend execution engine.",
 )
 @click.option("--model", "-m", default="gemini-2.5-flash", help="Model identifier.")
+@click.option(
+    "--tier",
+    "-t",
+    type=click.Choice([t.value for t in ModelTier]),
+    default=None,
+    help="Model tier preset (fast, reasoning, local, lead). Overrides --model.",
+)
 @click.option("--base-url", default=None, help="Base URL for local OpenAI/Ollama server.")
 @click.option("--model-path", default=None, help="Filesystem path to local LiteRT model weights.")
 @click.option("--api-key", default=None, help="Explicit Gemini API key.")
@@ -185,6 +210,7 @@ def run_antigravity_cmd(
     prompt: str,
     backend: str,
     model: str,
+    tier: str | None,
     base_url: str | None,
     model_path: str | None,
     api_key: str | None,
@@ -193,6 +219,10 @@ def run_antigravity_cmd(
     import asyncio
     import os
     import sys
+
+    if tier:
+        preset = resolve_model_preset(tier)
+        model = preset.model_name
 
     resolved_key = api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     if backend == "hosted" and not resolved_key:
