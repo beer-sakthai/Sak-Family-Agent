@@ -1,6 +1,6 @@
 # PLAN.md — SakJules 🔧 Deep-Dive Task-by-Task Roadmap
-> *DevSecOps, GitHub Actions (28 Workflows), Cron Implementation, Sentinel Guardrails & Asynchronous Jules Automation — Execution Plan*  
-> *Each task's **Status** follows the root [`/PLAN.md`](../../PLAN.md): `[ ]` open → `[/]` in progress → `[x] YYYY-MM-DD` done.*  
+> *DevSecOps, GitHub Actions (28 Workflows), Cron Implementation, Sentinel Guardrails & Asynchronous Jules Automation — Execution Plan*
+> *Each task's **Status** follows the root [`/PLAN.md`](../../PLAN.md): `[ ]` open → `[/]` in progress → `[x] YYYY-MM-DD` done.*
 > *Commands that call `sakthai` from inside an agent run need `SAKTHAI_SHELL_ALLOW`; the `run_command` tool is off without it.*
 
 ---

@@ -1,9 +1,9 @@
 # 🎒 BACKPACK.md — SakJules 🔧 Complete Installation & Equipment Inventory
 
-> **Agent**: SakJules 🔧 (Master of GitHub, CI/CD & Automation)  
-> **Bot Handle**: `@sakjules_agent_bot`  
-> **Repository**: `Sak-Family-Agent`  
-> **Hermes Profile**: `infra/hermes-agents/profiles/sakjules/`  
+> **Agent**: SakJules 🔧 (Master of GitHub, CI/CD & Automation)
+> **Bot Handle**: `@sakjules_agent_bot`
+> **Repository**: `Sak-Family-Agent`
+> **Hermes Profile**: `infra/hermes-agents/profiles/sakjules/`
 > **Cost Policy**: **$0.00 USD Financial Spend** (100% Local & Free Tier Execution)
 
 ---

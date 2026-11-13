@@ -1,8 +1,8 @@
 # 🔄 CYCLE.md — SakSee 👁️ 6-Stage Growth Cycle Workflow Record
 
-> **Agent**: SakSee 👁️ (Web / Browser Specialist (Deputy 3))  
-> **Repository**: `Sak-Family-Agent`  
-> **Hermes Profile**: `infra/hermes-agents/profiles/saksee/`  
+> **Agent**: SakSee 👁️ (Web / Browser Specialist (Deputy 3))
+> **Repository**: `Sak-Family-Agent`
+> **Hermes Profile**: `infra/hermes-agents/profiles/saksee/`
 > **Cycle Target**: >75% Benchmark Accuracy & $0.00 USD Financial Spend
 
 ---
@@ -11,7 +11,7 @@
 
 ```
                        The 6-Stage Sak-Family Growth Cycle
-                       
+
  💭 1. DREAM    ➔ Define vision, check Charge & Deputy Chain, read family memory
  🌟 2. HOPE     ➔ Architect solution, verify model/MCP/skill bindings & gates
  ❤️ 3. CARE     ➔ Execute domain work with TDD, guardrails & zero-cost precision

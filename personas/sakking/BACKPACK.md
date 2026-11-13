@@ -1,9 +1,9 @@
 # 🎒 BACKPACK.md — SakKing 👑 Complete Installation & Equipment Inventory
 
-> **Agent**: SakKing 👑 (General Assistant & Runner (Deputy 1))  
-> **Bot Handle**: `@sakking_agent_bot`  
-> **Repository**: `Sak-Family-Agent`  
-> **Hermes Profile**: `infra/hermes-agents/profiles/sakking/`  
+> **Agent**: SakKing 👑 (General Assistant & Runner (Deputy 1))
+> **Bot Handle**: `@sakking_agent_bot`
+> **Repository**: `Sak-Family-Agent`
+> **Hermes Profile**: `infra/hermes-agents/profiles/sakking/`
 > **Cost Policy**: **$0.00 USD Financial Spend** (100% Local & Free Tier Execution)
 
 ---

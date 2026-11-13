@@ -1,6 +1,6 @@
 # PLAN.md — SakTan 📗 Deep-Dive Task-by-Task Roadmap
-> *Daily Briefings, Close-the-Day, Weekly Reviews, Alert Filtering, Ban Tally, Stalled Joy Check & Cron Proposals — Execution Plan*  
-> *Each task's **Status** follows the root [`/PLAN.md`](../../PLAN.md): `[ ]` open → `[/]` in progress → `[x] YYYY-MM-DD` done.*  
+> *Daily Briefings, Close-the-Day, Weekly Reviews, Alert Filtering, Ban Tally, Stalled Joy Check & Cron Proposals — Execution Plan*
+> *Each task's **Status** follows the root [`/PLAN.md`](../../PLAN.md): `[ ]` open → `[/]` in progress → `[x] YYYY-MM-DD` done.*
 > *Commands that call `sakthai` from inside an agent run need `SAKTHAI_SHELL_ALLOW`; the `run_command` tool is off without it.*
 
 ---

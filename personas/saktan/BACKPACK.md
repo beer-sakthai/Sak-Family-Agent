@@ -1,9 +1,9 @@
 # 🎒 BACKPACK.md — SakTan 📗 Complete Installation & Equipment Inventory
 
-> **Agent**: SakTan 📗 (Daily Ops & Rhythm (Deputy 2))  
-> **Bot Handle**: `@saktan_agent_bot`  
-> **Repository**: `Sak-Family-Agent`  
-> **Hermes Profile**: `infra/hermes-agents/profiles/saktan/`  
+> **Agent**: SakTan 📗 (Daily Ops & Rhythm (Deputy 2))
+> **Bot Handle**: `@saktan_agent_bot`
+> **Repository**: `Sak-Family-Agent`
+> **Hermes Profile**: `infra/hermes-agents/profiles/saktan/`
 > **Cost Policy**: **$0.00 USD Financial Spend** (100% Local & Free Tier Execution)
 
 ---

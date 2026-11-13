@@ -1,9 +1,9 @@
 # 🎒 BACKPACK.md — SakThai 🤗 Complete Installation & Equipment Inventory
 
-> **Agent**: SakThai 🤗 (Main Lead & HF Master)  
-> **Bot Handle**: `@sakthai_agent_bot`  
-> **Repository**: `Sak-Family-Agent`  
-> **Hermes Profile**: `infra/hermes-agents/default/`  
+> **Agent**: SakThai 🤗 (Main Lead & HF Master)
+> **Bot Handle**: `@sakthai_agent_bot`
+> **Repository**: `Sak-Family-Agent`
+> **Hermes Profile**: `infra/hermes-agents/default/`
 > **Cost Policy**: **$0.00 USD Financial Spend** (100% Local & Free Tier Execution)
 
 ---

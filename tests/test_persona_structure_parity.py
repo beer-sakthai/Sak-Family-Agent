@@ -41,7 +41,11 @@ class TestPersonaStructureParity(unittest.TestCase):
         for persona in PERSONAS:
             with self.subTest(persona=persona):
                 pdir = REPO_ROOT / "personas" / persona
-                actual = {item.name for item in pdir.iterdir()}
+                actual = {
+                    item.name
+                    for item in pdir.iterdir()
+                    if not item.name.endswith(".egg-info") and not item.name.startswith(".")
+                }
                 self.assertEqual(actual, EXPECTED_PERSONA_ITEMS)
 
     def test_every_persona_has_exact_four_config_files(self) -> None:

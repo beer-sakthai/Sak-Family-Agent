@@ -1,9 +1,9 @@
 # 🎒 BACKPACK.md — SakSit 📣 Complete Installation & Equipment Inventory
 
-> **Agent**: SakSit 📣 (Social / Content Specialist)  
-> **Bot Handle**: `@saksit_agent_bot`  
-> **Repository**: `Sak-Family-Agent`  
-> **Hermes Profile**: `infra/hermes-agents/profiles/saksit/`  
+> **Agent**: SakSit 📣 (Social / Content Specialist)
+> **Bot Handle**: `@saksit_agent_bot`
+> **Repository**: `Sak-Family-Agent`
+> **Hermes Profile**: `infra/hermes-agents/profiles/saksit/`
 > **Cost Policy**: **$0.00 USD Financial Spend** (100% Local & Free Tier Execution)
 
 ---

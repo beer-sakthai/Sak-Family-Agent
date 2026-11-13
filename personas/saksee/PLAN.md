@@ -1,6 +1,6 @@
 # PLAN.md — SakSee 👁️ Deep-Dive Task-by-Task Roadmap
-> *Web Scraping, Playwright Browser Automation, Chrome DevTools MCP, OCR & 30-Minute Monitoring Cache — Execution Plan*  
-> *Each task's **Status** follows the root [`/PLAN.md`](../../PLAN.md): `[ ]` open → `[/]` in progress → `[x] YYYY-MM-DD` done.*  
+> *Web Scraping, Playwright Browser Automation, Chrome DevTools MCP, OCR & 30-Minute Monitoring Cache — Execution Plan*
+> *Each task's **Status** follows the root [`/PLAN.md`](../../PLAN.md): `[ ]` open → `[/]` in progress → `[x] YYYY-MM-DD` done.*
 > *Commands that call `sakthai` from inside an agent run need `SAKTHAI_SHELL_ALLOW`; the `run_command` tool is off without it.*
 
 ---

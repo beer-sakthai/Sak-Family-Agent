@@ -13,11 +13,16 @@ SCRIPTS_DIR = REPO_ROOT / "scripts"
 def _imports_sakthai(tree: ast.Module) -> bool:
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
-            if any(alias.name == "sakthai" or alias.name.startswith("sakthai.") for alias in node.names):
+            if any(
+                alias.name == "sakthai" or alias.name.startswith("sakthai.") for alias in node.names
+            ):
                 return True
-        elif isinstance(node, ast.ImportFrom):
-            if node.module and (node.module == "sakthai" or node.module.startswith("sakthai.")):
-                return True
+        elif (
+            isinstance(node, ast.ImportFrom)
+            and node.module
+            and (node.module == "sakthai" or node.module.startswith("sakthai."))
+        ):
+            return True
     return False
 
 

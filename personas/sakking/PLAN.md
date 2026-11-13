@@ -1,6 +1,6 @@
 # PLAN.md — SakKing 👑 Deep-Dive Task-by-Task Roadmap
-> *TDD Execution, CLI Runner, Subagent Dispatch, Full-Skill Rollup & Deputy 1 Routing — Execution Plan*  
-> *Each task's **Status** follows the root [`/PLAN.md`](../../PLAN.md): `[ ]` open → `[/]` in progress → `[x] YYYY-MM-DD` done.*  
+> *TDD Execution, CLI Runner, Subagent Dispatch, Full-Skill Rollup & Deputy 1 Routing — Execution Plan*
+> *Each task's **Status** follows the root [`/PLAN.md`](../../PLAN.md): `[ ]` open → `[/]` in progress → `[x] YYYY-MM-DD` done.*
 > *Commands that call `sakthai` from inside an agent run need `SAKTHAI_SHELL_ALLOW`; the `run_command` tool is off without it.*
 
 ---

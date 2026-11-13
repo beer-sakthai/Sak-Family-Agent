@@ -1,9 +1,9 @@
 # 🤝 HANDOFF.md — SakTan 📗 Hand-off Contract
 
-> **Agent**: SakTan 📗 — Daily Ops & Rhythm (Deputy 2)  
-> **Bot Handle**: `@saktan_agent_bot`  
-> **Repository**: `Sak-Family-Agent`  
-> **Hermes Profile**: `infra/hermes-agents/profiles/saktan/`  
+> **Agent**: SakTan 📗 — Daily Ops & Rhythm (Deputy 2)
+> **Bot Handle**: `@saktan_agent_bot`
+> **Repository**: `Sak-Family-Agent`
+> **Hermes Profile**: `infra/hermes-agents/profiles/saktan/`
 > **Source of Truth**: Siblings write tagged observations to their own SQLite shards (`~/.sakthai/<agent>/memory.db`); `sakthai memory family` reads them across all 6 agents.
 
 ---

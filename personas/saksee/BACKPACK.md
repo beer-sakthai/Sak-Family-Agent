@@ -1,9 +1,9 @@
 # 🎒 BACKPACK.md — SakSee 👁️ Complete Installation & Equipment Inventory
 
-> **Agent**: SakSee 👁️ (Web / Browser Specialist (Deputy 3))  
-> **Bot Handle**: `@saksee_agent_bot`  
-> **Repository**: `Sak-Family-Agent`  
-> **Hermes Profile**: `infra/hermes-agents/profiles/saksee/`  
+> **Agent**: SakSee 👁️ (Web / Browser Specialist (Deputy 3))
+> **Bot Handle**: `@saksee_agent_bot`
+> **Repository**: `Sak-Family-Agent`
+> **Hermes Profile**: `infra/hermes-agents/profiles/saksee/`
 > **Cost Policy**: **$0.00 USD Financial Spend** (100% Local & Free Tier Execution)
 
 ---
