@@ -1,5 +1,6 @@
 ---
 name: SakSee-touchdesigner-mcp
+version: 1.0.0
 description: "Control a running TouchDesigner instance via twozero MCP — create operators, set parameters, wire connections, execute Python, build real-time visuals. 36 native tools."
 ---
 

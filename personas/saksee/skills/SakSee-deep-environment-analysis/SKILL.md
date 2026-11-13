@@ -1,5 +1,6 @@
 ---
 name: SakSee-deep-environment-analysis
+version: 1.0.0
 description: "Perform deep research and analysis of environment files with systematic investigation and diagnostic capabilities."
 ---
 

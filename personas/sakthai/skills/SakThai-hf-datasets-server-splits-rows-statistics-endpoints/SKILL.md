@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-datasets-server-splits-rows-statistics-endpoints
+version: 1.0.0
 description: ">-   Deep-dive into the remaining Datasets Server REST API endpoints beyond the   well-known filter/search/parquet APIs: /splits, /first-rows, /rows, /size,   /statistics, /is-valid, and /siblings.  Each endpoint is documented with the   exact reques"
 ---
 

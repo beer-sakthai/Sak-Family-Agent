@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-spaces-persistent-storage
+version: 1.0.0
 description: "Knowledge about Hugging Face Spaces persistent storage via Storage Buckets — creating, attaching, mounting, and managing persistent volumes in Spaces for zero-cost operation."
 ---
 

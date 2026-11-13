@@ -1,5 +1,6 @@
 ---
 name: SakSee-antigravity-cli-usage
+version: 1.0.0
 description: "Use the Google Antigravity CLI (agy) for AI-powered coding assistance, including installation, authentication, and common usage patterns."
 ---
 

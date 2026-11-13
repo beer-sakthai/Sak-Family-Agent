@@ -1,5 +1,6 @@
 ---
 name: SakSee-polymarket
+version: 1.0.0
 description: "Query Polymarket: markets, prices, orderbooks, history."
 ---
 

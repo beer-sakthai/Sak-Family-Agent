@@ -1,5 +1,6 @@
 ---
 name: SakThai-huggingface-zerogpu
+version: 1.0.0
 description: "AI demos and GPU compute with Gradio Spaces and Hugging Face Spaces ZeroGPU. Use when writing or reviewing code that uses `@spaces.GPU`, configuring `python_version` or `requirements.txt` for a ZeroGPU Space, or handling ZeroGPU-specific code constra"
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-gated-repos-access-management
+version: 1.0.0
 description: "Complete reference on Hugging Face Hub gated repository access management — enabling and configuring gating, managing access requests via UI and API, using the huggingface_hub Python client, and understanding gating group collections for Team & Enter"
 ---
 

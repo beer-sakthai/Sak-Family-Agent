@@ -1,5 +1,6 @@
 ---
 name: SakJules-workflow
+version: 1.0.0
 description: "Use when the user mentions workflow, pipeline, cycle, lifecycle, CI/CD, release process, or end-to-end development of SakThai models. Orchestrates all skills and commands into the 11-phase development cycle. Phase: ALL (master cycle)."
 ---
 

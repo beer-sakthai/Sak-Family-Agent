@@ -1,5 +1,6 @@
 ---
 name: SakSee-playwright-ime-composition-validation
+version: 1.0.0
 description: "Validate CJK and complex-text input behaviors in web apps using Playwright   by simulating IME composition events, detecting compositionend/blur race conditions,   and ensuring composed text is submitted before input loss. Use when your app has   Eas"
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-snapshot-download-and-cache-management
+version: 1.0.0
 description: "Hugging Face Hub: snapshot_download, cache locations, revision locking, and disk-space management."
 ---
 

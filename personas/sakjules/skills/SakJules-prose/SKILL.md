@@ -1,5 +1,6 @@
 ---
 name: SakJules-prose
+version: 1.0.0
 description: "OpenProse VM skill pack. Activate on any `prose` command, .prose files, or OpenProse mentions; orchestrates multi-agent workflows."
 ---
 

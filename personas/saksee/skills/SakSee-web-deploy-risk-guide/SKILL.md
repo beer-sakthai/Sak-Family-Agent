@@ -1,5 +1,6 @@
 ---
 name: SakSee-web-deploy-risk-guide
+version: 1.0.0
 description: "Safely deploy, verify, and recover static websites."
 ---
 

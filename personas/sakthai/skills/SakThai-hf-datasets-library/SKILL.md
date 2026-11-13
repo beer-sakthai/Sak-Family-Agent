@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-datasets-library
+version: 1.0.0
 description: "Deep dive into the Hugging Face `datasets` Python library — Arrow-backed memory mapping, caching architecture, Dataset.map() operations, and processing pipelines."
 ---
 

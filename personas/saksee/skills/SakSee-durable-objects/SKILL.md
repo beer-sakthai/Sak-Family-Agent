@@ -1,5 +1,6 @@
 ---
 name: SakSee-durable-objects
+version: 1.0.0
 description: "Create and review Cloudflare Durable Objects. Use when building stateful coordination (chat rooms, multiplayer games, booking systems), implementing RPC methods, SQLite storage, alarms, WebSockets, or reviewing DO code for best practices. Covers Work"
 ---
 

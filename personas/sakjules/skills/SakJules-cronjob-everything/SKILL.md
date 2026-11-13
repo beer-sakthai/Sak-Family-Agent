@@ -1,5 +1,6 @@
 ---
 name: SakJules-cronjob-everything
+version: 1.0.0
 description: "Create, manage, heal, and debug any Hermes cron job."
 ---
 

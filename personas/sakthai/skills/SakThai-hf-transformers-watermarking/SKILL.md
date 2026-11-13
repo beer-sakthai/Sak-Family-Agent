@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-transformers-watermarking
+version: 1.0.0
 description: ">   Complete reference on AI watermarking in the Hugging Face ecosystem —   Transformers watermarking system (Kirchenbauer + SynthID Text), logits   processors, detectors (WatermarkDetector, BayesianDetectorModel,   SynthIDTextWatermarkDetector), Gra"
 ---
 

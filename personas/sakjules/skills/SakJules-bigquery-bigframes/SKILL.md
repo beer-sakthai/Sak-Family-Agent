@@ -1,5 +1,6 @@
 ---
 name: SakJules-bigquery-bigframes
+version: 1.0.0
 description: ">-   Generates Python code using BigQuery DataFrames (BigFrames), the pandas/scikit-learn-style API over BigQuery. Use when writing BigFrames code or doing pandas-style dataframe/ML work against BigQuery (e.g. in a notebook). Dont use for SQL-first w"
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-learn-portal
+version: 1.0.0
 description: "Navigate and recommend Hugging Face Learn courses."
 ---
 # Hugging Face Learn Portal Guide

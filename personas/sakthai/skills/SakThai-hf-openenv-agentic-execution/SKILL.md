@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-openenv-agentic-execution
+version: 1.0.0
 description: ">-   Comprehensive deep-dive into Hugging Face OpenEnv (v0.4.1) — the unified   framework for building, deploying, and interacting with isolated execution   environments for agentic reinforcement learning. Covers the Gymnasium-style   API (step/reset"
 ---
 

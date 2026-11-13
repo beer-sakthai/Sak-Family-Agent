@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-spaces-docker
+version: 1.0.0
 description: "Hugging Face Spaces with Docker SDK — custom Dockerfiles, buildtime vs runtime secrets/variables, GPU support, data persistence via Storage Buckets, permissions, and hardware configuration."
 ---
 

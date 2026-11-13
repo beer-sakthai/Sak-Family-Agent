@@ -1,5 +1,6 @@
 ---
 name: SakSee-playwright-route-replay
+version: 1.0.0
 description: "Use Playwright route interception and HAR replay to run headless browser   automations offline against recorded network responses, enabling deterministic replay,   flaky-dependency isolation, and zero-network CI runs."
 ---
 

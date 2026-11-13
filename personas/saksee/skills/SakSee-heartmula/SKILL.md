@@ -1,5 +1,6 @@
 ---
 name: SakSee-heartmula
+version: 1.0.0
 description: "HeartMuLa: Suno-like song generation from lyrics + tags."
 ---
 

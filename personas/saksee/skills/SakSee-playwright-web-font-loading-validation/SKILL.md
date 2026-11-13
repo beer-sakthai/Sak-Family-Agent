@@ -1,5 +1,6 @@
 ---
 name: SakSee-playwright-web-font-loading-validation
+version: 1.0.0
 description: "Use Playwright to detect and gate on web font loading behavior - font-display   strategies, @font-face ready events, FOUT/FOIT, and font-load timing regressions."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakJules-dotenvx
+version: 1.0.0
 description: "Use dotenvx to run commands with environment variables, manage multiple .env files, expand variables, and encrypt env files for safe commits and CI/CD."
 ---
 

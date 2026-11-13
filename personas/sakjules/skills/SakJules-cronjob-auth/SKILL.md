@@ -1,5 +1,6 @@
 ---
 name: SakJules-cronjob-auth
+version: 1.0.0
 description: "Handle authentication, authorization, and credential safety for Hermes   cron jobs"
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-repocard-system
+version: 1.0.0
 description: "Programmatic creation, loading, validation, and management of repository cards on the Hugging Face Hub"
 ---
 

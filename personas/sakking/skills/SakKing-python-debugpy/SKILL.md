@@ -1,5 +1,6 @@
 ---
 name: SakKing-python-debugpy
+version: 1.0.0
 description: "Debug Python: pdb REPL + debugpy remote (DAP)."
 ---
 # Python Debugger (pdb + debugpy)

@@ -1,5 +1,6 @@
 ---
 name: SakKing-coding-agent
+version: 1.0.0
 description: "Delegate coding work to Codex, Claude Code, or OpenCode as background workers; not simple edits or read-only code lookup."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakJules-github-code-review
+version: 1.0.0
 description: "Review PRs: diffs, inline comments via gh or REST."
 ---
 # GitHub Code Review

@@ -1,5 +1,6 @@
 ---
 name: SakSee-repository-structure-investigation
+version: 1.0.0
 description: "Investigate complex repository structures, especially when processes may be running from integrated components rather than standalone repositories."
 ---
 

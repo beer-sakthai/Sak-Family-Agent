@@ -1,5 +1,6 @@
 ---
 name: SakSee-playwright-cross-origin-isolation-validation
+version: 1.0.0
 description: "Use when verifying Cross-Origin Isolation (COOP/COEP) and SharedArrayBuffer   capabilities with Playwright."
 ---
 

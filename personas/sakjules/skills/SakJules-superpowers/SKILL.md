@@ -1,5 +1,6 @@
 ---
 name: SakJules-superpowers
+version: 1.0.0
 description: "Superpowers development methodology: plan execution, subagent-driven-development, and programmatic verification (TDD)."
 ---
 

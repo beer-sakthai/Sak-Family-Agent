@@ -1,5 +1,6 @@
 ---
 name: SakJules-cycle-workflow
+version: 1.0.0
 description: "Master operation flow for every task. Follows SakThai 6-stage energy cycle: Dream → Hope → Care → Joy → Trust → Growth. Every action passes through all 6 stages. Never skip a stage."
 ---
 

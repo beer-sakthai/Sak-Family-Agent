@@ -1,5 +1,6 @@
 ---
 name: SakKing-smolagents
+version: 1.0.0
 description: "Use when the user mentions agents, smolagents, tool use, code agents, or using any SakThai model for agentic tasks. Phase: DEPLOY."
 ---
 

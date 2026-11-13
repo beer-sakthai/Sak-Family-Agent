@@ -1,5 +1,6 @@
 ---
 name: SakJules-gemini-interactions-api
+version: 1.0.0
 description: "Guides the usage of Gemini Interactions API on Gemini Enterprise Agent Platform. Use when the user wants to use the stateful, server-managed Interactions API for multi-turn conversations, background execution, streaming, structured output, and functi"
 ---
 

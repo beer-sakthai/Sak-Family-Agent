@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-datasets-server-is-valid-endpoint
+version: 1.0.0
 description: "Complete reference for the Datasets Server /is-valid endpoint — checking dataset availability, viewer/preview/search/filter/statistics capabilities, gated dataset access, and integration patterns."
 ---
 

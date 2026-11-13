@@ -1,5 +1,6 @@
 ---
 name: SakKing-model-routing-agent-systems-deep-dive
+version: 1.0.0
 description: "name: SakThai-model-routing-agent-systems-deep-dive"
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakKing-sak-family-agent-knowledge
+version: 1.0.0
 description: "Help and support for the Sak-Family-Agent monorepo."
 ---
 

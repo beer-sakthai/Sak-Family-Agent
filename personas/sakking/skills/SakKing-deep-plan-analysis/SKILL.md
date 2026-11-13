@@ -1,5 +1,6 @@
 ---
 name: SakKing-deep-plan-analysis
+version: 1.0.0
 description: "Audit and diagnose PLAN.md files with deep analysis."
 ---
 

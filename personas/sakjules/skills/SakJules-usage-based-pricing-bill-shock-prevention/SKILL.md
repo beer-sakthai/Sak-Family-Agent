@@ -1,5 +1,6 @@
 ---
 name: SakJules-usage-based-pricing-bill-shock-prevention
+version: 1.0.0
 description: "Operational guardrails and workflow for preventing bill shock, billing disputes, and churn in usage-based / consumption-based B2B SaaS pricing. Covers alert thresholds, spending caps, transparent metering, communication design, and churn-risk monitor"
 ---
 

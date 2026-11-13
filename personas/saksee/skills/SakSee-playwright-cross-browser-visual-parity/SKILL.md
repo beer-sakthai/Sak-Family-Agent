@@ -1,5 +1,6 @@
 ---
 name: SakSee-playwright-cross-browser-visual-parity
+version: 1.0.0
 description: "Use Playwright to capture and compare visual output across Chromium,   Firefox, and WebKit for the same page/state. Detect rendering differences, font   fallbacks, layout shifts, and viewport quirks by generating baseline and diff screenshots   in a "
 ---
 

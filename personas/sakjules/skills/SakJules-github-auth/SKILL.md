@@ -1,5 +1,6 @@
 ---
 name: SakJules-github-auth
+version: 1.0.0
 description: "GitHub auth setup: HTTPS tokens, SSH keys, gh CLI login."
 ---
 

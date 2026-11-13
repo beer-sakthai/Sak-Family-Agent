@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-discussions-pull-requests
+version: 1.0.0
 description: "Complete reference for the Hugging Face Hub Discussions & Pull Requests API — creating, managing, merging, and interacting with discussions and pull requests on the Hub programmatically via huggingface_hub Python SDK."
 ---
 

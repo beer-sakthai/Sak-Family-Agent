@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-mage-vl
+version: 1.0.0
 description: "Complete reference on Microsoft Mage-VL — a 4B codec-native streaming VLM (Mage-ViT from-scratch encoder + Qwen3-4B decoder + Mamba-1 StreamMind cognition gate). Architecture, codec tokenization, gate, training curriculum, benchmarks, deployment."
 ---
 

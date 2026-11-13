@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-gradio-server-mode
+version: 1.0.0
 description: "Complete reference for Gradio 6 Server mode (gr.Server) — FastAPI-based API server with queue, SSE streaming, concurrency control, and MCP capabilities without a UI."
 ---
 

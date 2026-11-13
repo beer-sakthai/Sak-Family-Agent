@@ -1,5 +1,6 @@
 ---
 name: SakThai-huggingface-llm-trainer
+version: 1.0.0
 description: "Train or fine-tune language and vision models using TRL (Transformer Reinforcement Learning) or Unsloth with Hugging Face Jobs infrastructure. Covers SFT, DPO, GRPO and reward modeling training methods, plus GGUF conversion for local deployment. Incl"
 ---
 

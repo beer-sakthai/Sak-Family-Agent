@@ -1,5 +1,6 @@
 ---
 name: SakJules-ci-fixer-master-debug
+version: 1.0.0
 description: "Diagnose and fix GitHub Actions CI failures."
 ---
 

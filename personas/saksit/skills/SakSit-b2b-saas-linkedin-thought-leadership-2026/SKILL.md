@@ -1,5 +1,6 @@
 ---
 name: SakSit-b2b-saas-linkedin-thought-leadership-2026
+version: 1.0.0
 description: ">   A practical playbook for B2B SaaS companies to build executive thought leadership   on LinkedIn in the 360Brew algorithm era. Covers founder-led content, Depth Score   optimization, document carousel strategy, and measurable pipeline impact."
 ---
 

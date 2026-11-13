@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-audit-logs
+version: 1.0.0
 description: "Complete reference for Hugging Face Hub Audit Logs — event types, access patterns, JSON export, and integration patterns for organization activity tracking"
 ---
 

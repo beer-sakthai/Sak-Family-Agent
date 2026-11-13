@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-ml-games
+version: 1.0.0
 description: "Integrate AI into games — NPCs, tools, Unity, Cubzh."
 ---
 # Machine Learning for Games

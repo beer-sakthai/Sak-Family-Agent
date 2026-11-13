@@ -1,5 +1,6 @@
 ---
 name: SakKing-gcloud
+version: 1.0.0
 description: ">-   Provides safety-critical validation, guardrails, and data reduction for gcloud   CLI operations across Google Cloud Platform (GCP) services and infrastructure.   Use when planning, generating, invoking, executing, or managing any gcloud CLI   co"
 ---
 

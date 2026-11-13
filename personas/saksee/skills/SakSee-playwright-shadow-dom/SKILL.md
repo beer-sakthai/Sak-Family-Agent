@@ -1,5 +1,6 @@
 ---
 name: SakSee-playwright-shadow-dom
+version: 1.0.0
 description: "Use Playwright locators with `:scope`, `locator(css=...)` targeting   `shadowRoot`, and `evaluate()` to interact with, assert on, and extract state fromShadow   DOM, closed Shadow DOM workarounds, and shadow-piercing strategies for LWC/SLDS/Custom   "
 ---
 

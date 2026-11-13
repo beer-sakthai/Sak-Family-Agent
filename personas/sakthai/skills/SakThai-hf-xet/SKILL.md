@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-xet
+version: 1.0.0
 description: "Hugging Face XET protocol: fast large-file transfers with chunk-based deduplication, CAS backend, and Git-LFS compatibility."
 ---
 

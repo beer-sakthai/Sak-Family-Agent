@@ -1,5 +1,6 @@
 ---
 name: SakJules-continuous-learning-loop
+version: 1.0.0
 description: "Automated research cron feeding back into skills."
 ---
 

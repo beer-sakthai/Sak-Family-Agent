@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-bitsandbytes-quantization
+version: 1.0.0
 description: "Guide to using bitsandbytes with Hugging Face Transformers for 4-bit and 8-bit quantization, enabling large model inference and QLoRA training on consumer GPUs."
 ---
 

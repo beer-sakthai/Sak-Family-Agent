@@ -1,5 +1,6 @@
 ---
 name: SakJules-customer-health-score-operational-framework
+version: 1.0.0
 description: "Build, validate, and operationalize a customer health score that predicts churn and expansion. Covers signal selection, weighted scoring, threshold playbooks, and CSM action triggers."
 ---
 

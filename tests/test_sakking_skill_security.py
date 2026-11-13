@@ -8,6 +8,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SKILLS_ROOT = REPO_ROOT / "personas" / "sakking" / "skills"
+SAKSEE_SKILLS_ROOT = REPO_ROOT / "personas" / "saksee" / "skills"
 P5_SCRIPT_URL = "https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.3/p5.min.js"
 P5_SCRIPT_INTEGRITY = (
     "sha512-I0Pwwz3PPNQkWes+rcSoQqikKFfRmTfGQrcNzZbm8ALaUyJuFdyRinl805shE8xT6iEWsWgv"
@@ -22,8 +23,8 @@ class _CredentialDisplay:
 
 def test_comfyui_output_redacts_credentials(capsys) -> None:
     common = runpy.run_path(
-        str(SKILLS_ROOT / "SakKing-comfyui" / "scripts" / "_common.py"),
-        run_name="sakking_comfyui_common",
+        str(SAKSEE_SKILLS_ROOT / "SakSee-comfyui" / "scripts" / "_common.py"),
+        run_name="saksee_comfyui_common",
     )
 
     common["emit_json"](
@@ -73,7 +74,7 @@ def test_maps_output_redacts_precise_location(capsys) -> None:
 
 
 def test_p5js_dependency_has_subresource_integrity() -> None:
-    viewer = (SKILLS_ROOT / "SakKing-p5js" / "templates" / "viewer.html").read_text()
+    viewer = (SAKSEE_SKILLS_ROOT / "SakSee-p5js" / "templates" / "viewer.html").read_text()
 
     expected_script = (
         f'<script src="{P5_SCRIPT_URL}" integrity="{P5_SCRIPT_INTEGRITY}" '

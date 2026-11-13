@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-inference-endpoints
+version: 1.0.0
 description: "Hugging Face Inference Endpoints — deploy, manage, scale, and monitor production-grade model endpoints via the Python SDK and REST API. Covers creation, lifecycle, auto-scaling, pause/resume, scale-to-zero, custom containers, and cost optimization."
 ---
 

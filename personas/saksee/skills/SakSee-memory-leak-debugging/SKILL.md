@@ -1,5 +1,6 @@
 ---
 name: SakSee-memory-leak-debugging
+version: 1.0.0
 description: "Diagnoses and resolves memory leaks in JavaScript/Node.js applications. Use when a user reports high memory usage, OOM errors, or wants to capture, compare, or inspect heap snapshots with Chrome DevTools MCP memory tools."
 ---
 

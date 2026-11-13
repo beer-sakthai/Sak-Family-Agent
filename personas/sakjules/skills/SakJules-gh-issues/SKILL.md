@@ -1,5 +1,6 @@
 ---
 name: SakJules-gh-issues
+version: 1.0.0
 description: "Fetch GitHub issues, select candidates, spawn background fix agents, open PRs, and optionally process PR review comments. user-invocable: true"
 ---
 

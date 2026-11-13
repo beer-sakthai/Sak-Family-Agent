@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-datasets-streaming-deep-dive
+version: 1.0.0
 description: "Complete deep-dive into Hugging Face Datasets streaming — load, process, and train with IterableDataset for large-scale data without downloading the full dataset. Covers streaming from Hub, local files, Parquet column projection/filter pushdown, Iter"
 ---
 

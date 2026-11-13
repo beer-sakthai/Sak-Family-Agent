@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-transformers-tipsv2
+version: 1.0.0
 description: ">-   TIPSv2 (Text-Image Pre-training with Spatial awareness v2) — Google DeepMinds   contrastive vision-language encoder family added in Transformers v5.14.0.   Covers architecture (dual ViT + text transformer), dual-class-token design,   iBOT++ pret"
 ---
 

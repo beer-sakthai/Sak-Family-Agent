@@ -1,5 +1,6 @@
 ---
 name: SakSee-hermes-agent-skill-authoring
+version: 1.0.0
 description: "Author SKILL.md files with proper frontmatter and structure."
 ---
 

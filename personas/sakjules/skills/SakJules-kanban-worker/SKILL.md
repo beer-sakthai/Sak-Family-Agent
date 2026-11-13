@@ -1,5 +1,6 @@
 ---
 name: SakJules-kanban-worker
+version: 1.0.0
 description: "Execute tasks in a kanban workflow pattern."
 ---
 

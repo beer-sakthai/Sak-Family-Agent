@@ -1,5 +1,6 @@
 ---
 name: SakKing-typer
+version: 1.0.0
 description: "Typer best practices and conventions. Use when working with Typer CLIs. Keeps Typer code clean and up to date with the latest features and patterns, updated with new versions. Write new code or refactor and update old code."
 ---
 

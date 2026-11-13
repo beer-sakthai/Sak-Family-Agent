@@ -1,5 +1,6 @@
 ---
 name: SakSit-b2b-saas-interactive-content-2026
+version: 1.0.0
 description: "Saksit B2B Saas Interactive Content 2026"
 ---
 

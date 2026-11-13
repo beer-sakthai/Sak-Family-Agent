@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-repo-move-delete-management
+version: 1.0.0
 description: ">   Complete reference for Hugging Face Hub repository lifecycle management —   renaming, transferring ownership, deleting, duplicating, checking existence,   and updating visibility/settings of models, datasets, and Spaces via the   huggingface_hub "
 ---
 

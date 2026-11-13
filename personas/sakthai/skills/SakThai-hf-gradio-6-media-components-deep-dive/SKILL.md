@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-gradio-6-media-components-deep-dive
+version: 1.0.0
 description: "Complete reference for Gradio 6 media components — Audio, Video, Image, File, Gallery, and ImageEditor. Covers API surface, streaming, preprocessing, events, theming, and advanced usage patterns."
 ---
 

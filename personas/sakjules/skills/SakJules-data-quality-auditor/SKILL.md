@@ -1,5 +1,6 @@
 ---
 name: SakJules-data-quality-auditor
+version: 1.0.0
 description: "Audit datasets for completeness, consistency, accuracy, and validity. Profile data distributions, detect anomalies and outliers, surface structural issues, and produce an actionable remediation plan. Use when the user asks to check data quality, prof"
 ---
 

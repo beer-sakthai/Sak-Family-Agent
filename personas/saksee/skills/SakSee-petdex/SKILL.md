@@ -1,5 +1,6 @@
 ---
 name: SakSee-petdex
+version: 1.0.0
 description: "Install and select animated petdex mascots for Hermes."
 ---
 

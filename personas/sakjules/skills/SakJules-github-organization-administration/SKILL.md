@@ -1,5 +1,6 @@
 ---
 name: SakJules-github-organization-administration
+version: 1.0.0
 description: "GitHub organization admin: manage org/team roles, audit logs, policies, secrets, and billing."
 ---
 

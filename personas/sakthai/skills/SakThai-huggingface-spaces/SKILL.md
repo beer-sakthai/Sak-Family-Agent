@@ -1,5 +1,6 @@
 ---
 name: SakThai-huggingface-spaces
+version: 1.0.0
 description: "Build, deploy, and maintain applications on Hugging Face Spaces — Gradio / Docker / Static SDKs, ZeroGPU and dedicated hardware, model loading, debugging, buckets, inference providers, community grants. Use whenever the user asks to create or host an"
 ---
 

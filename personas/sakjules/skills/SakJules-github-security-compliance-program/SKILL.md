@@ -1,5 +1,6 @@
 ---
 name: SakJules-github-security-compliance-program
+version: 1.0.0
 description: "GitHub security compliance: dependabot, code scanning, secret scanning, branch rules, SSLL certs, and force push."
 ---
 

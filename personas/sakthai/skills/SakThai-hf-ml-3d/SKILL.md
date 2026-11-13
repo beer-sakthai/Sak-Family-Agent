@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-ml-3d
+version: 1.0.0
 description: "3D machine learning on Hugging Face — multi-view diffusion, Gaussian splatting, mesh generation, and the HF ML for 3D Course ecosystem."
 ---
 

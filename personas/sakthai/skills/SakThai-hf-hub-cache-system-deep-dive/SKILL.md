@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-cache-system-deep-dive
+version: 1.0.0
 description: "Complete deep-dive on the Hugging Face Hub local cache system — file-based cache architecture (blobs, refs, snapshots, trees, .no_exist), Xet chunk-based deduplication, asset caching for downstream libraries, cache inspection/verification/cleanup via"
 ---
 

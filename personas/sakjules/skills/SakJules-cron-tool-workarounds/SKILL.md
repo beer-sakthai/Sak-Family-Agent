@@ -1,5 +1,6 @@
 ---
 name: SakJules-cron-tool-workarounds
+version: 1.0.0
 description: "Approved terminal patterns for cron-mode execution — avoids tirith security blocks and execute_code restrictions."
 ---
 

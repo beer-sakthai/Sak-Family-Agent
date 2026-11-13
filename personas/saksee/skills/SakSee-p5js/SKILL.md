@@ -1,5 +1,6 @@
 ---
 name: SakSee-p5js
+version: 1.0.0
 description: "p5.js sketches: gen art, shaders, interactive, 3D."
 ---
 

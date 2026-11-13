@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-spaces-zerogpu
+version: 1.0.0
 description: ">   Use ZeroGPU — Hugging Face’s dynamic shared GPU allocation — to build, host,   and optimize Gradio Spaces without managing dedicated GPU infrastructure.   Covers hardware, quotas, decorators, model loading, and queue behavior."
 ---
 

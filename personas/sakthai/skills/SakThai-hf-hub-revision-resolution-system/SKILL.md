@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-revision-resolution-system
+version: 1.0.0
 description: "A skill for Hf Hub Revision Resolution System."
 ---
 

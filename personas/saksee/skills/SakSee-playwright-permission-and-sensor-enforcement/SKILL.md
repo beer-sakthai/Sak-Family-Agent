@@ -1,5 +1,6 @@
 ---
 name: SakSee-playwright-permission-and-sensor-enforcement
+version: 1.0.0
 description: "Enforce browser permission boundaries and sensor/device API availability   during automated tests"
 ---
 

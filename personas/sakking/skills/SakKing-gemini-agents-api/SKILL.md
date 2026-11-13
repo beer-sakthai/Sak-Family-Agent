@@ -1,5 +1,6 @@
 ---
 name: SakKing-gemini-agents-api
+version: 1.0.0
 description: "Manages custom Agent resources on Gemini Enterprise Agent Platform. Use when the user wants to programmatically create, configure, list, update, or delete stateful, server-managed Agent resources (including mounting files, skills, and tools) before e"
 ---
 

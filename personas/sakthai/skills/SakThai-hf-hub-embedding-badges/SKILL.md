@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-embedding-badges
+version: 1.0.0
 description: "name: SakThai-hf-hub-embedding-badges"
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-gradio-6-native-plot-components
+version: 1.0.0
 description: "Comprehensive reference for Gradio 6 native plot components — gr.LinePlot, gr.ScatterPlot, gr.BarPlot, and gr.Plot with declarative DataFrame-backed charting."
 ---
 

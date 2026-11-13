@@ -1,5 +1,6 @@
 ---
 name: SakThai-vision
+version: 1.0.0
 description: "Use when the user mentions vision, image-to-text, LLaVA, sakthai-vision-7b, multimodal, or visual question answering with the SakThai ecosystem. Phase: DEPLOY."
 ---
 

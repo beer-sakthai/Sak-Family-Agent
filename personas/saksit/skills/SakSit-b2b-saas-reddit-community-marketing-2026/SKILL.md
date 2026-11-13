@@ -1,5 +1,6 @@
 ---
 name: SakSit-b2b-saas-reddit-community-marketing-2026
+version: 1.0.0
 description: "Saksit B2B Saas Reddit Community Marketing 2026"
 ---
 

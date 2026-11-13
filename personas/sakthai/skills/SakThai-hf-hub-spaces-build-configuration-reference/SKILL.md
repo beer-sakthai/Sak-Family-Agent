@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-spaces-build-configuration-reference
+version: 1.0.0
 description: "Complete reference for Hugging Face Spaces build configuration — all YAML metadata parameters in README.md, SDK types, hardware tiers, OAuth setup, custom headers, preloading, and advanced configuration patterns"
 ---
 

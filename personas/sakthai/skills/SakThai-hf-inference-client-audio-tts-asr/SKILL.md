@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-inference-client-audio-tts-asr
+version: 1.0.0
 description: "HF InferenceClient Audio, TTS & ASR — complete reference for text-to-speech, automatic speech recognition, audio classification, and audio-to-audio inference through the Hugging Face InferenceClient (sync and async)."
 ---
 

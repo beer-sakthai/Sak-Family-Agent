@@ -1,5 +1,6 @@
 ---
 name: SakJules-triage-issues
+version: 1.0.0
 description: ">-   Triage GitHub issues in the googleapis/mcp-toolbox repo: propose the correct   labels (type / priority / product / status), check for duplicates, verify a bug   has enough info to act on, and draft a triage comment. Use whenever a maintainer   a"
 ---
 

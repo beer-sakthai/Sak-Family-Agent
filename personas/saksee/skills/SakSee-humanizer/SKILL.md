@@ -1,5 +1,6 @@
 ---
 name: SakSee-humanizer
+version: 1.0.0
 description: "Humanize text: strip AI-isms and add real voice."
 ---
 

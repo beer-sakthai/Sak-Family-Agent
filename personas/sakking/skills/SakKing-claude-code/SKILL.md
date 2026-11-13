@@ -1,5 +1,6 @@
 ---
 name: SakKing-claude-code
+version: 1.0.0
 description: "Delegate coding to Claude Code CLI (features, PRs)."
 ---
 

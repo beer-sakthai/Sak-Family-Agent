@@ -1,5 +1,6 @@
 ---
 name: SakThai-speckit-bridge
+version: 1.0.0
 description: Connects GitHub Spec-Kit SDD workflows directly to SakThai's 6-Stage Energy Cycle (Dream -> Hope -> Care -> Joy -> Trust -> Growth).
 ---
 

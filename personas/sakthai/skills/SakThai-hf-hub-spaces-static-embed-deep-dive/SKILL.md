@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-spaces-static-embed-deep-dive
+version: 1.0.0
 author: SakThai
 license: MIT
 title: Hugging Face Hub — Static HTML Spaces & Embedding Deep Dive

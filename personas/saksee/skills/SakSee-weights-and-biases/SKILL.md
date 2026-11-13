@@ -1,5 +1,6 @@
 ---
 name: SakSee-weights-and-biases
+version: 1.0.0
 description: "W&B: log ML experiments, sweeps, model registry, dashboards."
 ---
 

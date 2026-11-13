@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-nanotron
+version: 1.0.0
 description: "Complete reference on Hugging Face Nanotron — the minimalist 3D-parallelism distributed training framework for pre-training transformer models at scale, used by Cosmo-1B and SmolLM."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakSit-social-platform-audit
+version: 1.0.0
 description: "Audit all connected social platforms before posting."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakSee-antigravity
+version: 1.0.0
 description: "Google Antigravity CLI — AI coding agent from Google. Build, debug, and ship from your terminal. Describe what you need, and Antigravity handles the rest. Similar to Claude Code / Codex CLI."
 ---
 

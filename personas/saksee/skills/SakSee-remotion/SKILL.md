@@ -1,5 +1,6 @@
 ---
 name: SakSee-remotion
+version: 1.0.0
 description: "Generate walkthrough videos from Stitch projects using Remotion with smooth transitions, zooming, and text overlays allowed-tools:   - stitch*:*   - remotion*:*   - Bash   - Read   - Write   - web_fetch"
 ---
 

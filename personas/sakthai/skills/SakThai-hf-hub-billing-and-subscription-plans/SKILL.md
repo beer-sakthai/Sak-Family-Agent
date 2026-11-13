@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-billing-and-subscription-plans
+version: 1.0.0
 description: "Complete reference for Hugging Face Hub subscription plans (PRO, Team, Enterprise) — feature breakdown, pricing structure, private storage overage, inference credits, ZeroGPU tiers, compute services billing, and plan comparison for informed decision-"
 ---
 

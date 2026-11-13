@@ -1,5 +1,6 @@
 ---
 name: SakJules-agents-sdk
+version: 1.0.0
 description: "Build AI agents on Cloudflare Workers using the Agents SDK. Load when creating stateful agents, durable workflows, real-time WebSocket apps, scheduled tasks, MCP servers, chat applications, voice agents, or browser automation. Covers Agent class, sta"
 ---
 

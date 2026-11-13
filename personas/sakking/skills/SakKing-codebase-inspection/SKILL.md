@@ -1,5 +1,6 @@
 ---
 name: SakKing-codebase-inspection
+version: 1.0.0
 description: "Inspect codebases w/ pygount: LOC, languages, ratios."
 ---
 

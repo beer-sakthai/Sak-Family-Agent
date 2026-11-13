@@ -1,5 +1,6 @@
 ---
 name: SakThai-huggingface-lora-space-builder
+version: 1.0.0
 description: "Build and publish a Gradio demo on Hugging Face Spaces for a user-provided LoRA. Use when someone asks to create, generate, ship, or publish a Space, demo, Gradio app, or playground for a LoRA — including LoRAs for Qwen-Image, Qwen-Image-Edit, LTX-Vi"
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakKing-hermes-skill-evolution
+version: 1.0.0
 description: "Evolve skills using DSPy and GEPA optimization."
 ---
 

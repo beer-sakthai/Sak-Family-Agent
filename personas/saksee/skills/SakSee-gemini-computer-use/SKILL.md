@@ -1,5 +1,6 @@
 ---
 name: SakSee-gemini-computer-use
+version: 1.0.0
 description: "Build UI automation agents with Gemini Computer Use."
 ---
 

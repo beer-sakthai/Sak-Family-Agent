@@ -1,5 +1,6 @@
 ---
 name: SakSee-songwriting-and-ai-music
+version: 1.0.0
 description: "Songwriting craft and Suno AI music prompts."
 ---
 

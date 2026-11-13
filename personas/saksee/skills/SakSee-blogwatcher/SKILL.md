@@ -1,5 +1,6 @@
 ---
 name: SakSee-blogwatcher
+version: 1.0.0
 description: "Monitor blogs and RSS/Atom feeds via blogwatcher-cli tool."
 ---
 

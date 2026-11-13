@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-agent-traces
+version: 1.0.0
 description: "Deep knowledge of the Hugging Face Agent Traces ecosystem — uploading, viewing, and standardizing agent sessions using the Session Trace Simple Format (STS-Format)."
 ---
 

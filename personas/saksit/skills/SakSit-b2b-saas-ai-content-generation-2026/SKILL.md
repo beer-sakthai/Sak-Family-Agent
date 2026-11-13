@@ -1,5 +1,6 @@
 ---
 name: SakSit-b2b-saas-ai-content-generation-2026
+version: 1.0.0
 description: "Saksit B2B Saas Ai Content Generation 2026"
 ---
 

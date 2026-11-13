@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-inference-client-embeddings-patterns
+version: 1.0.0
 description: "name: SakThai-hf-inference-client-embeddings-patterns"
 ---
 

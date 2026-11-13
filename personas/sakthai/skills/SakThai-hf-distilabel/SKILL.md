@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-distilabel
+version: 1.0.0
 description: "HuggingFace Distilabel for synthetic data generation and labeling"
 ---
 

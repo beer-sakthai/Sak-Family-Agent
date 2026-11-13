@@ -1,5 +1,6 @@
 ---
 name: SakSee-design-md
+version: 1.0.0
 description: "Author/validate/export Googles DESIGN.md token spec files."
 ---
 

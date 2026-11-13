@@ -1,5 +1,6 @@
 ---
 name: SakJules-cron-watchdog-self-heal
+version: 1.0.0
 description: "Auto-resume paused/disabled cron jobs across profiles."
 ---
 # Cron Watchdog Self-Heal

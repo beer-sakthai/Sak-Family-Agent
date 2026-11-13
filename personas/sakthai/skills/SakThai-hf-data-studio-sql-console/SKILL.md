@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-data-studio-sql-console
+version: 1.0.0
 description: "HuggingFace Data Studio SQL console for dataset queries"
 ---
 

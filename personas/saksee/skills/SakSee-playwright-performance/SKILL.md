@@ -1,5 +1,6 @@
 ---
 name: SakSee-playwright-performance
+version: 1.0.0
 description: "Automate budget validation and core web vitals measurement in Playwright; combines before/after budget checks with reproducible vitals collection."
 ---
 
