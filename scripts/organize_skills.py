@@ -396,14 +396,13 @@ def run_organization(apply: bool = False) -> None:
                     shutil.move(str(entry), str(target_dir))
                     md = target_dir / "SKILL.md"
                     if md.exists():
-                        content = yaml_replace_name(
-                            md.read_text(encoding="utf-8"), target_name
-                        )
+                        content = yaml_replace_name(md.read_text(encoding="utf-8"), target_name)
                         md.write_text(content, encoding="utf-8")
 
     # 4b. Safety pass: eliminate any remaining identical skill bodies across personas
     import hashlib
     from collections import defaultdict
+
     body_to_entries: dict[str, list[tuple[str, Path]]] = defaultdict(list)
     for p in PERSONAS:
         sdir = PERSONAS_DIR / p / "skills"
