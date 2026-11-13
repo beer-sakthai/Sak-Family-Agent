@@ -11,6 +11,15 @@ import pytest
 
 from sakthai.memory.store import MemoryStore
 
+# Ensure loopback addresses bypass any ambient HTTP/HTTPS proxy during test runs.
+for _k in ("NO_PROXY", "no_proxy"):
+    _cur = os.environ.get(_k, "")
+    _hosts = [h.strip() for h in _cur.split(",") if h.strip()]
+    for _lh in ("127.0.0.1", "localhost"):
+        if _lh not in _hosts:
+            _hosts.append(_lh)
+    os.environ[_k] = ",".join(_hosts)
+
 #: The invoking user's real `~/.sakthai`, captured once at import time — before
 #: any fixture has had a chance to move `HOME`. `test_home_isolation.py` asserts
 #: the suite never creates it.

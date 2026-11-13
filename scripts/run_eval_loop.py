@@ -132,6 +132,8 @@ def generate_html_viewer(results, output_path):
     case_cards = ""
     for c in cases:
         savings = round((1.0 - len(c["new_output"]) / len(c["old_output"])) * 100, 1)
+        old_content = c["old_output"].replace("\n", "<br>").replace("```", "")
+        new_content = c["new_output"].replace("\n", "<br>").replace("```", "")
         case_cards += f"""
         <div class="case-card" data-category="{c["category"]}">
             <div class="case-header">
@@ -144,12 +146,12 @@ def generate_html_viewer(results, output_path):
             <div class="comparator">
                 <div class="panel old-panel">
                     <div class="panel-header">Old Skill Output <span class="score-badge bad">{int(c["old_score"]*100)}%</span></div>
-                    <div class="panel-content">{c["old_output"].replace('\\n', '<br>').replace('```', '')}</div>
+                    <div class="panel-content">{old_content}</div>
                     <div class="char-count">Length: {len(c["old_output"])} chars</div>
                 </div>
                 <div class="panel new-panel">
                     <div class="panel-header">New Skill Output <span class="score-badge good">{int(c["new_score"]*100)}%</span></div>
-                    <div class="panel-content">{c["new_output"].replace('\\n', '<br>').replace('```', '')}</div>
+                    <div class="panel-content">{new_content}</div>
                     <div class="char-count">Length: {len(c["new_output"])} chars <span class="savings-tag">({savings}% fewer)</span></div>
                 </div>
             </div>

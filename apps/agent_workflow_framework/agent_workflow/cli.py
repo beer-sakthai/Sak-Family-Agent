@@ -32,6 +32,12 @@ def build_parser() -> argparse.ArgumentParser:
         prog="agent-workflow",
         description="Agent Workflow Framework CLI — Validate, Execute, and Inspect DAG Workflows.",
     )
+    parser.add_argument(
+        "--storage-dir",
+        dest="storage_dir",
+        default=None,
+        help="Directory to store and read workflow run history.",
+    )
     subparsers = parser.add_subparsers(dest="subcommand", help="Available subcommands")
 
     # 1. validate
@@ -72,7 +78,7 @@ def cmd_validate(filepath: str) -> int:
         return 2
 
 
-def cmd_run(filepath: str, run_id: Optional[str] = None) -> int:
+def cmd_run(filepath: str, run_id: Optional[str] = None, storage_dir: Optional[str] = None) -> int:
     """Execute 'run' subcommand."""
     # Pre-flight parse check
     try:
@@ -87,7 +93,7 @@ def cmd_run(filepath: str, run_id: Optional[str] = None) -> int:
         print(f"Validation Error: {'; '.join(errors)}", file=sys.stderr)
         return 2
 
-    executor = WorkflowExecutor()
+    executor = WorkflowExecutor(storage_dir=storage_dir)
 
     def status_cb(r_id: str, step_res):
         print(f"  Step '{step_res.step_id}': {step_res.status.value} (attempts: {step_res.attempts})")
@@ -105,9 +111,9 @@ def cmd_run(filepath: str, run_id: Optional[str] = None) -> int:
         return 1
 
 
-def cmd_inspect(run_id: str, step_id: Optional[str] = None) -> int:
+def cmd_inspect(run_id: str, step_id: Optional[str] = None, storage_dir: Optional[str] = None) -> int:
     """Execute 'inspect' subcommand."""
-    store = RunHistoryStore()
+    store = RunHistoryStore(storage_dir=storage_dir)
     try:
         history = store.load_run_history(run_id)
         if step_id:
@@ -131,9 +137,9 @@ def cmd_inspect(run_id: str, step_id: Optional[str] = None) -> int:
         return 1
 
 
-def cmd_list() -> int:
+def cmd_list(storage_dir: Optional[str] = None) -> int:
     """Execute 'list' subcommand."""
-    store = RunHistoryStore()
+    store = RunHistoryStore(storage_dir=storage_dir)
     try:
         runs = store.list_runs()
         if not runs:
@@ -162,11 +168,11 @@ def cli_main(args: Optional[List[str]] = None) -> int:
     if parsed.subcommand == "validate":
         return cmd_validate(parsed.file)
     elif parsed.subcommand == "run":
-        return cmd_run(parsed.file, run_id=parsed.run_id)
+        return cmd_run(parsed.file, run_id=parsed.run_id, storage_dir=parsed.storage_dir)
     elif parsed.subcommand == "inspect":
-        return cmd_inspect(parsed.run_id, step_id=parsed.step_id)
+        return cmd_inspect(parsed.run_id, step_id=parsed.step_id, storage_dir=parsed.storage_dir)
     elif parsed.subcommand == "list":
-        return cmd_list()
+        return cmd_list(storage_dir=parsed.storage_dir)
     else:
         parser.print_help()
         return 0

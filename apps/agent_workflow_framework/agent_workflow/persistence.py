@@ -71,6 +71,9 @@ def default_storage_dir() -> Path:
     package free of any sakthai import. Falls back to the historical cwd-relative
     ``.workflow_runs`` only if the home directory cannot be resolved.
     """
+    env_dir = os.environ.get("AGENT_WORKFLOW_STORAGE_DIR")
+    if env_dir:
+        return Path(env_dir)
     base = os.environ.get("SAKTHAI_HOME")
     if base:
         return Path(base) / "workflow_runs"
