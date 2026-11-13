@@ -72,6 +72,20 @@ DOMAIN_REALLOCATIONS = {
 }
 
 
+def _strip_all_prefixes(name: str) -> str:
+    """Iteratively strip all known convention, legacy, and persona prefixes."""
+    clean = name
+    while True:
+        nxt = strip_known_prefix(clean)
+        if nxt == clean:
+            break
+        clean = nxt
+    for p in PERSONAS:
+        if clean.startswith(f"{p}-"):
+            clean = clean[len(p) + 1 :]
+    return clean
+
+
 def repair_frontmatter_version(md_path: Path, apply: bool) -> bool:
     """Ensure frontmatter contains version: 1.0.0."""
     try:
@@ -122,7 +136,8 @@ def yaml_replace_name(content: str, new_name: str) -> str:
 
 def run_organization(apply: bool = False) -> None:
     print(f"=== Running Skill Organization (apply={apply}) ===")
-    SHARED_SKILLS_DIR.mkdir(parents=True, exist_ok=True)
+    if apply:
+        SHARED_SKILLS_DIR.mkdir(parents=True, exist_ok=True)
 
     # 1. Promote universal skills to shared
     promoted_slugs: set[str] = set()
@@ -160,33 +175,48 @@ def run_organization(apply: bool = False) -> None:
                 content = yaml_replace_name(content, target_name)
                 target_md.write_text(content, encoding="utf-8")
 
-    # 2. Canonicalize double prefixes (SakThai-sakthai-*)
+    # 2. Canonicalize double prefixes (SakThai-sakthai-*, cross-persona SakKing-saksit-*, etc.)
     for p in PERSONAS:
         sdir = PERSONAS_DIR / p / "skills"
         if not sdir.is_dir():
             continue
+        prefix = PERSONA_SKILL_PREFIXES.get(p, f"Sak{p[3:].capitalize()}-")
         for entry in list(sdir.iterdir()):
             if not entry.is_dir():
                 continue
-            name_lower = entry.name.lower()
-            if f"-{p}-" in name_lower:
-                canonical_slug = entry.name.replace("SakThai-sakthai-", "SakThai-")
-                canonical_slug = canonical_slug.replace(f"-{p}-", "-")
-                target_entry = sdir / canonical_slug
-                print(
-                    f"[CANONICALIZE] {entry.relative_to(REPO_ROOT)} -> {target_entry.relative_to(REPO_ROOT)}"
-                )
-                if apply:
-                    if target_entry.exists():
-                        shutil.rmtree(entry)
-                    else:
-                        entry.rename(target_entry)
-                        md = target_entry / "SKILL.md"
-                        if md.exists():
-                            content = yaml_replace_name(
-                                md.read_text(encoding="utf-8"), canonical_slug
-                            )
-                            md.write_text(content, encoding="utf-8")
+            clean = entry.name
+            count = 0
+            while True:
+                nxt = strip_known_prefix(clean)
+                if nxt == clean:
+                    break
+                clean = nxt
+                count += 1
+            found_other = False
+            for other_p in PERSONAS:
+                if clean.startswith(f"{other_p}-"):
+                    clean = clean[len(other_p) + 1 :]
+                    found_other = True
+                    break
+            if count > 1 or found_other:
+                canonical_slug = f"{prefix}{clean}"
+                if entry.name != canonical_slug:
+                    target_entry = sdir / canonical_slug
+                    print(
+                        f"[CANONICALIZE] {entry.relative_to(REPO_ROOT)} -> "
+                        f"{target_entry.relative_to(REPO_ROOT)}"
+                    )
+                    if apply:
+                        if target_entry.exists():
+                            shutil.rmtree(entry)
+                        else:
+                            entry.rename(target_entry)
+                            md = target_entry / "SKILL.md"
+                            if md.exists():
+                                content = yaml_replace_name(
+                                    md.read_text(encoding="utf-8"), canonical_slug
+                                )
+                                md.write_text(content, encoding="utf-8")
 
     # 3. Deduplicate universal shared skills from individual persona folders
     for slug in UNIVERSAL_SHARED_SLUGS:
@@ -200,8 +230,8 @@ def run_organization(apply: bool = False) -> None:
             for entry in list(sdir.iterdir()):
                 if not entry.is_dir():
                     continue
-                clean = strip_known_prefix(entry.name)
-                if clean == slug or clean == f"{p}-{slug}":
+                clean = _strip_all_prefixes(entry.name)
+                if clean == slug:
                     print(
                         f"[DEDUP REMOVE] {entry.relative_to(REPO_ROOT)} "
                         f"(now provided by shared {SHARED_SKILL_PREFIX}{slug})"
@@ -226,12 +256,7 @@ def run_organization(apply: bool = False) -> None:
             for entry in list(sdir.iterdir()):
                 if not entry.is_dir():
                     continue
-                clean = strip_known_prefix(entry.name)
-                if clean.startswith(f"{p}-"):
-                    clean = clean[len(p) + 1 :]
-                for other_p in PERSONAS:
-                    if clean.startswith(f"{other_p}-"):
-                        clean = clean[len(other_p) + 1 :]
+                clean = _strip_all_prefixes(entry.name)
                 if clean == slug:
                     already_present = target_dir.exists() or target_dir in reallocated_targets
                     if already_present:
