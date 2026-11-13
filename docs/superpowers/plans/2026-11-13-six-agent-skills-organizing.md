@@ -311,7 +311,7 @@ def repair_frontmatter_version(md_path: Path, apply: bool) -> bool:
         front = yaml.safe_load(parts[1])
         if not isinstance(front, dict) or front.get("version"):
             return False
-        
+
         # Insert version: 1.0.0 after name or description
         lines = parts[1].splitlines()
         new_lines = []
@@ -323,7 +323,7 @@ def repair_frontmatter_version(md_path: Path, apply: bool) -> bool:
                 inserted = True
         if not inserted:
             new_lines.append("version: 1.0.0")
-        
+
         new_text = f"---\n{chr(10).join(new_lines)}\n---{parts[2]}"
         if apply:
             md_path.write_text(new_text, encoding="utf-8")
@@ -335,13 +335,13 @@ def repair_frontmatter_version(md_path: Path, apply: bool) -> bool:
 def run_organization(apply: bool = False) -> None:
     print(f"=== Running Skill Organization (apply={apply}) ===")
     SHARED_SKILLS_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     # 1. Promote universal skills to shared
     for slug in UNIVERSAL_SHARED_SLUGS:
         target_name = f"Sak-{slug}"
         target_dir = SHARED_SKILLS_DIR / target_name
         target_md = target_dir / "SKILL.md"
-        
+
         if not target_md.exists():
             # Find candidate in personas
             found = None
@@ -353,7 +353,7 @@ def run_organization(apply: bool = False) -> None:
                         break
                 if found:
                     break
-            
+
             if found:
                 print(f"[PROMOTE] {found.relative_to(REPO_ROOT)} -> {target_dir.relative_to(REPO_ROOT)}")
                 if apply:
