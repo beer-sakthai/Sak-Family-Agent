@@ -1,5 +1,6 @@
 ---
 name: SakSee-github-workspace-audit
+version: 1.0.0
 description: "Reconcile local workspace state, GitHub remote state, and agent memory/Supermemory   claims about repositories."
 ---
 

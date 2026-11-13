@@ -1,5 +1,6 @@
 ---
 name: SakJules-playwright-geolocation-poi-testing
+version: 1.0.0
 description: "Automate browser location-based workflows with Playwright: set geolocation/POI   coordinates, intercept location-based API responses, verify nearby results and region-dependent   UI. Use for mapping, geofencing, delivery, travel, and distance-based l"
 ---
 

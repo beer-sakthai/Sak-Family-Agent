@@ -1,5 +1,6 @@
 ---
 name: SakJules-computer-use
+version: 1.0.0
 description: "|   Drive the users desktop in the background — clicking, typing,   scrolling, dragging — without stealing the cursor, keyboard focus,   or switching virtual desktops / Spaces. Cross-platform: macOS,   Windows, Linux. Works with any tool-capable mode"
 ---
 

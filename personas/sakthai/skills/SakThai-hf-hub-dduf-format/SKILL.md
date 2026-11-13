@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-dduf-format
+version: 1.0.0
 description: "Comprehensive knowledge of the DDUF (Diffusion Data Unified Format) — a single-file archive format for diffusion models that unifies model distribution by packaging all components into a single .dduf file."
 ---
 

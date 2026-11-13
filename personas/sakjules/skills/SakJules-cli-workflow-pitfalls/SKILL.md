@@ -1,5 +1,6 @@
 ---
 name: SakJules-cli-workflow-pitfalls
+version: 1.0.0
 description: "CLI-specific pitfalls and workarounds for SakKing Agent workflows."
 ---
 

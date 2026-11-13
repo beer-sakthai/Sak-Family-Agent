@@ -1,5 +1,6 @@
 ---
 name: SakSee-playwright
+version: 1.0.0
 description: "Playwright browser automation: installation, script execution, common pitfalls."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakSee-dashboard
+version: 1.0.0
 description: "Set up and run the SakThai Agent dashboard."
 ---
 

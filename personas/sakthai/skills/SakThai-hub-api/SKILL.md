@@ -1,5 +1,6 @@
 ---
 name: SakThai-hub-api
+version: 1.0.0
 description: "Use when the user mentions huggingface_hub, HfApi, upload, download, create repo, manage models/datasets/spaces programmatically, collections, or Hub operations beyond simple push_to_hub. Phase: ALL."
 ---
 

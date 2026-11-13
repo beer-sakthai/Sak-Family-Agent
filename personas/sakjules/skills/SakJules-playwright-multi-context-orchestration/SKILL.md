@@ -1,5 +1,6 @@
 ---
 name: SakJules-playwright-multi-context-orchestration
+version: 1.0.0
 description: "Advanced Playwright skill for orchestrating multiple browser contexts   within a single test. Use this when you need to verify cross-user interactions,   multi-tenant isolation, real-time collaboration, or any scenario requiring two or   more indepen"
 ---
 

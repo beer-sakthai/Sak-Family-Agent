@@ -1,5 +1,6 @@
 ---
 name: SakSee-macos-computer-use
+version: 1.0.0
 description: "Apple macOS specific computer use tools."
 ---
 # macOS Computer Use

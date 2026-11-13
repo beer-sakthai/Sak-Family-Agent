@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-datasets-text-processing-pipeline
+version: 1.0.0
 description: "name: SakThai-hf-datasets-text-processing-pipeline"
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-model-cards
+version: 1.0.0
 description: "Hugging Face Model Cards: repository metadata, YAML frontmatter, tags, pipeline types, license, and how to write a great README.md."
 ---
 

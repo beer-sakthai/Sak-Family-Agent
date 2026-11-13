@@ -1,5 +1,6 @@
 ---
 name: SakThai-huggingface-cli
+version: 1.0.0
 description: "Use when working with Hugging Face Hub via the hf CLI — auth, upload, download, jobs, repos, endpoints, and SakThai pipeline operations."
 ---
 

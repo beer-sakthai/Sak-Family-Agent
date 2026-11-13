@@ -1,5 +1,6 @@
 ---
 name: SakSee-computer-use
+version: 1.0.0
 description: "Drive the users desktop in the background — clicking, typing, scrolling, dragging."
 ---
 

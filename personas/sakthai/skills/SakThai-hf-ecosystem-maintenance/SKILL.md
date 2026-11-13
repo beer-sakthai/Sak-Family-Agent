@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-ecosystem-maintenance
+version: 1.0.0
 description: HF ecosystem upkeep — download counts, cross-links, low-dl promotion, deprecation, Spaces. Complements health-check (finds issues → this fixes them).
 category: mlops
 ---

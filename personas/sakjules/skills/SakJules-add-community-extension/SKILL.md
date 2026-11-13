@@ -1,5 +1,6 @@
 ---
 name: SakJules-add-community-extension
+version: 1.0.0
 description: "Add a community extension to the Spec Kit catalog from a GitHub issue submission. USE FOR: processing extension submission issues, validating catalog entries, updating catalog.community.json and docs/community/extensions.md, creating PRs. DO NOT USE "
 ---
 

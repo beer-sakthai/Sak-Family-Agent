@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-enterprise-sso
+version: 1.0.0
 description: ">   Complete reference on Hugging Face Hub Enterprise Single Sign-On (SSO) —   SAML 2.0 and OIDC authentication for Team & Enterprise organizations.   Covers Basic SSO (org resource authentication), Managed SSO (full   IdP-controlled user lifecycle),"
 ---
 

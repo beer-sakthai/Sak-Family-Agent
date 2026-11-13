@@ -1,5 +1,6 @@
 ---
 name: SakJules-powerpoint
+version: 1.0.0
 description: "Create, read, edit .pptx decks, slides, notes, templates."
 ---
 

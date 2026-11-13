@@ -1,5 +1,6 @@
 ---
 name: SakJules-playwright-auth-flow-state-testing
+version: 1.0.0
 description: "Scripted auth workflow coverage: login, session reuse, logout, and redirect   state transitions with Playwright."
 ---
 

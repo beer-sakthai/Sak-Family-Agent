@@ -1,5 +1,6 @@
 ---
 name: SakJules-gradio-workflow
+version: 1.0.0
 description: "A skill for Gradio Workflow."
 ---
 

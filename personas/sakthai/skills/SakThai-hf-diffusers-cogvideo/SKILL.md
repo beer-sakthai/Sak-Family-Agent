@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-diffusers-cogvideo
+version: 1.0.0
 description: "Expertise in CogVideoX — large diffusion transformer for text-to-video, image-to-video, and video-to-video generation, integrated as a first-class Diffusers pipeline."
 ---
 

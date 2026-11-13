@@ -1,5 +1,6 @@
 ---
 name: SakKing-plan-check-count
+version: 1.0.0
 description: "Plan first, verify before reporting, count before stating."
 ---
 

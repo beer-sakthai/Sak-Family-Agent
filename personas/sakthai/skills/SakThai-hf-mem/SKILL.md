@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-mem
+version: 1.0.0
 description: "Hugging Face CLI to estimate the required memory to load Safetensors or GGUF model weights for inference from the Hugging Face Hub"
 ---
 

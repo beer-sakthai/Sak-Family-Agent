@@ -1,5 +1,6 @@
 ---
 name: SakSee-llm-wiki
+version: 1.0.0
 description: "Karpathys LLM Wiki: build/query interlinked markdown KB."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakJules-yuanbao
+version: 1.0.0
 description: "Yuanbao (元宝) groups: @mention users, query info/members."
 ---
 

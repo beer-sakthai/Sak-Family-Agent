@@ -1,5 +1,6 @@
 ---
 name: SakSee-run-sakthai-agent-v2
+version: 1.0.0
 description: "Build, run, drive, and test sakthai-agent-v2 — the `sakthai` CLI, its agent loop, its MCP stdio server, and the web API. Use when asked to run sakthai, start the sakthai agent, smoke-test it, drive the MCP server, serve the web API, or verify the CLI"
 ---
 

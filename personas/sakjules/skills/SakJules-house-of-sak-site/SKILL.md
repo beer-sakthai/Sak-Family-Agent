@@ -1,5 +1,6 @@
 ---
 name: SakJules-house-of-sak-site
+version: 1.0.0
 description: "Manage the House of Sak landing page and repo — update sections, services, pricing, and push to GitHub → Vercel auto-deploy."
 ---
 

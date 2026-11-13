@@ -1,5 +1,6 @@
 ---
 name: SakSee-instagram-content-kit
+version: 1.0.0
 description: "End-to-end Instagram content production for SakSit: Reels (9:16), carousels,   single-image posts, captions, hashtags, CTAs, and generation via FLUX.1-schnell   and LTX-Video on Hugging Face Spaces."
 ---
 

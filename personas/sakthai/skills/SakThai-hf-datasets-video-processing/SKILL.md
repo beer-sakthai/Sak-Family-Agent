@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-datasets-video-processing
+version: 1.0.0
 description: "Covers the datasets.Video feature — loading, decoding, transforming, encoding, and streaming video data through the Hugging Face datasets library."
 ---
 

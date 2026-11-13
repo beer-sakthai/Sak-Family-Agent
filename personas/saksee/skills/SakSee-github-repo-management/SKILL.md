@@ -1,5 +1,6 @@
 ---
 name: SakSee-github-repo-management
+version: 1.0.0
 description: "Clone/create/fork repos; manage remotes, releases."
 ---
 # GitHub Repository Management

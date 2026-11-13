@@ -1,5 +1,6 @@
 ---
 name: SakKing-audiocraft
+version: 1.0.0
 description: "AudioCraft: MusicGen text-to-music, AudioGen text-to-sound."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakSee-handling-missing-system-tools
+version: 1.0.0
 description: "Handle situations where common system tools like lsof, netstat, or gh are not available, and use alternative methods to accomplish the same tasks."
 ---
 

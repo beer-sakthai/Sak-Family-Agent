@@ -1,5 +1,6 @@
 ---
 name: SakKing-node-inspect-debugger
+version: 1.0.0
 description: "Debug Node.js with node inspect, --inspect, breakpoints, CDP, heap, and CPU profiles."
 ---
 

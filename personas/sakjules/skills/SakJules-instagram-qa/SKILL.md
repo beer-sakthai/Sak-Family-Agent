@@ -1,5 +1,6 @@
 ---
 name: SakJules-instagram-qa
+version: 1.0.0
 description: "Provide a verified, repeatable workflow for checking Instagram content   quality before publishing"
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakKing-agent-platform-tuning-management
+version: 1.0.0
 description: ">-   Manages GenAI tuning jobs in Agent Platform. Use this to list, get, or cancel   ongoing model tuning jobs. Dont use for fine-tuning models (use   `agent-platform-tuning`), deploying models to endpoints (use   `agent-platform-deploy`), or managin"
 ---
 

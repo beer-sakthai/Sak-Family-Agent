@@ -1,5 +1,6 @@
 ---
 name: SakSee-claude-design
+version: 1.0.0
 description: "Design one-off HTML artifacts (landing, deck, prototype)."
 ---
 

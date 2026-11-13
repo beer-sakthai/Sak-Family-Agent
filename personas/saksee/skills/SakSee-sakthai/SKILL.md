@@ -1,5 +1,6 @@
 ---
 name: SakSee-sakthai
+version: 1.0.0
 description: "Drive sakthai-agent-v2 — the `sakthai` CLI with persistent SQLite memory, an agent loop, and an MCP stdio server."
 ---
 

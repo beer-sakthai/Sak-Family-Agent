@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-gguf-llama-cpp
+version: 1.0.0
 description: "GGUF model format on Hugging Face — loading GGUF files via Transformers, conversion between HF and GGUF, deployment with llama.cpp, supported quantization types, and the Hub ecosystem of GGUF models."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakSee-hf-hub-webhooks-practical-patterns-deep-dive
+version: 1.0.0
 description: "# HF Hub Webhooks — Practical Patterns"
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakSee-research-diary-documentation
+version: 1.0.0
 description: "Create and save research diaries to GitHub for documentation safety."
 ---
 

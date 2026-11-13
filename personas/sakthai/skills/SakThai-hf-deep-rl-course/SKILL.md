@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-deep-rl-course
+version: 1.0.0
 description: "Train RL agents with Stable Baselines3 and Hugging Face."
 ---
 # Deep Reinforcement Learning with Hugging Face

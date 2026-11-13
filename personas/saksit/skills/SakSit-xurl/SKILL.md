@@ -1,5 +1,6 @@
 ---
 name: SakSit-xurl
+version: 1.0.0
 description: "X/Twitter via xurl CLI: post, search, DM, media, v2 API."
 ---
 

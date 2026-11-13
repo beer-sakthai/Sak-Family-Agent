@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-inference-endpoints-custom-containers
+version: 1.0.0
 description: "Deep-dive into deploying custom Docker containers to Hugging Face Inference Endpoints — FastAPI server patterns, Docker packaging, model mounting, autoscaling, monitoring, and production best practices."
 ---
 

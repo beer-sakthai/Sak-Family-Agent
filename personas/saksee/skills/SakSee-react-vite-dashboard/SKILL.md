@@ -1,5 +1,6 @@
 ---
 name: SakSee-react-vite-dashboard
+version: 1.0.0
 description: "Convert Stitch designs into production React + Vite dashboards with TanStack Query, accessible tokens from DESIGN.md, and Web3-ready patterns (ethers/viem). allowed-tools:   - stitch*:*   - Read   - Write   - Bash   - web_fetch"
 ---
 

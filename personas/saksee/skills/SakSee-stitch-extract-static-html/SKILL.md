@@ -1,5 +1,6 @@
 ---
 name: SakSee-stitch-extract-static-html
+version: 1.0.0
 description: ">-   Extract self-contained static HTML from a built web application or React components by inlining CSS and images. Use this skill whenever you need to capture a specific UI state, share a static version of a page, or prepare assets for Stitch uploa"
 ---
 

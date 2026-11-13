@@ -1,5 +1,6 @@
 ---
 name: SakThai-tts
+version: 1.0.0
 description: "Use when the user mentions TTS, text-to-speech, Kokoro, sakthai-tts-model, voice, or audio generation with the SakThai ecosystem. Phase: DEPLOY."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-transformers-memory-estimation
+version: 1.0.0
 description: ">-   Comprehensive deep dive into GPU memory estimation for Transformers models,   covering memory formulas, batch size optimization, quantization impact,   gradient checkpointing trade-offs, mixed precision, and practical recipes   for fitting model"
 ---
 

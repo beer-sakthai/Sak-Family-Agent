@@ -1,5 +1,6 @@
 ---
 name: SakJules-playwright-trace-har-bundle
+version: 1.0.0
 description: "Package Playwright traces and HAR recordings into verifiable QA bundles   for cron/CI runs, with CLI inspection commands and headless-safe artifact delivery."
 ---
 

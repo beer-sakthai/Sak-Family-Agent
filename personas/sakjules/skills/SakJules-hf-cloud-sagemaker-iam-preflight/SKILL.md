@@ -1,5 +1,6 @@
 ---
 name: SakJules-hf-cloud-sagemaker-iam-preflight
+version: 1.0.0
 description: "Ensure a usable SageMaker execution role exists before deploying or training. Use this skill whenever about to create a SageMaker endpoint, model, training job, or any resource that requires an execution role. Use it especially when the user has not "
 ---
 

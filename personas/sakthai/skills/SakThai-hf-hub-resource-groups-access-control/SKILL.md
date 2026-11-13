@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-resource-groups-access-control
+version: 1.0.0
 description: "Hugging Face Hub Resource Groups — fine-grained access control for organizations, group management via UI and API, auto-join, SCIM integration, cost attribution, and programmatic member assignment."
 ---
 

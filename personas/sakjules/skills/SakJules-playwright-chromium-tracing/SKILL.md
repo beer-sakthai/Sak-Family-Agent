@@ -1,5 +1,6 @@
 ---
 name: SakJules-playwright-chromium-tracing
+version: 1.0.0
 description: "Capture and export Playwright Chromium trace files (trace.zip) programmatically,   then inspect them in Playwright Trace Viewer for debugging, audits, and deterministic   replay of cron-driven browser sessions."
 ---
 

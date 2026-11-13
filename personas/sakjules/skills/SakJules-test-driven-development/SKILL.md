@@ -1,5 +1,6 @@
 ---
 name: SakJules-test-driven-development
+version: 1.0.0
 description: "TDD: enforce RED-GREEN-REFACTOR, tests before code."
 ---
 # Test-Driven Development (TDD)

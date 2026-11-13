@@ -1,5 +1,6 @@
 ---
 name: SakSee-ascii-art
+version: 1.0.0
 description: "ASCII art: pyfiglet, cowsay, boxes, image-to-ascii."
 ---
 

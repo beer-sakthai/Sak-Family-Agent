@@ -1,5 +1,6 @@
 ---
 name: SakKing-hf-smolagents
+version: 1.0.0
 description: "Lightweight HF agent framework u2014 CodeAgent, ToolCallingAgent, model/tool    integrations, secure execution, and CLI patterns."
 ---
 

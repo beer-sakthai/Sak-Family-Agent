@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-gemma3-deep-dive
+version: 1.0.0
 description: "name: SakThai-hf-gemma3-deep-dive"
 ---
 

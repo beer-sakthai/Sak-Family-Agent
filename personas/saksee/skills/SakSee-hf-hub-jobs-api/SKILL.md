@@ -1,5 +1,6 @@
 ---
 name: SakSee-hf-hub-jobs-api
+version: 1.0.0
 description: ">-   Complete reference for the Hugging Face Hub Jobs API — HFs managed compute   service for running arbitrary code on cloud infrastructure. Covers CLI   commands (`hf jobs`), Python API (`HfApi.create_job`, `get_job_status`,   `list_jobs`, `cancel_"
 ---
 

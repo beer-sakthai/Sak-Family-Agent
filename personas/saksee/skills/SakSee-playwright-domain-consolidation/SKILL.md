@@ -1,5 +1,6 @@
 ---
 name: SakSee-playwright-domain-consolidation
+version: 1.0.0
 description: "Group Playwright skills by domain instead of keeping one-offs scattered. Use when asked to consolidate, dedupe, or reorganize playwright skills into network, visual, performance, and security buckets. Also use when a domain check reports MISSING for "
 ---
 

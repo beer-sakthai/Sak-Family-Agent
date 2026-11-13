@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-context-engineering
+version: 1.0.0
 description: "Context engineering for code agents — skills, MCP, hooks."
 ---
 

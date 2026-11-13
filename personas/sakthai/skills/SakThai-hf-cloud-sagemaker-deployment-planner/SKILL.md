@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-cloud-sagemaker-deployment-planner
+version: 1.0.0
 description: "Plan and coordinate the deployment of a model to Amazon SageMaker AI. Use this skill whenever the user wants to deploy, host, serve, or expose a model on SageMaker or AWS — including phrases like deploy a model, host this LLM on AWS, serve this embed"
 ---
 

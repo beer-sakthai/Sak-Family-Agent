@@ -1,5 +1,6 @@
 ---
 name: SakJules-cron-fleet
+version: 1.0.0
 description: "Manage a Hermes cron fleet across multiple profiles — list, audit, re-enable, and remediate scheduled jobs."
 ---
 

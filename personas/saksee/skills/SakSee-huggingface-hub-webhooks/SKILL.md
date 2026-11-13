@@ -1,5 +1,6 @@
 ---
 name: SakSee-huggingface-hub-webhooks
+version: 1.0.0
 description: "Hugging Face Hub Webhooks — create, manage, and debug webhooks programmatically via the SDK, CLI, and UI. Covers event types, payload structure, watched items, secrets, rate limiting, and Job integration."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakJules-ireland-business-research
+version: 1.0.0
 description: "Structured Ireland business research workflow for company verification, market analysis, sector intelligence, and regulatory context."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakSit-b2b-saas-community-building-2026
+version: 1.0.0
 description: "Saksit B2B Saas Community Building 2026"
 ---
 

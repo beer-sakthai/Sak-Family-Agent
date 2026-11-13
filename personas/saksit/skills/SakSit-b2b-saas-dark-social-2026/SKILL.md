@@ -1,5 +1,6 @@
 ---
 name: SakSit-b2b-saas-dark-social-2026
+version: 1.0.0
 description: ">-   A complete strategy for B2B SaaS marketers to measure, create for, and   capitalize on dark social — the 70-84% of content sharing happening in   private, untrackable channels like Slack, WhatsApp, Teams, and DMs."
 ---
 

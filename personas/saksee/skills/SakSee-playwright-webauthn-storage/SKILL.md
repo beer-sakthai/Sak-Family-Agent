@@ -1,5 +1,6 @@
 ---
 name: SakSee-playwright-webauthn-storage
+version: 1.0.0
 description: "Use Playwright’s WebAuthn virtual authenticator, credentials API, and   Web Storage APIs to automate passkey flows and read/write browser storage state   without UI workarounds or hardware."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakJules-playwright-cli
+version: 1.0.0
 description: "Automate browser interactions, test web pages and work with Playwright tests. allowed-tools: Bash(playwright-cli:*) Bash(npx:*) Bash(npm:*)"
 ---
 

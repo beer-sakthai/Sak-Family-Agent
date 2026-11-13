@@ -1,5 +1,6 @@
 ---
 name: SakSee-hermes-agent
+version: 1.0.0
 description: "Configure, extend, or contribute to Hermes Agent."
 ---
 # Hermes Agent

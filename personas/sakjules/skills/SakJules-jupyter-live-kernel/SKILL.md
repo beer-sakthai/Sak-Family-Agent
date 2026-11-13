@@ -1,5 +1,6 @@
 ---
 name: SakJules-jupyter-live-kernel
+version: 1.0.0
 description: "Iterative Python via live Jupyter kernel (hamelnb)."
 ---
 # Jupyter Live Kernel (hamelnb)

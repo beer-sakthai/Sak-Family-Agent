@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-agents-course
+version: 1.0.0
 description: "Build AI agents with smolagents, LlamaIndex, LangGraph."
 ---
 # AI Agents Course Reference

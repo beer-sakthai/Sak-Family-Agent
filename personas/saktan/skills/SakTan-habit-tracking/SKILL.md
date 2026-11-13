@@ -1,5 +1,6 @@
 ---
 name: SakTan-habit-tracking
+version: 1.0.0
 description: "Track recurring habits and routines over time in memory, and report consistency rather than just todays status."
 ---
 

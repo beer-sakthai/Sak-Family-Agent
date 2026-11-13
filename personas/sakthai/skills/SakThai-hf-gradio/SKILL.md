@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-gradio
+version: 1.0.0
 description: "Gradio: the Python library for building interactive UIs behind Hugging Face Spaces — Interface, Blocks, session state, event chaining, theming, MCP servers, and deployment patterns for Gradio 6."
 ---
 

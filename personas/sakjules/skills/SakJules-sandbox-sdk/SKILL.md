@@ -1,5 +1,6 @@
 ---
 name: SakJules-sandbox-sdk
+version: 1.0.0
 description: "Build sandboxed applications for secure code execution. Load when building AI code execution, code interpreters, CI/CD systems, interactive dev environments, or executing untrusted code. Covers Sandbox SDK lifecycle, commands, files, code interpreter"
 ---
 

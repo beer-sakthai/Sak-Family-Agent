@@ -1,5 +1,6 @@
 ---
 name: SakSee-playwright-web-vitals-automation
+version: 1.0.0
 description: "Automated capture/assertion of Core Web Vitals and custom metrics in   Playwright using the web-vitals library + page console interception. Use when testing   performance, LCP, INP, CLS, TTFB, FCP, or building regression-tested dashboards   for E2E s"
 ---
 

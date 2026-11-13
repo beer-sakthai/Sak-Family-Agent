@@ -1,5 +1,6 @@
 ---
 name: SakSit-hf-hub-model-card-seo-social-meta-tags
+version: 1.0.0
 description: "How Hugging Face model/dataset/space cards appear in search engines and social media, and how to optimize metadata for maximum discoverability."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-jobs-serving-vllm
+version: 1.0.0
 description: "name: SakThai-hf-jobs-serving-vllm"
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakSit-instagram-reels-optimization-2026
+version: 1.0.0
 description: ">   Optimize Instagram Reels for the 2026 algorithm — covering retention metrics,   hook strategies, AI-assisted production pipelines, and content cadence for   maximum organic reach and engagement."
 ---
 

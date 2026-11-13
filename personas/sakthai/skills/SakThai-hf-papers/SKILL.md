@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-papers
+version: 1.0.0
 description: "Daily snapshot of featured papers on Hugging Face"
 ---
 

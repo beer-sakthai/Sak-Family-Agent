@@ -1,5 +1,6 @@
 ---
 name: SakKing-playwright-browser-lifecycle
+version: 1.0.0
 description: "Manage Playwright browser process lifecycles for long-lived cron/CI    flows u2014 waitForEvent(close), controlled abort patterns, detached browser    reuse, child-process cleanup on timeout, and safe teardown for Chromium launched    on ephemeral environments."
 ---
 

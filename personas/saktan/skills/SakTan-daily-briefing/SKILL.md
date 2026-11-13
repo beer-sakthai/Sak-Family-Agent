@@ -1,5 +1,6 @@
 ---
 name: SakTan-daily-briefing
+version: 1.0.0
 description: "Generate Beers day-start briefing u2014 todays calendar, open tasks,    and one clear next action u2014 from stored memory and connected tools."
 ---
 

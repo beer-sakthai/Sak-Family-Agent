@@ -1,5 +1,6 @@
 ---
 name: SakJules-hf-hub-spaces-build-runtime-api
+version: 1.0.0
 description: "Complete reference for the Hugging Face Spaces Build, Runtime, and Management API — covering SpaceRuntime stages, hardware management, secrets/variables, dev mode, logs streaming, wait_for_space, pause/restart, and duplicate workflows via huggingface"
 ---
 

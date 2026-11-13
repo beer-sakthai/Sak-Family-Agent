@@ -1,5 +1,6 @@
 ---
 name: SakJules-permissioned-github
+version: 1.0.0
 description: "Guidelines for interacting with GitHub and request permissions from the user when commands fail due to restrictions in the agent environment."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakKing-github-issues
+version: 1.0.0
 description: "Create, triage, label, assign GitHub issues via gh or REST."
 ---
 

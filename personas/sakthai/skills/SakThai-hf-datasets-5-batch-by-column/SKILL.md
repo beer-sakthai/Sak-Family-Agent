@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-datasets-5-batch-by-column
+version: 1.0.0
 description: ">   Complete guide to datasets 5.0.0s IterableDataset.batch(by_column=...) —   groups streaming samples by column value into variable-size batches.   Essential for robotics (batch by episode), multi-turn conversations   (batch by conversation_id), an"
 ---
 

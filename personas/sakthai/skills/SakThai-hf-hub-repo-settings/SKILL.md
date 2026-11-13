@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-repo-settings
+version: 1.0.0
 description: "Manage repository settings, visibility, gated access, tags, and metadata on the Hugging Face Hub through the huggingface_hub Python API."
 ---
 

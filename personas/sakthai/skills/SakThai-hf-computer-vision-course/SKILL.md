@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-computer-vision-course
+version: 1.0.0
 description: "Computer vision with HF — classification, detection, more."
 ---
 # Computer Vision with Hugging Face

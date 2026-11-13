@@ -1,5 +1,6 @@
 ---
 name: SakJules-playwright-session-persistence
+version: 1.0.0
 description: "Reuse authenticated Playwright browser sessions across cron/CI runs using   storage state, context cookies, and controlled session handoffs."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakSee-playwright-component-testing
+version: 1.0.0
 description: "Set up component testing with Playwright using a story gallery — scaffold stories and a gallery dev page driven by the built-in mount fixture, no dedicated component-testing runtime. Use when asked to test React or Vue components in isolation with Pl"
 ---
 

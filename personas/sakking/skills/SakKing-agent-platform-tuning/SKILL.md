@@ -1,5 +1,6 @@
 ---
 name: SakKing-agent-platform-tuning
+version: 1.0.0
 description: ">-   Agent Platform Model Tuning. Use when you need to fine-tune open models   or Gemini models using Agent Platform infrastructure. Dont use for model   training outside Agent Platform, model deployment to endpoints (use   `agent-platform-deploy`), "
 ---
 

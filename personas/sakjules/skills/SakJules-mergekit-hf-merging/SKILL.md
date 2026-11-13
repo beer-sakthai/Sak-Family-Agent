@@ -1,5 +1,6 @@
 ---
 name: SakJules-mergekit-hf-merging
+version: 1.0.0
 description: "MergeKit — complete model merging toolkit for combining LLMs on the Hugging Face Hub. Expanded deep-dive: all 17+ merge methods, MoE conversion (mergekit-moe), evolutionary search (mergekit-evolve), multi-stage merging (mergekit-multi), raw PyTorch m"
 ---
 

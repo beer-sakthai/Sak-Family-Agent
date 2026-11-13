@@ -1,5 +1,6 @@
 ---
 name: SakSit-b2b-saas-interactive-content-leadgen-2026
+version: 1.0.0
 description: "Complete playbook for B2B SaaS companies to build, deploy, and optimize interactive content tools (ROI calculators, assessments, configurators, quizzes) for lead generation in 2026."
 ---
 

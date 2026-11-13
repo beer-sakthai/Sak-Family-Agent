@@ -1,5 +1,6 @@
 ---
 name: SakSee-troubleshooting
+version: 1.0.0
 description: "Uses Chrome DevTools MCP and documentation to troubleshoot connection and target issues. Trigger this skill when list_pages, new_page, or navigate_page fail, or when the server initialization fails."
 ---
 

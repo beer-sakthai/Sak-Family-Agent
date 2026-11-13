@@ -1,5 +1,6 @@
 ---
 name: SakJules-playwright-growth-loop
+version: 1.0.0
 description: "Use when setting up a cron-driven loop that learns a new topic in a chosen   domain on every tick, creates a fresh SKILL.md, logs a one-line summary, and attempts   best-effort supermemory persistence. A generalized growth-loop pattern with Playwrigh"
 ---
 

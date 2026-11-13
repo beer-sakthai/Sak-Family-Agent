@@ -1,5 +1,6 @@
 ---
 name: SakSee-evaluating-llms-harness
+version: 1.0.0
 description: "lm-eval-harness: benchmark LLMs (MMLU, GSM8K, etc.)."
 ---
 

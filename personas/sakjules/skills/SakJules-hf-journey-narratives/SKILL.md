@@ -1,5 +1,6 @@
 ---
 name: SakJules-hf-journey-narratives
+version: 1.0.0
 description: "Create narrative content about your Hugging Face ecosystem journey — tweet threads, blog posts, HF forum posts, retrospectives, and collection notes — for self-improvement crons, social sharing, and community engagement"
 ---
 

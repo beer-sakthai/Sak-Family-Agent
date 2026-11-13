@@ -1,5 +1,6 @@
 ---
 name: SakSit-b2b-saas-linkedin-newsletter-2026
+version: 1.0.0
 description: "Saksit B2B Saas Linkedin Newsletter 2026"
 ---
 

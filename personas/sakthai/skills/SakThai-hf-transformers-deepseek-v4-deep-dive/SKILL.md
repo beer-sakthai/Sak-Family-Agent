@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-transformers-deepseek-v4-deep-dive
+version: 1.0.0
 description: "Complete reference on DeepSeek V4 architecture in Transformers 5.14+ — three novel attention mechanisms, Lightning Indexer, Manifold-Constrained Hyper-Connections, Hash-MoE, and full source code layout."
 ---
 

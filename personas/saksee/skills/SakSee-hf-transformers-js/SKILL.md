@@ -1,5 +1,6 @@
 ---
 name: SakSee-hf-transformers-js
+version: 1.0.0
 description: "Hugging Face Transformers.js — run LLMs, vision, speech, and diffusion models directly in the browser via ONNX Runtime Web (WASM / WebGPU). Covers pipeline API, quantization, model caching, and deployment patterns."
 ---
 

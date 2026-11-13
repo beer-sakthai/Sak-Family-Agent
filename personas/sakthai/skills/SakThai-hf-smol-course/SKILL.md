@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-smol-course
+version: 1.0.0
 description: "Fine-tune LLMs with TRL, PEFT, and alignment methods."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakKing-project-plan-maintenance
+version: 1.0.0
 description: "Audit and standardize PLAN.md files across projects."
 ---
 

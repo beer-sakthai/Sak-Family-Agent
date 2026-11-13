@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-audio-course
+version: 1.0.0
 description: "Process audio with transformers — ASR, TTS, classification, music gen, audio processing, fine-tuning."
 ---
 

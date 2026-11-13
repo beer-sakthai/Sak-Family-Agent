@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-spaces
+version: 1.0.0
 description: "Tracked snapshots of trending Hugging Face Spaces with methodology for search, analysis, and reporting"
 ---
 

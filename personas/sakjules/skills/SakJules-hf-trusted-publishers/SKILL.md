@@ -1,5 +1,6 @@
 ---
 name: SakJules-hf-trusted-publishers
+version: 1.0.0
 description: "Hugging Face Trusted Publishers: OIDC-based CI/CD authentication that exchanges short-lived CI tokens for temporary Hub access tokens, enabling keyless publishing from GitHub Actions, GitLab CI, CircleCI, Bitbucket, and other providers."
 ---
 

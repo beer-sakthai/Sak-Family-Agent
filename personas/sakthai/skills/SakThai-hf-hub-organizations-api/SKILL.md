@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-organizations-api
+version: 1.0.0
 description: "Complete reference for Hugging Face Hub Organizations API — creating and managing organizations, members, roles, access control, and programmatic management via the huggingface_hub Python library and REST API"
 ---
 

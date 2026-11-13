@@ -1,5 +1,6 @@
 ---
 name: SakJules-playwright-trace
+version: 1.0.0
 description: "Inspect Playwright trace files from the command line — list actions, view requests, console, errors, snapshots and screenshots. allowed-tools: Bash(npx:*)"
 ---
 

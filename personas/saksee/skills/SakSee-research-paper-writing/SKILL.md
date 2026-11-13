@@ -1,5 +1,6 @@
 ---
 name: SakSee-research-paper-writing
+version: 1.0.0
 description: "Write ML papers for NeurIPS/ICML/ICLR: design→submit."
 ---
 

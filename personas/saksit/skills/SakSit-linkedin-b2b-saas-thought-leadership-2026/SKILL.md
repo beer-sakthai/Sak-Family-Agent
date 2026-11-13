@@ -1,5 +1,6 @@
 ---
 name: SakSit-linkedin-b2b-saas-thought-leadership-2026
+version: 1.0.0
 description: "Saksit Linkedin B2B Saas Thought Leadership 2026"
 ---
 

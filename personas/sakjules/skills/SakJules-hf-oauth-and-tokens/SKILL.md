@@ -1,5 +1,6 @@
 ---
 name: SakJules-hf-oauth-and-tokens
+version: 1.0.0
 description: ">   Complete reference on Hugging Face Hub authentication — User Access Tokens   (fine-grained, read, write), OAuth 2.0 / OpenID Connect flows (authorization   code, device code, PKCE), Spaces OAuth integration, Token Exchange for   Organizations (RF"
 ---
 

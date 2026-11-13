@@ -1,5 +1,6 @@
 ---
 name: SakJules-kanban-orchestrator
+version: 1.0.0
 description: "Orchestrate multi-agent kanban workflows."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-inference-client-streaming-patterns
+version: 1.0.0
 description: "Deep reference on Hugging Face InferenceClient streaming chat completion patterns — SSE event stream architecture, sync/async streaming, streaming with tools and structured outputs, provider-specific behavior, stream lifecycle management, error handl"
 ---
 

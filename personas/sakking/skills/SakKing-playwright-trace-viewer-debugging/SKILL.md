@@ -1,5 +1,6 @@
 ---
 name: SakKing-playwright-trace-viewer-debugging
+version: 1.0.0
 description: "Use Playwright Trace Viewer to debug failing tests by recording traces   and replaying them in the Playwright Trace Viewer UI."
 ---
 

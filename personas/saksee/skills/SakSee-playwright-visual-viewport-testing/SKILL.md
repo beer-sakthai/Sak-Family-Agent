@@ -1,5 +1,6 @@
 ---
 name: SakSee-playwright-visual-viewport-testing
+version: 1.0.0
 description: "Validates and correlates physical, layout, and visual viewport metrics   in real mobile/desktop contexts."
 ---
 

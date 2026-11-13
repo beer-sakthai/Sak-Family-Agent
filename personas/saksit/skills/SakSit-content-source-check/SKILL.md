@@ -1,5 +1,6 @@
 ---
 name: SakSit-content-source-check
+version: 1.0.0
 description: "Check Drive and history for content before creating."
 ---
 

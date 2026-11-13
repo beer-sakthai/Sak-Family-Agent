@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-transformers-5
+version: 1.0.0
 description: ">-   Deep-dive skill for Hugging Face Transformers v5.x architecture. Covers the   new cache system (DynamicCache, StaticCache, MtpCache, QuantizedCache),   Multi-Token Prediction (MTP), built-in watermarking, continuous batching   for production ser"
 ---
 

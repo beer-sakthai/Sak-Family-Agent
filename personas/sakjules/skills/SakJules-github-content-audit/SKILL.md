@@ -1,5 +1,6 @@
 ---
 name: SakJules-github-content-audit
+version: 1.0.0
 description: "Read GitHub repository files, audit directory structures, and extract file contents via the GitHub Contents API — especially useful when CLI/terminal tools are unavailable and youre operating through an API gateway (Composio, MCP, etc.)."
 ---
 

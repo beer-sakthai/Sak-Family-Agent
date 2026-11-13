@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-dataset-card-api
+version: 1.0.0
 description: "Complete reference for Hugging Face DatasetCard API — creating, editing, validating, and publishing dataset cards via huggingface_hub"
 ---
 # HF Dataset Card API

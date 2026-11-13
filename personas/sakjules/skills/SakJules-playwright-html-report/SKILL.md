@@ -1,5 +1,6 @@
 ---
 name: SakJules-playwright-html-report
+version: 1.0.0
 description: "Playwright HTML Test Report: auto-open behavior, manual viewing, and filtering workflow."
 ---
 

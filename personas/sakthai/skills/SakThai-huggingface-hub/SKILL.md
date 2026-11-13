@@ -1,5 +1,6 @@
 ---
 name: SakThai-huggingface-hub
+version: 1.0.0
 description: "HuggingFace hf CLI: search/download/upload models, datasets."
 ---
 # Hugging Face CLI (`hf`) Reference Guide

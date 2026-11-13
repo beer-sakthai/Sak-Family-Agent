@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-inference-fim-code-completion
+version: 1.0.0
 description: "Deep reference for Fill-in-the-Middle (FIM) code completion through Hugging Face InferenceClient — model-specific token formats, text_generation vs chat_completion approaches, TGI/vLLM/SGLang endpoints, parameter tuning, and verification patterns."
 ---
 

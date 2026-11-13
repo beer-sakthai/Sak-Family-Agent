@@ -1,5 +1,6 @@
 ---
 name: SakThai-huggingface-connect
+version: 1.0.0
 description: "Use when setting up or connecting to Hugging Face Inference Providers in opencode. Covers token creation, /connect setup, model selection, and config wiring."
 ---
 

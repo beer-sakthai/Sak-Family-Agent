@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-async-inference-client
+version: 1.0.0
 description: "Master async inference patterns with HFs AsyncInferenceClient — concurrent requests, streaming, MCP integration."
 ---
 

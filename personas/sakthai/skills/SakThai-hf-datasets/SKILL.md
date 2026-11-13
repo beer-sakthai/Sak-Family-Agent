@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-datasets
+version: 1.0.0
 description: "Hugging Face Datasets: fast, flexible library for loading, processing, and streaming datasets — bridging the gap between data storage and ML frameworks like PyTorch, TensorFlow, JAX, and Pandas."
 ---
 

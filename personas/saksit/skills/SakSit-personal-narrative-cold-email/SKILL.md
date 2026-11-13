@@ -1,5 +1,6 @@
 ---
 name: SakSit-personal-narrative-cold-email
+version: 1.0.0
 description: "Cold email using personal narrative as hook."
 ---
 

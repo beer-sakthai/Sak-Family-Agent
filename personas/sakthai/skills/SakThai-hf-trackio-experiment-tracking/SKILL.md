@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-trackio-experiment-tracking
+version: 1.0.0
 description: "Comprehensive deep-dive into Trackio — Hugging Faces lightweight, free experiment tracking library built on Storage Buckets and Spaces."
 ---
 

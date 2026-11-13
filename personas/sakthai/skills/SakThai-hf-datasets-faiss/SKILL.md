@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-datasets-faiss
+version: 1.0.0
 description: "A skill for Hf Datasets Faiss."
 ---
 

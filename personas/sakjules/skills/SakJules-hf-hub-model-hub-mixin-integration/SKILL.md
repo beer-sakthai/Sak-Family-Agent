@@ -1,5 +1,6 @@
 ---
 name: SakJules-hf-hub-model-hub-mixin-integration
+version: 1.0.0
 description: ">   Complete reference for integrating any ML framework with the Hugging Face Hub   using ModelHubMixin — covering the mixin lifecycle, PyTorchModelHubMixin for   instant integration, helper functions for framework-specific workflows, model   card ge"
 ---
 

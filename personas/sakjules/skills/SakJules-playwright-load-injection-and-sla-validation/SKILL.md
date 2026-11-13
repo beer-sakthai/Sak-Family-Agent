@@ -1,5 +1,6 @@
 ---
 name: SakJules-playwright-load-injection-and-sla-validation
+version: 1.0.0
 description: "Automate synthetic load testing and SLA validation in CI or cron workflows   by using Playwright to drive many parallel browser workers, collect timing telemetry,   and assert hard latency/error-rate thr…"
 ---
 

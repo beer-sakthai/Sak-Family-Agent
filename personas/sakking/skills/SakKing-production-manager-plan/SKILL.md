@@ -1,5 +1,6 @@
 ---
 name: SakKing-production-manager-plan
+version: 1.0.0
 description: "Plan, analyze, and report production with cost and metrics."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakSee-huggingface-hub
+version: 1.0.0
 description: "HuggingFace hf CLI: search/download/upload models, datasets."
 ---
 

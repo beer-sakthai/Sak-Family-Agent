@@ -1,5 +1,6 @@
 ---
 name: SakSee-notion
+version: 1.0.0
 description: "Notion API + ntn CLI: pages, databases, markdown, Workers."
 ---
 

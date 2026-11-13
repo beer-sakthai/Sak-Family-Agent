@@ -1,5 +1,6 @@
 ---
 name: SakKing-spanner-basics
+version: 1.0.0
 description: ">-   Assists in provisioning instances and databases, designing performant schemas, and querying data in Spanner. Use when designing primary keys, writing SQL queries or client library code, or diagnosing performance issues."
 ---
 

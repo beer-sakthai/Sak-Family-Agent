@@ -1,5 +1,6 @@
 ---
 name: SakSee-simplify-code
+version: 1.0.0
 description: "Parallel 3-agent cleanup of recent code changes."
 ---
 # Simplify Code — Parallel Review & Cleanup

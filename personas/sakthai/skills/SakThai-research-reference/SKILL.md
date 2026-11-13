@@ -1,5 +1,6 @@
 ---
 name: SakThai-research-reference
+version: 1.0.0
 description: "Capture, organize, and document academic paper references in project directories. Search arXiv, download PDFs, write structured reference indexes with BibTeX, and link back to your projects README."
 ---
 

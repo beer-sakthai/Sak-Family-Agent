@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-transformers-flash-attention-3
+version: 1.0.0
 description: ">-   FlashAttention-3 integration in Hugging Face Transformers — attention   backend architecture, FA3/FA4 kernel system, Kernels Hub, paged attention,   backbone-specific dispatch, and runtime switching."
 ---
 

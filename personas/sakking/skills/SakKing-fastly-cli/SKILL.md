@@ -1,5 +1,6 @@
 ---
 name: SakKing-fastly-cli
+version: 1.0.0
 description: "Executes Fastly CLI commands for managing CDN services, Compute deploys, and edge infrastructure. Use when running `fastly` CLI commands, creating or managing Fastly services from the terminal, deploying Fastly Compute applications, managing backends"
 ---
 

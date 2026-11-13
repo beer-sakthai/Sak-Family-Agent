@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-accelerate
+version: 1.0.0
 description: "Comprehensive deep-dive on Hugging Face Accelerate (v1.14.0) — the Accelerator class, distributed training, mixed precision, big model inference, FSDP, DeepSpeed, FP8 training, CLI, and production patterns."
 ---
 

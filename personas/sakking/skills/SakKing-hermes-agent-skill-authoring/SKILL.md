@@ -1,5 +1,6 @@
 ---
 name: SakKing-hermes-agent-skill-authoring
+version: 1.0.0
 description: "Author in-repo SKILL.md: frontmatter, validator, structure, and writing-quality principles."
 ---
 

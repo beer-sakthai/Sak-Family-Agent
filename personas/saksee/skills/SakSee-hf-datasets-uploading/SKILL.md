@@ -1,5 +1,6 @@
 ---
 name: SakSee-hf-datasets-uploading
+version: 1.0.0
 description: ">-   Complete end-to-end reference for uploading datasets to the Hugging Face Hub.   Covers web UI, Git CLI, huggingface_hub Python SDK, hf CLI, dataset cards,   metadata configuration, Data Studio preview, large-scale dataset uploads,   Xet-accelera"
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakSee-manim-video
+version: 1.0.0
 description: "Manim CE animations: 3Blue1Brown math/algo videos."
 ---
 

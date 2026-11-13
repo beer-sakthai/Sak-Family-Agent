@@ -1,5 +1,6 @@
 ---
 name: SakJules-hf-open-distillation-codex
+version: 1.0.0
 description: "Complete reference on Manusagents Open Distillation Codex — the 73-source / 18M+ sample multi-frontier distillation collection with cybersecurity SFT data and 7,090 GitHub repo archives. Covers schema, verified numbers vs README claims, per-source pr"
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakSee-hf-donut-document-understanding
+version: 1.0.0
 description: "Hugging Face Donut (Document Understanding Transformer) — comprehensive reference for OCR-free document understanding with Swin Transformer encoder + BART decoder architecture, inference pipelines, fine-tuning, and model card documentation."
 ---
 

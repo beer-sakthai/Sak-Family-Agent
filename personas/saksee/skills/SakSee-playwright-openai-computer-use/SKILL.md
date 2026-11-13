@@ -1,5 +1,6 @@
 ---
 name: SakSee-playwright-openai-computer-use
+version: 1.0.0
 description: "Record Playwright browser sessions into OpenAI Computer-Using Agent formatted   JSONL bundles for cross-tool agent narratives, replay, and audit."
 ---
 

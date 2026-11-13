@@ -1,5 +1,6 @@
 ---
 name: SakKing-sak-agent-ecosystem-persistence
+version: 1.0.0
 description: "Backup agent state to Drive and Supermemory."
 ---
 

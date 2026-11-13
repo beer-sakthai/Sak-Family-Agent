@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-trending-models
+version: 1.0.0
 description: "Tracked snapshot of trending models from Hugging Face Hub"
 ---
 

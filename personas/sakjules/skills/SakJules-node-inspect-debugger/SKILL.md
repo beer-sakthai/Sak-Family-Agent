@@ -1,5 +1,6 @@
 ---
 name: SakJules-node-inspect-debugger
+version: 1.0.0
 description: "Debug Node.js via --inspect + Chrome DevTools Protocol CLI."
 ---
 # Node.js Inspect Debugger

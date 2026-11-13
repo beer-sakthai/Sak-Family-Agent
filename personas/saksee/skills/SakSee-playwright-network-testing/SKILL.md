@@ -1,5 +1,6 @@
 ---
 name: SakSee-playwright-network-testing
+version: 1.0.0
 description: "Centralize Playwright network and request-level assertions into one skill for reliable DOM and API behavior testing."
 ---
 

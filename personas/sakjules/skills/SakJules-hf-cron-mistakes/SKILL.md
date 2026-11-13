@@ -1,5 +1,6 @@
 ---
 name: SakJules-hf-cron-mistakes
+version: 1.0.0
 description: ">-   Avoid recurring pitfalls when building HF cron jobs — check infra,   verify connectivity, design zero-cost, use tracker files."
 ---
 

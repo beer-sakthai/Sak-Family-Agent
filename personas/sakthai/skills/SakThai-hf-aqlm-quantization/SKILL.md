@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-aqlm-quantization
+version: 1.0.0
 description: "Complete reference for AQLM (Additive Quantization of Language Models) — theory, configuration, inference, and practical deployment patterns"
 ---
 

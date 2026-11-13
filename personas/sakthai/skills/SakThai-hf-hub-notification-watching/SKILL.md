@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-notification-watching
+version: 1.0.0
 description: "name: SakThai-hf-hub-notification-watching"
 ---
 

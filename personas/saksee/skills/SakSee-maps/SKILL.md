@@ -1,5 +1,6 @@
 ---
 name: SakSee-maps
+version: 1.0.0
 description: "Geocode, POIs, routes, timezones via OpenStreetMap/OSRM."
 ---
 

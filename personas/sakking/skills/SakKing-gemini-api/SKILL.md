@@ -1,5 +1,6 @@
 ---
 name: SakKing-gemini-api
+version: 1.0.0
 description: "Use when the user asks about using Gemini in an enterprise environment or explicitly mentions Vertex AI, Google Cloud, or Agent Platform. Guides the usage of the Gemini API on Agent Platform with the Google Gen AI SDK. Covers SDK usage (Python, JS/TS"
 ---
 

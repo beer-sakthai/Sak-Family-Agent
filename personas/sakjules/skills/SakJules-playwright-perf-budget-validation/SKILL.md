@@ -1,5 +1,6 @@
 ---
 name: SakJules-playwright-perf-budget-validation
+version: 1.0.0
 description: "Use when you want Playwright tests to fail if a page exceeds a performance   budget for JavaScript execution time, DOMContentLoaded, or custom frontend timing   metrics. Combines real browser measurement with budget gating and trace/meta extraction  "
 ---
 

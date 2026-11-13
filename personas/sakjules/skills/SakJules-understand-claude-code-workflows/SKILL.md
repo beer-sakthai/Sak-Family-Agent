@@ -1,5 +1,6 @@
 ---
 name: SakJules-understand-claude-code-workflows
+version: 1.0.0
 description: "Navigate and leverage the claude-code-workflows extension (84 plugins, 192 agents, 156 skills, 102 commands). Use when exploring available plugins, invoking subagents, running slash commands, or combining multi-domain agentic workflows."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-datasets-server-filter-endpoint
+version: 1.0.0
 description: ">   Complete reference for the Hugging Face Datasets Server /filter endpoint —   covering DuckDB SQL WHERE syntax, supported operators, column type handling,   partial indexing for large datasets, ORDER BY, pagination, related endpoints   (statistics"
 ---
 

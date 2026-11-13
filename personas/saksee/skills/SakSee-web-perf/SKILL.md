@@ -1,5 +1,6 @@
 ---
 name: SakSee-web-perf
+version: 1.0.0
 description: "Analyzes web performance using Chrome DevTools MCP. Measures Core Web Vitals (LCP, INP, CLS) and supplementary metrics (FCP, TBT, Speed Index), identifies render-blocking resources, network dependency chains, layout shifts, caching issues, and access"
 ---
 

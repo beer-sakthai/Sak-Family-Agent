@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-peft-lora
+version: 1.0.0
 description: "Deep dive into Hugging Face PEFT library — LoRA/QLoRA configuration, training, inference, multi-adapter management, merging, and Hub integration."
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: SakJules-hf-mergekit
+version: 1.0.0
 description: "Merge pre-trained language models in weight space using mergekit: algorithms, configuration, LoRA extraction, MoE merging, evolutionary optimization, and tokenizer transplantation."
 ---
 

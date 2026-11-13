@@ -1,5 +1,6 @@
 ---
 name: SakJules-hf-fineweb-dataset-processing
+version: 1.0.0
 description: "Hugging Faces FineWeb, FineWeb-Edu, and FineWeb-2 datasets — web-scale data processing pipeline using datatrove for LLM pretraining data curation, including URL filtering, text extraction, language filtering, quality heuristics, MinHash deduplication"
 ---
 

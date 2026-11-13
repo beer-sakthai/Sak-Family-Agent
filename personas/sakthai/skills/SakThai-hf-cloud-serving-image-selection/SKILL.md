@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-cloud-serving-image-selection
+version: 1.0.0
 description: "Pick the right serving container for a SageMaker model deployment and find its current image URI. Use this skill whenever about to deploy a model to a SageMaker endpoint and an image URI needs to be chosen — including when the user says deploy this L"
 ---
 

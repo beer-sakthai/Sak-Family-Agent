@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-stack-v3
+version: 1.0.0
 description: "The Stack v3 (HuggingFaceCode/stack-v3-train + stack-v3-full) — the largest open source-code dataset. Pipeline, schema, access patterns, and curation details for using it in code-LLM pre-training."
 ---
 

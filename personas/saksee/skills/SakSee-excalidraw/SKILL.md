@@ -1,5 +1,6 @@
 ---
 name: SakSee-excalidraw
+version: 1.0.0
 description: "Hand-drawn Excalidraw JSON diagrams (arch, flow, seq)."
 ---
 

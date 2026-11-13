@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-storage-management
+version: 1.0.0
 description: "Manage Hugging Face Hub storage — understand quotas, free space, delete LFS files, super-squash repos, and manage Git LFS on the Hub"
 ---
 # HF Hub Storage Management

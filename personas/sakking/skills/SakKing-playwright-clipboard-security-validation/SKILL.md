@@ -1,5 +1,6 @@
 ---
 name: SakKing-playwright-clipboard-security-validation
+version: 1.0.0
 description: "Validate clipboard access, sensitive-text protection, and copy/paste   behavior in web apps with Playwright. Use this skill to probe clipboard-read permissions,   detect unexpected clipboard writes via the Async Clipboard API or copy-paste interactions,   and verify consent-gated flows without relying on external services."
 ---
 

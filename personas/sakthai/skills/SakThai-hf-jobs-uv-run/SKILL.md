@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-jobs-uv-run
+version: 1.0.0
 description: "Run Python UV scripts with inline dependencies on Hugging Face Jobs infrastructure — zero setup, free-tier CPU ($0.01/hr), paid GPU options. Covers `hf jobs uv run`, `hf jobs run`, `hf jobs ssh`, hardware flavors, and integration patterns for the Sak"
 ---
 

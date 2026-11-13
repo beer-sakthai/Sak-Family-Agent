@@ -1,5 +1,6 @@
 ---
 name: SakJules-github
+version: 1.0.0
 description: "GitHub CLI for issues, PRs, CI/check logs, comments, reviews, releases, repos, and gh api queries."
 ---
 

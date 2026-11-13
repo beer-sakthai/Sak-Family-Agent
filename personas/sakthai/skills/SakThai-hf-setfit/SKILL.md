@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-setfit
+version: 1.0.0
 description: "SetFit: prompt-free, efficient few-shot text classification using Sentence Transformers"
 ---
 

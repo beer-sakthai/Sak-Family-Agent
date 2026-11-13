@@ -1,5 +1,6 @@
 ---
 name: SakJules-hf-llm-course
+version: 1.0.0
 description: "Reference for Hugging Face Transformers and LLM workflows."
 ---
 # LLM Course — Transformers & NLP Reference

@@ -1,5 +1,6 @@
 ---
 name: SakSit-sak-instagram-content-kit
+version: 1.0.0
 description: "Produce Instagram Reels, carousels, and captions."
 ---
 

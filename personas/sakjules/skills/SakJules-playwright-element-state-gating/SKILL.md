@@ -1,5 +1,6 @@
 ---
 name: SakJules-playwright-element-state-gating
+version: 1.0.0
 description: "Robust Playwright interaction patterns that gate automated actions on   validated element states to eliminate flaky tests before they happen."
 ---
 

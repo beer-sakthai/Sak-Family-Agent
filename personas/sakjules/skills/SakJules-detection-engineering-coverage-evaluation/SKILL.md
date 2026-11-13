@@ -1,5 +1,6 @@
 ---
 name: SakJules-detection-engineering-coverage-evaluation
+version: 1.0.0
 description: ">-   Automates the end-to-end detection engineering workflow in Google SecOps using MCP tools.   Use when fetching threat intelligence from blogs, generating Threat Detection Opportunities (TDOs),   simulating attacker behavior with synthetic UDM eve"
 ---
 

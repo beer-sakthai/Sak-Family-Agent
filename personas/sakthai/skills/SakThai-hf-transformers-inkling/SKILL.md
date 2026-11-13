@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-transformers-inkling
+version: 1.0.0
 description: ">-   Comprehensive deep-dive into Inkling (Thinking Machines Lab) — a 975B   sparse MoE multimodal model (41B active) supporting text, image, audio,   and video inputs with a 1M-token context window. Added in Transformers   5.14.0. Covers architectur"
 ---
 

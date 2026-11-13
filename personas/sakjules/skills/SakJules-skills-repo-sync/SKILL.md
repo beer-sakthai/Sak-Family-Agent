@@ -1,5 +1,6 @@
 ---
 name: SakJules-skills-repo-sync
+version: 1.0.0
 description: "Sync SakSit skills to saksit-skills GitHub repo."
 ---
 

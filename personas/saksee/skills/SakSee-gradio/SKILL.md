@@ -1,5 +1,6 @@
 ---
 name: SakSee-gradio
+version: 1.0.0
 description: "Use when the user mentions Gradio, Spaces, demo, UI, web interface, or deploying an interactive demo for any SakThai model (context, vision, TTS). Phase: DEPLOY."
 ---
 

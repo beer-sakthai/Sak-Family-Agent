@@ -1,5 +1,6 @@
 ---
 name: SakJules-hf-trending-crawl
+version: 1.0.0
 description: "Scheduled crawl of HF Hub trending models: fetch, select uncovered model, deep-dive, report, update tracker, sync to GitHub."
 ---
 

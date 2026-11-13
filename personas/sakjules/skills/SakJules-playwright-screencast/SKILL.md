@@ -1,5 +1,6 @@
 ---
 name: SakJules-playwright-screencast
+version: 1.0.0
 description: "Use Playwright’s built-in Screencast API (page.screencast) to record   browser sessions as video, add chapter markers and action annotations, extract frames   for AI vision, and produce verifiable “video receipts” for agent actions in cron/CI."
 ---
 

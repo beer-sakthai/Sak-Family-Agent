@@ -1,5 +1,6 @@
 ---
 name: SakSee-huggingface-trackio
+version: 1.0.0
 description: "Track and visualize ML training experiments with Trackio. Use when logging metrics during training (Python API), firing alerts for training diagnostics, or retrieving/analyzing logged metrics (CLI). Supports real-time dashboard visualization, alerts "
 ---
 

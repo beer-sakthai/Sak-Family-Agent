@@ -1,5 +1,6 @@
 ---
 name: SakSit-hf-hub-contents-api
+version: 1.0.0
 description: "HuggingFace Hub Contents API endpoint details and usage patterns"
 ---
 
