@@ -72,6 +72,95 @@ DOMAIN_REALLOCATIONS = {
 }
 
 
+def get_domain_owner(slug: str) -> str | None:
+    """Determine domain owner persona for a specialist skill per SOUL.md and architecture."""
+    if slug in DOMAIN_REALLOCATIONS:
+        return DOMAIN_REALLOCATIONS[slug]
+
+    # SakThai: Hugging Face, mergekit, MLOps, datasets, evaluation harnesses
+    if (
+        slug.startswith("hf-")
+        or slug.startswith("mergekit-")
+        or slug.startswith("huggingface-")
+        or "evaluation-harness" in slug
+        or "evaluating-llms" in slug
+    ):
+        return "sakthai"
+
+    # SakJules: GitHub, CI/CD, DevSecOps, automation, cron fleet
+    if (
+        slug.startswith("github-")
+        or slug.startswith("ci-")
+        or slug == "devsecops"
+        or slug == "cron-fleet"
+        or slug == "teams-meeting-pipeline"
+        or slug == "research-diary-documentation"
+        or slug == "test-driven-development"
+        or slug.startswith("kanban-")
+        or slug == "superpowers"
+    ):
+        return "sakjules"
+
+    # SakSee: Web, browser, DevTools, Playwright, scraping, visual/UI artifacts
+    if (
+        slug.startswith("playwright-")
+        or slug.startswith("chrome-devtools")
+        or slug == "ga4-to-sheets-dashboard"
+        or slug == "node-inspect-debugger"
+        or slug == "dogfood"
+        or slug == "computer-use"
+        or slug == "excalidraw"
+        or slug == "claude-design"
+        or slug == "comfyui"
+        or slug == "p5js"
+        or slug == "house-of-sak-site"
+        or slug == "powerpoint"
+        or slug == "jupyter-live-kernel"
+        or slug == "yuanbao"
+        or slug == "notion"
+    ):
+        return "saksee"
+
+    # SakSit: B2B SaaS, sales enablement, VoC, UGC, content, social media
+    if (
+        slug.startswith("b2b-")
+        or slug.startswith("founder-story")
+        or slug.startswith("social-media-")
+        or slug.startswith("instagram-")
+        or slug.startswith("youtube-")
+        or slug.startswith("ascii-")
+        or slug.startswith("audiocraft")
+        or slug == "xurl"
+    ):
+        return "saksit"
+
+    # SakTan: Daily ops, briefing, close-the-day, rhythm, family health
+    if slug in (
+        "daily-briefing",
+        "close-the-day",
+        "beer-cycle-signals",
+        "diary-writer",
+        "family-auto-cycle",
+        "family-health-audit",
+    ):
+        return "saktan"
+
+    # SakKing: Runner, CLI admin, general assistant
+    if slug in (
+        "cli-workflow-pitfalls",
+        "python-debugpy",
+        "maps",
+        "claude-code",
+        "codex",
+        "understand-claude-code-workflows",
+        "simplify-code",
+        "hermes-agent",
+    ):
+        return "sakking"
+
+    return None
+
+
 def _strip_all_prefixes(name: str) -> str:
     """Iteratively strip all known convention, legacy, and persona prefixes."""
     clean = name
@@ -249,47 +338,111 @@ def run_organization(apply: bool = False) -> None:
                     if apply:
                         shutil.rmtree(entry)
 
-    # 4. Domain reallocations
+    # 4. Domain reallocations and deduplication
     reallocated_targets: set[Path] = set()
-    for slug, target_persona in DOMAIN_REALLOCATIONS.items():
-        target_prefix = PERSONA_SKILL_PREFIXES.get(
-            target_persona, f"Sak{target_persona[3:].capitalize()}-"
-        )
-        target_name = f"{target_prefix}{slug}"
-        target_dir = PERSONAS_DIR / target_persona / "skills" / target_name
-        for p in PERSONAS:
-            if p == target_persona:
+    for p in PERSONAS:
+        sdir = PERSONAS_DIR / p / "skills"
+        if not sdir.is_dir():
+            continue
+        for entry in sorted(sdir.iterdir()):
+            if not entry.is_dir():
                 continue
-            sdir = PERSONAS_DIR / p / "skills"
-            if not sdir.is_dir():
+            slug = _strip_all_prefixes(entry.name)
+            if slug in UNIVERSAL_SHARED_SLUGS:
                 continue
-            for entry in list(sdir.iterdir()):
-                if not entry.is_dir():
-                    continue
-                clean = _strip_all_prefixes(entry.name)
-                if clean == slug:
-                    already_present = target_dir.exists() or target_dir in reallocated_targets
-                    if already_present:
-                        print(
-                            f"[REALLOCATE DEDUP] {entry.relative_to(REPO_ROOT)} "
-                            f"(target {target_dir.relative_to(REPO_ROOT)} already exists)"
+            target_persona = get_domain_owner(slug)
+            if target_persona is None or target_persona == p:
+                continue
+
+            target_prefix = PERSONA_SKILL_PREFIXES.get(
+                target_persona, f"Sak{target_persona[3:].capitalize()}-"
+            )
+            target_name = f"{target_prefix}{slug}"
+            target_dir = PERSONAS_DIR / target_persona / "skills" / target_name
+
+            already_present = target_dir.exists() or target_dir in reallocated_targets
+            if already_present:
+                # Target already exists or was moved earlier.
+                # If entry contains significantly richer content (e.g. comprehensive xurl or hf-accelerate), upgrade target!
+                src_md = entry / "SKILL.md"
+                tgt_md = target_dir / "SKILL.md"
+                if src_md.exists() and tgt_md.exists():
+                    try:
+                        src_text = src_md.read_text(encoding="utf-8")
+                        tgt_text = tgt_md.read_text(encoding="utf-8")
+                        if len(src_text) > len(tgt_text) * 2:
+                            print(
+                                f"[DOMAIN UPGRADE] {target_dir.relative_to(REPO_ROOT)} ({len(tgt_text)}B) "
+                                f"<- richer content from {entry.relative_to(REPO_ROOT)} ({len(src_text)}B)"
+                            )
+                            if apply:
+                                upgraded = yaml_replace_name(src_text, target_name)
+                                tgt_md.write_text(upgraded, encoding="utf-8")
+                    except Exception:
+                        pass
+                print(
+                    f"[DOMAIN DEDUP REMOVE] {entry.relative_to(REPO_ROOT)} "
+                    f"(target {target_dir.relative_to(REPO_ROOT)} owned by {target_persona})"
+                )
+                if apply:
+                    shutil.rmtree(entry)
+            else:
+                print(
+                    f"[DOMAIN MOVE] {entry.relative_to(REPO_ROOT)} -> "
+                    f"{target_dir.relative_to(REPO_ROOT)}"
+                )
+                reallocated_targets.add(target_dir)
+                if apply:
+                    shutil.move(str(entry), str(target_dir))
+                    md = target_dir / "SKILL.md"
+                    if md.exists():
+                        content = yaml_replace_name(
+                            md.read_text(encoding="utf-8"), target_name
                         )
-                        if apply:
-                            shutil.rmtree(entry)
-                    else:
-                        print(
-                            f"[REALLOCATE MOVE] {entry.relative_to(REPO_ROOT)} -> "
-                            f"{target_dir.relative_to(REPO_ROOT)}"
-                        )
-                        reallocated_targets.add(target_dir)
-                        if apply:
-                            shutil.move(str(entry), str(target_dir))
-                            md = target_dir / "SKILL.md"
-                            if md.exists():
-                                content = yaml_replace_name(
-                                    md.read_text(encoding="utf-8"), target_name
-                                )
-                                md.write_text(content, encoding="utf-8")
+                        md.write_text(content, encoding="utf-8")
+
+    # 4b. Safety pass: eliminate any remaining identical skill bodies across personas
+    import hashlib
+    from collections import defaultdict
+    body_to_entries: dict[str, list[tuple[str, Path]]] = defaultdict(list)
+    for p in PERSONAS:
+        sdir = PERSONAS_DIR / p / "skills"
+        if not sdir.is_dir():
+            continue
+        for entry in sdir.iterdir():
+            md = entry / "SKILL.md"
+            if not md.is_file():
+                continue
+            try:
+                content = md.read_bytes()
+                parts = content.split(b"---", 2)
+                body = parts[2].strip() if len(parts) >= 3 else content.strip()
+                body_hash = hashlib.sha256(b" ".join(body.split())).hexdigest()
+                body_to_entries[body_hash].append((p, entry))
+            except Exception:
+                pass
+
+    for _body_hash, entries in body_to_entries.items():
+        unique_personas = {e[0] for e in entries}
+        if len(unique_personas) > 1:
+            keeper = None
+            for p, entry in entries:
+                slug = _strip_all_prefixes(entry.name)
+                owner = get_domain_owner(slug)
+                if owner == p:
+                    keeper = (p, entry)
+                    break
+            if keeper is None:
+                keeper = entries[0]
+
+            for _p, entry in entries:
+                if entry != keeper[1]:
+                    print(
+                        f"[CROSS-PERSONA BODY DEDUP] {entry.relative_to(REPO_ROOT)} "
+                        f"(identical body already kept in {keeper[1].relative_to(REPO_ROOT)})"
+                    )
+                    if apply:
+                        shutil.rmtree(entry)
 
     # 5. Repair version metadata across all skills
     all_roots = [SHARED_SKILLS_DIR] + [PERSONAS_DIR / p / "skills" for p in PERSONAS]
