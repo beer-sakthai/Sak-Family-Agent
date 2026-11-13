@@ -1,7 +1,7 @@
 {
   "meta": {
-    "source_commit": "014e1096",
-    "source_date": "2026-11-13T12:25:28Z",
+    "source_commit": "0938d5dd",
+    "source_date": "2026-11-13T18:58:49Z",
     "generator": "scripts/gen_system_snapshot.py"
   },
   "personas": [
@@ -12,7 +12,7 @@
       "domain": "TDD execution, CLI runner, utility refactoring, subagents",
       "provider": "huggingface",
       "model": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
-      "skill_count": 106,
+      "skill_count": 63,
       "mcp_servers": [
         "chrome-devtools",
         "hf-media",
@@ -26,7 +26,7 @@
       "domain": "Hugging Face Hub, Model Lifecycle, 6-Stage Energy Cycle, QLoRA",
       "provider": "huggingface",
       "model": "deepseek-ai/DeepSeek-V4.1-Flash",
-      "skill_count": 299,
+      "skill_count": 286,
       "mcp_servers": []
     },
     {
@@ -36,7 +36,7 @@
       "domain": "Playwright, Live Web Scraping, Chrome DevTools, OCR & extraction",
       "provider": "huggingface",
       "model": "deepseek-ai/DeepSeek-V4.1-Flash",
-      "skill_count": 182,
+      "skill_count": 139,
       "mcp_servers": [
         "chrome-devtools",
         "playwright"
@@ -49,7 +49,7 @@
       "domain": "Brand Copy, Social Posts, Hub Dataset Cards, Storytelling",
       "provider": "huggingface",
       "model": "deepseek-ai/DeepSeek-V4-Flash",
-      "skill_count": 43,
+      "skill_count": 44,
       "mcp_servers": [
         "hf-media"
       ]
@@ -61,7 +61,7 @@
       "domain": "GitHub Actions, Cron Fleet, DevSecOps, Release Automation",
       "provider": "huggingface",
       "model": "deepseek-ai/DeepSeek-V4.1-Flash",
-      "skill_count": 180,
+      "skill_count": 68,
       "mcp_servers": []
     },
     {
@@ -71,7 +71,7 @@
       "domain": "Schedule, alarms, rhythm, health checks, eval aggregation",
       "provider": "ollama",
       "model": "sakthai",
-      "skill_count": 13,
+      "skill_count": 9,
       "mcp_servers": []
     }
   ],
@@ -1080,12 +1080,12 @@
   ],
   "tests": {
     "coverage_floor": 96.0,
-    "test_functions": 2118,
+    "test_functions": 2122,
     "trees": [
       {
         "name": "sakthai (tests/)",
         "path": "tests",
-        "files": 125,
+        "files": 126,
         "runner": "ci.yml"
       },
       {
@@ -1117,10 +1117,23 @@
   "skills": {
     "shared": [
       "Sak-auto-cycle-loop",
+      "Sak-cycle-care",
+      "Sak-cycle-dream",
+      "Sak-cycle-growth",
+      "Sak-cycle-hope",
+      "Sak-cycle-joy",
+      "Sak-cycle-trust",
       "Sak-dogfood",
+      "Sak-google-workspace",
+      "Sak-nano-pdf",
+      "Sak-ocr-and-documents",
+      "Sak-opencode",
+      "Sak-plan",
       "Sak-repository-quality",
       "Sak-repository-security",
+      "Sak-requesting-code-review",
       "Sak-skill-authoring-and-validation",
+      "Sak-spike",
       "Sak-yuanbao"
     ],
     "library_categories": [
