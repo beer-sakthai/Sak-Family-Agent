@@ -1,74 +1,90 @@
-# PLAN.md — SakTan 📗 Task-by-Task Roadmap
-> *Schedule, alarms, rhythm, health checks, eval aggregation — Execution Plan*\
-> *Each task's **Status** follows the root PLAN.md: `[ ]` open → `[/]` in progress → `[x] YYYY-MM-DD` done.*\
+# PLAN.md — SakTan 📗 Deep-Dive Task-by-Task Roadmap
+> *Daily Briefings, Close-the-Day, Weekly Reviews, Alert Filtering, Ban Tally, Stalled Joy Check & Cron Proposals — Execution Plan*  
+> *Each task's **Status** follows the root [`/PLAN.md`](../../PLAN.md): `[ ]` open → `[/]` in progress → `[x] YYYY-MM-DD` done.*  
 > *Commands that call `sakthai` from inside an agent run need `SAKTHAI_SHELL_ALLOW`; the `run_command` tool is off without it.*
 
 ---
 
-### Phase 1: Foundation
+## 📋 Deep-Dive Task Execution Breakdown (Step-by-Step, One-by-One)
 
-#### 🔹 Task 1.1: Config preflight
+```mermaid
+flowchart TD
+    T1["Task 1: Local Ollama & Platform Preflight (Phase 1)"] --> T2["Task 2: Family Memory, Deputy 2 & Healthcheck Audit (Phase 1)"]
+    T2 --> T3["Task 3: Morning Daily Briefing & Close-the-Day Rhythm (Phase 2)"]
+    T3 --> T4["Task 4: SakSee Rate-Limit Ban Tally & Alert Triage (Phase 3)"]
+    T4 --> T5["Task 5: SakSit >7d Stalled Joy Check & Cron Audit (Phase 4)"]
+    T5 --> T6["Task 6: Weekly Review & Growth Stage Self-Eval v9 (Phase 5)"]
+```
+
+---
+
+### Phase 1: Foundation, Local Ollama & Memory Health Preflight
+
+#### 🔹 Task 1.1: Config & Local Ollama (`sakthai`) Preflight
 - **Status**: [ ]
-- **Goal**: Confirm SakTan's provider, model and skills resolve.
+- **Goal**: Confirm SakTan's provider (`ollama`), local model (`sakthai`), and 13 overlay skills resolve with $0.00 API spend.
+- **Estimated Time**: 2 minutes
 - **Command**: `SAKTHAI_HOME=$(mktemp -d) sakthai run "preflight" --persona saktan --no-mcp --dry-run`
-- **Acceptance Criteria**: The preflight shows `ollama` → `sakthai`, and `curl -s http://127.0.0.1:11434/api/tags` lists the `sakthai` model. The dry run alone reports `runnable: yes` for Ollama even with no server running.
+- **Acceptance Criteria**: Preflight resolves `ollama` → `sakthai` (verify local server via `curl -s http://127.0.0.1:11434/api/tags`).
 
-#### 🔹 Task 1.2: Read the family first
+#### 🔹 Task 1.2: Pre-Task Family Reads & Shard Healthcheck
 - **Status**: [ ]
-- **Goal**: Know the deputy chain and what my siblings left for me before any task.
-- **Command**: the SOUL's family reads (see MEMORY.md)
-- **Acceptance Criteria**: The task starts from the family's current state, not from a guess.
-
-#### 🔹 Task 1.3: Memory health
-- **Status**: [ ]
-- **Goal**: Check my memory shard and keep a backup.
-- **Command**: `sakthai memory --persona saktan healthcheck`, then `sakthai memory --persona saktan backup`
-- **Acceptance Criteria**: The integrity check passes and a fresh backup exists.
+- **Goal**: Read charge, conservation mode, and `DEPUTY CHAIN`, then run `healthcheck` and `backup` on SakTan's memory shard.
+- **Estimated Time**: 2 minutes
+- **Command**: `sakthai memory family "DEPUTY CHAIN" --tag deputy-chain --limit 1 && sakthai memory --persona saktan healthcheck && sakthai memory --persona saktan backup`
+- **Acceptance Criteria**: Integrity check passes and timestamped backup exists.
 
 ---
 
-### Phase 2: Beer's day
+### Phase 2: Beer's Daily Rhythm (Briefing, Close-the-Day & Weekly Review)
 
-#### 🔹 Task 2.1: Daily briefing
+#### 🔹 Task 2.1: Daily Briefing (`SakTan-daily-briefing`)
 - **Status**: [ ]
-- **Goal**: Surface today's one clear next action.
+- **Goal**: Surface today's single clearest next action for Beer without overwhelming options.
+- **Estimated Time**: 3 minutes
 - **Command**: `sakthai run "Daily briefing for Beer" --persona saktan --with-skills SakTan-daily-briefing`
-- **Acceptance Criteria**: One next action, not an agenda dump.
+- **Acceptance Criteria**: One actionable priority delivered with strict token economy.
 
-#### 🔹 Task 2.2: Close the day
+#### 🔹 Task 2.2: Close the Day & Weekly Review (`SakTan-close-the-day`, `SakTan-weekly-review`)
 - **Status**: [ ]
-- **Goal**: Log the day's outcomes and tomorrow's top task.
+- **Goal**: Record completed outcomes, set tomorrow's top task, and keep the weekly rhythm realistic.
+- **Estimated Time**: 5 minutes
 - **Command**: `sakthai run "Close the day" --persona saktan --with-skills SakTan-close-the-day`
-- **Acceptance Criteria**: Outcomes logged; tomorrow's top task is clear.
-
-#### 🔹 Task 2.3: Weekly review
-- **Status**: [ ]
-- **Goal**: Review the week's rhythm.
-- **Command**: `sakthai run "Weekly review" --persona saktan --with-skills SakTan-weekly-review`
-- **Acceptance Criteria**: A realistic plan for next week — never overcommitted.
+- **Acceptance Criteria**: Outcomes and tomorrow's top task saved to `~/.sakthai/saktan/memory.db`.
 
 ---
 
-### Phase 3: Family duties
+### Phase 3: Family Watchdog — Rate-Limit Ban Tally & Alert Filtering
 
-#### 🔹 Task 3.1: Rate-limit ban tally
+#### 🔹 Task 3.1: Tally SakSee `rate-limit-ban` Entries Per Domain
 - **Status**: [ ]
-- **Goal**: Count SakSee's bans per domain.
+- **Goal**: Count SakSee's bans per domain and flag any domain that repeatedly bans so the family stops retrying it.
+- **Estimated Time**: 3 minutes
 - **Command**: `sakthai memory family --tag rate-limit-ban --personas saksee --limit 50`
-- **Acceptance Criteria**: A domain that keeps banning is flagged instead of retried.
-
-#### 🔹 Task 3.2: Stalled Joy stages
-- **Status**: [ ]
-- **Goal**: Find SakSit drafts waiting on Beer.
-- **Command**: `sakthai memory family "CYCLE PAUSED: saksit" --tag cycle-paused --tag awaiting-beer --limit 20`
-- **Acceptance Criteria**: Beer hears about any wait over 7 days.
-
-#### 🔹 Task 3.3: Cron schedule check
-- **Status**: [ ]
-- **Goal**: Match every `schedule-request` to SakJules' `schedule-confirmed`.
-- **Command**: `sakthai memory family --tag schedule-confirmed --personas sakjules --limit 20`
-- **Acceptance Criteria**: No cron job runs without a request of mine.
+- **Acceptance Criteria**: Offending domains flagged in memory; routine alerts filtered before reaching Beer.
 
 ---
 
-*SakTan Task Plan · House of Sak*
+### Phase 4: Stalled Joy Stage Monitor & Cron Schedule Verification
+
+#### 🔹 Task 4.1: Check SakSit Joy Drafts Waiting > 7 Days & Verify Cron Confirmations
+- **Status**: [ ]
+- **Goal**: Surface any `CYCLE PAUSED: saksit` (`awaiting-beer`) entry older than 7 days, and verify every `schedule-request` has a matching `schedule-confirmed` from SakJules.
+- **Estimated Time**: 3 minutes
+- **Command**: `sakthai memory family "CYCLE PAUSED: saksit" --tag cycle-paused --tag awaiting-beer --limit 20 && sakthai memory family --tag schedule-confirmed --personas sakjules --limit 20`
+- **Acceptance Criteria**: Beer hears about any >7d draft wait; zero unconfirmed cron schedules.
+
+---
+
+### Phase 5: Growth Stage Self-Eval v9
+
+#### 🔹 Task 5.1: Self-Evaluation v9 Tag Write & Cycle Completion
+- **Status**: [ ]
+- **Goal**: Score the cycle on the 5-dimension rubric (`/100`) and write `CYCLE EVAL: saktan` before `cycle-complete`.
+- **Estimated Time**: 3 minutes
+- **Command**: `sakthai learn --persona saktan "CYCLE EVAL: saktan | task: <name> | total: <n>/100 | grade: <S/A/B/C/D/F> | timestamp: <ISO>" --kind observation --tag cycle-eval --tag saktan`
+- **Acceptance Criteria**: `cycle-eval` written to `~/.sakthai/saktan/memory.db` and logged in `CYCLE.md`.
+
+---
+
+*SakTan Step-by-Step Task Master Plan · House of Sak*

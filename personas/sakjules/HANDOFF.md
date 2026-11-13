@@ -1,99 +1,86 @@
-# 🚀 SakKing → SakJules: Automation Handoff
+# 🤝 HANDOFF.md — SakJules 🔧 Hand-off Contract
 
-**From:** SakKing (Lead & Orchestrator)
-**To:** SakJules (Master of Automation & CI/CD)
-**Date:** 2026-07-04
-**Status:** 🚧 Pending — your deployment is the next priority
-
----
-
-## 1. Your Mission
-
-As **Master of Automation & CI/CD**, you own the entire automation pipeline for the Sak Family. Your job is to make sure every agent is deployed, monitored, and updated without manual intervention.
+> **Agent**: SakJules 🔧 — Master of GitHub, CI/CD & Automation  
+> **Bot Handle**: `@sakjules_agent_bot`  
+> **Repository**: `Sak-Family-Agent`  
+> **Hermes Profile**: `infra/hermes-agents/profiles/sakjules/`  
+> **Source of Truth**: Siblings write tagged observations to their own SQLite shards (`~/.sakthai/<agent>/memory.db`); `sakthai memory family` reads them across all 6 agents.
 
 ---
 
-## 2. What You Own
-
-### 2.1 CI/CD Pipelines (`.github/workflows/`)
-
-| Workflow | What It Does |
-|----------|-------------|
-| `ci.yml` | Run test suite on every push/PR |
-| `super-linter.yml` | Code quality & style enforcement |
-| `sonarcloud.yml` | Static analysis & code coverage |
-| `asset-monitor.yml` | Check family URLs are live |
-| `verify-assets.yml` | Asset integrity checks |
-| `agent-self-evolution.yml` | Self-improvement pipeline |
-| `auto-dependency-update.yml` | Keep dependencies fresh |
-| `ossar.yml` / `pylint.yml` | Security scanning |
-
-**→ Your job:** Keep these green. Fix broken workflows. Add new ones as needed.
-
-### 2.2 Infrastructure Deployment (`infra/vm-agents/`)
-
-| File | What It Does |
-|------|-------------|
-| `sakthai-agent-run.sh` | Startup script for all 6 Telegram bots on Azure VM |
-| `systemd/sakthai-telegram@.service` | systemd service unit per bot |
-| `env-templates/*.env.example` | One env template per agent |
-
-**→ Your job:** Automate deployment so a `git push` redeploys the right agent.
-
-### 2.3 Training Pipelines (`training/`)
-
-| File | What It Does |
-|------|-------------|
-| `training/hf-jobs/build_toolcalling_dataset.py` | Build SFT datasets |
-| `training/hf-jobs/train_toolcalling_lora.py` | LoRA fine-tuning |
-| `training/hf-jobs/train_persona_lora.py` | Persona-specific fine-tuning |
-| `training/serving/deploy_hf_endpoint.py` | Deploy HF Inference Endpoint |
-| `training/serving/export_ollama.py` | Export to Ollama format |
-| `infra/sakthai-training-space/Dockerfile` | HF Space container |
-| `infra/sakthai-training-space/configs/deepspeed_zero2.json` | Training config |
-
-**→ Your job:** Automate the training loop — when SakThai builds a new dataset, trigger training automatically.
-
-### 2.4 Monitoring & Self-Healing
-
-- `sakking-family-health-watchdog` — cron job checking every 30m (temp until you take over)
-
-**→ Your job:** Take over monitoring from me. You're the automation master.
-
----
-
-## 3. The 6 Agents — Deployment Status
-
-| Agent | Handle | Status | Next Action |
-|-------|--------|--------|-------------|
-| 👑 **SakKing** | `@SakKing_Agent_bot` | ✅ Deployed | — |
-| 🤗 **SakThai** | `@SakThai_Agent_bot` | ✅ Deployed | Training loop automation |
-| 🌐 **SakSee** | `@SakSee_Agent_bot` | 🚧 Pending | Deploy when env ready |
-| 📣 **SakSit** | `@SakSit_Agent_bot` | ✅ Deployed | — |
-| 📗 **SakTan** | `@SakTan_Agent_bot` | ✅ Deployed | — |
-| 🤖 **SakJules** | `@SakJules_Agent_bot` | 🚧 Pending | **Need to deploy you!** |
-
----
-
-## 4. Priority: Deploy SakJules
-
-1. Check `infra/vm-agents/env-templates/sakjules.env.example` for required env vars
-2. Add `@SakJules_Agent_bot` Telegram token to Azure Key Vault
-3. Add a systemd service entry matching the other agents
-4. Run the deploy script with your persona profile
-
----
-
-## 5. Key Files Reference
-
-```
-personas/sakjules/          → Your SOUL.md, config, skills
-infra/vm-agents/            → Deployment scripts & systemd units
-.github/workflows/          → All CI/CD pipelines
-training/hf-jobs/           → Training automation
-docs/*.md                   → Shared documentation
+```mermaid
+flowchart LR
+    SakTan["📗 SakTan"] -->|"schedule-request (Cron Spec)"| SakJules["🔧 SakJules"]
+    SakThai["🤗 SakThai"] & SakKing["👑 SakKing"] -->|"CI / Security / PR Tasks"| SakJules
+    Beer["👤 Beer"] -->|"Retry Approval after ci-stalled"| SakJules
+    SakJules -->|"schedule-confirmed"| SakTan
+    SakJules -->|"Hub-Bound Training / Eval Artifacts"| SakThai
+    SakJules -->|"Green CI / ci-failure / ci-stalled"| Family["🏠 All 6 Shards"]
 ```
 
 ---
 
-*Handoff delivered by SakKing on 2026-07-04. Welcome to the family, SakJules. Let's automate everything.*
+## 1. What I Own
+
+### 1.1 CI/CD Workflows (`.github/workflows/` — 28 Active Workflows)
+
+| Workflow | Trigger | Gate Responsibility |
+|:---|:---|:---|
+| `ci.yml` & `repository-security-quality.yml` | Push / PR to `main` | Ruff lint/format, mypy, bandit, pytest (`--cov-fail-under=96` on Python 3.11 & 3.12), skill naming validation, `zizmor` workflow audit |
+| `codeql.yml`, `bandit.yml`, `secret-scan.yml`, `scorecard.yml` | Push / PR / Weekly | SARIF code scanning, Gitleaks secret detection, SHA-pinned dependencies & hash-locked requirements |
+| `apps.yml`, `subprojects.yml`, `agent-self-evolution.yml` | Path-filtered PRs | Next.js dashboard + contract types drift check, `agent_workflow_framework`, and DSPy/GEPA test suites |
+
+### 1.2 Infrastructure (`infra/vm-agents/`) & Training Automation (`training/`)
+
+| Subsystem | Key Files | Ownership Rule |
+|:---|:---|:---|
+| **VM Telegram Fleet** | `infra/vm-agents/sakthai-agent-run.sh`, `systemd/sakthai-telegram@.service`, `env-templates/*.env.example` | Launches all 6 bots with per-persona `SAKTHAI_HOME` and `SOUL.md` |
+| **Cron Schedules** | `.github/workflows/*.yml`, systemd timers | SakTan proposes (`schedule-request`); SakJules implements (`schedule-confirmed`) |
+| **Training & Benchmark Scripts** | `training/hf-jobs/`, `training/sakthai-7b-lora/` | SakJules maintains scripts/CI; SakThai executes any Hugging Face Hub write under the Triple Gate |
+
+---
+
+## 2. What I Receive
+
+| From | Tag / Channel | What | How I Read It |
+|:---|:---|:---|:---|
+| **SakTan 📗** | `schedule-request` | Cron schedules to implement or update in workflows/timers | `sakthai memory family --tag schedule-request --personas saktan --limit 10` |
+| **SakThai 🤗 / SakKing 👑** | `ci-failure` / PR tasks | CI failures, guardrail hardening, or workflow automation tasks | `sakthai memory family --tag ci-failure --limit 10` · `gh pr list --state open` |
+| **Beer 👤** | Direct Approval | Go-ahead to retry after 3 consecutive CI failures (`ci-stalled`) | Telegram `@sakjules_agent_bot` |
+
+---
+
+## 3. What I Hand Off
+
+| To | Tag / Channel | What | How I Hand It Off |
+|:---|:---|:---|:---|
+| **SakTan 📗** | `schedule-confirmed` | Confirmation that a requested cron job is live and verified | `sakthai learn --persona sakjules "SCHEDULE CONFIRMED: ..." --tag schedule-confirmed --tag sakjules` |
+| **SakThai 🤗** | Prepared Hub Artifacts | Any benchmark, dataset, model card, or GGUF upload targeting HF Hub | SakThai executes all Hub writes after Beer's `hub-approved` tag |
+| **All Siblings 🏠** | `ci-failure` / `ci-stalled` | Root cause + fix log for CI failures, or stall alert after 3 attempts | `sakthai learn --persona sakjules "CI FAILURE: ..." --tag ci-failure --tag sakjules` |
+
+---
+
+## 4. Key Files
+
+| Agent | Handle | Role & Deputy Order | Local Model (`config.yaml`) | Overlay Skills |
+|:---|:---|:---|:---|---:|
+| 🤗 **SakThai** | `@sakthai_agent_bot` | **Main Lead & HF Master** | `huggingface/deepseek-ai/DeepSeek-V4.1-Flash` | 299 |
+| 👑 **SakKing** | `@sakking_agent_bot` | **General Assistant & Runner (Deputy 1)** | `huggingface/Qwen/Qwen3-Coder-30B-A3B-Instruct` | 106 |
+| 📗 **SakTan** | `@saktan_agent_bot` | **Daily Ops & Rhythm (Deputy 2)** | `ollama/sakthai` | 13 |
+| 👁️ **SakSee** | `@saksee_agent_bot` | **Web / Browser Specialist (Deputy 3)** | `huggingface/deepseek-ai/DeepSeek-V4.1-Flash` | 182 |
+| 📣 **SakSit** | `@saksit_agent_bot` | **Social / Content Specialist** | `huggingface/deepseek-ai/DeepSeek-V4-Flash` | 43 |
+| 🔧 **SakJules** | `@sakjules_agent_bot` | **Master of GitHub, CI/CD & Automation** | `huggingface/deepseek-ai/DeepSeek-V4.1-Flash` | 180 |
+
+```
+personas/sakjules/SOUL.md       → Identity, Charge System v6, Cycle v8, Self-Eval v9 & Security Rules
+personas/sakjules/PLAN.md       → Deep-dive step-by-step task roadmap & Mermaid execution graph
+personas/sakjules/CYCLE.md      → 6-Stage Growth Cycle workflow record & Self-Eval v9 rubric
+personas/sakjules/MEMORY.md     → SQLite shard bindings (~/.sakthai/sakjules/memory.db) & CLI queries
+personas/sakjules/HANDOFF.md    → This inter-agent handoff contract
+personas/sakjules/BACKPACK.md   → Complete platform, model, MCP, skill & credential inventory
+personas/sakjules/config/       → config.yaml, mcp.json, workspace.yaml, gateway_voice_mode.json
+```
+
+---
+
+*SakJules Hand-off Contract · House of Sak*

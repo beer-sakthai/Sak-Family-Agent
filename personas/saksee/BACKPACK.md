@@ -1,8 +1,9 @@
-# 🎒 BACKPACK.md — SakSee Equipment & Starter Inventory
+# 🎒 BACKPACK.md — SakSee 👁️ Complete Installation & Equipment Inventory
 
-> **Agent**: SakSee 👁️ (Master of Web Scraping, Playwright, DevTools & Computer Use Vision)  
+> **Agent**: SakSee 👁️ (Web / Browser Specialist (Deputy 3))  
+> **Bot Handle**: `@saksee_agent_bot`  
 > **Repository**: `Sak-Family-Agent`  
-> **Hermes Profile**: `~/.hermes/profiles/saksee/`  
+> **Hermes Profile**: `infra/hermes-agents/profiles/saksee/`  
 > **Cost Policy**: **$0.00 USD Financial Spend** (100% Local & Free Tier Execution)
 
 ---
@@ -12,67 +13,76 @@
 | Component | Executable Path / Command | Version / Mode | Status |
 |:---|:---|:---|:---:|
 | **Google Antigravity IDE** | AGY Canvas & IDE Extension | Antigravity 2.0 | ✅ Active |
-| **AGY CLI** | `/home/beern/.local/bin/agy` | v2.0 Stdio & MCP | ✅ Active |
-| **Google ADK CLI** | `/home/beern/.local/bin/agents-cli` | v1.2.1 (Google Agent Dev Kit) | ✅ Active |
-| **Hermes Agent CLI** | `/home/beern/.local/bin/hermes` | Multi-profile TUI (`--profile saksee`) | ✅ Active |
-| **Supermemory Server Daemon** | `/home/beern/.supermemory/bin/supermemory-server` | v0.0.6 Daemon (`http://localhost:6767`) | ✅ Active (PID 23310) |
-| **OpenCode CLI** | `opencode` | Configured via `opencode.json` | ✅ Active |
+| **AGY CLI & Runner** | `agy` · `sakthai platform antigravity` | v2.0 Stdio, MCP & `AntigravityAgentRunner` | ✅ Active |
+| **Google ADK CLI** | `agents-cli` | v1.2.1 (Google Agent Dev Kit) | ✅ Active |
+| **Hermes Agent CLI** | `hermes --profile saksee` | Multi-profile TUI & Systemd Gateway | ✅ Active |
+| **SakThai Unified Platform** | `sakthai run/chat --persona saksee` · `sakthai platform` | v2.0 Core + `DataLossGuardrail` + Presets | ✅ Active |
+| **Supermemory & SQLite Shards** | `~/.sakthai/saksee/memory.db` · `http://localhost:6767` | WAL SQLite + ONNX `Xenova/bge-base-en-v1.5` | ✅ Active |
+| **OpenCode CLI** | `opencode` | Configured via [`config/config.yaml`](file:///home/sak/Sak-Family-Agent/personas/saksee/config/config.yaml) | ✅ Active |
 
 ---
 
-## 🤖 2. Active Model Loadout ([`opencode.json`](file:///home/beern/opencode.json))
+## 🤖 2. Active Model Loadout ([`config/config.yaml`](file:///home/sak/Sak-Family-Agent/personas/saksee/config/config.yaml))
 
-| Slot | Model ID / Identifier | Type | Role |
+| Slot | Model ID / Identifier | Provider / Tier | Role |
 |:---|:---|:---|:---|
-| **Local Browser Engine** | `hf.co/Nanthasit/sakthai-coder-browser-gguf` | Custom 7.1 GB GGUF | Sub-100ms local Playwright & DOM automation |
-| **Vision Computer Use** | `google/gemini-3.5-flash` / `gemini-2.5-flash` | Multimodal Vision API | High-res UI screenshot parsing & bounding box coordinates `click(x, y)` |
-| **Small / Fast Model** | `Nanthasit/sakthai-context-1.5b-tools-v2` | Custom 1.5B | Ultra-fast triage & web selector routing |
-| **Tools Model** | `Nanthasit/sakthai-context-7b-tools` | Custom 7B | JSON schema tool calling & function execution |
-| **Embedding Engine** | `Nanthasit/sakthai-embedding-multilingual` | Sentence-Transformers | Cross-lingual vector memory & RAG retrieval |
+| **Primary Engine** | `deepseek-ai/DeepSeek-V4.1-Flash` | `huggingface` | Primary persona reasoning & tool execution (`--persona saksee`) |
+| **Fallback Engine** | `ollama-cloud / gpt-oss:120b` | Fallback Provider | Automatic failover when primary provider is rate-limited |
+| **Unified Platform Preset** | `ModelTier.FAST (gemini-2.5-flash / deepseek-ai/DeepSeek-V4.1-Flash)` | `sakthai.agent_platform` | Preset tier for `sakthai platform antigravity --tier` |
+| **Small / Fast Model** | `Nanthasit/sakthai-context-1.5b-tools-v2` | Custom 1.5B Open-Weights | Ultra-fast triage, task classification & routing |
+| **Tools Model** | `Nanthasit/sakthai-context-7b-tools` | Custom 7B Open-Weights | JSON schema tool calling & function execution |
+| **Embedding Engine** | `Nanthasit/sakthai-embedding-multilingual` | Sentence-Transformers | Cross-lingual Thai/English vector memory & RAG retrieval |
+| **VM Telegram Bot Engine** | `openai (Azure OpenAI) / gpt-4o-mini` | `infra/vm-agents/sakthai-agent-run.sh` | Production Telegram bot (`@saksee_agent_bot`) |
 
 ---
 
-## 🛠️ 3. Web & Vision Tool Loadout
+## 🛠️ 3. MCP Server, Platform & Domain Tool Loadout
 
-- **🌐 Playwright Browser Engine**:
-  - Chromium Version: `v1.62.1` (`~/.cache/ms-playwright/chromium-1155`)
-- **🚀 Desktop Executable**:
-  - Perplexity Comet: `/mnt/c/Program Files/Perplexity/Comet/Application/comet.exe` (`COMET_EXE_PATH` in `.env`)
-- **📡 Automated Web Monitor Hook (`saksee-auto-monitor.sh`)**:
-  - Script: `.opencode/scripts/saksee-auto-monitor.sh` (Monitors Beer's 6 HF Spaces, records `monitoring-result` to `~/.sakthai/memory.db`)
-- **⚡ Composio MCP (`composio`)**:
-  - Not configured: `composio` is not in `config/mcp.json`. Pin an exact version there before use, never `@latest` (Security Rule 5). (Integrates 250+ SaaS tools: GitHub, Slack, Gmail, Jira)
-- **🎮 CUA Driver Daemon (`cua-driver`)**:
-  - Path: `/home/beern/.cua-driver/packages/releases/0.16.0-x86_64-unknown-linux-gnu/cua-driver`
-  - Capabilities: `browser_click`, `browser_type`, `browser_scroll`, pixel-coordinate targeting
-- **🌐 Chrome DevTools MCP**:
-  - `npx -y chrome-devtools-mcp@1.10.1` (pinned in `config/mcp.json`)
-- **🎨 Google Stitch MCP (`stitch`)**:
-  - Endpoint: `https://stitch.googleapis.com/mcp`
-  - Headers: `X-Goog-Api-Key`
-- **🧠 Local Supermemory Server**:
-  - Endpoint: `http://localhost:6767` (PID `23310`)
-  - Local ONNX Embedding Model: `Xenova/bge-base-en-v1.5`
-
----
-
-## 🔑 4. Credential & Environment Inventory (`~/.env`)
-
-- **`COMET_EXE_PATH`**: `/mnt/c/Program Files/Perplexity/Comet/Application/comet.exe`
-- **`GOOGLE_API_KEY`**: Authenticated for Gemini 3.5 Flash vision computer use
-- **`OPENCODE_GO_API_KEY`**: Authenticated for OpenCode Go platform
-- **`SUPERMEMORY_API_KEY`**: Authenticated for local Supermemory daemon
+- **🌐 Playwright Browser Engine MCP (`playwright`)**:
+  - `npx -y @playwright/mcp@0.0.83` (pinned in `config/mcp.json`; requires Active charge >= 50%)
+- **🔍 Chrome DevTools MCP (`chrome-devtools`)**:
+  - `npx -y chrome-devtools-mcp@1.10.1` (pinned in `config/mcp.json`, never `@latest` — Security Rule 5)
+- **🛡️ Prompt-Injection Boundary & Timestamp Auditor**:
+  - Wraps every scraped page or DOM snippet in `<untrusted_web_content source="<url>">...</untrusted_web_content>`
+  - Attaches mandatory `retrieved_at=<ISO 8601>` timestamp to every extracted observation
+- **📡 30-Minute Shared Monitoring Cache & Rate-Limit Tracker**:
+  - Writes `monitoring-result` + `<asset-id>` tags to `~/.sakthai/saksee/memory.db` so all 6 siblings can read via `sakthai memory family --tag monitoring-result`
+  - Logs HTTP 429 / CAPTCHA blocks with `rate-limit-ban` (`-25%` charge) so SakTan can tally per-domain frequency
+- **🛡️ Unified Agent Platform Pro-Tips (`sakthai.agent_platform`)**:
+  - **Safety Interception**: `check_data_loss_guardrail` (`safety.py` & `guardrails_hardened.py`) blocks destructive shell/SQL commands unless authorized by HMAC digest token
+  - **Isolated Environment Runner**: `sakthai platform wrap-cmd "<cmd>"` (`dep_manager.py`) auto-wraps commands in the detected `uv` virtual environment
+  - **Progressive Skill Disclosure**: `sakthai platform skills` (`render_skills_progressive_summary`) renders lightweight skill metadata tables to prevent prompt bloat
+  - **Harness Pipeline Exporter**: `sakthai platform export-harness saksee` (`harness_exporter.py`) exports declarative Harness v1 agent & pipeline specs
+- **🧰 Skill Overlay Inventory (182 Overlay Skills + 3 Shared Skills)**:
+  - **Overlay Root**: [`personas/saksee/skills/`](file:///home/sak/Sak-Family-Agent/personas/saksee/skills) (182 specialized `SakSee-*` skills)
+  - **Shared Root**: [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills) (3 shared skills: `Sak-auto-cycle-loop`, `Sak-dogfood`, `Sak-yuanbao`)
+  - **Primary Workspace Skills** ([`config/workspace.yaml`](file:///home/sak/Sak-Family-Agent/personas/saksee/config/workspace.yaml)):
+  - `SakSee-chrome-devtools-cli`
+  - `SakSee-playwright-visual-snapshot-regression`
+  - `SakSee-hf-unlimited-ocr`
 
 ---
 
-## 📜 5. Permanent Configuration Files
+## 🔑 4. Credential & Environment Inventory (Names Only — Never Print Values)
 
-- [`personas/saksee/SOUL.md`](file:///home/beern/Sak-Family-Agent/personas/saksee/SOUL.md) — Persona identity & directives
-- [`personas/saksee/PLAN.md`](file:///home/beern/Sak-Family-Agent/personas/saksee/PLAN.md) — Web vision & Playwright roadmap
-- [`personas/saksee/MEMORY.md`](file:///home/beern/Sak-Family-Agent/personas/saksee/MEMORY.md) — Fact store & selector registry
-- [`personas/saksee/BACKPACK.md`](file:///home/beern/Sak-Family-Agent/personas/saksee/BACKPACK.md) — Complete installation & equipment inventory
-- [`personas/saksee/CYCLE.md`](file:///home/beern/Sak-Family-Agent/personas/saksee/CYCLE.md) — 6-Stage Growth Cycle Workflow record
+- **`HF_TOKEN`**: Authenticated for `deepseek-ai/DeepSeek-V4.1-Flash` on Hugging Face Inference Providers and OCR Spaces
+- **`GOOGLE_API_KEY`**: Optional multimodal vision fallback for UI coordinate parsing
+- **VM Env Template (`infra/vm-agents/env-templates/saksee.env.example`)**: `SAKTHAI_FAST`, `SAKTHAI_HOME`, `SAKTHAI_PERSONA`, `SAKTHAI_MODEL`, `SAKTHAI_SYSTEM_PROMPT_FILE`, `SAKTHAI_WITH_SKILLS`, `TELEGRAM_ALLOWED_USER_IDS`, `TELEGRAM_BOT_TOKEN`
+- **Security & Approval Posture (`config/config.yaml`)**:
+  - `command_allowlist: []` · `tirith_enabled: true` · `tirith_fail_open: false` · `allow_lazy_installs: false` · `redact_secrets: true` · `allow_private_urls: false` · `approvals.mode: manual` · `approvals.cron_mode: deny`
 
 ---
 
-*SakSee Complete Equipment Inventory · House of Sak*
+## 📜 5. Permanent Configuration Files (`personas/saksee/`)
+
+- [`personas/saksee/SOUL.md`](file:///home/sak/Sak-Family-Agent/personas/saksee/SOUL.md) — Persona identity, Charge System v6, Cycle Tracker v8, Self-Eval v9 & Security Rules
+- [`personas/saksee/PLAN.md`](file:///home/sak/Sak-Family-Agent/personas/saksee/PLAN.md) — Deep-dive step-by-step task roadmap & Mermaid execution flow
+- [`personas/saksee/CYCLE.md`](file:///home/sak/Sak-Family-Agent/personas/saksee/CYCLE.md) — 6-Stage Growth Cycle workflow record, v9 rubric & v8 recovery protocol
+- [`personas/saksee/MEMORY.md`](file:///home/sak/Sak-Family-Agent/personas/saksee/MEMORY.md) — Shard bindings (`~/.sakthai/saksee/memory.db`), read/write CLI commands & execution log
+- [`personas/saksee/HANDOFF.md`](file:///home/sak/Sak-Family-Agent/personas/saksee/HANDOFF.md) — Incoming/outgoing sibling handoff contracts & family coordination matrix
+- [`personas/saksee/BACKPACK.md`](file:///home/sak/Sak-Family-Agent/personas/saksee/BACKPACK.md) — This complete installation & equipment inventory
+- [`personas/saksee/config/`](file:///home/sak/Sak-Family-Agent/personas/saksee/config) — `config.yaml`, `mcp.json`, `workspace.yaml`, `gateway_voice_mode.json`
+
+---
+
+*SakSee Complete Installation & Equipment Inventory · House of Sak*

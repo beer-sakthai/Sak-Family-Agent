@@ -1,7 +1,7 @@
 agent_name: SakSee
 role: Web / Browser Specialist (Deputy 3)
 domain: Playwright, Live Web Scraping, Chrome DevTools, OCR & extraction
-workspace_root: /home/beern/Sak-Family-Agent
+workspace_root: /home/sak/Sak-Family-Agent
 primary_skills:
   - SakSee-chrome-devtools-cli
   - SakSee-playwright-visual-snapshot-regression

@@ -1,7 +1,7 @@
 # PLAN.md — SakJules 🔧 Deep-Dive Task-by-Task Roadmap
-> *DevSecOps, GitHub Actions & Asynchronous Model Training Execution Plan*
-> *Status: Active Step-by-Step Execution*
-> *Each task's **Status** follows the root PLAN.md: `[ ]` open → `[/]` in progress → `[x] YYYY-MM-DD` done.*
+> *DevSecOps, GitHub Actions (28 Workflows), Cron Implementation, Sentinel Guardrails & Asynchronous Jules Automation — Execution Plan*  
+> *Each task's **Status** follows the root [`/PLAN.md`](../../PLAN.md): `[ ]` open → `[/]` in progress → `[x] YYYY-MM-DD` done.*  
+> *Commands that call `sakthai` from inside an agent run need `SAKTHAI_SHELL_ALLOW`; the `run_command` tool is off without it.*
 
 ---
 
@@ -9,134 +9,74 @@
 
 ```mermaid
 flowchart TD
-    T1["Task 1: Environment & Credential Audit (Phase 1)"] --> T2["Task 2: Local Memory & Daemon Health Check (Phase 1)"]
-    T2 --> T3["Task 3: OpenCode Custom Model Matrix Audit (Phase 2)"]
-    T3 --> T4["Task 4: Remote Jules Session Dispatch & Integration (Phase 3)"]
-    T4 --> T5["Task 5: HF Jobs Dataset & Training Pipeline Execution (Phase 4)"]
-    T5 --> T6["Task 6: Benchmark Eval & Model Cards Publishing (Phase 5)"]
-    T6 --> T7["Task 7: GGUF Quantization & Local Ollama Binding (Phase 6)"]
+    T1["Task 1: Config, Model & Platform CLI Preflight (Phase 1)"] --> T2["Task 2: Open PR Duplicate Check & Family Memory Audit (Phase 1)"]
+    T2 --> T3["Task 3: SakTan Schedule-Request Implementation (Phase 2)"]
+    T3 --> T4["Task 4: Guardrails & Web Server Parity Verification (Phase 3)"]
+    T4 --> T5["Task 5: Full Quality & Security Gate Execution (Phase 4)"]
+    T5 --> T6["Task 6: HF Training Prep Handoff & Growth Self-Eval v9 (Phase 5)"]
 ```
 
 ---
 
-### Phase 1: Foundation & Infrastructure Verification
+### Phase 1: Foundation, Platform & PR Hygiene Preflight
 
-#### 🔹 Task 1.1: Environment Variable & API Credential Audit
+#### 🔹 Task 1.1: Config, Model & Unified Platform Preflight
 - **Status**: [ ]
-- **Goal**: Verify all API keys (`JULES_API_KEY`, `OPENCODE_GO_API_KEY`, `SUPERMEMORY_API_KEY`, `RENDER_API_KEY`, `GOOGLE_API_KEY`) are present in `/home/beern/.env` and exported in `~/.bashrc`.
+- **Goal**: Confirm SakJules's provider (`huggingface`), model (`deepseek-ai/DeepSeek-V4.1-Flash`), 180 overlay skills, and `sakthai platform` CLI (`detect-deps`, `check-safety`, `export-harness`) resolve cleanly.
 - **Estimated Time**: 2 minutes
-- **Command**: `for k in JULES_API_KEY OPENCODE_GO_API_KEY SUPERMEMORY_API_KEY RENDER_API_KEY GOOGLE_API_KEY; do grep -qE "^(export )?$k=." /home/beern/.env && echo "$k set" || echo "$k MISSING"; done`
-- **Acceptance Criteria**: All 5 names print `set`. The check prints key names only, never a value (the earlier `grep` echoed every matching key into the log).
+- **Command**: `SAKTHAI_HOME=$(mktemp -d) sakthai run "preflight" --persona sakjules --no-mcp --dry-run && sakthai platform export-harness sakjules`
+- **Acceptance Criteria**: Preflight resolves `huggingface` → `deepseek-ai/DeepSeek-V4.1-Flash`; Harness v1 spec exports cleanly.
 
-#### 🔹 Task 1.2: Local Supermemory Daemon Health Check
+#### 🔹 Task 1.2: Open PR Duplicate Check & Family Memory Audit
 - **Status**: [ ]
-- **Goal**: Verify local Supermemory daemon is running on port 6767 with ONNX `Xenova/bge-base-en-v1.5` embeddings.
+- **Goal**: Check open PRs (`gh pr list --state open`) before starting work so a duplicate PR is never opened (`-20%` charge penalty), and read `schedule-request` and `security-interrupted` tags.
 - **Estimated Time**: 2 minutes
-- **Command**: `curl -s http://localhost:6767/healthcheck || pgrep -f supermemory-server`
-- **Acceptance Criteria**: HTTP 200 response or active PID returned.
+- **Command**: `gh pr list --state open && sakthai memory family --tag schedule-request --personas saktan --limit 10`
+- **Acceptance Criteria**: Zero overlapping open PRs; branch rebased onto latest `main`.
 
 ---
 
-### Phase 2: OpenCode & Custom Model Binding Audit
+### Phase 2: Cron Schedule Implementation (`schedule-request` → `schedule-confirmed`)
 
-#### 🔹 Task 2.1: OpenCode Model Matrix Verification
+#### 🔹 Task 2.1: Implement SakTan Schedule Requests
 - **Status**: [ ]
-- **Goal**: Audit [`/home/beern/opencode.json`](file:///home/beern/opencode.json) to ensure zero Gemini API quota dependencies.
-- **Estimated Time**: 3 minutes
-- **Matrix**:
-  - `model`: `huggingface/deepseek-ai/DeepSeek-V4-Flash`
-  - `small_model`: `Nanthasit/sakthai-context-1.5b-tools-v2`
-  - `tools_model`: `Nanthasit/sakthai-context-7b-tools`
-  - `embedding_model`: `Nanthasit/sakthai-embedding-multilingual`
-- **Acceptance Criteria**: `opencode.json` contains 100% custom `Nanthasit/*` models.
-
-#### 🔹 Task 2.2: Google ADK Zero-Cost Specification Audit
-- **Status**: [ ]
-- **Goal**: Verify [`/home/beern/.agents-cli-spec.md`](file:///home/beern/.agents-cli-spec.md) is configured for $0.00 USD spend.
-- **Estimated Time**: 2 minutes
-- **Command**: `agents-cli info`
-- **Acceptance Criteria**: Executed cleanly with 0 malformed metadata warnings.
-
----
-
-### Phase 3: Jules Asynchronous Remote Automation
-
-#### 🔹 Task 3.1: Remote Jules Session List & Status Audit
-- **Status**: [ ]
-- **Goal**: Query active remote sessions on Jules server.
+- **Goal**: Implement any cron or GitHub Actions schedule requested by SakTan and record `schedule-confirmed`.
 - **Estimated Time**: 5 minutes
-- **Command**: `jules remote list --session` or via `julesServer` MCP
-- **Acceptance Criteria**: List of remote sessions returned cleanly.
-
-#### 🔹 Task 3.2: Jules Remote Patch Pull & Git Merge
-- **Status**: [ ]
-- **Goal**: Pull completed patches from remote Jules sessions and apply to `Sak-Family-Agent` or target repos.
-- **Estimated Time**: 5 minutes
-- **Command**: `jules remote pull --session <SESSION_ID> --apply`
-- **Acceptance Criteria**: Git working tree updated cleanly without merge conflicts.
+- **Command**: `sakthai learn --persona sakjules "SCHEDULE CONFIRMED: <job> | cron: <expression> | workflow: <file> | timestamp: <ISO>" --kind observation --tag schedule-confirmed --tag sakjules`
+- **Acceptance Criteria**: Every active cron schedule matches a `schedule-request` from SakTan.
 
 ---
 
-### Phase 4: Custom Model Training & Benchmark Pipeline
+### Phase 3: Cross-Persona Security Parity Verification
 
-#### 🔹 Task 4.1: Dataset Synthesis (`sakthai-bench-v3`)
+#### 🔹 Task 3.1: Guardrails & Web Server Parity Check
 - **Status**: [ ]
-- **Goal**: Run `.opencode/scripts/run-benchmark-v3.py` to generate 25,000 synthetic task routing prompts.
-- **Estimated Time**: 15 minutes
-- **Command**: `uv run .opencode/scripts/run-benchmark-v3.py`
-- **Acceptance Criteria**: Dataset saved under `Nanthasit/sakthai-triage-dataset`.
-- **Owner**: SakThai. This writes to the Hugging Face Hub, so SakJules prepares it and SakThai runs it only through its Hub write triple gate, which needs Beer's `hub-approved` tag.
-- **Note**: `.opencode/scripts/` is not in this repository; confirm the script exists before running.
-
-#### 🔹 Task 4.2: Hugging Face Job GPU Fine-Tuning
-- **Status**: [ ]
-- **Goal**: Dispatch QLoRA SFT training for `Nanthasit/sakthai-triage-1.5b` on HF Jobs.
-- **Estimated Time**: 45 minutes
-- **Command**: `hf jobs run python:3.11 "uv run SakThai-Training/train.py" --secrets HF_TOKEN --flavor t4-small`
-- **Acceptance Criteria**: Job status `COMPLETED` and weights published to HF Hub.
-- **Owner**: SakThai. This writes to the Hugging Face Hub, so SakJules prepares it and SakThai runs it only through its Hub write triple gate, which needs Beer's `hub-approved` tag.
-- **Note**: `SakThai-Training/` is not in this repository (this repository's HF Jobs definitions live under `training/`); confirm the script exists before running.
+- **Goal**: Verify `agent/guardrails.py` and `web/server.py` remain byte-identical across `personas/sakthai/`, `personas/shared/`, and all persona copies.
+- **Estimated Time**: 2 minutes
+- **Command**: `python3 -m unittest tests/test_persona_guardrails_parity.py tests/test_persona_web_server_parity.py`
+- **Acceptance Criteria**: Both parity unittest suites pass 100%.
 
 ---
 
-### Phase 5: Evaluation & Documentation Publishing
+### Phase 4: Full Quality & Security Gate Verification
 
-#### 🔹 Task 5.1: Benchmark Evaluation Run
+#### 🔹 Task 4.1: Lint, Typecheck, Bandit & Pytest (>=96% Coverage)
 - **Status**: [ ]
-- **Goal**: Evaluate model accuracy on `Nanthasit/sakthai-bench-v2`.
+- **Goal**: Run the full CI quality gate locally before opening or merging any pull request.
 - **Estimated Time**: 10 minutes
-- **Command**: `uv run .opencode/scripts/run-eval.py --model Nanthasit/sakthai-triage-1.5b --publish`
-- **Acceptance Criteria**: Cross-model YAML uploaded to `Nanthasit/eval_results`.
-- **Owner**: SakThai. This writes to the Hugging Face Hub, so SakJules prepares it and SakThai runs it only through its Hub write triple gate, which needs Beer's `hub-approved` tag.
-- **Note**: `.opencode/scripts/` is not in this repository; confirm the script exists before running.
-
-#### 🔹 Task 5.2: Model Cards & Dataset Card Synchronization
-- **Status**: [ ]
-- **Goal**: Update README tables across all model repos and dataset cards.
-- **Estimated Time**: 5 minutes
-- **Command**: `uv run .opencode/scripts/update-model-cards.py`
-- **Acceptance Criteria**: Model card tables updated on Hugging Face Hub.
-- **Owner**: SakThai. This writes to the Hugging Face Hub, so SakJules prepares it and SakThai runs it only through its Hub write triple gate, which needs Beer's `hub-approved` tag.
-- **Note**: `.opencode/scripts/` is not in this repository; confirm the script exists before running.
+- **Command**: `make lint && uv run mypy personas/sakthai/sakthai && uv run bandit -c pyproject.toml -r personas/sakthai/sakthai && make test`
+- **Acceptance Criteria**: Ruff, mypy, bandit, and pytest all exit 0 with branch coverage >= 96%.
 
 ---
 
-### Phase 6: GGUF Quantization & Local Ollama Binding
+### Phase 5: Hub Artifact Handoff & Growth Stage Self-Eval v9
 
-#### 🔹 Task 6.1: GGUF Quantization & Upload
+#### 🔹 Task 5.1: Prepare HF Training/Eval Artifacts for SakThai & Write Self-Eval v9
 - **Status**: [ ]
-- **Goal**: Convert model weights to GGUF format (Q4_K_M) for local sub-100ms inference.
-- **Estimated Time**: 15 minutes
-- **Command**: `hf upload Nanthasit/sakthai-triage-1.5b-gguf ./model.gguf`
-- **Acceptance Criteria**: GGUF file available on HF Hub.
-- **Owner**: SakThai. This writes to the Hugging Face Hub, so SakJules prepares it and SakThai runs it only through its Hub write triple gate, which needs Beer's `hub-approved` tag.
-
-#### 🔹 Task 6.2: Local Ollama Pull & Verification
-- **Status**: [ ]
-- **Goal**: Pull GGUF into local Ollama instance and run inference test.
-- **Estimated Time**: 5 minutes
-- **Command**: `ollama run hf.co/Nanthasit/sakthai-triage-1.5b-gguf "Task triage test"`
-- **Acceptance Criteria**: Sub-100ms response generated cleanly.
+- **Goal**: Hand any Hub-writing training/benchmark task to SakThai (who executes it under the Triple Gate after Beer's `hub-approved` tag), and record `CYCLE EVAL: sakjules` before `cycle-complete`.
+- **Estimated Time**: 3 minutes
+- **Command**: `sakthai learn --persona sakjules "CYCLE EVAL: sakjules | task: <name> | total: <n>/100 | grade: <S/A/B/C/D/F> | timestamp: <ISO>" --kind observation --tag cycle-eval --tag sakjules`
+- **Acceptance Criteria**: `cycle-eval` written to `~/.sakthai/sakjules/memory.db` and logged in `CYCLE.md`.
 
 ---
 
