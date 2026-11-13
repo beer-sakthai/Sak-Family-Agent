@@ -231,16 +231,20 @@ def verify_adversarial_suite() -> bool:
 
 
 def main():
+    import tempfile
     print("Starting E2E Master Verification Runner (verify.py)...")
-    results = [
-        verify_unittest_suite(),
-        verify_adversarial_suite(),
-        verify_scenario_1(),
-        verify_scenario_2(),
-        verify_scenario_3(),
-        verify_scenario_4(),
-        verify_cyclic_validation(),
-    ]
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        os.environ["AGENT_WORKFLOW_STORAGE_DIR"] = tmp_dir
+        os.environ["SAKTHAI_HOME"] = tmp_dir
+        results = [
+            verify_unittest_suite(),
+            verify_adversarial_suite(),
+            verify_scenario_1(),
+            verify_scenario_2(),
+            verify_scenario_3(),
+            verify_scenario_4(),
+            verify_cyclic_validation(),
+        ]
 
     if all(results):
         print("\n========================================")

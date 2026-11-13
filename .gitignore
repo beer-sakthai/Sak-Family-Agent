@@ -83,3 +83,5 @@ apps/*/next_output.log
 # Gemini security audit artifacts
 .gemini_security/
 
+# Subagent scratch & workflow run artifacts
+apps/*/.agents/

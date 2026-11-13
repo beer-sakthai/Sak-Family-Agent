@@ -53,8 +53,7 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [ ] **Phase 5: Continuous Self-Improvement Loop** (`evolution/monitor/`) — Build performance monitor, auto-triage ranker, and scheduled optimization trigger.
 
 ### 5. Agent Workflow Framework Backlog ([`apps/agent_workflow_framework/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md`](./apps/agent_workflow_framework/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md))
-- [ ] **P1 — Packaging & Import Ergonomics** — Add `pyproject.toml` with console entry point to `apps/agent_workflow_framework/`.
-- [ ] **P1 — Evaluation Isolation** — Add `--storage-dir` to CLI and isolate `verify.py` run storage.
+*(P1 — Packaging & Import Ergonomics (`pyproject.toml`) and P1 — Evaluation Isolation (`--storage-dir` + `verify.py` isolation) are `[x]` complete)*
 - [ ] **P2 — Observability & Failure Contracts** — Add tests for malformed persisted history, duplicate run IDs, invalid retry values, and callback exceptions.
 - [ ] **P2 — Execution Resilience** — Add cancellation and timeout semantics for long-running workflow steps.
 - [ ] **P3 — Benchmark Quality** — Add parallel fan-out/retry baselines and machine-readable JSON summary output to `verify.py`.
@@ -71,12 +70,13 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 
 | Plan | Location | Status |
 |---|---|---|
+| Whole-Repo Refactor Plan | [`docs/superpowers/plans/2026-11-13-whole-repo-refactor.md`](./docs/superpowers/plans/2026-11-13-whole-repo-refactor.md) | 🟢 Complete (2026-11-13) — All 5 TDD tasks verified |
 | Product & Monetization | [`product/PLAN.md`](./product/PLAN.md) | 🟡 Active — 2 outreach/revenue tasks open |
 | Security Fixes | [`security/SECURITY_FIXES_PLAN.md`](./security/SECURITY_FIXES_PLAN.md) | 🔴 HIGH — Fix #1 (Credential revocation) open; Fix #2 done |
 | Personas (×6) | [`personas/*/PLAN.md`](./personas/) | 🟡 Active — operational tasks open |
 | Agent Self-Evolution | [`personas/shared/agent-self-evolution/PLAN.md`](./personas/shared/agent-self-evolution/PLAN.md) | 🟡 Active — Phases 3–5 open (Phases 1–2 done) |
 | HF Ecosystem Improvement | [`docs/hf-cards-improvement-plan.md`](./docs/hf-cards-improvement-plan.md) | 🟡 Active — private `sakthai-embedding` decision open |
-| Workflow Framework Backlog | [`apps/agent_workflow_framework/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md`](./apps/agent_workflow_framework/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md) | 🟡 Active — P1–P3 backlog open |
+| Workflow Framework Backlog | [`apps/agent_workflow_framework/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md`](./apps/agent_workflow_framework/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md) | 🟡 Active — P2–P3 open (P1 done) |
 
 ## 🔧 Runtime Notes
 
