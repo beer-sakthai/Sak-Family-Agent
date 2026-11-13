@@ -5,7 +5,7 @@ workspace_root: /home/sak/Sak-Family-Agent
 primary_skills:
   - SakSee-chrome-devtools-cli
   - SakSee-playwright-visual-snapshot-regression
-  - SakSee-hf-unlimited-ocr
+  - Sak-ocr-and-documents
 allowed_tools:
   - run_command
   - view_file

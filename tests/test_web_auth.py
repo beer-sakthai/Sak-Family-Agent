@@ -80,12 +80,13 @@ def authed_server_base() -> tuple[str, str]:
 
 
 def _get_with_headers(
-    url: str, headers: dict[str, str], timeout: int = 5
+    url: str, headers: dict[str, str], timeout: int = 20
 ) -> tuple[int, dict[str, Any]]:
     """GET url with headers, returning (status_code, parsed_body)."""
     req = urllib.request.Request(url, headers=headers)
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with opener.open(req, timeout=timeout) as resp:
             return resp.status, json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         try:

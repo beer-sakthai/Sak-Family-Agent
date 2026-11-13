@@ -46,7 +46,8 @@ UNIVERSAL_SHARED_SLUGS = (
 )
 
 DOMAIN_REALLOCATIONS = {
-    # B2B SaaS and content belong to SakSit
+    # B2B SaaS, SEO/social meta tags, and content belong to SakSit
+    "hf-hub-model-card-seo-social-meta-tags": "saksit",
     "b2b-saas-sales-enablement-content-2026": "saksit",
     "b2b-saas-ugc-strategy-2026": "saksit",
     "b2b-saas-voc-feedback-loop-2026": "saksit",

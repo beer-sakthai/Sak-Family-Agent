@@ -1,7 +1,7 @@
 {
   "meta": {
-    "source_commit": "0938d5dd",
-    "source_date": "2026-11-13T18:58:49Z",
+    "source_commit": "5bddd75f",
+    "source_date": "2026-11-13T19:53:29Z",
     "generator": "scripts/gen_system_snapshot.py"
   },
   "personas": [
@@ -26,7 +26,7 @@
       "domain": "Hugging Face Hub, Model Lifecycle, 6-Stage Energy Cycle, QLoRA",
       "provider": "huggingface",
       "model": "deepseek-ai/DeepSeek-V4.1-Flash",
-      "skill_count": 286,
+      "skill_count": 285,
       "mcp_servers": []
     },
     {
@@ -49,7 +49,7 @@
       "domain": "Brand Copy, Social Posts, Hub Dataset Cards, Storytelling",
       "provider": "huggingface",
       "model": "deepseek-ai/DeepSeek-V4-Flash",
-      "skill_count": 44,
+      "skill_count": 45,
       "mcp_servers": [
         "hf-media"
       ]
