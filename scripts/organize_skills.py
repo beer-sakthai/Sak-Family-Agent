@@ -76,13 +76,17 @@ def _strip_all_prefixes(name: str) -> str:
     """Iteratively strip all known convention, legacy, and persona prefixes."""
     clean = name
     while True:
+        changed = False
         nxt = strip_known_prefix(clean)
-        if nxt == clean:
+        if nxt != clean:
+            clean = nxt
+            changed = True
+        for p in PERSONAS:
+            if clean.startswith(f"{p}-"):
+                clean = clean[len(p) + 1 :]
+                changed = True
+        if not changed:
             break
-        clean = nxt
-    for p in PERSONAS:
-        if clean.startswith(f"{p}-"):
-            clean = clean[len(p) + 1 :]
     return clean
 
 
@@ -181,35 +185,41 @@ def run_organization(apply: bool = False) -> None:
         if not sdir.is_dir():
             continue
         prefix = PERSONA_SKILL_PREFIXES.get(p, f"Sak{p[3:].capitalize()}-")
-        for entry in list(sdir.iterdir()):
+        for entry in sorted(sdir.iterdir()):
             if not entry.is_dir():
                 continue
-            clean = entry.name
-            count = 0
-            while True:
-                nxt = strip_known_prefix(clean)
-                if nxt == clean:
-                    break
-                clean = nxt
-                count += 1
-            found_other = False
-            for other_p in PERSONAS:
-                if clean.startswith(f"{other_p}-"):
-                    clean = clean[len(other_p) + 1 :]
-                    found_other = True
-                    break
-            if count > 1 or found_other:
+            clean = _strip_all_prefixes(entry.name)
+            # Universal shared skills belong in shared/skills/ and are removed in Step 3
+            if clean in UNIVERSAL_SHARED_SLUGS:
+                continue
+
+            has_double_prefix = False
+            first_stripped = strip_known_prefix(entry.name)
+            if first_stripped != entry.name:
+                for other_p in PERSONAS:
+                    if first_stripped.startswith(f"{other_p}-"):
+                        has_double_prefix = True
+                        break
+            if not has_double_prefix and f"-{p}-" in entry.name.lower():
+                has_double_prefix = True
+
+            if has_double_prefix:
                 canonical_slug = f"{prefix}{clean}"
                 if entry.name != canonical_slug:
                     target_entry = sdir / canonical_slug
-                    print(
-                        f"[CANONICALIZE] {entry.relative_to(REPO_ROOT)} -> "
-                        f"{target_entry.relative_to(REPO_ROOT)}"
-                    )
-                    if apply:
-                        if target_entry.exists():
+                    if target_entry.exists():
+                        print(
+                            f"[CANONICALIZE DEDUP] {entry.relative_to(REPO_ROOT)} "
+                            f"(canonical {target_entry.relative_to(REPO_ROOT)} already exists)"
+                        )
+                        if apply:
                             shutil.rmtree(entry)
-                        else:
+                    else:
+                        print(
+                            f"[CANONICALIZE RENAME] {entry.relative_to(REPO_ROOT)} -> "
+                            f"{target_entry.relative_to(REPO_ROOT)}"
+                        )
+                        if apply:
                             entry.rename(target_entry)
                             md = target_entry / "SKILL.md"
                             if md.exists():
@@ -227,7 +237,7 @@ def run_organization(apply: bool = False) -> None:
             sdir = PERSONAS_DIR / p / "skills"
             if not sdir.is_dir():
                 continue
-            for entry in list(sdir.iterdir()):
+            for entry in sorted(sdir.iterdir()):
                 if not entry.is_dir():
                     continue
                 clean = _strip_all_prefixes(entry.name)
