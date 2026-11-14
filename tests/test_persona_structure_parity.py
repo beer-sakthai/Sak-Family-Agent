@@ -16,16 +16,39 @@ EXPECTED_PERSONA_ITEMS = {
     "PLAN.md",
     "README.md",
     "SOUL.md",
+    "__init__.py",
+    "__main__.py",
+    "agent",
+    "agent_platform",
+    "auth.py",
+    "cli",
+    "client",
     "config",
+    "config.py",
+    "cycle",
+    "dashboard",
     "datasets",
     "evolution",
     "evolve_agent.sh",
+    "extensions",
     "generate_report.py",
+    "giturl.py",
+    "hf.py",
+    "lead",
+    "learn",
+    "mcp",
+    "memory",
     "pyproject.toml",
     "reports",
-    "sakthai",
+    "sakking_skills.py",
+    "sandbox.py",
+    "scripts",
     "skills",
+    "skills.py",
+    "team",
+    "telegram",
     "tests",
+    "web",
 }
 EXPECTED_CONFIG_ITEMS = {
     "config.yaml",
@@ -52,7 +75,9 @@ class TestPersonaStructureParity(unittest.TestCase):
                 actual = {
                     item.name
                     for item in pdir.iterdir()
-                    if not item.name.endswith(".egg-info") and not item.name.startswith(".")
+                    if not item.name.endswith(".egg-info")
+                    and not item.name.startswith(".")
+                    and item.name != "__pycache__"
                 }
                 self.assertEqual(actual, EXPECTED_PERSONA_ITEMS)
 
@@ -64,20 +89,27 @@ class TestPersonaStructureParity(unittest.TestCase):
                 self.assertEqual(actual, EXPECTED_CONFIG_ITEMS)
 
     def test_all_personas_resolve_to_single_canonical_sakthai_package(self) -> None:
-        canonical = (REPO_ROOT / "personas" / "sakthai" / "sakthai").resolve()
+        canonical = (REPO_ROOT / "personas" / "sakthai").resolve()
         self.assertTrue(canonical.is_dir())
-        shared = REPO_ROOT / "personas" / "shared" / "sakthai"
-        self.assertTrue(shared.is_symlink(), "personas/shared/sakthai must be a symlink")
-        self.assertEqual(shared.resolve(), canonical)
         for persona in PERSONAS:
             with self.subTest(persona=persona):
-                pkg_path = REPO_ROOT / "personas" / persona / "sakthai"
+                # Ensure no folder named 'sakthai' exists
+                sakthai_folder = REPO_ROOT / "personas" / persona / "sakthai"
+                self.assertFalse(
+                    sakthai_folder.exists(),
+                    f"personas/{persona}/sakthai must not exist",
+                )
                 if persona != "sakthai":
-                    self.assertTrue(
-                        pkg_path.is_symlink(),
-                        f"personas/{persona}/sakthai must be a symlink, not a duplicate directory",
-                    )
-                self.assertEqual(pkg_path.resolve(), canonical)
+                    for sym in ("agent", "cli", "config.py", "web"):
+                        sym_path = REPO_ROOT / "personas" / persona / sym
+                        self.assertTrue(
+                            sym_path.is_symlink(),
+                            f"personas/{persona}/{sym} must be a symlink",
+                        )
+                        self.assertEqual(
+                            sym_path.resolve(),
+                            (canonical / sym).resolve(),
+                        )
 
     def test_all_personas_resolve_to_single_canonical_self_evolution_dir(self) -> None:
         for persona in PERSONAS:

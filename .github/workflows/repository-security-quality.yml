@@ -110,11 +110,11 @@ jobs:
 
       - name: Run Ruff checks
         run: |
-          uv run ruff check personas/sakthai/sakthai tests
-          uv run ruff format --check personas/sakthai/sakthai tests
+          uv run ruff check personas/sakthai tests
+          uv run ruff format --check personas/sakthai tests
 
       - name: Run strict type checking
-        run: uv run mypy personas/sakthai/sakthai
+        run: uv run mypy
 
       - name: Run tests with coverage
         run: >-

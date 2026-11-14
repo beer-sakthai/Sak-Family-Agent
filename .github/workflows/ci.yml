@@ -51,13 +51,13 @@ jobs:
 
       - name: Run linters
         run: |
-          uv run ruff check personas/sakthai/sakthai tests
-          uv run ruff format --check personas/sakthai/sakthai tests
+          uv run ruff check personas/sakthai tests
+          uv run ruff format --check personas/sakthai tests
 
       - name: Run static analysis
         run: |
-          uv run mypy personas/sakthai/sakthai
-          uv run bandit -c pyproject.toml -r personas/sakthai/sakthai
+          uv run mypy
+          uv run bandit -c pyproject.toml -r personas/sakthai
 
       - name: Run tests with coverage
         # --cov-fail-under is passed explicitly rather than relying on

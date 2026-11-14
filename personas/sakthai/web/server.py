@@ -110,7 +110,7 @@ def _find_static_root(start: Path | None = None) -> Path:
         candidate = parent / "dashboard" / "dist"
         if candidate.is_dir():
             return candidate.resolve()
-    return (Path(__file__).resolve().parents[4] / "dashboard" / "dist").resolve()
+    return (Path(__file__).resolve().parents[3] / "dashboard" / "dist").resolve()
 
 
 _STATIC_ROOT = _find_static_root()

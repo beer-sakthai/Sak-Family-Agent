@@ -91,8 +91,17 @@ COPY_DIRS = (
 # dst relative paths differ here, so these are copied explicitly rather than
 # through the generic COPY_DIRS loop.
 CANONICAL_COPY_DIRS = (
-    ("personas/sakthai/sakthai", "sakthai"),
     ("personas/sakthai/agent-self-evolution", "packages/agent-self-evolution"),
+)
+
+PACKAGE_SUBDIRS = (
+    "agent", "agent_platform", "cli", "client", "cycle", "dashboard",
+    "extensions", "lead", "learn", "mcp", "memory", "scripts",
+    "team", "telegram", "web"
+)
+PACKAGE_FILES = (
+    "__init__.py", "__main__.py", "auth.py", "config.py", "giturl.py",
+    "hf.py", "sakking_skills.py", "sandbox.py", "skills.py"
 )
 
 EXCLUDED_DIR_NAMES = {
@@ -493,7 +502,22 @@ def export_agent_repo(persona: str, out: Path) -> Path:
         _copy_tree(src, out / rel)
 
     for src_rel, dst_rel in CANONICAL_COPY_DIRS:
-        _copy_tree(REPO_ROOT / src_rel, out / dst_rel)
+        if (REPO_ROOT / src_rel).exists():
+            _copy_tree(REPO_ROOT / src_rel, out / dst_rel)
+
+    sakthai_out = out / "sakthai"
+    sakthai_pkg_dir = REPO_ROOT / "personas" / "sakthai" / "sakthai"
+    if sakthai_pkg_dir.is_dir():
+        _copy_tree(sakthai_pkg_dir, sakthai_out)
+    else:
+        for d in PACKAGE_SUBDIRS:
+            src_d = REPO_ROOT / "personas" / "sakthai" / d
+            if src_d.is_dir():
+                _copy_tree(src_d, sakthai_out / d)
+        for f in PACKAGE_FILES:
+            src_f = REPO_ROOT / "personas" / "sakthai" / f
+            if src_f.is_file():
+                _copy_file(src_f, sakthai_out / f)
 
     # Only keep the selected persona's deployment material.
     _prune_hermes_profiles(out, persona)

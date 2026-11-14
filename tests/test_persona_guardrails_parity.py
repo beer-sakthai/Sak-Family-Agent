@@ -2,7 +2,7 @@
 
 Each persona under ``personas/`` carries its own copy of the ``sakthai``
 package. Security hardening applied to the canonical copy
-(``personas/sakthai/sakthai/agent/guardrails.py``) must be synchronized to
+(``personas/sakthai/agent/guardrails.py``) must be synchronized to
 every other persona, otherwise a fixed vulnerability silently survives in the
 unsynced copies. This test fails CI the moment any copy diverges.
 """
@@ -12,7 +12,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PERSONAS = ["sakthai", "sakjules", "saktan", "sakking", "saksee", "saksit"]
-GUARDRAILS_REL = Path("sakthai") / "agent" / "guardrails.py"
+GUARDRAILS_REL = Path("agent") / "guardrails.py"
 
 
 class TestPersonaGuardrailsParity(unittest.TestCase):

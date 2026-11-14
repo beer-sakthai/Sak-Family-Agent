@@ -41,7 +41,7 @@ from sakthai.agent.tools import BUILTIN_TOOLS  # noqa: E402
 from sakthai.cli import main as cli_main  # noqa: E402
 
 OUTPUT_PATH = REPO_ROOT / "apps" / "sak_agent_dashboard" / "src" / "data" / "system-snapshot.json"
-PACKAGE_DIR = REPO_ROOT / "personas" / "sakthai" / "sakthai"
+PACKAGE_DIR = REPO_ROOT / "personas" / "sakthai"
 LEAD_PERSONA = "sakthai"
 
 # Tools the agent loop never offers the model (see agent/tools.py: the nested
@@ -115,9 +115,24 @@ def _personas() -> list[dict[str, Any]]:
 
 def _package() -> list[dict[str, Any]]:
     """Top-level modules and subpackages of the installed package, with LOC."""
+    non_package = {
+        "evolution",
+        "tests",
+        "skills",
+        "datasets",
+        "reports",
+        "config",
+        "generate_report.py",
+        "evolve_agent.sh",
+        "sakthai_agent.egg-info",
+    }
     entries = []
     for path in sorted(PACKAGE_DIR.iterdir()):
-        if path.name.startswith(("_", ".")) or path.name == "__pycache__":
+        if (
+            path.name.startswith(("_", "."))
+            or path.name == "__pycache__"
+            or path.name in non_package
+        ):
             continue
         if path.is_dir():
             files = sorted(path.rglob("*.py"))
