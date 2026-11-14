@@ -54,7 +54,7 @@ Objective: Review pull requests merged and source files updated over the past 7 
 
 1. Read `/tmp/gh-aw/data/weekly-merged-prs.json` and `/tmp/gh-aw/data/weekly-git-log.txt`.
 2. Read the current root `AGENTS.md` and verify every factual claim against the live repository:
-   - **Project Structure & Module Organization**: subpackages under `personas/sakthai/sakthai/`, `tests/`, `docs/`, `personas/<name>/`, `scripts/`, and `infra/`.
+   - **Project Structure & Module Organization**: subpackages under `personas/sakthai/`, `tests/`, `docs/`, `personas/<name>/`, `scripts/`, and `infra/`.
    - **Build, Test, and Development Commands**: `Makefile` targets, `pyproject.toml` scripts/extras, `uv` commands, and path-resolution notes.
    - **Coding Style & Naming Conventions**: Python version floor, Ruff line-length and formatting rules in `pyproject.toml`.
    - **Testing Guidelines**: Pytest markers, coverage floor (`--cov-fail-under` in `.github/workflows/ci.yml` and `pyproject.toml`).

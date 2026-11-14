@@ -36,7 +36,7 @@ safe-outputs:
     draft: true
     expires: 7
     allowed-files:
-      - "personas/sakthai/sakthai/**/*.py"
+      - "personas/sakthai/**/*.py"
       - "tests/**/*.py"
       - "scripts/**/*.py"
       - "apps/sak_agent_dashboard/src/**/*.ts"
@@ -77,8 +77,8 @@ Objective: Act as a conservative repository maintainer for `${{ github.repositor
 
 Choose one small, self-contained task from this priority order:
 1. **Actionable low-risk bug or test gap from an open issue** (when clearly reproducible and fixable within allowed files).
-2. **Unit test & branch-coverage hardening** in `tests/` for uncovered branches or error paths in `personas/sakthai/sakthai/`.
-3. **Static type, lint, or dead-code cleanup** in `personas/sakthai/sakthai/`, `scripts/`, or `apps/sak_agent_dashboard/src/`.
+2. **Unit test & branch-coverage hardening** in `tests/` for uncovered branches or error paths in `personas/sakthai/`.
+3. **Static type, lint, or dead-code cleanup** in `personas/sakthai/`, `scripts/`, or `apps/sak_agent_dashboard/src/`.
 4. **Documentation accuracy fix** in `docs/**/*.md` where a code path or CLI flag is documented inaccurately.
 
 Keep the diff focused on a single concern (ideally 1–3 files). Preserve public APIs and do not add new dependencies.
@@ -86,10 +86,10 @@ Keep the diff focused on a single concern (ideally 1–3 files). Preserve public
 ### 3. Validate Before Opening a Draft Pull Request
 
 Run the applicable quality checks and ensure all pass before creating the PR:
-- For Python changes (`personas/sakthai/sakthai/`, `tests/`, `scripts/`):
+- For Python changes (`personas/sakthai/`, `tests/`, `scripts/`):
   - `uv run ruff check <changed-files>`
-  - `uv run mypy personas/sakthai/sakthai`
-  - `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai`
+  - `uv run mypy personas/sakthai`
+  - `uv run bandit -c pyproject.toml -r personas/sakthai`
   - `uv run pytest tests/ -q`
 - For Next.js dashboard changes (`apps/sak_agent_dashboard/`):
   - `npm --prefix apps/sak_agent_dashboard test -- --run`

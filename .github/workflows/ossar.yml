@@ -11,7 +11,7 @@
 # the Windows 32KB command-line limit, so bandit fails before it starts.
 #
 # bandit is deliberately not run in this workflow: CI (ci.yml) already runs
-# bandit scoped to the core package (personas/sakthai/sakthai), and CodeQL
+# bandit scoped to the core package (personas/sakthai), and CodeQL
 # covers Python across the repo.
 name: OSSAR
 

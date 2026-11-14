@@ -56,6 +56,32 @@ EXPECTED_CONFIG_ITEMS = {
     "mcp.json",
     "workspace.yaml",
 }
+EXPECTED_PACKAGE_ITEMS = {
+    "__init__.py",
+    "__main__.py",
+    "agent",
+    "agent_platform",
+    "auth.py",
+    "cli",
+    "client",
+    "config.py",
+    "cycle",
+    "dashboard",
+    "extensions",
+    "giturl.py",
+    "hf.py",
+    "lead",
+    "learn",
+    "mcp",
+    "memory",
+    "sakking_skills.py",
+    "sandbox.py",
+    "scripts",
+    "skills.py",
+    "team",
+    "telegram",
+    "web",
+}
 EXPECTED_HERMES_ITEMS = {
     "BACKPACK.md",
     "CYCLE.md",
@@ -97,8 +123,8 @@ class TestPersonaStructureParity(unittest.TestCase):
                     sakthai_folder.exists(),
                     f"personas/{persona}/sakthai must not exist",
                 )
-                # Ensure core package items are real files/directories, not symlinks
-                for item in ("agent", "cli", "config.py", "web"):
+                # Ensure all 24 core package items are real files/directories, not symlinks
+                for item in EXPECTED_PACKAGE_ITEMS:
                     item_path = REPO_ROOT / "personas" / persona / item
                     self.assertTrue(item_path.exists(), f"personas/{persona}/{item} must exist")
                     self.assertFalse(

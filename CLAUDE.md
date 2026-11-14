@@ -34,7 +34,7 @@ task spans more than the agent runtime, check which repo actually owns the code:
 ## Monorepo Structure
 
 This repo is the shared source workspace for the whole Sak family, not just one
-package. Only `personas/sakthai/sakthai/` is a build target; everything else is
+package. Only `personas/sakthai/` is a build target; everything else is
 personas, deployment config, training assets, or docs.
 
 ```
@@ -76,8 +76,8 @@ coverage figures, re-measured after the `team/engine.py` tests landed.
 
 ### The persona package copies (read this before editing `sakthai/`)
 
-`personas/sakthai/sakthai/` is **the** package: it is what `pyproject.toml`
-installs (`[tool.setuptools.packages.find] where = ["personas/sakthai"]`), what
+`personas/sakthai/` is **the** package: it is what `pyproject.toml`
+installs (`[tool.setuptools.package-dir] sakthai = "personas/sakthai"`), what
 `import sakthai` resolves to, and what mypy/ruff/bandit/pytest run against.
 Treat it as the source of truth for anything you are actually running.
 
@@ -184,10 +184,10 @@ uv sync --all-extras      # install all project and optional dependencies
 uv run pytest tests/ -q                      # full unit suite (no network, no GCP)
 uv run pytest tests/test_memory_store.py -q  # a single test file
 uv run pytest -m "not integration" -q        # exclude network tests
-uv run ruff check personas/sakthai/sakthai tests              # lint
-uv run ruff format --check personas/sakthai/sakthai tests     # format check (drop --check to apply)
-uv run mypy personas/sakthai/sakthai                          # strict type-check
-uv run bandit -c pyproject.toml -r personas/sakthai/sakthai   # security scan
+uv run ruff check personas/sakthai tests              # lint
+uv run ruff format --check personas/sakthai tests     # format check (drop --check to apply)
+uv run mypy personas/sakthai                          # strict type-check
+uv run bandit -c pyproject.toml -r personas/sakthai   # security scan
 make mutation                                # mutmut on core seam modules (slow, local-only, not in CI)
 ```
 
@@ -219,7 +219,7 @@ Twenty-seven workflows live in `.github/workflows/`. The ones that gate a change
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `ci.yml` | push/PR to `main` | ruff check + format → mypy + bandit → pytest with coverage, on Python **3.11 and 3.12**; uploads `coverage.xml` per matrix leg |
-| `pylint.yml` | push/PR to `main` | pylint over `personas/sakthai/sakthai` + `tests` |
+| `pylint.yml` | push/PR to `main` | pylint over `personas/sakthai` + `tests` |
 | `repository-security-quality.yml` | PR to `main` | skill validation (library frontmatter + persona `skills validate --naming`) + `make compose-personas`; `Quality gates` (a **required status check** — see below); zizmor over **every** workflow; tracked-secret-file check |
 | `dependency-review.yml` | PR to `main` | blocks PRs introducing known-vulnerable deps (`fail-on-severity: high`) |
 | `secret-scan.yml` | push to `main`, all PRs, daily | gitleaks (config `.gitleaks.toml`, which allowlists persona docs). The daily run scans full history; its known historical hits are baselined by fingerprint in `.gitleaksignore`, so only a new leak turns it red |
@@ -642,7 +642,7 @@ runtime behavior. See findings 5 and 6 of
 
 **When you change guardrails, you must sync the file.** `guardrails.py` is
 copied per persona and `tests/test_persona_guardrails_parity.py` fails CI the
-moment any copy drifts from `personas/sakthai/sakthai/agent/guardrails.py`
+moment any copy drifts from `personas/sakthai/agent/guardrails.py`
 (it checks sakthai, sakjules, sakking, saksee, saksit). Roughly 15 test files
 (`test_guardrails_*.py`, `test_sentinel_*.py`, `test_security_*.py`) cover this
 area; add a regression test for every new bypass you close.
@@ -728,7 +728,7 @@ There is no `dashboard.py` here — see the dashboard note below.
   `render_skills_prompt_block()`.
 - **Dashboard — backend only.** The CLI's `dashboard` command and the frontend
   (both the old in-package bundle and the repo-root Vite project) are gone, but
-  `personas/sakthai/sakthai/dashboard/data.py` was re-added: it collects
+  `personas/sakthai/dashboard/data.py` was re-added: it collects
   KPI/lead/revenue metrics from the memory store and is served by
   `web/server.py`'s `/api/stages` endpoint (covered by
   `tests/test_dashboard_data.py`). `_find_static_root()` walks up from
@@ -874,11 +874,11 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
   `~/.sakthai` + `SAKTHAI_READ_ALLOW`; `run_command` is **opt-in** via
   `SAKTHAI_SHELL_ALLOW`. Don't widen these without reason.
 - **Guardrail changes must be synced across personas.** Copy the canonical
-  `personas/sakthai/sakthai/agent/guardrails.py` to every persona copy, or
+  `personas/sakthai/agent/guardrails.py` to every persona copy, or
   `tests/test_persona_guardrails_parity.py` fails CI. `web/server.py` needs the
   same sync, enforced by `tests/test_persona_web_server_parity.py`.
 - **Not linted / not type-checked:** ruff excludes `library/` and `scripts/`;
-  mypy covers only `personas/sakthai/sakthai`. Don't "fix" lint/types in the
+  mypy covers only `personas/sakthai`. Don't "fix" lint/types in the
   other trees.
 - **mypy is `strict`** over the package, with exactly one exemption:
   `sakthai.telegram.*` is `ignore_errors = true` (an early-stage standalone
@@ -1011,7 +1011,7 @@ A skill directory may also carry `commands/<name>.md` files, which become
 ## Adding a new built-in tool
 
 1. Add a `Tool(name=..., description=..., input_schema=..., handler=...)` to
-   `BUILTIN_TOOLS` in `personas/sakthai/sakthai/agent/tools.py`.
+   `BUILTIN_TOOLS` in `personas/sakthai/agent/tools.py`.
 2. The tool automatically appears in both `sakthai run` (agent loop) and
    `sakthai mcp` (MCP server) — no other wiring needed.
 3. Write a test in `tests/test_tools.py` using an injected `MemoryStore(":memory:")`.

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// DO NOT EDIT. Generated from personas/sakthai/sakthai/web/contracts.py by
+// DO NOT EDIT. Generated from personas/sakthai/web/contracts.py by
 // scripts/gen_dashboard_types.py. Run that script to regenerate; CI fails if
 // this file is out of sync with the Python contract.
 // ---------------------------------------------------------------------------
