@@ -8,16 +8,24 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PERSONAS = ("sakthai", "sakking", "saksee", "saksit", "sakjules", "saktan")
 EXPECTED_PERSONA_ITEMS = {
+    "AGENTS.md",
     "BACKPACK.md",
     "CYCLE.md",
     "HANDOFF.md",
     "MEMORY.md",
     "PLAN.md",
+    "README.md",
     "SOUL.md",
-    "agent-self-evolution",
     "config",
+    "datasets",
+    "evolution",
+    "evolve_agent.sh",
+    "generate_report.py",
+    "pyproject.toml",
+    "reports",
     "sakthai",
     "skills",
+    "tests",
 }
 EXPECTED_CONFIG_ITEMS = {
     "config.yaml",
@@ -74,10 +82,14 @@ class TestPersonaStructureParity(unittest.TestCase):
     def test_all_personas_resolve_to_single_canonical_self_evolution_dir(self) -> None:
         for persona in PERSONAS:
             with self.subTest(persona=persona):
-                evo_path = REPO_ROOT / "personas" / persona / "agent-self-evolution"
+                evo_dir = REPO_ROOT / "personas" / persona / "evolution"
                 self.assertTrue(
-                    evo_path.is_dir(),
-                    f"personas/{persona}/agent-self-evolution must be a directory",
+                    evo_dir.is_dir(),
+                    f"personas/{persona}/evolution must be a directory",
+                )
+                self.assertFalse(
+                    (REPO_ROOT / "personas" / persona / "agent-self-evolution").exists(),
+                    f"personas/{persona}/agent-self-evolution must not exist",
                 )
 
     def test_hermes_profiles_expose_all_seven_items(self) -> None:
