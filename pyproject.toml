@@ -231,5 +231,6 @@ url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
 [tool.ruff.lint.extend-per-file-ignores]
-"personas/*/agent-self-evolution/*" = ["E402", "F401", "B904", "SIM102", "F841"]
+"personas/*/evolution/*" = ["E402", "F401", "B904", "SIM102", "F841"]
+"personas/*/tests/*" = ["E402", "F401", "B904", "SIM102", "F841"]
 "personas/*" = ["F841"]

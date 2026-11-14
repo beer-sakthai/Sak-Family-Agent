@@ -28,7 +28,11 @@ personas/shared/sakthai/**/*.pyc
 .hub/
 
 # Agent self-evolution artifacts
-personas/sakthai/agent-self-evolution/output/
+personas/*/output/
+personas/*/snapshots/
+personas/*/datasets/**/*.jsonl
+personas/*/datasets/**/*.json
+!personas/*/datasets/.gitkeep
 
 # Root-level skills/ dir — conflicts with personas/*/skills/
 /skills/

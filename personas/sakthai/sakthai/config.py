@@ -33,6 +33,9 @@ _PRIVATE_KEY_RE = re.compile(
 
 def _find_repo_root(start: Path) -> Path:
     for candidate in (start, *start.parents):
+        if (candidate / "pyproject.toml").is_file() and (candidate / "personas").is_dir():
+            return candidate
+    for candidate in (start, *start.parents):
         if (candidate / "pyproject.toml").is_file():
             return candidate
     return start

@@ -4,12 +4,16 @@ on:
   push:
     branches: [main]
     paths:
-      - "personas/sakthai/agent-self-evolution/**"
+      - "personas/sakthai/evolution/**"
+      - "personas/sakthai/tests/**"
+      - "personas/sakthai/evolve_agent.sh"
       - ".github/workflows/agent-self-evolution.yml"
   pull_request:
     branches: [main]
     paths:
-      - "personas/sakthai/agent-self-evolution/**"
+      - "personas/sakthai/evolution/**"
+      - "personas/sakthai/tests/**"
+      - "personas/sakthai/evolve_agent.sh"
       - ".github/workflows/agent-self-evolution.yml"
   workflow_dispatch:
 
@@ -31,7 +35,7 @@ jobs:
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: personas/sakthai/agent-self-evolution
+        working-directory: personas/sakthai
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
