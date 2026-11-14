@@ -51,6 +51,7 @@ sakthai = "sakthai.cli:main"
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
+pythonpath = ["."]
 markers = [
     "integration: tests that may hit real external endpoints (Ollama/Anthropic); CI runs them and they self-skip when the endpoint/credential is absent; deselect locally with -m 'not integration'",
 ]
