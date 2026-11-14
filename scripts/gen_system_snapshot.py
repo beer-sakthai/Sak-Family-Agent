@@ -31,6 +31,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # There is no root-level `sakthai/` package; the installed one lives here.
+sys.path.insert(0, str(REPO_ROOT / "personas"))
 sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))
 
 import click  # noqa: E402
