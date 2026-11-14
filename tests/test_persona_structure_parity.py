@@ -88,9 +88,7 @@ class TestPersonaStructureParity(unittest.TestCase):
                 actual = {item.name for item in cdir.iterdir()}
                 self.assertEqual(actual, EXPECTED_CONFIG_ITEMS)
 
-    def test_all_personas_resolve_to_single_canonical_sakthai_package(self) -> None:
-        canonical = (REPO_ROOT / "personas" / "sakthai").resolve()
-        self.assertTrue(canonical.is_dir())
+    def test_all_personas_have_real_package_files_and_no_nested_sakthai_folder(self) -> None:
         for persona in PERSONAS:
             with self.subTest(persona=persona):
                 # Ensure no folder named 'sakthai' exists
@@ -99,17 +97,14 @@ class TestPersonaStructureParity(unittest.TestCase):
                     sakthai_folder.exists(),
                     f"personas/{persona}/sakthai must not exist",
                 )
-                if persona != "sakthai":
-                    for sym in ("agent", "cli", "config.py", "web"):
-                        sym_path = REPO_ROOT / "personas" / persona / sym
-                        self.assertTrue(
-                            sym_path.is_symlink(),
-                            f"personas/{persona}/{sym} must be a symlink",
-                        )
-                        self.assertEqual(
-                            sym_path.resolve(),
-                            (canonical / sym).resolve(),
-                        )
+                # Ensure core package items are real files/directories, not symlinks
+                for item in ("agent", "cli", "config.py", "web"):
+                    item_path = REPO_ROOT / "personas" / persona / item
+                    self.assertTrue(item_path.exists(), f"personas/{persona}/{item} must exist")
+                    self.assertFalse(
+                        item_path.is_symlink(),
+                        f"personas/{persona}/{item} must be a real file/dir, not a symlink",
+                    )
 
     def test_all_personas_resolve_to_single_canonical_self_evolution_dir(self) -> None:
         for persona in PERSONAS:
