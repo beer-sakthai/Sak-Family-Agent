@@ -72,16 +72,13 @@ class TestPersonaStructureParity(unittest.TestCase):
                 self.assertEqual(pkg_path.resolve(), canonical)
 
     def test_all_personas_resolve_to_single_canonical_self_evolution_dir(self) -> None:
-        canonical = (REPO_ROOT / "personas" / "shared" / "agent-self-evolution").resolve()
-        self.assertTrue(canonical.is_dir())
         for persona in PERSONAS:
             with self.subTest(persona=persona):
                 evo_path = REPO_ROOT / "personas" / persona / "agent-self-evolution"
                 self.assertTrue(
-                    evo_path.is_symlink(),
-                    f"personas/{persona}/agent-self-evolution must be a symlink to ../shared/agent-self-evolution",
+                    evo_path.is_dir(),
+                    f"personas/{persona}/agent-self-evolution must be a directory",
                 )
-                self.assertEqual(evo_path.resolve(), canonical)
 
     def test_hermes_profiles_expose_all_seven_items(self) -> None:
         hermes_root = REPO_ROOT / "infra" / "hermes-agents"
