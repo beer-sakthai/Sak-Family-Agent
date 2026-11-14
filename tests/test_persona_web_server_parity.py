@@ -5,11 +5,9 @@
 suite only imports the canonical copy, so a security fix that lands there
 alone would leave the other copies vulnerable with nothing to notice. This
 test fails CI the moment any copy diverges from
-``personas/sakthai/sakthai/web/server.py``.
+``personas/sakthai/web/server.py``.
 
-SakJules and SakTan reach ``personas/shared/sakthai`` through a symlink, so
-they cover the shared copy; SakKing, SakSee and SakSit each shadow it with a
-real file of their own.
+Sibling personas reach the canonical copy directly or through symlinks.
 """
 
 import unittest
@@ -17,7 +15,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PERSONAS = ["sakjules", "saktan", "sakking", "saksee", "saksit"]
-SERVER_REL = Path("sakthai") / "web" / "server.py"
+SERVER_REL = Path("web") / "server.py"
 
 
 class TestPersonaWebServerParity(unittest.TestCase):

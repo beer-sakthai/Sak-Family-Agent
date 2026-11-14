@@ -16,6 +16,7 @@ from pathlib import Path
 
 # Add project root to sys.path so it works out of the box
 REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "personas"))
 sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))
 
 from sakthai.agent_platform.antigravity_agent import (  # noqa: E402

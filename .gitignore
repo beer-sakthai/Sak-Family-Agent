@@ -7,23 +7,6 @@ __pycache__/
 .hypothesis/
 *.pyc
 .venv/
-# Legacy per-persona duplicate sakthai package copies. Scoped explicitly rather
-# than with `personas/*/sakthai/`: that glob also matched
-# personas/sakthai/sakthai/ — the package pyproject.toml installs — which made
-# new modules there invisible to `git add`. personas/saktan/ was likewise fully
-# ignored even though tests/test_soul_consistency.py reads its SOUL.md from
-# disk. The consolidated shared canonical (personas/shared/sakthai/) stays
-# tracked: the five personas symlink to it, so it must exist in a fresh
-# checkout (mirrors how personas/shared/agent-self-evolution/ is tracked).
-personas/sakjules/sakthai/
-personas/sakking/sakthai/
-personas/saksee/sakthai/
-personas/saksit/sakthai/
-personas/saktan/sakthai/
-# ...but never the regenerated Python caches inside the shared copy.
-personas/shared/sakthai/**/__pycache__/
-personas/shared/sakthai/**/*.pyc
-
 # HF cache directories
 .hub/
 

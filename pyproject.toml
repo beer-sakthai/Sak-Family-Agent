@@ -58,7 +58,13 @@ markers = [
 
 [tool.coverage.run]
 source = ["sakthai"]
-omit = ["*/telegram/bot.py"]
+omit = [
+    "*/telegram/bot.py",
+    "*/tests/*",
+    "*/skills/*",
+    "*/evolution/*",
+    "*/generate_report.py",
+]
 # Measure branch coverage too: line coverage alone hides untested conditional
 # paths (one side of an if/else). Setting it here rather than on the command
 # line means every invocation measures branches, CI's included -- ci.yml does
@@ -76,7 +82,7 @@ fail_under = 96
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-exclude = ["library", "scripts"]
+exclude = ["library", "scripts", "personas/*/skills", "personas/*/evolution", "personas/*/tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]
@@ -94,8 +100,12 @@ ignore_missing_imports = true
 warn_unused_ignores = true
 warn_return_any = true
 check_untyped_defs = true
-files = ["personas/sakthai/sakthai"]
-mypy_path = "personas/sakthai"
+packages = ["sakthai"]
+mypy_path = "personas"
+exclude = [
+    "^personas/.*/(evolution|tests|skills|datasets)/",
+    "generate_report\\.py$",
+]
 
 # The Telegram bot is an early-stage, standalone prototype (see CLAUDE.md); it is
 # not held to the package's strict-typing bar. Exclude it from mypy rather than
@@ -105,7 +115,7 @@ module = "sakthai.telegram.*"
 ignore_errors = true
 
 [tool.bandit]
-exclude_dirs = ["tests"]
+exclude_dirs = ["tests", "skills", "evolution"]
 skips = ["B101", "B404", "B603", "B606", "B607"]
 
 # Mutation testing (local-only, via `make mutation`). Scoped to the core seam
@@ -114,15 +124,15 @@ skips = ["B101", "B404", "B603", "B606", "B607"]
 # Keys follow mutmut >= 3.x (`source_paths`, not the deprecated `paths_to_mutate`).
 [tool.mutmut]
 source_paths = [
-    "personas/sakthai/sakthai/memory/store.py",
-    "personas/sakthai/sakthai/agent/loop.py",
-    "personas/sakthai/sakthai/agent/tools.py",
-    "personas/sakthai/sakthai/agent/registry.py",
-    "personas/sakthai/sakthai/agent/guardrails.py",
-    "personas/sakthai/sakthai/mcp/server.py",
-    "personas/sakthai/sakthai/mcp/client.py",
-    "personas/sakthai/sakthai/auth.py",
-    "personas/sakthai/sakthai/sandbox.py",
+    "personas/sakthai/memory/store.py",
+    "personas/sakthai/agent/loop.py",
+    "personas/sakthai/agent/tools.py",
+    "personas/sakthai/agent/registry.py",
+    "personas/sakthai/agent/guardrails.py",
+    "personas/sakthai/mcp/server.py",
+    "personas/sakthai/mcp/client.py",
+    "personas/sakthai/auth.py",
+    "personas/sakthai/sandbox.py",
 ]
 # mutmut runs the suite from an isolated ``mutants/`` copy and drops the original
 # source from sys.path, so anything the mutated modules import at runtime must be
@@ -132,7 +142,7 @@ source_paths = [
 # the whole package so imports resolve; ``create_mutants`` still mutates only the
 # ``source_paths`` files (it runs after the copy), so scope is unchanged.
 also_copy = [
-    "personas/sakthai/sakthai",
+    "personas/sakthai",
 ]
 # mutmut's stats phase runs the whole suite once with a trampoline that resolves
 # the (relative) ``source_paths`` against the *current* working directory on every
@@ -168,12 +178,29 @@ pytest_add_cli_args_test_selection = [
 ]
 
 # The canonical importable copy of the core package lives inside the SakThai
-# persona (personas/sakthai/sakthai); the copies under the other five personas
+# persona (personas/sakthai); the copies under the other five personas
 # are data, not build targets.
-[tool.setuptools.packages.find]
-where = ["personas/sakthai"]
-include = ["sakthai*"]
-exclude = ["tests*"]
+[tool.setuptools]
+package-dir = {"sakthai" = "personas/sakthai"}
+packages = [
+    "sakthai",
+    "sakthai.agent",
+    "sakthai.agent.providers",
+    "sakthai.agent_platform",
+    "sakthai.cli",
+    "sakthai.client",
+    "sakthai.cycle",
+    "sakthai.dashboard",
+    "sakthai.extensions",
+    "sakthai.lead",
+    "sakthai.learn",
+    "sakthai.mcp",
+    "sakthai.memory",
+    "sakthai.scripts",
+    "sakthai.team",
+    "sakthai.telegram",
+    "sakthai.web",
+]
 
 # --- Monorepo note --------------------------------------------------------
 # This repo is a monorepo (see top-level README). The core package is

@@ -52,6 +52,8 @@ def _get_or_create_bearer_token() -> str:
         from pathlib import Path
 
         REPO_ROOT = (Path(__file__).resolve().parent.parent).resolve()
+        if str(REPO_ROOT / "personas") not in sys.path:
+            sys.path.insert(0, str(REPO_ROOT / "personas"))
         if str(REPO_ROOT / "personas" / "sakthai") not in sys.path:
             sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))
         if str(REPO_ROOT) not in sys.path:
@@ -96,6 +98,7 @@ def _dashboard_data(days: int = 30) -> dict[str, Any]:
         import sys
 
         REPO_ROOT = (Path(__file__).resolve().parent.parent).resolve()
+        sys.path.insert(0, str(REPO_ROOT / "personas"))
         sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))
         sys.path.insert(0, str(REPO_ROOT))
         from sakthai.dashboard.data import collect_dashboard_data

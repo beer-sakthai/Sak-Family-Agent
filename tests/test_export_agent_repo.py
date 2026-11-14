@@ -125,8 +125,8 @@ def source_tree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     (
         root / "personas" / "sakthai" / "agent-self-evolution" / "evolution" / "__init__.py"
     ).write_text("", encoding="utf-8")
-    (root / "personas" / "sakthai" / "sakthai" / "cli").mkdir(parents=True)
-    (root / "personas" / "sakthai" / "sakthai" / "config.py").write_text(
+    (root / "personas" / "sakthai" / "cli").mkdir(parents=True)
+    (root / "personas" / "sakthai" / "config.py").write_text(
         "SAKTHAI_HOME = None\n", encoding="utf-8"
     )
 

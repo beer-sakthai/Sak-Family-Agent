@@ -13,7 +13,7 @@ on:
     branches: [main]
     paths:
       - "apps/**"
-      - "personas/sakthai/sakthai/web/contracts.py"
+      - "personas/sakthai/web/contracts.py"
       - "scripts/gen_dashboard_types.py"
       # The dashboard serves copies of the README's persona portraits;
       # persona-avatar.test.tsx fails when the two sets drift.
@@ -22,7 +22,7 @@ on:
   pull_request:
     paths:
       - "apps/**"
-      - "personas/sakthai/sakthai/web/contracts.py"
+      - "personas/sakthai/web/contracts.py"
       - "scripts/gen_dashboard_types.py"
       # The dashboard serves copies of the README's persona portraits;
       # persona-avatar.test.tsx fails when the two sets drift.

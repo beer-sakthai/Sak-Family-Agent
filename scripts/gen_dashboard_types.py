@@ -32,6 +32,7 @@ from typing import Any, Literal, TypeVar, Union, get_args, get_origin
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # There is no root-level `sakthai/` package; the installed one lives here.
+sys.path.insert(0, str(REPO_ROOT / "personas"))
 sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))
 
 from sakthai.web import contracts  # noqa: E402

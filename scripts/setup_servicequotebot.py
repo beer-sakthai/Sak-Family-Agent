@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT / "personas") not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT / "personas"))
 if str(REPO_ROOT / "personas" / "sakthai") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))
 
