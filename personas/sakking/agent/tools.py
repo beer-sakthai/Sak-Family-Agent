@@ -1,0 +1,1331 @@
+"""Tools the agent loop (and the MCP server) can invoke.
+
+A :class:`Tool` pairs a JSON input schema (what the model sees) with a Python
+handler ``(args, store) -> str``. ``BUILTIN_TOOLS`` is the single registry used
+by both the agent loop and the MCP server, so a tool's schema and behaviour live
+in one place.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import re
+import shlex
+import subprocess
+import sys
+import urllib.parse
+import urllib.request
+from collections.abc import Callable
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+from urllib.error import HTTPError, URLError
+
+from ..config import register_secret, sakthai_home
+from ..lead.capture import capture_lead as capture_lead_fact
+from ..learn.ingest import ingest_document as ingest_document_facts
+from ..memory.session_search import search_sessions as search_past_sessions
+from ..memory.store import MemoryStore
+
+logger = logging.getLogger(__name__)
+
+MAX_FILE_READ_CHARS = 20_000  # read_file output cap
+MAX_CMD_OUTPUT_CHARS = 20_000  # run_command output cap
+_RECALL_LIMIT_MAX = 200  # cap on recall/search limit
+_CMD_TIMEOUT_DEFAULT = 30.0
+_CMD_TIMEOUT_MAX = 120.0
+_HF_DEFAULT_MODEL = "Nanthasit/sakthai-context-1.5b-merged"
+_HF_API_BASE_DEFAULT = "https://router.huggingface.co/v1"
+
+_GRAPH_API_BASE = "https://graph.microsoft.com/v1.0"
+_GRAPH_TOKEN_URL_TMPL = "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token"  # nosec B105 - URL template, not a password
+_GRAPH_SCOPES = "Mail.Send Mail.Read Calendars.ReadWrite offline_access"
+_GRAPH_TOKEN_CACHE_NAME = "graph_token.json"  # nosec B105 - filename, not a password
+
+
+@dataclass(frozen=True)
+class Tool:
+    name: str
+    description: str
+    input_schema: dict[str, Any]
+    handler: Callable[[dict[str, Any], MemoryStore], str]
+
+    def schema(self) -> dict[str, Any]:
+        """The model-facing tool definition."""
+        return {
+            "name": self.name,
+            "description": self.description,
+            "input_schema": self.input_schema,
+        }
+
+
+def _coerce_limit(raw: Any, default: int) -> int:
+    try:
+        limit = int(raw) if raw else default
+    except (TypeError, ValueError):
+        limit = default
+    return max(1, min(limit, _RECALL_LIMIT_MAX))
+
+
+def _format_facts(facts: list[Any]) -> list[str]:
+    lines = []
+    for f in facts:
+        head = f"[{f.kind}] {f.key}: " if f.key else f"[{f.kind}] "
+        lines.append(f"  {f.id}  {head}{f.value}")
+    return lines
+
+
+def _format_observations(observations: list[Any]) -> list[str]:
+    return [f"  {o.id}  ({o.weight:.2f}) {o.summary}" for o in observations]
+
+
+# -- handlers ------------------------------------------------------------
+
+
+def _learn(args: dict[str, Any], store: MemoryStore) -> str:
+    raw = args.get("value")
+    if not isinstance(raw, str) or not raw.strip():
+        raise ValueError("`value` is required and must be a non-empty string.")
+    kind = args.get("kind") or "note"
+    key = args.get("key")
+    fact_id = store.add_fact(raw.strip(), kind=kind, key=key)
+    return f"Stored fact id={fact_id} (kind={kind}, key={key or '-'})."
+
+
+# Secret-bearing filenames blocked regardless of allowed roots. ``cwd`` is an
+# auto-trusted read root, so without this an agent could read ``./.env`` or
+# ``./id_rsa`` and exfiltrate it. This is defense-in-depth alongside the
+# guardrail layer: it holds even for direct handler callers or a custom policy.
+_SENSITIVE_READ_BASENAMES: frozenset[str] = frozenset(
+    {
+        ".env",
+        "memory.db",
+        ".bash_history",
+        ".zsh_history",
+        ".python_history",
+        ".history",
+        ".netrc",
+        ".npmrc",
+        ".pypirc",
+        "id_rsa",
+        "id_dsa",
+        "id_ecdsa",
+        "id_ed25519",
+        "id_ecdsa_sk",
+        "id_ed25519_sk",
+        "id_xmss",
+        "known_hosts",
+        "authorized_keys",
+        "credentials",
+        "credentials.json",
+        "shadow",
+        "passwd",
+        "sudoers",
+        "gshadow",
+        "group",
+        ".bashrc",
+        ".zshrc",
+        ".profile",
+        ".bash_profile",
+        ".gitconfig",
+        ".zprofile",
+        ".yarnrc",
+        ".yarnrc.yml",
+        ".git-credentials",
+        ".node_repl_history",
+        ".mysql_history",
+        ".psql_history",
+        ".sqlite_history",
+        ".rediscli_history",
+        ".mongo_history",
+        ".pgpass",
+        ".my.cnf",
+    }
+)
+_SENSITIVE_READ_SUFFIXES: tuple[str, ...] = (".pem", ".key", ".pfx", ".p12")
+# Path fragments (relative to a root) that indicate a secret store.
+_SENSITIVE_READ_FRAGMENTS: tuple[tuple[str, ...], ...] = (
+    (".aws", "credentials"),
+    (".ssh",),
+    (".git", "config"),
+)
+
+
+def _is_sensitive_read_target(resolved: Path) -> bool:
+    """Return True if ``resolved`` names a well-known secret file."""
+    name = resolved.name
+    lower = name.lower()
+    if name in _SENSITIVE_READ_BASENAMES or lower.startswith(".env."):
+        return True
+    if lower.endswith(_SENSITIVE_READ_SUFFIXES):
+        return True
+    parts = resolved.parts
+    for fragment in _SENSITIVE_READ_FRAGMENTS:
+        n = len(fragment)
+        if n <= len(parts) and any(
+            tuple(parts[i : i + n]) == fragment for i in range(len(parts) - n + 1)
+        ):
+            return True
+    return False
+
+
+def _resolve_and_validate_path(path_str: str) -> Path:
+    """Resolve a path and ensure it is a file within the allowed roots."""
+    candidate = Path(path_str).expanduser()
+    try:
+        resolved = candidate.resolve(strict=True)
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(f"{candidate} is not a regular file.") from exc
+    except OSError as exc:
+        raise FileNotFoundError(f"{candidate} could not be opened: {exc}") from exc
+
+    if not resolved.is_file():
+        raise FileNotFoundError(f"{resolved} is not a regular file.")
+
+    if _is_sensitive_read_target(resolved):
+        raise PermissionError(
+            f"{resolved} is a sensitive credential file and cannot be read by this tool."
+        )
+
+    if not _path_under_any_root(resolved, _allowed_read_roots()):
+        raise PermissionError(
+            f"{resolved} is outside the allowed roots. Add it to SAKTHAI_READ_ALLOW "
+            "(os.pathsep-separated) to permit reading."
+        )
+    return resolved
+
+
+def _ingest_document(args: dict[str, Any], store: MemoryStore) -> str:
+    path = args.get("path")
+    if not isinstance(path, str) or not path.strip():
+        raise ValueError("`path` is required and must be a non-empty string.")
+    resolved = _resolve_and_validate_path(path.strip())
+    ids = ingest_document_facts(resolved, store=store)
+    if not ids:
+        return "No facts found in document."
+    return f"learned {len(ids)} facts (ids: {ids})"
+
+
+def _capture_lead(args: dict[str, Any], store: MemoryStore) -> str:
+    name = args.get("name")
+    phone = args.get("phone")
+    email = args.get("email")
+    query = args.get("query")
+    lead_id = capture_lead_fact(
+        name=name, phone=phone, email=email, query=str(query or ""), store=store
+    )
+    return f"captured lead id={lead_id}"
+
+
+def _recall(args: dict[str, Any], store: MemoryStore) -> str:
+    limit = _coerce_limit(args.get("limit"), 20)
+    facts = store.list_facts(limit=limit)
+    obs = store.top_observations(limit=limit)
+    if not facts and not obs:
+        return "Memory is empty."
+    lines: list[str] = []
+    if facts:
+        lines.append("Facts:")
+        lines.extend(_format_facts(facts))
+    if obs:
+        lines.append("Observations:")
+        lines.extend(_format_observations(obs))
+    return "\n".join(lines)
+
+
+def _search(args: dict[str, Any], store: MemoryStore) -> str:
+    query = args.get("query")
+    if not isinstance(query, str) or not query:
+        raise ValueError("`query` is required and must be a non-empty string.")
+    limit = _coerce_limit(args.get("limit"), 50)
+    facts, obs = store.search_memory(query, limit=limit)
+    if not facts and not obs:
+        return f"No matches found for '{query}'."
+    lines: list[str] = []
+    if facts:
+        lines.append(f"Matching Facts ({len(facts)}):")
+        lines.extend(_format_facts(facts))
+    if obs:
+        lines.append(f"Matching Observations ({len(obs)}):")
+        lines.extend(_format_observations(obs))
+    return "\n".join(lines)
+
+
+def _search_sessions(args: dict[str, Any], store: MemoryStore) -> str:
+    query = args.get("query")
+    if not isinstance(query, str) or not query.strip():
+        raise ValueError("`query` is required and must be a non-empty string.")
+    limit = _coerce_limit(args.get("limit"), 20)
+    matches = search_past_sessions(query, limit=limit)
+    if not matches:
+        return f"No matching sessions found for '{query}'."
+    lines = [f"Matching Sessions ({len(matches)}):"]
+    lines.extend(f"  {m.session_id}  {m.task}  — {m.matched_snippet}" for m in matches)
+    return "\n".join(lines)
+
+
+def _forget(args: dict[str, Any], store: MemoryStore) -> str:
+    raw = args.get("fact_id")
+    if isinstance(raw, bool) or raw is None:
+        raise ValueError("`fact_id` is required and must be an integer.")
+    try:
+        fact_id = int(raw)
+    except (TypeError, ValueError):
+        raise ValueError("`fact_id` is required and must be an integer.") from None
+    if store.forget_fact(fact_id):
+        return f"Forgot fact id={fact_id}."
+    return f"No fact with id={fact_id}."
+
+
+def _allowed_read_roots() -> list[Path]:
+    """Roots ``read_file`` may read: cwd and ~/.sakthai, plus SAKTHAI_READ_ALLOW."""
+    roots: list[Path] = []
+    for base in (Path.cwd(), sakthai_home()):
+        try:
+            roots.append(base.resolve())
+        except OSError:
+            continue
+    for token in os.environ.get("SAKTHAI_READ_ALLOW", "").split(os.pathsep):
+        token = token.strip()
+        if not token:
+            continue
+        try:
+            roots.append(Path(token).expanduser().resolve())
+        except OSError:
+            continue
+    return roots
+
+
+def _path_under_any_root(path: Path, roots: list[Path]) -> bool:
+    for root in roots:
+        try:
+            if path == root or path.is_relative_to(root):
+                return True
+        except (ValueError, OSError):
+            continue
+    return False
+
+
+def _read_file(args: dict[str, Any], store: MemoryStore) -> str:
+    raw = args.get("path")
+    if not isinstance(raw, str) or not raw:
+        raise ValueError("`path` is required and must be a non-empty string.")
+    resolved = _resolve_and_validate_path(raw)
+    with resolved.open(encoding="utf-8", errors="replace") as fh:
+        text = fh.read(MAX_FILE_READ_CHARS + 1)
+    if len(text) > MAX_FILE_READ_CHARS:
+        text = text[:MAX_FILE_READ_CHARS] + "\n... [truncated]"
+    return text
+
+
+# Values of SAKTHAI_SHELL_ALLOW that keep the legacy "gate only" behavior: once
+# shell execution is enabled, any binary may run. Any other value is treated as
+# an os.pathsep-separated allow-list of permitted program names, so an operator
+# can enable, say, only ``git`` and ``ls`` without opening the whole PATH.
+_SHELL_ALLOW_ANY: frozenset[str] = frozenset({"1", "true", "yes", "on", "all", "*"})
+
+
+def _shell_allowlist() -> tuple[bool, frozenset[str]]:
+    """Parse ``SAKTHAI_SHELL_ALLOW`` into (enabled, allowed_program_names).
+
+    An empty allow-list set with ``enabled`` True means "any program"
+    (backwards-compatible with ``SAKTHAI_SHELL_ALLOW=1``).
+    """
+    raw = os.environ.get("SAKTHAI_SHELL_ALLOW", "").strip()
+    if not raw:
+        return (False, frozenset())
+    tokens = [t.strip() for t in raw.split(os.pathsep) if t.strip()]
+    if any(t.lower() in _SHELL_ALLOW_ANY for t in tokens):
+        return (True, frozenset())
+    return (True, frozenset(tokens))
+
+
+# Name segments that mark an environment variable as a credential. A
+# run_command child gets the rest of the environment (PATH, HOME, the venv,
+# locale), but not ANTHROPIC_API_KEY, HF_TOKEN, GH_PAT_FOR_ACTIONS and the
+# like: nothing the allow-listed tools need, and everything an injected
+# command would want to exfiltrate. Matched per `_`-separated segment, so
+# PATH and SSH_AUTH_SOCK are kept.
+_SECRET_ENV_SEGMENTS: frozenset[str] = frozenset(
+    {"TOKEN", "SECRET", "PASSWORD", "PASSWD", "KEY", "APIKEY", "PAT", "CREDENTIAL", "CREDENTIALS"}
+)
+
+
+def _command_env() -> dict[str, str]:
+    """The parent environment minus every credential-named variable."""
+    return {
+        name: value
+        for name, value in os.environ.items()
+        if _SECRET_ENV_SEGMENTS.isdisjoint(name.upper().split("_"))
+    }
+
+
+def _program_name(argv0: str) -> str:
+    """Basename of a program path, without a Windows ``.exe`` suffix."""
+    name = Path(argv0).name
+    if name.lower().endswith(".exe"):
+        name = name[:-4]
+    return name
+
+
+def _run_command(args: dict[str, Any], store: MemoryStore) -> str:
+    """Run a command (no shell) and return its output and exit code.
+
+    Disabled unless ``SAKTHAI_SHELL_ALLOW`` is set, so a stray tool call cannot
+    execute arbitrary code on a machine where the user has not opted in. When
+    ``SAKTHAI_SHELL_ALLOW`` names specific programs (an os.pathsep list rather
+    than a truthy flag), only those programs may run. Credential-named
+    environment variables are withheld from the child (see ``_command_env``).
+    """
+    command = args.get("command")
+    if not isinstance(command, str) or not command.strip():
+        raise ValueError("`command` is required and must be a non-empty string.")
+    enabled, allowed = _shell_allowlist()
+    if not enabled:
+        raise PermissionError(
+            "Shell execution is disabled. Set SAKTHAI_SHELL_ALLOW=1 to enable `run_command`."
+        )
+    argv = shlex.split(command, posix=sys.platform != "win32")
+    if not argv:
+        raise ValueError("`command` is required and must be a non-empty string.")
+    if allowed and _program_name(argv[0]) not in allowed:
+        raise PermissionError(
+            f"Program {_program_name(argv[0])!r} is not in the SAKTHAI_SHELL_ALLOW "
+            "allow-list. Add it to SAKTHAI_SHELL_ALLOW (os.pathsep-separated) to permit it."
+        )
+    try:
+        timeout = float(args.get("timeout") or _CMD_TIMEOUT_DEFAULT)
+    except (TypeError, ValueError):
+        timeout = _CMD_TIMEOUT_DEFAULT
+    timeout = max(1.0, min(timeout, _CMD_TIMEOUT_MAX))
+    try:
+        proc = subprocess.run(  # nosec B603 — shell=False, opt-in gated + allow-list above
+            argv,
+            shell=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+            env=_command_env(),
+        )
+    except subprocess.TimeoutExpired:
+        return f"[timeout after {timeout:.0f}s]\n(command: {command})"
+    except OSError as exc:
+        raise RuntimeError(f"Failed to run command: {exc}") from exc
+
+    combined = proc.stdout or ""
+    if proc.stderr:
+        combined += ("\n[stderr]\n" if combined else "[stderr]\n") + proc.stderr
+    if len(combined) > MAX_CMD_OUTPUT_CHARS:
+        combined = combined[:MAX_CMD_OUTPUT_CHARS] + "\n... [truncated]"
+    tag = f"[exit {proc.returncode}]"
+    return f"{tag}\n{combined}" if combined else tag
+
+
+def _send_telegram_message(args: dict[str, Any], store: MemoryStore) -> str:
+    """Send a Telegram message via TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID."""
+    message = args.get("message")
+    if not isinstance(message, str) or not message.strip():
+        raise ValueError("`message` is required and must be a non-empty string.")
+    token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        return (
+            "Error: Telegram configuration missing. Set TELEGRAM_BOT_TOKEN and "
+            "TELEGRAM_CHAT_ID in the environment."
+        )
+    if not re.match(r"^[0-9]+:[a-zA-Z0-9_-]+$", token):
+        return "Error: Invalid TELEGRAM_BOT_TOKEN format."
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = json.dumps({"chat_id": chat_id, "text": message}).encode("utf-8")
+    request = urllib.request.Request(
+        url, data=payload, headers={"Content-Type": "application/json"}, method="POST"
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:  # nosec B310
+            body = json.loads(response.read().decode("utf-8"))
+        if body.get("ok"):
+            return "Telegram message sent successfully."
+        return f"Telegram send failed: {body.get('description', 'Unknown error')}"
+    except HTTPError as exc:
+        try:
+            err = json.loads(exc.read().decode("utf-8"))
+            return f"Telegram API Error: {err.get('description', exc.reason)}"
+        except Exception:
+            return f"Telegram API HTTP Error {exc.code}: {exc.reason}"
+    except URLError as exc:
+        return f"Network Error: Could not connect to Telegram API: {exc.reason}"
+    except Exception as exc:  # noqa: BLE001
+        from ..config import redact_secrets
+
+        return f"Unexpected Error sending Telegram message: {redact_secrets(str(exc))}"
+
+
+def _graph_token_cache_path() -> Path:
+    return sakthai_home() / _GRAPH_TOKEN_CACHE_NAME
+
+
+def _graph_cached_refresh_token() -> str | None:
+    path = _graph_token_cache_path()
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    token = data.get("refresh_token") if isinstance(data, dict) else None
+    return str(token) if token else None
+
+
+def _graph_write_token_cache(refresh_token: str) -> None:
+    """Persist the (possibly rotated) refresh token, matching MemoryStore's 0700/0600 perms."""
+    path = _graph_token_cache_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    import contextlib
+
+    with contextlib.suppress(OSError):
+        os.chmod(str(path.parent), 0o700)
+    payload = json.dumps({"refresh_token": refresh_token}).encode("utf-8")
+    fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        os.write(fd, payload)
+    finally:
+        os.close(fd)
+    with contextlib.suppress(OSError):
+        os.chmod(str(path), 0o600)
+
+
+def _graph_access_token() -> str:
+    """Return a Graph API access token, refreshing via the cached/env refresh token.
+
+    Raises RuntimeError with a user-facing message on any setup or refresh failure.
+    """
+    client_id = os.environ.get("MS_GRAPH_CLIENT_ID")
+    tenant = os.environ.get("MS_GRAPH_TENANT_ID", "consumers")
+    refresh_token = _graph_cached_refresh_token() or os.environ.get("MS_GRAPH_REFRESH_TOKEN")
+    if not client_id or not refresh_token:
+        raise RuntimeError(
+            "Graph configuration missing. Set MS_GRAPH_CLIENT_ID and MS_GRAPH_REFRESH_TOKEN "
+            "(see scripts/graph_device_login.py for the one-time sign-in)."
+        )
+
+    url = _GRAPH_TOKEN_URL_TMPL.format(tenant=tenant)
+    data = urllib.parse.urlencode(
+        {
+            "client_id": client_id,
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+            "scope": _GRAPH_SCOPES,
+        }
+    ).encode("utf-8")
+    request = urllib.request.Request(url, data=data, method="POST")
+    with urllib.request.urlopen(request, timeout=10) as response:  # nosec B310
+        body = json.loads(response.read().decode("utf-8"))
+
+    access_token = body.get("access_token")
+    if not access_token:
+        raise RuntimeError(
+            f"Graph token refresh failed: {body.get('error_description', 'unknown error')}"
+        )
+    new_refresh_token = body.get("refresh_token", refresh_token)
+    _graph_write_token_cache(str(new_refresh_token))
+    register_secret(str(access_token))
+    register_secret(str(new_refresh_token))
+    return str(access_token)
+
+
+def _graph_request(method: str, path: str, *, json_body: dict[str, Any] | None = None) -> Any:
+    token = _graph_access_token()
+    url = f"{_GRAPH_API_BASE}{path}"
+    data = json.dumps(json_body).encode("utf-8") if json_body is not None else None
+    headers = {"Authorization": f"Bearer {token}"}
+    if data is not None:
+        headers["Content-Type"] = "application/json"
+    request = urllib.request.Request(url, data=data, headers=headers, method=method)
+    with urllib.request.urlopen(request, timeout=10) as response:  # nosec B310
+        raw = response.read()
+    return json.loads(raw) if raw else None
+
+
+def _graph_safe(action_desc: str, fn: Callable[[], str]) -> str:
+    """Run a Graph handler body, turning network/API/config errors into a result string."""
+    try:
+        return fn()
+    except RuntimeError as exc:
+        return f"Error: {exc}"
+    except HTTPError as exc:
+        try:
+            err = json.loads(exc.read().decode("utf-8"))
+            message = err.get("error", {}).get("message", exc.reason)
+        except Exception:
+            message = exc.reason
+        return f"Microsoft Graph API Error ({exc.code}): {message}"
+    except URLError as exc:
+        return f"Network Error: Could not connect to Microsoft Graph: {exc.reason}"
+    except Exception as exc:  # noqa: BLE001
+        return f"Unexpected Error {action_desc}: {exc}"
+
+
+def _send_outlook_mail(args: dict[str, Any], store: MemoryStore) -> str:
+    to = args.get("to")
+    subject = args.get("subject")
+    body = args.get("body")
+    if not isinstance(to, str) or not to.strip():
+        raise ValueError("`to` is required and must be a non-empty string.")
+    if not isinstance(subject, str) or not subject.strip():
+        raise ValueError("`subject` is required and must be a non-empty string.")
+    if not isinstance(body, str) or not body.strip():
+        raise ValueError("`body` is required and must be a non-empty string.")
+
+    def _do() -> str:
+        payload = {
+            "message": {
+                "subject": subject,
+                "body": {"contentType": "Text", "content": body},
+                "toRecipients": [{"emailAddress": {"address": to}}],
+            },
+            "saveToSentItems": "true",
+        }
+        _graph_request("POST", "/me/sendMail", json_body=payload)
+        return f"Email sent to {to}."
+
+    return _graph_safe("sending email", _do)
+
+
+def _read_outlook_mail(args: dict[str, Any], store: MemoryStore) -> str:
+    limit = _coerce_limit(args.get("limit"), 10)
+
+    def _do() -> str:
+        result = _graph_request(
+            "GET",
+            f"/me/mailFolders/inbox/messages?$top={limit}&$select="
+            "subject,from,receivedDateTime,bodyPreview",
+        )
+        messages = (result or {}).get("value", [])
+        if not messages:
+            return "No messages found."
+        lines = ["Recent inbox messages:"]
+        for m in messages:
+            sender = (m.get("from") or {}).get("emailAddress", {}).get("address", "unknown")
+            lines.append(
+                f"  [{m.get('receivedDateTime', '')}] {sender} — "
+                f"{m.get('subject', '(no subject)')}: {m.get('bodyPreview', '')}"
+            )
+        return "\n".join(lines)
+
+    return _graph_safe("reading inbox", _do)
+
+
+def _list_calendar_events(args: dict[str, Any], store: MemoryStore) -> str:
+    limit = _coerce_limit(args.get("limit"), 10)
+
+    def _do() -> str:
+        result = _graph_request(
+            "GET",
+            f"/me/events?$top={limit}&$orderby=start%2FdateTime&$select=subject,start,end,location",
+        )
+        events = (result or {}).get("value", [])
+        if not events:
+            return "No upcoming events found."
+        lines = ["Upcoming calendar events:"]
+        for e in events:
+            start = (e.get("start") or {}).get("dateTime", "")
+            location = (e.get("location") or {}).get("displayName", "")
+            suffix = f" @ {location}" if location else ""
+            lines.append(f"  [{start}] {e.get('subject', '(no subject)')}{suffix}")
+        return "\n".join(lines)
+
+    return _graph_safe("listing calendar events", _do)
+
+
+def _create_calendar_event(args: dict[str, Any], store: MemoryStore) -> str:
+    subject = args.get("subject")
+    start = args.get("start")
+    end = args.get("end")
+    if not isinstance(subject, str) or not subject.strip():
+        raise ValueError("`subject` is required and must be a non-empty string.")
+    if not isinstance(start, str) or not start.strip():
+        raise ValueError("`start` is required and must be an ISO 8601 datetime string.")
+    if not isinstance(end, str) or not end.strip():
+        raise ValueError("`end` is required and must be an ISO 8601 datetime string.")
+    timezone = args.get("timezone") or "UTC"
+    location = args.get("location")
+
+    def _do() -> str:
+        payload: dict[str, Any] = {
+            "subject": subject,
+            "start": {"dateTime": start, "timeZone": timezone},
+            "end": {"dateTime": end, "timeZone": timezone},
+        }
+        if isinstance(location, str) and location.strip():
+            payload["location"] = {"displayName": location}
+        result = _graph_request("POST", "/me/events", json_body=payload)
+        link = (result or {}).get("webLink", "")
+        return f"Event created: {subject}" + (f" ({link})" if link else "")
+
+    return _graph_safe("creating calendar event", _do)
+
+
+def _family_recall(args: dict[str, Any], store: MemoryStore) -> str:
+    from ..memory.merged import FamilyMemoryView
+
+    limit = _coerce_limit(args.get("limit"), 20)
+    raw_personas = args.get("personas")
+    personas = tuple(raw_personas) if isinstance(raw_personas, list) else None
+    with FamilyMemoryView(personas=personas) as view:
+        facts = view.list_facts(limit=limit)
+        obs = view.top_observations(limit=limit)
+    if not facts and not obs:
+        return "Family memory is empty."
+    lines: list[str] = []
+    if facts:
+        lines.append(f"Family Facts ({len(facts)}):")
+        for sf in facts:
+            head = (
+                f"[{sf.persona}] [{sf.fact.kind}] {sf.fact.key}: "
+                if sf.fact.key
+                else f"[{sf.persona}] [{sf.fact.kind}] "
+            )
+            lines.append(f"  {sf.fact.id}  {head}{sf.fact.value}")
+    if obs:
+        lines.append(f"Family Observations ({len(obs)}):")
+        for so in obs:
+            lines.append(
+                f"  {so.observation.id}  [{so.persona}] ({so.observation.weight:.2f}) {so.observation.summary}"
+            )
+    return "\n".join(lines)
+
+
+def _family_search(args: dict[str, Any], store: MemoryStore) -> str:
+    from ..memory.merged import FamilyMemoryView
+
+    query = args.get("query")
+    if not isinstance(query, str) or not query.strip():
+        raise ValueError("`query` is required and must be a non-empty string.")
+    limit = _coerce_limit(args.get("limit"), 50)
+    raw_personas = args.get("personas")
+    personas = tuple(raw_personas) if isinstance(raw_personas, list) else None
+    with FamilyMemoryView(personas=personas) as view:
+        facts, obs = view.search(query.strip(), limit=limit)
+    if not facts and not obs:
+        return f"No family memory matches found for '{query}'."
+    lines: list[str] = []
+    if facts:
+        lines.append(f"Matching Family Facts ({len(facts)}):")
+        for sf in facts:
+            head = (
+                f"[{sf.persona}] [{sf.fact.kind}] {sf.fact.key}: "
+                if sf.fact.key
+                else f"[{sf.persona}] [{sf.fact.kind}] "
+            )
+            lines.append(f"  {sf.fact.id}  {head}{sf.fact.value}")
+    if obs:
+        lines.append(f"Matching Family Observations ({len(obs)}):")
+        for so in obs:
+            lines.append(
+                f"  {so.observation.id}  [{so.persona}] ({so.observation.weight:.2f}) {so.observation.summary}"
+            )
+    return "\n".join(lines)
+
+
+def _delegate_to_persona(args: dict[str, Any], store: MemoryStore) -> str:
+    from .coordinator import run_persona_task
+
+    persona = args.get("persona")
+    if not isinstance(persona, str) or not persona.strip():
+        raise ValueError("`persona` is required and must be a non-empty string.")
+    task = args.get("task")
+    if not isinstance(task, str) or not task.strip():
+        raise ValueError("`task` is required and must be a non-empty string.")
+
+    with_skills = args.get("with_skills")
+    resolved_skills = tuple(with_skills) if isinstance(with_skills, list) else ()
+
+    max_iter = args.get("max_iterations")
+    resolved_iter = None
+    if max_iter is not None:
+        import contextlib
+
+        with contextlib.suppress(TypeError, ValueError):
+            resolved_iter = int(max_iter)
+
+    result = run_persona_task(
+        persona=persona.strip().lower(),
+        task=task.strip(),
+        with_skills=resolved_skills,
+        max_iterations=resolved_iter,
+    )
+    return (
+        f"### Delegated Task Result ({persona.upper()}):\n"
+        f"{result.text}\n\n"
+        f"[Iterations: {result.iterations}, Tokens: {result.usage.get('total_tokens', 0)}]"
+    )
+
+
+def _run_agent_loop(args: dict[str, Any], store: MemoryStore) -> str:
+    """Run a high-level task through the full SakThai agent loop."""
+    import os
+
+    if os.environ.get("SAKTHAI_AGENT_ACTIVE") == "1":
+        raise ValueError("Indirect recursion detected: cannot run nested SakThai agent loops.")
+
+    from .loop import run_agent
+
+    task = args.get("task")
+    if not isinstance(task, str) or not task.strip():
+        raise ValueError("`task` is required and must be a non-empty string.")
+    model = args.get("model")
+    provider = args.get("provider")
+    max_iterations = args.get("max_iterations")
+
+    kwargs: dict[str, Any] = {
+        "task": task.strip(),
+        "store": store,
+    }
+    if model:
+        kwargs["model"] = model
+    if provider:
+        kwargs["provider"] = provider
+    if max_iterations is not None:
+        import contextlib
+
+        with contextlib.suppress(TypeError, ValueError):
+            kwargs["max_iterations"] = int(max_iterations)
+
+    # Exclude run_agent_loop from the child loop's tools to prevent self-recursion
+    tools_for_loop = tuple(t for t in BUILTIN_TOOLS if t.name != "run_agent_loop")
+    kwargs["tools"] = tools_for_loop
+
+    prune_history = args.get("prune_history", True)
+    if not isinstance(prune_history, bool):
+        prune_history = True
+
+    result = run_agent(**kwargs)
+    if prune_history:
+        return result.text
+
+    lines = [result.text, "", "Tool calls made in this loop:"]
+    for tc in result.tool_calls:
+        status = "error" if tc.get("is_error") else "success"
+        lines.append(f"- {tc['name']}({tc['input']}) [{status}]")
+    return "\n".join(lines)
+
+
+def _huggingface_inference(args: dict[str, Any], store: MemoryStore) -> str:
+    """Run one bounded text-generation request through Hugging Face Router."""
+    del store
+    prompt = args.get("prompt")
+    if not isinstance(prompt, str) or not prompt.strip():
+        raise ValueError("`prompt` is required and must be a non-empty string.")
+
+    import contextlib
+
+    from ..auth import resolve_huggingface_credentials
+
+    model = args.get("model") or _HF_DEFAULT_MODEL
+    if not isinstance(model, str) or not model.strip():
+        raise ValueError("`model` must be a non-empty string when provided.")
+    max_tokens = 256
+    with contextlib.suppress(TypeError, ValueError):
+        max_tokens = max(1, min(int(args.get("max_tokens", 256)), 1024))
+
+    base_url, token = resolve_huggingface_credentials()
+    endpoint = base_url.rstrip("/") + "/chat/completions"
+    payload = json.dumps(
+        {
+            "model": model.strip(),
+            "messages": [{"role": "user", "content": prompt.strip()}],
+            "max_tokens": max_tokens,
+        }
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        endpoint,
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:  # nosec B310 - configured HF endpoint
+            result = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:500]
+        raise RuntimeError(
+            f"Hugging Face inference request failed: HTTP {exc.code}: {detail}"
+        ) from exc
+    except (URLError, TimeoutError) as exc:
+        raise RuntimeError(f"Hugging Face inference request failed: {exc}") from exc
+    choices = result.get("choices", [])
+    if not choices or not isinstance(choices[0], dict):
+        raise RuntimeError("Hugging Face returned no completion choices.")
+    message = choices[0].get("message", {})
+    content = message.get("content") if isinstance(message, dict) else None
+    if not isinstance(content, str) or not content.strip():
+        raise RuntimeError("Hugging Face returned an empty completion.")
+    return content.strip()
+
+
+# -- registry ------------------------------------------------------------
+
+BUILTIN_TOOLS: tuple[Tool, ...] = (
+    Tool(
+        name="learn",
+        description=(
+            "Save a fact about the user into persistent SakThai memory. Use when the "
+            "user shares a preference, project detail, or anything worth recalling in "
+            "future sessions."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "value": {"type": "string", "description": "The fact text."},
+                "kind": {
+                    "type": "string",
+                    "description": "Category (e.g. 'note', 'pref', 'project').",
+                    "default": "note",
+                },
+                "key": {"type": "string", "description": "Optional key/name for the fact."},
+            },
+            "required": ["value"],
+        },
+        handler=_learn,
+    ),
+    Tool(
+        name="huggingface_inference",
+        description=(
+            "Run a bounded text-generation request through the configured Hugging Face "
+            "Inference Providers router. Requires HF_TOKEN; never include secrets in the prompt."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "prompt": {"type": "string", "description": "The user-safe prompt to send."},
+                "model": {
+                    "type": "string",
+                    "description": "Optional Hugging Face model ID.",
+                    "default": _HF_DEFAULT_MODEL,
+                },
+                "max_tokens": {
+                    "type": "integer",
+                    "description": "Maximum generated tokens, clamped to 1–1024.",
+                    "default": 256,
+                },
+            },
+            "required": ["prompt"],
+        },
+        handler=_huggingface_inference,
+    ),
+    Tool(
+        name="ingest_document",
+        description=(
+            "Parse a markdown, CSV, or plain-text document into explicit memory facts. "
+            "Use for price books, FAQs, and other source documents that should become "
+            "recallable structured facts."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Path to a markdown, CSV, or plain-text document.",
+                },
+            },
+            "required": ["path"],
+        },
+        handler=_ingest_document,
+    ),
+    Tool(
+        name="capture_lead",
+        description=(
+            "Capture a customer lead with contact details and their query. Use when "
+            "the conversation should be handed off for follow-up instead of answered "
+            "immediately."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Customer name."},
+                "phone": {"type": "string", "description": "Customer phone number."},
+                "email": {"type": "string", "description": "Customer email address."},
+                "query": {
+                    "type": "string",
+                    "description": "The customer's request or question.",
+                },
+            },
+            "required": ["query"],
+        },
+        handler=_capture_lead,
+    ),
+    Tool(
+        name="recall",
+        description=(
+            "List facts and observations currently stored in SakThai memory. Use to "
+            "check what is already known before asking the user or answering a question "
+            "that depends on prior context."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum entries per section.",
+                    "default": 20,
+                },
+            },
+        },
+        handler=_recall,
+    ),
+    Tool(
+        name="search",
+        description=(
+            "Search SakThai facts and observations for matching substrings. Use when you "
+            "need specific entries about a topic rather than a broad recall of everything."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The substring search term."},
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum entries per section.",
+                    "default": 50,
+                },
+            },
+            "required": ["query"],
+        },
+        handler=_search,
+    ),
+    Tool(
+        name="search_sessions",
+        description=(
+            "Search past agent session logs by content (task, final answer, and tool "
+            "calls). Use to find what was done or discussed in a prior session, as "
+            "opposed to `search`, which searches stored facts/observations."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Whitespace-separated search terms; all must match.",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum sessions to return.",
+                    "default": 20,
+                },
+            },
+            "required": ["query"],
+        },
+        handler=_search_sessions,
+    ),
+    Tool(
+        name="forget",
+        description="Delete a fact from SakThai memory by its integer id.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "fact_id": {"type": "integer", "description": "The fact id."},
+            },
+            "required": ["fact_id"],
+        },
+        handler=_forget,
+    ),
+    Tool(
+        name="read_file",
+        description=(
+            "Read a local text file from disk. Output is truncated at 20,000 characters. "
+            "Use for source files, notes, or configs the user references."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Absolute or working-directory-relative path.",
+                },
+            },
+            "required": ["path"],
+        },
+        handler=_read_file,
+    ),
+    Tool(
+        name="run_command",
+        description=(
+            "Execute a CLI command and return its output and exit code. Requires "
+            "SAKTHAI_SHELL_ALLOW=1. Shell features like pipes or redirection are not "
+            "supported. Output capped at 20,000 characters; timeout 30s default, 120s max."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "description": "The command line to run (e.g. 'ls -la').",
+                },
+                "timeout": {
+                    "type": "number",
+                    "description": "Timeout in seconds (1-120). Default: 30.",
+                    "default": 30,
+                },
+            },
+            "required": ["command"],
+        },
+        handler=_run_command,
+    ),
+    Tool(
+        name="send_telegram_message",
+        description=(
+            "Send a text message to Telegram. Requires TELEGRAM_BOT_TOKEN and "
+            "TELEGRAM_CHAT_ID in the environment."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "message": {"type": "string", "description": "The message body to send."},
+            },
+            "required": ["message"],
+        },
+        handler=_send_telegram_message,
+    ),
+    Tool(
+        name="send_outlook_mail",
+        description=(
+            "Send an email through Microsoft Outlook / Microsoft 365. Requires "
+            "MS_GRAPH_CLIENT_ID and MS_GRAPH_REFRESH_TOKEN in the environment."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "to": {"type": "string", "description": "Recipient email address."},
+                "subject": {"type": "string", "description": "Email subject line."},
+                "body": {"type": "string", "description": "Plain-text email body."},
+            },
+            "required": ["to", "subject", "body"],
+        },
+        handler=_send_outlook_mail,
+    ),
+    Tool(
+        name="read_outlook_mail",
+        description=(
+            "List recent messages from the Outlook inbox (subject, sender, preview). "
+            "Requires MS_GRAPH_CLIENT_ID and MS_GRAPH_REFRESH_TOKEN in the environment."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum messages to return.",
+                    "default": 10,
+                },
+            },
+        },
+        handler=_read_outlook_mail,
+    ),
+    Tool(
+        name="list_calendar_events",
+        description=(
+            "List upcoming Outlook/Microsoft 365 calendar events. Requires "
+            "MS_GRAPH_CLIENT_ID and MS_GRAPH_REFRESH_TOKEN in the environment."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum events to return.",
+                    "default": 10,
+                },
+            },
+        },
+        handler=_list_calendar_events,
+    ),
+    Tool(
+        name="create_calendar_event",
+        description=(
+            "Create an Outlook/Microsoft 365 calendar event. Requires MS_GRAPH_CLIENT_ID "
+            "and MS_GRAPH_REFRESH_TOKEN in the environment."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "subject": {"type": "string", "description": "Event title."},
+                "start": {
+                    "type": "string",
+                    "description": "Start datetime, ISO 8601 (e.g. '2026-08-05T14:00:00').",
+                },
+                "end": {
+                    "type": "string",
+                    "description": "End datetime, ISO 8601 (e.g. '2026-08-05T15:00:00').",
+                },
+                "timezone": {
+                    "type": "string",
+                    "description": "IANA/Windows timezone name. Default: UTC.",
+                    "default": "UTC",
+                },
+                "location": {"type": "string", "description": "Optional event location."},
+            },
+            "required": ["subject", "start", "end"],
+        },
+        handler=_create_calendar_event,
+    ),
+    Tool(
+        name="run_agent_loop",
+        description=(
+            "Run a high-level task through the full SakThai agent loop (which can execute "
+            "commands, read files, learn preferences, and recall memory to solve the task)."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "task": {
+                    "type": "string",
+                    "description": "The high-level prompt/task description to execute.",
+                },
+                "model": {
+                    "type": "string",
+                    "description": "Optional model identifier to override the default.",
+                },
+                "provider": {
+                    "type": "string",
+                    "description": "Optional LLM provider backend (anthropic, google, openai, ollama, gateway, huggingface).",
+                },
+                "max_iterations": {
+                    "type": "integer",
+                    "description": "Optional maximum tool-use cap (default: 12).",
+                },
+                "prune_history": {
+                    "type": "boolean",
+                    "description": "If true, return answer only; else include tool summary.",
+                    "default": True,
+                },
+            },
+            "required": ["task"],
+        },
+        handler=_run_agent_loop,
+    ),
+    Tool(
+        name="family_recall",
+        description=(
+            "Recall facts and top observations across the entire Sak Family memory shards. "
+            "Use to inspect shared family learnings and context from sibling agents."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "personas": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional subset of personas to recall from (default: all).",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum entries per section (default: 20).",
+                    "default": 20,
+                },
+            },
+        },
+        handler=_family_recall,
+    ),
+    Tool(
+        name="family_search",
+        description=(
+            "Search facts and observations across all Sak Family personas' memory shards. "
+            "Use when you need cross-persona insights or context discovered by other agents."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search term to query across family memory shards.",
+                },
+                "personas": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional subset of personas to search (default: all).",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum entries per section (default: 20).",
+                    "default": 20,
+                },
+            },
+            "required": ["query"],
+        },
+        handler=_family_search,
+    ),
+    Tool(
+        name="delegate_to_persona",
+        description=(
+            "Delegate a focused subtask to another Sak Family persona (sakking, sakthai, "
+            "saksee, saksit, sakjules, saktan) in-process and return their response. "
+            "Use to dispatch tasks to domain specialists (e.g. SakKing for coding, "
+            "SakSee for review/architecture, SakSit for content/business, SakJules for CI/testing)."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "persona": {
+                    "type": "string",
+                    "description": "The target persona name (sakking, sakthai, saksee, saksit, sakjules, saktan).",
+                    "enum": ["sakking", "sakthai", "saksee", "saksit", "sakjules", "saktan"],
+                },
+                "task": {
+                    "type": "string",
+                    "description": "The specific task instructions for the persona to execute.",
+                },
+                "with_skills": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional list of skill names to activate for the persona.",
+                },
+                "max_iterations": {
+                    "type": "integer",
+                    "description": "Maximum iterations for the delegated loop (default: 8).",
+                    "default": 8,
+                },
+            },
+            "required": ["persona", "task"],
+        },
+        handler=_delegate_to_persona,
+    ),
+)
+
+
+def _load_tool_overrides() -> None:
+    """Load tool description overrides from a local config JSON if it exists."""
+    from ..config import tool_descriptions_path
+
+    path = tool_descriptions_path()
+    if not path.is_file():
+        return
+    try:
+        with open(path, encoding="utf-8") as f:
+            overrides = json.load(f)
+        for tool in BUILTIN_TOOLS:
+            if tool.name in overrides:
+                tool_override = overrides[tool.name]
+                if "description" in tool_override:
+                    object.__setattr__(tool, "description", tool_override["description"])
+                if "input_schema" in tool_override:
+                    object.__setattr__(tool, "input_schema", tool_override["input_schema"])
+    except Exception as exc:  # noqa: BLE001
+        # A broken overrides file must not stop the agent from starting, but
+        # it must not be indistinguishable from no overrides file either.
+        logger.warning("Failed to load tool overrides from %s: %s", path, exc)
+
+
+_load_tool_overrides()
+
+
+def tool_by_name(name: str) -> Tool | None:
+    for tool in BUILTIN_TOOLS:
+        if tool.name == name:
+            return tool
+    return None
