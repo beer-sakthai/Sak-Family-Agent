@@ -36,7 +36,7 @@ class DataLossGuardrail:
             "Destructive database operation (TRUNCATE)",
         ),
         (
-            re.compile(r"\bDELETE\s+FROM\s+[`\"'\w-]+(?:[\.`\"'\w-]+)*\s*(?:;|$)", re.IGNORECASE),
+            re.compile(r"\bDELETE\s+FROM\s+[`\"'\w.-]+\s*(?:;|$)", re.IGNORECASE),
             "Unbounded DELETE operation without WHERE clause",
         ),
     ]
