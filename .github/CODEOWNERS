@@ -18,13 +18,13 @@
 # The security surface. guardrails.py is copied into five persona trees and is
 # parity-enforced by tests/test_persona_guardrails_parity.py; web/server.py is
 # copied the same way with no test enforcing it.
-/personas/*/sakthai/agent/guardrails.py             @beer-sakthai
-/personas/*/sakthai/agent/security_hardening.py     @beer-sakthai
-/personas/*/sakthai/agent/guardrails_hardened.py    @beer-sakthai
-/personas/*/sakthai/web/server.py                   @beer-sakthai
-/personas/sakthai/sakthai/config.py                 @beer-sakthai
-/personas/sakthai/sakthai/auth.py                   @beer-sakthai
-/personas/sakthai/sakthai/giturl.py                 @beer-sakthai
+/personas/*/agent/guardrails.py             @beer-sakthai
+/personas/*/agent/security_hardening.py     @beer-sakthai
+/personas/*/agent/guardrails_hardened.py    @beer-sakthai
+/personas/*/web/server.py                   @beer-sakthai
+/personas/sakthai/config.py                 @beer-sakthai
+/personas/sakthai/auth.py                   @beer-sakthai
+/personas/sakthai/giturl.py                 @beer-sakthai
 
 # Persona identity contracts — cross-persona consistency is CI-enforced by
 # tests/test_soul_consistency.py.

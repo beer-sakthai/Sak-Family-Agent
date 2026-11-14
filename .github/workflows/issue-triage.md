@@ -63,7 +63,7 @@ Determine applicability from the triggering issue context and `/tmp/gh-aw/data/e
 1. Read the triggering issue details (`#${{ github.event.issue.number }}`) and compare its title and description against `/tmp/gh-aw/data/existing-issues.json` (excluding `#${{ github.event.issue.number }}` itself).
 2. Check `.github/CODEOWNERS` and `AGENTS.md` to identify which subsystem and Sak Family persona own the area described in the issue:
    - **SakThai** (`@sakthai_agent_bot`) — Core orchestration, Hugging Face Hub, model routing, lead architecture (`personas/sakthai/`)
-   - **SakSee** (`@saksee_agent_bot`) — Web, browser specialist, Next.js dashboard (`apps/sak_agent_dashboard/`, `personas/sakthai/sakthai/web/`)
+   - **SakSee** (`@saksee_agent_bot`) — Web, browser specialist, Next.js dashboard (`apps/sak_agent_dashboard/`, `personas/sakthai/web/`)
    - **SakJules** (`@sakjules_agent_bot`) — GitHub Actions, CI/CD, security hardening, guardrails (`.github/workflows/`, `agent/guardrails*.py`)
    - **SakKing** (`@sakking_agent_bot`) — General assistant, CLI runner, client/team tools (`cli/`, `client/`, `team/`)
    - **SakSit** (`@saksit_agent_bot`) — Social and content workflows (`personas/saksit/`)

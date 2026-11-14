@@ -59,15 +59,15 @@ Objective: Inspect code changes merged over the last 24 hours (or since the last
 ### 1. Inspect Recent Code Changes
 
 1. Read `/tmp/gh-aw/data/changed-files.txt`, `/tmp/gh-aw/data/recent-commits.jsonl`, and `/tmp/gh-aw/data/recent-merged-prs.json`.
-2. If no source files (`personas/sakthai/sakthai/**`, `apps/**`, `scripts/**`, `.github/workflows/**`, `pyproject.toml`) changed in the window, or if all documentation already reflects current behavior, call `noop` with a brief explanation and make no edits.
+2. If no source files (`personas/sakthai/**`, `apps/**`, `scripts/**`, `.github/workflows/**`, `pyproject.toml`) changed in the window, or if all documentation already reflects current behavior, call `noop` with a brief explanation and make no edits.
 
 ### 2. Verify Documentation Accuracy Against Code
 
 Compare changed code paths against the relevant documentation files:
-- CLI subcommands and options (`personas/sakthai/sakthai/cli/`) → `README.md`, `docs/SAKTHAI.md`, `docs/capabilities.md`
-- Built-in agent tools and architecture (`personas/sakthai/sakthai/agent/`, `personas/sakthai/sakthai/mcp/`) → `docs/architecture.md`, `docs/capabilities.md`, `README.md`
-- Web API and dashboard (`personas/sakthai/sakthai/web/`, `apps/sak_agent_dashboard/`) → `docs/architecture.md`, `README.md`
-- Security guardrails (`personas/sakthai/sakthai/agent/guardrails.py`) → `docs/security-hardening.md`, `README.md`
+- CLI subcommands and options (`personas/sakthai/cli/`) → `README.md`, `docs/SAKTHAI.md`, `docs/capabilities.md`
+- Built-in agent tools and architecture (`personas/sakthai/agent/`, `personas/sakthai/mcp/`) → `docs/architecture.md`, `docs/capabilities.md`, `README.md`
+- Web API and dashboard (`personas/sakthai/web/`, `apps/sak_agent_dashboard/`) → `docs/architecture.md`, `README.md`
+- Security guardrails (`personas/sakthai/agent/guardrails.py`) → `docs/security-hardening.md`, `README.md`
 
 ### 3. Apply Surgical Updates and Open a Pull Request
 

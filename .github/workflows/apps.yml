@@ -1,6 +1,6 @@
 # Builds and tests the two projects under apps/, which ci.yml does not cover.
 #
-# ci.yml scopes ruff/mypy/bandit/pytest to personas/sakthai/sakthai and tests/,
+# ci.yml scopes ruff/mypy/bandit/pytest to personas/sakthai and tests/,
 # and pyproject sets testpaths = ["tests"] and mypy.files to the package — so
 # apps/ has had no CI at all. Dependabot has been opening npm PRs against the
 # dashboard that nothing verified.

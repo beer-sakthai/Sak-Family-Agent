@@ -26,7 +26,7 @@ _PRIVATE_KEY_RE = re.compile(
 
 # Repository root and bundled resource directories. The package no longer sits
 # directly under the repo root (its canonical copy lives at
-# personas/sakthai/sakthai), so walk up from the package to the nearest
+# personas/sakthai), so walk up from the package to the nearest
 # directory holding pyproject.toml — correct both in this monorepo and in an
 # exported standalone agent repo where the package sits at the root again.
 

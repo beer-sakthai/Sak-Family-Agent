@@ -12,7 +12,7 @@
 
 <!-- Delete the lines that do not apply. -->
 
-- **Package** (`personas/sakthai/sakthai/`) — changes what `import sakthai` does.
+- **Package** (`personas/sakthai/`) — changes what `import sakthai` does.
 - **Guardrails / security** — touches `agent/guardrails*.py` or `web/server.py`.
   Both are copied per persona; see the sync rules in `CLAUDE.md`.
 - **Workflows / CI** — changes `.github/`.

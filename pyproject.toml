@@ -204,7 +204,7 @@ packages = [
 
 # --- Monorepo note --------------------------------------------------------
 # This repo is a monorepo (see top-level README). The core package is
-# sakthai-agent (this file), sourced from personas/sakthai/sakthai. The other
+# sakthai-agent (this file), sourced from personas/sakthai. The other
 # co-located Python package, agent-self-evolution (one copy per persona;
 # personas/sakthai/agent-self-evolution is canonical for CI), is intentionally
 # NOT a uv workspace member: its dependency set (dspy/optuna/…) is disjoint and

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the dashboard's TypeScript types from ``sakthai.web.contracts``.
 
-``personas/sakthai/sakthai/web/contracts.py`` is the single definition of every
+``personas/sakthai/web/contracts.py`` is the single definition of every
 payload the web API returns. This script renders it to
 ``apps/sak_agent_dashboard/src/lib/contracts.generated.ts`` so the Next.js app
 and the Python server cannot drift apart. CI regenerates and runs
@@ -37,13 +37,11 @@ sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))
 
 from sakthai.web import contracts  # noqa: E402
 
-OUTPUT_PATH = (
-    REPO_ROOT / "apps" / "sak_agent_dashboard" / "src" / "lib" / "contracts.generated.ts"
-)
+OUTPUT_PATH = REPO_ROOT / "apps" / "sak_agent_dashboard" / "src" / "lib" / "contracts.generated.ts"
 
 _BANNER = """\
 // ---------------------------------------------------------------------------
-// DO NOT EDIT. Generated from personas/sakthai/sakthai/web/contracts.py by
+// DO NOT EDIT. Generated from personas/sakthai/web/contracts.py by
 // scripts/gen_dashboard_types.py. Run that script to regenerate; CI fails if
 // this file is out of sync with the Python contract.
 // ---------------------------------------------------------------------------
@@ -157,9 +155,7 @@ def render_member(name: str, obj: Any, aliases: dict[Any, str]) -> str:
 def generate() -> str:
     """Render the whole contracts module as a TypeScript source file."""
     aliases = _alias_names()
-    blocks = [
-        render_member(name, getattr(contracts, name), aliases) for name in contracts.__all__
-    ]
+    blocks = [render_member(name, getattr(contracts, name), aliases) for name in contracts.__all__]
     return _BANNER + "\n" + "\n\n".join(blocks) + "\n"
 
 
