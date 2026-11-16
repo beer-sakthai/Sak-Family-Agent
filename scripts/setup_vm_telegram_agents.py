@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create Hermes-free VM deployment files for the six Sak Family Telegram bots."""
+"""Create VM deployment files for the six Sak Family Telegram bots."""
 
 from __future__ import annotations
 

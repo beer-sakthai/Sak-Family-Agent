@@ -14,9 +14,7 @@ For every persona it verifies, offline and with zero token spend:
      model (`run --persona <name> --dry-run --no-mcp`); missing provider
      credentials are reported, not failed, since they belong to the machine;
   5. shared memory round-trips (`learn` -> `recall`);
-  6. its Hermes profile scaffold exists (infra/hermes-agents/default/ for
-     SakKing's reserved default profile, infra/hermes-agents/profiles/<name>/
-     for the other five) with a SOUL.md and config.yaml.
+  6. its 6 working files, v9 self-eval rubric, and intro line readiness check pass.
 It also reports naming-convention drift per overlay (a warning — the bulk rename
 is deferred to scripts/rename_skills.py).
 
@@ -57,7 +55,6 @@ from sakthai.skills import (  # noqa: E402  (path bootstrap above)
 
 PERSONAS = ("sakking", "sakthai", "saksee", "saksit", "saktan", "sakjules")
 PERSONAS_DIR = REPO_ROOT / "personas"
-HERMES_AGENTS_DIR = REPO_ROOT / "infra" / "hermes-agents"
 BIN = os.environ.get("SAKTHAI_BIN", "sakthai")
 
 failures: list[str] = []
@@ -87,18 +84,6 @@ def persona_model_config_path(persona: str) -> Path:
 def persona_mcp_config_path(persona: str) -> Path:
     """Return the MCP manifest path for one persona."""
     return PERSONAS_DIR / persona / "config" / "mcp.json"
-
-
-def hermes_profile_dir(persona: str) -> Path:
-    """Return the repo-tracked Hermes profile scaffold dir for PERSONA.
-
-    SakThai (lead, per CLAUDE.md) uses the reserved default profile
-    (infra/hermes-agents/default/); the other five each have their own
-    infra/hermes-agents/profiles/<name>/.
-    """
-    if persona == "sakthai":
-        return HERMES_AGENTS_DIR / "default"
-    return HERMES_AGENTS_DIR / "profiles" / persona
 
 
 def _with_pythonpath(env: dict[str, str]) -> dict[str, str]:
@@ -233,17 +218,7 @@ def diagnose_persona(persona: str) -> None:
         rc2, out = run(["recall", "was here"], env)
         check("memory learn -> recall", rc == 0 and rc2 == 0 and "was here" in out)
 
-        # 6. hermes profile scaffold
-        profile_dir = hermes_profile_dir(persona)
-        has_soul = (profile_dir / "SOUL.md").is_file()
-        has_config = (profile_dir / "config.yaml").is_file()
-        check(
-            "hermes profile scaffold",
-            has_soul and has_config,
-            str(profile_dir) if has_soul and has_config else f"missing under {profile_dir}",
-        )
-
-        # 7. 6 working files + v9 self-eval rubric + intro line readiness
+        # 6. 6 working files + v9 self-eval rubric + intro line readiness
         readiness = evaluate_persona_readiness(persona)
         wf_count = sum(1 for v in readiness["working_files"].values() if v)
         check(

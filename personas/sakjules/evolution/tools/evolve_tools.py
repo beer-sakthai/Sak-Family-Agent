@@ -72,13 +72,13 @@ def evolve_tools(
     )
 
     console.print(
-        "\n[bold cyan]🧬 Hermes Agent Self-Evolution[/bold cyan] — Evolving Tool Descriptions\n"
+        "\n[bold cyan]🧬 Sak Agent Self-Evolution[/bold cyan] — Evolving Tool Descriptions\n"
     )
 
     # Make sure we can find/import BUILTIN_TOOLS from the canonical path
     hermes_path = config.hermes_agent_path
     if not hermes_path:
-        console.print("[red]✗ hermes-agent repository path not resolved.[/red]")
+        console.print("[red]✗ agent repository path not resolved.[/red]")
         sys.exit(1)
 
     # Insert package directory into sys.path to load BUILTIN_TOOLS
@@ -339,7 +339,7 @@ def evolve_tools(
     default=lambda: os.getenv("EVO_EVAL_MODEL", _DEFAULT_LOCAL_MODEL),
     help="LiteLLM model for evaluations",
 )
-@click.option("--hermes-repo", default=None, help="Path to hermes-agent repo")
+@click.option("--repo", "--hermes-repo", "hermes_repo", default=None, help="Path to agent repo")
 @click.option("--dry-run", is_flag=True, help="Validate setup without running optimization")
 def main(
     iterations,

@@ -1,4 +1,4 @@
-"""Evolve a Hermes Agent skill using DSPy + GEPA.
+"""Evolve a Sak Family Agent skill using DSPy + GEPA.
 
 Usage:
     python -m evolution.skills.evolve_skill --skill github-code-review --iterations 10
@@ -85,7 +85,7 @@ def evolve(
 
     # ── 1. Find and load the skill ──────────────────────────────────────
     console.print(
-        f"\n[bold cyan]🧬 Hermes Agent Self-Evolution[/bold cyan] — Evolving skill: [bold]{skill_name}[/bold]\n"
+        f"\n[bold cyan]🧬 Sak Agent Self-Evolution[/bold cyan] — Evolving skill: [bold]{skill_name}[/bold]\n"
     )
 
     skill_path = find_skill(skill_name, config.hermes_agent_path)
@@ -402,7 +402,7 @@ def evolve(
     default=lambda: os.getenv("EVO_EVAL_MODEL", _DEFAULT_LOCAL_MODEL),
     help="LiteLLM model for evaluations (default: local Ollama)",
 )
-@click.option("--hermes-repo", default=None, help="Path to hermes-agent repo")
+@click.option("--repo", "--hermes-repo", "hermes_repo", default=None, help="Path to agent repo")
 @click.option("--run-tests", is_flag=True, help="Run full pytest suite as constraint gate")
 @click.option("--test-layout", is_flag=True, help="Generate layout-specific test cases")
 @click.option("--dry-run", is_flag=True, help="Validate setup without running optimization")
@@ -418,7 +418,7 @@ def main(
     test_layout,
     dry_run,
 ):
-    """Evolve a Hermes Agent skill using DSPy + GEPA optimization."""
+    """Evolve a Sak Family Agent skill using DSPy + GEPA optimization."""
     evolve(
         skill_name=skill,
         iterations=iterations,

@@ -2,7 +2,7 @@
 
 **Evolutionary self-improvement for SakThai Agent.**
 
-Hermes Agent Self-Evolution uses DSPy + GEPA (Genetic-Pareto Prompt Evolution) to automatically evolve and optimize Hermes Agent's skills, tool descriptions, system prompts, and code — producing measurably better versions through reflective evolutionary search.
+Sak Agent Self-Evolution uses DSPy + GEPA (Genetic-Pareto Prompt Evolution) to automatically evolve and optimize the agent's skills, tool descriptions, system prompts, and code — producing measurably better versions through reflective evolutionary search.
 
 **No GPU training required.** Everything operates via API calls — mutating text, evaluating results, and selecting the best variants. ~$2-10 per optimization run.
 
@@ -20,7 +20,7 @@ Read current skill/prompt/tool ──► Generate eval dataset
                                    Constraint gates (tests, size limits, benchmarks)
                                         │
                                         ▼
-                                   Best variant ──► PR against hermes-agent
+                                   Best variant ──► PR against agent repo
 ```
 
 GEPA reads execution traces to understand *why* things fail (not just that they failed), then proposes targeted improvements. ICLR 2026 Oral, MIT licensed.
@@ -29,12 +29,12 @@ GEPA reads execution traces to understand *why* things fail (not just that they 
 
 ```bash
 # Install
-git clone https://github.com/NousResearch/hermes-agent-self-evolution.git
-cd hermes-agent-self-evolution
-pip install -e ".[dev]"
+git clone https://github.com/beer-sakthai/Sak-Family-Agent.git
+cd Sak-Family-Agent
+pip install -e "personas/sakthai[dev]"
 
-# Point at your hermes-agent repo
-export HERMES_AGENT_REPO=~/.hermes/hermes-agent
+# Point at your agent data dir (optional override)
+export SAK_AGENT_REPO=~/.sakthai
 
 # Evolve a skill (synthetic eval data)
 python -m evolution.skills.evolve_skill \
@@ -42,7 +42,7 @@ python -m evolution.skills.evolve_skill \
     --iterations 10 \
     --eval-source synthetic
 
-# Or use real session history from Claude Code, Copilot, and Hermes
+# Or use real session history from session files
 python -m evolution.skills.evolve_skill \
     --skill github-code-review \
     --iterations 10 \
@@ -81,4 +81,4 @@ See [PLAN.md](PLAN.md) for the complete architecture, evaluation data strategy, 
 
 ## License
 
-MIT — © 2026 Nous Research
+MIT — © 2026 Beer SakThai / House of Sak

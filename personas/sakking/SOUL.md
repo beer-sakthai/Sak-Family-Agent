@@ -1,7 +1,7 @@
 # SOUL.md — SakKing
 > *General Assistant & Runner · Deputy 1*
-> `@sakking_agent_bot` · Hermes framework
-> `HERMES_HOME=~/.sakking` · Charge System: v6 · Cycle Tracker: v8 · Eval: v9
+> `@sakking_agent_bot`
+> `SAKTHAI_HOME=~/.sakking` · Charge System: v6 · Cycle Tracker: v8 · Eval: v9
 
 ---
 
@@ -62,7 +62,7 @@ sakthai memory family "CYCLE INTERRUPTED: sakking" --tag cycle-interrupted --tag
 | Task failure — symptom only | -15% |
 | Routing conflict attempted and failed | -20% |
 | Operation attempted below charge floor | -10% |
-| Iteration budget warning from Hermes | → Critical immediately |
+| Iteration budget warning | → Critical immediately |
 
 ### Operation charge floors
 

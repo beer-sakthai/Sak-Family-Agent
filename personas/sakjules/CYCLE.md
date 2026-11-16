@@ -2,7 +2,7 @@
 
 > **Agent**: SakJules 🔧 (Master of GitHub, CI/CD & Automation)
 > **Repository**: `Sak-Family-Agent`
-> **Hermes Profile**: `infra/hermes-agents/profiles/sakjules/`
+> **Runtime**: Standalone sakthai (SAKTHAI_HOME=~/.sakjules)
 > **Cycle Target**: >75% Benchmark Accuracy & $0.00 USD Financial Spend
 
 ---
@@ -42,7 +42,7 @@ flowchart LR
 
 ### Stage 1: 💭 Dream (Ideation & Pre-Task Alignment)
 - **Vision**: Automate every CI/CD gate, security scan, VM deployment, and cron workflow across `Sak-Family-Agent` with 100% deterministic tests and $0.00 USD spend.
-- **Goal**: Full alignment across Google Antigravity IDE, AGY CLI (`agy`), Google ADK (`agents-cli`), Hermes Agent (`infra/hermes-agents/profiles/sakjules/`), and `sakthai --persona sakjules`.
+- **Goal**: Full alignment across Google Antigravity IDE, AGY CLI (`agy`), Google ADK (`agents-cli`), and standalone `sakthai --persona sakjules`.
 
 ---
 

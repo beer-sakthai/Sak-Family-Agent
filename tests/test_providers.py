@@ -358,8 +358,16 @@ class TestCallAnthropic:
 # ---------------------------------------------------------------------------
 
 
+_SAVED_GENAI_MODULES: dict[str, Any] = {}
+
+
 def _install_fake_genai() -> MagicMock:
     """Insert a minimal fake google.genai into sys.modules so the provider can import it."""
+    global _SAVED_GENAI_MODULES
+    for mod_name in ("google", "google.genai", "google.genai.types"):
+        if mod_name not in _SAVED_GENAI_MODULES:
+            _SAVED_GENAI_MODULES[mod_name] = sys.modules.get(mod_name)
+
     fake_types = MagicMock()
 
     def Part(**kwargs: Any) -> Any:
@@ -391,9 +399,22 @@ def _install_fake_genai() -> MagicMock:
     return fake_genai
 
 
+def _restore_fake_genai() -> None:
+    global _SAVED_GENAI_MODULES
+    for mod_name, orig in _SAVED_GENAI_MODULES.items():
+        if orig is None:
+            sys.modules.pop(mod_name, None)
+        else:
+            sys.modules[mod_name] = orig
+    _SAVED_GENAI_MODULES.clear()
+
+
 class TestToGeminiContents:
     def setup_method(self) -> None:
         self._fake_genai = _install_fake_genai()
+
+    def teardown_method(self) -> None:
+        _restore_fake_genai()
 
     def _convert(self, messages: list[dict[str, Any]]) -> list[Any]:
         # Re-import after patching to pick up the mocked module
@@ -452,6 +473,9 @@ class TestToGeminiContents:
 class TestCallGemini:
     def setup_method(self) -> None:
         _install_fake_genai()
+
+    def teardown_method(self) -> None:
+        _restore_fake_genai()
 
     def _make_tool(self, name: str = "recall") -> Any:
         from sakthai.agent.tools import Tool

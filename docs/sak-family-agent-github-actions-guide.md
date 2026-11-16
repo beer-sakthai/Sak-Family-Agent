@@ -22,11 +22,11 @@ The integration must respect the following source-of-truth rules.
 | Runnable Python package | `personas/sakthai/sakthai/` | Use the existing Ruff, mypy, Bandit, and pytest commands. |
 | Shared skill tree | `personas/shared/skills/` | Compose all six overlays and detect composition failures. |
 | Persona-specific overlay | `personas/<persona>/skills/` | Preserve overlay precedence and naming conventions. |
-| Hermes runtime profiles | `infra/hermes-agents/default/` and `infra/hermes-agents/profiles/<persona>/` | Verify the profile scaffold remains present and aligned. |
+| Persona runtime configs | `personas/<persona>/config/` | Verify configuration and security guardrails remain present and aligned. |
 | Standalone exports | `scripts/export_agent_repo.py` | Exercise all six export paths without publishing or pushing from CI. |
 | Persona diagnostics | `scripts/diagnose_personas.py` | Use as an offline integration check; report warnings separately from hard failures. |
 
-The repository contains six personas: `sakking`, `sakthai`, `saksee`, `saksit`, `saktan`, and `sakjules`. SakThai uses the reserved `infra/hermes-agents/default/` profile; the other personas use `infra/hermes-agents/profiles/<persona>/`.
+The repository contains six personas: `sakking`, `sakthai`, `saksee`, `saksit`, `saktan`, and `sakjules`. All personas run standalone via `sakthai`.
 
 ## Recommended workflow architecture
 
@@ -56,7 +56,6 @@ on:
       - "personas/**/config/**"
       - "personas/**/skills/**"
       - "personas/shared/**"
-      - "infra/hermes-agents/**"
       - "scripts/compose_persona.py"
       - "scripts/diagnose_personas.py"
       - "scripts/export_agent_repo.py"
@@ -72,7 +71,6 @@ on:
       - "personas/**/config/**"
       - "personas/**/skills/**"
       - "personas/shared/**"
-      - "infra/hermes-agents/**"
       - "scripts/compose_persona.py"
       - "scripts/diagnose_personas.py"
       - "scripts/export_agent_repo.py"
@@ -166,7 +164,7 @@ The validator should return a non-zero exit code for malformed frontmatter or mi
 
 ## Export and diagnostics checks
 
-The export helper copies a shared core, one persona overlay, and the matching Hermes profile into a standalone snapshot. CI should validate that all six exports complete, but it should not publish those snapshots or push to the six standalone repositories from an untrusted pull request.
+The export helper copies a shared core and one persona overlay into a standalone snapshot. CI should validate that all six exports complete, but it should not publish those snapshots or push to the six standalone repositories from an untrusted pull request.
 
 A dedicated export smoke test can be run with:
 
@@ -179,7 +177,7 @@ for persona in sakking sakthai saksee saksit saktan sakjules; do
 done
 ```
 
-`scripts/diagnose_personas.py` performs broader offline checks, including skill composition, model configuration, MCP manifest loading, dry-run preflight, memory round-trips, and Hermes profile scaffolds. It creates temporary `SAKTHAI_HOME` directories and should not need production credentials. Its documented behavior treats skill naming drift and an unavailable self-evolution dependency as warnings, while hard runtime contract failures return non-zero. The current repository intentionally gives SakTan an empty MCP manifest, but the diagnostic currently treats an empty server list as a hard failure. For that reason, the ready-to-use merge-gating workflow does not invoke this broader diagnostic; run it manually when investigating runtime profiles, and resolve the SakTan diagnostic contract before making it required.
+`scripts/diagnose_personas.py` performs broader offline checks, including skill composition, model configuration, MCP manifest loading, dry-run preflight, memory round-trips, and persona configurations. It creates temporary `SAKTHAI_HOME` directories and should not need production credentials. Its documented behavior treats skill naming drift and an unavailable self-evolution dependency as warnings, while hard runtime contract failures return non-zero. The current repository intentionally gives SakTan an empty MCP manifest, but the diagnostic currently treats an empty server list as a hard failure. For that reason, the ready-to-use merge-gating workflow does not invoke this broader diagnostic; run it manually when investigating runtime profiles, and resolve the SakTan diagnostic contract before making it required.
 
 If diagnostics become slow, keep the focused workflow limited to the contract tests and run the full diagnostics in a separately required integration job. The existing `CI` workflow is the repository's full quality gate, but it does not currently invoke `scripts/diagnose_personas.py`. Do not weaken the checks silently; record the decision in the workflow comments and guide.
 

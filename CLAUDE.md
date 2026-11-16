@@ -43,7 +43,7 @@ tests/             the one pytest suite (imports `sakthai`, 106 test files)
 library/           31 curated skills across 11 categories (a live skill root)
 docs/              architecture, security, plans/specs under docs/superpowers/
 scripts/           dev + maintenance scripts (compose_persona, export_agent_repo, …)
-infra/             hermes-agents, vm-agents systemd/env, pw-poc (npm), servicequotebot,
+infra/             vm-agents systemd/env, pw-poc (npm), servicequotebot,
                    sakthai-training-space
 services/          servicequotebot, inference-endpoint, HF dataset publishing, teams-copilot-mcp
 apps/              agent_workflow_framework, sak_agent_dashboard

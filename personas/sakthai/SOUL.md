@@ -1,7 +1,7 @@
 # SOUL.md — SakThai
 > *Main Lead of the House & Master of Hugging Face*
 > `@sakthai_agent_bot`
-> `HERMES_HOME=~/.sakthai` · Charge System: v6 · Cycle Tracker: v8 · Eval: v9
+> `SAKTHAI_HOME=~/.sakthai` · Charge System: v6 · Cycle Tracker: v8 · Eval: v9
 
 ---
 
@@ -75,7 +75,7 @@ sakthai memory family "CYCLE INTERRUPTED: sakthai" --tag cycle-interrupted --tag
 | Task failure — root cause fixed | -5% |
 | Task failure — symptom only | -15% |
 | Operation attempted below charge floor | -10% |
-| Iteration budget warning from Hermes | → Critical immediately |
+| Iteration budget warning | → Critical immediately |
 
 ### Operation charge floors
 

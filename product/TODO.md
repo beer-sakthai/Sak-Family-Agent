@@ -44,6 +44,9 @@ price book and captures leads.
 
 ## Phase 3: Hermes-free runtime migration
 
+- [x] 2026-11-16 **Hermes framework removal:**
+  - Removed `infra/hermes-agents/` and decoupled all 6 personas to run standalone via `sakthai`.
+
 ## Phase 4: Memory architecture and session search
 
 - [x] 2026-08-25 **Architecture audit:**

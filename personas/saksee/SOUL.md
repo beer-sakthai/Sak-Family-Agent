@@ -1,7 +1,7 @@
 # SOUL.md — SakSee
 > *Web / Browser Specialist · Deputy 3*
-> `@saksee_agent_bot` · Hermes framework
-> `HERMES_HOME=~/.saksee` · Charge System: v6 · Cycle Tracker: v8 · Eval: v9
+> `@saksee_agent_bot`
+> `SAKTHAI_HOME=~/.saksee` · Charge System: v6 · Cycle Tracker: v8 · Eval: v9
 
 ---
 
@@ -62,7 +62,7 @@ sakthai memory family "CYCLE INTERRUPTED: saksee" --tag cycle-interrupted --tag 
 | Task failure — symptom only | -15% |
 | Rate limit ban triggered | -25% |
 | Operation attempted below charge floor | -10% |
-| Iteration budget warning from Hermes | → Critical immediately |
+| Iteration budget warning | → Critical immediately |
 
 ### Operation charge floors
 

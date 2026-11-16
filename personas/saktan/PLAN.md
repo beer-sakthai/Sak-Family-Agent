@@ -180,13 +180,13 @@ GEPA is the star — it's integrated into DSPy, reads execution traces to unders
 └─────────────────────────────────────────────┘
 ```
 
-### Integration Points with Existing Hermes Infrastructure
+### Integration Points with Agent Infrastructure
 
-| Hermes Component | Role in Self-Improvement |
+| Component | Role in Self-Improvement |
 |-----------------|------------------------|
 | `batch_runner.py` | Evaluation harness — run agent on test tasks in parallel |
 | `agent/trajectory.py` | Collect execution traces for GEPA's reflective analysis |
-| `hermes_state.py` (SessionDB) | Mine real usage data for evaluation datasets |
+| SessionDB | Mine real usage data for evaluation datasets |
 | `skills/` directory | The primary optimization targets |
 | `tools/registry.py` | Tool descriptions to optimize |
 | `agent/prompt_builder.py` | System prompt components to optimize |
@@ -228,10 +228,10 @@ Human Review & Merge
 
 ### Where It Lives
 
-Hermes Agent Self-Evolution lives in its own repo (`NousResearch/hermes-agent-self-evolution`), separate from hermes-agent. It pip-installs or clones hermes-agent to access its infrastructure, and outputs PRs against the hermes-agent repo.
+Sak Agent Self-Evolution lives under `personas/<persona>/evolution/`, integrated into each persona in `beer-sakthai/Sak-Family-Agent`.
 
 ```
-hermes-agent-self-evolution/             # Standalone repo
+sak-agent-self-evolution/                # Self-evolution package
 ├── PLAN.md                             # This file
 ├── README.md                           # Setup, usage, examples
 ├── pyproject.toml                      # Package config + dependencies (dspy, gepa)
@@ -266,12 +266,12 @@ hermes-agent-self-evolution/             # Standalone repo
 
 ```bash
 # Clone and install
-git clone https://github.com/NousResearch/hermes-agent-self-evolution.git
-cd hermes-agent-self-evolution
-pip install -e ".[dev]"
+git clone https://github.com/beer-sakthai/Sak-Family-Agent.git
+cd Sak-Family-Agent
+pip install -e "personas/sakthai[dev]"
 
-# Point at hermes-agent repo (auto-detected from ~/.hermes/hermes-agent or env var)
-export HERMES_AGENT_REPO=~/.hermes/hermes-agent
+# Point at your agent data dir (optional override)
+export SAK_AGENT_REPO=~/.sakthai
 
 # Phase 1: Evolve a skill
 python -m evolution.skills.evolve_skill \
@@ -280,9 +280,8 @@ python -m evolution.skills.evolve_skill \
     --eval-source synthetic         # or: sessiondb, golden, auto
 
 # Phase 2: Evolve tool descriptions
-python -m evolution.tools.evolve_tool_descriptions \
-    --iterations 5 \
-    --benchmark-gate tblite-fast
+python -m evolution.tools.evolve_tools \
+    --iterations 5
 
 # Phase 3: Evolve a system prompt section
 python -m evolution.prompts.evolve_prompt_section \
@@ -295,21 +294,18 @@ python -m evolution.code.evolve_tool_code \
     --bug-issue 742 \
     --iterations 10
 
-# All commands output a PR branch + summary against hermes-agent. Human merges.
+# All commands output a PR branch + summary against the agent repo. Human merges.
 ```
 
-### Relationship to hermes-agent
+### Relationship to Agent Codebase
 
-**hermes-agent-self-evolution operates ON hermes-agent, not inside it.** Zero changes to the agent repo are needed. It reads from the hermes-agent codebase and writes evolved versions to git branches, creating PRs for human review.
+**sak-agent-self-evolution operates ON agent skills, not inside core runtime.** Zero changes to the agent repo core are needed. It reads from the codebase and writes evolved versions to git branches, creating PRs for human review.
 
-| hermes-agent Component | How Self-Evolution Uses It |
+| Component | How Self-Evolution Uses It |
 |------------------------|-------------------|
 | `batch_runner.py` | Run agent on eval tasks in parallel |
-| `environments/benchmarks/tblite/` | Benchmark gating |
-| `environments/benchmarks/yc_bench/` | Coherence checks |
-| `hermes_state.py` (SessionDB) | Mine real usage for eval data |
-| `agent/prompt_builder.py` | Read current prompt sections (read-only) |
-| `tools/registry.py` | Read current tool descriptions (read-only) |
+| SessionDB | Mine real usage for eval data |
+| `personas/sakthai/agent/tools/` | Read current tool descriptions (read-only) |
 | `skills/` directory | Read current skills, write evolved versions to branch |
 
 ---
@@ -511,7 +507,7 @@ Actual Python source code in `tools/*.py` files. This is the highest-risk tier �
 
 **Prerequisite:** Phases 1-4 proven — manual optimization works reliably for skills, tools, prompts, and code. Now we automate it.
 
-**Week 1 (Build):** Build performance monitor (tracks skill success rates, tool selection accuracy, benchmark scores over time). Build auto-triage logic (ranks optimization targets by impact × frequency). Wire up to Hermes cron scheduler.
+**Week 1 (Build):** Build performance monitor (tracks skill success rates, tool selection accuracy, benchmark scores over time). Build auto-triage logic (ranks optimization targets by impact × frequency). Wire up to cron scheduler.
 
 **Week 2 (Deploy & Monitor):** Set up weekly benchmark runs via cron. Set up threshold-triggered optimization (when a skill's failure rate exceeds X%, auto-trigger GEPA). All automated PRs still require human merge.
 
@@ -607,7 +603,7 @@ Evolved text must stay within strict size budgets:
 The optimizer's fitness function applies a **length penalty** — variants that approach the limit get scored lower even if they're otherwise better. This prevents evolutionary drift toward verbose solutions.
 
 ### 3. Prompt Caching Compatibility
-Hermes relies on prompt caching to keep costs manageable. Evolved content must not break this:
+The agent loop relies on prompt caching to keep costs manageable. Evolved content must not break this:
 
 - **Skills**: Injected as user messages at conversation start. Evolved skills are deployed as new versions — they take effect on NEW sessions only, never mid-conversation.
 - **Tool descriptions**: Part of the tool schema sent with every API call. Changes take effect on next session start. Schema structure (parameter names, types) must NOT change — only the description text.
@@ -672,7 +668,7 @@ See the **Constraints & Guardrails** section above for the full enforcement list
 - DSPy: MIT ✓ (can import and integrate freely)
 - GEPA: MIT ✓ (integrated into DSPy, also standalone `pip install gepa`)
 - Darwinian Evolver: AGPL v3 ⚠️ (external CLI only, no Python imports)
-- All Hermes-native code: MIT ✓
+- All agent code: MIT ✓
 
 ---
 

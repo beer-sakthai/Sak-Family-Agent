@@ -2,7 +2,7 @@
 
 > **Agent**: SakTan 📗 (Daily Ops & Rhythm (Deputy 2))
 > **Repository**: `Sak-Family-Agent`
-> **Hermes Profile**: `infra/hermes-agents/profiles/saktan/`
+> **Runtime**: Standalone sakthai (SAKTHAI_HOME=~/.saktan)
 > **Cycle Target**: >75% Benchmark Accuracy & $0.00 USD Financial Spend
 
 ---
@@ -42,7 +42,7 @@ flowchart LR
 
 ### Stage 1: 💭 Dream (Ideation & Pre-Task Alignment)
 - **Vision**: Protect Beer's daily energy, calm, and focus by surfacing one clear, low-stress next action at a time while keeping the household's memory and schedules healthy at $0.00 cost.
-- **Goal**: Full alignment across Google Antigravity IDE, AGY CLI (`agy`), Google ADK (`agents-cli`), Hermes Agent (`infra/hermes-agents/profiles/saktan/`), and `sakthai --persona saktan`.
+- **Goal**: Full alignment across Google Antigravity IDE, AGY CLI (`agy`), Google ADK (`agents-cli`), and standalone `sakthai --persona saktan`.
 
 ---
 

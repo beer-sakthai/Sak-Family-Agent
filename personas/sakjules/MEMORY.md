@@ -9,7 +9,7 @@
   - **Local CLI**: Pass `--persona sakjules` to `sakthai learn`, `sakthai recall`, `sakthai memory <subcommand>`, `sakthai run`, or `sakthai chat`.
   - **VM Deployment**: [`infra/vm-agents/sakthai-agent-run.sh`](file:///home/sak/Sak-Family-Agent/infra/vm-agents/sakthai-agent-run.sh) sets `SAKTHAI_HOME=$HOME/.sakthai/sakjules`, resolving automatically to the same shard.
 - **Merged Family View**: `sakthai memory family` ([`FamilyMemoryView`](file:///home/sak/Sak-Family-Agent/personas/sakthai/memory/merged.py)) opens all 6 persona shards (`sakthai`, `sakking`, `saksee`, `saksit`, `sakjules`, `saktan`) plus the legacy `~/.sakthai/memory.db` in one read-only view.
-- **Hermes Profile Path**: [`infra/hermes-agents/profiles/sakjules/`](file:///home/sak/Sak-Family-Agent/infra/hermes-agents/profiles/sakjules)
+- **Standalone Runtime**: `sakthai run --persona sakjules`
 - **Active Model Matrix**:
   - `primary`: `huggingface` / `deepseek-ai/DeepSeek-V4.1-Flash`
   - `fallback`: `ollama-cloud / gpt-oss:120b`
@@ -91,7 +91,7 @@ Connected MCP & Platform Tools:
 
 ## 📋 5. Verified Execution Log
 
-1. **Persona & Hermes Profile Synchronization**: Verified [`personas/sakjules/`](file:///home/sak/Sak-Family-Agent/personas/sakjules) and [`infra/hermes-agents/profiles/sakjules/`](file:///home/sak/Sak-Family-Agent/infra/hermes-agents/profiles/sakjules) carry identical `SOUL.md`, `PLAN.md`, `CYCLE.md`, `MEMORY.md`, `HANDOFF.md`, and `BACKPACK.md` files with zero unpinned `@latest` npx commands.
+1. **Persona Working Files Alignment**: Verified [`personas/sakjules/`](file:///home/sak/Sak-Family-Agent/personas/sakjules) carries valid `SOUL.md`, `PLAN.md`, `CYCLE.md`, `MEMORY.md`, `HANDOFF.md`, and `BACKPACK.md` files with zero unpinned `@latest` npx commands.
 2. **Cross-Persona Guardrail & Web Server Parity**: Verified `agent/guardrails.py` and `web/server.py` parity checks pass (`tests/test_persona_guardrails_parity.py`, `tests/test_persona_web_server_parity.py`).
 3. **Unified Agent Platform Integration**: Verified `sakthai platform` (`detect-deps`, `check-safety`, `skills`, `export-harness`, `antigravity`, `wrap-cmd`) and `ModelTier` presets.
 

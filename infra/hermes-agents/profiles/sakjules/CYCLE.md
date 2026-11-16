@@ -1,1 +1,0 @@
-../../../../personas/sakjules/CYCLE.md

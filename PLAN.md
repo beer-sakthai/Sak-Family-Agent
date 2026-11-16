@@ -38,6 +38,7 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-16 **GitHub Agentic Workflows & Gemini Reviewer fixes** — Merged PR #1860 and PR #1861 to `main`, applied `copilot-requests: write` token auth and Gemini excluded-only PR guard, and closed the 8 open `[aw]` issues (`#1837`, `#1839`, `#1850`, `#1851`, `#1852`, `#1853`, `#1854`, `#1859`).
 - [x] 2026-11-16 **6-Persona Evaluation & Readiness Pipeline** — Added 4-layer evaluation across all 6 personas (`sakthai eval personas`, `sakthai eval summary --persona / --all-personas`, `saktan` v9 rubric in `SOUL.md`, 6-persona `lm-eval` soul-following dataset/regex, and `diagnose_personas.py` working-files check).
 - [x] 2026-11-16 **6-Persona Working & Analysis Files Alignment** — Audited and synchronized all 8 markdown/analysis files (`SOUL.md`, `PLAN.md`, `CYCLE.md`, `MEMORY.md`, `HANDOFF.md`, `BACKPACK.md`, `AGENTS.md`, `README.md`) across `personas/<agent>/` with actual on-disk skill counts (`285/63/139/45/68/9` + `19` shared), primary skills (`Sak-ocr-and-documents`), canonical paths (`personas/sakthai/`, `personas/<agent>/evolution/`), and Hermes lead profile (`sakthai` on `~/.hermes`).
+- [/] **Remove Hermes framework — personas run standalone via `sakthai`** — Delete `infra/hermes-agents/`, strip Hermes from the 6 persona working files, evolution code, scripts, tests, CI, configs, and current docs (skill bodies and historical journals left untouched).
 - [ ] **Revoke historical leaked credentials** ([`security/SECURITY_FIXES_PLAN.md`](./security/SECURITY_FIXES_PLAN.md) Fix #1) — Revoke the historical Composio consumer key, Mistral API key, and Kaggle API token in their provider dashboards and re-test dependent integrations (Fix #2 Web API Bearer Auth is already `[x]` done).
 - [ ] **GitHub Repository Settings — Required Status Check De-duplication** — Drop `Quality gates` from `main`'s required status checks in GitHub repo settings so the duplicate `quality` job in `.github/workflows/repository-security-quality.yml` can be removed (`ci.yml` already runs ruff, mypy, bandit, and pytest on Python 3.11 and 3.12).
 - [ ] **GitHub Repository Settings — Scorecard Non-Commit Checks** — `Branch-Protection`, `Code-Review` (requires a second human reviewer), and `CII-Best-Practices` ([`docs/cii-best-practices-answers.md`](./docs/cii-best-practices-answers.md)) require repository/external settings changes by Beer.
@@ -91,7 +92,7 @@ workspace runtime config under `infra/`.
 ### Source files
 
 - `docs/agent-diagnosis.md` for the standalone run checklist and runtime notes.
-- `infra/hermes-agents/` for the live agent profiles, systemd services, and deployment config.
+- `personas/` for the persona profiles and runtime config.
 - `product/TODO.md` for the product delivery checklist.
 
 ---

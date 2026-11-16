@@ -1,22 +1,21 @@
 # Self-evolution for the six Sak Family agents
 
-`evolve_agent.sh` wires this framework to the six Sak Family agents that run on
-the local Hermes gateway, so each can evolve its own skills and keep the result
+`evolve_agent.sh` wires this framework to the six Sak Family agents that run
+standalone via `sakthai`, so each can evolve its own skills and keep the result
 inside its standalone repo export before it is published.
 
-| agent      | profile dir (`HERMES_AGENT_REPO`)        | standalone repo export                    |
+| agent      | persona directory                        | standalone repo export                    |
 |------------|------------------------------------------|-------------------------------------------|
-| `sakthai`  | `~/.hermes`                              | `build/agent-repos/sakthai`               |
-| `sakking`  | `~/.hermes/profiles/sakking`             | `build/agent-repos/sakking`               |
-| `saksee`   | `~/.hermes/profiles/saksee`              | `build/agent-repos/saksee`                |
-| `saksit`   | `~/.hermes/profiles/saksit`              | `build/agent-repos/saksit`                |
-| `saktan`   | `~/.hermes/profiles/saktan`              | `build/agent-repos/saktan`                |
-| `sakjules` | `~/.hermes/profiles/sakjules`            | `build/agent-repos/sakjules`              |
+| `sakthai`  | `personas/sakthai`                       | `build/agent-repos/sakthai`               |
+| `sakking`  | `personas/sakking`                       | `build/agent-repos/sakking`               |
+| `saksee`   | `personas/saksee`                        | `build/agent-repos/saksee`                |
+| `saksit`   | `personas/saksit`                        | `build/agent-repos/saksit`                |
+| `saktan`   | `personas/saktan`                        | `build/agent-repos/saktan`                |
+| `sakjules` | `personas/sakjules`                      | `build/agent-repos/sakjules`              |
 
-> The lead, **SakThai**, lives on the reserved default profile (`~/.hermes`).
-> "Hermes" is only the framework. Source of truth for repo export is the
-> `Sak-Family-Agent` workspace and its `personas/` plus `infra/hermes-agents/`
-> profile trees.
+> The lead, **SakThai**, coordinates the family and runs standalone via `sakthai`.
+> Source of truth for repo export is the `Sak-Family-Agent` workspace and its
+> `personas/` directory tree.
 
 ## Six-stage workflow
 

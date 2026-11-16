@@ -1,10 +1,9 @@
 """Security invariants for every persona's ``config/`` directory.
 
 ``sakthai run --persona X`` launches the stdio MCP servers listed in
-``personas/X/config/mcp.json``, and ``config.yaml`` is the Hermes runtime
+``personas/X/config/mcp.json``, and ``config.yaml`` is the runtime
 config each persona is deployed with. Both are edited by hand and by the
-runtime itself (Hermes writes an "always allow" answer straight into
-``command_allowlist``), so nothing but a test keeps them safe:
+agent runtime itself, so nothing but a test keeps them safe:
 
 * every ``npx`` server is pinned to an exact version. ``npx -y pkg@latest``
   installs and runs whatever was published last, on every launch, with no

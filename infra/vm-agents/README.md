@@ -1,10 +1,10 @@
-# VM Agent Deployment (Hermes-Free)
+# VM Agent Deployment
 
-This directory contains assets for deploying the six Sak Family Telegram agents on a Linux VM without the Hermes runtime. The deployment uses `systemd` user services, with one service instance per agent, managed by a single templated unit file.
+This directory contains assets for deploying the six Sak Family Telegram agents on a Linux VM. The deployment uses `systemd` user services, with one service instance per agent, managed by a single templated unit file.
 
 ## Architecture
 
-The goal is a clean, repeatable, and robust deployment that is independent of the Hermes framework.
+The goal is a clean, repeatable, and robust deployment.
 
 - **`systemd` User Services**: Each agent runs as its own `systemd` service under the user account (`systemctl --user`). This allows the agents to start on user login and be managed without root privileges.
 - **Templated Service Unit**: A single file, `systemd/sakthai-telegram@.service`, serves as a template for all six agents. When you enable `sakthai-telegram@sakking.service`, `systemd` automatically substitutes `%i` with `sakking`.

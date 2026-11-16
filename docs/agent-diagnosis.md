@@ -8,20 +8,20 @@ SakKing, SakThai, SakSee, SakSit, SakTan, and SakJules.
 The current state is:
 
 - the shared persona and export scaffolding is in place for all six agents;
-- the runtime config tree lives under `infra/hermes-agents/`;
-- SakTan and SakJules still rely on the runtime profile layer for their live configuration;
+- the runtime config tree lives under `personas/<persona>/config/`;
+- all six personas run standalone via `sakthai`;
 - the standalone export/build path exists for each persona.
 
 ## Current Read
 
 | Agent | Identity | Runtime | Standalone | Tools / MCP | Docs |
 |---|---:|---:|---:|---:|---:|
-| SakKing | 5 | 4 | 4 | 5 | 4 |
-| SakThai | 5 | 4 | 4 | 5 | 4 |
-| SakSee | 5 | 4 | 4 | 5 | 4 |
-| SakSit | 5 | 4 | 4 | 4 | 4 |
-| SakTan | 5 | 3 | 4 | 3 | 3 |
-| SakJules | 5 | 3 | 4 | 4 | 3 |
+| SakKing | 5 | 5 | 5 | 5 | 5 |
+| SakThai | 5 | 5 | 5 | 5 | 5 |
+| SakSee | 5 | 5 | 5 | 5 | 5 |
+| SakSit | 5 | 5 | 5 | 5 | 5 |
+| SakTan | 5 | 5 | 5 | 5 | 5 |
+| SakJules | 5 | 5 | 5 | 5 | 5 |
 
 ## Runtime Inventory
 
@@ -29,10 +29,9 @@ The current state is:
 
 | Area | Files | Why it matters |
 |---|---|---|
-| Live agent config tree | `infra/hermes-agents/` | Holds live profile configs, deploy tooling, and service definitions. |
-| Service launchers | `infra/hermes-agents/systemd/*.service` | Start each live bot/profile on the host. |
-| Default/profile configs | `infra/hermes-agents/default/`, `infra/hermes-agents/profiles/{saksee,sakking,saksit,saktan,sakjules}/` | Store the live persona/config payloads loaded by deployment scripts. |
-| Deployment helpers | `Makefile`, `scripts/export_agent_repo.py`, `scripts/diagnose_personas.py` | Connect the config tree to export and verification workflows. |
+| Live agent config tree | `personas/<persona>/config/` | Holds persona configs, model settings, and security guardrails. |
+| Persona working files | `personas/<persona>/{SOUL,PLAN,CYCLE,MEMORY,HANDOFF,BACKPACK}.md` | Operational state and behavioral instructions per persona. |
+| Deployment helpers | `Makefile`, `scripts/export_agent_repo.py`, `scripts/diagnose_personas.py` | Connect the persona tree to export and verification workflows. |
 
 ### Documentation surfaces
 
@@ -40,7 +39,7 @@ The current state is:
 |---|---|
 | Workspace guidance | `README.md`, `CLAUDE.md` |
 | Shared identity docs | `docs/SOUL.md`, `docs/USER.md`, `docs/OPERATING_CONTRACT.md` |
-| Runtime notes | `infra/hermes-agents/README.md` |
+| Runtime notes | `docs/runtimes.md` |
 | Product delivery | `product/PLAN.md`, `product/TODO.md` |
 
 ## Standalone Run Checklist
@@ -50,14 +49,12 @@ Use this as the minimum “can I run this agent by itself?” check.
 ### SakKing
 
 - Confirm `personas/sakking/SOUL.md` and `personas/sakking/config/` exist.
-- Confirm `infra/hermes-agents/profiles/sakking/SOUL.md` and `config.yaml` exist.
 - Confirm shared memory access is available.
 
 ### SakThai
 
-- Use the reserved `default` profile (SakThai is lead, per `CLAUDE.md`).
-- Confirm `infra/hermes-agents/default/SOUL.md` and `config.yaml` exist.
-- Confirm Hugging Face MCP access is configured.
+- Confirm `personas/sakthai/SOUL.md` and `personas/sakthai/config/` exist.
+- Confirm Hugging Face access is configured.
 - Confirm shared memory access is available.
 
 ### SakSee
@@ -75,14 +72,12 @@ Use this as the minimum “can I run this agent by itself?” check.
 ### SakTan
 
 - Confirm `personas/saktan/SOUL.md` and `personas/saktan/config/` exist.
-- Confirm `infra/hermes-agents/profiles/saktan/SOUL.md` and `config.yaml` exist.
-- Confirm the live runtime wiring for daily ops is present.
+- Confirm local Ollama access is configured.
 - Confirm shared memory access is available.
 
 ### SakJules
 
 - Confirm `personas/sakjules/SOUL.md` and `personas/sakjules/config/` exist.
-- Confirm `infra/hermes-agents/profiles/sakjules/SOUL.md` and `config.yaml` exist.
 - Confirm GitHub/MCP and automation access are configured.
 - Confirm shared memory access is available.
 
@@ -91,15 +86,15 @@ Use this as the minimum “can I run this agent by itself?” check.
 The family is structurally sound, but the highest-value cleanup areas are:
 
 1. keep the six-agent roster consistent everywhere;
-2. keep the standalone export path honest for SakTan and SakJules;
+2. keep the standalone export path honest for all personas;
 3. avoid drifting runtime docs across the workspace;
 4. keep the product tracker focused on active delivery work, not historical notes.
 
 ## Practical Read
 
 - SakKing: orchestrator.
-- SakThai: lead, Hugging Face specialist, reserved default profile.
+- SakThai: lead, Hugging Face specialist.
 - SakSee: web and browser specialist.
 - SakSit: social/content specialist.
-- SakTan: ops helper, runtime-profile dependent.
-- SakJules: automation and CI/CD, runtime-profile dependent.
+- SakTan: ops helper, local Ollama specialist.
+- SakJules: automation and CI/CD master.

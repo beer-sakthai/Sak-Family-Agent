@@ -1,1 +1,0 @@
-../../../personas/sakthai/BACKPACK.md

@@ -1,4 +1,4 @@
-"""Configuration and hermes-agent repo discovery."""
+"""Configuration and agent repo discovery."""
 
 import os
 from dataclasses import dataclass, field
@@ -13,11 +13,12 @@ _DEFAULT_LOCAL_MODEL = os.getenv("EVO_MODEL", "ollama_chat/qwen2.5-coder:1.5b")
 class EvolutionConfig:
     """Configuration for a self-evolution optimization run."""
 
-    # hermes-agent repo path. Discovered lazily and non-fatally so the config
+    # agent repo path. Discovered lazily and non-fatally so the config
     # can be constructed even when no repo is present (e.g. unit tests, or
-    # callers that pass an explicit path). Use resolve_hermes_agent_path() when
-    # an explicit override should win, or get_hermes_agent_path() to require one.
-    hermes_agent_path: Path | None = field(default_factory=lambda: _discover_hermes_agent_path())
+    # callers that pass an explicit path). Use resolve_agent_repo_path() when
+    # an explicit override should win, or get_agent_repo_path() to require one.
+    agent_repo_path: Path | None = None
+    hermes_agent_path: Path | None = None
 
     # Optimization parameters
     iterations: int = 10
@@ -60,57 +61,72 @@ class EvolutionConfig:
     output_dir: Path = field(default_factory=lambda: Path("./output"))
     create_pr: bool = True
 
+    def __post_init__(self) -> None:
+        if self.agent_repo_path is None and self.hermes_agent_path is not None:
+            self.agent_repo_path = self.hermes_agent_path
+        elif self.agent_repo_path is not None and self.hermes_agent_path is None:
+            self.hermes_agent_path = self.agent_repo_path
+        elif self.agent_repo_path is None and self.hermes_agent_path is None:
+            discovered = _discover_agent_repo_path()
+            self.agent_repo_path = discovered
+            self.hermes_agent_path = discovered
 
-def _discover_hermes_agent_path() -> Path | None:
-    """Best-effort hermes-agent repo discovery that never raises.
 
-    Returns the discovered path, or None when no repo can be found. Used as
-    the EvolutionConfig default so construction never crashes; callers that
-    truly require the repo should use get_hermes_agent_path().
-    """
+def _discover_agent_repo_path() -> Path | None:
+    """Best-effort agent repo discovery that never raises."""
     try:
-        return get_hermes_agent_path()
+        return get_agent_repo_path()
     except FileNotFoundError:
         return None
 
 
-def get_hermes_agent_path() -> Path:
-    """Discover the hermes-agent repo path.
+_discover_hermes_agent_path = _discover_agent_repo_path
+
+
+def get_agent_repo_path() -> Path:
+    """Discover the agent repo path.
 
     Priority:
-    1. HERMES_AGENT_REPO env var
-    2. ~/.hermes/hermes-agent (standard install location)
-    3. ../hermes-agent (sibling directory)
+    1. SAK_AGENT_REPO / HERMES_AGENT_REPO env var
+    2. Repository root containing personas/sakthai
+    3. ~/.sakthai / ~/.hermes install locations
+    4. Sibling directory
     """
-    env_path = os.getenv("HERMES_AGENT_REPO")
-    if env_path:
-        p = Path(env_path).expanduser()
-        if p.exists():
-            return p
+    for var in ("SAK_AGENT_REPO", "HERMES_AGENT_REPO"):
+        env_path = os.getenv(var)
+        if env_path:
+            p = Path(env_path).expanduser()
+            if p.exists():
+                return p
 
-    home_path = Path.home() / ".hermes" / "hermes-agent"
-    if home_path.exists():
-        return home_path
+    for home_candidate in (
+        Path.home() / ".sakthai" / "sakthai-agent",
+        Path.home() / ".hermes" / "hermes-agent",
+    ):
+        if home_candidate.exists():
+            return home_candidate
 
-    sibling_path = Path(__file__).parent.parent.parent / "hermes-agent"
-    if sibling_path.exists():
-        return sibling_path
+    for sibling_path in (
+        Path(__file__).parent.parent.parent / "sakthai-agent",
+        Path(__file__).parent.parent.parent / "hermes-agent",
+    ):
+        if sibling_path.exists():
+            return sibling_path
 
     raise FileNotFoundError(
-        "Cannot find hermes-agent repo. Set HERMES_AGENT_REPO env var "
-        "or ensure it exists at ~/.hermes/hermes-agent"
+        "Cannot find agent repo. Set SAK_AGENT_REPO env var "
+        "or ensure it exists at ~/.sakthai/sakthai-agent"
     )
 
 
-def resolve_hermes_agent_path(hermes_repo: str | None = None) -> Path:
-    """Return the hermes-agent repo path, honoring an explicit override.
+get_hermes_agent_path = get_agent_repo_path
 
-    An explicit path (for example from ``--hermes-repo``) is expanded and used
-    as-is, taking precedence over auto-discovery. This lets callers point at a
-    repo in a non-default location without the tool crashing just because
-    ``~/.hermes/hermes-agent`` happens to be absent. When no override is given,
-    falls back to :func:`get_hermes_agent_path`.
-    """
-    if hermes_repo:
-        return Path(hermes_repo).expanduser()
-    return get_hermes_agent_path()
+
+def resolve_agent_repo_path(repo: str | None = None) -> Path:
+    """Return the agent repo path, honoring an explicit override."""
+    if repo:
+        return Path(repo).expanduser()
+    return get_agent_repo_path()
+
+
+resolve_hermes_agent_path = resolve_agent_repo_path

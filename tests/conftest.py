@@ -14,7 +14,7 @@ from sakthai.memory.store import MemoryStore
 # Ensure loopback addresses bypass any ambient HTTP/HTTPS proxy during test runs.
 for _k in ("NO_PROXY", "no_proxy"):
     _cur = os.environ.get(_k, "")
-    _hosts = [h.strip() for h in _cur.split(",") if h.strip()]
+    _hosts = [h.strip() for h in _cur.split(",") if h.strip() and h.strip() != "[::1]"]
     for _lh in ("127.0.0.1", "localhost"):
         if _lh not in _hosts:
             _hosts.append(_lh)

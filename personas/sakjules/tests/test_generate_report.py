@@ -93,7 +93,7 @@ def test_build_report_story_elements(tmp_path):
                 tables_info.append(element._cellvalues)
 
         # Verify key sections exist in the story
-        assert any("Hermes Agent Self-Evolution" in text for text in paragraph_texts)
+        assert any("Sak Agent Self-Evolution" in text for text in paragraph_texts)
         assert any("Phase 1 Validation Report" in text for text in paragraph_texts)
         assert any("Results" in text for text in paragraph_texts)
         assert any("Safety and Guardrails" in text for text in paragraph_texts)

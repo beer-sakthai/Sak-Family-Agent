@@ -2,7 +2,7 @@
 
 > **Agent**: SakKing 👑 (General Assistant & Runner (Deputy 1))
 > **Repository**: `Sak-Family-Agent`
-> **Hermes Profile**: `infra/hermes-agents/profiles/sakking/`
+> **Runtime**: Standalone sakthai (SAKTHAI_HOME=~/.sakking)
 > **Cycle Target**: >75% Benchmark Accuracy & $0.00 USD Financial Spend
 
 ---
@@ -42,7 +42,7 @@ flowchart LR
 
 ### Stage 1: 💭 Dream (Ideation & Pre-Task Alignment)
 - **Vision**: Break complex multi-step engineering and operational requests into clear, testable subtasks and route domain work to specialists early.
-- **Goal**: Full alignment across Google Antigravity IDE, AGY CLI (`agy`), Google ADK (`agents-cli`), Hermes Agent (`infra/hermes-agents/profiles/sakking/`), and `sakthai --persona sakking`.
+- **Goal**: Full alignment across Google Antigravity IDE, AGY CLI (`agy`), Google ADK (`agents-cli`), and standalone `sakthai --persona sakking`.
 
 ---
 
