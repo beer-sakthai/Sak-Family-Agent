@@ -22,6 +22,7 @@
   <img alt="Version 2.0.0" src="https://img.shields.io/badge/version-2.0.0-2563EB">
   <img alt="Python 3.11 | 3.12" src="https://img.shields.io/badge/python-3.11%20%7C%203.12-3776AB?logo=python&amp;logoColor=white">
   <img alt="6 personas" src="https://img.shields.io/badge/personas-6-7C3AED">
+  <img alt="480 skills" src="https://img.shields.io/badge/skills-480-10B981">
   <a href="LICENSE"><img alt="License: custom IP license" src="https://img.shields.io/badge/license-custom%20IP%20license-4B5563"></a>
 </p>
 
@@ -37,7 +38,7 @@ The project is built around the six-stage cycle **Dream → Hope → Care → Jo
 - **Persistent memory** — SQLite-backed facts and observations stored under `~/.sakthai`, with search, tagging, consolidation, versioned JSON snapshots ([format](data/README.md)), and sync helpers.
 - **Multiple providers** — Anthropic, Google Gemini, OpenAI-compatible endpoints, Ollama, gateways, and Hugging Face inference providers.
 - **MCP** — a dependency-light stdio server plus discovery and namespaced connections to external MCP servers.
-- **Six personas** — SakThai, SakSee, SakJules, SakKing, SakSit, and SakTan, each with its own identity, skills, default model, and memory.
+- **Six personas** — SakThai, SakSee, SakJules, SakKing, SakSit, and SakTan, each with its own identity, curated skills (480 on-disk skills under the searchable `Sak<Agent>-<domain>-<topic>` taxonomy), default model, and memory.
 - **Team and client workflows** — declarative multi-persona pipelines and ServiceQuoteBot client workspace provisioning.
 - **Unified Agent Platform** — core integration subsystems (`sakthai.agent_platform`) for accidental data loss prevention (`DataLossGuardrail`), reactive python dependency manager detection & isolated execution runners (`wrap_with_isolated_runner`), progressive disclosure skills rendering (`render_skills_progressive_summary`), Jules remote task delegation, dual Antigravity/ADK execution engine with model selection presets (`ModelTier`), and Harness AI agent pipeline spec generation.
 - **Dashboard** — a Next.js frontend backed by the SakThai HTTP API for personas, metrics, sessions, memory, audit data, and workflows.
@@ -56,14 +57,16 @@ The project is built around the six-stage cycle **Dream → Hope → Care → Jo
   </tr>
 </table>
 
-| Persona | Role | Default model |
-|---|---|---|
-| **SakThai** (lead) | Main Lead & HF Master | `deepseek-ai/DeepSeek-V4.1-Flash` |
-| **SakSee** | Web / Browser Specialist | `deepseek-ai/DeepSeek-V4.1-Flash` |
-| **SakJules** | Master of GitHub, CI/CD & Automation | `deepseek-ai/DeepSeek-V4.1-Flash` |
-| **SakKing** | General Assistant & Runner | `Qwen/Qwen3-Coder-30B-A3B-Instruct` |
-| **SakSit** | Social / Content Specialist | `deepseek-ai/DeepSeek-V4-Flash` |
-| **SakTan** | Daily Ops & Rhythm | `sakthai` on a local Ollama |
+| Persona | Role | Skills | Default model |
+|---|---|---|---|
+| **SakThai** (lead) | Main Lead & HF Master | 170 skills | `deepseek-ai/DeepSeek-V4.1-Flash` |
+| **SakSee** | Web / Browser Specialist | 105 skills | `deepseek-ai/DeepSeek-V4.1-Flash` |
+| **SakJules** | Master of GitHub, CI/CD & Automation | 56 skills | `deepseek-ai/DeepSeek-V4.1-Flash` |
+| **SakKing** | General Assistant & Runner | 59 skills | `Qwen/Qwen3-Coder-30B-A3B-Instruct` |
+| **SakSit** | Social / Content Specialist | 45 skills | `deepseek-ai/DeepSeek-V4-Flash` |
+| **SakTan** | Daily Ops & Rhythm | 26 skills | `sakthai` on a local Ollama |
+
+> The six personas collectively host **480 on-disk skills** (461 persona overlays + 19 universal shared skills) adhering to a standardized frontmatter schema and the searchable `Sak<Agent>-<domain>-<topic>` taxonomy.
 
 Every persona directory (`personas/<name>/`) carries the **6 core working files** — `SOUL.md` (identity, charge system v6, and self-evaluation v9 rubric), `PLAN.md` (v7 task decomposition and routing), `CYCLE.md` (v8 6-stage execution and v9 `CYCLE EVAL: <name>` rubric), `MEMORY.md` (active memory and lessons), `HANDOFF.md` (cross-persona handoff contract), and `BACKPACK.md` (domain toolbelt and skills inventory) — along with `config/config.yaml`, `config/workspace.yaml`, `config/mcp.json`, and its own DSPy/GEPA self-evolution engine (`personas/<name>/evolution/`).
 
