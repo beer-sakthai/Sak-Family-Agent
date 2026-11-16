@@ -8,6 +8,7 @@ on:
   skip-if-match: 'is:pr is:open in:title "[agents-md-sync] "'
 permissions:
   contents: read
+  copilot-requests: write
   issues: read
   pull-requests: read
 tools:
