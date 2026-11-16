@@ -35,6 +35,11 @@ class TestRepoHygiene(unittest.TestCase):
         self.assertIn("apps/*/.agents/", gitignore)
         self.assertIn(".workflow_runs/", gitignore)
 
+    def test_readme_documents_the_real_canonical_package_path(self) -> None:
+        readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("personas/sakthai/", readme)
+        self.assertNotIn("personas/sakthai/sakthai/", readme)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -181,7 +181,7 @@ make dashboard-test
 ## Repository layout
 
 ```text
-personas/sakthai/sakthai/  Canonical installable Python package
+personas/sakthai/          Canonical installable Python package
 personas/<name>/           Persona overlays, skills, and configuration
 apps/sak_agent_dashboard/  Next.js dashboard
 services/                  Service integrations and supporting services
@@ -202,8 +202,8 @@ Install the full development environment and run the main checks:
 uv sync --all-extras
 make test
 make lint
-uv run mypy personas/sakthai/sakthai
-uv run bandit -c pyproject.toml -r personas/sakthai/sakthai
+uv run mypy personas/sakthai
+uv run bandit -c pyproject.toml -r personas/sakthai
 ```
 
 Additional repository commands:
