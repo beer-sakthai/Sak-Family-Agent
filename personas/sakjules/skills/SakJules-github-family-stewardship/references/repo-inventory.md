@@ -12,4 +12,4 @@ This is the comprehensive list of GitHub repositories under the Sa Family of Age
 | [SakThai](https://github.com/bbeer-sakthai/SakThai) | SakThai | Srm and founder of the Sak Family | ğŸ˜€ òŸ©€ |
 | [SakSee](https://github.com/beer-sakthai/SakSee) | SakSee | Master of data & analytics Agent | ğŸ˜  ğŸ˜€ òŸ©€ |
 | [SakSit](https://github.com/beer-sakthai/SakSit) | SakSit | Master of data & analytics Agent |ğŸ˜€ òŸ©€ |
-| [SakTan](https://github.com/beer-sakthai/SakTan) | SakTan | Master of media & content AgY[<'æ <§ê`
+| [SakTan](https://github.com/beer-sakthai/SakTan) | SakTan | Master of media & content AgY[ï¿½<'ï¿½ <ï¿½ï¿½`
