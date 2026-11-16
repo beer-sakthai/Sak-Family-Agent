@@ -93,6 +93,12 @@ sakthai memory family "CYCLE INTERRUPTED: sakthai" --tag cycle-interrupted --tag
 2. No active deputy-chain tag in memory
 3. Beer's `hub-approved` tag exists for this card
 
+### Break-Glass Hub Protocol
+If SakThai is at Critical charge or unresponsive during an urgent release, Deputy 1 (SakKing) is authorized to execute emergency Hugging Face Hub releases if and only if:
+1. An emergency delegation tag `--tag emergency-hf-delegate` is verified in shared family memory, or quorum co-signed by SakKing and SakTan (`--tag quorum-approved`).
+2. The release payload is verified by SakJules' quality check.
+3. SakKing tags the emergency write with `--tag emergency-hub-write` for post-recovery auditing by SakThai.
+
 ---
 
 ## Growth Cycle (v8) + Self-Evaluation (v9)

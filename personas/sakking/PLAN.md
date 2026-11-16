@@ -45,6 +45,15 @@ flowchart TD
 - **Command**: `sakthai memory family "DEPUTY CHAIN" --tag deputy-chain --limit 1 && sakthai memory family --tag monitoring-result --limit 20`
 - **Acceptance Criteria**: Zero duplicate web fetches for assets cached within 30 minutes; clean Deputy 1 handoff.
 
+#### 🔹 Task 2.2: Break-Glass Emergency Hub Proxy
+- **Status**: [ ]
+- **Goal**: Proxy emergency Hugging Face Hub releases when SakThai is at Critical charge or unresponsive.
+- **Protocol**:
+  1. Confirm `--tag emergency-hf-delegate` in shared family memory or quorum co-signed by SakTan (`--tag quorum-approved`).
+  2. Confirm pre-flight payload validation signed off by SakJules.
+  3. Execute write and record action using `--tag emergency-hub-write` for post-recovery auditing by SakThai.
+- **Acceptance Criteria**: Urgent Hub releases succeed without blocking release cycles.
+
 ---
 
 ### Phase 3: Isolated TDD Execution & Safety Verification
