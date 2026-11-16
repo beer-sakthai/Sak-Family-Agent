@@ -9,6 +9,10 @@ permissions:
   pull-requests: write
   issues: write
 
+concurrency:
+  group: gemini-code-review-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
 jobs:
   gemini-code-review:
     runs-on: ubuntu-latest
