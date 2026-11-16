@@ -1,0 +1,62 @@
+name: Cleanup PR Caches
+
+on:
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: cache-cleanup-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  cleanup-cache:
+    name: Purge closed PR caches
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Delete caches for PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          if [ -n "${PR_NUMBER:-}" ]; then
+            ref="refs/pull/${PR_NUMBER}/merge"
+            echo "Searching caches for closed PR #${PR_NUMBER} (${ref})..."
+            caches=$(gh cache list --ref "${ref}" --limit 100 --json id --jq '.[].id' 2>/dev/null || true)
+            if [ -z "${caches}" ]; then
+              echo "No caches found for ${ref}."
+            else
+              for cache_id in ${caches}; do
+                echo "Deleting cache ID: ${cache_id}"
+                gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/caches/${cache_id}" || true
+              done
+              echo "PR cache cleanup finished."
+            fi
+          else
+            echo "Manual sweep: searching all closed PR caches..."
+            open_prs=$(gh pr list --state open --limit 200 --json number --jq '.[].number' 2>/dev/null || true)
+            all_caches=$(gh cache list --limit 500 --json id,ref 2>/dev/null || true)
+            echo "$all_caches" | jq -c '.[]' | while read -r item; do
+              cid=$(echo "$item" | jq -r '.id')
+              cref=$(echo "$item" | jq -r '.ref')
+              if [[ "$cref" =~ ^refs/pull/([0-9]+)/merge$ ]]; then
+                pr_num="${BASH_REMATCH[1]}"
+                if ! echo "$open_prs" | grep -Fqx "$pr_num"; then
+                  echo "Deleting orphaned cache ${cid} for closed PR #${pr_num}"
+                  gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/caches/${cid}" || true
+                fi
+              fi
+            done
+          fi
