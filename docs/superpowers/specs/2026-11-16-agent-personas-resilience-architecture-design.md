@@ -1,9 +1,9 @@
 # House of Sak — 6-Agent Personas Resilience Architecture Specification
 
-> **Date**: 2026-11-16  
-> **Status**: Approved  
-> **Target Repository**: `Sak-Family-Agent`  
-> **Monorepo Root**: `/home/sak/Sak-Family-Agent`  
+> **Date**: 2026-11-16
+> **Status**: Approved
+> **Target Repository**: `Sak-Family-Agent`
+> **Monorepo Root**: `/home/sak/Sak-Family-Agent`
 > **Cost Policy**: $0.00 USD Financial Spend (100% Local & Free Tier Execution)
 
 ---
