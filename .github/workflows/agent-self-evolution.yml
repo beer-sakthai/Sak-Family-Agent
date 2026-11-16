@@ -61,4 +61,4 @@ jobs:
         run: uv pip install --system -e ".[dev]"
 
       - name: Tests (pytest)
-        run: uv run pytest tests/ -q
+        run: pytest tests/ -q
