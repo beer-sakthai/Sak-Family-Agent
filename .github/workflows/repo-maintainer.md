@@ -8,6 +8,7 @@ on:
   skip-if-match: 'is:pr is:open in:title "[maintainer] "'
 permissions:
   contents: read
+  copilot-requests: write
   issues: read
   pull-requests: read
 tools:

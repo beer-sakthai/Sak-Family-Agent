@@ -38,18 +38,29 @@ jobs:
 
       - name: Get PR Details
         id: pr
-        run: |
-          PR_JSON=$(gh api repos/${{ github.repository }}/pulls/${{ github.event.issue.number }})
-          echo "head_sha=$(echo $PR_JSON | jq -r .head.sha)" >> $GITHUB_OUTPUT
-          echo "base_sha=$(echo $PR_JSON | jq -r .base.sha)" >> $GITHUB_OUTPUT
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          PR_JSON=$(gh api "repos/${REPO}/pulls/${PR_NUMBER}")
+          echo "head_sha=$(echo "$PR_JSON" | jq -r .head.sha)" >> "$GITHUB_OUTPUT"
+          echo "base_sha=$(echo "$PR_JSON" | jq -r .base.sha)" >> "$GITHUB_OUTPUT"
+          REVIEWABLE_COUNT=$(gh api --paginate "repos/${REPO}/pulls/${PR_NUMBER}/files" --jq '.[].filename' \
+            | grep -vE '(\.md$|\.txt$|(^|/)package-lock\.json$|\.lock$|\.lock\.yml$)' \
+            | wc -l | tr -d ' ')
+          if [ "${REVIEWABLE_COUNT}" -gt 0 ]; then
+            echo "has_reviewable_files=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Info: All changed files in PR #${PR_NUMBER} match excluded patterns; skipping Gemini review."
+            echo "has_reviewable_files=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - uses: truongnh1992/gemini-ai-code-reviewer@f9ab8e6b6ec8507aff632c159b5b8c0a771be215 # main
+      - name: Run Gemini AI Code Reviewer
+        if: steps.pr.outputs.has_reviewable_files == 'true'
+        uses: truongnh1992/gemini-ai-code-reviewer@f9ab8e6b6ec8507aff632c159b5b8c0a771be215 # main
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: gemini-3.8-flash # Optional, default is `gemini-3.8-flash`
-          # Keep prose and npm lockfiles out of review, but include YAML so
-          # workflow-only pull requests can be reviewed.
-          EXCLUDE: "*.md,*.txt,package-lock.json"
+          EXCLUDE: "*.md,*.txt,package-lock.json,*.lock,*.lock.yml"
