@@ -247,8 +247,8 @@ def _tests() -> dict[str, Any]:
 
 
 def _skills() -> dict[str, Any]:
-    library = REPO_ROOT / "library"
-    categories = sorted(p for p in library.iterdir() if p.is_dir()) if library.is_dir() else []
+    library = REPO_ROOT / "personas" / "sakthai"
+    categories = sorted(p for p in library.iterdir() if p.is_dir() and p.name != "skills") if library.is_dir() else []
     shared = _skill_dirs(REPO_ROOT / "personas" / "shared" / "skills")
     return {
         "shared": [p.name for p in shared],

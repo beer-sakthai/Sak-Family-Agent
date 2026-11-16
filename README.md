@@ -182,6 +182,8 @@ sakthai mcp ping [name]                                    # ping configured MCP
 sakthai mcp tools                                          # list tools exposed by external MCP servers
 sakthai platform skills                                    # progressive disclosure of available skills
 sakthai platform antigravity "Inspect repo" --tier pro     # run Antigravity agent with model tier
+sakthai platform export-harness --name "ReviewBot" --task "Review PR" # export Harness v1 pipeline agent spec
+agent-workflow list                                        # list registered durable agent workflows
 ```
 
 ### Run the Dashboard
@@ -199,15 +201,15 @@ cd apps/sak_agent_dashboard && npm ci && npm run dev
 ## Repository Layout
 
 ```text
-personas/sakthai/          Canonical installable Python package
-personas/<name>/           Persona overlays, skills, and configuration
-apps/sak_agent_dashboard/  Next.js dashboard
-services/                  Service integrations and supporting services
-tests/                     Pytest test suite (2,811 unit tests)
-docs/                      Architecture, operations, security, and user guides
-scripts/                   Repository and maintenance tooling
-library/                   Curated shared skills and reference material
-.github/workflows/         CI, security, evaluation, and maintenance workflows
+personas/sakthai/              Canonical installable Python package
+personas/<name>/               Persona overlays, skills, and configuration
+apps/sak_agent_dashboard/      Next.js dashboard
+apps/agent_workflow_framework/ Standalone durable workflow execution framework & CLI
+services/                      Service integrations and supporting services
+tests/                         Pytest test suite (2,811 unit tests)
+docs/                          Architecture, operations, security, and user guides
+scripts/                       Repository and maintenance tooling
+.github/workflows/             CI, security, evaluation, and maintenance workflows
 ```
 
 ---
@@ -222,6 +224,7 @@ make test                                      # run full pytest suite (enforces
 make lint                                      # run Ruff linter & formatter checks
 uv run mypy personas/sakthai                   # run strict type checker
 uv run bandit -c pyproject.toml -r personas/sakthai  # run security vulnerability scanner
+uv run pytest tests/test_persona_structure_parity.py tests/test_repo_hygiene.py
 ```
 
 Additional repository tooling:
