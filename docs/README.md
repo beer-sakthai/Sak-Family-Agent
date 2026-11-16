@@ -16,6 +16,14 @@ Project documentation for SakThai.
 - [og_parity_audit.md](./og_parity_audit.md) — comparison with the original SakThai.
 - [sakthai-live-connect-plan.md](./sakthai-live-connect-plan.md) — Phase 5–8 Live Connect & Robust Agent Runtime execution plan.
 
+## Architecture Specifications & Implementation Plans
+
+Formal architecture designs and implementation plans authored via Superpowers:
+- [2026-11-16 Agent Personas Resilience Architecture Spec](./superpowers/specs/2026-11-16-agent-personas-resilience-architecture-design.md)
+- [2026-11-16 GitHub Workflows & Cache Optimization Spec](./superpowers/specs/2026-11-16-github-workflows-and-cache-optimization-design.md)
+- [2026-11-16 Agent Personas Resilience Implementation Plan](./superpowers/plans/2026-11-16-agent-personas-resilience.md)
+- [2026-11-16 GitHub Workflows & Cache Optimization Plan](./superpowers/plans/2026-11-16-github-workflows-and-cache-optimization.md)
+- [2026-11-16 Update Every README Implementation Plan](./superpowers/plans/2026-11-16-update-every-readme.md)
 
 For the working cycle, see the stage docs in the repo root
 ([SOUL.md](../SOUL.md), [Dream.md](./cycle/Dream.md) → [Growth.md](./cycle/Growth.md)).
