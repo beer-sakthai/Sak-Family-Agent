@@ -143,6 +143,35 @@ class TestPersonaStructureParity(unittest.TestCase):
             "infra/hermes-agents must not exist; personas run standalone via sakthai",
         )
 
+    def test_evolve_agent_script_byte_identical_across_all_personas(self) -> None:
+        """Ensure evolve_agent.sh is byte-identical across all 6 personas."""
+        base_content = (REPO_ROOT / "personas" / PERSONAS[0] / "evolve_agent.sh").read_bytes()
+        for persona in PERSONAS[1:]:
+            with self.subTest(persona=persona):
+                content = (REPO_ROOT / "personas" / persona / "evolve_agent.sh").read_bytes()
+                self.assertEqual(
+                    content,
+                    base_content,
+                    f"personas/{persona}/evolve_agent.sh differs from personas/{PERSONAS[0]}/evolve_agent.sh",
+                )
+
+    def test_evolve_agent_script_has_no_unpinned_pip_install(self) -> None:
+        """Prevent Scorecard Pinned-Dependencies alerts (pipCommand not pinned by hash)."""
+        import re
+
+        pip_install_re = re.compile(r"(?<!uv\s)(?<!uv\s-q\s)\b(pip|pip3)\s+install\b")
+        for persona in PERSONAS:
+            with self.subTest(persona=persona):
+                script_path = REPO_ROOT / "personas" / persona / "evolve_agent.sh"
+                script_text = script_path.read_text(encoding="utf-8")
+                self.assertNotRegex(
+                    script_text,
+                    pip_install_re,
+                    f"personas/{persona}/evolve_agent.sh contains unpinned pip/pip3 install command",
+                )
+                self.assertIn("command -v uv", script_text)
+                self.assertIn("uv pip install", script_text)
+
 
 if __name__ == "__main__":
     unittest.main()
