@@ -219,6 +219,44 @@ class TestPersonaStructureParity(unittest.TestCase):
                 self.assertIn("command -v uv", script_text)
                 self.assertIn("uv pip install", script_text)
 
+    def test_bootstrap_scripts_have_no_unpinned_pip_install(self) -> None:
+        """Prevent Scorecard Pinned-Dependencies alerts in bootstrap scripts."""
+        import re
+
+        pip_install_re = re.compile(r"(?<!uv\s)(?<!uv\s-q\s)\b(pip|pip3)\s+install\b")
+        for rel_path in ["scripts/bootstrap.sh", "sakthai-chat-cli/scripts/bootstrap.sh"]:
+            with self.subTest(script=rel_path):
+                script_path = REPO_ROOT / rel_path
+                script_text = script_path.read_text(encoding="utf-8")
+                self.assertNotRegex(
+                    script_text,
+                    pip_install_re,
+                    f"{rel_path} contains unpinned pip/pip3 install command",
+                )
+                self.assertIn("command -v uv", script_text)
+                self.assertIn("uv pip install", script_text)
+
+    def test_dockerfile_sandbox_has_no_unpinned_pip_install(self) -> None:
+        """Prevent Scorecard Pinned-Dependencies alerts in Dockerfile.sandbox."""
+        import re
+
+        pip_install_re = re.compile(r"(?<!uv\s)(?<!uv\s-q\s)\b(pip|pip3)\s+install\b")
+        df_path = REPO_ROOT / "Dockerfile.sandbox"
+        df_text = df_path.read_text(encoding="utf-8")
+        self.assertNotRegex(
+            df_text,
+            pip_install_re,
+            "Dockerfile.sandbox contains unpinned pip/pip3 install command",
+        )
+        self.assertIn("uv pip install", df_text)
+
+    def test_cache_cleanup_workflow_permissions_scoped(self) -> None:
+        """Prevent Scorecard Token-Permissions alerts in cache-cleanup.yml."""
+        workflow_path = REPO_ROOT / ".github" / "workflows" / "cache-cleanup.yml"
+        workflow_text = workflow_path.read_text(encoding="utf-8")
+        self.assertIn("permissions: read-all", workflow_text)
+        self.assertNotIn("permissions:\n  actions: write", workflow_text)
+
 
 if __name__ == "__main__":
     unittest.main()
