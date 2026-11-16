@@ -1,52 +1,37 @@
-# SakThai Skills
+# SakThai Skills Directory
 
-Self-evolving Hermes skills for the SakThai Agent — the **Main Lead of the House**.
+**Curated specialized skills for the SakThai Agent — the Main Lead of the House of Sak.**
 
-This repo backs up the live skill library from `~/profiles/sakthai/skills/`. Every skill is a reusable procedure with YAML frontmatter, markdown body, and optional references/templates/scripts.
+This directory contains the specialized overlay skills tailored for SakThai. Every skill is a reusable, deterministic procedure with YAML frontmatter, markdown instructions, and optional templates, workflows, or scripts.
 
-## Structure
+---
 
-```
-skills/
-  autonomous-ai-agents/    — Codex, Claude Code, OpenCode, Hermes Agent
-  communication/           — User communication preferences
-  computer-use/            — Desktop automation
-  creative/                — Humanizer
-  data-science/            — Jupyter live kernel
-  dogfood/                 — Exploratory QA
-  email/                   — Email category placeholder
-  environment-automation/  — Workspace conventions
-  github/                  — GitHub auth, code review, PR workflow, issues, repo mgmt
-  media/                   — Media category placeholder
-  mlops/                   — HF Hub, vLLM, lm-eval-harness, W&B, model publishing
-  note-taking/             — Notes category placeholder
-  productivity/            — Productivity placeholder
-  research/                — arXiv, blogwatcher, LLM wiki, research references
-  sak-family-handoff/      — Multi-agent handoff protocol
-  social-media/            — Social media placeholder
-  software-development/    — TDD, debugging, code review, planning, spikes
-  telegram-media/          — Native Telegram media delivery
-```
+## Structure & Domains
 
-## Stats
+Skills are organized under the standardized `Sak<Agent>-<domain>-<topic>` taxonomy:
 
-- **86 files** across **18 category directories**
-- **36 SKILL.md files** — each defines a reusable procedure with frontmatter metadata
-- Managed by the SakThai Agent on Hermes
+- **Autonomous AI Agents**: Codex, Claude Code, OpenCode, and Antigravity SDK workflows.
+- **MLOps & Hugging Face**: Hugging Face Hub operations, Spaces, datasets, vLLM, and model publishing with break-glass safety verification.
+- **Research & Data Science**: arXiv paper digestion, literature exploration, and research synthesis.
+- **Software Development**: TDD disciplines, systematic debugging, code review, and planning.
+- **Multi-Agent Coordination**: Cross-persona handoffs, task delegation, and memory synchronization.
 
-## Updating
+---
 
-Skills are synced from the live Hermes agent. To update:
+## Discovery & Validation
+
+Skills are automatically discovered and composed by `sakthai`:
 
 ```bash
-git clone https://github.com/beer-sakthai/sakthai-skills.git
-cp -a ~/profiles/sakthai/skills/. sakthai-skills/skills/
-cd sakthai-skills
-git add -A
-git commit -m "sync skills"
-git push
+# List all skills accessible to SakThai
+uv run sakthai skills list
+
+# Validate all skill frontmatter
+uv run sakthai skills validate
 ```
 
-## Owner
+---
 
-**Beer** — SakThai Agent, Main Lead of the House & Master of Hugging Face.
+## License
+
+MIT — © 2026 Beer SakThai / House of Sak

@@ -2,12 +2,13 @@
 
 Once `train_toolcalling_lora.py` has produced the adapter
 (`Nanthasit/sakthai-toolcalling-1.5b-lora`), these scripts let the **SakThai
-agent actually run on it**. Three paths, same model:
+agent actually run on it**. Four paths, same model:
 
-| Script | Path | Cost | What it does |
+| Script / Runtime | Path | Cost | What it does |
 |---|---|---|---|
 | `eval_toolcalling.py` | verify | free (local) / cheap (HF Job) | Loads base + adapter and runs tool-calling probe prompts. Confirms the fine-tune learned the tool-call format before you wire it up. |
-| `export_ollama.py` | **local** | free | Merges the adapter, writes an Ollama `Modelfile`, and prints the GGUF-conversion + `ollama create` steps. Then `sakthai run --provider ollama --model sakthai ...`. |
+| `export_ollama.py` | **local (Ollama)** | free | Merges the adapter, writes an Ollama `Modelfile`, and prints the GGUF-conversion + `ollama create` steps. Then `sakthai run --provider ollama --model sakthai ...`. |
+| `vLLM` | **local / self-hosted GPU** | free (local GPU) | High-throughput OpenAI-compatible server with PagedAttention and batched inference. Point `OPENAI_API_BASE` at `http://localhost:8000/v1`. |
 | `deploy_hf_endpoint.py` | **cloud** | billable (dry-run by default) | Provisions a TGI Inference Endpoint exposing an OpenAI-compatible `/v1` API. Point `OPENAI_API_BASE` at it and `sakthai run --provider openai ...`. |
 
 All three reuse the **single** tool/system definitions from
@@ -36,7 +37,26 @@ Needs [`llama.cpp`](https://github.com/ggerganov/llama.cpp) (for
 `convert_hf_to_gguf.py`) and [Ollama](https://ollama.com) installed. The agent's
 OpenAI/Ollama provider already targets `127.0.0.1:11434`.
 
-## 3. Cloud via HF Inference Endpoint (billable)
+## 3. High-throughput serving via vLLM (GPU)
+
+For production or benchmark workloads on a GPU-enabled workstation or server:
+
+```bash
+uv run python -m vllm.entrypoints.openai.api_server \
+  --model Nanthasit/sakthai-context-1.5b-merged \
+  --port 8000 \
+  --chat-template-content-format openai
+```
+
+Then point the SakThai CLI at the local vLLM endpoint:
+
+```bash
+export OPENAI_API_BASE="http://localhost:8000/v1"
+export OPENAI_API_KEY="none"
+sakthai run --provider openai --model Nanthasit/sakthai-context-1.5b-merged "Check system status"
+```
+
+## 4. Cloud via HF Inference Endpoint (billable)
 
 ```bash
 # Merge + upload a serving repo first (TGI serves a full model, not a bare adapter):

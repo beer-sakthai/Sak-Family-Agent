@@ -1,7 +1,7 @@
 # teams-copilot-mcp
 
 Local stdio MCP server exposing Microsoft Teams (Graph API) and M365 Copilot
-operations as tools, so SakThai/Hermes/Claude can drive Teams directly.
+operations as tools, so SakThai and the Sak family agents can drive Teams directly.
 
 ## Direction
 
@@ -15,7 +15,7 @@ for that reverse leg (Copilot Cowork connectors).
 
 App-only (client-credentials) Microsoft Graph auth — no interactive login,
 no per-user OAuth. Reuses the same Azure AD app registration convention as
-the `hermes teams-pipeline` skill:
+the Microsoft Teams automation pipelines:
 
 ```bash
 MSGRAPH_TENANT_ID=...
@@ -27,13 +27,13 @@ MSGRAPH_CLIENT_SECRET=...
 server itself never loads `.env` files (`graph_client.py` calls
 `os.environ.get(...)` directly, nothing more) — copying it to `.env` alone
 does nothing. **Export these three vars in whatever shell/profile launches
-the MCP server process.** This matters most for the Claude Code plugin path
+the MCP server process.** This matters most for the MCP client path
 (`.mcp.json`'s `env` block does `"MSGRAPH_TENANT_ID": "${MSGRAPH_TENANT_ID}"`
-— a passthrough from Claude Code's own environment; if they're unset there,
+— a passthrough from the host environment; if they're unset there,
 `graph_client.py`'s `_require_config` still raises a clear `GraphAuthError`
 naming the missing vars, but only on the *first tool call* rather than at
 launch, so an unset var won't be obvious until something actually tries to
-use it) and for `sakthai run`/Hermes the same way. If you
+use it) and for `sakthai run` or family agents the same way. If you
 already have an app registration for the Teams meeting pipeline, reuse it —
 just make sure it has the Graph **application permissions** the tools you
 plan to use need (e.g. `Team.ReadBasic.All`, `Channel.ReadWrite.All`,

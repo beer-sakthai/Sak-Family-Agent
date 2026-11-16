@@ -33,7 +33,7 @@ Run the `setup_vm_telegram_agents.py` script to create a directory containing al
 # Ensure you are in the repository root
 # Replace placeholders with your actual paths
 
-python scripts/setup_vm_telegram_agents.py \
+uv run python scripts/setup_vm_telegram_agents.py \
   --repo-root ~/Sak-Family-Agent \
   --target-dir ~/sak-family-agents-deployment \
   --openai-base-url "https://api.openai.com/v1" \
@@ -99,7 +99,7 @@ The `enable --now` command both starts the service immediately and ensures it st
 An automated script is provided to check the status of all six agent services. Run it from the repository root:
 
 ```bash
-python scripts/verify_vm_telegram_agents.py
+uv run python scripts/verify_vm_telegram_agents.py
 ```
 
 This script will report if each service is active and show the last few log entries for each.

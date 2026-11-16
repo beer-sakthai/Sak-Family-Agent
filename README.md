@@ -30,7 +30,7 @@
   <img alt="Version 2.0.0" src="https://img.shields.io/badge/version-2.0.0-2563EB">
   <img alt="Python 3.11 | 3.12" src="https://img.shields.io/badge/python-3.11%20%7C%203.12-3776AB?logo=python&amp;logoColor=white">
   <img alt="6 personas" src="https://img.shields.io/badge/personas-6-7C3AED">
-  <img alt="480 skills" src="https://img.shields.io/badge/skills-480-10B981">
+  <img alt="481 skills" src="https://img.shields.io/badge/skills-481-10B981">
   <a href="LICENSE"><img alt="License: custom IP license" src="https://img.shields.io/badge/license-custom%20IP%20license-4B5563"></a>
 </p>
 
@@ -38,9 +38,9 @@
 | :--- | :--- | :---: | :--- |
 | **Core Loop** | Local-first tool loop (`agent/loop.py`) | `🟢 ACTIVE` | Provider-agnostic retries, preflight & streaming |
 | **Personas** | 6 Family Agents (`personas/<name>/`) | `🟢 6/6 ONLINE` | `SakThai` · `SakSee` · `SakJules` · `SakKing` · `SakSit` · `SakTan` |
-| **Skills Catalog** | 480 On-Disk Skills (461 overlay + 19 shared) | `🟢 STANDARDIZED`| Structured `Sak<Agent>-<domain>-<topic>` taxonomy |
+| **Skills Catalog** | 481 On-Disk Skills (462 overlay + 19 shared) | `🟢 STANDARDIZED`| Structured `Sak<Agent>-<domain>-<topic>` taxonomy |
 | **Memory Store** | SQLite per Persona (`~/.sakthai/`) | `🟢 SYNCED` | Sharded persistence & multi-agent `sakthai memory family` |
-| **Test Quality** | 2,811 Unit Tests across Python 3.11 & 3.12 | `🟢 PASS (≥96%)` | Enforced strict coverage floor (`--cov-fail-under=96`) |
+| **Test Quality** | 2,823 Unit Tests across Python 3.11 & 3.12 | `🟢 PASS (≥96%)` | Enforced strict coverage floor (`--cov-fail-under=96`) |
 | **Security Gates** | Guardrails, Secret Scan, CodeQL & Bandit | `🛡️ ENFORCED` | Safe execution, credential isolation & automated scanning |
 
 > **Six personas, one shared runtime.**
@@ -55,7 +55,10 @@
 - **Persistent memory** — SQLite-backed facts and observations stored under `~/.sakthai`, with semantic search, tagging, consolidation, versioned JSON snapshots ([format](data/README.md)), and sync helpers.
 - **Multiple providers** — Anthropic, Google Gemini, OpenAI-compatible endpoints, Ollama, gateways, and Hugging Face inference providers.
 - **MCP** — dependency-light stdio server, remote HTTP/SSE client support, resource and prompt exposing, plus discovery, tool allowlisting, and namespaced connections to external MCP servers.
-- **Six personas** — SakThai, SakSee, SakJules, SakKing, SakSit, and SakTan, each with its own identity, curated skills (480 on-disk skills under the searchable `Sak<Agent>-<domain>-<topic>` taxonomy), default model, and memory shard.
+- **Six personas & resilience architecture** — SakThai, SakSee, SakJules, SakKing, SakSit, and SakTan, each with its own identity, curated skills (481 on-disk skills under the searchable `Sak<Agent>-<domain>-<topic>` taxonomy), default model, memory shard, and multi-tier resilience:
+  - *Governance & Routing*: Break-glass Hugging Face Hub protocol (`assert_hf_write_allowed`) and 3-second intent preflight classification.
+  - *Performance & Scalability*: 3-tier web scraping escalation (HTTP $\rightarrow$ Headless $\rightarrow$ Stealth) and progressive domain manifest hydration.
+  - *Automation & Reliability*: Autonomous CI auto-heal utility (`scripts/ci_auto_heal.py`), guarded algorithmic cloud fallback, and event-driven PR cache lifecycle management (`cache-cleanup.yml`).
 - **Team and client workflows** — declarative multi-persona pipelines and ServiceQuoteBot client workspace provisioning.
 - **Unified Agent Platform** — core integration subsystems (`sakthai.agent_platform`) for accidental data loss prevention (`DataLossGuardrail`), reactive python dependency manager detection & isolated execution runners (`wrap_with_isolated_runner`), progressive disclosure skills rendering (`render_skills_progressive_summary`), Jules remote task delegation, dual Antigravity/ADK execution engine with model selection presets (`ModelTier`), and Harness AI agent pipeline spec generation.
 - **Dashboard** — Next.js frontend backed by the SakThai HTTP API for personas, metrics, sessions, memory, audit data, and workflows.
@@ -79,13 +82,13 @@
 | Persona | Role & Domain Specialty | Skills | Default Model |
 | :--- | :--- | :---: | :--- |
 | **SakThai** (lead) | Main Lead & Hugging Face Master (MLOps, hub, spaces) | **170** skills | `deepseek-ai/DeepSeek-V4.1-Flash` |
-| **SakSee** | Web & Browser Specialist (Playwright, scraping, web UI) | **105** skills | `deepseek-ai/DeepSeek-V4.1-Flash` |
+| **SakSee** | Web & Browser Specialist (Playwright, scraping, web UI) | **106** skills | `deepseek-ai/DeepSeek-V4.1-Flash` |
 | **SakJules** | Master of Automation, GitHub & CI/CD Pipelines | **56** skills | `deepseek-ai/DeepSeek-V4.1-Flash` |
 | **SakKing** | General Assistant, Runner & Primary Coder (TDD) | **59** skills | `Qwen/Qwen3-Coder-30B-A3B-Instruct` |
 | **SakSit** | Social, Brand & Content Specialist | **45** skills | `deepseek-ai/DeepSeek-V4-Flash` |
 | **SakTan** | Daily Ops, Daemon Watchdog & System Rhythm | **26** skills | `sakthai` on local Ollama |
 
-> The six personas collectively host **480 on-disk skills** (461 persona overlays + 19 universal shared skills) adhering to a standardized frontmatter schema and the searchable `Sak<Agent>-<domain>-<topic>` taxonomy.
+> The six personas collectively host **481 on-disk skills** (462 persona overlays + 19 universal shared skills) adhering to a standardized frontmatter schema and the searchable `Sak<Agent>-<domain>-<topic>` taxonomy.
 
 Every persona directory (`personas/<name>/`) carries the **6 core working files** — `SOUL.md` (identity, charge system v6, and self-evaluation v9 rubric), `PLAN.md` (v7 task decomposition and routing), `CYCLE.md` (v8 6-stage execution and v9 `CYCLE EVAL: <name>` rubric), `MEMORY.md` (active memory and lessons), `HANDOFF.md` (cross-persona handoff contract), and `BACKPACK.md` (domain toolbelt and skills inventory) — along with `config/config.yaml`, `config/workspace.yaml`, `config/mcp.json`, and its own DSPy/GEPA self-evolution engine (`personas/<name>/evolution/`).
 

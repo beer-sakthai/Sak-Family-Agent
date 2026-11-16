@@ -20,7 +20,12 @@ https://eh3lv509oegmvapd.us-east-1.aws.endpoints.huggingface.cloud
 
 **Usage:**
 ```bash
+# Poll endpoint status until running
+uv run python poll_endpoint.py
+
+# Query endpoint
 curl https://eh3lv509oegmvapd.us-east-1.aws.endpoints.huggingface.cloud \
-  -H "Authorization: Bearer \$HF_TOKEN" \
+  -H "Authorization: Bearer $HF_TOKEN" \
+  -H "Content-Type: application/json" \
   -d '{"inputs":"Hello!","parameters":{"max_new_tokens":50}}'
 ```

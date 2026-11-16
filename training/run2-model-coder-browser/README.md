@@ -302,7 +302,7 @@ If you want to verify the broken-state diagnosis locally, run the same llama.cpp
 
 ```bash
 # Convert the current merged weights to GGUF Q4_K_M
-python -m scripts.convert_hf_to_gguf --outfile sakthai-coder-browser-q4_k_m.gguf --quant-type Q4_K_M ./sakthai-coder-browser
+uv run python -m scripts.convert_hf_to_gguf --outfile sakthai-coder-browser-q4_k_m.gguf --quant-type Q4_K_M ./sakthai-coder-browser
 
 # 3-trial probe, 2 threads, CPU only
 for seed in 7 42 1337; do
@@ -323,7 +323,7 @@ The merged weights were produced by applying the LoRA adapter onto `Qwen/Qwen2.5
 
 ```bash
 git clone https://huggingface.co/Nanthasit/sakthai-coder-browser-lora adapter
-python -m peft.merge_and_unload \
+uv run python -m peft.merge_and_unload \
   --base_model Qwen/Qwen2.5-Coder-1.5B-Instruct \
   --adapter adapter \
   --output repaired-merged \

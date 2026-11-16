@@ -3,7 +3,8 @@
 Playwright keyboard-focus / tab-order accessibility probe against a target page.
 `test-keyboard.js` presses Tab 25× on `https://example.com`, records the focused
 element after each press, reports the active element's outline (focus-visibility),
-and saves a screenshot.
+and saves a screenshot. Used to validate keyboard accessibility and tab order in
+headless browser workflows (e.g., automated QA and visual verification pipelines).
 
 ## Run (host or any Node 20 box)
 ```bash
