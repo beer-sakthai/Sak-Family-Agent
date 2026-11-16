@@ -28,22 +28,26 @@ own PR. No configuration fixes that. Only a second reviewer does.
 
 ## Branch-Protection (alert #15379)
 
-**What is already enforced on `main`**, as read from the repository rulesets
-(`main` and `Copilot review for default branch`):
+**What is enforced on `main`**, as read from the legacy branch-protection API and
+the active `main` ruleset (verified 2026-11-15):
 
 - branch deletion and force pushes are blocked;
-- changes go through a pull request, and its review threads must be
-  resolved before merge;
+- changes go through a pull request, and one approving review is required;
+- the approval must come from a code owner and must cover the latest push;
+- approvals are dismissed when new commits are pushed, and all review threads
+  must be resolved before merge;
+- commits must be signed, and `main` must maintain linear history;
 - required status checks, with the branch kept up to date with `main`:
-  `test (3.11)`, `test (3.12)`, `build (3.11)`, `build (3.12)` and
-  `gitleaks`;
-- a code-owner review rule, with zero required approvals;
-- a Copilot review requested on every push. This is advisory only.
+- the full protected-check set recorded in the branch-protection API, including
+  both Python test/build legs, gitleaks, Bandit, OSSAR, CodeQL, repository
+  skill validation, quality/security gates, and labeler;
+- secret-scanning push protection;
+- automatic merging remains available, but only after every required check and
+  review rule passes. No bypass actor is configured for the `main` ruleset.
 
-**What Scorecard wants next.** That covers its basic tier. The next tiers
-need at least one required approving review, approval of the most recent
-push, and stale reviews dismissed on push. With one maintainer, each of
-those would block every merge, including Dependabot's.
+These controls intentionally trade unattended merges for provenance and review
+integrity. A pull request opened by the sole code owner cannot self-approve;
+automatic merging therefore requires a second eligible reviewer.
 
 ## CII-Best-Practices (alert #15462)
 
@@ -88,15 +92,14 @@ these checks.
 
 ## When to revisit
 
-**Code-Review and Branch-Protection**, when a second maintainer joins:
+**Code-Review and Branch-Protection**, when another maintainer joins:
 
 1. Add them to `.github/CODEOWNERS`.
-2. In the `main` ruleset (Settings → Rules → Rulesets), set:
-   - required approvals to 1;
-   - "Dismiss stale pull request approvals when new commits are pushed";
-   - "Require approval of the most recent reviewable push".
-3. Reopen both alerts on the Security tab. Code-Review then climbs as
-   reviewed PRs replace the unreviewed ones in Scorecard's window.
+2. Confirm that the new owner can approve a representative pull request and
+   that automatic merging proceeds only after the required checks and review
+   controls are green.
+3. Reopen both alerts on the Security tab. Code-Review then climbs as reviewed
+   PRs replace the unreviewed ones in Scorecard's window.
 
 **CII-Best-Practices**, if the project is relicensed under an OSI-approved
 licence and starts tagging releases: enter the drafted answers, switching the
