@@ -4,6 +4,8 @@ from pathlib import Path
 
 import yaml
 
+from scripts.lint_workflow_permissions import find_scalar_permissions
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
 
@@ -73,3 +75,20 @@ def test_workflows_do_not_use_scalar_permissions() -> None:
                 f"{yml_path.name} uses scalar {declaration}; declare least-privilege "
                 "permissions as a mapping instead"
             )
+
+
+def test_workflow_permission_linter_catches_scalar_forms(tmp_path: Path) -> None:
+    """Cover all forbidden scalar forms, including declarations not used today."""
+    workflow = tmp_path / "sample.yml"
+    workflow.write_text(
+        "permissions: read\npermissions: write\npermissions: read-all\npermissions: {}\n",
+        encoding="utf-8",
+    )
+
+    findings = find_scalar_permissions(tmp_path)
+
+    assert [(line, value) for _, line, value in findings] == [
+        (1, "read"),
+        (2, "write"),
+        (3, "read-all"),
+    ]
