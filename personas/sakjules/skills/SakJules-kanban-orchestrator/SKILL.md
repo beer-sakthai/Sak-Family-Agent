@@ -1,7 +1,12 @@
 ---
 name: SakJules-kanban-orchestrator
 version: 1.0.0
-description: "Orchestrate multi-agent kanban workflows."
+description: Orchestrate multi-agent kanban workflows.
+category: devops
+tags:
+- automation
+- kanban
+- orchestrator
 ---
 
 # Kanban Orchestrator — Decomposition Playbook

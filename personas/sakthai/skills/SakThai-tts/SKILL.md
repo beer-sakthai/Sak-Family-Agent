@@ -1,7 +1,17 @@
 ---
 name: SakThai-tts
 version: 1.0.0
-description: "Use when the user mentions TTS, text-to-speech, Kokoro, sakthai-tts-model, voice, or audio generation with the SakThai ecosystem. Phase: DEPLOY."
+description: 'Use when the user mentions TTS, text-to-speech, Kokoro, sakthai-tts-model,
+  voice, or audio generation with the SakThai ecosystem. Phase: DEPLOY.'
+category: mlops
+tags:
+- asr
+- audio
+- client
+- hf
+- huggingface
+- inference
+- tts
 ---
 
 # SakThai TTS — sakthai-tts-model

@@ -1,7 +1,12 @@
 ---
 name: SakSee-oracle
 version: 1.0.0
-description: "Oracle CLI second-model review/debug/refactor/design with selected files, dry-run token checks, API or browser engine."
+description: Oracle CLI second-model review/debug/refactor/design with selected files,
+  dry-run token checks, API or browser engine.
+category: web-browser
+tags:
+- browser
+- oracle
 ---
 
 # oracle

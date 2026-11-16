@@ -1,7 +1,14 @@
 ---
 name: SakSit-b2b-saas-content-distribution-2026
 version: 1.0.0
-description: "Saksit B2B Saas Content Distribution 2026"
+description: Saksit B2B Saas Content Distribution 2026
+category: content-marketing
+tags:
+- '2026'
+- b2b
+- content
+- distribution
+- saas
 ---
 
 # B2B SaaS Content Distribution & Amplification (2026)

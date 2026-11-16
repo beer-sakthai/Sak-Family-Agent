@@ -1,7 +1,11 @@
 ---
 name: Sak-spike
 version: 1.0.0
-description: "Throwaway experiments to validate an idea before build."
+description: Throwaway experiments to validate an idea before build.
+category: utilities
+tags:
+- shared
+- spike
 ---
 
 # Spike

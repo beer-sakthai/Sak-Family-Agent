@@ -1,7 +1,18 @@
 ---
 name: SakSit-b2b-saas-twitter-x-marketing-2026
 version: 1.0.0
-description: ">-   A complete playbook for B2B SaaS companies to build an audience, generate   pipeline, and drive leads through organic X/Twitter marketing in 2026.   Covers founder-led content strategy, reply-first engagement, X Spaces   hosting, content repurpo"
+description: '>-   A complete playbook for B2B SaaS companies to build an audience,
+  generate   pipeline, and drive leads through organic X/Twitter marketing in 2026.   Covers
+  founder-led content strategy, reply-first engagement, X Spaces   hosting, content
+  repurpo'
+category: social-media
+tags:
+- '2026'
+- b2b
+- content
+- marketing
+- saas
+- twitter
 ---
 
 # B2B SaaS X/Twitter Marketing Strategy 2026

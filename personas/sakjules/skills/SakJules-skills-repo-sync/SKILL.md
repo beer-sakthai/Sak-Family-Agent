@@ -1,7 +1,13 @@
 ---
 name: SakJules-skills-repo-sync
 version: 1.0.0
-description: "Sync SakSit skills to saksit-skills GitHub repo."
+description: Sync SakSit skills to saksit-skills GitHub repo.
+category: devops
+tags:
+- automation
+- repo
+- skills
+- sync
 ---
 
 # SakSit Skills → GitHub Sync

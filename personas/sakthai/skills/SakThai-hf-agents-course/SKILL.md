@@ -1,7 +1,13 @@
 ---
 name: SakThai-hf-agents-course
 version: 1.0.0
-description: "Build AI agents with smolagents, LlamaIndex, LangGraph."
+description: Build AI agents with smolagents, LlamaIndex, LangGraph.
+category: mlops
+tags:
+- agents
+- course
+- hf
+- huggingface
 ---
 # AI Agents Course Reference
 

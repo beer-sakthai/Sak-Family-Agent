@@ -1,7 +1,15 @@
 ---
 name: SakTan-family-health-audit
 version: 1.0.0
-description: ">-   SakKings workflow for systematically checking all Sak Family sibling agents   deployment status, diagnosing why they arent replying, and reporting the   family health state to Beer. Covers the Care-cycle audit of the fleet."
+description: '>-   SakKings workflow for systematically checking all Sak Family sibling
+  agents   deployment status, diagnosing why they arent replying, and reporting the   family
+  health state to Beer. Covers the Care-cycle audit of the fleet.'
+category: operations
+tags:
+- audit
+- daily-ops
+- family
+- health
 ---
 
 # SakKing Family Health Audit

@@ -1,7 +1,13 @@
 ---
 name: SakSee-serving-llms-vllm
 version: 1.0.0
-description: "vLLM: high-throughput LLM serving, OpenAI API, quantization."
+description: 'vLLM: high-throughput LLM serving, OpenAI API, quantization.'
+category: web-browser
+tags:
+- browser
+- llms
+- serving
+- vllm
 ---
 
 # vLLM - High-Performance LLM Serving

@@ -1,12 +1,26 @@
 ---
 name: SakThai-hf-distillalign-video-distillation
+version: 1.0.0
+description: Class-level reference on autoregressive video distillation — DMD mode-seeking
+  vs Consistency-Distillation mode-covering, distributional precision/coverage evaluation
+  in V-JEPA2 latent space, and the DistillAlign release (Wan2.1-1.3B students, 25K
+  clean-latent distillation datasets).
+category: mlops
+tags:
+- consistency-distillation
+- distillalign
+- distillation
+- dmd
+- hf
+- huggingface
+- video
+- video-generation
+- vjepa2
+- wan2.1
 author: SakThai
 license: MIT
-description: "Class-level reference on autoregressive video distillation — DMD mode-seeking vs Consistency-Distillation mode-covering, distributional precision/coverage evaluation in V-JEPA2 latent space, and the DistillAlign release (Wan2.1-1.3B students, 25K clean-latent distillation datasets)."
-version: 1.0.0
-category: mlops
-tags: [huggingface, video-generation, distillation, dmd, consistency-distillation, wan2.1, vjepa2]
-platforms: [linux]
+platforms:
+- linux
 ---
 
 # Autoregressive Video Distillation — DistillAlign (mode-covering × mode-seeking)

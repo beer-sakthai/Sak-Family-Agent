@@ -1,7 +1,12 @@
 ---
 name: SakThai-hf-cookbook
 version: 1.0.0
-description: "Practical AI notebooks from the Open-Source AI Cookbook."
+description: Practical AI notebooks from the Open-Source AI Cookbook.
+category: mlops
+tags:
+- cookbook
+- hf
+- huggingface
 ---
 
 # Open-Source AI Cookbook

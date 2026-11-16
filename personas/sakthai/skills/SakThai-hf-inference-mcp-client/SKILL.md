@@ -1,21 +1,30 @@
 ---
 name: SakThai-hf-inference-mcp-client
+version: 1.0.0
+description: Complete reference for the Hugging Face Inference MCP Client and Agent
+  framework built into huggingface_hub. Covers the MCPClient class for connecting
+  to MCP servers (stdio, SSE, HTTP), tool discovery and management, chat completion
+  with tool execution, multi-turn agent loops, CLI agent runner (hf app), and the
+  Tiny Agent config format.
+category: mlops
+tags:
+- agent
+- async
+- client
+- function-calling
+- hf
+- huggingface
+- huggingface-hub
+- inference
+- mcp
+- tool-use
 author: SakThai
 license: MIT
 title: Hugging Face Inference MCP Client & Agent Framework
-category: mlops
-tags: [mcp, inference, agent, tool-use, function-calling, huggingface-hub, async]
 related_skills:
-  - SakThai-hf-mcp-server
-  - hf-inference-client-tool-use-and-function-calling
-  - hf-smolagents
-description: >-
-  Complete reference for the Hugging Face Inference MCP Client and Agent
-  framework built into huggingface_hub. Covers the MCPClient class for
-  connecting to MCP servers (stdio, SSE, HTTP), tool discovery and management,
-  chat completion with tool execution, multi-turn agent loops, CLI agent runner
-  (hf app), and the Tiny Agent config format.
-version: 1.0.0
+- SakThai-hf-mcp-server
+- hf-inference-client-tool-use-and-function-calling
+- hf-smolagents
 ---
 
 # Hugging Face Inference MCP Client & Agent Framework

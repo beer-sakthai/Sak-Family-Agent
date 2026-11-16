@@ -1,7 +1,14 @@
 ---
 name: SakThai-spec-kit
 version: 1.0.0
-description: Specification-Driven Development (SDD) using GitHub Spec-Kit. Use when asked to create specifications, feature plans, task breakdowns, project constitutions, or execute spec-driven development.
+description: Specification-Driven Development (SDD) using GitHub Spec-Kit. Use when
+  asked to create specifications, feature plans, task breakdowns, project constitutions,
+  or execute spec-driven development.
+category: mlops
+tags:
+- huggingface
+- kit
+- spec
 ---
 
 # Spec-Kit (Specification-Driven Development)

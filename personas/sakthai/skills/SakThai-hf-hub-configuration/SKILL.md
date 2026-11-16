@@ -1,7 +1,14 @@
 ---
 name: SakThai-hf-hub-configuration
 version: 1.0.0
-description: "Complete reference for huggingface_hub library configuration — all environment variables, cache paths, token management, and customization options"
+description: Complete reference for huggingface_hub library configuration — all environment
+  variables, cache paths, token management, and customization options
+category: mlops
+tags:
+- configuration
+- hf
+- hub
+- huggingface
 ---
 # HF Hub Configuration
 

@@ -1,7 +1,13 @@
 ---
 name: SakSit-social-platform-audit
 version: 1.0.0
-description: "Audit all connected social platforms before posting."
+description: Audit all connected social platforms before posting.
+category: social-media
+tags:
+- audit
+- content
+- platform
+- social
 ---
 
 # Social Platform Audit — Pre-Posting

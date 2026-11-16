@@ -1,7 +1,14 @@
 ---
 name: SakJules-preset-cli
 version: 1.0.0
-description: "Drive Presets `sup` CLI (PyPI package `superset-sup`) for shell, scripting, CI/CD, and agent-driven Preset workflows. Use only for CLI workflows; Do not use for MCP-only work or for direct HTTP/SDK code paths."
+description: Drive Presets `sup` CLI (PyPI package `superset-sup`) for shell, scripting,
+  CI/CD, and agent-driven Preset workflows. Use only for CLI workflows; Do not use
+  for MCP-only work or for direct HTTP/SDK code paths.
+category: devops
+tags:
+- automation
+- cli
+- preset
 ---
 
 # preset-cli

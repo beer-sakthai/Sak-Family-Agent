@@ -4,7 +4,7 @@ domain: TDD execution, CLI runner, utility refactoring, subagents
 workspace_root: /home/sak/Sak-Family-Agent
 primary_skills:
   - SakKing-subagent-driven-development
-  - sakthai-coding-tdd
+  - SakKing-coding-tdd
   - SakKing-executing-plans
   - SakKing-systematic-debugging
 allowed_tools:

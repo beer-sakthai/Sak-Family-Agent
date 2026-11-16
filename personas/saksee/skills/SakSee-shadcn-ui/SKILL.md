@@ -1,7 +1,15 @@
 ---
 name: SakSee-shadcn-ui
 version: 1.0.0
-description: "Expert guidance for integrating and building applications with shadcn/ui components, including component discovery, installation, customization, and best practices. allowed-tools:   - shadcn*:*   - mcp_shadcn*   - Read   - Write   - Bash   - web_fetc"
+description: 'Expert guidance for integrating and building applications with shadcn/ui
+  components, including component discovery, installation, customization, and best
+  practices. allowed-tools:   - shadcn*:*   - mcp_shadcn*   - Read   - Write   - Bash   -
+  web_fetc'
+category: web-browser
+tags:
+- browser
+- shadcn
+- ui
 ---
 
 # shadcn/ui Component Integration

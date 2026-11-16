@@ -1,7 +1,25 @@
 ---
 name: SakThai-hf-hub-local-apps-and-agents
 version: 1.0.0
-description: "Complete reference for running Hugging Face Hub models locally via Local Apps (llama.cpp, Ollama, Jan, LM Studio) and connecting local coding agents (Pi, OpenClaw, Hermes, OpenCode, llama-agent). Covers hardware profiling, the `-hf` flag architecture"
+description: Complete reference for running Hugging Face Hub models locally via Local
+  Apps (llama.cpp, Ollama, Jan, LM Studio) and connecting local coding agents (Pi,
+  OpenClaw, Hermes, OpenCode, llama-agent). Covers hardware profiling, the `-hf` flag
+  architecture
+category: mlops
+tags:
+- agents
+- apps
+- gguf
+- hf
+- hub
+- huggingface
+- llama-cpp
+- llamacpp
+- lm-studio
+- local
+- local-apps
+- local-inference
+- ollama
 ---
 
 # HF Hub Local Apps & Agents

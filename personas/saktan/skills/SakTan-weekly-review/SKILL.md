@@ -1,7 +1,13 @@
 ---
 name: SakTan-weekly-review
 version: 1.0.0
-description: "End-of-week retrospective — what got done, what habits held, and next weeks top priority — logged to memory."
+description: End-of-week retrospective — what got done, what habits held, and next
+  weeks top priority — logged to memory.
+category: operations
+tags:
+- daily-ops
+- review
+- weekly
 ---
 
 # Weekly Review

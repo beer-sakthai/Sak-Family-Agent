@@ -1,7 +1,15 @@
 ---
 name: SakThai-hf-inference-client-openai
 version: 1.0.0
-description: "Deep reference on HF InferenceClients OpenAI API compatibility — chat.completions.create, structured outputs (JSON Schema / regex), function calling, and streaming."
+description: Deep reference on HF InferenceClients OpenAI API compatibility — chat.completions.create,
+  structured outputs (JSON Schema / regex), function calling, and streaming.
+category: mlops
+tags:
+- client
+- hf
+- huggingface
+- inference
+- openai
 ---
 
 # HF Inference Client — OpenAI Compatibility & Structured Outputs

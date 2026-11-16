@@ -1,7 +1,16 @@
 ---
 name: SakThai-hf-smolagents
 version: 1.0.0
-description: ">-   Deep-dive skill for Hugging Faces smolagents library (v1.26.0+). Covers   CodeAgent, ToolCallingAgent, multi-agent orchestration, agent memory,   Human-in-the-Loop, async integration, OpenTelemetry telemetry, secure code   execution, tool creati"
+description: '>-   Deep-dive skill for Hugging Faces smolagents library (v1.26.0+).
+  Covers   CodeAgent, ToolCallingAgent, multi-agent orchestration, agent memory,   Human-in-the-Loop,
+  async integration, OpenTelemetry telemetry, secure code   execution, tool creati'
+category: mlops
+tags:
+- course
+- hf
+- huggingface
+- smol
+- smolagents
 ---
 
 # smolagents — Hugging Face Agent Framework (Deep Dive v2)

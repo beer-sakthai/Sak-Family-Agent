@@ -1,7 +1,16 @@
 ---
 name: SakKing-model-routing-agent-systems-deep-dive
 version: 1.0.0
-description: "name: SakThai-model-routing-agent-systems-deep-dive"
+description: 'name: SakThai-model-routing-agent-systems-deep-dive'
+category: productivity
+tags:
+- agent
+- cli
+- deep
+- dive
+- model
+- routing
+- systems
 ---
 
 # Model Routing for Agentic Systems — Deep Dive

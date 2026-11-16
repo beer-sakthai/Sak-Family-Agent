@@ -107,6 +107,10 @@ class TestSkillsOrganizationParity(unittest.TestCase):
                         missing_metadata.append(f"{md}: missing 'description'")
                     if not front.get("version"):
                         missing_metadata.append(f"{md}: missing 'version'")
+                    if not front.get("category"):
+                        missing_metadata.append(f"{md}: missing 'category'")
+                    if not front.get("tags"):
+                        missing_metadata.append(f"{md}: missing 'tags'")
                 except Exception as exc:
                     missing_metadata.append(f"{md}: parse error {exc}")
 
@@ -114,6 +118,78 @@ class TestSkillsOrganizationParity(unittest.TestCase):
             missing_metadata,
             [],
             f"Found {len(missing_metadata)} skills with missing metadata. Sample: {missing_metadata[:10]}",
+        )
+
+    def test_no_hermes_metadata_in_any_skill(self) -> None:
+        """No skills should carry legacy metadata.hermes blocks."""
+        hermes_skills: list[str] = []
+        roots = [SHARED_DIR] + [PERSONAS_DIR / p / "skills" for p in PERSONAS]
+        for root in roots:
+            if not root.is_dir():
+                continue
+            for md in sorted(root.rglob("SKILL.md")):
+                try:
+                    parts = md.read_text(encoding="utf-8").split("---", 2)
+                    if len(parts) >= 3:
+                        front = yaml.safe_load(parts[1])
+                        if (
+                            isinstance(front, dict)
+                            and isinstance(front.get("metadata"), dict)
+                            and "hermes" in front["metadata"]
+                        ):
+                            hermes_skills.append(str(md))
+                except Exception:
+                    pass
+        self.assertEqual(
+            hermes_skills,
+            [],
+            f"Found legacy metadata.hermes in skills: {hermes_skills}",
+        )
+
+    def test_all_skills_have_non_empty_bodies(self) -> None:
+        """Every skill must contain actionable markdown instructions (at least 30 chars)."""
+        short_bodies: list[str] = []
+        roots = [SHARED_DIR] + [PERSONAS_DIR / p / "skills" for p in PERSONAS]
+        for root in roots:
+            if not root.is_dir():
+                continue
+            for md in sorted(root.rglob("SKILL.md")):
+                parts = md.read_text(encoding="utf-8").split("---", 2)
+                if len(parts) < 3 or len(parts[2].strip()) < 30:
+                    short_bodies.append(str(md))
+        self.assertEqual(
+            short_bodies,
+            [],
+            f"Found skills with empty or stub bodies: {short_bodies}",
+        )
+
+    def test_all_workspace_primary_skills_resolve(self) -> None:
+        """Every primary skill defined in a persona workspace.yaml must exist on disk."""
+        unresolved: list[str] = []
+        shared_skills = (
+            {d.name for d in SHARED_DIR.iterdir() if d.is_dir()} if SHARED_DIR.is_dir() else set()
+        )
+
+        for persona in PERSONAS:
+            ws_file = PERSONAS_DIR / persona / "config" / "workspace.yaml"
+            if not ws_file.is_file():
+                continue
+            persona_skills_dir = PERSONAS_DIR / persona / "skills"
+            p_skills = (
+                {d.name for d in persona_skills_dir.iterdir() if d.is_dir()}
+                if persona_skills_dir.is_dir()
+                else set()
+            )
+            data = yaml.safe_load(ws_file.read_text(encoding="utf-8")) or {}
+            primaries = data.get("primary_skills", [])
+            for skill in primaries:
+                if skill not in p_skills and skill not in shared_skills:
+                    unresolved.append(f"{persona}: {skill}")
+
+        self.assertEqual(
+            unresolved,
+            [],
+            f"Found unresolvable workspace primary skills: {unresolved}",
         )
 
 

@@ -1,26 +1,33 @@
 ---
 name: Sak-repository-security
+version: 1.0.0
+description: Review, implement, and verify security-sensitive changes in Sak-Family-Agent.
+  Use when work touches guardrails, credentials, authentication, filesystem or shell
+  execution, MCP or external integrations, dependencies, CI security controls, or
+  a suspected vulnerability.
 category: security
-description: >-
-  Review, implement, and verify security-sensitive changes in Sak-Family-Agent.
-  Use when work touches guardrails, credentials, authentication, filesystem or
-  shell execution, MCP or external integrations, dependencies, CI security
-  controls, or a suspected vulnerability.
-version: "1.0.0"
+tags:
+- ci
+- guardrails
+- repository
+- review
+- secure-coding
+- security
+- shared
 platforms:
-  - linux
-  - macos
-  - windows
+- linux
+- macos
+- windows
 metadata:
   sakthai:
     tags:
-      - security
-      - secure-coding
-      - review
-      - guardrails
-      - ci
+    - security
+    - secure-coding
+    - review
+    - guardrails
+    - ci
     related_skills:
-      - Sak-repository-quality
+    - Sak-repository-quality
 ---
 
 # Sak-Family-Agent Security

@@ -1,7 +1,13 @@
 ---
 name: SakThai-research-paper-writing
 version: 1.0.0
-description: "Write ML papers for NeurIPS/ICML/ICLR: design→submit."
+description: 'Write ML papers for NeurIPS/ICML/ICLR: design→submit.'
+category: mlops
+tags:
+- huggingface
+- paper
+- research
+- writing
 ---
 
 # Research Paper Writing Pipeline

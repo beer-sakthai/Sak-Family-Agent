@@ -1,7 +1,16 @@
 ---
 name: SakJules-github-ci-fix
 version: 1.0.0
-description: "Diagnose and repair GitHub Actions CI failures."
+description: Diagnose and repair GitHub Actions CI failures.
+category: devops
+tags:
+- automation
+- ci
+- debug
+- fix
+- fixer
+- github
+- master
 ---
 
 # GitHub CI Fix

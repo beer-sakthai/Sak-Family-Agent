@@ -1,7 +1,16 @@
 ---
 name: SakSit-b2b-saas-brand-journalism-storytelling-2026
 version: 1.0.0
-description: "Saksit B2B Saas Brand Journalism Storytelling 2026"
+description: Saksit B2B Saas Brand Journalism Storytelling 2026
+category: content-marketing
+tags:
+- '2026'
+- b2b
+- brand
+- content
+- journalism
+- saas
+- storytelling
 ---
 
 # B2B SaaS Brand Journalism & Storytelling Strategy 2026

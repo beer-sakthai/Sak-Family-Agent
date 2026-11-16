@@ -1,11 +1,30 @@
 ---
 name: SakThai-hf-pipelines
-description: "Hugging Face Pipelines (transformers.pipeline): high-level inference API that wraps models, tokenizers, and post-processing for rapid deployment across text, vision, audio, and multimodal tasks."
 version: 1.0.0
+description: 'Hugging Face Pipelines (transformers.pipeline): high-level inference
+  API that wraps models, tokenizers, and post-processing for rapid deployment across
+  text, vision, audio, and multimodal tasks.'
+category: mlops
+tags:
+- audio
+- environment
+- from
+- hf
+- huggingface
+- inference
+- multimodal
+- nlp
+- pipeline
+- pipelines
+- transformers
+- vision
+- write
 author: SakThai
 license: MIT
-tags: [huggingface, transformers, pipeline, inference, nlp, vision, audio, multimodal]
-platforms: [linux, macos, windows]
+platforms:
+- linux
+- macos
+- windows
 ---
 
 # Hugging Face Pipelines

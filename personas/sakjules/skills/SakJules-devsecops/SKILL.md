@@ -1,7 +1,12 @@
 ---
 name: SakJules-devsecops
 version: 1.0.0
-description: "Orchestrates static analysis, vulnerability scanning, and automated patching into a continuous security workflow."
+description: Orchestrates static analysis, vulnerability scanning, and automated patching
+  into a continuous security workflow.
+category: devops
+tags:
+- automation
+- devsecops
 ---
 
 # DevSecOps: Continuous Security Workflow

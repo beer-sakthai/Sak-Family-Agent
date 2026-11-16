@@ -1,7 +1,14 @@
 ---
 name: SakThai-learning-loop
 version: 1.0.0
-description: "Use when the user mentions learning loop, iterative improvement, feedback loop, continuous improvement, multi-cycle training, or wants to run multiple training iterations to progressively improve model performance. Phase: ITERATE."
+description: 'Use when the user mentions learning loop, iterative improvement, feedback
+  loop, continuous improvement, multi-cycle training, or wants to run multiple training
+  iterations to progressively improve model performance. Phase: ITERATE.'
+category: mlops
+tags:
+- huggingface
+- learning
+- loop
 ---
 
 # SakThai Learning Improvement Loop

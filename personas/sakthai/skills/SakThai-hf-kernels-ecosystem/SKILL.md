@@ -1,7 +1,16 @@
 ---
 name: SakThai-hf-kernels-ecosystem
 version: 1.0.0
-description: "Deep dive into the Hugging Face Kernel Hub — a first-class repository type for distributing pre-built compute kernels. Covers `kernels` Python package, CLI tools, kernel-builder, Nix-based build system, versioning, locking, security (trusted publishe"
+description: Deep dive into the Hugging Face Kernel Hub — a first-class repository
+  type for distributing pre-built compute kernels. Covers `kernels` Python package,
+  CLI tools, kernel-builder, Nix-based build system, versioning, locking, security
+  (trusted publishe
+category: mlops
+tags:
+- ecosystem
+- hf
+- huggingface
+- kernels
 ---
 
 # Hugging Face Kernel Hub — Comprehensive Guide

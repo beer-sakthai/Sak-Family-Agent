@@ -1,7 +1,11 @@
 ---
 name: SakSee-heartmula
 version: 1.0.0
-description: "HeartMuLa: Suno-like song generation from lyrics + tags."
+description: 'HeartMuLa: Suno-like song generation from lyrics + tags.'
+category: web-browser
+tags:
+- browser
+- heartmula
 ---
 
 # HeartMuLa - Open-Source Music Generation

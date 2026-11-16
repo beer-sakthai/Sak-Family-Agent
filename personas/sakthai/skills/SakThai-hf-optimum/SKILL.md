@@ -1,7 +1,16 @@
 ---
 name: SakThai-hf-optimum
 version: 1.0.0
-description: "Deep-dive guide for Hugging Face Optimum — the hardware optimization library for accelerating inference and training on targeted hardware (Intel OpenVINO, ONNX Runtime, NVIDIA TensorRT-LLM, AWS Trainium/Inferentia, Google TPU, Intel Gaudi, AMD, Furio"
+description: Deep-dive guide for Hugging Face Optimum — the hardware optimization
+  library for accelerating inference and training on targeted hardware (Intel OpenVINO,
+  ONNX Runtime, NVIDIA TensorRT-LLM, AWS Trainium/Inferentia, Google TPU, Intel Gaudi,
+  AMD, Furio
+category: mlops
+tags:
+- hf
+- huggingface
+- nanotron
+- optimum
 ---
 
 # 🤗 Optimum — Hardware Optimization Library

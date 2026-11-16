@@ -1,7 +1,22 @@
 ---
 name: SakThai-hf-transformers-quantization-eetq-deep-dive
 version: 1.0.0
-description: "Complete reference for EETQ (Easy & Efficient Quantization for Transformers) — int8 weight-only per-channel quantization for NVIDIA GPUs, integrated via the Hugging Face Hub Kernels system."
+description: Complete reference for EETQ (Easy & Efficient Quantization for Transformers)
+  — int8 weight-only per-channel quantization for NVIDIA GPUs, integrated via the
+  Hugging Face Hub Kernels system.
+category: mlops
+tags:
+- deep
+- dive
+- eetq
+- estimation
+- hf
+- huggingface
+- inkling
+- memory
+- quantization
+- transformers
+- watermarking
 ---
 
 # EETQ Quantization in Hugging Face Transformers

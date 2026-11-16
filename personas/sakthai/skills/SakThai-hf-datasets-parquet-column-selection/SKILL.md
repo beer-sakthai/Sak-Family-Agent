@@ -1,22 +1,33 @@
 ---
 name: SakThai-hf-datasets-parquet-column-selection
+version: 1.0.0
+description: 'Deep reference on Parquet column projection, filter pushdown, predicate
+  pushdown, row group skipping, and column pruning with Hugging Face Datasets. Covers
+  Dataset.from_parquet(), Dataset.to_parquet(), ParquetConfig, PyArrow dataset integration,
+  fragment scan options, content-defined chunking, and practical zero-cost analytics
+  query patterns via DuckDB, Polars, and direct Parquet reads.
+
+  '
+category: datasets
+tags:
+- arrow
+- column
+- column-projection
+- datasets
+- duckdb
+- filter-pushdown
+- from
+- hf
+- huggingface
+- io
+- parquet
+- performance
+- polars
+- pyarrow
+- selection
+- streaming
 author: SakThai
 license: MIT
-description: >
-  Deep reference on Parquet column projection, filter pushdown, predicate
-  pushdown, row group skipping, and column pruning with Hugging Face Datasets.
-  Covers Dataset.from_parquet(), Dataset.to_parquet(), ParquetConfig, PyArrow
-  dataset integration, fragment scan options, content-defined chunking, and
-  practical zero-cost analytics query patterns via DuckDB, Polars, and direct
-  Parquet reads.
-version: 1.0.0
-metadata:
-  hermes:
-    agent: sakthai
-    created: 2026-07-24
-    updated: 2026-07-24
-    type: mlops
-    tags: [hf, datasets, parquet, column-projection, filter-pushdown, duckdb, polars]
 ---
 
 # SakThai — HF Datasets Parquet Column Selection & Filter Pushdown Deep Dive

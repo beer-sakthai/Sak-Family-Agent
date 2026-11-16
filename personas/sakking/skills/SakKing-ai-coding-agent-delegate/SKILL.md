@@ -1,7 +1,14 @@
 ---
 name: SakKing-ai-coding-agent-delegate
 version: 1.0.0
-description: "Delegate tasks to Claude, Codex, or Gemini coding agents."
+description: Delegate tasks to Claude, Codex, or Gemini coding agents.
+category: productivity
+tags:
+- agent
+- ai
+- cli
+- coding
+- delegate
 ---
 # AI Coding Agent Delegate
 

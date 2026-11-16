@@ -1,7 +1,11 @@
 ---
 name: SakSee-songsee
 version: 1.0.0
-description: "Audio spectrograms/features (mel, chroma, MFCC) via CLI."
+description: Audio spectrograms/features (mel, chroma, MFCC) via CLI.
+category: web-browser
+tags:
+- browser
+- songsee
 ---
 
 # songsee

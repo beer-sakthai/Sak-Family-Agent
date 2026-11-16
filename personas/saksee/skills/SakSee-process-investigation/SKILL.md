@@ -1,7 +1,13 @@
 ---
 name: SakSee-process-investigation
 version: 1.0.0
-description: "Investigate and manage system processes for debugging, monitoring, and verification purposes."
+description: Investigate and manage system processes for debugging, monitoring, and
+  verification purposes.
+category: web-browser
+tags:
+- browser
+- investigation
+- process
 ---
 
 # Process Investigation

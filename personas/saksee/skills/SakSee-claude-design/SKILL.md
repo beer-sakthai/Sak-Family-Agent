@@ -1,7 +1,12 @@
 ---
 name: SakSee-claude-design
 version: 1.0.0
-description: "Design one-off HTML artifacts (landing, deck, prototype)."
+description: Design one-off HTML artifacts (landing, deck, prototype).
+category: web-browser
+tags:
+- browser
+- claude
+- design
 ---
 
 # Claude Design for CLI/API Agents

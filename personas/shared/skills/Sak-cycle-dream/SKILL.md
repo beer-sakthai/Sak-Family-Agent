@@ -1,7 +1,12 @@
 ---
 name: Sak-cycle-dream
 version: 1.0.0
-description: "Define the vision and recall prior context before building."
+description: Define the vision and recall prior context before building.
+category: cycle
+tags:
+- cycle
+- dream
+- shared
 ---
 
 # Sak-cycle-dream

@@ -1,7 +1,12 @@
 ---
 name: SakSit-linkedin-content-publishing
 version: 1.0.0
-description: "Publish to LinkedIn and Instagram via REST API."
+description: Publish to LinkedIn and Instagram via REST API.
+category: content-marketing
+tags:
+- content
+- linkedin
+- publishing
 ---
 
 # LinkedIn Content Publishing

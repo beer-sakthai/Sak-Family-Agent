@@ -1,7 +1,15 @@
 ---
 name: SakThai-hf-inference-client-embeddings-patterns
 version: 1.0.0
-description: "name: SakThai-hf-inference-client-embeddings-patterns"
+description: 'name: SakThai-hf-inference-client-embeddings-patterns'
+category: mlops
+tags:
+- client
+- embeddings
+- hf
+- huggingface
+- inference
+- patterns
 ---
 
 # HF Inference Client — Embeddings Patterns (Serverless)

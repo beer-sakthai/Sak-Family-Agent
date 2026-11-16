@@ -1,7 +1,13 @@
 ---
 name: SakKing-production-manager-plan
 version: 1.0.0
-description: "Plan, analyze, and report production with cost and metrics."
+description: Plan, analyze, and report production with cost and metrics.
+category: agent-runner
+tags:
+- cli
+- manager
+- plan
+- production
 ---
 
 # Production Manager Plan

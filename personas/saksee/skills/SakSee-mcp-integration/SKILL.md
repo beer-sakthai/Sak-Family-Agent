@@ -1,7 +1,15 @@
 ---
 name: SakSee-mcp-integration
 version: 1.0.0
-description: "This skill should be used when the user asks to add MCP server, integrate MCP, configure MCP in plugin, use .mcp.json, set up Model Context Protocol, connect external service, mentions ${CLAUDE_PLUGIN_ROOT} with MCP, or discusses MCP server types (SS"
+description: This skill should be used when the user asks to add MCP server, integrate
+  MCP, configure MCP in plugin, use .mcp.json, set up Model Context Protocol, connect
+  external service, mentions ${CLAUDE_PLUGIN_ROOT} with MCP, or discusses MCP server
+  types (SS
+category: web-browser
+tags:
+- browser
+- integration
+- mcp
 ---
 
 # MCP Integration for Claude Code Plugins

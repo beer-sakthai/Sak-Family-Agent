@@ -1,7 +1,14 @@
 ---
 name: SakThai-hf-accelerate
 version: 1.0.0
-description: "Hugging Face Accelerate: distributed/mixed-precision training, device mapping, and the accelerate launch CLI — unify CPU/GPU/TPU/FSDP/DeepSpeed workflows with a single PyTorch-compatible API."
+description: 'Hugging Face Accelerate: distributed/mixed-precision training, device
+  mapping, and the accelerate launch CLI — unify CPU/GPU/TPU/FSDP/DeepSpeed workflows
+  with a single PyTorch-compatible API.'
+category: mlops
+tags:
+- accelerate
+- hf
+- huggingface
 ---
 
 # Hugging Face Accelerate

@@ -1,7 +1,15 @@
 ---
 name: SakSee-playwright-html-reports
 version: 1.0.0
-description: "Playwright HTML Test Reports: inspect test results via a filterable dashboard with browser, pass/fail/skip, and time-travel step inspection."
+description: 'Playwright HTML Test Reports: inspect test results via a filterable
+  dashboard with browser, pass/fail/skip, and time-travel step inspection.'
+category: web-browser
+tags:
+- browser
+- html
+- playwright
+- report
+- reports
 ---
 
 # Playwright HTML Test Reports

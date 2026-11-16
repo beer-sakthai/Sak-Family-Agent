@@ -1,7 +1,12 @@
 ---
 name: SakSee-manim-video
 version: 1.0.0
-description: "Manim CE animations: 3Blue1Brown math/algo videos."
+description: 'Manim CE animations: 3Blue1Brown math/algo videos.'
+category: web-browser
+tags:
+- browser
+- manim
+- video
 ---
 
 # Manim Video Production Pipeline

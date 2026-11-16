@@ -1,7 +1,14 @@
 ---
 name: SakJules-model-publishing-pipeline
 version: 1.0.0
-description: "End-to-end ML model publishing: free-GPU training (Kaggle/Colab), LoRA fine-tuning, GGUF quantization, BFCL benchmark, and HF Hub release with auto-reporting."
+description: 'End-to-end ML model publishing: free-GPU training (Kaggle/Colab), LoRA
+  fine-tuning, GGUF quantization, BFCL benchmark, and HF Hub release with auto-reporting.'
+category: automation
+tags:
+- automation
+- model
+- pipeline
+- publishing
 ---
 
 # Model Publishing Pipeline

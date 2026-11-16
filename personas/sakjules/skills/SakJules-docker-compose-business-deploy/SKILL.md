@@ -1,7 +1,16 @@
 ---
 name: SakJules-docker-compose-business-deploy
 version: 1.0.0
-description: "Practical Docker Compose patterns for containerizing Python/FastAPI backend services with databases, networking, and secrets management. Mirrors Beers WorkFlow-SakThai deployment style."
+description: Practical Docker Compose patterns for containerizing Python/FastAPI backend
+  services with databases, networking, and secrets management. Mirrors Beers WorkFlow-SakThai
+  deployment style.
+category: devops
+tags:
+- automation
+- business
+- compose
+- deploy
+- docker
 ---
 
 # Docker Compose Business Deployment

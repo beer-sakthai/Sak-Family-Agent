@@ -1,8 +1,27 @@
 ---
 name: SakThai-hf-hub-storage-management
 version: 1.0.0
-description: "Manage Hugging Face Hub storage — understand quotas, free space, delete LFS files, super-squash repos, and manage Git LFS on the Hub"
+description: Manage Hugging Face Hub storage — understand quotas, free space, delete
+  LFS files, super-squash repos, and manage Git LFS on the Hub
+category: mlops
+tags:
+- compliance
+- data-residency
+- deep
+- dive
+- enterprise
+- gdpr
+- hf
+- hub
+- huggingface
+- limits
+- management
+- performance
+- regions
+- storage
+- teams
 ---
+
 # HF Hub Storage Management
 
 Trigger when: user asks about HF storage quotas, freeing space, cleaning LFS files, deleting model versions, managing repo storage, super-squashing repos.

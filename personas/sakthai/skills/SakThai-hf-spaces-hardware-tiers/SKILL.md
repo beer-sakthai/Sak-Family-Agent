@@ -1,7 +1,21 @@
 ---
 name: SakThai-hf-spaces-hardware-tiers
 version: 1.0.0
-description: "HuggingFace Spaces hardware tiers: CPU, GPU, and accelerators"
+description: 'HuggingFace Spaces hardware tiers: CPU, GPU, and accelerators'
+category: mlops
+tags:
+- billing
+- free-tier
+- hardware
+- hf
+- hub
+- huggingface
+- lifecycle
+- pause
+- sleep
+- spaces
+- tiers
+- zerogpu
 ---
 
 # HF Spaces Hardware Tiers

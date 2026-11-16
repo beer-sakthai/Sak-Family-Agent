@@ -1,7 +1,13 @@
 ---
 name: SakJules-user-communication
 version: 1.0.0
-description: "Communication preferences and interaction conventions for the primary user (Beer / beer-sakthai). Apply on every interaction."
+description: Communication preferences and interaction conventions for the primary
+  user (Beer / beer-sakthai). Apply on every interaction.
+category: devops
+tags:
+- automation
+- communication
+- user
 ---
 
 # User Communication Preferences

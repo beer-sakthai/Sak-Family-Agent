@@ -1,7 +1,13 @@
 ---
 name: SakTan-close-the-day
 version: 1.0.0
-description: "End-of-day closure routine u2014 mark tasks done, log the days outcome,    and set tomorrows top action."
+description: End-of-day closure routine u2014 mark tasks done, log the days outcome,    and
+  set tomorrows top action.
+category: operations
+tags:
+- close
+- daily-ops
+- day
 ---
 
 # Close the Day

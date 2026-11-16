@@ -1,7 +1,11 @@
 ---
 name: SakSit-xurl
 version: 1.0.0
-description: "X/Twitter via xurl CLI: post, search, DM, media, v2 API."
+description: 'X/Twitter via xurl CLI: post, search, DM, media, v2 API.'
+category: social-media
+tags:
+- content
+- xurl
 ---
 
 # xurl — X (Twitter) API via the Official CLI

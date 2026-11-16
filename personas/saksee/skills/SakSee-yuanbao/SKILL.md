@@ -1,7 +1,11 @@
 ---
 name: SakSee-yuanbao
 version: 1.0.0
-description: "Yuanbao (元宝) groups: @mention users, query info/members."
+description: 'Yuanbao (元宝) groups: @mention users, query info/members.'
+category: web-browser
+tags:
+- browser
+- yuanbao
 ---
 
 # Yuanbao Group Interaction

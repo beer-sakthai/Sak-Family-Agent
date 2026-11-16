@@ -1,7 +1,15 @@
 ---
 name: SakThai-hf-gated-repos
 version: 1.0.0
-description: "Hugging Face Hub Gated Repositories — configure, manage, and programmatically approve access for gated models and datasets, including custom field forms, EU restrictions, the REST API, and the huggingface_hub Python library methods"
+description: Hugging Face Hub Gated Repositories — configure, manage, and programmatically
+  approve access for gated models and datasets, including custom field forms, EU restrictions,
+  the REST API, and the huggingface_hub Python library methods
+category: mlops
+tags:
+- gated
+- hf
+- huggingface
+- repos
 ---
 
 # HF Hub Gated Repositories

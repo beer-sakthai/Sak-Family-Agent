@@ -1,7 +1,17 @@
 ---
 name: SakThai-hf-datasets-text-processing-pipeline
 version: 1.0.0
-description: "name: SakThai-hf-datasets-text-processing-pipeline"
+description: 'name: SakThai-hf-datasets-text-processing-pipeline'
+category: datasets
+tags:
+- datasets
+- hf
+- huggingface
+- image
+- pipeline
+- processing
+- text
+- video
 ---
 
 # HF Datasets Text Processing and Deduplication Pipeline

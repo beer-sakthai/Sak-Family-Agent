@@ -1,7 +1,13 @@
 ---
 name: SakSee-songwriting-and-ai-music
 version: 1.0.0
-description: "Songwriting craft and Suno AI music prompts."
+description: Songwriting craft and Suno AI music prompts.
+category: web-browser
+tags:
+- ai
+- browser
+- music
+- songwriting
 ---
 
 # Songwriting & AI Music Generation

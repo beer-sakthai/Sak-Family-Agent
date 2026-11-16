@@ -1,7 +1,19 @@
 ---
 name: SakSit-b2b-saas-voc-feedback-loop-2026
 version: 1.0.0
-description: ">-   A complete operational playbook for B2B SaaS companies to build, deploy, and   scale a Voice of Customer (VoC) program with continuous AI-driven feedback   loops in 2026. Covers program charter, source diversification, AI conversation   layer, c"
+description: '>-   A complete operational playbook for B2B SaaS companies to build,
+  deploy, and   scale a Voice of Customer (VoC) program with continuous AI-driven
+  feedback   loops in 2026. Covers program charter, source diversification, AI conversation   layer,
+  c'
+category: content-marketing
+tags:
+- '2026'
+- b2b
+- content
+- feedback
+- loop
+- saas
+- voc
 ---
 
 # B2B SaaS Voice of Customer (VoC) Program & Feedback Loop Strategy 2026

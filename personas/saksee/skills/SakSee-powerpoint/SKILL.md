@@ -1,7 +1,11 @@
 ---
 name: SakSee-powerpoint
 version: 1.0.0
-description: "Create, read, edit .pptx decks, slides, notes, templates."
+description: Create, read, edit .pptx decks, slides, notes, templates.
+category: web-browser
+tags:
+- browser
+- powerpoint
 ---
 
 # Powerpoint Skill

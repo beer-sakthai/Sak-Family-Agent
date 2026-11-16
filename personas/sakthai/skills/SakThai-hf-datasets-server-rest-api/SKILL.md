@@ -1,7 +1,33 @@
 ---
 name: SakThai-hf-datasets-server-rest-api
 version: 1.0.0
-description: "HF Datasets Server REST API — browse, query, search, filter, and download datasets on the Hub without downloading the full dataset. Covers all 11+ endpoints, pagination, auth, and integration patterns."
+description: HF Datasets Server REST API — browse, query, search, filter, and download
+  datasets on the Hub without downloading the full dataset. Covers all 11+ endpoints,
+  pagination, auth, and integration patterns.
+category: datasets
+tags:
+- api
+- conversion
+- datasets
+- deep
+- dive
+- endpoint
+- endpoints
+- filter
+- hf
+- huggingface
+- is
+- parquet
+- pipeline
+- pyarrow
+- rest
+- rows
+- rust
+- server
+- splits
+- statistics
+- streaming
+- valid
 ---
 
 # HF Datasets Server REST API

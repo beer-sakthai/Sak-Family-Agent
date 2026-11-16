@@ -1,7 +1,12 @@
 ---
 name: Sak-ocr-and-documents
 version: 1.0.0
-description: "Extract text from PDFs/scans (pymupdf, marker-pdf)."
+description: Extract text from PDFs/scans (pymupdf, marker-pdf).
+category: utilities
+tags:
+- documents
+- ocr
+- shared
 ---
 
 # PDF & Document Extraction

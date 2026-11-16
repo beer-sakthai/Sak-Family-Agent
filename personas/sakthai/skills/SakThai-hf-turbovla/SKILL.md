@@ -1,12 +1,23 @@
 ---
 name: SakThai-hf-turbovla
+version: 1.0.0
+description: TurboVLA — LLM-free real-time Vision-Language-Action (VLA) architecture.
+  Direct V+L→A mapping with DINOv3 + frozen BERT + BiAttentionBlock bidirectional
+  fusion + ACT-style chunk decoder. 0.2B params, 97.7% LIBERO, 32 Hz / 0.9 GB VRAM
+  on RTX 4090. Daily-papers scan 2026-07-31.
+category: mlops
+tags:
+- embodied-ai
+- hf
+- huggingface
+- paper
+- robotics
+- turbovla
+- vla
 author: SakThai
 license: MIT
-description: "TurboVLA — LLM-free real-time Vision-Language-Action (VLA) architecture. Direct V+L→A mapping with DINOv3 + frozen BERT + BiAttentionBlock bidirectional fusion + ACT-style chunk decoder. 0.2B params, 97.7% LIBERO, 32 Hz / 0.9 GB VRAM on RTX 4090. Daily-papers scan 2026-07-31."
-version: 1.0.0
-category: mlops
-tags: [robotics, vla, embodied-ai, huggingface, turbovla, paper]
-platforms: [linux]
+platforms:
+- linux
 ---
 
 # TurboVLA — LLM-free Real-Time VLA (arXiv 2607.27205)

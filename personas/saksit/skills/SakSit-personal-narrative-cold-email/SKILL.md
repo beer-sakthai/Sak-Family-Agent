@@ -1,7 +1,14 @@
 ---
 name: SakSit-personal-narrative-cold-email
 version: 1.0.0
-description: "Cold email using personal narrative as hook."
+description: Cold email using personal narrative as hook.
+category: content-marketing
+tags:
+- cold
+- content
+- email
+- narrative
+- personal
 ---
 
 # Personal Narrative Cold Email Outreach

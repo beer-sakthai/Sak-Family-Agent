@@ -1,7 +1,16 @@
 ---
 name: SakSee-stitch-upload-to-stitch
 version: 1.0.0
-description: ">-   Upload local assets (images, mockups, extracted HTML, design markdown) to a Stitch project.   ALWAYS use this skill when you need to upload visual assets, HTML pages, or design docs   to Stitch, particularly when direct MCP tool calls fail or tr"
+description: '>-   Upload local assets (images, mockups, extracted HTML, design markdown)
+  to a Stitch project.   ALWAYS use this skill when you need to upload visual assets,
+  HTML pages, or design docs   to Stitch, particularly when direct MCP tool calls
+  fail or tr'
+category: web-browser
+tags:
+- browser
+- stitch
+- to
+- upload
 ---
 
 # Upload-to-Stitch

@@ -1,16 +1,28 @@
 ---
 name: SakKing-maps
-description: "Geocode, POIs, routes, timezones via OpenStreetMap/OSRM."
 version: 1.2.0
+description: Geocode, POIs, routes, timezones via OpenStreetMap/OSRM.
+category: productivity
+tags:
+- cli
+- directions
+- distance
+- geocoding
+- location
+- maps
+- nearby
+- nominatim
+- openstreetmap
+- osrm
+- overpass
+- places
+- routing
 author: Mibayy
 license: MIT
-platforms: [linux, macos, windows]
-metadata:
-  hermes:
-    tags: [maps, geocoding, places, routing, distance, directions, nearby, location, openstreetmap, nominatim, overpass, osrm]
-    category: productivity
-    requires_toolsets: [terminal]
-    supersedes: [find-nearby]
+platforms:
+- linux
+- macos
+- windows
 ---
 
 # Maps Skill

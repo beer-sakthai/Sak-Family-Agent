@@ -1,7 +1,12 @@
 ---
 name: Sak-nano-pdf
 version: 1.0.0
-description: "Edit PDF text/typos/titles via nano-pdf CLI (NL prompts)."
+description: Edit PDF text/typos/titles via nano-pdf CLI (NL prompts).
+category: utilities
+tags:
+- nano
+- pdf
+- shared
 ---
 
 # nano-pdf

@@ -1,7 +1,17 @@
 ---
 name: SakSit-b2b-saas-youtube-seo-2026
 version: 1.0.0
-description: "Optimize B2B SaaS YouTube content for search discoverability, ranking, and organic growth using keyword research, CTR optimization, retention tactics, and topical authority building."
+description: Optimize B2B SaaS YouTube content for search discoverability, ranking,
+  and organic growth using keyword research, CTR optimization, retention tactics,
+  and topical authority building.
+category: seo
+tags:
+- '2026'
+- b2b
+- content
+- saas
+- seo
+- youtube
 ---
 
 # B2B SaaS YouTube SEO Strategy 2026

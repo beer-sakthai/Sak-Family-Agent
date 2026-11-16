@@ -1,7 +1,16 @@
 ---
 name: SakThai-hf-pull-requests-discussions
 version: 1.0.0
-description: ">   Complete reference on Hugging Face Hub Pull Requests and Discussions API —   covering the full lifecycle: creating discussions and PRs, listing, filtering,   commenting, editing, hiding, status changes, merging, renaming, and the git   ref model "
+description: '>   Complete reference on Hugging Face Hub Pull Requests and Discussions
+  API —   covering the full lifecycle: creating discussions and PRs, listing, filtering,   commenting,
+  editing, hiding, status changes, merging, renaming, and the git   ref model '
+category: mlops
+tags:
+- discussions
+- hf
+- huggingface
+- pull
+- requests
 ---
 
 # HF Hub Pull Requests & Discussions API

@@ -1,7 +1,13 @@
 ---
 name: SakSit-media-playback
 version: 1.0.0
-description: "Find and deliver playable media links for requested tracks, playlists,   or sleep/relaxation content across desktop and mobile."
+description: Find and deliver playable media links for requested tracks, playlists,   or
+  sleep/relaxation content across desktop and mobile.
+category: content-marketing
+tags:
+- content
+- media
+- playback
 ---
 
 # Media playback: links and device delivery

@@ -1,10 +1,17 @@
 ---
 name: SakThai-lm-evaluation-harness
+version: 1.0.0
+description: 'lm-eval-harness: benchmark LLMs (MMLU, GSM8K, etc.).'
 category: mlops
+tags:
+- evaluation
+- harness
+- hermes
+- huggingface
+- lm
+- mlops
 author: SakThai
 license: MIT
-description: 'lm-eval-harness: benchmark LLMs (MMLU, GSM8K, etc.).'
-version: 1.0.0
 platforms:
 - linux
 - macos

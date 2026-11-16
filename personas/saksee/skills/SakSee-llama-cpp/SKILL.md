@@ -1,7 +1,12 @@
 ---
 name: SakSee-llama-cpp
 version: 1.0.0
-description: "llama.cpp local GGUF inference + HF Hub model discovery."
+description: llama.cpp local GGUF inference + HF Hub model discovery.
+category: web-browser
+tags:
+- browser
+- cpp
+- llama
 ---
 
 # llama.cpp + GGUF

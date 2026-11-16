@@ -1,7 +1,16 @@
 ---
 name: SakKing-agent-ecosystem-persistence
 version: 1.0.0
-description: "Full-stack agent knowledge backup to Google Drive + Supermemory — inventory all agent state (memory, supermemory, skills, soul, config), structure a Drive folder hierarchy, persist each piece in the right format, consolidate memory, and log the opera"
+description: Full-stack agent knowledge backup to Google Drive + Supermemory — inventory
+  all agent state (memory, supermemory, skills, soul, config), structure a Drive folder
+  hierarchy, persist each piece in the right format, consolidate memory, and log the
+  opera
+category: productivity
+tags:
+- agent
+- cli
+- ecosystem
+- persistence
 ---
 
 # Sak Agent Ecosystem Persistence

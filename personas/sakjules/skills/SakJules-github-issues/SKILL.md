@@ -1,7 +1,12 @@
 ---
 name: SakJules-github-issues
 version: 1.0.0
-description: "Create, triage, label, assign GitHub issues via gh or REST."
+description: Create, triage, label, assign GitHub issues via gh or REST.
+category: devops
+tags:
+- automation
+- github
+- issues
 ---
 
 # GitHub Issues Management

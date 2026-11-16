@@ -1,12 +1,27 @@
 ---
 name: SakThai-hf-xet-storage
-category: mlops
-author: SakThai
-license: MIT
+version: 1.0.0
 description: Use when working with Hugging Face Xet storage — chunk-level deduplication
   for faster uploads/downloads, the hf_xet Python package, git-xet, the Xet protocol
   (xorbs, shards, CDC), Parquet content-defined chunking, and Xet environment variables.
-version: 1.0.0
+category: mlops
+tags:
+- backend
+- cas
+- content-addressed-store
+- deduplication
+- git-lfs
+- hermes
+- hf
+- hf-hub
+- hf-xet
+- huggingface
+- infrastructure
+- mlops
+- storage
+- xet
+author: SakThai
+license: MIT
 platforms:
 - linux
 - macos

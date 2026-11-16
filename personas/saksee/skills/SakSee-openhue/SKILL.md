@@ -1,7 +1,11 @@
 ---
 name: SakSee-openhue
 version: 1.0.0
-description: "Control Philips Hue lights, scenes, rooms via OpenHue CLI."
+description: Control Philips Hue lights, scenes, rooms via OpenHue CLI.
+category: web-browser
+tags:
+- browser
+- openhue
 ---
 
 # OpenHue CLI

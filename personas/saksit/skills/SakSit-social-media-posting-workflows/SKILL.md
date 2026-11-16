@@ -1,7 +1,14 @@
 ---
 name: SakSit-social-media-posting-workflows
 version: 1.0.0
-description: "Post to Instagram, LinkedIn, Facebook via Composio."
+description: Post to Instagram, LinkedIn, Facebook via Composio.
+category: social-media
+tags:
+- content
+- media
+- posting
+- social
+- workflows
 ---
 
 # Social-Media Posting Workflows 2026

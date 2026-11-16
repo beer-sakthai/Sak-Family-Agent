@@ -1,7 +1,15 @@
 ---
 name: SakSit-b2b-saas-linkedin-newsletter-2026
 version: 1.0.0
-description: "Saksit B2B Saas Linkedin Newsletter 2026"
+description: Saksit B2B Saas Linkedin Newsletter 2026
+category: content-marketing
+tags:
+- '2026'
+- b2b
+- content
+- linkedin
+- newsletter
+- saas
 ---
 
 # B2B SaaS LinkedIn Newsletter Growth Strategy 2026

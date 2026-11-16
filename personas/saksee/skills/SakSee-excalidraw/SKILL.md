@@ -1,7 +1,11 @@
 ---
 name: SakSee-excalidraw
 version: 1.0.0
-description: "Hand-drawn Excalidraw JSON diagrams (arch, flow, seq)."
+description: Hand-drawn Excalidraw JSON diagrams (arch, flow, seq).
+category: web-browser
+tags:
+- browser
+- excalidraw
 ---
 
 # Excalidraw Diagram Skill

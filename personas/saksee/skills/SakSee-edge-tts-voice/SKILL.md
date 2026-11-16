@@ -1,7 +1,15 @@
 ---
 name: SakSee-edge-tts-voice
 version: 1.0.0
-description: "Generate voice notes via local Edge TTS for Hermes/Saksee. Use edge-tts CLI with en-US-EmmaMultilingualNeural, convert to Telegram OGG/Opus, and deliver as voice bubbles."
+description: Generate voice notes via local Edge TTS for Hermes/Saksee. Use edge-tts
+  CLI with en-US-EmmaMultilingualNeural, convert to Telegram OGG/Opus, and deliver
+  as voice bubbles.
+category: web-browser
+tags:
+- browser
+- edge
+- tts
+- voice
 ---
 
 # Edge TTS Voice Notes

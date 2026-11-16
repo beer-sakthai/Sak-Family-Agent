@@ -1,7 +1,14 @@
 ---
 name: SakJules-github-repo-management
 version: 1.0.0
-description: "GitHub repo management: invite, protect, archive, restrict push, rename, delete, transfer ownership, and settings."
+description: 'GitHub repo management: invite, protect, archive, restrict push, rename,
+  delete, transfer ownership, and settings.'
+category: devops
+tags:
+- automation
+- github
+- management
+- repo
 ---
 # GitHub Repository Management
 

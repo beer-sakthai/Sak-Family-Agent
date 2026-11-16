@@ -1,7 +1,12 @@
 ---
 name: SakJules-kanban-worker
 version: 1.0.0
-description: "Execute tasks in a kanban workflow pattern."
+description: Execute tasks in a kanban workflow pattern.
+category: devops
+tags:
+- automation
+- kanban
+- worker
 ---
 
 # Kanban Worker — Pitfalls and Examples

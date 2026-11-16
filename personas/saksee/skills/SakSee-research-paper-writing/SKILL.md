@@ -1,7 +1,13 @@
 ---
 name: SakSee-research-paper-writing
 version: 1.0.0
-description: "Write ML papers for NeurIPS/ICML/ICLR: design→submit."
+description: 'Write ML papers for NeurIPS/ICML/ICLR: design→submit.'
+category: web-browser
+tags:
+- browser
+- paper
+- research
+- writing
 ---
 
 # Research Paper Writing Pipeline

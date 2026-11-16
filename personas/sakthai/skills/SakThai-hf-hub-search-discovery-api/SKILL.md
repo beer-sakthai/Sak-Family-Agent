@@ -1,7 +1,15 @@
 ---
 name: SakThai-hf-hub-search-discovery-api
 version: 1.0.0
-description: "name: SakThai-hf-hub-search-discovery-api"
+description: 'name: SakThai-hf-hub-search-discovery-api'
+category: mlops
+tags:
+- api
+- discovery
+- hf
+- hub
+- huggingface
+- search
 ---
 
 # Hugging Face Hub Search & Discovery API

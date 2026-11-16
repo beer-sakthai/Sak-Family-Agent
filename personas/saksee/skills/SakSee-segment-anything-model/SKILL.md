@@ -1,7 +1,13 @@
 ---
 name: SakSee-segment-anything-model
 version: 1.0.0
-description: "SAM: zero-shot image segmentation via points, boxes, masks."
+description: 'SAM: zero-shot image segmentation via points, boxes, masks.'
+category: web-browser
+tags:
+- anything
+- browser
+- model
+- segment
 ---
 
 # Segment Anything Model (SAM)

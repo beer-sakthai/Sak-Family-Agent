@@ -1,7 +1,16 @@
 ---
 name: SakThai-hf-videococo-code-cot
 version: 1.0.0
-description: "Complete reference on VideoCoCo (arXiv:2607.27380) — code-as-CoT physically-consistent video generation via an agentic dual-engine system (coding agent → Blender simulation draft → generative video editor). Covers the pipeline, agent skills, OmniWeav"
+description: Complete reference on VideoCoCo (arXiv:2607.27380) — code-as-CoT physically-consistent
+  video generation via an agentic dual-engine system (coding agent → Blender simulation
+  draft → generative video editor). Covers the pipeline, agent skills, OmniWeav
+category: mlops
+tags:
+- code
+- cot
+- hf
+- huggingface
+- videococo
 ---
 
 # VideoCoCo — Code-as-CoT Video Generation (Agentic Dual-Engine)

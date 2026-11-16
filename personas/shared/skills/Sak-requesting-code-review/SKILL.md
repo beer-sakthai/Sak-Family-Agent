@@ -1,7 +1,13 @@
 ---
 name: Sak-requesting-code-review
 version: 1.0.0
-description: "Pre-commit review: security scan, quality gates, auto-fix."
+description: 'Pre-commit review: security scan, quality gates, auto-fix.'
+category: utilities
+tags:
+- code
+- requesting
+- review
+- shared
 ---
 
 # Requesting Code Review

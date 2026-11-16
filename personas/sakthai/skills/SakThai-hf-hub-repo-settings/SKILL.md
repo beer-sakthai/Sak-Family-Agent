@@ -1,7 +1,19 @@
 ---
 name: SakThai-hf-hub-repo-settings
 version: 1.0.0
-description: "Manage repository settings, visibility, gated access, tags, and metadata on the Hugging Face Hub through the huggingface_hub Python API."
+description: Manage repository settings, visibility, gated access, tags, and metadata
+  on the Hugging Face Hub through the huggingface_hub Python API.
+category: mlops
+tags:
+- access
+- gated
+- hf
+- hub
+- huggingface
+- management
+- repo
+- repos
+- settings
 ---
 
 # HF Hub Repo Settings, Visibility & Tags Management

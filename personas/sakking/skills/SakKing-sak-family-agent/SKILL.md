@@ -1,7 +1,15 @@
 ---
 name: SakKing-sak-family-agent
 version: 1.0.0
-description: ">-   Cheatsheet for developing in the Sak-Family-Agent monorepo. Covers persona   registration patterns, SOUL.md structure, lint gotchas, build commands, and   the 6-agent family architecture. Activate when working in /home/beern/Sak-Family-Agent."
+description: '>-   Cheatsheet for developing in the Sak-Family-Agent monorepo. Covers
+  persona   registration patterns, SOUL.md structure, lint gotchas, build commands,
+  and   the 6-agent family architecture. Activate when working in /home/beern/Sak-Family-Agent.'
+category: productivity
+tags:
+- agent
+- cli
+- family
+- sak
 ---
 
 # Sak-Family-Agent Developer Skill

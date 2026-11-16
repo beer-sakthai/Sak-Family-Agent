@@ -1,12 +1,29 @@
 ---
 name: SakThai-hf-donut-document-understanding
+version: 1.0.0
+description: Hugging Face Donut (Document Understanding Transformer) — comprehensive
+  reference for OCR-free document understanding with Swin Transformer encoder + BART
+  decoder architecture, inference pipelines, fine-tuning, and model card documentation.
+category: mlops
+tags:
+- bart
+- document
+- document-ai
+- document-understanding
+- donut
+- hf
+- huggingface
+- ocr-free
+- swin
+- transformers
+- understanding
+- vision
 author: SakThai
 license: MIT
-description: "Hugging Face Donut (Document Understanding Transformer) — comprehensive reference for OCR-free document understanding with Swin Transformer encoder + BART decoder architecture, inference pipelines, fine-tuning, and model card documentation."
-version: 1.0.0
-category: mlops
-tags: [huggingface, transformers, document-understanding, donut, vision, ocr-free, swin, bart, document-ai]
-platforms: [linux, macos, windows]
+platforms:
+- linux
+- macos
+- windows
 ---
 
 # HF Donut: Document Understanding Transformer

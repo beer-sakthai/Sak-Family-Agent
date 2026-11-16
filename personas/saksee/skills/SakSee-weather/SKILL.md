@@ -1,7 +1,12 @@
 ---
 name: SakSee-weather
 version: 1.0.0
-description: "Current weather and forecasts with web_fetch, falling back to wttr.in curl for locations, rain, temperature, travel planning."
+description: Current weather and forecasts with web_fetch, falling back to wttr.in
+  curl for locations, rain, temperature, travel planning.
+category: web-browser
+tags:
+- browser
+- weather
 ---
 
 # Weather

@@ -1,7 +1,11 @@
 ---
 name: SakSit-milestone-content
 version: 1.0.0
-description: "Create multi-platform content from achievement data."
+description: Create multi-platform content from achievement data.
+category: content-marketing
+tags:
+- content
+- milestone
 ---
 
 # SakSit Milestone Content

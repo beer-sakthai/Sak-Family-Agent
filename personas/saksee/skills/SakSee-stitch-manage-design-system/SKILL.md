@@ -1,7 +1,21 @@
 ---
 name: SakSee-stitch-manage-design-system
 version: 1.0.0
-description: ">-   Manage design systems in Stitch using MCP tools. Includes retrieval of assets,   creating/updating design systems in Stitch, and applying them to screens. allowed-tools:   - stitch*:*   - Bash   - Read   - Write   - web_fetch"
+description: '>-   Manage design systems in Stitch using MCP tools. Includes retrieval
+  of assets,   creating/updating design systems in Stitch, and applying them to screens.
+  allowed-tools:   - stitch*:*   - Bash   - Read   - Write   - web_fetch'
+category: web-browser
+tags:
+- browser
+- design
+- extract
+- generate
+- html
+- manage
+- md
+- static
+- stitch
+- system
 ---
 
 # Design-System

@@ -1,7 +1,12 @@
 ---
 name: SakJules-github-auth
 version: 1.0.0
-description: "GitHub auth setup: HTTPS tokens, SSH keys, gh CLI login."
+description: 'GitHub auth setup: HTTPS tokens, SSH keys, gh CLI login.'
+category: devops
+tags:
+- auth
+- automation
+- github
 ---
 
 # GitHub Authentication Setup

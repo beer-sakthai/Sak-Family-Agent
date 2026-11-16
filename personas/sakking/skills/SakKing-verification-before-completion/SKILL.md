@@ -1,7 +1,15 @@
 ---
 name: SakKing-verification-before-completion
 version: 1.0.0
-description: "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always"
+description: Use when about to claim work is complete, fixed, or passing, before committing
+  or creating PRs - requires running verification commands and confirming output before
+  making any success claims; evidence before assertions always
+category: productivity
+tags:
+- before
+- cli
+- completion
+- verification
 ---
 
 # Verification Before Completion

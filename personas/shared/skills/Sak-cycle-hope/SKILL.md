@@ -1,7 +1,12 @@
 ---
 name: Sak-cycle-hope
 version: 1.0.0
-description: "Turn the Dream vision into a concrete, defensible plan (PTCF)."
+description: Turn the Dream vision into a concrete, defensible plan (PTCF).
+category: cycle
+tags:
+- cycle
+- hope
+- shared
 ---
 
 # Sak-cycle-hope

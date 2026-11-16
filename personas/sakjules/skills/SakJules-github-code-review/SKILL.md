@@ -1,7 +1,13 @@
 ---
 name: SakJules-github-code-review
 version: 1.0.0
-description: "Review PRs: diffs, inline comments via gh or REST."
+description: 'Review PRs: diffs, inline comments via gh or REST.'
+category: devops
+tags:
+- automation
+- code
+- github
+- review
 ---
 # GitHub Code Review
 

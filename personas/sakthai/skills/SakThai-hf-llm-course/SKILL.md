@@ -1,10 +1,17 @@
 ---
 name: SakThai-hf-llm-course
+version: 1.0.0
+description: Reference for Hugging Face Transformers and LLM workflows.
+category: mlops
+tags:
+- course
+- hf
+- huggingface
+- llm
+- nlp
+- transformers
 author: SakThai
 license: MIT
-description: "Reference for Hugging Face Transformers and LLM workflows."
-version: 1.0.0
-tags: [LLM, NLP, Transformers, HuggingFace, Course]
 ---
 # LLM Course — Transformers & NLP Reference
 

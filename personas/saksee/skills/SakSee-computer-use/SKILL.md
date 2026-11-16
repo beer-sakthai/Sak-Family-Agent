@@ -1,7 +1,15 @@
 ---
 name: SakSee-computer-use
 version: 1.0.0
-description: "Drive the users desktop in the background — clicking, typing, scrolling, dragging."
+description: Drive the users desktop in the background — clicking, typing, scrolling,
+  dragging.
+category: web-browser
+tags:
+- browser
+- computer
+- gemini
+- macos
+- use
 ---
 
 # Computer Use (universal, any-model, cross-platform)

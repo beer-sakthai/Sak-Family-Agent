@@ -1,16 +1,26 @@
 ---
 name: SakThai-hf-journey-narratives
+version: 1.6.0
+description: Create narrative content about your Hugging Face ecosystem journey —
+  tweet threads, blog posts, HF forum posts, retrospectives, and collection notes
+  — for self-improvement crons, social sharing, and community engagement
+category: mlops
+tags:
+- branding
+- content-creation
+- ecosystem
+- hf
+- huggingface
+- journey
+- narrative
+- narratives
+- storytelling
 author: SakThai
 license: MIT
-description: Create narrative content about your Hugging Face ecosystem journey — tweet threads, blog posts, HF forum posts, retrospectives, and collection notes — for self-improvement crons, social sharing, and community engagement
-version: 1.6.0
-category: mlops
-tags: [huggingface, narrative, content-creation, storytelling, branding, journey, ecosystem]
-trigger: >-
-  On cron-based self-improvement tasks that create "one piece of content about
-  our HF journey", when writing about the ecosystem story for social platforms,
-  when composing collection notes or retrospective entries, when running
-  "Brand Storytelling" or "Content Creation" cron jobs
+trigger: On cron-based self-improvement tasks that create "one piece of content about
+  our HF journey", when writing about the ecosystem story for social platforms, when
+  composing collection notes or retrospective entries, when running "Brand Storytelling"
+  or "Content Creation" cron jobs
 ---
 
 # HF Journey Narratives

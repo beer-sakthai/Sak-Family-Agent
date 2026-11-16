@@ -1,18 +1,33 @@
 ---
 name: SakThai-hf-hub-user-and-org-profile-api
-author: SakThai
-license: MIT
-description: >-
-  Complete reference for Hugging Face Hub User and Organization Profile API —
-  REST endpoints, Python SDK methods (get_user_overview, get_organization_overview,
+version: 1.0.0
+description: Complete reference for Hugging Face Hub User and Organization Profile
+  API — REST endpoints, Python SDK methods (get_user_overview, get_organization_overview,
   whoami, list_user_followers/following/members, list_user_repos, list_repo_likers,
   pagination behavior), User and Organization dataclass fields (annotated + dynamic
   extras), auth patterns, social graph operations, and practical discovery recipes.
-version: 2.0.0
-metadata:
-  hermes:
-    tags: [huggingface, hub, api, users, organizations, profiles, social-graph, whoami, followers, members]
-    category: mlops
+category: mlops
+tags:
+- access
+- api
+- control
+- followers
+- groups
+- hf
+- hub
+- huggingface
+- members
+- org
+- organizations
+- profile
+- profiles
+- resource
+- social-graph
+- user
+- users
+- whoami
+author: SakThai
+license: MIT
 updated: 2026-07-25
 ---
 

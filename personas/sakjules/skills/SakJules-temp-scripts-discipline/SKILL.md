@@ -1,7 +1,14 @@
 ---
 name: SakJules-temp-scripts-discipline
 version: 1.0.0
-description: "All temporary/ad-hoc scripts must go in /tmp/, not the working directory. Prevents file pollution across concurrent cron sessions."
+description: All temporary/ad-hoc scripts must go in /tmp/, not the working directory.
+  Prevents file pollution across concurrent cron sessions.
+category: devops
+tags:
+- automation
+- discipline
+- scripts
+- temp
 ---
 
 # Temp Scripts Discipline

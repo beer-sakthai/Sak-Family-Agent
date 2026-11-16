@@ -1,7 +1,19 @@
 ---
 name: SakThai-hf-datasets-tabular-loading
 version: 1.0.0
-description: "Comprehensive guide to loading tabular data with the 🤗 Datasets library — CSV, Pandas, HDF5, SQL, text, XML, and JSON/JSONL formats, with all configuration options and best practices."
+description: Comprehensive guide to loading tabular data with the 🤗 Datasets library
+  — CSV, Pandas, HDF5, SQL, text, XML, and JSON/JSONL formats, with all configuration
+  options and best practices.
+category: datasets
+tags:
+- concatenate
+- datasets
+- faiss
+- hf
+- huggingface
+- interleave
+- loading
+- tabular
 ---
 
 # HF Datasets Tabular Loading

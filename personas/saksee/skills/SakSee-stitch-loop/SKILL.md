@@ -1,7 +1,14 @@
 ---
 name: SakSee-stitch-loop
 version: 1.0.0
-description: "Teaches agents to iteratively build websites using Stitch with an autonomous baton-passing loop pattern allowed-tools:   - stitch*:*   - chrome*:*   - Read   - Write   - Bash"
+description: 'Teaches agents to iteratively build websites using Stitch with an autonomous
+  baton-passing loop pattern allowed-tools:   - stitch*:*   - chrome*:*   - Read   -
+  Write   - Bash'
+category: web-browser
+tags:
+- browser
+- loop
+- stitch
 ---
 
 # Stitch Build Loop

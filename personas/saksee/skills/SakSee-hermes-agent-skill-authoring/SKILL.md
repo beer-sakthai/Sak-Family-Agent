@@ -1,7 +1,14 @@
 ---
 name: SakSee-hermes-agent-skill-authoring
 version: 1.0.0
-description: "Author SKILL.md files with proper frontmatter and structure."
+description: Author SKILL.md files with proper frontmatter and structure.
+category: web-browser
+tags:
+- agent
+- authoring
+- browser
+- hermes
+- skill
 ---
 
 # Hermes Agent Skill Authoring

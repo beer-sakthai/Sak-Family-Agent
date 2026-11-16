@@ -1,7 +1,12 @@
 ---
 name: Sak-google-workspace
 version: 1.0.0
-description: "Gmail, Calendar, Drive, Docs, Sheets via gws CLI or Python."
+description: Gmail, Calendar, Drive, Docs, Sheets via gws CLI or Python.
+category: utilities
+tags:
+- google
+- shared
+- workspace
 ---
 
 # Google Workspace

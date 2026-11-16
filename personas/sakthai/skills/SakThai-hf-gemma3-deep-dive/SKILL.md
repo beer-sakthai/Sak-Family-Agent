@@ -1,7 +1,14 @@
 ---
 name: SakThai-hf-gemma3-deep-dive
 version: 1.0.0
-description: "name: SakThai-hf-gemma3-deep-dive"
+description: 'name: SakThai-hf-gemma3-deep-dive'
+category: mlops
+tags:
+- deep
+- dive
+- gemma3
+- hf
+- huggingface
 ---
 
 # Gemma 3 on Hugging Face — Architecture & Inference Deep Dive

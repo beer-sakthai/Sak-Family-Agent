@@ -1,7 +1,16 @@
 ---
 name: SakThai-hf-hub-security-scanning-deep-dive
 version: 1.0.0
-description: "name: SakThai-hf-hub-security-scanning-deep-dive"
+description: 'name: SakThai-hf-hub-security-scanning-deep-dive'
+category: mlops
+tags:
+- deep
+- dive
+- hf
+- hub
+- huggingface
+- scanning
+- security
 ---
 
 # Hugging Face Hub Security Scanning — Deep Dive

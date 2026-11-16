@@ -1,7 +1,22 @@
 ---
 name: SakThai-hf-skypilot-storage
 version: 1.0.0
-description: ">   Knowledge of running AI workloads on any cloud while storing data on   Hugging Face Hub with zero-egress storage, using SkyPilot for multi-cloud   compute orchestration and HF Storage Buckets / Xet for data storage."
+description: '>   Knowledge of running AI workloads on any cloud while storing data
+  on   Hugging Face Hub with zero-egress storage, using SkyPilot for multi-cloud   compute
+  orchestration and HF Storage Buckets / Xet for data storage.'
+category: mlops
+tags:
+- benchmark
+- embodied-ai
+- hf
+- huggingface
+- internalization
+- skypilot
+- spatial-reasoning
+- spatialcli
+- storage
+- tool-use
+- vlm
 ---
 
 # Hugging Face SkyPilot Storage Integration

@@ -1,7 +1,24 @@
 ---
 name: SakSee-playwright-security-hardening
 version: 1.0.0
-description: "Centralize security and isolation test patterns for Playwright: CSP/cookies/cross-origin behavior and other browser-layer boundaries."
+description: 'Centralize security and isolation test patterns for Playwright: CSP/cookies/cross-origin
+  behavior and other browser-layer boundaries.'
+category: web-browser
+tags:
+- browser
+- clipboard
+- cross
+- enforcement
+- hardening
+- isolation
+- origin
+- permission
+- playwright
+- security
+- sensor
+- storage
+- validation
+- webauthn
 ---
 
 # Playwright Security Hardening

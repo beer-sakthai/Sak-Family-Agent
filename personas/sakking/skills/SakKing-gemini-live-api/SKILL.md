@@ -1,7 +1,15 @@
 ---
 name: SakKing-gemini-live-api
 version: 1.0.0
-description: ">-   Generates a Gemini LiveAPI client service class in the users chosen programming   language. Use when the user wants to build, scaffold, or integrate a client   that connects to the Gemini Enterprise LiveAPI websocket endpoint, handles   session "
+description: '>-   Generates a Gemini LiveAPI client service class in the users chosen
+  programming   language. Use when the user wants to build, scaffold, or integrate
+  a client   that connects to the Gemini Enterprise LiveAPI websocket endpoint, handles   session '
+category: productivity
+tags:
+- api
+- cli
+- gemini
+- live
 ---
 
 # LiveAPI Service Skill

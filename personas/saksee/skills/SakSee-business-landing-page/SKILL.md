@@ -1,7 +1,15 @@
 ---
 name: SakSee-business-landing-page
 version: 1.0.0
-description: "Transform a business repo (README, services, pricing, docs) into a polished, story-driven single-page HTML landing site with nav, animations, trust signals, and CTA."
+description: Transform a business repo (README, services, pricing, docs) into a polished,
+  story-driven single-page HTML landing site with nav, animations, trust signals,
+  and CTA.
+category: web-browser
+tags:
+- browser
+- business
+- landing
+- page
 ---
 
 # Business Landing Page

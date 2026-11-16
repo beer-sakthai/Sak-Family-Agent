@@ -1,26 +1,33 @@
 ---
 name: Sak-repository-quality
+version: 1.0.0
+description: Plan, implement, test, and integrate high-quality changes in Sak-Family-Agent.
+  Use for repository maintenance, code review, tests, documentation, skill content,
+  dashboard work, generated contracts, CI validation, pull requests, and release-ready
+  verification.
 category: quality
-description: >-
-  Plan, implement, test, and integrate high-quality changes in Sak-Family-Agent.
-  Use for repository maintenance, code review, tests, documentation, skill
-  content, dashboard work, generated contracts, CI validation, pull requests,
-  and release-ready verification.
-version: "1.0.0"
+tags:
+- ci
+- documentation
+- quality
+- repository
+- review
+- shared
+- testing
 platforms:
-  - linux
-  - macos
-  - windows
+- linux
+- macos
+- windows
 metadata:
   sakthai:
     tags:
-      - quality
-      - testing
-      - review
-      - ci
-      - documentation
+    - quality
+    - testing
+    - review
+    - ci
+    - documentation
     related_skills:
-      - Sak-repository-security
+    - Sak-repository-security
 ---
 
 # Sak-Family-Agent Quality

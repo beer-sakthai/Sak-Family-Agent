@@ -1,7 +1,12 @@
 ---
 name: SakKing-simplify-code
 version: 1.0.0
-description: "Parallel 3-agent cleanup of recent code changes."
+description: Parallel 3-agent cleanup of recent code changes.
+category: coding
+tags:
+- cli
+- code
+- simplify
 ---
 # Simplify Code — Parallel Review & Cleanup
 

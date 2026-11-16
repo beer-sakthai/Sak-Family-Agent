@@ -1,7 +1,13 @@
 ---
 name: SakSee-jupyter-live-kernel
 version: 1.0.0
-description: "Iterative Python via live Jupyter kernel (hamelnb)."
+description: Iterative Python via live Jupyter kernel (hamelnb).
+category: web-browser
+tags:
+- browser
+- jupyter
+- kernel
+- live
 ---
 # Jupyter Live Kernel (hamelnb)
 

@@ -1,7 +1,16 @@
 ---
 name: SakSit-linkedin-b2b-saas-thought-leadership-2026
 version: 1.0.0
-description: "Saksit Linkedin B2B Saas Thought Leadership 2026"
+description: Saksit Linkedin B2B Saas Thought Leadership 2026
+category: content-marketing
+tags:
+- '2026'
+- b2b
+- content
+- leadership
+- linkedin
+- saas
+- thought
 ---
 
 # LinkedIn B2B SaaS Thought Leadership Strategy 2026

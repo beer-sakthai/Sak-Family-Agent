@@ -1,7 +1,15 @@
 ---
 name: SakJules-command-development
 version: 1.0.0
-description: "This skill should be used when the user asks to create a slash command, add a command, write a custom command, define command arguments, use command frontmatter, organize commands, create command with file references, interactive command, use AskUser"
+description: This skill should be used when the user asks to create a slash command,
+  add a command, write a custom command, define command arguments, use command frontmatter,
+  organize commands, create command with file references, interactive command, use
+  AskUser
+category: devops
+tags:
+- automation
+- command
+- development
 ---
 
 # Command Development for Claude Code

@@ -1,7 +1,16 @@
 ---
 name: SakThai-hf-hub-js-sdk
 version: 1.0.0
-description: ">   Complete reference for the @huggingface/* TypeScript/JS SDK monorepo —   inference, hub, gguf, mcp-client, tiny-agents, tasks, jinja, dduf,   ollama-utils, and space-header packages."
+description: '>   Complete reference for the @huggingface/* TypeScript/JS SDK monorepo
+  —   inference, hub, gguf, mcp-client, tiny-agents, tasks, jinja, dduf,   ollama-utils,
+  and space-header packages.'
+category: mlops
+tags:
+- hf
+- hub
+- huggingface
+- js
+- sdk
 ---
 
 # huggingface.js — Official Hugging Face TypeScript/JS SDK

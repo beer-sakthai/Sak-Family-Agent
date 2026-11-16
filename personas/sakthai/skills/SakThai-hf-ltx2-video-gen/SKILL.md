@@ -1,12 +1,28 @@
 ---
 name: SakThai-hf-ltx2-video-gen
+version: 1.0.0
+description: Complete reference on Lightricks LTX-2 / LTX-2.3 video generation — open
+  22B DiT family with native audio, ComfyUI workflow-in-Space pattern, MSR IC-LoRA
+  likeness guidance, GGUF prompt enhancers, ZeroGPU recipes. Verified 2026-07-31 on
+  Fighterdan/LTX-2.3-10Eros_I2V.
+category: mlops
+tags:
+- comfyui
+- gen
+- hf
+- huggingface
+- lightricks
+- ltx
+- ltx2
+- native-audio
+- spaces
+- video
+- video-generation
+- zerogpu
 author: SakThai
 license: MIT
-description: "Complete reference on Lightricks LTX-2 / LTX-2.3 video generation — open 22B DiT family with native audio, ComfyUI workflow-in-Space pattern, MSR IC-LoRA likeness guidance, GGUF prompt enhancers, ZeroGPU recipes. Verified 2026-07-31 on Fighterdan/LTX-2.3-10Eros_I2V."
-version: 1.0.0
-category: mlops
-tags: [huggingface, video-generation, ltx, lightricks, comfyui, native-audio, zerogpu, spaces]
-platforms: [linux]
+platforms:
+- linux
 ---
 
 # LTX-2 / LTX-2.3 Video Generation (Lightricks)

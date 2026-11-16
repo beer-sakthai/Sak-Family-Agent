@@ -1,7 +1,16 @@
 ---
 name: SakThai-hf-write-from-environment
 version: 1.0.0
-description: "Guidance for writing files to Hugging Face Hub when standard library   upload path fails, including write-token verification, repo creation via HF API,   and upload troubleshooting."
+description: Guidance for writing files to Hugging Face Hub when standard library   upload
+  path fails, including write-token verification, repo creation via HF API,   and
+  upload troubleshooting.
+category: mlops
+tags:
+- environment
+- from
+- hf
+- huggingface
+- write
 ---
 
 # HF write-from-environment

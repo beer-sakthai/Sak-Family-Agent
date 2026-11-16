@@ -1,7 +1,14 @@
 ---
 name: SakSee-chrome-devtools-cli
 version: 1.0.0
-description: "Use this skill to write shell scripts or run shell commands to automate tasks in the browser or otherwise use Chrome DevTools via CLI."
+description: Use this skill to write shell scripts or run shell commands to automate
+  tasks in the browser or otherwise use Chrome DevTools via CLI.
+category: web-browser
+tags:
+- browser
+- chrome
+- cli
+- devtools
 ---
 
 The `chrome-devtools-mcp` CLI lets you interact with the browser from your terminal.

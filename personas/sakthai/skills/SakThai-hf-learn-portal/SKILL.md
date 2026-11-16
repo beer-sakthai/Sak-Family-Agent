@@ -1,7 +1,13 @@
 ---
 name: SakThai-hf-learn-portal
 version: 1.0.0
-description: "Navigate and recommend Hugging Face Learn courses."
+description: Navigate and recommend Hugging Face Learn courses.
+category: mlops
+tags:
+- hf
+- huggingface
+- learn
+- portal
 ---
 # Hugging Face Learn Portal Guide
 

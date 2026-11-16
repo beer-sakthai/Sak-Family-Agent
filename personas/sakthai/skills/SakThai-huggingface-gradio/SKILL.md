@@ -1,7 +1,23 @@
 ---
 name: SakThai-huggingface-gradio
 version: 1.0.0
-description: "Build Gradio web UIs and demos in Python. Use when creating or editing Gradio apps, components, event listeners, layouts, or chatbots."
+description: Build Gradio web UIs and demos in Python. Use when creating or editing
+  Gradio apps, components, event listeners, layouts, or chatbots.
+category: mlops
+tags:
+- components
+- customization
+- deep
+- dive
+- gradio
+- hf
+- huggingface
+- media
+- mode
+- native
+- plot
+- server
+- theme
 ---
 
 # Gradio

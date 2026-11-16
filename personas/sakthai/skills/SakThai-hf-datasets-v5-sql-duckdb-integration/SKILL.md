@@ -1,7 +1,24 @@
 ---
 name: SakThai-hf-datasets-v5-sql-duckdb-integration
 version: 1.0.0
-description: "# HF Datasets v5 SQL + DuckDB Integration"
+description: '# HF Datasets v5 SQL + DuckDB Integration'
+category: datasets
+tags:
+- agent-traces
+- batch
+- by
+- column
+- datasets
+- duckdb
+- features
+- hf
+- huggingface
+- integration
+- release
+- shuffle
+- sql
+- teich
+- v5
 ---
 
 # HF Datasets v5 SQL + DuckDB Integration

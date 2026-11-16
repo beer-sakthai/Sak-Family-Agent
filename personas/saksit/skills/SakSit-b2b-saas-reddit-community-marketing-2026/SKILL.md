@@ -1,7 +1,16 @@
 ---
 name: SakSit-b2b-saas-reddit-community-marketing-2026
 version: 1.0.0
-description: "Saksit B2B Saas Reddit Community Marketing 2026"
+description: Saksit B2B Saas Reddit Community Marketing 2026
+category: content-marketing
+tags:
+- '2026'
+- b2b
+- community
+- content
+- marketing
+- reddit
+- saas
 ---
 
 # B2B SaaS Reddit Community Marketing Strategy 2026

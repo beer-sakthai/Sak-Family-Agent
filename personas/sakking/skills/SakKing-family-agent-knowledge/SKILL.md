@@ -1,7 +1,13 @@
 ---
 name: SakKing-family-agent-knowledge
 version: 1.0.0
-description: "Help and support for the Sak-Family-Agent monorepo."
+description: Help and support for the Sak-Family-Agent monorepo.
+category: productivity
+tags:
+- agent
+- cli
+- family
+- knowledge
 ---
 
 # Sak-Family-Agent — Help & Support Knowledge

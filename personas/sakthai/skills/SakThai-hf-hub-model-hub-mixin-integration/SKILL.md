@@ -1,19 +1,26 @@
 ---
 name: SakThai-hf-hub-model-hub-mixin-integration
-author: SakThai
-license: MIT
-description: >
-  Complete reference for integrating any ML framework with the Hugging Face Hub
-  using ModelHubMixin — covering the mixin lifecycle, PyTorchModelHubMixin for
-  instant integration, helper functions for framework-specific workflows, model
+version: 1.0.0
+description: 'Complete reference for integrating any ML framework with the Hugging
+  Face Hub using ModelHubMixin — covering the mixin lifecycle, PyTorchModelHubMixin
+  for instant integration, helper functions for framework-specific workflows, model
   card generation, config serialization, and the choice between helpers vs. class
   inheritance approaches.
-version: 1.0.0
-metadata:
-  hermes:
-    tags: [huggingface, hub, mixin, integration, pytorch, model-sharing, serialization]
-    category: mlops
+
+  '
 category: mlops
+tags:
+- hf
+- hub
+- huggingface
+- integration
+- mixin
+- model
+- model-sharing
+- pytorch
+- serialization
+author: SakThai
+license: MIT
 ---
 
 # HF Hub ModelHubMixin: Integrating Custom Frameworks with the Hub

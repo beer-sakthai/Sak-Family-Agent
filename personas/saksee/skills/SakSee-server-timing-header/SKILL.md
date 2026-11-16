@@ -1,7 +1,15 @@
 ---
 name: SakSee-server-timing-header
 version: 1.0.0
-description: "Use the HTTP Server-Timing response header to expose backend performance metrics to browser developer tools and JavaScript, enabling front-end-to-back-end performance debugging."
+description: Use the HTTP Server-Timing response header to expose backend performance
+  metrics to browser developer tools and JavaScript, enabling front-end-to-back-end
+  performance debugging.
+category: web-browser
+tags:
+- browser
+- header
+- server
+- timing
 ---
 
 # Server-Timing Header
