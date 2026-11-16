@@ -65,17 +65,17 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --locked --all-extras
 
       - name: Validate shared skill frontmatter
-        run: uv run sakthai skills validate --source library
+        run: uv run --locked sakthai skills validate --source library
 
       # Every persona skill's frontmatter `name:` must carry its persona's
       # prefix and match its folder. Skills resolve by that name, so a
       # mismatch is a skill `--with-skills` and workspace.yaml cannot find;
       # 175 of them built up unnoticed before this ran in CI.
       - name: Validate persona skill naming
-        run: uv run sakthai skills validate --naming
+        run: uv run --locked sakthai skills validate --naming
 
       - name: Compose persona skill trees
         run: make compose-personas
@@ -112,19 +112,19 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --locked --all-extras
 
       - name: Run Ruff checks
         run: |
-          uv run ruff check personas/sakthai tests
-          uv run ruff format --check personas/sakthai tests
+          uv run --locked ruff check personas/sakthai tests
+          uv run --locked ruff format --check personas/sakthai tests
 
       - name: Run strict type checking
-        run: uv run mypy
+        run: uv run --locked mypy
 
       - name: Run tests with coverage
         run: >-
-          uv run pytest --cov=sakthai --cov-report=term-missing
+          uv run --locked pytest --cov=sakthai --cov-report=term-missing
           --cov-report=xml:coverage.xml --cov-fail-under=96 tests/
         env:
           OPENAI_API_KEY: ""

@@ -57,3 +57,27 @@ def test_all_active_workflows_have_concurrency() -> None:
         if not data or not isinstance(data, dict):
             continue
         assert "concurrency" in data, f"{yml_path.name} is missing concurrency declaration"
+
+
+def test_root_uv_workflows_use_locked_execution() -> None:
+    """Prevent CI from silently rewriting or relocking the root environment."""
+    root_uv_workflows = {
+        "ci.yml",
+        "continuous-security.yml",
+        "huggingface-integration.yml",
+        "pylint.yml",
+        "repository-security-quality.yml",
+        "run-evals.yml",
+        "sak-family-agent-contract.yml",
+        "subprojects.yml",
+        "verify-assets.yml",
+    }
+
+    for workflow_name in root_uv_workflows:
+        content = (WORKFLOWS_DIR / workflow_name).read_text(encoding="utf-8")
+        commands = [line.strip() for line in content.splitlines() if not line.lstrip().startswith("#")]
+        uv_commands = [line for line in commands if "uv sync" in line or "uv run" in line]
+        assert uv_commands, f"{workflow_name} should contain uv commands"
+        assert all("--locked" in line for line in uv_commands), (
+            f"{workflow_name} must use --locked for every uv sync/run command"
+        )

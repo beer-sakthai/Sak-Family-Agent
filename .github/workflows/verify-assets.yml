@@ -53,11 +53,11 @@ jobs:
         # Locked, reproducible install (matches the rest of the repo's uv-based
         # workflows) rather than an unpinned `pip install -e .`. No extras
         # needed: the verification script only touches the stdlib.
-        run: uv sync --no-dev
+        run: uv sync --locked --no-dev
 
       - name: Run verification script
         run: |
-          uv run python3 -m sakthai.scripts.verify_hf_upload \
+          uv run --locked python3 -m sakthai.scripts.verify_hf_upload \
             https://huggingface.co/datasets/Nanthasit/sakthai-combined-v6 \
             https://huggingface.co/Nanthasit/sakthai-context-1.5b-tools \
             https://huggingface.co/Nanthasit/sakthai-context-0.5b-merged
