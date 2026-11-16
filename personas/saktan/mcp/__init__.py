@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .client import MCPClientError, MCPToolError, StdioMCPClient
+from .client import MCPClientError, MCPToolError, RemoteMCPClient, StdioMCPClient
 from .manager import connect_servers
 from .server import handle_request, serve
 from .servers import MCPServerSpec, load_server_specs, mcp_config_path, parse_mcp_servers
@@ -11,6 +11,7 @@ __all__ = [
     "MCPClientError",
     "MCPServerSpec",
     "MCPToolError",
+    "RemoteMCPClient",
     "StdioMCPClient",
     "connect_servers",
     "handle_request",

@@ -46,6 +46,8 @@ uv run ruff format sakthai/ tests/
 
 ## 🔌 Configured MCP Servers
 
-MCP configurations are stored in `~/.sakthai/mcp.json`. External stdio servers can be registered there or dynamically loaded from Gemini CLI directories (`~/.gemini/extensions/`).
+MCP configurations are stored in `~/.sakthai/mcp.json` (or persona configs under `personas/<name>/config/mcp.json`). External stdio servers and remote HTTP/SSE endpoints can be registered there or dynamically loaded from Gemini CLI directories (`~/.gemini/extensions/`).
 
-During runtime, tools are automatically discovered and prefixed with `<server_name>__` to prevent namespace collisions.
+During runtime, tools are automatically discovered, filtered against any configured `tools` allowlists, and prefixed with `<server_name>__` to prevent namespace collisions.
+
+Developers can inspect, ping, and explore MCP tools using `sakthai mcp list`, `sakthai mcp ping [name]`, and `sakthai mcp tools`.

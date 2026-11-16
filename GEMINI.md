@@ -42,8 +42,11 @@ This document serves as the foundational context and instructional guide for ope
   - `uv run sakthai run "your instruction prompt"`
   - `uv run sakthai run "your prompt" --persona sakking`
 - **Interactive Chat**: `uv run sakthai chat --persona <name>`
-- **Memory Inspection**: `uv run sakthai memory family --tag <tag>`
-- **Run MCP Stdio Server**: `uv run sakthai mcp`
+- **Run MCP Stdio Server**: `uv run sakthai mcp` (or `uv run sakthai mcp serve`)
+- **Inspect MCP Integrations**:
+  - `uv run sakthai mcp list [--persona <name>] [--json]`
+  - `uv run sakthai mcp ping [<server_name>] [--persona <name>]`
+  - `uv run sakthai mcp tools [--persona <name>]`
 
 #### Dashboard (`apps/sak_agent_dashboard`)
 - **Install**: `cd apps/sak_agent_dashboard && npm install`
