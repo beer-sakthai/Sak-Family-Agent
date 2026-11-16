@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 # ── Config ────────────────────────────────────────────────────────
 BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
@@ -60,17 +61,17 @@ subprocess.run(
 print("Deps installed", flush=True)
 
 # ── Auth (HF_TOKEN env var or file) ────────────────────────────────
-from huggingface_hub import HfApi
+from huggingface_hub import HfApi  # noqa: E402
 
 token = os.environ.get("HF_TOKEN", "")
 if not token:
     token_path = os.path.expanduser("~/.cache/huggingface/token")
-    token = open(token_path).read().strip()
+    token = Path(token_path).read_text(encoding="utf-8").strip()
 api = HfApi(token=token)
 print(f"Auth OK: {api.whoami()['name']}", flush=True)
 
 # ── Load dataset ──────────────────────────────────────────────────
-from datasets import load_dataset
+from datasets import load_dataset  # noqa: E402
 
 print("Loading dataset...", flush=True)
 # Own-namespace dataset, republished by this project's own pipeline;
@@ -104,8 +105,8 @@ split = dataset.train_test_split(test_size=50, seed=42)
 print(f"Train: {len(split['train'])}, Eval: {len(split['test'])}", flush=True)
 
 # ── Load model ────────────────────────────────────────────────────
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+import torch  # noqa: E402
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig  # noqa: E402
 
 bnb = BitsAndBytesConfig(
     load_in_4bit=True,
@@ -130,7 +131,7 @@ tok.padding_side = "right"
 print(f"Loaded. Params: {model.num_parameters():,}", flush=True)
 
 # ── LoRA ──────────────────────────────────────────────────────────
-from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training  # noqa: E402
 
 model = prepare_model_for_kbit_training(model)
 lora = LoraConfig(
@@ -144,7 +145,7 @@ model = get_peft_model(model, lora)
 model.print_trainable_parameters()
 
 # ── Training ──────────────────────────────────────────────────────
-from trl import SFTConfig, SFTTrainer
+from trl import SFTConfig, SFTTrainer  # noqa: E402
 
 args = SFTConfig(
     output_dir="/data/7b-lora",
@@ -170,7 +171,7 @@ args = SFTConfig(
 )
 
 # TRL dynamic loader: detect correct arg name at runtime
-import inspect
+import inspect  # noqa: E402
 
 sig_trainer = inspect.signature(SFTTrainer.__init__)
 arg_name = "processing_class" if "processing_class" in sig_trainer.parameters else "tokenizer"

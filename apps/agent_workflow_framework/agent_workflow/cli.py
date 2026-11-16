@@ -16,13 +16,11 @@ import argparse
 import asyncio
 import json
 import sys
-from pathlib import Path
-from typing import List, Optional
 
 from agent_workflow.dag import validate_workflow_dag
 from agent_workflow.executor import WorkflowExecutor
-from agent_workflow.models import RunStatus, StepStatus
-from agent_workflow.parser import parse_workflow_file, WorkflowParseError
+from agent_workflow.models import RunStatus
+from agent_workflow.parser import WorkflowParseError, parse_workflow_file
 from agent_workflow.persistence import RunHistoryStore, RunNotFoundError
 
 
@@ -78,7 +76,7 @@ def cmd_validate(filepath: str) -> int:
         return 2
 
 
-def cmd_run(filepath: str, run_id: Optional[str] = None, storage_dir: Optional[str] = None) -> int:
+def cmd_run(filepath: str, run_id: str | None = None, storage_dir: str | None = None) -> int:
     """Execute 'run' subcommand."""
     # Pre-flight parse check
     try:
@@ -111,7 +109,7 @@ def cmd_run(filepath: str, run_id: Optional[str] = None, storage_dir: Optional[s
         return 1
 
 
-def cmd_inspect(run_id: str, step_id: Optional[str] = None, storage_dir: Optional[str] = None) -> int:
+def cmd_inspect(run_id: str, step_id: str | None = None, storage_dir: str | None = None) -> int:
     """Execute 'inspect' subcommand."""
     store = RunHistoryStore(storage_dir=storage_dir)
     try:
@@ -137,7 +135,7 @@ def cmd_inspect(run_id: str, step_id: Optional[str] = None, storage_dir: Optiona
         return 1
 
 
-def cmd_list(storage_dir: Optional[str] = None) -> int:
+def cmd_list(storage_dir: str | None = None) -> int:
     """Execute 'list' subcommand."""
     store = RunHistoryStore(storage_dir=storage_dir)
     try:
@@ -156,7 +154,7 @@ def cmd_list(storage_dir: Optional[str] = None) -> int:
         return 1
 
 
-def cli_main(args: Optional[List[str]] = None) -> int:
+def cli_main(args: list[str] | None = None) -> int:
     """Main CLI entry point function."""
     parser = build_parser()
     parsed = parser.parse_args(args)
@@ -178,7 +176,7 @@ def cli_main(args: Optional[List[str]] = None) -> int:
         return 0
 
 
-def main(args: Optional[List[str]] = None) -> int:
+def main(args: list[str] | None = None) -> int:
     """Executable console script entry point."""
     return cli_main(args)
 

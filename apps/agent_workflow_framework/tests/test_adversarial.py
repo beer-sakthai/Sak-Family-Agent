@@ -4,17 +4,15 @@ Tests security boundaries (path traversal, recursive interpolation bombs),
 high-concurrency race condition safety, scale bounds (1,000-node DAGs), and fuzzing.
 """
 
+import threading
 import time
 import unittest
-import threading
-import asyncio
-from pathlib import Path
 
-from agent_workflow.models import WorkflowDefinition, StepDefinition, RunHistory, RunStatus
+from agent_workflow.dag import build_topological_batches, validate_workflow_dag
+from agent_workflow.models import StepDefinition, WorkflowDefinition
+from agent_workflow.parser import WorkflowParseError, parse_workflow_dict
 from agent_workflow.persistence import RunHistoryStore
-from agent_workflow.state import StateContext, StateInterpolationError
-from agent_workflow.parser import parse_workflow_dict, WorkflowParseError
-from agent_workflow.dag import validate_workflow_dag, build_topological_batches
+from agent_workflow.state import StateContext
 
 
 class TestAdversarialSecurityAudit(unittest.TestCase):
@@ -33,9 +31,8 @@ class TestAdversarialSecurityAudit(unittest.TestCase):
         ]
 
         for bad_id in malicious_ids:
-            with self.subTest(run_id=bad_id):
-                with self.assertRaises((ValueError, Exception)):
-                    store.load_run_history(bad_id)
+            with self.subTest(run_id=bad_id), self.assertRaises((ValueError, Exception)):
+                store.load_run_history(bad_id)
 
     def test_interpolation_infinite_recursion(self):
         """Verify circular or infinitely nested state interpolation expression bombs fail gracefully."""
@@ -105,9 +102,10 @@ class TestAdversarialSecurityAudit(unittest.TestCase):
         ]
 
         for payload in bad_payloads:
-            with self.subTest(payload=payload):
-                with self.assertRaises((WorkflowParseError, TypeError, ValueError)):
-                    parse_workflow_dict(payload)
+            with self.subTest(payload=payload), self.assertRaises(
+                (WorkflowParseError, TypeError, ValueError)
+            ):
+                parse_workflow_dict(payload)
 
 
 if __name__ == "__main__":

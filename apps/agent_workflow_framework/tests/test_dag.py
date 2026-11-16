@@ -5,22 +5,22 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from agent_workflow.dag import build_topological_batches, validate_workflow_dag
 from agent_workflow.models import (
-    StepStatus,
+    RunHistory,
     RunStatus,
     StepDefinition,
-    WorkflowDefinition,
     StepResult,
-    RunHistory,
+    StepStatus,
+    WorkflowDefinition,
 )
 from agent_workflow.parser import (
     WorkflowParseError,
     parse_workflow_dict,
-    parse_workflow_yaml,
-    parse_workflow_json,
     parse_workflow_file,
+    parse_workflow_json,
+    parse_workflow_yaml,
 )
-from agent_workflow.dag import validate_workflow_dag, build_topological_batches
 
 
 class TestModels(unittest.TestCase):

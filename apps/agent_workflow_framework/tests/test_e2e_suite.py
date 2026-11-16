@@ -1,31 +1,42 @@
-import os
-import sys
-import unittest
-import tempfile
-import json
 import asyncio
+import json
+import os
+import tempfile
+import unittest
 from pathlib import Path
 
 # Standard import guard: attempt import from agent_workflow, fallback to tests.engine_fallback if not present
 try:
-    from agent_workflow.models import (
-        StepStatus, RunStatus, StepDefinition, WorkflowDefinition, StepResult, RunHistory
-    )
-    from agent_workflow.parser import parse_workflow_file, parse_workflow_dict
-    from agent_workflow.dag import validate_workflow_dag, build_topological_batches
-    from agent_workflow.state import StateContext
-    from agent_workflow.executor import WorkflowExecutor
-    from agent_workflow.persistence import HistoryStore
     from agent_workflow.cli import main as cli_main
+    from agent_workflow.dag import build_topological_batches, validate_workflow_dag
+    from agent_workflow.executor import WorkflowExecutor
+    from agent_workflow.models import (
+        RunHistory,
+        RunStatus,
+        StepDefinition,
+        StepResult,
+        StepStatus,
+        WorkflowDefinition,
+    )
+    from agent_workflow.parser import parse_workflow_dict, parse_workflow_file
+    from agent_workflow.persistence import HistoryStore
+    from agent_workflow.state import StateContext
 except ModuleNotFoundError:
     from tests.engine_fallback import (
-        StepStatus, RunStatus, StepDefinition, WorkflowDefinition, StepResult, RunHistory,
-        parse_workflow_file, parse_workflow_dict,
-        validate_workflow_dag, build_topological_batches,
-        StateContext,
-        WorkflowExecutor,
         HistoryStore,
-        cli_main
+        RunHistory,
+        RunStatus,
+        StateContext,
+        StepDefinition,
+        StepResult,
+        StepStatus,
+        WorkflowDefinition,
+        WorkflowExecutor,
+        build_topological_batches,
+        cli_main,
+        parse_workflow_dict,
+        parse_workflow_file,
+        validate_workflow_dag,
     )
 
 FIXTURES_DIR = Path(__file__).parent / "test_workflows"
@@ -69,7 +80,7 @@ class TestTier1FeatureCoverage(unittest.TestCase):
             f.write("name: test\nsteps:\n  - id: s1\n   bad_indent: [")
             f_path = f.name
         try:
-            with self.assertRaises(Exception):
+            with self.assertRaises(Exception):  # noqa: B017 - parser backend exceptions vary
                 parse_workflow_file(f_path)
         finally:
             os.unlink(f_path)
@@ -415,7 +426,7 @@ class TestTier1FeatureCoverage(unittest.TestCase):
         yaml_path = str(FIXTURES_DIR / "linear_workflow.yaml")
         wf = parse_workflow_file(yaml_path)
         executor = WorkflowExecutor()
-        history = asyncio.run(executor.execute_workflow(wf, run_id="cli_inspect_test_run"))
+        asyncio.run(executor.execute_workflow(wf, run_id="cli_inspect_test_run"))
         code = cli_main(["inspect", "cli_inspect_test_run"])
         self.assertEqual(code, 0)
 

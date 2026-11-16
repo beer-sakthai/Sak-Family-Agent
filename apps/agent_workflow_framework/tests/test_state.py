@@ -2,8 +2,9 @@
 
 import unittest
 from concurrent.futures import ThreadPoolExecutor
-from agent_workflow.state import StateContext, StateInterpolationError
+
 from agent_workflow.models import StepResult, StepStatus
+from agent_workflow.state import StateContext, StateInterpolationError
 
 
 class TestStateContext(unittest.TestCase):

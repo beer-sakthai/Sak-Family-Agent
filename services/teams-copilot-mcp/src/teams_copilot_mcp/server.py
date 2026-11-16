@@ -19,9 +19,8 @@ mcp = FastMCP("teams-copilot-mcp")
 
 def _resolve_path(template: str, path_params: dict[str, Any]) -> str:
     for key, value in path_params.items():
-        if isinstance(value, str):
-            if any(ord(c) < 32 for c in value):
-                raise ValueError(f"ASCII control characters are not allowed in path param: {key}")
+        if isinstance(value, str) and any(ord(c) < 32 for c in value):
+            raise ValueError(f"ASCII control characters are not allowed in path param: {key}")
     try:
         return template.format(**path_params)
     except KeyError as exc:

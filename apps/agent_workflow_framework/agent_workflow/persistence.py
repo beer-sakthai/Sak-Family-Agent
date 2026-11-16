@@ -16,18 +16,19 @@ PyYAML, and must stay independently runnable. If the home directory cannot be re
 it falls back to the original cwd-relative directory.
 """
 
+import contextlib
 import json
 import os
 import re
 import tempfile
 import threading
-from dataclasses import is_dataclass, asdict
-from datetime import datetime, date
+from dataclasses import asdict, is_dataclass
+from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Union
+from typing import Any
 
-from agent_workflow.models import RunHistory, StepResult, RunStatus, StepStatus
+from agent_workflow.models import RunHistory, StepResult
 
 
 class PersistenceError(Exception):
@@ -51,7 +52,7 @@ class WorkflowJSONEncoder(json.JSONEncoder):
     def default(self, obj: Any) -> Any:
         if isinstance(obj, Enum):
             return obj.value
-        if hasattr(obj, "to_dict") and callable(getattr(obj, "to_dict")):
+        if hasattr(obj, "to_dict") and callable(obj.to_dict):
             return obj.to_dict()
         if is_dataclass(obj) and not isinstance(obj, type):
             return asdict(obj)
@@ -89,7 +90,7 @@ class RunHistoryStore:
     #: Used only when the user's home directory cannot be resolved.
     FALLBACK_STORAGE_DIR = ".workflow_runs"
 
-    def __init__(self, storage_dir: Optional[Union[str, Path]] = None):
+    def __init__(self, storage_dir: str | Path | None = None):
         """Initialize RunHistoryStore with optional custom storage directory."""
         if storage_dir is None:
             storage_dir = default_storage_dir()
@@ -147,18 +148,17 @@ class RunHistoryStore:
             temp_file = None
             temp_path = None
             try:
-                temp_file = tempfile.NamedTemporaryFile(
+                with tempfile.NamedTemporaryFile(
                     mode="w",
                     dir=self.storage_dir,
                     delete=False,
                     suffix=".tmp",
                     encoding="utf-8",
-                )
-                temp_path = Path(temp_file.name)
-                json.dump(data, temp_file, indent=2, cls=WorkflowJSONEncoder)
-                temp_file.flush()
-                os.fsync(temp_file.fileno())
-                temp_file.close()
+                ) as temp_file:
+                    temp_path = Path(temp_file.name)
+                    json.dump(data, temp_file, indent=2, cls=WorkflowJSONEncoder)
+                    temp_file.flush()
+                    os.fsync(temp_file.fileno())
 
                 temp_path.replace(target_path)
                 return target_path
@@ -166,10 +166,8 @@ class RunHistoryStore:
                 if temp_file and not temp_file.closed:
                     temp_file.close()
                 if temp_path and temp_path.exists():
-                    try:
+                    with contextlib.suppress(OSError):
                         temp_path.unlink()
-                    except OSError:
-                        pass
                 if isinstance(e, (TypeError, ValueError, PersistenceError)):
                     raise
                 raise PersistenceError(f"Failed to save run history '{history.run_id}': {e}") from e
@@ -186,7 +184,7 @@ class RunHistoryStore:
                 try:
                     raw_path.relative_to(self.storage_dir)
                 except ValueError:
-                    raise ValueError(f"Path traversal attempt detected in run_id: '{run_id}'")
+                    raise ValueError(f"Path traversal attempt detected in run_id: '{run_id}'") from None
                 target_path = raw_path
 
             if not target_path.exists() or target_path.is_dir():
@@ -203,11 +201,11 @@ class RunHistoryStore:
             except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
                 raise RunCorruptedError(f"Failed to parse run history file '{target_path}': {e}") from e
 
-    def list_runs(self) -> List[RunHistory]:
+    def list_runs(self) -> list[RunHistory]:
         """List all stored run histories, ordered by start_time descending (newest first)."""
         with self._lock:
             self._ensure_storage_dir()
-            runs: List[RunHistory] = []
+            runs: list[RunHistory] = []
             for item in self.storage_dir.glob("*.json"):
                 if item.is_file():
                     try:
@@ -239,7 +237,7 @@ class RunHistoryStore:
             raise KeyError(f"Step '{step_id}' not found in run '{run_id}' history.")
         return step_res
 
-    def get_step_output(self, run_id: str, step_id: str) -> Dict[str, Any]:
+    def get_step_output(self, run_id: str, step_id: str) -> dict[str, Any]:
         """Retrieve execution output dictionary for a specific step within a run history."""
         step_res = self.get_step_result(run_id, step_id)
         return step_res.output
@@ -251,42 +249,42 @@ ExecutionStore = RunHistoryStore
 
 
 # Module-level convenience functions
-def save_run_history(history: RunHistory, storage_dir: Optional[Union[str, Path]] = None) -> Path:
+def save_run_history(history: RunHistory, storage_dir: str | Path | None = None) -> Path:
     """Convenience function to save a RunHistory."""
     store = RunHistoryStore(storage_dir)
     return store.save_run_history(history)
 
 
-def get_run_history(run_id: str, storage_dir: Optional[Union[str, Path]] = None) -> RunHistory:
+def get_run_history(run_id: str, storage_dir: str | Path | None = None) -> RunHistory:
     """Convenience function to retrieve a RunHistory by run_id."""
     store = RunHistoryStore(storage_dir)
     return store.load_run_history(run_id)
 
 
-def load_run_history(run_id: str, storage_dir: Optional[Union[str, Path]] = None) -> RunHistory:
+def load_run_history(run_id: str, storage_dir: str | Path | None = None) -> RunHistory:
     """Alias for get_run_history."""
     return get_run_history(run_id, storage_dir)
 
 
-def list_runs(storage_dir: Optional[Union[str, Path]] = None) -> List[RunHistory]:
+def list_runs(storage_dir: str | Path | None = None) -> list[RunHistory]:
     """Convenience function to list all saved RunHistories."""
     store = RunHistoryStore(storage_dir)
     return store.list_runs()
 
 
-def delete_run_history(run_id: str, storage_dir: Optional[Union[str, Path]] = None) -> bool:
+def delete_run_history(run_id: str, storage_dir: str | Path | None = None) -> bool:
     """Convenience function to delete a run history file."""
     store = RunHistoryStore(storage_dir)
     return store.delete_run_history(run_id)
 
 
-def get_step_result(run_id: str, step_id: str, storage_dir: Optional[Union[str, Path]] = None) -> StepResult:
+def get_step_result(run_id: str, step_id: str, storage_dir: str | Path | None = None) -> StepResult:
     """Convenience function to get a StepResult for a step in a run."""
     store = RunHistoryStore(storage_dir)
     return store.get_step_result(run_id, step_id)
 
 
-def get_step_output(run_id: str, step_id: str, storage_dir: Optional[Union[str, Path]] = None) -> Dict[str, Any]:
+def get_step_output(run_id: str, step_id: str, storage_dir: str | Path | None = None) -> dict[str, Any]:
     """Convenience function to get output dictionary for a step in a run."""
     store = RunHistoryStore(storage_dir)
     return store.get_step_output(run_id, step_id)

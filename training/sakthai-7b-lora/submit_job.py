@@ -2,11 +2,12 @@
 """Submit 7B training to HF Jobs."""
 
 import sys
+from pathlib import Path
 
 sys.path.insert(0, "/opt/data/.venv/lib/python3.13/site-packages")
 from huggingface_hub import run_uv_job
 
-token = open("/opt/data/profiles/sakthai/home/.cache/huggingface/token").read().strip()
+token = Path("/opt/data/profiles/sakthai/home/.cache/huggingface/token").read_text(encoding="utf-8").strip()
 
 job = run_uv_job(
     script="/opt/data/train_7b_v2.py",

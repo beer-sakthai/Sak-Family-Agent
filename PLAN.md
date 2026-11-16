@@ -33,6 +33,8 @@ never duplicate content across files.
 All completed historical tasks (`✅ Done` / `[x]`) have been removed from the active plan files and consolidated here so only uncompleted work remains in one place.
 
 ### 1. Security & Repository Settings (Needs Beer / Maintainer Action)
+- [x] 2026-11-16 **Repository quality review** — corrected the README's canonical package path and added a regression test for the documented validation commands.
+- [x] 2026-11-16 **Legacy and infrastructure Ruff cleanup** — removed the remaining findings in the workflow framework, infrastructure, services, and training utilities without changing behavior.
 - [ ] **Revoke historical leaked credentials** ([`security/SECURITY_FIXES_PLAN.md`](./security/SECURITY_FIXES_PLAN.md) Fix #1) — Revoke the historical Composio consumer key, Mistral API key, and Kaggle API token in their provider dashboards and re-test dependent integrations (Fix #2 Web API Bearer Auth is already `[x]` done).
 - [ ] **GitHub Repository Settings — Required Status Check De-duplication** — Drop `Quality gates` from `main`'s required status checks in GitHub repo settings so the duplicate `quality` job in `.github/workflows/repository-security-quality.yml` can be removed (`ci.yml` already runs ruff, mypy, bandit, and pytest on Python 3.11 and 3.12).
 - [ ] **GitHub Repository Settings — Scorecard Non-Commit Checks** — `Branch-Protection`, `Code-Review` (requires a second human reviewer), and `CII-Best-Practices` ([`docs/cii-best-practices-answers.md`](./docs/cii-best-practices-answers.md)) require repository/external settings changes by Beer.
