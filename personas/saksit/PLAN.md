@@ -45,6 +45,15 @@ flowchart TD
 - **Command**: `sakthai learn --persona saksit "DATA REQUEST: saksit | target: <url/metric> | needed-for: <post/card> | timestamp: <ISO>" --kind observation --tag data-request --tag saksit`
 - **Acceptance Criteria**: Every number used in a draft cites SakSee's `monitoring-result` and `retrieved_at` timestamp.
 
+#### 🔹 Task 2.2: Asynchronous Template Staging & 1-Tap Batch Digest
+- **Status**: [ ]
+- **Goal**: Prevent pipeline stalls while waiting on live upstream context (from SakSee or SakThai) by adopting **Asynchronous Template Staging**.
+- **Template Staging Protocol**:
+  - Draft post and model card structures proactively with `{{VARIABLE}}` placeholders (e.g., `{{BENCHMARK_SCORE}}`, `{{DOWNLOAD_COUNT}}`, `{{HUB_COMMIT}}`).
+  - Once live data is fetched and tagged in family memory, asynchronously hydrate the staged `{{VARIABLE}}` slots.
+  - Deliver aggregated staging outputs via Telegram 1-tap batch digest for Beer's approval, minimizing notification interruptions.
+- **Acceptance Criteria**: Content pipeline proceeds asynchronously without synchronous blocking on upstream latency.
+
 ---
 
 ### Phase 3: Gate 1 Model Card Copywriting

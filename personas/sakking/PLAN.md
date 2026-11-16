@@ -34,6 +34,17 @@ flowchart TD
 - **Command**: `sakthai memory family "CHARGE: sakking" --tag charge-report --limit 1 && sakthai memory family "DEPUTY CHAIN" --tag deputy-chain --limit 1`
 - **Acceptance Criteria**: Task starts from verified family state in `~/.sakthai/*/memory.db`.
 
+#### 🔹 Task 1.3: 3-Second Intent Preflight & Delegation Routing
+- **Status**: [ ]
+- **Goal**: Apply the **3-Second Intent Preflight** filter to incoming tasks before executing to avoid generalist execution bottlenecks.
+- **Core Law**: **Specialist beats generalist**. Route early, not late.
+- **Classification Rules**:
+  - Web scraping / browser navigation → Delegate immediately to SakSee (`@saksee_agent_bot`).
+  - Content drafting / social digests → Delegate immediately to SakSit (`@saksit_agent_bot`).
+  - GitHub PRs / CI diagnostics / git hooks → Delegate immediately to SakJules (`@sakjules_agent_bot`).
+  - Scheduling / daily calendar / health audit → Delegate immediately to SakTan (`@saktan_agent_bot`).
+- **Acceptance Criteria**: Specialist domains classified within 3 seconds and dispatched without executing redundant local generalist steps.
+
 ---
 
 ### Phase 2: Deputy 1 Readiness & Cache Check
@@ -44,6 +55,15 @@ flowchart TD
 - **Estimated Time**: 3 minutes
 - **Command**: `sakthai memory family "DEPUTY CHAIN" --tag deputy-chain --limit 1 && sakthai memory family --tag monitoring-result --limit 20`
 - **Acceptance Criteria**: Zero duplicate web fetches for assets cached within 30 minutes; clean Deputy 1 handoff.
+
+#### 🔹 Task 2.2: Break-Glass Emergency Hub Proxy
+- **Status**: [ ]
+- **Goal**: Proxy emergency Hugging Face Hub releases when SakThai is at Critical charge or unresponsive.
+- **Protocol**:
+  1. Confirm `--tag emergency-hf-delegate` in shared family memory or quorum co-signed by SakTan (`--tag quorum-approved`).
+  2. Confirm pre-flight payload validation signed off by SakJules.
+  3. Execute write and record action using `--tag emergency-hub-write` for post-recovery auditing by SakThai.
+- **Acceptance Criteria**: Urgent Hub releases succeed without blocking release cycles.
 
 ---
 

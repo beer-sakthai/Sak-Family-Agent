@@ -57,6 +57,15 @@ flowchart TD
 - **Rule**: Every scraped observation must include `retrieved_at` and untrusted content wrapping.
 - **Acceptance Criteria**: Zero plain scraped strings missing timestamp or boundary wrapper.
 
+#### 🔹 Task 3.2: 3-Tier Scraping Escalation Fast-Path
+- **Status**: [ ]
+- **Goal**: Minimize memory bloat and Chromium overhead by prioritizing lightweight static extraction before launching headless browsers.
+- **Escalation Rules**:
+  - Tier 1: Fast & Free (`curl` / `httpx` + `BeautifulSoup` / Markdown parsing for static HTML).
+  - Tier 2: Render-Only (headless Chromium with 15s timeout and automatic process reaping).
+  - Tier 3: Interactive Playwright (full session reserved exclusively for complex authenticated/SPA navigation).
+- **Acceptance Criteria**: Static requests bypass browser launch entirely; resource footprint kept minimal.
+
 ---
 
 ### Phase 4: Shared Memory Monitoring Cache Write

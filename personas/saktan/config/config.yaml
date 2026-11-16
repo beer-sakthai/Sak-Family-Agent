@@ -21,3 +21,8 @@ security:
   # Do not install packages on the fly at runtime (arbitrary-code / supply-chain
   # vector). Provision dependencies ahead of time instead.
   allow_lazy_installs: false
+algorithmic_fallback:
+  enabled: true
+  provider: huggingface
+  model: deepseek-ai/DeepSeek-V4-Flash
+  anonymize_pii: true
