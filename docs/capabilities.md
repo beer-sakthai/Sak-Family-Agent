@@ -94,3 +94,22 @@ The `sakthai.agent_platform` subsystem unifies advanced agent engineering and en
 - **Autonomous Antigravity Agent (`antigravity_agent.py`)**: Production-ready agent runner supporting hosted Gemini, on-device LiteRT, and local Ollama backends with streaming responses and data loss prevention guardrails (`sakthai platform antigravity`).
 - **Harness AI Agent Spec Exporter (`harness_exporter.py`)**: Deterministic canonical identifier generation (`ca_<slug>`) and declarative Harness v1 agent template and pipeline step export (`sakthai platform export-harness`).
 
+## Model Context Protocol (MCP)
+
+`sakthai mcp` exposes the unified runtime over JSON-RPC 2.0 and connects to external MCP servers:
+
+- **Inbound MCP Server (`sakthai mcp` / `sakthai mcp serve`)**:
+  - Tools: All `BUILTIN_TOOLS` (`tools/list`, `tools/call`).
+  - Resources: Sharded memory status at `sakthai://memory/status` (`resources/list`, `resources/read`).
+  - Prompts: Standard agent prompt templates (`prompts/list`, `prompts/get`).
+- **Outbound MCP Client (`StdioMCPClient` & `RemoteMCPClient`)**:
+  - Connects to external MCP servers configured in `~/.sakthai/mcp.json` or persona configs.
+  - Supports stdio sub-processes and remote HTTP/SSE endpoints (`transport: "sse"` or `"http"`).
+  - Enforces URL scheme validation (`http://` / `https://`) and command sanitization.
+  - Fine-grained tool scoping with allowlists (`spec.tools`).
+  - Tools are auto-namespaced as `<server>__<tool>`.
+- **Developer & Diagnostic CLI Tools**:
+  - `sakthai mcp list [--persona <name>] [--json]`: Inspect configured external servers and transports.
+  - `sakthai mcp ping [<name>] [--persona <name>]`: Probe responsiveness and health of external servers.
+  - `sakthai mcp tools [--persona <name>]`: List discovered external tools and schemas.
+

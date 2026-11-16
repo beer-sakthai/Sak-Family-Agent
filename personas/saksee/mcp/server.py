@@ -132,7 +132,11 @@ def handle_request(
             req_id,
             {
                 "protocolVersion": params.get("protocolVersion") or PROTOCOL_VERSION,
-                "capabilities": {"tools": {"listChanged": False}},
+                "capabilities": {
+                    "tools": {"listChanged": False},
+                    "resources": {"subscribe": False, "listChanged": False},
+                    "prompts": {"listChanged": False},
+                },
                 "serverInfo": {"name": SERVER_NAME, "version": __version__},
             },
         )
@@ -155,6 +159,102 @@ def handle_request(
                 _tool_call(params, store, tools, policy),
             )
         )
+
+    if method == "resources/list":
+        return (
+            None
+            if is_notification
+            else _result(
+                req_id,
+                {
+                    "resources": [
+                        {
+                            "uri": "sakthai://memory/status",
+                            "name": "Memory Store Status",
+                            "description": "Summary of active items and tags in SakThai memory",
+                            "mimeType": "application/json",
+                        }
+                    ]
+                },
+            )
+        )
+
+    if method == "resources/read":
+        uri = params.get("uri")
+        if uri == "sakthai://memory/status":
+            facts = store.list_facts(limit=1000)
+            stats = {
+                "fact_count": len(facts),
+                "health": store.healthcheck(),
+            }
+            return (
+                None
+                if is_notification
+                else _result(
+                    req_id,
+                    {
+                        "contents": [
+                            {
+                                "uri": uri,
+                                "mimeType": "application/json",
+                                "text": json.dumps(stats),
+                            }
+                        ]
+                    },
+                )
+            )
+        return None if is_notification else _error(req_id, -32602, f"Resource not found: {uri}")
+
+    if method == "prompts/list":
+        return (
+            None
+            if is_notification
+            else _result(
+                req_id,
+                {
+                    "prompts": [
+                        {
+                            "name": "sakthai_prompt",
+                            "description": "Standard SakThai agent prompt template",
+                            "arguments": [
+                                {
+                                    "name": "task",
+                                    "description": "The user task or objective",
+                                    "required": True,
+                                }
+                            ],
+                        }
+                    ]
+                },
+            )
+        )
+
+    if method == "prompts/get":
+        name = params.get("name")
+        if name == "sakthai_prompt":
+            task_arg = (params.get("arguments") or {}).get("task", "")
+            return (
+                None
+                if is_notification
+                else _result(
+                    req_id,
+                    {
+                        "description": "SakThai agent prompt template",
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": {
+                                    "type": "text",
+                                    "text": f"Task: {task_arg}"
+                                    if task_arg
+                                    else "Please provide a task.",
+                                },
+                            }
+                        ],
+                    },
+                )
+            )
+        return None if is_notification else _error(req_id, -32602, f"Prompt not found: {name}")
 
     if is_notification:
         return None

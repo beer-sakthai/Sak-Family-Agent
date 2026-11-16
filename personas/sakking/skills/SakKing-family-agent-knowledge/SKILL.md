@@ -52,7 +52,10 @@ When asked what a SakThai model can or cannot do:
 | `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` | Security scan |
 | `make mutation` | Local mutation testing (slow) |
 | `sakthai run "<prompt>"` | Run the agent loop |
-| `sakthai mcp` | Start MCP stdio server |
+| `sakthai mcp` / `sakthai mcp serve` | Start MCP stdio server |
+| `sakthai mcp list` | List configured external MCP servers |
+| `sakthai mcp ping [name]` | Ping external MCP server(s) |
+| `sakthai mcp tools` | List external MCP server tools |
 | `sakthai learn "<fact>" [--kind pref/note/project]` | Save a memory fact |
 | `sakthai recall` | List memory facts |
 | `sakthai memory consolidate` | Fold old facts into observations |
@@ -156,12 +159,13 @@ To compose ALL personas at once: `make compose-personas`.
 
 ### 6. Integration Points
 
-**MCP servers** configured in `~/.sakthai/mcp.json` (Claude-Desktop-compatible format). During `sakthai run`, all enabled servers are discovered and their tools merged namespaced as `<server>__<tool>`. `--no-mcp` disables all.
+**MCP servers** configured in `~/.sakthai/mcp.json` (Claude-Desktop-compatible `mcpServers` format or `servers` list/dict). Supports stdio subprocess commands and remote HTTP/SSE servers (`transport: "sse"`). Tools can be selectively scoped using `tools` allowlists. During `sakthai run`, all enabled servers are discovered and their tools merged namespaced as `<server>__<tool>`. `--no-mcp` disables all.
 
 - **Claude CLI:** Add to `~/.claude/config.json` with `command: "sakthai"`, `args: ["mcp"]`
 - **Gemini CLI:** Same format in active `.mcp.json`
 - **SakKing ↔ SakThai:** Interop over local MCP stdio (zero network cost)
-- **Composio:** Configure in `~/.sakthai/mcp.json` for managed tool integrations
+- **Composio / Remote SSE:** Configure in `~/.sakthai/mcp.json` for managed tool integrations or remote services
+- **CLI Management:** Use `sakthai mcp list`, `sakthai mcp ping [name]`, and `sakthai mcp tools`
 - **SakKing-learned skills:** Import via `sakthai skills sync-sakking`
 
 ### 7. Hugging Face in the Sak-Family-Agent

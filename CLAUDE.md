@@ -412,7 +412,7 @@ get the same per-persona shard without setting `SAKTHAI_HOME` yourself — see
      `memory.db` is bind-mounted; not combinable with `--persona`),
      `--persona <name>`, `-v/--verbose`.
    - Chat: `chat` — interactive multi-turn REPL over the same loop and memory.
-   - Server: `mcp` (start the MCP stdio server).
+   - Server: `mcp` (start the MCP stdio server `serve`, plus `list`, `ping`, `tools`).
    - Web: `web setup` (print/create the API bearer token), `web regen-token`,
      `web serve [--host 127.0.0.1] [--port 3001]` (serve the read-only API).
    - Cycle: `cycle status|next|set|list`
@@ -666,23 +666,29 @@ for want of the same check.
 - **`mcp/server.py`** — **inbound** JSON-RPC 2.0 stdio server. `handle_request`
   is a **pure function**, testable without a process. Reuses `BUILTIN_TOOLS` so
   behavior matches the agent loop exactly. Advertises protocol version
-  `"2024-11-05"`.
-- **`mcp/client.py`** — **outbound** stdio client. Launches external MCP servers,
-  wraps their tools as local `Tool` objects, auto-namespaces as `<server>__<tool>`.
-  Dependency-free; uses `select`-based timeouts (no asyncio).
+  `"2024-11-05"`. Handles tools (`tools/list`, `tools/call`), resources
+  (`resources/list`, `resources/read` for `sakthai://memory/status`), and
+  prompts (`prompts/list`, `prompts/get`).
+- **`mcp/client.py`** — **outbound** client supporting both stdio (`StdioMCPClient`)
+  and remote HTTP/SSE endpoints (`RemoteMCPClient`), with `ping()` responsiveness checks,
+  URL scheme enforcement, and tool filtering (`allowed_tools`). Wraps server tools as
+  local `Tool` objects, auto-namespaces as `<server>__<tool>`.
 - **`mcp/manager.py`** — `connect_servers()` context manager starts all configured
-  servers, fails soft on errors, merges tools, cleans up on exit.
+  servers (stdio or remote), filters tools according to allowlists, fails soft on
+  errors, merges tools, cleans up on exit.
 - **`mcp/servers.py`** — `MCPServerSpec` dataclass + `load_server_specs()`:
   discovers external server specs from `~/.sakthai/mcp.json` (or
   `SAKTHAI_MCP_CONFIG`, or the persona's own `config/mcp.json`) and extensions.
+  Supports dual-format manifests (`mcpServers` dict and `servers` list/dict).
 
-External MCP server config format:
+External MCP server config format (supports stdio commands and remote SSE endpoints):
 
 ```json
 {
-  "servers": [
-    { "name": "my-server", "command": "npx", "args": ["-y", "my-mcp-pkg"] }
-  ]
+  "mcpServers": {
+    "local-server": { "command": "npx", "args": ["-y", "my-mcp-pkg"], "tools": ["tool1"] },
+    "remote-server": { "url": "http://127.0.0.1:8000/sse", "transport": "sse" }
+  }
 }
 ```
 
@@ -692,7 +698,7 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`, which
 binds groups under `*_cmd` aliases on purpose so `sakthai.cli.<name>` keeps
 resolving to the *module* rather than the command object:
 
-- `agent.py` — `run`, `mcp`
+- `agent.py` — `run`, `mcp` (group with default `serve`, plus `list`, `ping`, `tools`)
 - `chat.py` — `chat`
 - `memory.py` — `learn`, `recall`, `memory` group
 - `system.py` — `doctor`, `setup`, `status`, `tools`, `web` group

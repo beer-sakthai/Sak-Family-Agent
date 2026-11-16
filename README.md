@@ -40,7 +40,7 @@
 | **Personas** | 6 Family Agents (`personas/<name>/`) | `🟢 6/6 ONLINE` | `SakThai` · `SakSee` · `SakJules` · `SakKing` · `SakSit` · `SakTan` |
 | **Skills Catalog** | 480 On-Disk Skills (461 overlay + 19 shared) | `🟢 STANDARDIZED`| Structured `Sak<Agent>-<domain>-<topic>` taxonomy |
 | **Memory Store** | SQLite per Persona (`~/.sakthai/`) | `🟢 SYNCED` | Sharded persistence & multi-agent `sakthai memory family` |
-| **Test Quality** | 2,791 Unit Tests across Python 3.11 & 3.12 | `🟢 PASS (≥96%)` | Enforced strict coverage floor (`--cov-fail-under=96`) |
+| **Test Quality** | 2,811 Unit Tests across Python 3.11 & 3.12 | `🟢 PASS (≥96%)` | Enforced strict coverage floor (`--cov-fail-under=96`) |
 | **Security Gates** | Guardrails, Secret Scan, CodeQL & Bandit | `🛡️ ENFORCED` | Safe execution, credential isolation & automated scanning |
 
 > **Six personas, one shared runtime.**
@@ -54,7 +54,7 @@
 - **SakThai core agent** — Python 3.11+ package with a provider-agnostic tool loop, retries, streaming, usage tracking, and dry-run preflight.
 - **Persistent memory** — SQLite-backed facts and observations stored under `~/.sakthai`, with semantic search, tagging, consolidation, versioned JSON snapshots ([format](data/README.md)), and sync helpers.
 - **Multiple providers** — Anthropic, Google Gemini, OpenAI-compatible endpoints, Ollama, gateways, and Hugging Face inference providers.
-- **MCP** — dependency-light stdio server plus discovery and namespaced connections to external MCP servers.
+- **MCP** — dependency-light stdio server, remote HTTP/SSE client support, resource and prompt exposing, plus discovery, tool allowlisting, and namespaced connections to external MCP servers.
 - **Six personas** — SakThai, SakSee, SakJules, SakKing, SakSit, and SakTan, each with its own identity, curated skills (480 on-disk skills under the searchable `Sak<Agent>-<domain>-<topic>` taxonomy), default model, and memory shard.
 - **Team and client workflows** — declarative multi-persona pipelines and ServiceQuoteBot client workspace provisioning.
 - **Unified Agent Platform** — core integration subsystems (`sakthai.agent_platform`) for accidental data loss prevention (`DataLossGuardrail`), reactive python dependency manager detection & isolated execution runners (`wrap_with_isolated_runner`), progressive disclosure skills rendering (`render_skills_progressive_summary`), Jules remote task delegation, dual Antigravity/ADK execution engine with model selection presets (`ModelTier`), and Harness AI agent pipeline spec generation.
@@ -176,7 +176,10 @@ sakthai chat --persona sakthai                             # start interactive c
 sakthai memory family --tag deputy-chain                   # search family-wide memory notes
 sakthai eval personas                                      # verify all 6 personas contracts & rubrics
 sakthai eval summary --all-personas                        # aggregate runtime evals across all shards
-sakthai mcp                                                # launch stdio MCP server
+sakthai mcp                                                # launch stdio MCP server (default serve)
+sakthai mcp list                                           # list configured external MCP servers
+sakthai mcp ping [name]                                    # ping configured MCP servers
+sakthai mcp tools                                          # list tools exposed by external MCP servers
 sakthai platform skills                                    # progressive disclosure of available skills
 sakthai platform antigravity "Inspect repo" --tier pro     # run Antigravity agent with model tier
 ```
@@ -200,7 +203,7 @@ personas/sakthai/          Canonical installable Python package
 personas/<name>/           Persona overlays, skills, and configuration
 apps/sak_agent_dashboard/  Next.js dashboard
 services/                  Service integrations and supporting services
-tests/                     Pytest test suite (2,791 unit tests)
+tests/                     Pytest test suite (2,811 unit tests)
 docs/                      Architecture, operations, security, and user guides
 scripts/                   Repository and maintenance tooling
 library/                   Curated shared skills and reference material

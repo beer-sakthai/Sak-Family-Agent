@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import json
 import os
 import sys
 from collections.abc import Callable, Iterator
@@ -348,14 +349,145 @@ def run(
         click.echo(result.text)
 
 
-@click.command()
-def mcp() -> None:
-    """Serve the memory tools over MCP (stdio JSON-RPC).
+@click.group(invoke_without_command=True)
+@click.pass_context
+def mcp(ctx: click.Context) -> None:
+    """Serve or inspect Model Context Protocol (MCP) integrations.
 
     Meant to be launched by an MCP client (an IDE, Claude Desktop, …): it reads
     requests on stdin and writes responses on stdout, exposing the same tools as
     ``sakthai run`` backed by the shared memory store.
+
+    Run subcommands (`list`, `ping`, `tools`) to manage configured MCP servers.
     """
+    if ctx.invoked_subcommand is None:
+        from ..mcp import serve
+
+        serve()
+
+
+@mcp.command(name="serve")
+def mcp_serve() -> None:
+    """Serve the memory tools over MCP (stdio JSON-RPC)."""
     from ..mcp import serve
 
     serve()
+
+
+@mcp.command(name="list")
+@click.option("--persona", default=None, help="Inspect MCP servers for a specific persona.")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
+def mcp_list(persona: str | None, as_json: bool) -> None:
+    """List configured external MCP servers."""
+    from ..mcp import load_server_specs
+
+    ctx_mgr = (
+        _temp_env("SAKTHAI_MCP_CONFIG", str(config.persona_mcp_config_path(persona)))
+        if (persona and config.persona_mcp_config_path(persona).is_file())
+        else contextlib.nullcontext()
+    )
+
+    with ctx_mgr:
+        specs = load_server_specs()
+
+    if as_json:
+        data = [
+            {
+                "name": s.name,
+                "transport": s.transport,
+                "command": s.command,
+                "args": s.args,
+                "url": s.url,
+                "tools": s.tools,
+            }
+            for s in specs
+        ]
+        click.echo(json.dumps(data, indent=2))
+        return
+
+    if not specs:
+        click.echo("No external MCP servers configured.")
+        return
+
+    click.echo(f"Configured MCP server(s) ({len(specs)}):")
+    for s in specs:
+        target = s.url if s.url else f"{s.command} {' '.join(s.args)}".strip()
+        tools_str = f" [tools: {', '.join(s.tools)}]" if s.tools else ""
+        click.echo(f"  • {click.style(s.name, bold=True)} ({s.transport}): {target}{tools_str}")
+
+
+@mcp.command(name="ping")
+@click.argument("name", required=False)
+@click.option("--persona", default=None, help="Inspect MCP servers for a specific persona.")
+def mcp_ping(name: str | None, persona: str | None) -> None:
+    """Ping configured MCP servers to verify responsiveness."""
+    from ..mcp import RemoteMCPClient, StdioMCPClient, load_server_specs
+
+    ctx_mgr = (
+        _temp_env("SAKTHAI_MCP_CONFIG", str(config.persona_mcp_config_path(persona)))
+        if (persona and config.persona_mcp_config_path(persona).is_file())
+        else contextlib.nullcontext()
+    )
+
+    with ctx_mgr:
+        specs = load_server_specs()
+
+    if name:
+        specs = [s for s in specs if s.name == name]
+        if not specs:
+            raise click.ClickException(f"No configured MCP server named {name!r}")
+
+    if not specs:
+        click.echo("No external MCP servers configured.")
+        return
+
+    for s in specs:
+        client: StdioMCPClient | RemoteMCPClient
+        if s.transport in ("sse", "http") or s.url:
+            if not s.url:
+                click.echo(f"  • {s.name}: FAIL (missing url)")
+                continue
+            client = RemoteMCPClient(s.url, name=s.name, timeout=5.0)
+        else:
+            if not s.command:
+                click.echo(f"  • {s.name}: FAIL (missing command)")
+                continue
+            client = StdioMCPClient(
+                s.command,
+                s.args,
+                env=s.env or None,
+                cwd=s.cwd,
+                name=s.name,
+                timeout=5.0,
+            )
+
+        try:
+            client.start()
+            ok = client.ping()
+            status = click.style("PONG", fg="green") if ok else click.style("NO PONG", fg="yellow")
+            click.echo(f"  • {s.name}: {status}")
+        except Exception as exc:
+            click.echo(f"  • {s.name}: {click.style('ERROR', fg='red')} ({exc})")
+        finally:
+            client.close()
+
+
+@mcp.command(name="tools")
+@click.option("--persona", default=None, help="Inspect MCP servers for a specific persona.")
+def mcp_tools(persona: str | None) -> None:
+    """List tools exposed by configured external MCP servers."""
+    from ..mcp.manager import connect_servers
+
+    ctx_mgr = (
+        _temp_env("SAKTHAI_MCP_CONFIG", str(config.persona_mcp_config_path(persona)))
+        if (persona and config.persona_mcp_config_path(persona).is_file())
+        else contextlib.nullcontext()
+    )
+
+    with ctx_mgr, connect_servers() as tools:
+        if not tools:
+            click.echo("No external MCP tools available.")
+            return
+        click.echo(f"Available external MCP tool(s) ({len(tools)}):")
+        for t in tools:
+            click.echo(f"  • {click.style(t.name, bold=True)}: {t.description}")

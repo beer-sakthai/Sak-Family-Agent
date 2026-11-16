@@ -61,9 +61,10 @@ Credentials are sourced from environment variables or local credential files —
 - `LIKE` patterns use `ESCAPE '='` to prevent wildcard injection
 - Schema migrations are additive (ALTER TABLE only) under `BEGIN IMMEDIATE`
 
-### MCP stdio server
+### MCP security boundaries
 
-`sakthai mcp` is a dependency-free JSON-RPC 2.0 stdio server. It enforces the same tool sandbox as the agent loop. It does not listen on any TCP port and cannot be reached from outside the local process without explicit piping.
+- **Inbound MCP server**: `sakthai mcp` is a dependency-free JSON-RPC 2.0 stdio server. It enforces the same tool sandbox as the agent loop, does not listen on any TCP port, and cannot be reached from outside the local process without explicit piping.
+- **Outbound MCP clients**: External server configurations are validated via `MCPServerValidator`. Commands containing suspicious execution patterns (`eval`, `exec`, `rm -rf`, redirection to `/dev/null`) are blocked. Remote server URLs are strictly validated to require `http://` or `https://` schemes, preventing file/socket injection. Server specifications can also enforce fine-grained tool allowlists (`spec.tools`), preventing untrusted servers from exposing unvetted capabilities.
 
 ### Secrets in the repository
 
