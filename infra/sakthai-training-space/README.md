@@ -36,6 +36,18 @@ has its own); pip refuses any file the locks do not list.
 
 3. Alternatively, enable **Dev Mode** or use **HF Jobs** to run training manually inside the container.
 
+## Local Container Build & Run
+
+To test the container image locally:
+
+```bash
+docker build -t sakthai-training-space .
+docker run --gpus all -it --rm \
+  -e HF_TOKEN="$HF_TOKEN" \
+  -p 7860:7860 \
+  sakthai-training-space
+```
+
 ## Directories
 
 - `/workspace/scripts` — training scripts
