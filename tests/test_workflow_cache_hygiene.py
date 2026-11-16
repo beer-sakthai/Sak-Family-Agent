@@ -75,7 +75,9 @@ def test_root_uv_workflows_use_locked_execution() -> None:
 
     for workflow_name in root_uv_workflows:
         content = (WORKFLOWS_DIR / workflow_name).read_text(encoding="utf-8")
-        commands = [line.strip() for line in content.splitlines() if not line.lstrip().startswith("#")]
+        commands = [
+            line.strip() for line in content.splitlines() if not line.lstrip().startswith("#")
+        ]
         uv_commands = [line for line in commands if "uv sync" in line or "uv run" in line]
         assert uv_commands, f"{workflow_name} should contain uv commands"
         assert all("--locked" in line for line in uv_commands), (
