@@ -42,7 +42,7 @@
   - `sakthai hf info <repo_id>` — Live Hub model/dataset/Space inspection (Gate 1 for SakSit)
   - `sakthai hf download <repo_id>` — Safe artifact retrieval
   - `config/mcp.json` declares `{}` (zero external npx servers; all Hub calls run through native tools)
-- **🧬 Self-Evolution Engine (`personas/sakthai/agent-self-evolution/`)**:
+- **🧬 Self-Evolution Engine (`personas/sakthai/evolution/`)**:
   - `evolution/skills/evolve_skill.py` (Phase 1 GEPA skill evolution)
   - `evolution/tools/evolve_tools.py` (Phase 2 tool description optimization)
   - `evolution/core/constraints.py` & `fitness.py` (`ConstraintValidator`, `skill_fitness_metric`, `tool_selection_metric`)
@@ -55,9 +55,9 @@
   - **Isolated Environment Runner**: `sakthai platform wrap-cmd "<cmd>"` (`dep_manager.py`) auto-wraps commands in the detected `uv` virtual environment
   - **Progressive Skill Disclosure**: `sakthai platform skills` (`render_skills_progressive_summary`) renders lightweight skill metadata tables to prevent prompt bloat
   - **Harness Pipeline Exporter**: `sakthai platform export-harness sakthai` (`harness_exporter.py`) exports declarative Harness v1 agent & pipeline specs
-- **🧰 Skill Overlay Inventory (299 Overlay Skills + 3 Shared Skills)**:
-  - **Overlay Root**: [`personas/sakthai/skills/`](file:///home/sak/Sak-Family-Agent/personas/sakthai/skills) (299 specialized `SakThai-*` skills)
-  - **Shared Root**: [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills) (3 shared skills: `Sak-auto-cycle-loop`, `Sak-dogfood`, `Sak-yuanbao`)
+- **🧰 Skill Overlay Inventory (285 Overlay Skills + 19 Shared Skills)**:
+  - **Overlay Root**: [`personas/sakthai/skills/`](file:///home/sak/Sak-Family-Agent/personas/sakthai/skills) (285 specialized `SakThai-*` skills)
+  - **Shared Root**: [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills) (19 shared `Sak-*` skills including `Sak-auto-cycle-loop`, `Sak-dogfood`, `Sak-ocr-and-documents`, `Sak-yuanbao`)
   - **Primary Workspace Skills** ([`config/workspace.yaml`](file:///home/sak/Sak-Family-Agent/personas/sakthai/config/workspace.yaml)):
   - `SakThai-speckit-bridge`
   - `SakThai-spec-kit`

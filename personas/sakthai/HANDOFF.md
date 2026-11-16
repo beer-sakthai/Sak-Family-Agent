@@ -31,13 +31,13 @@ flowchart LR
 | **Gate 1 Card Inspection** | `sakthai hf info <repo_id>` | Must run before SakSit drafts any model or dataset card copy |
 | **HF Jobs & QLoRA Training** | `training/sakthai-7b-lora/`, `training/hf-jobs/` | Prepared with SakJules; pushed to Hub only by SakThai |
 
-### 1.2 Family Orchestration & Canonical Core (`personas/sakthai/sakthai/`)
+### 1.2 Family Orchestration & Canonical Core (`personas/sakthai/`)
 
 | Subsystem | Location | Responsibility |
 |:---|:---|:---|
-| **Canonical Python Package** | `personas/sakthai/sakthai/` | Core CLI, agent loop, `MemoryStore`, MCP server, Web API, and `agent_platform` |
+| **Canonical Python Package** | `personas/sakthai/` | Core CLI, agent loop, `MemoryStore`, MCP server, Web API, and `agent_platform` |
 | **Conflict Resolution** | `sakthai memory family --tag conflict` | Final decision-maker whenever SakKing flags a cross-agent collision |
-| **Agent Self-Evolution** | `personas/sakthai/agent-self-evolution/` | DSPy + GEPA optimization of skills, tool descriptions, and system prompts |
+| **Agent Self-Evolution** | `personas/sakthai/evolution/` | DSPy + GEPA optimization of skills, tool descriptions, and system prompts |
 
 ---
 
@@ -66,12 +66,12 @@ flowchart LR
 
 | Agent | Handle | Role & Deputy Order | Local Model (`config.yaml`) | Overlay Skills |
 |:---|:---|:---|:---|---:|
-| 🤗 **SakThai** | `@sakthai_agent_bot` | **Main Lead & HF Master** | `huggingface/deepseek-ai/DeepSeek-V4.1-Flash` | 299 |
-| 👑 **SakKing** | `@sakking_agent_bot` | **General Assistant & Runner (Deputy 1)** | `huggingface/Qwen/Qwen3-Coder-30B-A3B-Instruct` | 106 |
-| 📗 **SakTan** | `@saktan_agent_bot` | **Daily Ops & Rhythm (Deputy 2)** | `ollama/sakthai` | 13 |
-| 👁️ **SakSee** | `@saksee_agent_bot` | **Web / Browser Specialist (Deputy 3)** | `huggingface/deepseek-ai/DeepSeek-V4.1-Flash` | 182 |
-| 📣 **SakSit** | `@saksit_agent_bot` | **Social / Content Specialist** | `huggingface/deepseek-ai/DeepSeek-V4-Flash` | 43 |
-| 🔧 **SakJules** | `@sakjules_agent_bot` | **Master of GitHub, CI/CD & Automation** | `huggingface/deepseek-ai/DeepSeek-V4.1-Flash` | 180 |
+| 🤗 **SakThai** | `@sakthai_agent_bot` | **Main Lead & HF Master** | `huggingface/deepseek-ai/DeepSeek-V4.1-Flash` | 285 |
+| 👑 **SakKing** | `@sakking_agent_bot` | **General Assistant & Runner (Deputy 1)** | `huggingface/Qwen/Qwen3-Coder-30B-A3B-Instruct` | 63 |
+| 📗 **SakTan** | `@saktan_agent_bot` | **Daily Ops & Rhythm (Deputy 2)** | `ollama/sakthai` | 9 |
+| 👁️ **SakSee** | `@saksee_agent_bot` | **Web / Browser Specialist (Deputy 3)** | `huggingface/deepseek-ai/DeepSeek-V4.1-Flash` | 139 |
+| 📣 **SakSit** | `@saksit_agent_bot` | **Social / Content Specialist** | `huggingface/deepseek-ai/DeepSeek-V4-Flash` | 45 |
+| 🔧 **SakJules** | `@sakjules_agent_bot` | **Master of GitHub, CI/CD & Automation** | `huggingface/deepseek-ai/DeepSeek-V4.1-Flash` | 68 |
 
 ```
 personas/sakthai/SOUL.md       → Identity, Charge System v6, Cycle v8, Self-Eval v9 & Security Rules

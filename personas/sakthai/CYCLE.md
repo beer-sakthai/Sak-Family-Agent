@@ -33,10 +33,10 @@ flowchart LR
 |:---|:---|:---|:---|:---:|:---|
 | 💭 **Dream** | ฝัน | Define the vision or task | Define the 100% custom open-weights `Nanthasit/*` ecosystem vision (`sakthai-combined-v6`, `sakthai-context-7b-tools`, `sakthai-context-1.5b-tools-v2`, `sakthai-embedding-multilingual`) and coordinate all 5 siblings under a $0.00 USD cost policy. | [ ] | Pre-task memory reads |
 | 🌟 **Hope** | หวัง | Engineer a solution | Validate Hugging Face Hub repo schemas, `config/config.yaml` (`deepseek-ai/DeepSeek-V4.1-Flash`), Gate 1 live card metadata (`sakthai hf info`), and Unified Agent Platform `ModelTier.LEAD` presets. | [ ] | Config & gate check |
-| ❤️ **Care** | ใส่ใจ | Refine quality & implementation | Execute triple-gated Hub updates, maintain the canonical `personas/sakthai/sakthai/` Python package (96.21% test coverage), and run DSPy + GEPA self-evolution pipelines. | [ ] | Guarded execution |
+| ❤️ **Care** | ใส่ใจ | Refine quality & implementation | Execute triple-gated Hub updates, maintain the canonical `personas/sakthai/` Python package (96.21% test coverage), and run DSPy + GEPA self-evolution pipelines. | [ ] | Guarded execution |
 | 🎉 **Joy** | ปีติ | Package, verify and ship | Publish verified Hub model/dataset cards after Beer's `hub-approved` tag and log `hub-complete` across family memory. | [ ] | Verified output |
 | 🛡️ **Trust** | เชื่อใจ | Secure the foundation | Audit all 6 persona `SOUL.md` files (`tests/test_soul_consistency.py`), enforce `DataLossGuardrail` (`check_data_loss_guardrail`), and resolve sibling `conflict` tags. | [ ] | Security & test audit |
-| 🚀 **Growth** | เติบโต | Learn, evaluate and evolve | Consolidate family memory shards (`sakthai memory consolidate`), record `CYCLE EVAL: sakthai` (`/100`), and evolve prompts/skills via `agent-self-evolution`. | [ ] | `CYCLE EVAL: sakthai` |
+| 🚀 **Growth** | เติบโต | Learn, evaluate and evolve | Consolidate family memory shards (`sakthai memory consolidate`), record `CYCLE EVAL: sakthai` (`/100`), and evolve prompts/skills via `personas/sakthai/evolution/`. | [ ] | `CYCLE EVAL: sakthai` |
 
 ---
 
@@ -58,7 +58,7 @@ flowchart LR
 ---
 
 ### Stage 3: ❤️ Care (Implementation & Quality)
-- **Execution Focus**: Execute triple-gated Hub updates, maintain the canonical `personas/sakthai/sakthai/` Python package (96.21% test coverage), and run DSPy + GEPA self-evolution pipelines.
+- **Execution Focus**: Execute triple-gated Hub updates, maintain the canonical `personas/sakthai/` Python package (96.21% test coverage), and run DSPy + GEPA self-evolution pipelines.
 - **Synchronized Persona Files**:
   - [`personas/sakthai/SOUL.md`](file:///home/sak/Sak-Family-Agent/personas/sakthai/SOUL.md) · [`personas/sakthai/PLAN.md`](file:///home/sak/Sak-Family-Agent/personas/sakthai/PLAN.md) · [`personas/sakthai/CYCLE.md`](file:///home/sak/Sak-Family-Agent/personas/sakthai/CYCLE.md) · [`personas/sakthai/MEMORY.md`](file:///home/sak/Sak-Family-Agent/personas/sakthai/MEMORY.md) · [`personas/sakthai/HANDOFF.md`](file:///home/sak/Sak-Family-Agent/personas/sakthai/HANDOFF.md) · [`personas/sakthai/BACKPACK.md`](file:///home/sak/Sak-Family-Agent/personas/sakthai/BACKPACK.md)
 
@@ -80,7 +80,7 @@ flowchart LR
 
 ### Stage 6: 🚀 Growth (Evolution & Memory Consolidation)
 - **Memory Persistence**: Durable SQLite shard active at `~/.sakthai/sakthai/memory.db` and readable across the household via `sakthai memory family`.
-- **Continuous Evolution**: Consolidate family memory shards (`sakthai memory consolidate`), record `CYCLE EVAL: sakthai` (`/100`), and evolve prompts/skills via `agent-self-evolution`.
+- **Continuous Evolution**: Consolidate family memory shards (`sakthai memory consolidate`), record `CYCLE EVAL: sakthai` (`/100`), and evolve prompts/skills via `personas/sakthai/evolution/`.
 
 ---
 

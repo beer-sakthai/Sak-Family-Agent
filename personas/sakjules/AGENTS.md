@@ -6,14 +6,14 @@ inside its standalone repo export before it is published.
 
 | agent      | profile dir (`HERMES_AGENT_REPO`)        | standalone repo export                    |
 |------------|------------------------------------------|-------------------------------------------|
-| `sakking`  | `~/.hermes`                              | `build/agent-repos/sakking`               |
-| `sakthai`  | `~/.hermes/profiles/sakthai`             | `build/agent-repos/sakthai`               |
+| `sakthai`  | `~/.hermes`                              | `build/agent-repos/sakthai`               |
+| `sakking`  | `~/.hermes/profiles/sakking`             | `build/agent-repos/sakking`               |
 | `saksee`   | `~/.hermes/profiles/saksee`              | `build/agent-repos/saksee`                |
 | `saksit`   | `~/.hermes/profiles/saksit`              | `build/agent-repos/saksit`                |
 | `saktan`   | `~/.hermes/profiles/saktan`              | `build/agent-repos/saktan`                |
 | `sakjules` | `~/.hermes/profiles/sakjules`            | `build/agent-repos/sakjules`              |
 
-> The lead, **SakKing**, lives on the reserved default profile (`~/.hermes`).
+> The lead, **SakThai**, lives on the reserved default profile (`~/.hermes`).
 > "Hermes" is only the framework. Source of truth for repo export is the
 > `Sak-Family-Agent` workspace and its `personas/` plus `infra/hermes-agents/`
 > profile trees.

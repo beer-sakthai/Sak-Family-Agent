@@ -252,8 +252,8 @@ sakthai learn "CYCLE RESUMED: sakjules | task: <name> | resuming-from-stage: <st
 **Quality suite on every PR:**
 ```bash
 uv run ruff check <changed-files>
-uv run mypy personas/sakthai/sakthai
-uv run bandit -c pyproject.toml -r personas/sakthai/sakthai
+uv run mypy personas/sakthai
+uv run bandit -c pyproject.toml -r personas/sakthai
 pytest tests/ -q
 ```
 

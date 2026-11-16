@@ -44,9 +44,9 @@
 - **🏗️ Harness v1 AI Agent & Pipeline Exporter (`sakthai platform export-harness`)**:
   - Deterministic canonical identifier generation (`ca_<slug>`) and declarative Harness v1 agent template & pipeline step export (`sakthai/agent_platform/harness_exporter.py`)
 - **🔒 Full Quality & DevSecOps Gate Suite (`.github/workflows/ci.yml`)**:
-  - `uv run ruff check personas/sakthai/sakthai tests` & `uv run ruff format --check personas/sakthai/sakthai tests`
-  - `uv run mypy personas/sakthai/sakthai` (strict type checking)
-  - `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` (AST security scan)
+  - `uv run ruff check personas/sakthai tests` & `uv run ruff format --check personas/sakthai tests`
+  - `uv run mypy personas/sakthai` (strict type checking)
+  - `uv run bandit -c pyproject.toml -r personas/sakthai` (AST security scan)
   - `uv run pytest tests/ -q --cov=sakthai --cov-branch --cov-fail-under=96` (96.21% coverage floor)
   - Parity enforcement: `tests/test_persona_guardrails_parity.py` & `tests/test_persona_web_server_parity.py`
 - **⏰ Cron Schedule Implementation (`schedule-request` → `schedule-confirmed`)**:
@@ -56,9 +56,9 @@
   - **Isolated Environment Runner**: `sakthai platform wrap-cmd "<cmd>"` (`dep_manager.py`) auto-wraps commands in the detected `uv` virtual environment
   - **Progressive Skill Disclosure**: `sakthai platform skills` (`render_skills_progressive_summary`) renders lightweight skill metadata tables to prevent prompt bloat
   - **Harness Pipeline Exporter**: `sakthai platform export-harness sakjules` (`harness_exporter.py`) exports declarative Harness v1 agent & pipeline specs
-- **🧰 Skill Overlay Inventory (180 Overlay Skills + 3 Shared Skills)**:
-  - **Overlay Root**: [`personas/sakjules/skills/`](file:///home/sak/Sak-Family-Agent/personas/sakjules/skills) (180 specialized `SakJules-*` skills)
-  - **Shared Root**: [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills) (3 shared skills: `Sak-auto-cycle-loop`, `Sak-dogfood`, `Sak-yuanbao`)
+- **🧰 Skill Overlay Inventory (68 Overlay Skills + 19 Shared Skills)**:
+  - **Overlay Root**: [`personas/sakjules/skills/`](file:///home/sak/Sak-Family-Agent/personas/sakjules/skills) (68 specialized `SakJules-*` skills)
+  - **Shared Root**: [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills) (19 shared `Sak-*` skills including `Sak-auto-cycle-loop`, `Sak-dogfood`, `Sak-ocr-and-documents`, `Sak-yuanbao`)
   - **Primary Workspace Skills** ([`config/workspace.yaml`](file:///home/sak/Sak-Family-Agent/personas/sakjules/config/workspace.yaml)):
   - `SakJules-github-ci-fix`
   - `SakJules-triage-issues`

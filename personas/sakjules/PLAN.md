@@ -22,7 +22,7 @@ flowchart TD
 
 #### 🔹 Task 1.1: Config, Model & Unified Platform Preflight
 - **Status**: [ ]
-- **Goal**: Confirm SakJules's provider (`huggingface`), model (`deepseek-ai/DeepSeek-V4.1-Flash`), 180 overlay skills, and `sakthai platform` CLI (`detect-deps`, `check-safety`, `export-harness`) resolve cleanly.
+- **Goal**: Confirm SakJules's provider (`huggingface`), model (`deepseek-ai/DeepSeek-V4.1-Flash`), 68 overlay skills, and `sakthai platform` CLI (`detect-deps`, `check-safety`, `export-harness`) resolve cleanly.
 - **Estimated Time**: 2 minutes
 - **Command**: `SAKTHAI_HOME=$(mktemp -d) sakthai run "preflight" --persona sakjules --no-mcp --dry-run && sakthai platform export-harness sakjules`
 - **Acceptance Criteria**: Preflight resolves `huggingface` → `deepseek-ai/DeepSeek-V4.1-Flash`; Harness v1 spec exports cleanly.
@@ -64,7 +64,7 @@ flowchart TD
 - **Status**: [ ]
 - **Goal**: Run the full CI quality gate locally before opening or merging any pull request.
 - **Estimated Time**: 10 minutes
-- **Command**: `make lint && uv run mypy personas/sakthai/sakthai && uv run bandit -c pyproject.toml -r personas/sakthai/sakthai && make test`
+- **Command**: `make lint && uv run mypy personas/sakthai && uv run bandit -c pyproject.toml -r personas/sakthai && make test`
 - **Acceptance Criteria**: Ruff, mypy, bandit, and pytest all exit 0 with branch coverage >= 96%.
 
 ---

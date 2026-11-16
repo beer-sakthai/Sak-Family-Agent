@@ -33,7 +33,7 @@ flowchart LR
 |:---|:---|:---|:---|:---:|:---|
 | 💭 **Dream** | ฝัน | Define the vision or task | Automate every CI/CD gate, security scan, VM deployment, and cron workflow across `Sak-Family-Agent` with 100% deterministic tests and $0.00 USD spend. | [ ] | Pre-task memory reads |
 | 🌟 **Hope** | หวัง | Engineer a solution | Check `gh pr list --state open` first (never open a duplicate PR — `-20%` charge penalty), read SakTan's `schedule-request` tags, and inspect failing workflow logs. | [ ] | Config & gate check |
-| ❤️ **Care** | ใส่ใจ | Refine quality & implementation | Implement surgical fixes in `personas/sakthai/sakthai/` (and sync parity files `guardrails.py` & `web/server.py` to all persona copies), adding regression tests for every bug or security bypass. | [ ] | Guarded execution |
+| ❤️ **Care** | ใส่ใจ | Refine quality & implementation | Implement surgical fixes in `personas/sakthai/` (and sync parity files `guardrails.py` & `web/server.py` to all persona copies), adding regression tests for every bug or security bypass. | [ ] | Guarded execution |
 | 🎉 **Joy** | ปีติ | Package, verify and ship | Run the full local quality gate (`ruff`, `mypy`, `bandit`, `pytest` >= 96% coverage) and confirm green CI checks. | [ ] | Verified output |
 | 🛡️ **Trust** | เชื่อใจ | Secure the foundation | Enforce Scorecard Pinned-Dependencies (SHA-pinned GitHub Actions, hash-locked `.github/*-requirements.lock`), `DataLossGuardrail`, and zero hardcoded secrets. | [ ] | Security & test audit |
 | 🚀 **Growth** | เติบโต | Learn, evaluate and evolve | Write `schedule-confirmed` for SakTan, hand any HF Hub-bound artifacts to SakThai for triple-gated publishing, and record `CYCLE EVAL: sakjules` (`/100`). | [ ] | `CYCLE EVAL: sakjules` |
@@ -58,7 +58,7 @@ flowchart LR
 ---
 
 ### Stage 3: ❤️ Care (Implementation & Quality)
-- **Execution Focus**: Implement surgical fixes in `personas/sakthai/sakthai/` (and sync parity files `guardrails.py` & `web/server.py` to all persona copies), adding regression tests for every bug or security bypass.
+- **Execution Focus**: Implement surgical fixes in `personas/sakthai/` (and sync parity files `guardrails.py` & `web/server.py` to all persona copies), adding regression tests for every bug or security bypass.
 - **Synchronized Persona Files**:
   - [`personas/sakjules/SOUL.md`](file:///home/sak/Sak-Family-Agent/personas/sakjules/SOUL.md) · [`personas/sakjules/PLAN.md`](file:///home/sak/Sak-Family-Agent/personas/sakjules/PLAN.md) · [`personas/sakjules/CYCLE.md`](file:///home/sak/Sak-Family-Agent/personas/sakjules/CYCLE.md) · [`personas/sakjules/MEMORY.md`](file:///home/sak/Sak-Family-Agent/personas/sakjules/MEMORY.md) · [`personas/sakjules/HANDOFF.md`](file:///home/sak/Sak-Family-Agent/personas/sakjules/HANDOFF.md) · [`personas/sakjules/BACKPACK.md`](file:///home/sak/Sak-Family-Agent/personas/sakjules/BACKPACK.md)
 

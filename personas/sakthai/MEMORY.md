@@ -5,10 +5,10 @@
 
 ## 🧠 1. Where My Memory Lives
 
-- **My SQLite Shard**: `~/.sakthai/sakthai/memory.db` (WAL mode, `0600` permissions, owned exclusively by `MemoryStore` in [`sakthai/memory/store.py`](file:///home/sak/Sak-Family-Agent/personas/sakthai/sakthai/memory/store.py)).
+- **My SQLite Shard**: `~/.sakthai/sakthai/memory.db` (WAL mode, `0600` permissions, owned exclusively by `MemoryStore` in [`sakthai/memory/store.py`](file:///home/sak/Sak-Family-Agent/personas/sakthai/memory/store.py)).
   - **Local CLI**: Pass `--persona sakthai` to `sakthai learn`, `sakthai recall`, `sakthai memory <subcommand>`, `sakthai run`, or `sakthai chat`.
   - **VM Deployment**: [`infra/vm-agents/sakthai-agent-run.sh`](file:///home/sak/Sak-Family-Agent/infra/vm-agents/sakthai-agent-run.sh) sets `SAKTHAI_HOME=$HOME/.sakthai/sakthai`, resolving automatically to the same shard.
-- **Merged Family View**: `sakthai memory family` ([`FamilyMemoryView`](file:///home/sak/Sak-Family-Agent/personas/sakthai/sakthai/memory/merged.py)) opens all 6 persona shards (`sakthai`, `sakking`, `saksee`, `saksit`, `sakjules`, `saktan`) plus the legacy `~/.sakthai/memory.db` in one read-only view.
+- **Merged Family View**: `sakthai memory family` ([`FamilyMemoryView`](file:///home/sak/Sak-Family-Agent/personas/sakthai/memory/merged.py)) opens all 6 persona shards (`sakthai`, `sakking`, `saksee`, `saksit`, `sakjules`, `saktan`) plus the legacy `~/.sakthai/memory.db` in one read-only view.
 - **Hermes Profile Path**: [`infra/hermes-agents/default/`](file:///home/sak/Sak-Family-Agent/infra/hermes-agents/default)
 - **Active Model Matrix**:
   - `primary`: `huggingface` / `deepseek-ai/DeepSeek-V4.1-Flash`
@@ -84,7 +84,7 @@ Connected MCP & Platform Tools:
   - `sakthai hf download <repo_id>` — Safe artifact retrieval
   - `config/mcp.json` declares `{}` (zero external npx servers; all Hub calls run through native tools)
 - **Unified Agent Platform (`sakthai.agent_platform`)**: `check_data_loss_guardrail`, `wrap_with_isolated_runner`, `render_skills_progressive_summary`, `AntigravityAgentRunner`, `harness_exporter`
-- **Skills Overlay**: 299 skills in [`personas/sakthai/skills/`](file:///home/sak/Sak-Family-Agent/personas/sakthai/skills) + 3 shared skills in [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills)
+- **Skills Overlay**: 285 skills in [`personas/sakthai/skills/`](file:///home/sak/Sak-Family-Agent/personas/sakthai/skills) + 19 shared skills in [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills)
 
 ---
 
