@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 import yaml
 
+from scripts import lint_workflow_permissions
 from scripts.lint_workflow_permissions import find_scalar_permissions
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -66,29 +68,80 @@ def test_all_active_workflows_have_concurrency() -> None:
 
 
 def test_workflows_do_not_use_scalar_permissions() -> None:
-    """Require workflow permissions to be explicit mappings, not read-all shorthands."""
-    forbidden = ("permissions: read-all", "permissions: write-all")
-    for yml_path in WORKFLOWS_DIR.glob("*.yml"):
-        content = yml_path.read_text(encoding="utf-8")
-        for declaration in forbidden:
-            assert declaration not in content, (
-                f"{yml_path.name} uses scalar {declaration}; declare least-privilege "
-                "permissions as a mapping instead"
-            )
+    """Require workflow permissions to be explicit mappings."""
+    assert find_scalar_permissions(WORKFLOWS_DIR) == []
 
 
-def test_workflow_permission_linter_catches_scalar_forms(tmp_path: Path) -> None:
-    """Cover all forbidden scalar forms, including declarations not used today."""
-    workflow = tmp_path / "sample.yml"
+@pytest.mark.parametrize("extension", [".yml", ".yaml"])
+def test_workflow_permission_linter_catches_scalar_forms(tmp_path: Path, extension: str) -> None:
+    """Detect scalar forms at any mapping depth, including quoted values."""
+    workflow = tmp_path / f"sample{extension}"
     workflow.write_text(
-        "permissions: read\npermissions: write\npermissions: read-all\npermissions: {}\n",
+        """name: sample
+permissions: read
+jobs:
+  read-job:
+    permissions: write
+  read-all-job:
+    permissions: "read-all"
+  write-all-job:
+    permissions: 'write-all'
+  allowed-job:
+    permissions: {}
+""",
         encoding="utf-8",
     )
 
     findings = find_scalar_permissions(tmp_path)
 
     assert [(line, value) for _, line, value in findings] == [
-        (1, "read"),
-        (2, "write"),
-        (3, "read-all"),
+        (2, "read"),
+        (5, "write"),
+        (7, "read-all"),
+        (9, "write-all"),
     ]
+
+
+def test_workflow_permission_linter_ignores_comments_and_block_scalars(
+    tmp_path: Path,
+) -> None:
+    workflow = tmp_path / "sample.yaml"
+    workflow.write_text(
+        """name: sample
+# permissions: read-all
+run-name: |
+  permissions: write
+  permissions: "read-all"
+permissions: {}
+jobs: {}
+""",
+        encoding="utf-8",
+    )
+
+    assert find_scalar_permissions(tmp_path) == []
+
+
+def test_workflow_permission_linter_cli_reports_findings(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    workflow = tmp_path / "sample.yml"
+    workflow.write_text('permissions: "read-all"\n', encoding="utf-8")
+    monkeypatch.setattr(lint_workflow_permissions, "WORKFLOWS_DIR", tmp_path)
+
+    assert lint_workflow_permissions.main() == 1
+
+    captured = capsys.readouterr()
+    assert "Workflow permissions lint failed:" in captured.err
+    assert f"{workflow}:1: permissions: read-all" in captured.err
+
+
+def test_workflow_permission_linter_cli_passes_for_allowed_declarations(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "sample.yaml").write_text(
+        "permissions: {contents: read}\njobs: {}\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(lint_workflow_permissions, "WORKFLOWS_DIR", tmp_path)
+
+    assert lint_workflow_permissions.main() == 0
+    assert "no scalar permission declarations found" in capsys.readouterr().out
