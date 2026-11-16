@@ -1,12 +1,39 @@
-# 🧬 SakThai Agent Self-Evolution
+# 🧬 SakThai — Lead Persona & Agent Self-Evolution
 
-**Evolutionary self-improvement for SakThai Agent.**
+**Main Lead & Hugging Face Master of the House of Sak.**
 
-Sak Agent Self-Evolution uses DSPy + GEPA (Genetic-Pareto Prompt Evolution) to automatically evolve and optimize the agent's skills, tool descriptions, system prompts, and code — producing measurably better versions through reflective evolutionary search.
+SakThai coordinates the six-agent family, manages Hugging Face Hub deployments, spaces, and datasets, and drives reflective self-evolution for agent skills, prompts, and tooling.
 
-**No GPU training required.** Everything operates via API calls — mutating text, evaluating results, and selecting the best variants. ~$2-10 per optimization run.
+---
 
-## How It Works
+## ⚡ Core Responsibilities
+
+- **Lead Coordination**: Orchestrates family workflows and delegates to deputies (SakKing, SakTan, SakSee).
+- **Hugging Face Hub Master**: Secure model/dataset upload, sync, and inference with break-glass safety protocol (`assert_hf_write_allowed`).
+- **Progressive Skill Hydration**: Manifest-driven lazy loading of specialized functional clusters (`get_skill_domain_manifests`).
+- **Self-Evolution Engine**: Reflective evolutionary optimization using DSPy + GEPA (Genetic-Pareto Prompt Evolution).
+
+---
+
+## Quick Start
+
+```bash
+# Sync dependencies
+uv sync --all-extras
+
+# Run SakThai on default model (DeepSeek-V4.1-Flash)
+uv run sakthai run --persona sakthai "Analyze trending Hugging Face spaces and datasets"
+
+# Run with interactive chat mode
+uv run sakthai chat --persona sakthai
+
+# Run self-evolution on a skill
+./evolve_agent.sh --skill SakThai-coding-security --iterations 5
+```
+
+---
+
+## Self-Evolution & GEPA Architecture
 
 ```
 Read current skill/prompt/tool ──► Generate eval dataset
@@ -23,61 +50,26 @@ Read current skill/prompt/tool ──► Generate eval dataset
                                    Best variant ──► PR against agent repo
 ```
 
-GEPA reads execution traces to understand *why* things fail (not just that they failed), then proposes targeted improvements. ICLR 2026 Oral, MIT licensed.
-
-## Quick Start
-
-```bash
-# Install
-git clone https://github.com/beer-sakthai/Sak-Family-Agent.git
-cd Sak-Family-Agent
-pip install -e "personas/sakthai[dev]"
-
-# Point at your agent data dir (optional override)
-export SAK_AGENT_REPO=~/.sakthai
-
-# Evolve a skill (synthetic eval data)
-python -m evolution.skills.evolve_skill \
-    --skill github-code-review \
-    --iterations 10 \
-    --eval-source synthetic
-
-# Or use real session history from session files
-python -m evolution.skills.evolve_skill \
-    --skill github-code-review \
-    --iterations 10 \
-    --eval-source sessiondb
-```
-
-## What It Optimizes
-
-| Phase | Target | Engine | Status |
-|-------|--------|--------|--------|
-| **Phase 1** | Skill files (SKILL.md) | DSPy + GEPA | ✅ Implemented |
-| **Phase 2** | Tool descriptions | DSPy + GEPA | ✅ Implemented |
-| **Phase 3** | System prompt sections | DSPy + GEPA | 🔲 Planned |
-| **Phase 4** | Tool implementation code | Darwinian Evolver | 🔲 Planned |
-| **Phase 5** | Continuous improvement loop | Automated pipeline | 🔲 Planned |
-
-## Engines
-
-| Engine | What It Does | License |
-|--------|-------------|---------|
-| **[DSPy](https://github.com/stanfordnlp/dspy) + [GEPA](https://github.com/gepa-ai/gepa)** | Reflective prompt evolution — reads execution traces, proposes targeted mutations | MIT |
-| **[Darwinian Evolver](https://github.com/imbue-ai/darwinian_evolver)** | Code evolution with Git-based organisms | AGPL v3 (external CLI only) |
-
-## Guardrails
-
 Every evolved variant must pass:
-1. **Full test suite** — `pytest tests/ -q` must pass 100%
-2. **Size limits** — Skills ≤15KB, tool descriptions ≤500 chars
-3. **Caching compatibility** — No mid-conversation changes
-4. **Semantic preservation** — Must not drift from original purpose
-5. **PR review** — All changes go through human review, never direct commit
+1. **Full test suite** — `uv run pytest tests/ -q` must pass 100% with $\ge 96.0\%$ coverage.
+2. **Size limits** — Skills $\le 15\text{ KB}$, tool descriptions $\le 500\text{ chars}$.
+3. **Parity preservation** — Maintains 51-item structural parity and canonical path invariants.
+4. **Human review** — Proposed enhancements go through PR review before merging.
 
-## Full Plan
+---
 
-See [PLAN.md](PLAN.md) for the complete architecture, evaluation data strategy, constraints, benchmarks integration, and phased timeline.
+## Core Working Files
+
+- `SOUL.md`: Identity, charge system v6, and 100-point self-evaluation v9 rubric.
+- `PLAN.md`: Task decomposition and multi-agent routing protocols.
+- `CYCLE.md`: 6-stage growth cycle (Dream $\rightarrow$ Hope $\rightarrow$ Care $\rightarrow$ Joy $\rightarrow$ Trust $\rightarrow$ Growth).
+- `MEMORY.md`: Active memory and durable learnings.
+- `HANDOFF.md`: Cross-persona handoff contracts.
+- `BACKPACK.md`: Domain toolbelt and skills inventory (170 overlay skills + 19 shared).
+- `config/`: Configuration files (`config.yaml`, `workspace.yaml`, `mcp.json`).
+- `evolution/`: Persona-owned self-evolution engine.
+
+---
 
 ## License
 

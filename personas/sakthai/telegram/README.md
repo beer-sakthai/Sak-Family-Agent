@@ -22,7 +22,7 @@ Optional launch controls:
 From the repository root:
 
 ```bash
-python -m sakthai.telegram.bot
+uv run python -m sakthai.telegram.bot
 ```
 
 ## Telegram commands
