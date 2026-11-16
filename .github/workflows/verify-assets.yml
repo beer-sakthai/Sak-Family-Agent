@@ -46,14 +46,8 @@ jobs:
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: '3.11'
-
-      - name: Cache uv
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-verify-assets-${{ hashFiles('**/uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-verify-assets-
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
 
       - name: Install sakthai package
         # Locked, reproducible install (matches the rest of the repo's uv-based

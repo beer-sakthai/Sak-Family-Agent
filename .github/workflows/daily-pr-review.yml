@@ -50,7 +50,7 @@ jobs:
           APPLY_DELETE: ${{ github.event_name == 'schedule' && 'true' || inputs.apply_delete || 'false' }}
         run: |
           set -euo pipefail
-          .manus/skills/sak-family-daily-pr-review/scripts/daily_pr_review.sh | tee /tmp/daily-pr-review.txt
+          bash scripts/daily_pr_review.sh | tee /tmp/daily-pr-review.txt
 
       - name: Publish daily report
         if: always()
