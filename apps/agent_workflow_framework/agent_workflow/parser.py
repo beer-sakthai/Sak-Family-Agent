@@ -4,12 +4,13 @@ Provides functionality for parsing YAML and JSON workflow definition files
 or dictionary structures into validated WorkflowDefinition dataclasses.
 """
 
-from pathlib import Path
-from typing import Dict, Any, Union, List, Optional
 import json
+from pathlib import Path
+from typing import Any
+
 import yaml
 
-from agent_workflow.models import WorkflowDefinition, StepDefinition
+from agent_workflow.models import StepDefinition, WorkflowDefinition
 
 
 class WorkflowParseError(ValueError, FileNotFoundError):
@@ -66,7 +67,7 @@ def parse_workflow_dict(data: Any) -> WorkflowDefinition:
     if not isinstance(raw_steps, list):
         raise WorkflowParseError("Workflow 'steps' must be a list.")
 
-    parsed_steps: List[StepDefinition] = []
+    parsed_steps: list[StepDefinition] = []
     seen_step_ids = set()
 
     for idx, raw_step in enumerate(raw_steps):
@@ -188,7 +189,7 @@ def parse_workflow_json(json_content: str) -> WorkflowDefinition:
     return parse_workflow_dict(data)
 
 
-def parse_workflow_file(file_path: Union[str, Path]) -> WorkflowDefinition:
+def parse_workflow_file(file_path: str | Path) -> WorkflowDefinition:
     """Parse a workflow definition file (YAML or JSON) into a WorkflowDefinition.
 
     Args:

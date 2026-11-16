@@ -9,11 +9,9 @@ and runs python -m unittest discover -s tests.
 Exits code 0 when all tests pass, exit code 1 if any fail.
 """
 
-import sys
 import os
 import subprocess
-import json
-import unittest
+import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.resolve()
@@ -27,10 +25,9 @@ if str(BASE_DIR) not in sys.path:
 
 try:
     from agent_workflow.cli import main as cli_main
-    from agent_workflow.parser import parse_workflow_file
     from agent_workflow.executor import WorkflowExecutor
-    from agent_workflow.persistence import HistoryStore
     from agent_workflow.models import RunStatus, StepStatus
+    from agent_workflow.parser import parse_workflow_file
 except ModuleNotFoundError as exc:
     if exc.name == "yaml":
         raise SystemExit(
@@ -47,7 +44,7 @@ def print_header(title: str) -> None:
 def run_cli_cmd(args: list) -> int:
     """Executes CLI command via python -m subprocess if module exists, else directly calls cli_main."""
     cmd = [sys.executable, "-m", "agent_workflow.cli"] + args
-    res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=BASE_DIR)
+    res = subprocess.run(cmd, capture_output=True, text=True, cwd=BASE_DIR)
     if "No module named agent_workflow" not in res.stderr:
         return res.returncode
     return cli_main(args)
