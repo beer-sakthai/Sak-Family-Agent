@@ -5,9 +5,7 @@ on:
     types: [closed]
   workflow_dispatch:
 
-permissions:
-  actions: write
-  contents: read
+permissions: read-all
 
 concurrency:
   group: cache-cleanup-${{ github.event.pull_request.number || github.run_id }}
@@ -17,6 +15,9 @@ jobs:
   cleanup-cache:
     name: Purge closed PR caches
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
     timeout-minutes: 10
     steps:
       - name: Harden the runner

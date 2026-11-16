@@ -11,15 +11,14 @@ if ! python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' 
     exit 1
 fi
 
-# Install with whichever installer is available.
-if command -v uv >/dev/null 2>&1; then
-    uv pip install -e ".[dev]"
-elif command -v pip >/dev/null 2>&1; then
-    python3 -m pip install -e ".[dev]"
-else
-    echo "ERROR: no Python installer found. Install uv or pip." >&2
+# Require uv (https://docs.astral.sh/uv/) for reproducible local environment setup.
+if ! command -v uv >/dev/null 2>&1; then
+    echo "ERROR: uv is required for SakThai bootstrap (https://docs.astral.sh/uv/)." >&2
+    echo "Install uv via: curl -LsSf https://astral.sh/uv/install.sh | sh" >&2
     exit 1
 fi
+
+uv pip install -e ".[dev]"
 
 # Seed a .env from the example if there isn't one yet.
 if [ ! -f .env ] && [ -f .env.example ]; then

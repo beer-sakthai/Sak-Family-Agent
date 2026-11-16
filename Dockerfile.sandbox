@@ -21,7 +21,9 @@ COPY pyproject.toml README.md ./
 COPY personas/sakthai/ ./personas/sakthai/
 COPY library/ ./library/
 
-RUN pip install --no-cache-dir -e "."
+# Copy standalone uv binary pinned by hash (Scorecard Pinned-Dependencies)
+COPY --from=ghcr.io/astral-sh/uv:0.6.14@sha256:063d80d226a27e3661ebfdbe3a105f2c525fcf958994bb0f252bf46efea39b56 /uv /bin/uv
+RUN uv pip install --system --no-cache -e "."
 
 # Memory store mount point; host binds memory.db here at runtime
 RUN mkdir -p /root/.sakthai
