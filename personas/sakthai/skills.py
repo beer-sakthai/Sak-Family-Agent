@@ -447,4 +447,3 @@ def get_skill_domain_manifests() -> dict[str, dict[str, Any]]:
             "tags": ["arxiv", "research", "paper", "trending"],
         },
     }
-
