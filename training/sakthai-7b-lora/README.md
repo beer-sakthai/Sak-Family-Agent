@@ -2,7 +2,8 @@
 
 Attempt to train Qwen2.5-7B-Instruct with the tool-calling dataset v5.
 
-**Files:**
+## Artifacts & Configuration
+
 - `train.py` — training script (HF Jobs entrypoint)
 - `submit_job.py` — submits the job to HF Jobs via `run_uv_job`
 
@@ -10,6 +11,13 @@ Attempt to train Qwen2.5-7B-Instruct with the tool-calling dataset v5.
 
 **Config:** LoRA r=16, alpha=32, 4-bit NF4, 4 epochs, 300 steps, A10G 24GB (~$1.00/hr)
 **Dataset:** [sakthai-combined-v5](https://huggingface.co/datasets/Nanthasit/sakthai-combined-v5)
+
+## Job Submission
+
+```bash
+# Submit remote training job to Hugging Face Jobs
+HF_TOKEN=... uv run python submit_job.py
+```
 
 ### Failure log
 | # | Root cause | Fix |

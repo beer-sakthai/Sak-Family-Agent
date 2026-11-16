@@ -44,8 +44,8 @@ Suggested GPU flavor per base model (QLoRA 4-bit, seq 2048):
 ## Build the tool-calling dataset
 
 ```bash
-python build_toolcalling_dataset.py     # -> sakthai_toolcalling_synthetic.jsonl
-python fetch_public_toolcalling.py       # -> glaive_converted.jsonl
+uv run python build_toolcalling_dataset.py     # -> sakthai_toolcalling_synthetic.jsonl
+uv run python fetch_public_toolcalling.py       # -> glaive_converted.jsonl
 # merge + dedup + split, then `hf upload <repo> train.jsonl --repo-type dataset`
 ```
 
