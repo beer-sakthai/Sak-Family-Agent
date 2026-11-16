@@ -186,26 +186,34 @@ class MCPServerValidator:
                 f"MCP server '{server_spec.get('name')}' not in approved list (strict mode)",
             )
 
-        # Check for suspicious patterns in command
+        # Check command or remote URL
         command = server_spec.get("command", "")
-        if not command:
-            return False, "MCP server 'command' is required"
+        url = server_spec.get("url", "")
+        if not command and not url:
+            return False, "MCP server 'command' or 'url' is required"
 
-        # Block commands that look suspicious
-        suspicious_patterns = [
-            r"eval",
-            r"exec",
-            r"rm\s+-rf",
-            r":/dev/",
-            r">\s*/dev/null",
-            r">&\s*1",
-        ]
-        for pattern in suspicious_patterns:
-            if re.search(pattern, command, re.IGNORECASE):
-                return (
-                    False,
-                    f"MCP server command contains suspicious pattern: {pattern}",
-                )
+        if url and (
+            not isinstance(url, str)
+            or not (url.startswith("http://") or url.startswith("https://"))
+        ):
+            return False, "MCP server 'url' must be a valid http or https URL"
+
+        if command:
+            # Block commands that look suspicious
+            suspicious_patterns = [
+                r"eval",
+                r"exec",
+                r"rm\s+-rf",
+                r":/dev/",
+                r">\s*/dev/null",
+                r">&\s*1",
+            ]
+            for pattern in suspicious_patterns:
+                if re.search(pattern, command, re.IGNORECASE):
+                    return (
+                        False,
+                        f"MCP server command contains suspicious pattern: {pattern}",
+                    )
 
         # Validate args if present
         args = server_spec.get("args", [])

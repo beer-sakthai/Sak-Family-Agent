@@ -11,6 +11,7 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -322,3 +323,75 @@ def test_read_response_skips_non_json_noise() -> None:
     client._readline = lambda: next(lines, None)  # type: ignore[method-assign]
     result = client._read_response(2)
     assert result["id"] == 2
+
+
+def test_as_tools_allowed_tools_filters(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    with _server(home) as client:
+        # Filter to only 'learn'
+        tools = client.as_tools(prefix="m__", allowed_tools=["learn"])
+        names = [t.name for t in tools]
+        assert names == ["m__learn"]
+
+
+def test_client_ping(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    with _server(home) as client:
+        assert client.ping() is True
+
+
+def test_remote_mcp_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    from sakthai.mcp.client import RemoteMCPClient
+
+    client = RemoteMCPClient("https://mcp.feather.so", name="feather")
+
+    def mock_send_http(payload: dict[str, Any]) -> dict[str, Any]:
+        req_id = payload.get("id")
+        method = payload.get("method")
+        if method == "initialize":
+            return {"jsonrpc": "2.0", "id": req_id, "result": {"capabilities": {}}}
+        if method == "tools/list":
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": {
+                    "tools": [
+                        {
+                            "name": "create_post",
+                            "description": "Create a blog post",
+                            "inputSchema": {"type": "object"},
+                        },
+                        {
+                            "name": "delete_post",
+                            "description": "Delete a blog post",
+                            "inputSchema": {"type": "object"},
+                        },
+                    ]
+                },
+            }
+        if method == "tools/call":
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": {"content": [{"type": "text", "text": "Post created"}], "isError": False},
+            }
+        if method == "ping":
+            return {"jsonrpc": "2.0", "id": req_id, "result": {}}
+        return {"jsonrpc": "2.0", "id": req_id, "result": {}}
+
+    monkeypatch.setattr(client, "_send_http", mock_send_http)
+
+    client.start()
+    assert len(client.tools) == 2
+    assert client.ping() is True
+
+    # Filter with allowed_tools
+    tools = client.as_tools(prefix="feather__", allowed_tools=["create_post"])
+    assert len(tools) == 1
+    assert tools[0].name == "feather__create_post"
+
+    # Call tool
+    res = client.call_tool("create_post", {"title": "Hello"})
+    assert res == "Post created"
+
+    client.close()

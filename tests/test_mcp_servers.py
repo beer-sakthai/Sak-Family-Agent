@@ -224,3 +224,67 @@ def test_load_specs_ignores_missing_persona_override(
     _write_manifest(home / "mcp.json", "shared-srv", "ccmd")
     by_name = {s.name: s for s in load_server_specs()}
     assert set(by_name) == {"shared-srv"}
+
+
+def test_parse_servers_list_format() -> None:
+    data = {
+        "servers": [
+            {
+                "name": "sakking",
+                "command": "sakking",
+                "args": ["mcp", "serve"],
+                "env": {"FOO": "bar"},
+            },
+            {
+                "name": "feather",
+                "url": "https://mcp.feather.so",
+                "transport": "sse",
+                "tools": ["list_blogs", "create_post"],
+            },
+        ]
+    }
+    specs = parse_mcp_servers(data)
+    assert len(specs) == 2
+    by_name = {s.name: s for s in specs}
+    assert by_name["sakking"].command == "sakking"
+    assert by_name["sakking"].args == ["mcp", "serve"]
+    assert by_name["sakking"].env == {"FOO": "bar"}
+    assert by_name["sakking"].transport == "stdio"
+
+    assert by_name["feather"].url == "https://mcp.feather.so"
+    assert by_name["feather"].transport == "sse"
+    assert by_name["feather"].tools == ["list_blogs", "create_post"]
+
+
+def test_parse_servers_dict_format() -> None:
+    data = {
+        "servers": {
+            "remote_srv": {
+                "url": "https://example.com/mcp",
+                "tools": ["tool_a"],
+            }
+        }
+    }
+    specs = parse_mcp_servers(data)
+    assert len(specs) == 1
+    assert specs[0].name == "remote_srv"
+    assert specs[0].url == "https://example.com/mcp"
+    assert specs[0].transport == "sse"
+    assert specs[0].tools == ["tool_a"]
+
+
+def test_parse_local_type_maps_to_stdio() -> None:
+    data = {
+        "mcpServers": {
+            "gh_aw": {
+                "type": "local",
+                "command": "gh",
+                "args": ["aw", "mcp-server"],
+                "tools": ["compile", "audit"],
+            }
+        }
+    }
+    specs = parse_mcp_servers(data)
+    assert len(specs) == 1
+    assert specs[0].transport == "stdio"
+    assert specs[0].tools == ["compile", "audit"]

@@ -235,16 +235,26 @@ class StdioMCPClient:
         """The raw tool descriptors the server advertised at startup."""
         return list(self._remote_tools)
 
-    def as_tools(self, *, prefix: str = "") -> list[Tool]:
+    def as_tools(
+        self,
+        *,
+        prefix: str = "",
+        allowed_tools: Sequence[str] | None = None,
+    ) -> list[Tool]:
         """Wrap each remote tool as a local Tool whose handler dispatches out.
 
         ``prefix`` namespaces the local tool names (e.g. ``"github_"``) while the
         bare remote name is used on the wire, so several servers can coexist.
+        If ``allowed_tools`` is given, only tools whose remote name is in the
+        collection will be wrapped.
         """
         wrapped: list[Tool] = []
+        allowed_set = set(allowed_tools) if allowed_tools is not None else None
         for desc in self._remote_tools:
             remote_name = desc.get("name")
             if not isinstance(remote_name, str):
+                continue
+            if allowed_set is not None and remote_name not in allowed_set:
                 continue
             if not _REMOTE_TOOL_NAME_RE.match(remote_name):
                 logger.warning(
@@ -271,6 +281,14 @@ class StdioMCPClient:
             return self.call_tool(remote_name, args)
 
         return handler
+
+    def ping(self) -> bool:
+        """Ping the server via JSON-RPC ping method. Returns True if answered."""
+        try:
+            res = self._request("ping")
+            return "error" not in res
+        except Exception:
+            return False
 
     def call_tool(self, name: str, arguments: Mapping[str, Any] | None = None) -> str:
         response = self._request("tools/call", {"name": name, "arguments": dict(arguments or {})})
@@ -350,3 +368,178 @@ class StdioMCPClient:
             return None
         assert isinstance(item, str)
         return item
+
+
+class RemoteMCPClient:
+    """Minimal HTTP/SSE MCP client for remote servers (e.g. Feather, HF Spaces).
+
+    Uses standard library urllib.request to communicate with remote MCP endpoints
+    without external dependencies.
+    """
+
+    def __init__(
+        self,
+        url: str,
+        *,
+        name: str = "remote",
+        headers: Mapping[str, str] | None = None,
+        timeout: float | None = None,
+    ) -> None:
+        self.url = url.rstrip("/")
+        self.name = name
+        self._headers = dict(headers or {})
+        self._timeout = timeout if timeout is not None else DEFAULT_TIMEOUT
+        self._remote_tools: list[dict[str, Any]] = []
+        self._id = 0
+        self._initialized = False
+
+    @property
+    def tools(self) -> list[dict[str, Any]]:
+        """The raw tool descriptors fetched from the remote server."""
+        return list(self._remote_tools)
+
+    def start(self) -> None:
+        """Initialize session with the remote MCP server and cache its tools."""
+        try:
+            init_res = self._request(
+                "initialize",
+                {
+                    "protocolVersion": PROTOCOL_VERSION,
+                    "capabilities": {},
+                    "clientInfo": {"name": CLIENT_NAME, "version": "1.0.0"},
+                },
+            )
+            if "error" in init_res:
+                err_msg = init_res["error"].get("message", "unknown error")
+                raise MCPClientError(f"{self.name}: initialize failed: {err_msg}")
+            self._initialized = True
+            with contextlib.suppress(Exception):
+                self._notify("notifications/initialized")
+            self._remote_tools = self.list_tools()
+        except MCPClientError:
+            raise
+        except Exception as exc:
+            raise MCPClientError(f"{self.name}: connection failed to {self.url}: {exc}") from exc
+
+    def list_tools(self) -> list[dict[str, Any]]:
+        """Fetch remote tool descriptors via tools/list."""
+        response = self._request("tools/list")
+        if "error" in response:
+            message = response["error"].get("message", "error")
+            raise MCPClientError(f"{self.name}: tools/list failed: {message}")
+        result = response.get("result")
+        if not isinstance(result, dict) or not isinstance(result.get("tools"), list):
+            raise MCPClientError(f"{self.name}: tools/list returned malformed response")
+        return [t for t in result["tools"] if isinstance(t, dict)]
+
+    def as_tools(
+        self,
+        *,
+        prefix: str = "",
+        allowed_tools: Sequence[str] | None = None,
+    ) -> list[Tool]:
+        """Wrap remote tool definitions into local Tool objects."""
+        wrapped: list[Tool] = []
+        allowed_set = set(allowed_tools) if allowed_tools is not None else None
+        for desc in self._remote_tools:
+            remote_name = desc.get("name")
+            if not isinstance(remote_name, str):
+                continue
+            if allowed_set is not None and remote_name not in allowed_set:
+                continue
+            if not _REMOTE_TOOL_NAME_RE.match(remote_name):
+                logger.warning(
+                    "Skipping remote tool with unsafe name %r from %s", remote_name, self.name
+                )
+                continue
+            schema = desc.get("inputSchema")
+            wrapped.append(
+                Tool(
+                    name=f"{prefix}{remote_name}",
+                    description=_sanitize_remote_description(
+                        self.name, remote_name, desc.get("description")
+                    ),
+                    input_schema=schema
+                    if isinstance(schema, dict)
+                    else {"type": "object", "properties": {}},
+                    handler=self._make_handler(remote_name),
+                )
+            )
+        return wrapped
+
+    def _make_handler(self, remote_name: str) -> Callable[[dict[str, Any], MemoryStore], str]:
+        def handler(args: dict[str, Any], _store: MemoryStore) -> str:
+            return self.call_tool(remote_name, args)
+
+        return handler
+
+    def call_tool(self, name: str, arguments: Mapping[str, Any] | None = None) -> str:
+        response = self._request("tools/call", {"name": name, "arguments": dict(arguments or {})})
+        if "error" in response:
+            message = response["error"].get("message", "error")
+            raise MCPToolError(f"{self.name}/{name}: {message}")
+        result = response.get("result") or {}
+        text = _extract_text(result.get("content"))
+        if result.get("isError"):
+            raise MCPToolError(text or f"{self.name}/{name} returned an error")
+        return text
+
+    def ping(self) -> bool:
+        """Ping remote server."""
+        try:
+            res = self._request("ping")
+            return "error" not in res
+        except Exception:
+            return False
+
+    def close(self) -> None:
+        """Teardown remote client connection."""
+        self._initialized = False
+
+    def _next_id(self) -> int:
+        self._id += 1
+        return self._id
+
+    def _notify(self, method: str, params: dict[str, Any] | None = None) -> None:
+        payload: dict[str, Any] = {"jsonrpc": "2.0", "method": method}
+        if params is not None:
+            payload["params"] = params
+        self._send_http(payload)
+
+    def _request(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        req_id = self._next_id()
+        payload: dict[str, Any] = {"jsonrpc": "2.0", "id": req_id, "method": method}
+        if params is not None:
+            payload["params"] = params
+        return self._send_http(payload)
+
+    def _send_http(self, payload: dict[str, Any]) -> dict[str, Any]:
+        import urllib.error
+        import urllib.request
+
+        if not self.url.startswith(("http://", "https://")):
+            raise MCPClientError(f"{self.name}: URL must start with http:// or https://")
+
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        req = urllib.request.Request(
+            self.url,
+            data=body,
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": f"{CLIENT_NAME}/{PROTOCOL_VERSION}",
+                **self._headers,
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=self._timeout) as resp:  # nosec B310
+                resp_bytes = resp.read()
+                if not resp_bytes:
+                    return {}
+                parsed = json.loads(resp_bytes.decode("utf-8"))
+                return parsed if isinstance(parsed, dict) else {}
+        except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
+            raise MCPClientError(
+                f"{self.name}: HTTP error communicating with {self.url}: {exc}"
+            ) from exc
