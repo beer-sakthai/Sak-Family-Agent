@@ -416,3 +416,35 @@ def naming_violations(root: Path, *, prefix: str) -> list[tuple[Path, str]]:
         if issues:
             violations.append((skill_md, "; ".join(issues)))
     return violations
+
+
+def get_skill_domain_manifests() -> dict[str, dict[str, Any]]:
+    """Return progressive skill hydration domain manifests for targeted agent loading."""
+    return {
+        "mlops": {
+            "name": "MLOps & Hub Management",
+            "description": "Skills for Hugging Face Hub, model card publishing, and release orchestration.",
+            "tags": ["hub", "model", "dataset", "space", "mlops"],
+        },
+        "training": {
+            "name": "Training & Fine-Tuning",
+            "description": "Skills for QLoRA, SFT, DPO, and model alignment.",
+            "tags": ["training", "fine-tuning", "qlora", "dpo"],
+        },
+        "inference": {
+            "name": "Inference & Optimization",
+            "description": "Skills for vLLM, Ollama, GGUF quantization, and edge serving.",
+            "tags": ["inference", "serving", "quantization", "vllm", "gguf"],
+        },
+        "vision": {
+            "name": "Computer Vision & Multimodal",
+            "description": "Skills for vision-language models, ComfyUI, image and video processing.",
+            "tags": ["vision", "video", "multimodal", "image"],
+        },
+        "research": {
+            "name": "Research & Literature",
+            "description": "Skills for ArXiv analysis, paper summarization, and trend discovery.",
+            "tags": ["arxiv", "research", "paper", "trending"],
+        },
+    }
+
