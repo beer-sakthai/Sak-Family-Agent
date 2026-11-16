@@ -257,6 +257,11 @@ class TestPersonaStructureParity(unittest.TestCase):
         self.assertIn("permissions: {}", workflow_text)
         self.assertIn("permissions:\n      actions: write\n      contents: read", workflow_text)
         self.assertNotIn("permissions: read-all", workflow_text)
+        self.assertTrue(
+            "permissions: {}" in workflow_text or "permissions: read-all" in workflow_text,
+            "cache-cleanup.yml top-level permissions must be scoped (empty mapping {} or read-all)",
+        )
+        self.assertNotIn("permissions:\n  actions: write", workflow_text)
 
 
 if __name__ == "__main__":

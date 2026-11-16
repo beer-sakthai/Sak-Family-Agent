@@ -50,24 +50,24 @@ jobs:
 
       - name: Install dependencies
         # Install all optional dependencies to ensure linting/testing tools are present.
-        run: uv sync --all-extras
+        run: uv sync --locked --all-extras
 
       - name: Run linters
         run: |
-          uv run ruff check personas/sakthai tests
-          uv run ruff format --check personas/sakthai tests
+          uv run --locked ruff check personas/sakthai tests
+          uv run --locked ruff format --check personas/sakthai tests
 
       - name: Run static analysis
         run: |
-          uv run mypy
-          uv run bandit -c pyproject.toml -r personas/sakthai
+          uv run --locked mypy
+          uv run --locked bandit -c pyproject.toml -r personas/sakthai
 
       - name: Run tests with coverage
         # --cov-fail-under is passed explicitly rather than relying on
         # [tool.coverage.report] fail_under, which pytest-cov printed but which
         # did not fail this step -- finding 1 of
         # docs/test-coverage-audit-2026-08-27.md.
-        run: uv run pytest --cov=sakthai --cov-report=xml --cov-fail-under=96 tests/
+        run: uv run --locked pytest --cov=sakthai --cov-report=xml --cov-fail-under=96 tests/
 
       - name: Upload coverage report
         # Absorbed from repository-security-quality.yml's `quality` job, which
