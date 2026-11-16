@@ -31,6 +31,7 @@ from agent_workflow.parser import (
     parse_workflow_yaml,
 )
 from agent_workflow.persistence import (
+    DuplicateRunError,
     HistoryStore,
     RunCorruptedError,
     RunHistoryStore,
@@ -65,6 +66,7 @@ __all__ = [
     "HistoryStore",
     "RunNotFoundError",
     "RunCorruptedError",
+    "DuplicateRunError",
     # Executor & CLI
     "WorkflowExecutor",
     "ExecutionError",

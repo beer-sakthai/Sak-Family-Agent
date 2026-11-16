@@ -52,6 +52,44 @@ class TestModels(unittest.TestCase):
         s_restored = StepDefinition.from_dict(s_dict)
         self.assertEqual(s, s_restored)
 
+    def test_step_definition_invalid_retry_schema_and_from_dict(self):
+        # Negative retry count
+        s_neg = StepDefinition(id="s_neg", action="echo", retry=-1)
+        errs = s_neg.validate_schema()
+        self.assertTrue(any("retry count must be a non-negative integer" in e for e in errs))
+
+        # Boolean retry count
+        s_bool = StepDefinition(id="s_bool", action="echo", retry=True)
+        errs = s_bool.validate_schema()
+        self.assertTrue(any("retry count must be a non-negative integer" in e for e in errs))
+
+        # Non-integer retry count
+        s_str = StepDefinition(id="s_str", action="echo", retry="invalid")
+        errs = s_str.validate_schema()
+        self.assertTrue(any("retry count must be a non-negative integer" in e for e in errs))
+
+        # Negative retry delay
+        s_neg_delay = StepDefinition(id="s_neg_delay", action="echo", retry_delay=-1.0)
+        errs = s_neg_delay.validate_schema()
+        self.assertTrue(any("retry_delay must be a non-negative number" in e for e in errs))
+
+        # Boolean retry delay
+        s_bool_delay = StepDefinition(id="s_bool_delay", action="echo", retry_delay=True)
+        errs = s_bool_delay.validate_schema()
+        self.assertTrue(any("retry_delay must be a non-negative number" in e for e in errs))
+
+        # StepDefinition.from_dict rejects invalid retries
+        with self.assertRaises(ValueError):
+            StepDefinition.from_dict({"id": "s1", "action": "echo", "retry": -1})
+        with self.assertRaises(ValueError):
+            StepDefinition.from_dict({"id": "s1", "action": "echo", "retry": True})
+        with self.assertRaises(ValueError):
+            StepDefinition.from_dict({"id": "s1", "action": "echo", "retry": "not_an_int"})
+        with self.assertRaises(ValueError):
+            StepDefinition.from_dict({"id": "s1", "action": "echo", "retry_delay": -0.5})
+        with self.assertRaises(ValueError):
+            StepDefinition.from_dict({"id": "s1", "action": "echo", "retry_delay": False})
+
     def test_workflow_definition(self):
         s1 = StepDefinition(id="s1", action="echo")
         s2 = StepDefinition(id="s2", action="python", depends_on=["s1"])
@@ -182,6 +220,42 @@ steps:
         # Non-existent file
         with self.assertRaises(WorkflowParseError):
             parse_workflow_file("/nonexistent/file/path.yaml")
+
+    def test_parser_rejects_invalid_retry(self):
+        # Negative retry count
+        with self.assertRaises(WorkflowParseError):
+            parse_workflow_dict({
+                "name": "bad_retry",
+                "steps": [{"id": "s1", "action": "echo", "retry": -1}],
+            })
+
+        # Boolean retry count
+        with self.assertRaises(WorkflowParseError):
+            parse_workflow_dict({
+                "name": "bool_retry",
+                "steps": [{"id": "s1", "action": "echo", "retry": True}],
+            })
+
+        # Non-integer retry count
+        with self.assertRaises(WorkflowParseError):
+            parse_workflow_dict({
+                "name": "str_retry",
+                "steps": [{"id": "s1", "action": "echo", "retry": "not_an_int"}],
+            })
+
+        # Negative retry_delay
+        with self.assertRaises(WorkflowParseError):
+            parse_workflow_dict({
+                "name": "neg_delay",
+                "steps": [{"id": "s1", "action": "echo", "retry_delay": -2.0}],
+            })
+
+        # Boolean retry_delay
+        with self.assertRaises(WorkflowParseError):
+            parse_workflow_dict({
+                "name": "bool_delay",
+                "steps": [{"id": "s1", "action": "echo", "retry_delay": True}],
+            })
 
 
 class TestValidateWorkflowDAG(unittest.TestCase):
@@ -319,6 +393,21 @@ class TestValidateWorkflowDAG(unittest.TestCase):
         )
         errors = validate_workflow_dag(wf)
         self.assertGreaterEqual(len(errors), 3)
+
+    def test_validate_workflow_dag_rejects_invalid_retry(self):
+        wf_neg = WorkflowDefinition(
+            name="neg_retry_wf",
+            steps=[StepDefinition(id="s1", action="echo", retry=-3)],
+        )
+        errs = validate_workflow_dag(wf_neg)
+        self.assertTrue(any("retry count must be a non-negative integer" in e for e in errs))
+
+        wf_delay = WorkflowDefinition(
+            name="neg_delay_wf",
+            steps=[StepDefinition(id="s1", action="echo", retry_delay=-1.0)],
+        )
+        errs = validate_workflow_dag(wf_delay)
+        self.assertTrue(any("retry_delay must be a non-negative number" in e for e in errs))
 
 
 class TestBuildTopologicalBatches(unittest.TestCase):

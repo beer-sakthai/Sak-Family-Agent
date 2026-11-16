@@ -81,13 +81,23 @@ class StepDefinition:
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "StepDefinition":
         """Construct StepDefinition from dictionary."""
+        retry_val = d.get("retry", 0)
+        if isinstance(retry_val, bool) or not isinstance(retry_val, int) or retry_val < 0:
+            raise ValueError(
+                f"Step '{d.get('id', '')}' retry count must be a non-negative integer, got {retry_val!r}."
+            )
+        retry_delay_val = d.get("retry_delay", 0.0)
+        if isinstance(retry_delay_val, bool) or not isinstance(retry_delay_val, (int, float)) or retry_delay_val < 0:
+            raise ValueError(
+                f"Step '{d.get('id', '')}' retry_delay must be a non-negative number, got {retry_delay_val!r}."
+            )
         return cls(
             id=d["id"],
             action=d["action"],
             params=d.get("params", {}),
             depends_on=list(d.get("depends_on", [])),
-            retry=int(d.get("retry", 0)),
-            retry_delay=float(d.get("retry_delay", 0.0)),
+            retry=retry_val,
+            retry_delay=float(retry_delay_val),
         )
 
 
@@ -192,6 +202,11 @@ class StepResult:
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "StepResult":
         """Construct StepResult from dictionary."""
+        if not isinstance(d, dict):
+            raise ValueError(f"StepResult payload must be a dictionary, got {type(d).__name__}")
+        for req_field in ("step_id", "status"):
+            if req_field not in d:
+                raise KeyError(f"StepResult payload missing required field '{req_field}'.")
         status_val = d["status"]
         status = StepStatus(status_val) if isinstance(status_val, str) else status_val
         return cls(
@@ -252,9 +267,17 @@ class RunHistory:
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "RunHistory":
         """Construct RunHistory from dictionary."""
+        if not isinstance(d, dict):
+            raise ValueError(f"RunHistory payload must be a dictionary, got {type(d).__name__}")
+        for req_field in ("run_id", "workflow_name", "status", "start_time"):
+            if req_field not in d:
+                raise KeyError(f"RunHistory payload missing required field '{req_field}'.")
+
         status_val = d["status"]
         status = RunStatus(status_val) if isinstance(status_val, str) else status_val
         raw_results = d.get("step_results", {})
+        if not isinstance(raw_results, dict):
+            raise ValueError(f"'step_results' must be a dictionary, got {type(raw_results).__name__}")
         step_results = {
             k: StepResult.from_dict(v) if isinstance(v, dict) else v
             for k, v in raw_results.items()

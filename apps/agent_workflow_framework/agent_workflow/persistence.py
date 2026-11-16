@@ -46,6 +46,11 @@ class RunCorruptedError(PersistenceError, ValueError):
     pass
 
 
+class DuplicateRunError(PersistenceError, FileExistsError):
+    """Raised when attempting to create or execute a run with an existing run_id."""
+    pass
+
+
 class WorkflowJSONEncoder(json.JSONEncoder):
     """Custom JSON encoder handling dataclasses, Enums, dates, and Path objects."""
 
@@ -132,7 +137,14 @@ class RunHistoryStore:
         clean_id = self._sanitize_run_id(run_id)
         return self.storage_dir / f"{clean_id}.json"
 
-    def save_run_history(self, history: RunHistory) -> Path:
+    def has_run(self, run_id: str) -> bool:
+        """Check whether a run history exists in the store for the given run_id."""
+        try:
+            return self.get_run_path(run_id).exists()
+        except ValueError:
+            return False
+
+    def save_run_history(self, history: RunHistory, allow_overwrite: bool = True) -> Path:
         """Save RunHistory object to structured JSON file atomically and thread-safely."""
         if not isinstance(history, RunHistory):
             raise TypeError(f"Expected RunHistory instance, got {type(history).__name__}")
@@ -141,10 +153,15 @@ class RunHistoryStore:
             raise ValueError("RunHistory must have a valid run_id.")
 
         target_path = self.get_run_path(history.run_id)
-        data = history.to_dict()
 
         with self._lock:
             self._ensure_storage_dir()
+            if not allow_overwrite and target_path.exists():
+                raise DuplicateRunError(
+                    f"Run history with run_id '{history.run_id}' already exists at '{target_path}'."
+                )
+
+            data = history.to_dict()
             temp_file = None
             temp_path = None
             try:
@@ -198,7 +215,7 @@ class RunHistoryStore:
                 return RunHistory.from_dict(data)
             except RunCorruptedError:
                 raise
-            except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError, AttributeError) as e:
                 raise RunCorruptedError(f"Failed to parse run history file '{target_path}': {e}") from e
 
     def list_runs(self) -> list[RunHistory]:
@@ -248,11 +265,20 @@ HistoryStore = RunHistoryStore
 ExecutionStore = RunHistoryStore
 
 
-# Module-level convenience functions
-def save_run_history(history: RunHistory, storage_dir: str | Path | None = None) -> Path:
+def has_run(run_id: str, storage_dir: str | Path | None = None) -> bool:
+    """Convenience function to check if a run history exists."""
+    store = RunHistoryStore(storage_dir)
+    return store.has_run(run_id)
+
+
+def save_run_history(
+    history: RunHistory,
+    storage_dir: str | Path | None = None,
+    allow_overwrite: bool = True,
+) -> Path:
     """Convenience function to save a RunHistory."""
     store = RunHistoryStore(storage_dir)
-    return store.save_run_history(history)
+    return store.save_run_history(history, allow_overwrite=allow_overwrite)
 
 
 def get_run_history(run_id: str, storage_dir: str | Path | None = None) -> RunHistory:

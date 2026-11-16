@@ -21,10 +21,19 @@ def validate_workflow_dag(workflow: WorkflowDefinition) -> list[str]:
     duplicate_ids: set[str] = set()
     step_map: dict[str, StepDefinition] = {}
 
-    # Check 1: Empty/Invalid IDs and Duplicate IDs
+    # Check 1: Step schema validation, empty/invalid IDs, and duplicate IDs
     for step in workflow.steps:
+        if not isinstance(step, StepDefinition):
+            errors.append(f"Element in steps is not a StepDefinition: {type(step).__name__}")
+            continue
+
+        for err in step.validate_schema():
+            if err not in errors:
+                errors.append(err)
+
         if not step.id or not isinstance(step.id, str) or not step.id.strip():
-            errors.append(f"Step has empty or invalid ID: '{step.id}'")
+            if not any(f"Step '{step.id}'" in e or "Step ID must be" in e for e in errors):
+                errors.append(f"Step has empty or invalid ID: '{step.id}'")
             continue
 
         if step.id in seen_ids:

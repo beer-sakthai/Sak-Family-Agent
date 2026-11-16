@@ -7,6 +7,7 @@ from pathlib import Path
 
 from agent_workflow.executor import WorkflowExecutor
 from agent_workflow.models import RunStatus, StepDefinition, StepStatus, WorkflowDefinition
+from agent_workflow.persistence import DuplicateRunError
 
 
 class TestWorkflowExecutor(unittest.TestCase):
@@ -357,6 +358,104 @@ class TestWorkflowExecutor(unittest.TestCase):
         history = asyncio.run(self.executor.execute_workflow(wf))
         self.assertEqual(history.status, RunStatus.COMPLETED)
         self.assertEqual(history.step_results["read_step"].status, StepStatus.COMPLETED)
+
+    def test_duplicate_run_id_rejection(self):
+        """Verify that starting a workflow with an existing run_id raises DuplicateRunError unless allowed."""
+        wf = WorkflowDefinition(
+            name="test_dup_run",
+            steps=[StepDefinition(id="s1", action="echo", params={"msg": "first"})],
+        )
+        h1 = asyncio.run(self.executor.execute_workflow(wf, run_id="my_fixed_run_id"))
+        self.assertEqual(h1.status, RunStatus.COMPLETED)
+
+        # Attempting to run again with the same run_id must raise DuplicateRunError
+        with self.assertRaises(DuplicateRunError):
+            asyncio.run(self.executor.execute_workflow(wf, run_id="my_fixed_run_id"))
+
+        # Explicitly allowing duplicate run_id succeeds
+        h2 = asyncio.run(
+            self.executor.execute_workflow(wf, run_id="my_fixed_run_id", allow_duplicate_run_id=True)
+        )
+        self.assertEqual(h2.status, RunStatus.COMPLETED)
+
+    def test_callback_exception_isolation_sync(self):
+        """Verify that a failing synchronous status_callback does not crash workflow execution."""
+        wf = WorkflowDefinition(
+            name="test_failing_callback",
+            steps=[
+                StepDefinition(id="step_a", action="echo", params={"msg": "alpha"}),
+                StepDefinition(id="step_b", action="echo", params={"msg": "beta"}, depends_on=["step_a"]),
+            ],
+        )
+
+        callback_calls = []
+
+        def broken_callback(run_id, step_res):
+            callback_calls.append(step_res.step_id)
+            raise RuntimeError(f"Callback crashed on step {step_res.step_id}!")
+
+        # Workflow execution must succeed despite callback raising RuntimeError
+        history = asyncio.run(self.executor.execute_workflow(wf, status_callback=broken_callback))
+        self.assertEqual(history.status, RunStatus.COMPLETED)
+        self.assertEqual(len(callback_calls), 2)
+        self.assertEqual(history.step_results["step_a"].status, StepStatus.COMPLETED)
+        self.assertEqual(history.step_results["step_b"].status, StepStatus.COMPLETED)
+
+    def test_callback_exception_isolation_async(self):
+        """Verify that a failing asynchronous status_callback does not crash workflow execution."""
+        wf = WorkflowDefinition(
+            name="test_async_failing_callback",
+            steps=[StepDefinition(id="step_1", action="echo", params={"x": 1})],
+        )
+
+        async def broken_async_callback(run_id, step_res):
+            await asyncio.sleep(0.001)
+            raise ValueError("Async callback exploded!")
+
+        history = asyncio.run(self.executor.execute_workflow(wf, status_callback=broken_async_callback))
+        self.assertEqual(history.status, RunStatus.COMPLETED)
+        self.assertEqual(history.step_results["step_1"].status, StepStatus.COMPLETED)
+
+    def test_raise_callback_exceptions_flag(self):
+        """Verify that raise_callback_exceptions=True re-raises callback errors."""
+        wf = WorkflowDefinition(
+            name="test_raise_cb_flag",
+            steps=[StepDefinition(id="s1", action="echo")],
+        )
+
+        def explosive_callback(run_id, step_res):
+            raise ArithmeticError("Explosive callback error")
+
+        with self.assertRaises(ArithmeticError):
+            asyncio.run(
+                self.executor.execute_workflow(
+                    wf,
+                    status_callback=explosive_callback,
+                    raise_callback_exceptions=True,
+                )
+            )
+
+    def test_callback_on_skipped_steps_isolation(self):
+        """Verify that callback exceptions on skipped steps are also safely isolated."""
+        wf = WorkflowDefinition(
+            name="test_skip_callback",
+            steps=[
+                StepDefinition(id="fail_step", action="fail_always"),
+                StepDefinition(id="downstream_skip", action="echo", depends_on=["fail_step"]),
+            ],
+        )
+
+        skipped_callback_invoked = []
+
+        def failing_skip_callback(run_id, step_res):
+            if step_res.status == StepStatus.SKIPPED:
+                skipped_callback_invoked.append(step_res.step_id)
+                raise RuntimeError("Skipped callback error")
+
+        history = asyncio.run(self.executor.execute_workflow(wf, status_callback=failing_skip_callback))
+        self.assertEqual(history.status, RunStatus.FAILED)
+        self.assertEqual(history.step_results["downstream_skip"].status, StepStatus.SKIPPED)
+        self.assertEqual(skipped_callback_invoked, ["downstream_skip"])
 
 
 if __name__ == "__main__":
