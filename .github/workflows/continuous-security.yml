@@ -56,7 +56,7 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --locked --all-extras
 
       - name: Run DevSecOps Skill
         # This command invokes the agent and tells it to use security skills to
@@ -81,7 +81,7 @@ jobs:
         # stuck/looping agent can't burn the full job timeout (or unbounded
         # API spend).
         run: |
-          uv run sakthai run "Perform a full security audit of the codebase — run static analysis, triage findings, and propose fixes." \
+          uv run --locked sakthai run "Perform a full security audit of the codebase — run static analysis, triage findings, and propose fixes." \
             --with-skills SakThai-coding-security \
             --with-skills sakthai-security-hardening \
             --provider anthropic \

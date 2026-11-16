@@ -58,7 +58,7 @@ jobs:
         # The evals group (lm-eval + CPU-only torch/transformers) is kept out of
         # --all-extras on purpose (see pyproject.toml) so ci.yml/pylint.yml never
         # pull it in; only this workflow opts in.
-        run: uv sync --group evals
+        run: uv sync --locked --group evals
 
       - name: Run lm-evaluation-harness
         id: run_eval
@@ -82,7 +82,7 @@ jobs:
           # trust_remote_code is disabled below: it would execute arbitrary
           # Python shipped by the model repo inside CI (which holds HF_TOKEN).
           # The evaluated model uses a standard architecture and does not need it.
-          uv run python -m lm_eval \
+          uv run --locked python -m lm_eval \
             --model hf \
             --model_args pretrained=${{ matrix.model }},trust_remote_code=False \
             --tasks ${{ matrix.task }} \

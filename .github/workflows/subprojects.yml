@@ -4,7 +4,7 @@
 # Each has its own pyproject.toml and uv.lock, and until this workflow no job
 # ran either suite, so failures accumulated unnoticed (7 guardrail-assertion
 # failures and a collection error in chat-cli, fixed in #1458). Each job
-# installs strictly from its own lockfile (`uv sync --frozen`), so the pins are
+# installs strictly from its own lockfile (`uv sync --locked`), so the pins are
 # exactly what the lock says and a pyproject/lock mismatch fails the job.
 #
 # Path-filtered so this stays off every change that touches neither tree.
@@ -62,10 +62,10 @@ jobs:
           cache-dependency-glob: "sakthai-chat-cli/uv.lock"
 
       - name: Install dependencies
-        run: uv sync --frozen --all-extras
+        run: uv sync --locked --all-extras
 
       - name: Run tests
-        run: uv run pytest
+        run: uv run --locked pytest
 
   teams-copilot-mcp:
     name: teams-copilot-mcp
@@ -98,7 +98,7 @@ jobs:
           cache-dependency-glob: "services/teams-copilot-mcp/uv.lock"
 
       - name: Install dependencies
-        run: uv sync --frozen --all-extras
+        run: uv sync --locked --all-extras
 
       - name: Run tests
-        run: uv run pytest
+        run: uv run --locked pytest
