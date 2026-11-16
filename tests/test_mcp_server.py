@@ -356,3 +356,60 @@ def test_tools_call_post_guardrail_default_reason(store: MemoryStore) -> None:
     )
     assert resp["result"]["isError"] is True
     assert "denied by a guardrail" in resp["result"]["content"][0]["text"]
+
+
+def test_resources_list_and_read(store: MemoryStore) -> None:
+    # List resources
+    resp = handle_request({"jsonrpc": "2.0", "id": 50, "method": "resources/list"}, store)
+    assert "resources" in resp["result"]
+    assert len(resp["result"]["resources"]) == 1
+    uri = resp["result"]["resources"][0]["uri"]
+    assert uri == "sakthai://memory/status"
+
+    # Read existing resource
+    read_resp = handle_request(
+        {"jsonrpc": "2.0", "id": 51, "method": "resources/read", "params": {"uri": uri}},
+        store,
+    )
+    assert "contents" in read_resp["result"]
+    assert read_resp["result"]["contents"][0]["uri"] == uri
+
+    # Read non-existent resource
+    err_resp = handle_request(
+        {"jsonrpc": "2.0", "id": 52, "method": "resources/read", "params": {"uri": "unknown"}},
+        store,
+    )
+    assert "error" in err_resp
+
+
+def test_prompts_list_and_get(store: MemoryStore) -> None:
+    # List prompts
+    resp = handle_request({"jsonrpc": "2.0", "id": 60, "method": "prompts/list"}, store)
+    assert "prompts" in resp["result"]
+    assert len(resp["result"]["prompts"]) == 1
+    assert resp["result"]["prompts"][0]["name"] == "sakthai_prompt"
+
+    # Get prompt with arguments
+    get_resp = handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 61,
+            "method": "prompts/get",
+            "params": {"name": "sakthai_prompt", "arguments": {"task": "fix bug"}},
+        },
+        store,
+    )
+    assert "messages" in get_resp["result"]
+    assert "fix bug" in get_resp["result"]["messages"][0]["content"]["text"]
+
+    # Get unknown prompt
+    err_resp = handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 62,
+            "method": "prompts/get",
+            "params": {"name": "nonexistent_prompt"},
+        },
+        store,
+    )
+    assert "error" in err_resp

@@ -13,6 +13,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from ..config import gemini_extensions_dir, mcp_config_override, sakthai_home
 from ..extensions.install import extensions_dir
@@ -22,13 +23,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class MCPServerSpec:
-    """How to launch one external MCP server over stdio."""
+    """How to connect to or launch one external MCP server."""
 
     name: str
-    command: str
+    command: str | None = None
     args: list[str] = field(default_factory=list)
     env: dict[str, str] = field(default_factory=dict)
     cwd: str | None = None
+    url: str | None = None
+    transport: str = "stdio"
+    tools: list[str] | None = None
 
 
 def mcp_config_path() -> Path:
@@ -36,30 +40,87 @@ def mcp_config_path() -> Path:
     return sakthai_home() / "mcp.json"
 
 
-def parse_mcp_servers(data: object) -> list[MCPServerSpec]:
-    """Parse the ``mcpServers`` object of a manifest into specs.
+def _parse_server_entry(name: str, entry: dict[str, Any]) -> MCPServerSpec | None:
+    if not isinstance(entry, dict):
+        return None
+    raw_command = entry.get("command")
+    command = str(raw_command) if isinstance(raw_command, str) and raw_command else None
 
-    Tolerant of junk: invalid or non-``command`` entries are skipped, not raised.
+    raw_url = entry.get("url")
+    url = str(raw_url) if isinstance(raw_url, str) and raw_url else None
+
+    if not command and not url:
+        return None
+
+    raw_args = entry.get("args")
+    args = [str(a) for a in raw_args] if isinstance(raw_args, list) else []
+
+    raw_env = entry.get("env")
+    env = {str(k): str(v) for k, v in raw_env.items()} if isinstance(raw_env, dict) else {}
+
+    raw_cwd = entry.get("cwd")
+    cwd = raw_cwd if isinstance(raw_cwd, str) else None
+
+    raw_tools = entry.get("tools")
+    tools = [str(t) for t in raw_tools] if isinstance(raw_tools, list) else None
+
+    raw_type = entry.get("type") or entry.get("transport")
+    if isinstance(raw_type, str):
+        t_lower = raw_type.lower()
+        if t_lower in ("local", "stdio"):
+            transport = "stdio"
+        elif t_lower in ("sse", "http"):
+            transport = "sse"
+        else:
+            transport = t_lower
+    else:
+        transport = "sse" if url and not command else "stdio"
+
+    return MCPServerSpec(
+        name=name,
+        command=command,
+        args=args,
+        env=env,
+        cwd=cwd,
+        url=url,
+        transport=transport,
+        tools=tools,
+    )
+
+
+def parse_mcp_servers(data: object) -> list[MCPServerSpec]:
+    """Parse the ``mcpServers`` or ``servers`` object of a manifest into specs.
+
+    Tolerant of junk: invalid or missing entries are skipped, not raised.
     """
     if not isinstance(data, dict):
         return []
-    servers = data.get("mcpServers")
-    if not isinstance(servers, dict):
-        return []
     specs: list[MCPServerSpec] = []
-    for name, entry in servers.items():
-        if not isinstance(name, str) or not isinstance(entry, dict):
-            continue
-        command = entry.get("command")
-        if not isinstance(command, str) or not command:
-            continue  # only stdio "command" servers are supported
-        raw_args = entry.get("args")
-        args = [str(a) for a in raw_args] if isinstance(raw_args, list) else []
-        raw_env = entry.get("env")
-        env = {str(k): str(v) for k, v in raw_env.items()} if isinstance(raw_env, dict) else {}
-        raw_cwd = entry.get("cwd")
-        cwd = raw_cwd if isinstance(raw_cwd, str) else None
-        specs.append(MCPServerSpec(name=name, command=command, args=args, env=env, cwd=cwd))
+
+    # 1. Standard mcpServers mapping (Claude Desktop / Gemini format)
+    servers = data.get("mcpServers")
+    if isinstance(servers, dict):
+        for name, entry in servers.items():
+            if isinstance(name, str) and isinstance(entry, dict):
+                spec = _parse_server_entry(name, entry)
+                if spec is not None:
+                    specs.append(spec)
+
+    # 2. List or dict format (e.g. docs/example-mcp.json)
+    list_servers = data.get("servers")
+    if isinstance(list_servers, list):
+        for entry in list_servers:
+            if isinstance(entry, dict) and isinstance(entry.get("name"), str):
+                spec = _parse_server_entry(entry["name"], entry)
+                if spec is not None:
+                    specs.append(spec)
+    elif isinstance(list_servers, dict):
+        for name, entry in list_servers.items():
+            if isinstance(name, str) and isinstance(entry, dict):
+                spec = _parse_server_entry(name, entry)
+                if spec is not None:
+                    specs.append(spec)
+
     return specs
 
 
