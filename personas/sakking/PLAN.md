@@ -34,6 +34,17 @@ flowchart TD
 - **Command**: `sakthai memory family "CHARGE: sakking" --tag charge-report --limit 1 && sakthai memory family "DEPUTY CHAIN" --tag deputy-chain --limit 1`
 - **Acceptance Criteria**: Task starts from verified family state in `~/.sakthai/*/memory.db`.
 
+#### 🔹 Task 1.3: 3-Second Intent Preflight & Delegation Routing
+- **Status**: [ ]
+- **Goal**: Apply the **3-Second Intent Preflight** filter to incoming tasks before executing to avoid generalist execution bottlenecks.
+- **Core Law**: **Specialist beats generalist**. Route early, not late.
+- **Classification Rules**:
+  - Web scraping / browser navigation → Delegate immediately to SakSee (`@saksee_agent_bot`).
+  - Content drafting / social digests → Delegate immediately to SakSit (`@saksit_agent_bot`).
+  - GitHub PRs / CI diagnostics / git hooks → Delegate immediately to SakJules (`@sakjules_agent_bot`).
+  - Scheduling / daily calendar / health audit → Delegate immediately to SakTan (`@saktan_agent_bot`).
+- **Acceptance Criteria**: Specialist domains classified within 3 seconds and dispatched without executing redundant local generalist steps.
+
 ---
 
 ### Phase 2: Deputy 1 Readiness & Cache Check
