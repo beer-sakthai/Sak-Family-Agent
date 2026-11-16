@@ -50,4 +50,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: gemini-3.8-flash # Optional, default is `gemini-3.8-flash`
-          EXCLUDE: "*.md,*.txt,package-lock.json,*.yml,*.yaml"
+          # Keep prose and npm lockfiles out of review, but include YAML so
+          # workflow-only pull requests can be reviewed.
+          EXCLUDE: "*.md,*.txt,package-lock.json"
