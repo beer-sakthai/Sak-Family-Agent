@@ -27,7 +27,11 @@ def test_cache_cleanup_workflow_exists_and_valid() -> None:
     # Check permissions (either top-level or job-level grants actions: write)
     perms = data.get("permissions")
     job_perms = data.get("jobs", {}).get("cleanup-cache", {}).get("permissions", {})
-    actions_perm = perms.get("actions") if isinstance(perms, dict) else job_perms.get("actions")
+    actions_perm = (
+        perms.get("actions")
+        if isinstance(perms, dict) and perms.get("actions") is not None
+        else job_perms.get("actions")
+    )
     assert actions_perm == "write"
 
     # Check concurrency
@@ -83,3 +87,15 @@ def test_root_uv_workflows_use_locked_execution() -> None:
         assert all("--locked" in line for line in uv_commands), (
             f"{workflow_name} must use --locked for every uv sync/run command"
         )
+
+
+def test_workflows_do_not_use_scalar_permissions() -> None:
+    """Require workflow permissions to be explicit mappings, not read-all shorthands."""
+    forbidden = ("permissions: read-all", "permissions: write-all")
+    for yml_path in WORKFLOWS_DIR.glob("*.yml"):
+        content = yml_path.read_text(encoding="utf-8")
+        for declaration in forbidden:
+            assert declaration not in content, (
+                f"{yml_path.name} uses scalar {declaration}; declare least-privilege "
+                "permissions as a mapping instead"
+            )

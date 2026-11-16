@@ -5,7 +5,7 @@ on:
     types: [closed]
   workflow_dispatch:
 
-permissions: read-all
+permissions: {}
 
 concurrency:
   group: cache-cleanup-${{ github.event.pull_request.number || github.run_id }}

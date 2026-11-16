@@ -254,7 +254,10 @@ class TestPersonaStructureParity(unittest.TestCase):
         """Prevent Scorecard Token-Permissions alerts in cache-cleanup.yml."""
         workflow_path = REPO_ROOT / ".github" / "workflows" / "cache-cleanup.yml"
         workflow_text = workflow_path.read_text(encoding="utf-8")
-        self.assertIn("permissions: read-all", workflow_text)
+        self.assertTrue(
+            "permissions: {}" in workflow_text or "permissions: read-all" in workflow_text,
+            "cache-cleanup.yml top-level permissions must be scoped (empty mapping {} or read-all)",
+        )
         self.assertNotIn("permissions:\n  actions: write", workflow_text)
 
 
