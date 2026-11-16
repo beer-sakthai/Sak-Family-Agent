@@ -1,19 +1,36 @@
 import json
 import re
 from functools import wraps
+from pathlib import Path
 
 import yaml
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+_INTRO_LINE_PATTERNS = (
+    re.compile(r"For me that line is:\s*\n\s*\*\*(.*?)\*\*", re.DOTALL),
+    re.compile(r"Every reply I give begins with:\s*\*\*(.*?)\*\*", re.DOTALL),
+)
 
 
 def get_intro_line(persona_text):
     """
     Extracts the required introductory line from the persona text.
-    It looks for the line that follows the 'For me that line is:' directive.
+    Supports both 'For me that line is:' and 'Every reply I give begins with:' directives.
     """
-    match = re.search(r"For me that line is:\s*\n\s*\*\*(.*?)\*\*", persona_text, re.DOTALL)
-    if match:
-        return match.group(1).strip()
+    if not isinstance(persona_text, str):
+        return None
+    for pattern in _INTRO_LINE_PATTERNS:
+        match = pattern.search(persona_text)
+        if match:
+            return match.group(1).strip()
     return None
+
+
+def load_persona_soul(persona: str) -> str:
+    """Return the SOUL.md text for one of the six Sak Family personas."""
+    soul_path = REPO_ROOT / "personas" / persona.strip().lower() / "SOUL.md"
+    return soul_path.read_text(encoding="utf-8")
 
 
 def process_results_soul_following(doc, results):

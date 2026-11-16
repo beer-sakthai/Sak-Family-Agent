@@ -65,6 +65,8 @@ The project is built around the six-stage cycle **Dream → Hope → Care → Jo
 | **SakSit** | Social / Content Specialist | `deepseek-ai/DeepSeek-V4-Flash` |
 | **SakTan** | Daily Ops & Rhythm | `sakthai` on a local Ollama |
 
+Every persona directory (`personas/<name>/`) carries the **6 core working files** — `SOUL.md` (identity, charge system v6, and self-evaluation v9 rubric), `PLAN.md` (v7 task decomposition and routing), `CYCLE.md` (v8 6-stage execution and v9 `CYCLE EVAL: <name>` rubric), `MEMORY.md` (active memory and lessons), `HANDOFF.md` (cross-persona handoff contract), and `BACKPACK.md` (domain toolbelt and skills inventory) — along with `config/config.yaml`, `config/workspace.yaml`, `config/mcp.json`, and its own DSPy/GEPA self-evolution engine (`personas/<name>/evolution/`).
+
 `sakthai run --persona <name>` loads that persona's `SOUL.md`, skills, MCP servers and memory shard (`~/.sakthai/<name>/memory.db`), and runs on its default model unless you pass `--provider` or `--model`. The first five run through the Hugging Face router and need `HF_TOKEN`. SakTan needs no key: it expects a model named `sakthai` on Ollama at `127.0.0.1:11434` (set `OLLAMA_HOST` for another host). Each persona's settings live in `personas/<name>/config/config.yaml`.
 
 `sakthai chat --persona <name>` (default `sakthai`) loads the same identity, skills, MCP servers, memory shard and default model. Pass `--provider` and `--model` to talk to something else, such as `--provider ollama --model sakthai` for the local Ollama model.
@@ -145,6 +147,9 @@ sakthai run "summarize docs/architecture.md"
 sakthai run "review the latest memory" --persona sakking   # needs HF_TOKEN
 sakthai chat                                               # SakThai's model, so HF_TOKEN
 sakthai memory family --tag deputy-chain                   # notes from every persona's memory
+sakthai eval personas                                      # verify all 6 personas (6 working files, v9 rubric, skills, model)
+sakthai eval summary --persona sakthai                     # summarize runtime MLOps metrics for a specific persona
+sakthai eval summary --all-personas                        # aggregate runtime evals across all sharded persona logs
 sakthai mcp
 sakthai platform detect-deps                               # inspect workspace package manager
 sakthai platform wrap-cmd "pytest tests/"                  # wrap command with detected isolated runner

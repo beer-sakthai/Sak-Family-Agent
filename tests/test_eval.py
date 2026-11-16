@@ -3,9 +3,22 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
-from sakthai.agent.eval import EvalRecord, record_eval, summarize_evals, task_preview
+import pytest
+
+from sakthai.agent.eval import (
+    EvalRecord,
+    evaluate_all_personas,
+    evaluate_persona_readiness,
+    extract_soul_intro_line,
+    persona_eval_log_path,
+    record_eval,
+    summarize_evals,
+    task_preview,
+)
+from sakthai.config import PERSONA_NAMES
 
 
 def _record(**overrides: object) -> EvalRecord:
@@ -195,3 +208,75 @@ class TestPersonaAttribution:
         summary = summarize_evals(path=log_path)
         assert summary["count"] == 2
         assert summary["per_model"]["m"]["count"] == 2
+        assert summary["per_persona"]["unattributed"]["count"] == 1
+        assert summary["per_persona"]["sakthai"]["count"] == 1
+
+
+class TestPerPersonaEvaluation:
+    def test_filter_summarize_evals_by_persona(self, tmp_path: Path) -> None:
+        log_path = tmp_path / "eval.jsonl"
+        record_eval(_record(model="m1", persona="sakthai", latency_s=1.0), path=log_path)
+        record_eval(_record(model="m2", persona="sakking", latency_s=3.0), path=log_path)
+        record_eval(_record(model="m1", persona="sakthai", latency_s=5.0), path=log_path)
+
+        summary = summarize_evals(path=log_path, persona="sakthai")
+        assert summary["count"] == 2
+        assert summary["avg_latency_s"] == 3.0
+        assert set(summary["per_persona"]) == {"sakthai"}
+
+    def test_persona_eval_log_path_and_invalid_persona(self, tmp_path: Path) -> None:
+        old_home = os.environ.get("SAKTHAI_HOME")
+        os.environ["SAKTHAI_HOME"] = str(tmp_path)
+        try:
+            path = persona_eval_log_path("sakthai")
+            assert path.name == "eval.jsonl"
+            assert path.parent.name == "sakthai"
+        finally:
+            if old_home is None:
+                os.environ.pop("SAKTHAI_HOME", None)
+            else:
+                os.environ["SAKTHAI_HOME"] = old_home
+
+        with pytest.raises(ValueError, match="Unknown persona"):
+            persona_eval_log_path("not-a-persona")
+
+        with pytest.raises(ValueError, match="Unknown persona"):
+            evaluate_persona_readiness("not-a-persona")
+
+    def test_include_persona_shards_merges_and_attributes_records(self, tmp_path: Path) -> None:
+        old_home = os.environ.get("SAKTHAI_HOME")
+        os.environ["SAKTHAI_HOME"] = str(tmp_path)
+        try:
+            shard = persona_eval_log_path("saktan")
+            record_eval(_record(model="sakthai", persona=None, latency_s=1.0), path=shard)
+            record_eval(_record(model="sakthai", persona="saktan", latency_s=3.0), path=shard)
+
+            summary = summarize_evals(include_persona_shards=True)
+            assert summary["count"] == 2
+            assert summary["per_persona"]["saktan"]["count"] == 2
+        finally:
+            if old_home is None:
+                os.environ.pop("SAKTHAI_HOME", None)
+            else:
+                os.environ["SAKTHAI_HOME"] = old_home
+
+    def test_extract_soul_intro_line_missing_returns_none(self) -> None:
+        assert extract_soul_intro_line("No intro line here.") is None
+
+    def test_evaluate_persona_readiness_incomplete_dir(self, tmp_path: Path) -> None:
+        info = evaluate_persona_readiness("sakthai", personas_dir=tmp_path)
+        assert info["all_working_files_present"] is False
+        assert info["skill_count"] == 0
+        assert info["ready"] is False
+
+    def test_evaluate_all_six_personas_ready(self) -> None:
+        report = evaluate_all_personas()
+        assert set(report) == set(PERSONA_NAMES)
+        for persona, info in report.items():
+            assert info["all_working_files_present"] is True, f"{persona} missing working files"
+            assert info["has_v9_rubric_soul"] is True, f"{persona} missing v9 rubric in SOUL.md"
+            assert info["has_v9_rubric_cycle"] is True, f"{persona} missing v9 rubric in CYCLE.md"
+            assert info["intro_line"], f"{persona} missing intro_line"
+            assert info["primary_skills_present"] is True, f"{persona} missing primary skills"
+            assert info["evolution_ready"] is True, f"{persona} missing evolution engine"
+            assert info["ready"] is True, f"{persona} not ready: {info}"
