@@ -1,7 +1,18 @@
 ---
 name: SakSee-data-manager-api-event-ingestion
 version: 1.0.0
-description: ">-   Guides developers through implementing event and conversion ingestion to   Google products using the Data Manager API /v1/events/ingest endpoint   and its associated client libraries. Use this skill when the user wants to upload   offline conver"
+description: '>-   Guides developers through implementing event and conversion ingestion
+  to   Google products using the Data Manager API /v1/events/ingest endpoint   and
+  its associated client libraries. Use this skill when the user wants to upload   offline
+  conver'
+category: web-browser
+tags:
+- api
+- browser
+- data
+- event
+- ingestion
+- manager
 ---
 # Data Manager API Event Ingestion
 

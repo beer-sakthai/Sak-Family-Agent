@@ -1,7 +1,16 @@
 ---
 name: SakKing-debug-optimize-lcp
 version: 1.0.0
-description: "Guides debugging and optimizing Largest Contentful Paint (LCP) using Chrome DevTools MCP tools. Use this skill whenever the user asks about LCP performance, slow page loads, Core Web Vitals optimization, or wants to understand why their pages main co"
+description: Guides debugging and optimizing Largest Contentful Paint (LCP) using
+  Chrome DevTools MCP tools. Use this skill whenever the user asks about LCP performance,
+  slow page loads, Core Web Vitals optimization, or wants to understand why their
+  pages main co
+category: coding
+tags:
+- cli
+- debug
+- lcp
+- optimize
 ---
 
 ## What is LCP and why it matters

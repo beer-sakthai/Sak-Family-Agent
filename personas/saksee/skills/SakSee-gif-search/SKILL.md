@@ -1,7 +1,12 @@
 ---
 name: SakSee-gif-search
 version: 1.0.0
-description: "Search/download GIFs from Tenor via curl + jq."
+description: Search/download GIFs from Tenor via curl + jq.
+category: web-browser
+tags:
+- browser
+- gif
+- search
 ---
 
 # GIF Search (Tenor API)

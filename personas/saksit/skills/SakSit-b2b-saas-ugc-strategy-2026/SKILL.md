@@ -1,7 +1,18 @@
 ---
 name: SakSit-b2b-saas-ugc-strategy-2026
 version: 1.0.0
-description: ">-   A complete playbook for B2B SaaS companies to build, deploy, and measure   a User-Generated Content (UGC) strategy — covering collection workflows,   format selection, AI-friendly structuring, distribution channels, and   conversion benchmarks f"
+description: '>-   A complete playbook for B2B SaaS companies to build, deploy, and
+  measure   a User-Generated Content (UGC) strategy — covering collection workflows,   format
+  selection, AI-friendly structuring, distribution channels, and   conversion benchmarks
+  f'
+category: content-marketing
+tags:
+- '2026'
+- b2b
+- content
+- saas
+- strategy
+- ugc
 ---
 
 # B2B SaaS User-Generated Content (UGC) Strategy 2026

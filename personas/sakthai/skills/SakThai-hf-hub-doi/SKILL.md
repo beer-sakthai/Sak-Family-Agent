@@ -1,19 +1,31 @@
 ---
 name: SakThai-hf-hub-doi
+version: 1.0.0
+description: 'Complete reference for Digital Object Identifiers (DOIs) on the Hugging
+  Face Hub — generation process, DataCite kernel-4 metadata schema, DataCite REST
+  API for querying HF DOIs, versioning semantics, restrictions on DOI-locked repos,
+  citation workflow, and programmatic patterns for DOI discovery and metadata extraction.
+
+  '
+category: mlops
+tags:
+- academic
+- badges
+- citation
+- datacite
+- datasets
+- dduf
+- doi
+- embedding
+- format
+- hf
+- hub
+- huggingface
+- identifiers
+- metadata
+- models
 author: SakThai
 license: MIT
-description: >
-  Complete reference for Digital Object Identifiers (DOIs) on the Hugging Face
-  Hub — generation process, DataCite kernel-4 metadata schema, DataCite REST API
-  for querying HF DOIs, versioning semantics, restrictions on DOI-locked repos,
-  citation workflow, and programmatic patterns for DOI discovery and metadata
-  extraction.
-version: 2.0.0
-metadata:
-  hermes:
-    tags: [huggingface, hub, doi, datacite, datasets, models, citation, academic, identifiers, metadata]
-    category: mlops
-category: mlops
 ---
 
 # HF Hub DOI Deep Dive — DataCite Integration & Metadata Schema

@@ -1,7 +1,14 @@
 ---
 name: SakSee-voice-delivery
 version: 1.0.0
-description: "Deliver Telegram replies as matched voice notes — preferred voice is   en-US-BrianMultilingualNeural (multilingual, Thai-capable US male). Covers edge-tts   setup, MEDIA: file sending, Hermes TTS config, and browser-automation quirks on   WSL."
+description: 'Deliver Telegram replies as matched voice notes — preferred voice is   en-US-BrianMultilingualNeural
+  (multilingual, Thai-capable US male). Covers edge-tts   setup, MEDIA: file sending,
+  Hermes TTS config, and browser-automation quirks on   WSL.'
+category: web-browser
+tags:
+- browser
+- delivery
+- voice
 ---
 
 # Voice Delivery for Hermes Agent

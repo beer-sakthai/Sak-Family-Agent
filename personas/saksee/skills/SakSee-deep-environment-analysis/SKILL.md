@@ -1,7 +1,14 @@
 ---
 name: SakSee-deep-environment-analysis
 version: 1.0.0
-description: "Perform deep research and analysis of environment files with systematic investigation and diagnostic capabilities."
+description: Perform deep research and analysis of environment files with systematic
+  investigation and diagnostic capabilities.
+category: web-browser
+tags:
+- analysis
+- browser
+- deep
+- environment
 ---
 
 # Deep Environment Analysis

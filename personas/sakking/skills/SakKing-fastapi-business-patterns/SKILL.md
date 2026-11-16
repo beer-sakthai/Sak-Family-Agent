@@ -1,7 +1,15 @@
 ---
 name: SakKing-fastapi-business-patterns
 version: 1.0.0
-description: "Lightweight FastAPI + SQLite + uv backend patterns for internal business tools — lead trackers, webhook receivers, data APIs, admin dashboards. Beers go-to Python backend stack."
+description: Lightweight FastAPI + SQLite + uv backend patterns for internal business
+  tools — lead trackers, webhook receivers, data APIs, admin dashboards. Beers go-to
+  Python backend stack.
+category: productivity
+tags:
+- business
+- cli
+- fastapi
+- patterns
 ---
 
 # FastAPI Business Backend Patterns

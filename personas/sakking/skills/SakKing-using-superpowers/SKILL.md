@@ -1,7 +1,13 @@
 ---
 name: SakKing-using-superpowers
 version: 1.0.0
-description: "Use when starting any conversation - establishes how to find and use skills, requiring skill invocation before ANY response including clarifying questions"
+description: Use when starting any conversation - establishes how to find and use
+  skills, requiring skill invocation before ANY response including clarifying questions
+category: productivity
+tags:
+- cli
+- superpowers
+- using
 ---
 
 <SUBAGENT-STOP>

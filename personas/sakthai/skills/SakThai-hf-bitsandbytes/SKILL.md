@@ -1,7 +1,14 @@
 ---
 name: SakThai-hf-bitsandbytes
 version: 1.0.0
-description: "Hugging Face bitsandbytes — 4-bit and 8-bit quantization for LLM inference and training, with integration guides for Transformers, PEFT, Accelerate, and PyTorch Lightning. Covers BitsAndBytesConfig, QLoRA, LLM.int8(), and custom quantized layers."
+description: Hugging Face bitsandbytes — 4-bit and 8-bit quantization for LLM inference
+  and training, with integration guides for Transformers, PEFT, Accelerate, and PyTorch
+  Lightning. Covers BitsAndBytesConfig, QLoRA, LLM.int8(), and custom quantized layers.
+category: mlops
+tags:
+- bitsandbytes
+- hf
+- huggingface
 ---
 
 # Hugging Face BitsAndBytes — Quantization

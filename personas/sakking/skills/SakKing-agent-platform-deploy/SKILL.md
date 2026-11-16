@@ -1,7 +1,16 @@
 ---
 name: SakKing-agent-platform-deploy
 version: 1.0.0
-description: ">-   Deploy open models or custom weights from Model Garden to Agent Platform   endpoints, check the status of an in-progress deployment operation, or clean   up resources by undeploying models and deleting endpoints. Use when asked to   actively dep"
+description: '>-   Deploy open models or custom weights from Model Garden to Agent
+  Platform   endpoints, check the status of an in-progress deployment operation, or
+  clean   up resources by undeploying models and deleting endpoints. Use when asked
+  to   actively dep'
+category: productivity
+tags:
+- agent
+- cli
+- deploy
+- platform
 ---
 
 # Agent Platform Model Garden Deploy Skill

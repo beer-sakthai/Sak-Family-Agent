@@ -1,7 +1,14 @@
 ---
 name: SakSit-b2b-saas-interactive-content-2026
 version: 1.0.0
-description: "Saksit B2B Saas Interactive Content 2026"
+description: Saksit B2B Saas Interactive Content 2026
+category: content-marketing
+tags:
+- '2026'
+- b2b
+- content
+- interactive
+- saas
 ---
 
 # B2B SaaS Interactive Content Strategy 2026

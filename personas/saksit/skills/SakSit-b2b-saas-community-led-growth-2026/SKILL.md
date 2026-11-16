@@ -1,7 +1,18 @@
 ---
 name: SakSit-b2b-saas-community-led-growth-2026
 version: 1.0.0
-description: "A practical playbook for B2B SaaS companies to build, launch, and scale a community-led growth (CLG) strategy — turning an owned community into a repeatable revenue engine in 2026."
+description: A practical playbook for B2B SaaS companies to build, launch, and scale
+  a community-led growth (CLG) strategy — turning an owned community into a repeatable
+  revenue engine in 2026.
+category: content-marketing
+tags:
+- '2026'
+- b2b
+- community
+- content
+- growth
+- led
+- saas
 ---
 
 # B2B SaaS Community-Led Growth (CLG) Strategy 2026

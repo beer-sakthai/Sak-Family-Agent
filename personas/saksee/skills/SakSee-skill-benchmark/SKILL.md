@@ -1,7 +1,12 @@
 ---
 name: SakSee-skill-benchmark
 version: 1.0.0
-description: "Two-pass cold/hot file read benchmark for SKILL.md files."
+description: Two-pass cold/hot file read benchmark for SKILL.md files.
+category: web-browser
+tags:
+- benchmark
+- browser
+- skill
 ---
 
 # Skill Benchmark

@@ -1,7 +1,13 @@
 ---
 name: SakSee-playwright-cli
 version: 1.0.0
-description: "Automate browser interactions, test web pages and work with Playwright tests. allowed-tools: Bash(playwright-cli:*) Bash(npx:*) Bash(npm:*)"
+description: 'Automate browser interactions, test web pages and work with Playwright
+  tests. allowed-tools: Bash(playwright-cli:*) Bash(npx:*) Bash(npm:*)'
+category: web-browser
+tags:
+- browser
+- cli
+- playwright
 ---
 
 # Browser Automation with playwright-cli

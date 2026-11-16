@@ -1,7 +1,13 @@
 ---
 name: SakSee-production-management-planner
 version: 1.0.0
-description: "Plan and optimize House of Sak service delivery for QA, AI, and API projects."
+description: Plan and optimize House of Sak service delivery for QA, AI, and API projects.
+category: web-browser
+tags:
+- browser
+- management
+- planner
+- production
 ---
 
 # Production Management Planner

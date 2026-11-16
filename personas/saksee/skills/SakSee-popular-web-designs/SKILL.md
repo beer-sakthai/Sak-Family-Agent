@@ -1,7 +1,13 @@
 ---
 name: SakSee-popular-web-designs
 version: 1.0.0
-description: "54 real design systems (Stripe, Linear, Vercel) as HTML/CSS."
+description: 54 real design systems (Stripe, Linear, Vercel) as HTML/CSS.
+category: web-browser
+tags:
+- browser
+- designs
+- popular
+- web
 ---
 
 # Popular Web Designs

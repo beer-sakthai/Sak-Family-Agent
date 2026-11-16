@@ -1,7 +1,12 @@
 ---
 name: SakSee-weights-and-biases
 version: 1.0.0
-description: "W&B: log ML experiments, sweeps, model registry, dashboards."
+description: 'W&B: log ML experiments, sweeps, model registry, dashboards.'
+category: web-browser
+tags:
+- biases
+- browser
+- weights
 ---
 
 # Weights & Biases: ML Experiment Tracking & MLOps

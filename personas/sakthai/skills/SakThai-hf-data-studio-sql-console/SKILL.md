@@ -1,7 +1,15 @@
 ---
 name: SakThai-hf-data-studio-sql-console
 version: 1.0.0
-description: "HuggingFace Data Studio SQL console for dataset queries"
+description: HuggingFace Data Studio SQL console for dataset queries
+category: mlops
+tags:
+- console
+- data
+- hf
+- huggingface
+- sql
+- studio
 ---
 
 # SakThai HF Data Studio SQL Console Skill

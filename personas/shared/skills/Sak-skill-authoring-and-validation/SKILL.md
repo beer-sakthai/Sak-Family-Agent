@@ -1,12 +1,23 @@
 ---
 name: Sak-skill-authoring-and-validation
-description: Use when creating or editing a skill in Sak-Family-Agent, especially when choosing ownership, writing SKILL.md frontmatter, validating composition, or preparing a skill pull request.
 version: 1.0.0
-platforms: [linux, macos, windows]
-metadata:
-  hermes:
-    tags: [skills, authoring, validation, frontmatter, composition, pull request]
-    related_skills: [Sak-repository-quality]
+description: Use when creating or editing a skill in Sak-Family-Agent, especially
+  when choosing ownership, writing SKILL.md frontmatter, validating composition, or
+  preparing a skill pull request.
+category: utilities
+tags:
+- authoring
+- composition
+- frontmatter
+- pull request
+- shared
+- skill
+- skills
+- validation
+platforms:
+- linux
+- macos
+- windows
 ---
 
 # Skill Authoring and Validation

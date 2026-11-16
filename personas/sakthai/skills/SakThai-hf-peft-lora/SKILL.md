@@ -1,7 +1,20 @@
 ---
 name: SakThai-hf-peft-lora
 version: 1.0.0
-description: "Deep dive into Hugging Face PEFT library — LoRA/QLoRA configuration, training, inference, multi-adapter management, merging, and Hub integration."
+description: Deep dive into Hugging Face PEFT library — LoRA/QLoRA configuration,
+  training, inference, multi-adapter management, merging, and Hub integration.
+category: training
+tags:
+- adapters
+- beyond
+- efficient
+- fine-tuning
+- hf
+- huggingface
+- lora
+- mlops
+- peft
+- qlora
 ---
 
 # HF PEFT — Parameter-Efficient Fine-Tuning with LoRA/QLoRA

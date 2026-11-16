@@ -1,7 +1,13 @@
 ---
 name: SakThai-training
 version: 1.0.0
-description: "Use when the user mentions training, fine-tuning, QLoRA, LoRA, rsLoRA, HF Jobs, Kaggle training, SFTTrainer, TRL, mergekit, or running train-*.py scripts. Phase: TRAIN."
+description: 'Use when the user mentions training, fine-tuning, QLoRA, LoRA, rsLoRA,
+  HF Jobs, Kaggle training, SFTTrainer, TRL, mergekit, or running train-*.py scripts.
+  Phase: TRAIN.'
+category: training
+tags:
+- huggingface
+- training
 ---
 
 # SakThai Training

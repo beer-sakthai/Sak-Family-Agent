@@ -1,7 +1,16 @@
 ---
 name: SakKing-agent-platform-skill-registry
 version: 1.0.0
-description: ">   Interact with the Gemini Enterprise Agent Platform Skill Registry to create   and search for available skills. Use this skill to enable agents to register   functionality or discover new capabilities."
+description: '>   Interact with the Gemini Enterprise Agent Platform Skill Registry
+  to create   and search for available skills. Use this skill to enable agents to
+  register   functionality or discover new capabilities.'
+category: productivity
+tags:
+- agent
+- cli
+- platform
+- registry
+- skill
 ---
 
 # Skill Registry

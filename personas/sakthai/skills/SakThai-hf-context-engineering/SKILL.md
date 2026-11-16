@@ -1,7 +1,13 @@
 ---
 name: SakThai-hf-context-engineering
 version: 1.0.0
-description: "Context engineering for code agents — skills, MCP, hooks."
+description: Context engineering for code agents — skills, MCP, hooks.
+category: mlops
+tags:
+- context
+- engineering
+- hf
+- huggingface
 ---
 
 # Context Engineering for Code Agents

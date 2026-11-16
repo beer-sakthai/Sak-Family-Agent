@@ -1,7 +1,13 @@
 ---
 name: SakJules-github-pr-workflow
 version: 1.0.0
-description: "GitHub PR lifecycle: branch, commit, open, CI, merge."
+description: 'GitHub PR lifecycle: branch, commit, open, CI, merge.'
+category: devops
+tags:
+- automation
+- github
+- pr
+- workflow
 ---
 
 # GitHub Pull Request Workflow

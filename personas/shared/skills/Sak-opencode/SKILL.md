@@ -1,7 +1,11 @@
 ---
 name: Sak-opencode
 version: 1.0.0
-description: "Delegate coding to OpenCode CLI (features, PR review)."
+description: Delegate coding to OpenCode CLI (features, PR review).
+category: utilities
+tags:
+- opencode
+- shared
 ---
 
 # OpenCode CLI

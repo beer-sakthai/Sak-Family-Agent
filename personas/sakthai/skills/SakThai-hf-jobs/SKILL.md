@@ -1,11 +1,27 @@
 ---
-author: SakThai
-license: MIT
 name: SakThai-hf-jobs
 version: 0.1.0
-description: "Hugging Face Jobs: run compute workloads (scripts, Docker, UV) on HF infrastructure with GPU/TPU/CPU, scheduling, webhooks, and the Jobs CLI / Python SDK."
-tags: [huggingface, hf, jobs, compute, infrastructure, docker, uv, scheduling, webhooks, mlops]
-platforms: [linux, macos, windows]
+description: 'Hugging Face Jobs: run compute workloads (scripts, Docker, UV) on HF
+  infrastructure with GPU/TPU/CPU, scheduling, webhooks, and the Jobs CLI / Python
+  SDK.'
+category: mlops
+tags:
+- compute
+- docker
+- hf
+- huggingface
+- infrastructure
+- jobs
+- mlops
+- scheduling
+- uv
+- webhooks
+author: SakThai
+license: MIT
+platforms:
+- linux
+- macos
+- windows
 ---
 
 # Hugging Face Jobs

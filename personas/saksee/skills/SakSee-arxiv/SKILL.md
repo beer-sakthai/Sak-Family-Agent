@@ -1,7 +1,11 @@
 ---
 name: SakSee-arxiv
 version: 1.0.0
-description: "Search arXiv papers by keyword, author, category, or ID."
+description: Search arXiv papers by keyword, author, category, or ID.
+category: web-browser
+tags:
+- arxiv
+- browser
 ---
 
 # arXiv Research

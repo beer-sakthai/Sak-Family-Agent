@@ -1,7 +1,20 @@
 ---
 name: SakThai-hf-hub-publisher-analytics
 version: 1.0.0
-description: "Publisher Analytics dashboard, CSV export API, unique downloader logs for Team & Enterprise plans"
+description: Publisher Analytics dashboard, CSV export API, unique downloader logs
+  for Team & Enterprise plans
+category: mlops
+tags:
+- analytics
+- billing
+- egress
+- hf
+- hub
+- huggingface
+- metrics
+- plans
+- publisher
+- subscription
 ---
 
 # HF Hub Publisher Analytics

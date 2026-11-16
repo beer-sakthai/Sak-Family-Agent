@@ -1,7 +1,14 @@
 ---
 name: SakJules-github-family-stewardship
 version: 1.0.0
-description: "GitHub family stewardship management: repo inventory, support rotation, archiving, labels, and family-agent coordination."
+description: 'GitHub family stewardship management: repo inventory, support rotation,
+  archiving, labels, and family-agent coordination.'
+category: devops
+tags:
+- automation
+- family
+- github
+- stewardship
 ---
 
 # GitHub Family Stewardship

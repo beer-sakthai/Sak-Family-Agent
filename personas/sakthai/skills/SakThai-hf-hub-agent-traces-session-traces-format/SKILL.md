@@ -1,7 +1,16 @@
 ---
 name: SakThai-hf-hub-agent-traces-session-traces-format
 version: 1.0.0
-description: "name: SakThai-hf-hub-agent-traces-session-traces-format"
+description: 'name: SakThai-hf-hub-agent-traces-session-traces-format'
+category: mlops
+tags:
+- agent
+- format
+- hf
+- hub
+- huggingface
+- session
+- traces
 ---
 
 # HF Hub Agent Traces & Session Traces Format

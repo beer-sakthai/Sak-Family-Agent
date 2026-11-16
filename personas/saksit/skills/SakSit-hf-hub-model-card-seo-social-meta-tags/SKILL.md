@@ -1,10 +1,26 @@
 ---
 name: SakSit-hf-hub-model-card-seo-social-meta-tags
+version: 1.0.0
+description: How Hugging Face model/dataset/space cards appear in search engines and
+  social media, and how to optimize metadata for maximum discoverability.
+category: seo
+tags:
+- card
+- content
+- discoverability
+- hf
+- hf-hub
+- hub
+- meta
+- model
+- model-cards
+- open-graph
+- seo
+- social
+- social-media
+- tags
 created: 2026-07-30
 author: SakSit
-description: "How Hugging Face model/dataset/space cards appear in search engines and social media, and how to optimize metadata for maximum discoverability."
-version: 1.0.0
-tags: [HF-Hub, SEO, Social-Media, Model-Cards, Discoverability, Open-Graph]
 ---
 
 # HF Hub Model Card SEO & Social Meta Tags

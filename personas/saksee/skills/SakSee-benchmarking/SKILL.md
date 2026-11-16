@@ -1,7 +1,12 @@
 ---
 name: SakSee-benchmarking
 version: 1.0.0
-description: "Two-pass cold/hot benchmarking methodology for measuring file I/O, API latency, tool performance, and system throughput."
+description: Two-pass cold/hot benchmarking methodology for measuring file I/O, API
+  latency, tool performance, and system throughput.
+category: web-browser
+tags:
+- benchmarking
+- browser
 ---
 
 # Benchmarking Pattern

@@ -1,7 +1,16 @@
 ---
 name: SakThai-hf-unlimited-ocr
 version: 1.0.0
-description: Complete reference on Baidu Unlimited-OCR — the 3.3B long-horizon OCR VLM with Reference Sliding Window Attention (R-SWA) that transcribes dozens of document pages in a single 32K forward pass. Covers architecture, R-SWA mechanics, deployment (transformers/vLLM/SGLang), and usage patterns.
+description: Complete reference on Baidu Unlimited-OCR — the 3.3B long-horizon OCR
+  VLM with Reference Sliding Window Attention (R-SWA) that transcribes dozens of document
+  pages in a single 32K forward pass. Covers architecture, R-SWA mechanics, deployment
+  (transformers/vLLM/SGLang), and usage patterns.
+category: mlops
+tags:
+- hf
+- huggingface
+- ocr
+- unlimited
 ---
 
 # Baidu Unlimited-OCR (2026-06)

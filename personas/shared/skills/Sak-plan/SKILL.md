@@ -1,7 +1,12 @@
 ---
 name: Sak-plan
 version: 1.0.0
-description: "Plan mode: write an actionable markdown plan to .hermes/plans/, no execution.   Bite-sized tasks, exact paths, complete code."
+description: 'Plan mode: write an actionable markdown plan to .hermes/plans/, no execution.   Bite-sized
+  tasks, exact paths, complete code.'
+category: utilities
+tags:
+- plan
+- shared
 ---
 # Plan Mode
 

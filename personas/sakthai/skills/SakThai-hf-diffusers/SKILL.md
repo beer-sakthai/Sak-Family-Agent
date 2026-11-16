@@ -1,10 +1,28 @@
 ---
+name: SakThai-hf-diffusers
+version: 1.0.0
+description: 'Hugging Face Diffusers: diffusion model library for image, video, and
+  audio generation. Covers DiffusionPipeline, schedulers, memory optimizations, training
+  examples, and component interoperability.'
+category: mlops
+tags:
+- cogvideo
+- controlnets
+- diffusers
+- diffusion
+- flux
+- generation
+- hf
+- huggingface
+- inference
+- schedulers
+- stable-diffusion
+- training
+- video
+- video-generation
+- wan
 author: SakThai
 license: MIT
-name: SakThai-hf-diffusers
-description: "Hugging Face Diffusers: diffusion model library for image, video, and audio generation. Covers DiffusionPipeline, schedulers, memory optimizations, training examples, and component interoperability."
-tags: [huggingface, diffusers, diffusion, stable-diffusion, schedulers, inference, training]
-version: 1.0.0
 ---
 
 # Hugging Face Diffusers — Diffusion Models Library

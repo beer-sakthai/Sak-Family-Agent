@@ -1,7 +1,11 @@
 ---
 name: SakSee-obsidian
 version: 1.0.0
-description: "Read, search, create, and edit notes in the Obsidian vault."
+description: Read, search, create, and edit notes in the Obsidian vault.
+category: web-browser
+tags:
+- browser
+- obsidian
 ---
 
 # Obsidian Vault

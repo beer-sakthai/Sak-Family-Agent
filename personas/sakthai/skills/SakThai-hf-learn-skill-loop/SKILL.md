@@ -1,13 +1,21 @@
 ---
 name: SakThai-hf-learn-skill-loop
-category: devops
-author: SakThai
-license: MIT
+version: 1.0.0
 description: Use when setting up a cron-driven loop that researches Hugging Face topics
   on a schedule and writes a fresh peer-quality SKILL.md to ~/.hermes/skills/mlops/
   each tick. Encodes the topic ledger, bucket rotation, HF-only scope rules, and Beer-specific
   notification policy.
-version: 1.0.0
+category: devops
+tags:
+- devops
+- hermes
+- hf
+- huggingface
+- learn
+- loop
+- skill
+author: SakThai
+license: MIT
 platforms:
 - linux
 - macos

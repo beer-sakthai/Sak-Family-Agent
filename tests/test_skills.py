@@ -397,3 +397,43 @@ def test_naming_violations_skips_unparseable_skill(tmp_path: Path) -> None:
     )
     assert "broken" not in violations
     assert "bad-prefix" in violations
+
+
+def test_build_catalog(tmp_path: Path) -> None:
+    from sakthai.skills import build_catalog
+
+    root = tmp_path / "skills"
+    _write_skill(root / "Sak-skill-1", "Sak-skill-1")
+    _write_skill(root / "Sak-skill-2", "Sak-skill-2")
+
+    catalog = build_catalog(root)
+    assert len(catalog) > 0
+    assert any(c["category"] == "general" for c in catalog)
+    skills = [s["name"] for c in catalog for s in c["skills"]]
+    assert "Sak-skill-1" in skills
+    assert "Sak-skill-2" in skills
+
+
+def test_render_skills_progressive_summary(tmp_path: Path) -> None:
+    from sakthai.skills import render_skills_progressive_summary
+
+    root = tmp_path / "skills"
+    _write_skill(root / "Sak-skill-1", "Sak-skill-1")
+
+    summary = render_skills_progressive_summary(["Sak-skill-1"], roots=[root])
+    assert "Sak-skill-1" in summary
+    assert "Skill" in summary or "Name" in summary
+
+
+def test_validate_tree(tmp_path: Path) -> None:
+    from sakthai.skills import validate_tree
+
+    root = tmp_path / "skills"
+    _write_skill(root / "Sak-valid", "Sak-valid")
+    broken = root / "Sak-broken"
+    broken.mkdir(parents=True)
+    (broken / "SKILL.md").write_text("invalid YAML: [", encoding="utf-8")
+
+    errors = validate_tree(root)
+    assert len(errors) == 1
+    assert "Sak-broken" in str(errors[0][0])

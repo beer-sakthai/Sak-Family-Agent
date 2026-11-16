@@ -1,7 +1,14 @@
 ---
 name: SakKing-claude-code
 version: 1.0.0
-description: "Delegate coding to Claude Code CLI (features, PRs)."
+description: Delegate coding to Claude Code CLI (features, PRs).
+category: coding
+tags:
+- claude
+- cli
+- code
+- understand
+- workflows
 ---
 
 # Claude Code — Hermes Orchestration Guide

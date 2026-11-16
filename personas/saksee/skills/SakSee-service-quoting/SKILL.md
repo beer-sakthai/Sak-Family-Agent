@@ -1,7 +1,13 @@
 ---
 name: SakSee-service-quoting
 version: 1.0.0
-description: "Use when constructing a customer quote from stored pricing facts and when deciding whether to capture a lead instead of answering from memory."
+description: Use when constructing a customer quote from stored pricing facts and
+  when deciding whether to capture a lead instead of answering from memory.
+category: web-browser
+tags:
+- browser
+- quoting
+- service
 ---
 
 # Service Quoting

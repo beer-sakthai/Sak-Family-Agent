@@ -1,7 +1,14 @@
 ---
 name: SakJules-github-organization-administration
 version: 1.0.0
-description: "GitHub organization admin: manage org/team roles, audit logs, policies, secrets, and billing."
+description: 'GitHub organization admin: manage org/team roles, audit logs, policies,
+  secrets, and billing.'
+category: devops
+tags:
+- administration
+- automation
+- github
+- organization
 ---
 
 # GitHub Organization Administration

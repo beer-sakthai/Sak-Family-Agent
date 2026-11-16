@@ -1,7 +1,13 @@
 ---
 name: SakKing-project-plan-maintenance
 version: 1.0.0
-description: "Audit and standardize PLAN.md files across projects."
+description: Audit and standardize PLAN.md files across projects.
+category: agent-runner
+tags:
+- cli
+- maintenance
+- plan
+- project
 ---
 
 # Project-Plan Maintenance

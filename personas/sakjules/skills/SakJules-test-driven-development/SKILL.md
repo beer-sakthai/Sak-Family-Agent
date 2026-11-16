@@ -1,7 +1,13 @@
 ---
 name: SakJules-test-driven-development
 version: 1.0.0
-description: "TDD: enforce RED-GREEN-REFACTOR, tests before code."
+description: 'TDD: enforce RED-GREEN-REFACTOR, tests before code.'
+category: devops
+tags:
+- automation
+- development
+- driven
+- test
 ---
 # Test-Driven Development (TDD)
 

@@ -1,7 +1,17 @@
 ---
 name: SakSee-playwright-network-reliability
 version: 1.0.0
-description: "Use Playwright’s request interception, network idle, response timing,   and selective mock/abort patterns to harden browser workflows against flaky third-party   dependencies."
+description: Use Playwright’s request interception, network idle, response timing,   and
+  selective mock/abort patterns to harden browser workflows against flaky third-party   dependencies.
+category: web-browser
+tags:
+- browser
+- network
+- playwright
+- reliability
+- replay
+- route
+- testing
 ---
 
 # Playwright Network Reliability for Browser Automation

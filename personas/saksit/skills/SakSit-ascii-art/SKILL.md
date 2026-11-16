@@ -1,7 +1,12 @@
 ---
 name: SakSit-ascii-art
 version: 1.0.0
-description: "ASCII art: pyfiglet, cowsay, boxes, image-to-ascii."
+description: 'ASCII art: pyfiglet, cowsay, boxes, image-to-ascii.'
+category: content-marketing
+tags:
+- art
+- ascii
+- content
 ---
 
 # ASCII Art Skill

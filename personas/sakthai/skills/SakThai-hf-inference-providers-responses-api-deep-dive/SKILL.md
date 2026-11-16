@@ -1,7 +1,17 @@
 ---
 name: SakThai-hf-inference-providers-responses-api-deep-dive
 version: 1.0.0
-description: "name: SakThai-hf-inference-providers-responses-api-deep-dive"
+description: 'name: SakThai-hf-inference-providers-responses-api-deep-dive'
+category: mlops
+tags:
+- api
+- deep
+- dive
+- hf
+- huggingface
+- inference
+- providers
+- responses
 ---
 
 # HF Inference Providers — Responses API & Remote MCP (Deep Dive)

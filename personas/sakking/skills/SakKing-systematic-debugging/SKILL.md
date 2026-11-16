@@ -1,7 +1,13 @@
 ---
 name: SakKing-systematic-debugging
 version: 1.0.0
-description: "Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes"
+description: Use when encountering any bug, test failure, or unexpected behavior,
+  before proposing fixes
+category: coding
+tags:
+- cli
+- debugging
+- systematic
 ---
 
 # Systematic Debugging

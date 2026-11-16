@@ -1,7 +1,16 @@
 ---
 name: SakThai-hf-snapshot-download-and-cache-management
 version: 1.0.0
-description: "Hugging Face Hub: snapshot_download, cache locations, revision locking, and disk-space management."
+description: 'Hugging Face Hub: snapshot_download, cache locations, revision locking,
+  and disk-space management.'
+category: mlops
+tags:
+- cache
+- download
+- hf
+- huggingface
+- management
+- snapshot
 ---
 
 # Hugging Face Hub: snapshot_download and Cache Management

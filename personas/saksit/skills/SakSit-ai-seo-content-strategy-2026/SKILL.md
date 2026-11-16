@@ -1,7 +1,15 @@
 ---
 name: SakSit-ai-seo-content-strategy-2026
 version: 1.0.0
-description: "Comprehensive framework for creating IHW-CONTENT-rated, AI-assisted SEO content that ranks in 2026 Google environment."
+description: Comprehensive framework for creating IHW-CONTENT-rated, AI-assisted SEO
+  content that ranks in 2026 Google environment.
+category: seo
+tags:
+- '2026'
+- ai
+- content
+- seo
+- strategy
 ---
 
 # AI-Powered SEO Content Strategy 2026

@@ -1,7 +1,13 @@
 ---
 name: SakThai-hf-inference-providers
 version: 1.0.0
-description: "A skill for Hf Inference Providers."
+description: A skill for Hf Inference Providers.
+category: mlops
+tags:
+- hf
+- huggingface
+- inference
+- providers
 ---
 
 # Hugging Face Inference Providers

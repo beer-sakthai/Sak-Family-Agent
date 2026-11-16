@@ -1,7 +1,12 @@
 ---
 name: Sak-cycle-care
 version: 1.0.0
-description: "Audit correctness, safety, and performance before shipping."
+description: Audit correctness, safety, and performance before shipping.
+category: cycle
+tags:
+- care
+- cycle
+- shared
 ---
 
 # Sak-cycle-care

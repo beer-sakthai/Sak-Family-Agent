@@ -1,7 +1,12 @@
 ---
 name: SakTan-diary-writer
 version: 1.0.0
-description: "Write project diaries and commit them to GitHub."
+description: Write project diaries and commit them to GitHub.
+category: operations
+tags:
+- daily-ops
+- diary
+- writer
 ---
 
 # Diary Writer — Session Documentation & GitHub Backup

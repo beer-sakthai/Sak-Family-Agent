@@ -1,7 +1,14 @@
 ---
 name: SakThai-hf-robotics-course
 version: 1.0.0
-description: "Robot learning with LeRobot — imitation, RL, VLA models, and real-world robotics using Hugging Face ecosystem."
+description: Robot learning with LeRobot — imitation, RL, VLA models, and real-world
+  robotics using Hugging Face ecosystem.
+category: mlops
+tags:
+- course
+- hf
+- huggingface
+- robotics
 ---
 
 # Robotics with LeRobot

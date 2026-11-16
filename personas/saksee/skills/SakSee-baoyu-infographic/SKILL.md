@@ -1,7 +1,12 @@
 ---
 name: SakSee-baoyu-infographic
 version: 1.0.0
-description: "Infographics: 21 layouts x 21 styles (信息图, 可视化)."
+description: 'Infographics: 21 layouts x 21 styles (信息图, 可视化).'
+category: web-browser
+tags:
+- baoyu
+- browser
+- infographic
 ---
 
 # Infographic Generator

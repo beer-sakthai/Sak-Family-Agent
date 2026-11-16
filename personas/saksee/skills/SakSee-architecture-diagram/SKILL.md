@@ -1,7 +1,12 @@
 ---
 name: SakSee-architecture-diagram
 version: 1.0.0
-description: "Dark-themed SVG architecture/cloud/infra diagrams as HTML."
+description: Dark-themed SVG architecture/cloud/infra diagrams as HTML.
+category: web-browser
+tags:
+- architecture
+- browser
+- diagram
 ---
 
 # Architecture Diagram Skill

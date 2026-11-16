@@ -1,7 +1,11 @@
 ---
 name: SakSit-audiocraft
 version: 1.0.0
-description: "AudioCraft: MusicGen text-to-music, AudioGen text-to-sound."
+description: 'AudioCraft: MusicGen text-to-music, AudioGen text-to-sound.'
+category: content-marketing
+tags:
+- audiocraft
+- content
 ---
 
 # AudioCraft: Audio Generation

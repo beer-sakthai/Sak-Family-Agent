@@ -1,7 +1,12 @@
 ---
 name: SakSit-beer-content-voice
 version: 1.0.0
-description: "Write Beers story with his voice: tone, hooks, framing."
+description: 'Write Beers story with his voice: tone, hooks, framing.'
+category: content-marketing
+tags:
+- beer
+- content
+- voice
 ---
 
 # Beer's Content Voice

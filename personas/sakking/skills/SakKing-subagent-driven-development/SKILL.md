@@ -1,7 +1,14 @@
 ---
 name: SakKing-subagent-driven-development
 version: 1.0.0
-description: "Use when executing implementation plans with independent tasks in the current session"
+description: Use when executing implementation plans with independent tasks in the
+  current session
+category: agent-runner
+tags:
+- cli
+- development
+- driven
+- subagent
 ---
 
 # Subagent-Driven Development

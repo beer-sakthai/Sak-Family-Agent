@@ -1,7 +1,15 @@
 ---
 name: SakSit-b2b-saas-community-building-2026
 version: 1.0.0
-description: "Saksit B2B Saas Community Building 2026"
+description: Saksit B2B Saas Community Building 2026
+category: content-marketing
+tags:
+- '2026'
+- b2b
+- building
+- community
+- content
+- saas
 ---
 
 # B2B SaaS Community-Led Growth Strategy 2026

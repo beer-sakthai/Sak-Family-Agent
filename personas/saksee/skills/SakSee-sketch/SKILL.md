@@ -1,7 +1,11 @@
 ---
 name: SakSee-sketch
 version: 1.0.0
-description: "Throwaway HTML mockups: 2-3 design variants to compare."
+description: 'Throwaway HTML mockups: 2-3 design variants to compare.'
+category: web-browser
+tags:
+- browser
+- sketch
 ---
 
 # Sketch

@@ -1,7 +1,14 @@
 ---
 name: SakThai-hf-jobs-serving-vllm
 version: 1.0.0
-description: "name: SakThai-hf-jobs-serving-vllm"
+description: 'name: SakThai-hf-jobs-serving-vllm'
+category: mlops
+tags:
+- hf
+- huggingface
+- jobs
+- serving
+- vllm
 ---
 
 # Run a vLLM Server on HF Jobs — One-Command Serving Patterns

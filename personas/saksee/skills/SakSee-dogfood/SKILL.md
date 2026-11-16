@@ -1,7 +1,11 @@
 ---
 name: SakSee-dogfood
 version: 1.0.0
-description: "Exploratory QA of web apps: find bugs, evidence, reports."
+description: 'Exploratory QA of web apps: find bugs, evidence, reports.'
+category: web-browser
+tags:
+- browser
+- dogfood
 ---
 
 # Dogfood: Systematic Web Application QA Testing

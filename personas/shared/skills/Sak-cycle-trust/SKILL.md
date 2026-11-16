@@ -1,7 +1,12 @@
 ---
 name: Sak-cycle-trust
 version: 1.0.0
-description: "Verify the shipped work is safe to rely on."
+description: Verify the shipped work is safe to rely on.
+category: cycle
+tags:
+- cycle
+- shared
+- trust
 ---
 
 # Sak-cycle-trust

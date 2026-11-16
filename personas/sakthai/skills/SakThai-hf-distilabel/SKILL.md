@@ -1,7 +1,14 @@
 ---
 name: SakThai-hf-distilabel
 version: 1.0.0
-description: "HuggingFace Distilabel for synthetic data generation and labeling"
+description: HuggingFace Distilabel for synthetic data generation and labeling
+category: mlops
+tags:
+- deep
+- distilabel
+- dive
+- hf
+- huggingface
 ---
 
 # SakThai Distilabel Skill

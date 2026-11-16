@@ -1,10 +1,21 @@
 ---
 name: SakThai-hf-timm
+version: 1.0.0
+description: PyTorch Image Models (timm) by Ross Wightman — model creation, listing,
+  inference, feature extraction, data augmentation, training scripts, and Hugging
+  Face Hub integration for 1,000+ vision models
+category: mlops
+tags:
+- embodied-ai
+- hf
+- huggingface
+- paper
+- robotics
+- timm
+- turbovla
+- vla
 author: SakThai
 license: MIT
-description: PyTorch Image Models (timm) by Ross Wightman — model creation, listing, inference, feature extraction, data augmentation, training scripts, and Hugging Face Hub integration for 1,000+ vision models
-category: mlops
-version: 1.0.0
 ---
 
 # HF timm — PyTorch Image Models

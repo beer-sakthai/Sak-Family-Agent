@@ -1,7 +1,11 @@
 ---
 name: SakSee-humanizer
 version: 1.0.0
-description: "Humanize text: strip AI-isms and add real voice."
+description: 'Humanize text: strip AI-isms and add real voice.'
+category: web-browser
+tags:
+- browser
+- humanizer
 ---
 
 # Humanizer: Remove AI Writing Patterns

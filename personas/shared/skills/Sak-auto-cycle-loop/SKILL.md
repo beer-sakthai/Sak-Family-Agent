@@ -1,23 +1,29 @@
 ---
 name: Sak-auto-cycle-loop
+version: 1.0.0
+description: Sustain up to 3 Dream-through-Growth cycle rounds in a single `sakthai
+  run` session instead of stopping after the first Growth. Use when a persona should
+  keep working through follow-on tasks, each getting its own full 6-stage cycle, capped
+  at an exact, tracked count of 3 rounds.
 category: cycle
-description: >-
-  Sustain up to 3 Dream-through-Growth cycle rounds in a single `sakthai run`
-  session instead of stopping after the first Growth. Use when a persona
-  should keep working through follow-on tasks, each getting its own full
-  6-stage cycle, capped at an exact, tracked count of 3 rounds.
-version: "1.0.0"
+tags:
+- auto
+- auto-cycle
+- cycle
+- loop
+- multi-round
+- shared
 platforms:
-  - linux
-  - macos
-  - windows
+- linux
+- macos
+- windows
 metadata:
   sakthai:
     tags:
-      - cycle
-      - shared
-      - auto-cycle
-      - multi-round
+    - cycle
+    - shared
+    - auto-cycle
+    - multi-round
     related_skills: []
 ---
 

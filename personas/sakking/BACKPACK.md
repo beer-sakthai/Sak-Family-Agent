@@ -48,18 +48,18 @@
   - Automatic virtualenv command wrapping via `wrap_with_isolated_runner` (`uv run ...`)
 - **🔄 Cross-Persona Delegation (`delegate_to_persona` & `sakthai skills sync-sakking`)**:
   - Depth-bounded (`DEFAULT_MAX_DELEGATION_DEPTH = 2`), cycle-safe delegation in `sakthai/agent/coordinator.py`
-  - Aggregates learned skills across the family (`63` overlay skills)
+  - Aggregates learned skills across the family (`59` overlay skills)
 - **🛡️ Unified Agent Platform Pro-Tips (`sakthai.agent_platform`)**:
   - **Safety Interception**: `check_data_loss_guardrail` (`safety.py` & `guardrails_hardened.py`) blocks destructive shell/SQL commands unless authorized by HMAC digest token
   - **Isolated Environment Runner**: `sakthai platform wrap-cmd "<cmd>"` (`dep_manager.py`) auto-wraps commands in the detected `uv` virtual environment
   - **Progressive Skill Disclosure**: `sakthai platform skills` (`render_skills_progressive_summary`) renders lightweight skill metadata tables to prevent prompt bloat
   - **Harness Pipeline Exporter**: `sakthai platform export-harness sakking` (`harness_exporter.py`) exports declarative Harness v1 agent & pipeline specs
-- **🧰 Skill Overlay Inventory (63 Overlay Skills + 19 Shared Skills)**:
-  - **Overlay Root**: [`personas/sakking/skills/`](file:///home/sak/Sak-Family-Agent/personas/sakking/skills) (63 specialized `SakKing-*` skills)
+- **🧰 Skill Overlay Inventory (59 Overlay Skills + 19 Shared Skills)**:
+  - **Overlay Root**: [`personas/sakking/skills/`](file:///home/sak/Sak-Family-Agent/personas/sakking/skills) (59 specialized `SakSakking-*` skills)
   - **Shared Root**: [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills) (19 shared `Sak-*` skills including `Sak-auto-cycle-loop`, `Sak-dogfood`, `Sak-ocr-and-documents`, `Sak-yuanbao`)
   - **Primary Workspace Skills** ([`config/workspace.yaml`](file:///home/sak/Sak-Family-Agent/personas/sakking/config/workspace.yaml)):
   - `SakKing-subagent-driven-development`
-  - `sakthai-coding-tdd`
+  - `SakKing-coding-tdd`
   - `SakKing-executing-plans`
   - `SakKing-systematic-debugging`
 

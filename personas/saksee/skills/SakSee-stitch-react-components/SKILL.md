@@ -1,7 +1,17 @@
 ---
 name: SakSee-stitch-react-components
 version: 1.0.0
-description: ">-   Converts Stitch designs into modular Vite and React components, or syncs/updates   existing React components to align with the latest Stitch designs, using system-level   networking and AST-based validation. allowed-tools:   - stitch*:*   - Bash"
+description: '>-   Converts Stitch designs into modular Vite and React components,
+  or syncs/updates   existing React components to align with the latest Stitch designs,
+  using system-level   networking and AST-based validation. allowed-tools:   - stitch*:*   -
+  Bash'
+category: web-browser
+tags:
+- browser
+- components
+- native
+- react
+- stitch
 ---
 
 # Stitch to React Components

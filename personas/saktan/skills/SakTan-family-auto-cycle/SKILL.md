@@ -1,7 +1,15 @@
 ---
 name: SakTan-family-auto-cycle
 version: 1.0.0
-description: "Use when asked to run the Sak Family auto-cycle, get all six Sak Family personas working together, or dispatch SakKing/SakThai/SakSee/SakSit/SakTan/SakJules as a team."
+description: Use when asked to run the Sak Family auto-cycle, get all six Sak Family
+  personas working together, or dispatch SakKing/SakThai/SakSee/SakSit/SakTan/SakJules
+  as a team.
+category: cycle
+tags:
+- auto
+- cycle
+- daily-ops
+- family
 ---
 
 # Sak-family-auto-cycle

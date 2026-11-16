@@ -1,7 +1,22 @@
 ---
 name: SakThai-huggingface-tool-builder
 version: 1.0.0
-description: "Use this skill when the user wants to build tool/scripts or achieve a task where using data from the Hugging Face API would help. This is especially useful when chaining or combining API calls or the task will be repeated/automated. This Skill create"
+description: Use this skill when the user wants to build tool/scripts or achieve a
+  task where using data from the Hugging Face API would help. This is especially useful
+  when chaining or combining API calls or the task will be repeated/automated. This
+  Skill create
+category: mlops
+tags:
+- builder
+- huggingface
+- llm
+- local
+- lora
+- models
+- space
+- tool
+- trainer
+- zerogpu
 ---
 
 # Hugging Face API Tool Builder

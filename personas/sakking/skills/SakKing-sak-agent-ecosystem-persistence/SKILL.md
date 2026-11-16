@@ -1,7 +1,14 @@
 ---
 name: SakKing-sak-agent-ecosystem-persistence
 version: 1.0.0
-description: "Backup agent state to Drive and Supermemory."
+description: Backup agent state to Drive and Supermemory.
+category: productivity
+tags:
+- agent
+- cli
+- ecosystem
+- persistence
+- sak
 ---
 
 # Sak Agent Ecosystem Persistence

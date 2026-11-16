@@ -1,14 +1,27 @@
 ---
 name: SakThai-hf-hub-notebooks-integration-deep-dive
-author: SakThai
-category: hf-hub
-description: >-
-  Complete deep-dive on Jupyter Notebook integration with the Hugging Face Hub —
-  one-click Colab/Kaggle model launching, custom notebook.ipynb in repos, .ipynb
+version: 1.2.0
+description: Complete deep-dive on Jupyter Notebook integration with the Hugging Face
+  Hub — one-click Colab/Kaggle model launching, custom notebook.ipynb in repos, .ipynb
   rendering, the /colab and /kaggle endpoints, Open in Colab buttons, and practical
   workflows for sharing reproducible ML research through notebooks on the Hub.
-version: 1.2.0
-tags: [huggingface, hub, notebooks, jupyter, colab, kaggle, integration, rendering, model-cards, authentication, spaces]
+category: hf-hub
+tags:
+- authentication
+- colab
+- deep
+- dive
+- hf
+- hub
+- huggingface
+- integration
+- jupyter
+- kaggle
+- model-cards
+- notebooks
+- rendering
+- spaces
+author: SakThai
 ---
 
 # Hugging Face Hub — Jupyter Notebooks Integration Deep Dive

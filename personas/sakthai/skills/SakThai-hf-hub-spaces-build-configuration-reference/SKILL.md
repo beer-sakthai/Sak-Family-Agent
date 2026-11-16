@@ -1,7 +1,45 @@
 ---
 name: SakThai-hf-hub-spaces-build-configuration-reference
 version: 1.0.0
-description: "Complete reference for Hugging Face Spaces build configuration — all YAML metadata parameters in README.md, SDK types, hardware tiers, OAuth setup, custom headers, preloading, and advanced configuration patterns"
+description: Complete reference for Hugging Face Spaces build configuration — all
+  YAML metadata parameters in README.md, SDK types, hardware tiers, OAuth setup, custom
+  headers, preloading, and advanced configuration patterns
+category: mlops
+tags:
+- api
+- build
+- config
+- configuration
+- custom
+- custom-domains
+- deep
+- devops
+- dive
+- domains
+- embed
+- frontend
+- hardware
+- hf
+- html
+- hub
+- huggingface
+- huggingface-hub
+- iframe
+- management
+- oauth
+- persistent
+- python
+- reference
+- replicas
+- runtime
+- sdk
+- secrets
+- spaces
+- static
+- storage
+- streaming
+- streaming-logs
+- webcomponents
 ---
 
 # HF Hub Spaces Build Configuration Reference

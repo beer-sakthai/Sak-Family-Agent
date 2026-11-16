@@ -1,7 +1,15 @@
 ---
 name: SakSit-b2b-saas-ai-content-generation-2026
 version: 1.0.0
-description: "Saksit B2B Saas Ai Content Generation 2026"
+description: Saksit B2B Saas Ai Content Generation 2026
+category: content-marketing
+tags:
+- '2026'
+- ai
+- b2b
+- content
+- generation
+- saas
 ---
 
 # B2B SaaS AI Content Generation & Automation 2026

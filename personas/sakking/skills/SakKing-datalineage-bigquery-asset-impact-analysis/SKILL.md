@@ -1,7 +1,18 @@
 ---
 name: SakKing-datalineage-bigquery-asset-impact-analysis
 version: 1.0.0
-description: ">-   Analyzes the downstream impact (blast radius) when a BigQuery table or view is broken, stale, or modified.   Identifies all downstream tables, dashboards, and processes that will be affected.   Use when:   - Performing a blast radius or impact a"
+description: '>-   Analyzes the downstream impact (blast radius) when a BigQuery table
+  or view is broken, stale, or modified.   Identifies all downstream tables, dashboards,
+  and processes that will be affected.   Use when:   - Performing a blast radius or
+  impact a'
+category: productivity
+tags:
+- analysis
+- asset
+- bigquery
+- cli
+- datalineage
+- impact
 ---
 
 # BigQuery Asset Impact Analysis

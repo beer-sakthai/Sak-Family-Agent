@@ -1,12 +1,26 @@
 ---
 name: SakThai-hf-abot-world
+version: 1.0.0
+description: Complete reference on ABot-World (AMap CVLab) — action-conditioned interactive
+  world model built on Wan2.2-TI2V-5B. Causal student distillation + LongForcing,
+  local attention, lightweight VAE decoder, low-bit DiT inference, and the ZeroGPU
+  streaming Space recipe (per-visitor quota billing, steady-cadence pacing).
+category: mlops
+tags:
+- abot
+- abot-world
+- hf
+- huggingface
+- interactive
+- space
+- video
+- world
+- world-model
+- zerogpu
 author: SakThai
 license: MIT
-description: "Complete reference on ABot-World (AMap CVLab) — action-conditioned interactive world model built on Wan2.2-TI2V-5B. Causal student distillation + LongForcing, local attention, lightweight VAE decoder, low-bit DiT inference, and the ZeroGPU streaming Space recipe (per-visitor quota billing, steady-cadence pacing)."
-version: 1.0.0
-category: mlops
-tags: [huggingface, world-model, video, interactive, zerogpu, space, abot-world]
-platforms: [linux]
+platforms:
+- linux
 ---
 
 # ABot-World — Interactive World Rollout (AMap CVLab)

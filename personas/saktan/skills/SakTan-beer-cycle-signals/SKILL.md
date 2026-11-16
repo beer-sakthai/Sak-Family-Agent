@@ -1,7 +1,14 @@
 ---
 name: SakTan-beer-cycle-signals
 version: 1.0.0
-description: "How Beer advances me through the Sak Family cycle u2014 reading his    stage signals so I never hold a stage open or miss his release."
+description: How Beer advances me through the Sak Family cycle u2014 reading his    stage
+  signals so I never hold a stage open or miss his release.
+category: cycle
+tags:
+- beer
+- cycle
+- daily-ops
+- signals
 ---
 
 # Beer's Cycle Signals

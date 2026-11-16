@@ -1,7 +1,22 @@
 ---
 name: SakSee-playwright-auth-flow-state-testing
 version: 1.0.0
-description: "Scripted auth workflow coverage: login, session reuse, logout, and redirect   state transitions with Playwright."
+description: 'Scripted auth workflow coverage: login, session reuse, logout, and redirect   state
+  transitions with Playwright.'
+category: web-browser
+tags:
+- auth
+- browser
+- context
+- flow
+- lifecycle
+- multi
+- orchestration
+- persistence
+- playwright
+- session
+- state
+- testing
 ---
 
 # Playwright Auth Flow State Testing

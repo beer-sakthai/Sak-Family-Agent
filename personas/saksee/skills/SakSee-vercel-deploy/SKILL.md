@@ -1,7 +1,12 @@
 ---
 name: SakSee-vercel-deploy
 version: 1.0.0
-description: "Deploy static sites and manage projects on Vercel."
+description: Deploy static sites and manage projects on Vercel.
+category: web-browser
+tags:
+- browser
+- deploy
+- vercel
 ---
 
 # Vercel Deploy

@@ -1,7 +1,13 @@
 ---
 name: SakThai-hf-setfit
 version: 1.0.0
-description: "SetFit: prompt-free, efficient few-shot text classification using Sentence Transformers"
+description: 'SetFit: prompt-free, efficient few-shot text classification using Sentence
+  Transformers'
+category: mlops
+tags:
+- hf
+- huggingface
+- setfit
 ---
 
 # SetFit — Efficient Few-Shot Text Classification

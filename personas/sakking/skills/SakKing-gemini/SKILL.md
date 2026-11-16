@@ -1,7 +1,12 @@
 ---
 name: SakKing-gemini
 version: 1.0.0
-description: "Gemini CLI one-shot prompts, summaries, generation, skills, hooks, MCP, or Gemma routing."
+description: Gemini CLI one-shot prompts, summaries, generation, skills, hooks, MCP,
+  or Gemma routing.
+category: productivity
+tags:
+- cli
+- gemini
 ---
 
 # Gemini CLI

@@ -1,7 +1,13 @@
 ---
 name: SakKing-deep-plan-analysis
 version: 1.0.0
-description: "Audit and diagnose PLAN.md files with deep analysis."
+description: Audit and diagnose PLAN.md files with deep analysis.
+category: agent-runner
+tags:
+- analysis
+- cli
+- deep
+- plan
 ---
 
 # Deep Plan Analysis — Discover, Audit, Diagnose

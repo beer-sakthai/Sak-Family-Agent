@@ -1,7 +1,13 @@
 ---
 name: SakJules-continuous-learning-loop
 version: 1.0.0
-description: "Automated research cron feeding back into skills."
+description: Automated research cron feeding back into skills.
+category: devops
+tags:
+- automation
+- continuous
+- learning
+- loop
 ---
 
 # SakSit Continuous Learning Loop

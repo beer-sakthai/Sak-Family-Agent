@@ -1,7 +1,12 @@
 ---
 name: SakKing-hermes-agent
 version: 1.0.0
-description: "Configure, extend, or contribute to Hermes Agent."
+description: Configure, extend, or contribute to Hermes Agent.
+category: productivity
+tags:
+- agent
+- cli
+- hermes
 ---
 # Hermes Agent
 

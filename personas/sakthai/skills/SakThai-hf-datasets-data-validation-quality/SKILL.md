@@ -1,7 +1,22 @@
 ---
 name: SakThai-hf-datasets-data-validation-quality
 version: 1.0.0
-description: "Comprehensive guide to data validation, quality assurance, and cleaning pipelines using the Hugging Face Datasets library — schema validation, filtering, deduplication, distribution checks, outlier detection, null handling, and dataset integrity veri"
+description: Comprehensive guide to data validation, quality assurance, and cleaning
+  pipelines using the Hugging Face Datasets library — schema validation, filtering,
+  deduplication, distribution checks, outlier detection, null handling, and dataset
+  integrity veri
+category: datasets
+tags:
+- api
+- card
+- data
+- dataset
+- datasets
+- hf
+- huggingface
+- quality
+- validate
+- validation
 ---
 
 # HF Datasets Data Validation & Quality Assurance

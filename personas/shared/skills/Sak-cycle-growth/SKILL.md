@@ -1,7 +1,12 @@
 ---
 name: Sak-cycle-growth
 version: 1.0.0
-description: "Fold the cycles lessons back into memory and skills."
+description: Fold the cycles lessons back into memory and skills.
+category: cycle
+tags:
+- cycle
+- growth
+- shared
 ---
 
 # Sak-cycle-growth

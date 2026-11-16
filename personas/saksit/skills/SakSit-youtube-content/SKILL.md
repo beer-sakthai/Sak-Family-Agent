@@ -1,7 +1,11 @@
 ---
 name: SakSit-youtube-content
 version: 1.0.0
-description: "YouTube transcripts to summaries, threads, blogs."
+description: YouTube transcripts to summaries, threads, blogs.
+category: social-media
+tags:
+- content
+- youtube
 ---
 
 # YouTube Content Tool

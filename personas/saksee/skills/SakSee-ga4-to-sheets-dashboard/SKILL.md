@@ -1,7 +1,15 @@
 ---
 name: SakSee-ga4-to-sheets-dashboard
 version: 1.0.0
-description: "Pull Google Analytics 4 metrics into Google Sheets for live business reporting. One-shot or cron-ready."
+description: Pull Google Analytics 4 metrics into Google Sheets for live business
+  reporting. One-shot or cron-ready.
+category: web-browser
+tags:
+- browser
+- dashboard
+- ga4
+- sheets
+- to
 ---
 
 # GA4 → Sheets Analytics Pipeline

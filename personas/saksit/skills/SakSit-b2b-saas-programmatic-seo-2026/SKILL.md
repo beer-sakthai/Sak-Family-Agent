@@ -1,7 +1,15 @@
 ---
 name: SakSit-b2b-saas-programmatic-seo-2026
 version: 1.0.0
-description: "Saksit B2B Saas Programmatic Seo 2026"
+description: Saksit B2B Saas Programmatic Seo 2026
+category: seo
+tags:
+- '2026'
+- b2b
+- content
+- programmatic
+- saas
+- seo
 ---
 
 # B2B SaaS Programmatic SEO Strategy 2026

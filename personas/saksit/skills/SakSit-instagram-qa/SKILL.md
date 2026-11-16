@@ -1,11 +1,16 @@
 ---
 name: SakSit-instagram-qa
-category: social
-author: SakThai
-license: MIT
+version: 1.0.0
 description: Provide a verified, repeatable workflow for checking Instagram content
   quality before publishing
-version: 1.0.0
+category: social
+tags:
+- content
+- hermes
+- instagram
+- qa
+author: SakThai
+license: MIT
 platforms:
 - linux
 - macos

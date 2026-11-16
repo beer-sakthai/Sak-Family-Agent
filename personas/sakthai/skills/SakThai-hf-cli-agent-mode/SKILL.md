@@ -1,7 +1,15 @@
 ---
 name: SakThai-hf-cli-agent-mode
 version: 1.0.0
-description: "HF hf CLI agent-optimized mode: auto-detection, dual-rendering, skill system, benchmarking."
+description: 'HF hf CLI agent-optimized mode: auto-detection, dual-rendering, skill
+  system, benchmarking.'
+category: mlops
+tags:
+- agent
+- cli
+- hf
+- huggingface
+- mode
 ---
 
 # HF hf CLI Agent-Optimized Mode

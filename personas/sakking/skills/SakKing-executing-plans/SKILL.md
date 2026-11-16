@@ -1,7 +1,13 @@
 ---
 name: SakKing-executing-plans
 version: 1.0.0
-description: "Use when you have a written implementation plan to execute in a separate session with review checkpoints"
+description: Use when you have a written implementation plan to execute in a separate
+  session with review checkpoints
+category: agent-runner
+tags:
+- cli
+- executing
+- plans
 ---
 
 # Executing Plans

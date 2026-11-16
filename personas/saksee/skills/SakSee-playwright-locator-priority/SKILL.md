@@ -1,7 +1,20 @@
 ---
 name: SakSee-playwright-locator-priority
 version: 1.0.0
-description: "Playwright locator priority: use user-facing locators (role, label, text) instead of CSS/XPath to build resilient tests. Covers the built-in locator hierarchy, filtering, and selector composition."
+description: 'Playwright locator priority: use user-facing locators (role, label,
+  text) instead of CSS/XPath to build resilient tests. Covers the built-in locator
+  hierarchy, filtering, and selector composition.'
+category: web-browser
+tags:
+- browser
+- dom
+- element
+- gating
+- locator
+- playwright
+- priority
+- shadow
+- state
 ---
 
 # Playwright Locator Priority

@@ -1,7 +1,18 @@
 ---
 name: SakThai-hf-inference-router-openai-compatible-endpoint
 version: 1.0.0
-description: "Comprehensive deep-dive into Hugging Face Inference Router — OpenAI-compatible proxy endpoint with provider selection, auto-failover, Responses API, structured outputs, function calling, and MCP integration."
+description: Comprehensive deep-dive into Hugging Face Inference Router — OpenAI-compatible
+  proxy endpoint with provider selection, auto-failover, Responses API, structured
+  outputs, function calling, and MCP integration.
+category: mlops
+tags:
+- compatible
+- endpoint
+- hf
+- huggingface
+- inference
+- openai
+- router
 ---
 
 # HF Inference Router: OpenAI-Compatible Endpoint

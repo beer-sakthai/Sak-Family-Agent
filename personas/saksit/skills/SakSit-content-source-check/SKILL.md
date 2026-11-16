@@ -1,7 +1,12 @@
 ---
 name: SakSit-content-source-check
 version: 1.0.0
-description: "Check Drive and history for content before creating."
+description: Check Drive and history for content before creating.
+category: content-marketing
+tags:
+- check
+- content
+- source
 ---
 
 # Content Source Check Protocol

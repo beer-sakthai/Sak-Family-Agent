@@ -1,7 +1,14 @@
 ---
 name: SakThai-hf-hub-fork-and-sync
 version: 1.0.0
-description: "name: SakThai-hf-hub-fork-and-sync"
+description: 'name: SakThai-hf-hub-fork-and-sync'
+category: mlops
+tags:
+- fork
+- hf
+- hub
+- huggingface
+- sync
 ---
 
 # HF Hub Fork & Sync — Server-Side Repo Duplication, File Copy & Bucket Sync

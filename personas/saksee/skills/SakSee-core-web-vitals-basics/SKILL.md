@@ -1,7 +1,15 @@
 ---
 name: SakSee-core-web-vitals-basics
 version: 1.0.0
-description: "Core Web Vitals (LCP, CLS, INP): definitions, thresholds, and when to measure them for web performance and SEO."
+description: 'Core Web Vitals (LCP, CLS, INP): definitions, thresholds, and when to
+  measure them for web performance and SEO.'
+category: web-browser
+tags:
+- basics
+- browser
+- core
+- vitals
+- web
 ---
 
 # Core Web Vitals Basics

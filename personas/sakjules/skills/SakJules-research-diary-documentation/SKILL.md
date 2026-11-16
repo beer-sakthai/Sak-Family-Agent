@@ -1,7 +1,13 @@
 ---
 name: SakJules-research-diary-documentation
 version: 1.0.0
-description: "Create and save research diaries to GitHub for documentation safety."
+description: Create and save research diaries to GitHub for documentation safety.
+category: devops
+tags:
+- automation
+- diary
+- documentation
+- research
 ---
 
 # Research Diary Documentation
