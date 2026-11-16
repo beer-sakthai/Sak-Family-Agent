@@ -7,6 +7,7 @@ state interpolation, step retries, downstream failure short-circuiting, and acti
 import ast
 import asyncio
 import json
+import logging
 import os
 import shlex
 import urllib.parse
@@ -26,8 +27,10 @@ from agent_workflow.models import (
     StepStatus,
     WorkflowDefinition,
 )
-from agent_workflow.persistence import RunHistoryStore
+from agent_workflow.persistence import DuplicateRunError, RunHistoryStore
 from agent_workflow.state import StateContext
+
+logger = logging.getLogger(__name__)
 
 
 class ExecutionError(Exception):
@@ -499,11 +502,39 @@ class WorkflowExecutor:
             # Fallback custom action: return params as output
             return dict(params)
 
+    async def _invoke_callback(
+        self,
+        callback: Callable[[str, StepResult], None] | None,
+        run_id: str,
+        step_res: StepResult,
+        raise_exceptions: bool = False,
+    ) -> None:
+        """Invoke status callback safely, isolating any callback exceptions from workflow execution."""
+        if callback is None:
+            return
+        try:
+            if asyncio.iscoroutinefunction(callback):
+                await callback(run_id, step_res)
+            else:
+                callback(run_id, step_res)
+        except Exception as exc:
+            logger.warning(
+                "Status callback raised an unhandled exception for step '%s' in run '%s': %s",
+                step_res.step_id,
+                run_id,
+                exc,
+                exc_info=True,
+            )
+            if raise_exceptions:
+                raise
+
     async def execute_workflow(
         self,
         workflow: WorkflowDefinition,
         run_id: str | None = None,
         status_callback: Callable[[str, StepResult], None] | None = None,
+        allow_duplicate_run_id: bool = False,
+        raise_callback_exceptions: bool = False,
     ) -> RunHistory:
         """Execute a WorkflowDefinition asynchronously."""
         # 1. Pre-flight DAG validation
@@ -511,9 +542,16 @@ class WorkflowExecutor:
         if validation_errors:
             raise ValueError(f"Workflow DAG validation failed: {'; '.join(validation_errors)}")
 
-        # 2. Initialize RunHistory
-        if not run_id:
+        # 2. Check for duplicate run_id if provided
+        if run_id:
+            if not allow_duplicate_run_id and self.store.has_run(run_id):
+                raise DuplicateRunError(
+                    f"Workflow run with ID '{run_id}' already exists in store."
+                )
+        else:
             run_id = f"run_{uuid.uuid4().hex[:8]}"
+            while self.store.has_run(run_id):
+                run_id = f"run_{uuid.uuid4().hex[:8]}"
 
         start_time = datetime.now().isoformat()
         history = RunHistory(
@@ -550,8 +588,12 @@ class WorkflowExecutor:
                         end_time=datetime.now().isoformat(),
                     )
                     history.add_step_result(res)
-                    if status_callback:
-                        status_callback(run_id, res)
+                    await self._invoke_callback(
+                        status_callback,
+                        run_id,
+                        res,
+                        raise_exceptions=raise_callback_exceptions,
+                    )
                 else:
                     runnable_steps.append(step)
 
@@ -606,8 +648,12 @@ class WorkflowExecutor:
                 history.add_step_result(step_res)
                 if step_res.status == StepStatus.FAILED:
                     failed_step_ids.add(step_res.step_id)
-                if status_callback:
-                    status_callback(run_id, step_res)
+                await self._invoke_callback(
+                    status_callback,
+                    run_id,
+                    step_res,
+                    raise_exceptions=raise_callback_exceptions,
+                )
 
         # Determine final workflow run status
         history.end_time = datetime.now().isoformat()

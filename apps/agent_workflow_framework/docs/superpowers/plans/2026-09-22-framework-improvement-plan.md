@@ -26,9 +26,15 @@ Add a `pyproject.toml` with an installable package and console entry point, then
 
 Make `verify.py` create or accept an isolated run-storage directory so test runs cannot depend on or pollute `.workflow_runs`. Add a `--storage-dir` option to the CLI and test parallel invocations with distinct stores.
 
-### P2 — Observability and failure contracts
+### P2 — Observability and failure contracts (Complete)
 
-Standardize structured status output and error codes across library and CLI layers. Add tests for malformed persisted history, duplicate run IDs, invalid retry values, and callback exceptions.
+Standardized structured status output and error codes across library and CLI layers:
+- Added `DuplicateRunError` and duplicate run ID protection in `RunHistoryStore` and `WorkflowExecutor.execute_workflow(..., allow_duplicate_run_id=False)`.
+- Added callback exception isolation in `WorkflowExecutor` with warning logging (`_invoke_callback`) so broken status callbacks do not crash or abort workflows.
+- Added strict retry and retry_delay validation in `StepDefinition.from_dict` and `validate_workflow_dag`, rejecting negative values, booleans, and non-numeric types.
+- Hardened `RunHistoryStore.load_run_history` against malformed persisted JSON files (empty files, whitespace, corrupted syntax, invalid enums, non-dict step results).
+- Added `--json` structured output support for `inspect` and `list` CLI subcommands.
+- Comprehensive unit and E2E test suites added in `test_persistence.py`, `test_executor.py`, `test_dag.py`, and `test_cli.py`.
 
 ### P2 — Execution resilience
 

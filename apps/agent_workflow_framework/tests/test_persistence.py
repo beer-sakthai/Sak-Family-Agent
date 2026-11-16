@@ -14,6 +14,7 @@ from agent_workflow.models import (
     StepStatus,
 )
 from agent_workflow.persistence import (
+    DuplicateRunError,
     ExecutionStore,
     HistoryStore,
     RunCorruptedError,
@@ -23,6 +24,7 @@ from agent_workflow.persistence import (
     get_run_history,
     get_step_output,
     get_step_result,
+    has_run,
     list_runs,
     load_run_history,
     save_run_history,
@@ -245,6 +247,93 @@ class TestHistoryStore(unittest.TestCase):
 
         deleted = delete_run_history("run_conv", storage_dir=self.storage_dir)
         self.assertTrue(deleted)
+
+    def test_has_run(self):
+        self.assertFalse(self.store.has_run("nonexistent_run"))
+        self.assertFalse(has_run("nonexistent_run", storage_dir=self.storage_dir))
+
+        history = RunHistory(
+            run_id="run_exists_test",
+            workflow_name="wf",
+            status=RunStatus.RUNNING,
+            start_time="2026-08-01T12:00:00Z",
+        )
+        self.store.save_run_history(history)
+        self.assertTrue(self.store.has_run("run_exists_test"))
+        self.assertTrue(has_run("run_exists_test", storage_dir=self.storage_dir))
+
+    def test_duplicate_run_id_save_protection(self):
+        history = RunHistory(
+            run_id="run_dup_check",
+            workflow_name="wf",
+            status=RunStatus.RUNNING,
+            start_time="2026-08-01T12:00:00Z",
+        )
+        self.store.save_run_history(history)
+
+        # Overwrite=False must raise DuplicateRunError
+        with self.assertRaises(DuplicateRunError):
+            self.store.save_run_history(history, allow_overwrite=False)
+
+        with self.assertRaises(DuplicateRunError):
+            save_run_history(history, storage_dir=self.storage_dir, allow_overwrite=False)
+
+        # Overwrite=True succeeds
+        history.status = RunStatus.COMPLETED
+        self.store.save_run_history(history, allow_overwrite=True)
+        loaded = self.store.load_run_history("run_dup_check")
+        self.assertEqual(loaded.status, RunStatus.COMPLETED)
+
+    def test_malformed_persisted_history_exhaustive(self):
+        self.storage_dir.mkdir(parents=True, exist_ok=True)
+        malformed_cases = [
+            ("empty_file.json", ""),
+            ("whitespace_file.json", "   \n\t  "),
+            ("syntax_err.json", "{ 'invalid_json': true, "),
+            ("root_list.json", json.dumps([{"run_id": "r1"}])),
+            ("root_str.json", json.dumps("hello_world")),
+            ("root_number.json", json.dumps(12345)),
+            ("empty_dict.json", json.dumps({})),
+            ("missing_name.json", json.dumps({"run_id": "r1", "status": "COMPLETED", "start_time": "2026-01-01"})),
+            ("missing_status.json", json.dumps({"run_id": "r1", "workflow_name": "w1", "start_time": "2026-01-01"})),
+            ("missing_start_time.json", json.dumps({"run_id": "r1", "workflow_name": "w1", "status": "COMPLETED"})),
+            ("invalid_run_status.json", json.dumps({"run_id": "r1", "workflow_name": "w1", "status": "NONEXISTENT", "start_time": "2026-01-01"})),
+            ("step_results_list.json", json.dumps({"run_id": "r1", "workflow_name": "w1", "status": "COMPLETED", "start_time": "2026-01-01", "step_results": ["not_a_dict"]})),
+            ("step_results_str.json", json.dumps({"run_id": "r1", "workflow_name": "w1", "status": "COMPLETED", "start_time": "2026-01-01", "step_results": "invalid_string"})),
+            ("step_missing_id.json", json.dumps({"run_id": "r1", "workflow_name": "w1", "status": "COMPLETED", "start_time": "2026-01-01", "step_results": {"s1": {"status": "COMPLETED"}}})),
+            ("step_missing_status.json", json.dumps({"run_id": "r1", "workflow_name": "w1", "status": "COMPLETED", "start_time": "2026-01-01", "step_results": {"s1": {"step_id": "s1"}}})),
+            ("step_invalid_status.json", json.dumps({"run_id": "r1", "workflow_name": "w1", "status": "COMPLETED", "start_time": "2026-01-01", "step_results": {"s1": {"step_id": "s1", "status": "INVALID"}}}))
+        ]
+
+        for filename, content in malformed_cases:
+            with self.subTest(filename=filename):
+                file_path = self.storage_dir / filename
+                file_path.write_text(content, encoding="utf-8")
+                run_id = filename[:-5]
+
+                with self.assertRaises(RunCorruptedError):
+                    self.store.load_run_history(run_id)
+
+    def test_list_runs_skips_malformed_and_corrupted_files(self):
+        self.storage_dir.mkdir(parents=True, exist_ok=True)
+        # Create a valid run
+        h_valid = RunHistory(
+            run_id="valid_run",
+            workflow_name="wf",
+            status=RunStatus.COMPLETED,
+            start_time="2026-08-01T12:00:00Z",
+        )
+        self.store.save_run_history(h_valid)
+
+        # Create corrupted files
+        (self.storage_dir / "bad_syntax.json").write_text("invalid json", encoding="utf-8")
+        (self.storage_dir / "bad_root.json").write_text(json.dumps([1, 2, 3]), encoding="utf-8")
+        (self.storage_dir / "bad_enum.json").write_text(json.dumps({"run_id": "bad", "workflow_name": "w", "status": "BAD", "start_time": "2026-01-01"}), encoding="utf-8")
+
+        # list_runs should ignore the corrupted files and return only the valid run
+        runs = self.store.list_runs()
+        self.assertEqual(len(runs), 1)
+        self.assertEqual(runs[0].run_id, "valid_run")
 
 
 if __name__ == "__main__":
