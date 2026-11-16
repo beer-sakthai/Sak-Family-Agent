@@ -145,6 +145,8 @@ def test_workflow_permission_linter_cli_passes_for_allowed_declarations(
 
     assert lint_workflow_permissions.main() == 0
     assert "no scalar permission declarations found" in capsys.readouterr().out
+
+
 def test_root_uv_workflows_use_locked_execution() -> None:
     """Prevent CI from silently rewriting or relocking the root environment."""
     root_uv_workflows = {
@@ -169,15 +171,3 @@ def test_root_uv_workflows_use_locked_execution() -> None:
         assert all("--locked" in line for line in uv_commands), (
             f"{workflow_name} must use --locked for every uv sync/run command"
         )
-
-
-def test_workflows_do_not_use_scalar_permissions() -> None:
-    """Require workflow permissions to be explicit mappings, not read-all shorthands."""
-    forbidden = ("permissions: read-all", "permissions: write-all")
-    for yml_path in WORKFLOWS_DIR.glob("*.yml"):
-        content = yml_path.read_text(encoding="utf-8")
-        for declaration in forbidden:
-            assert declaration not in content, (
-                f"{yml_path.name} uses scalar {declaration}; declare least-privilege "
-                "permissions as a mapping instead"
-            )
