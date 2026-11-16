@@ -27,4 +27,3 @@ Consolidated capability providing unified execution procedures, configuration ru
 1. Initialize operational parameters and environmental context.
 2. Execute standardized task procedures.
 3. Verify outputs against automated quality gates.
-

@@ -166,14 +166,20 @@ class TestSkillsOrganizationParity(unittest.TestCase):
     def test_all_workspace_primary_skills_resolve(self) -> None:
         """Every primary skill defined in a persona workspace.yaml must exist on disk."""
         unresolved: list[str] = []
-        shared_skills = {d.name for d in SHARED_DIR.iterdir() if d.is_dir()} if SHARED_DIR.is_dir() else set()
+        shared_skills = (
+            {d.name for d in SHARED_DIR.iterdir() if d.is_dir()} if SHARED_DIR.is_dir() else set()
+        )
 
         for persona in PERSONAS:
             ws_file = PERSONAS_DIR / persona / "config" / "workspace.yaml"
             if not ws_file.is_file():
                 continue
             persona_skills_dir = PERSONAS_DIR / persona / "skills"
-            p_skills = {d.name for d in persona_skills_dir.iterdir() if d.is_dir()} if persona_skills_dir.is_dir() else set()
+            p_skills = (
+                {d.name for d in persona_skills_dir.iterdir() if d.is_dir()}
+                if persona_skills_dir.is_dir()
+                else set()
+            )
             data = yaml.safe_load(ws_file.read_text(encoding="utf-8")) or {}
             primaries = data.get("primary_skills", [])
             for skill in primaries:
