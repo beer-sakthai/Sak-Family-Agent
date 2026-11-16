@@ -24,8 +24,11 @@ def test_cache_cleanup_workflow_exists_and_valid() -> None:
     assert "types" in on_clause["pull_request"]
     assert "closed" in on_clause["pull_request"]["types"]
 
-    # Check permissions
-    assert data.get("permissions", {}).get("actions") == "write"
+    # Check permissions (either top-level or job-level grants actions: write)
+    perms = data.get("permissions")
+    job_perms = data.get("jobs", {}).get("cleanup-cache", {}).get("permissions", {})
+    actions_perm = perms.get("actions") if isinstance(perms, dict) else job_perms.get("actions")
+    assert actions_perm == "write"
 
     # Check concurrency
     assert "concurrency" in data
