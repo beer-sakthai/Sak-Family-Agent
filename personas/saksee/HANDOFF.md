@@ -27,7 +27,7 @@ flowchart LR
 |:---|:---|:---|
 | **Static & API Scraping** | HTTP / CSS Selectors | Allowed at Low or Active charge (>= 20%); check 30m cache first |
 | **Headless Browser & DevTools** | `@playwright/mcp@0.0.83`, `chrome-devtools-mcp@1.10.1` | Requires Active charge (>= 50%); pinned versions only |
-| **Visual Snapshot & OCR** | `SakSee-playwright-visual-snapshot-regression`, `SakSee-hf-unlimited-ocr` | Wrap all extracted text in `<untrusted_web_content source="<url>">` |
+| **Visual Snapshot & OCR** | `SakSee-playwright-visual-snapshot-regression`, `Sak-ocr-and-documents` | Wrap all extracted text in `<untrusted_web_content source="<url>">` |
 
 ### 1.2 30-Minute Family Cache & Rate-Limit Protocol
 
@@ -63,12 +63,12 @@ flowchart LR
 
 | Agent | Handle | Role & Deputy Order | Local Model (`config.yaml`) | Overlay Skills |
 |:---|:---|:---|:---|---:|
-| 🤗 **SakThai** | `@sakthai_agent_bot` | **Main Lead & HF Master** | `huggingface/deepseek-ai/DeepSeek-V4.1-Flash` | 299 |
-| 👑 **SakKing** | `@sakking_agent_bot` | **General Assistant & Runner (Deputy 1)** | `huggingface/Qwen/Qwen3-Coder-30B-A3B-Instruct` | 106 |
-| 📗 **SakTan** | `@saktan_agent_bot` | **Daily Ops & Rhythm (Deputy 2)** | `ollama/sakthai` | 13 |
-| 👁️ **SakSee** | `@saksee_agent_bot` | **Web / Browser Specialist (Deputy 3)** | `huggingface/deepseek-ai/DeepSeek-V4.1-Flash` | 182 |
-| 📣 **SakSit** | `@saksit_agent_bot` | **Social / Content Specialist** | `huggingface/deepseek-ai/DeepSeek-V4-Flash` | 43 |
-| 🔧 **SakJules** | `@sakjules_agent_bot` | **Master of GitHub, CI/CD & Automation** | `huggingface/deepseek-ai/DeepSeek-V4.1-Flash` | 180 |
+| 🤗 **SakThai** | `@sakthai_agent_bot` | **Main Lead & HF Master** | `huggingface/deepseek-ai/DeepSeek-V4.1-Flash` | 285 |
+| 👑 **SakKing** | `@sakking_agent_bot` | **General Assistant & Runner (Deputy 1)** | `huggingface/Qwen/Qwen3-Coder-30B-A3B-Instruct` | 63 |
+| 📗 **SakTan** | `@saktan_agent_bot` | **Daily Ops & Rhythm (Deputy 2)** | `ollama/sakthai` | 9 |
+| 👁️ **SakSee** | `@saksee_agent_bot` | **Web / Browser Specialist (Deputy 3)** | `huggingface/deepseek-ai/DeepSeek-V4.1-Flash` | 139 |
+| 📣 **SakSit** | `@saksit_agent_bot` | **Social / Content Specialist** | `huggingface/deepseek-ai/DeepSeek-V4-Flash` | 45 |
+| 🔧 **SakJules** | `@sakjules_agent_bot` | **Master of GitHub, CI/CD & Automation** | `huggingface/deepseek-ai/DeepSeek-V4.1-Flash` | 68 |
 
 ```
 personas/saksee/SOUL.md       → Identity, Charge System v6, Cycle v8, Self-Eval v9 & Security Rules

@@ -250,3 +250,50 @@ def test_soul_following_eval_extracts_and_scores_intro_line_for_all_six_personas
     fail_res = process_results_soul_following(doc, ["Here is an answer without the intro line."])
     assert pass_res == {"score": 1.0}
     assert fail_res == {"score": 0.0}
+
+
+@pytest.mark.parametrize("slug", sorted(PERSONAS))
+def test_persona_markdown_files_match_disk_skills_and_canonical_paths(slug: str) -> None:
+    """Every persona's 8 markdown files match on-disk skill counts, primary skills, and paths."""
+    pdir = PERSONAS_DIR / slug
+    overlay_count = sum(
+        1
+        for entry in (pdir / "skills").iterdir()
+        if entry.is_dir() and (entry / "SKILL.md").is_file()
+    )
+    shared_count = sum(
+        1
+        for entry in (PERSONAS_DIR / "shared" / "skills").iterdir()
+        if entry.is_dir() and (entry / "SKILL.md").is_file()
+    )
+    ws = yaml.safe_load((pdir / "config" / "workspace.yaml").read_text(encoding="utf-8"))
+
+    for md_name in (
+        "SOUL.md",
+        "PLAN.md",
+        "CYCLE.md",
+        "MEMORY.md",
+        "HANDOFF.md",
+        "BACKPACK.md",
+        "AGENTS.md",
+        "README.md",
+    ):
+        text = (pdir / md_name).read_text(encoding="utf-8")
+        assert "personas/sakthai/sakthai" not in text, (
+            f"personas/{slug}/{md_name} references removed nested path 'personas/sakthai/sakthai'"
+        )
+        assert "personas/sakthai/agent-self-evolution" not in text, (
+            f"personas/{slug}/{md_name} references removed path 'personas/sakthai/agent-self-evolution'"
+        )
+
+    backpack = (pdir / "BACKPACK.md").read_text(encoding="utf-8")
+    assert f"({overlay_count} Overlay Skills + {shared_count} Shared Skills)" in backpack
+    for primary_skill in ws.get("primary_skills") or []:
+        assert primary_skill in backpack, (
+            f"personas/{slug}/BACKPACK.md is missing primary skill {primary_skill!r}"
+        )
+
+    agents_md = (pdir / "AGENTS.md").read_text(encoding="utf-8")
+    assert (
+        "The lead, **SakThai**, lives on the reserved default profile (`~/.hermes`)." in agents_md
+    )
