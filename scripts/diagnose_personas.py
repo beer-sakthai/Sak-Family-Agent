@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -45,9 +46,9 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "personas"))
-sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))
 sys.path.insert(0, str(REPO_ROOT))
 
+from sakthai.agent.eval import evaluate_persona_readiness  # noqa: E402
 from sakthai.config import persona_model_defaults  # noqa: E402  (path bootstrap above)
 from sakthai.skills import (  # noqa: E402  (path bootstrap above)
     PERSONA_SKILL_PREFIXES,
@@ -100,9 +101,27 @@ def hermes_profile_dir(persona: str) -> Path:
     return HERMES_AGENTS_DIR / "profiles" / persona
 
 
+def _with_pythonpath(env: dict[str, str]) -> dict[str, str]:
+    existing = env.get("PYTHONPATH", "")
+    personas_path = str(PERSONAS_DIR)
+    new_pp = f"{personas_path}{os.pathsep}{existing}" if existing else personas_path
+    return {**env, "PYTHONPATH": new_pp}
+
+
 def run(args: list[str], env: dict[str, str], stdin: str | None = None) -> tuple[int, str]:
+    run_env = _with_pythonpath(env)
+    cmd = (
+        [BIN, *args]
+        if shutil.which(BIN)
+        else [
+            sys.executable,
+            "-c",
+            "import sys; from sakthai.cli import main; sys.exit(main())",
+            *args,
+        ]
+    )
     proc = subprocess.run(
-        [BIN, *args], env=env, input=stdin, capture_output=True, text=True, timeout=120
+        cmd, env=run_env, input=stdin, capture_output=True, text=True, timeout=120
     )
     return proc.returncode, proc.stdout + proc.stderr
 
@@ -144,7 +163,7 @@ def mcp_server_names(persona: str, env: dict[str, str]) -> list[str]:
     code = "from sakthai.mcp.servers import load_server_specs; print(' '.join(s.name for s in load_server_specs()))"
     proc = subprocess.run(
         [sys.executable, "-c", code],
-        env={**env, "SAKTHAI_MCP_CONFIG": str(cfg)},
+        env={**_with_pythonpath(env), "SAKTHAI_MCP_CONFIG": str(cfg)},
         capture_output=True,
         text=True,
         timeout=60,
@@ -224,6 +243,18 @@ def diagnose_persona(persona: str) -> None:
             str(profile_dir) if has_soul and has_config else f"missing under {profile_dir}",
         )
 
+        # 7. 6 working files + v9 self-eval rubric + intro line readiness
+        readiness = evaluate_persona_readiness(persona)
+        wf_count = sum(1 for v in readiness["working_files"].values() if v)
+        check(
+            "6 working files + v9 eval rubric",
+            readiness["all_working_files_present"]
+            and readiness["has_v9_rubric_soul"]
+            and readiness["has_v9_rubric_cycle"]
+            and bool(readiness["intro_line"]),
+            f"{wf_count}/6 files,CYCLE EVAL: {persona}",
+        )
+
         # naming drift (warning only — bulk rename deferred)
         overlay = PERSONAS_DIR / persona / "skills"
         prefix = PERSONA_SKILL_PREFIXES.get(persona)
@@ -239,8 +270,6 @@ def diagnose_persona(persona: str) -> None:
             else:
                 check("naming convention", True)
     finally:
-        import shutil
-
         shutil.rmtree(home, ignore_errors=True)
 
 
@@ -261,22 +290,24 @@ def diagnose_improve() -> None:
 
         try:
             subprocess.run(
-                [sys.executable, "-c", "import evolution"],
-                cwd=str(REPO_ROOT / "personas" / "sakthai" / "agent-self-evolution"),
+                [
+                    sys.executable,
+                    "-c",
+                    "import evolution, evolution.core.config, evolution.core.fitness, evolution.skills.evolve_skill",
+                ],
+                cwd=str(REPO_ROOT / "personas" / "sakthai"),
                 capture_output=True,
                 text=True,
                 timeout=60,
                 check=True,
             )
-            info("self-evolution (DSPy/GEPA)", "importable")
+            info("self-evolution (DSPy/GEPA)", "importable across personas/<persona>/evolution")
         except Exception:
             info(
                 "self-evolution (DSPy/GEPA)",
-                "package present, deps not installed (pip install -e personas/sakthai/agent-self-evolution)",
+                "package present, deps not installed (pip install -e personas/sakthai)",
             )
     finally:
-        import shutil
-
         shutil.rmtree(home, ignore_errors=True)
 
 

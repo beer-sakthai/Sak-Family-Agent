@@ -17,6 +17,7 @@ import click
 import pytest
 import yaml
 
+from evaluation_tasks.utils import get_intro_line, process_results_soul_following
 from sakthai.agent.tools import BUILTIN_TOOLS
 from sakthai.cli import main as cli_main
 from sakthai.config import persona_model_defaults
@@ -219,3 +220,33 @@ def test_personas_readme_skill_counts_match_disk() -> None:
     total_match = re.search(r"collectively host \*\*(\d+) specialized skills", readme)
     assert total_match is not None, "README total-skill claim not found"
     assert int(total_match.group(1)) == sum(actual.values())
+
+
+@pytest.mark.parametrize("slug", sorted(PERSONAS))
+def test_persona_defines_v9_cycle_eval_rubric_in_soul_and_cycle(slug: str) -> None:
+    """Every persona defines its `CYCLE EVAL: <slug>` v9 rubric in both SOUL.md and CYCLE.md."""
+    marker = f"CYCLE EVAL: {slug}"
+    soul = (PERSONAS_DIR / slug / "SOUL.md").read_text(encoding="utf-8")
+    cycle = (PERSONAS_DIR / slug / "CYCLE.md").read_text(encoding="utf-8")
+    assert marker in soul, f"personas/{slug}/SOUL.md is missing {marker!r} v9 self-eval rubric"
+    assert marker in cycle, f"personas/{slug}/CYCLE.md is missing {marker!r} v9 self-eval rubric"
+
+
+@pytest.mark.parametrize("slug", sorted(PERSONAS))
+def test_soul_following_eval_extracts_and_scores_intro_line_for_all_six_personas(
+    slug: str,
+) -> None:
+    """evaluation_tasks.utils intro-line extraction and scoring work for all six personas."""
+    soul = soul_text(slug)
+    intro = get_intro_line(soul)
+    display_name = PERSONAS[slug]
+    assert intro is not None, f"get_intro_line returned None for {slug}/SOUL.md"
+    assert intro.startswith(f"{display_name} · "), (
+        f"{slug}/SOUL.md intro line {intro!r} does not start with '{display_name} · '"
+    )
+
+    doc = {"persona": soul}
+    pass_res = process_results_soul_following(doc, [f"{intro} Here is the answer."])
+    fail_res = process_results_soul_following(doc, ["Here is an answer without the intro line."])
+    assert pass_res == {"score": 1.0}
+    assert fail_res == {"score": 0.0}

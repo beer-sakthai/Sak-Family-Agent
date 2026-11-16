@@ -21,13 +21,16 @@ workflows, **servicequotebot**, lives under `services/servicequotebot/`.
 ```text
 personas/
 ├── sakthai/            # Main Lead — HF master, ML, code, research (285 skills)
-│   ├── SOUL.md         # Identity, charge system, principles
-│   ├── config/         # persona config (config.yaml, gateway_voice_mode.json, …)
+│   ├── SOUL.md         # Identity, charge system (v6), self-evaluation (v9)
+│   ├── PLAN.md         # Task decomposition & routing protocol (v7)
+│   ├── CYCLE.md        # 6-stage growth cycle & v9 self-eval rubric
+│   ├── MEMORY.md       # Active memory & durable learnings
+│   ├── HANDOFF.md      # Cross-persona handoff contract
+│   ├── BACKPACK.md     # Domain toolbelt & skills inventory
+│   ├── config/         # Persona config (config.yaml, workspace.yaml, mcp.json, …)
 │   ├── skills/         # Contains the 285 skills mapped to SakThai
 │   ├── evolution/      # Persona-owned self-evolution pipeline (DSPy + GEPA)
-│   ├── evolve_agent.sh # Persona self-evolution runner
-│   ├── EVOLUTION_PLAN.md # Evolution architecture and roadmap
-│   └── EVOLUTION_README.md # Evolution engine reference
+│   └── evolve_agent.sh # Persona self-evolution runner
 ├── sakking/            # Contains the 63 skills mapped to SakKing + self-evolution
 ├── saktan/             # Contains the 9 skills mapped to SakTan + self-evolution
 ├── saksit/             # Contains the 45 skills mapped to SakSit + self-evolution
@@ -35,13 +38,16 @@ personas/
 └── saksee/             # Contains the 139 skills mapped to SakSee + self-evolution
 ```
 
-## Agent Self-Evolution
+## Agent Self-Evolution & 4-Layer Evaluation
 
-Each of the six personas hosts its own decoupled self-evolution module directly within its root directory:
-- `evolution/`: Prompt and skill mutation modules.
-- `evolve_agent.sh`: CLI runner defaulting to the hosting persona.
-- `tests/`: Self-evolution constraint and fitness tests.
-- `EVOLUTION_PLAN.md` & `EVOLUTION_README.md`: Agent-specific evolution specifications.
+Each of the six personas hosts its own self-evolution module and evaluates across four layers:
+1. **Working Files & v9 Self-Evaluation Rubric (`sakthai eval personas`)**: Verifies all 6 working files (`SOUL.md`, `PLAN.md`, `CYCLE.md`, `MEMORY.md`, `HANDOFF.md`, `BACKPACK.md`), the 100-point `CYCLE EVAL: <persona>` v9 rubric in `SOUL.md` and `CYCLE.md`, mandatory reply intro line, model/provider configuration, and primary skills.
+2. **Identity & Soul-Following Benchmark (`evaluation_tasks/soul_following.yaml`)**: Evaluates each persona's `SOUL.md` intro-line adherence across all six Sak Family personas via `evaluation_tasks/utils.py` and `evaluation_tasks/soul_following_dataset.jsonl`.
+3. **Runtime MLOps & Per-Persona Telemetry (`sakthai eval summary`)**: Tracks latency, token usage, and error rates per persona across `~/.sakthai/eval.jsonl` and sharded `~/.sakthai/<persona>/eval.jsonl` logs (`sakthai eval summary --persona <name>` or `--all-personas`).
+4. **DSPy + GEPA Skill & Tool Self-Evolution (`personas/<name>/evolution/`)**:
+   - `evolution/`: Prompt, skill, and tool mutation modules (`CompositeFitness` + `ConstraintValidator`).
+   - `evolve_agent.sh`: CLI runner defaulting to the hosting persona.
+   - `tests/`: Self-evolution constraint and fitness unit tests.
 
 ## Composition rule
 
