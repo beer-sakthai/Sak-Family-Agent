@@ -79,7 +79,6 @@ COPY_DIRS = (
     "dashboard",
     "data",
     "docs",
-    "library",
     "scripts",
     "tests",
 )

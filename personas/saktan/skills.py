@@ -241,11 +241,12 @@ def default_skill_roots(persona: str | None = None) -> tuple[Path, ...]:
     using SakThai's — otherwise identical to omitting it.
     """
     gemini_ext = gemini_extensions_dir()
+    curated_root = persona_skills_dir(persona).parent if persona else CURATED_LIBRARY_DIR
     roots = [
         persona_skills_dir(persona) if persona else SKILLS_DIR,
         SHARED_SKILLS_DIR,
         LIBRARY_DIR,
-        CURATED_LIBRARY_DIR,
+        curated_root,
         sakthai_home() / "extensions",
     ]
     if gemini_ext.is_dir():
