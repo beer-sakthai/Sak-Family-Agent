@@ -311,12 +311,12 @@ class ApiEnvelope(TypedDict, Generic[T]):
     data: T
 
 
-#: The four operational states of the Hermes v6 Charge System.
+#: The four operational states of the v6 Charge System.
 ChargeState = Literal["Optimal", "Active", "Low", "Critical"]
 
 
 class ChargeReport(TypedDict):
-    """Hermes charge state for a persona recorded in memory.
+    """Charge state for a persona recorded in memory.
 
     ``level`` is an integer percentage (0–100). ``state`` is the v6 bucket:
     Optimal (80–100), Active (50–79), Low (20–49), Critical (0–19).

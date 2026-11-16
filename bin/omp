@@ -13,8 +13,7 @@ if [ "$COMMAND" = "team" ]; then
         # We can route specific tasks here. For now, if it's 'smoke', we run doctor.
         if [[ "$*" == *"--task smoke"* ]]; then
             echo "=> [omp] Intercepted smoke task. Running local monorepo smoke pass..."
-            cd "$(dirname "$0")/../infra/hermes-agents" || exit 1
-            python3 doctor.py
+            python3 "$(dirname "$0")/../scripts/diagnose_personas.py"
         else
             echo "=> [omp] Emulating orchestrator run for tasks: $@"
             echo "=> [omp] (Mock execution complete)"
@@ -24,8 +23,7 @@ if [ "$COMMAND" = "team" ]; then
     fi
 elif [ "$COMMAND" = "doctor" ]; then
     echo "=> [omp] Running workspace diagnostics..."
-    cd "$(dirname "$0")/../infra/hermes-agents" || exit 1
-    python3 doctor.py
+    python3 "$(dirname "$0")/../scripts/diagnose_personas.py"
 else
     echo "Oh My Product (omp) - Local Monorepo Mock"
     echo "Usage:"

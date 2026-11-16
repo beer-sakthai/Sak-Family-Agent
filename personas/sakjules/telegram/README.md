@@ -34,7 +34,7 @@ python -m sakthai.telegram.bot
 
 ## Persona setup
 
-For Hermes-free deployments, point `SAKTHAI_SYSTEM_PROMPT_FILE` at the agent's
+For standalone deployments, point `SAKTHAI_SYSTEM_PROMPT_FILE` at the agent's
 `SOUL.md` file. The bot prepends that persona block before the shared runtime
 prompt, so one code path can serve SakKing, SakThai, SakSee, SakSit, SakTan,
 and SakJules.

@@ -2,7 +2,7 @@
 
 > **Agent**: SakThai 🤗 (Main Lead & HF Master)
 > **Repository**: `Sak-Family-Agent`
-> **Hermes Profile**: `infra/hermes-agents/default/`
+> **Runtime**: Standalone sakthai (SAKTHAI_HOME=~/.sakthai)
 > **Cycle Target**: >75% Benchmark Accuracy & $0.00 USD Financial Spend
 
 ---
@@ -42,7 +42,7 @@ flowchart LR
 
 ### Stage 1: 💭 Dream (Ideation & Pre-Task Alignment)
 - **Vision**: Define the 100% custom open-weights `Nanthasit/*` ecosystem vision (`sakthai-combined-v6`, `sakthai-context-7b-tools`, `sakthai-context-1.5b-tools-v2`, `sakthai-embedding-multilingual`) and coordinate all 5 siblings under a $0.00 USD cost policy.
-- **Goal**: Full alignment across Google Antigravity IDE, AGY CLI (`agy`), Google ADK (`agents-cli`), Hermes Agent (`infra/hermes-agents/default/`), and `sakthai --persona sakthai`.
+- **Goal**: Full alignment across Google Antigravity IDE, AGY CLI (`agy`), Google ADK (`agents-cli`), and standalone `sakthai --persona sakthai`.
 
 ---
 

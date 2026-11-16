@@ -436,8 +436,7 @@ every command it ran inherited it, alongside an allow-list that included
   approvals stay manual. Remote MCP headers may hold only `${VAR}` references,
   not literal credentials.
   `tests/test_soul_consistency.py::test_soul_carries_the_shared_security_rules`
-  checks that all six SOULs, and the Hermes profile SOULs that link to them,
-  carry the same Security Rules.
+  checks that all six SOULs carry the same Security Rules.
 
 
 ### 19. Five security checks no test could fail

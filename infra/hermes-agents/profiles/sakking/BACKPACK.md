@@ -1,1 +1,0 @@
-../../../../personas/sakking/BACKPACK.md

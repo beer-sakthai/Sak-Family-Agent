@@ -123,16 +123,6 @@ def test_soul_cli_commands_parse_against_the_real_cli(slug: str) -> None:
             pytest.fail(f"{slug}/SOUL.md: `{line}` does not parse: {exc.format_message()}")
 
 
-HERMES_SOULS: dict[str, Path] = {
-    slug: REPO_ROOT
-    / "infra"
-    / "hermes-agents"
-    / ("default" if slug == "sakthai" else f"profiles/{slug}")
-    / "SOUL.md"
-    for slug in PERSONAS
-}
-
-
 def security_rules(path: Path) -> str:
     """The ``## Security Rules`` section of a SOUL file, or "" if it has none."""
     text = path.read_text(encoding="utf-8")
@@ -144,7 +134,7 @@ def security_rules(path: Path) -> str:
 
 @pytest.mark.parametrize("slug", sorted(PERSONAS))
 def test_soul_carries_the_shared_security_rules(slug: str) -> None:
-    """Every SOUL, and its Hermes profile copy, carries the same Security Rules.
+    """Every SOUL carries the same Security Rules.
 
     The SOUL is injected as the agent's system prompt, so it is the only place
     these rules reach the model: a persona without the section never hears
@@ -152,10 +142,10 @@ def test_soul_carries_the_shared_security_rules(slug: str) -> None:
     """
     canonical = security_rules(PERSONAS_DIR / "sakthai" / "SOUL.md")
     assert canonical, "personas/sakthai/SOUL.md has no '## Security Rules' section"
-    for path in (PERSONAS_DIR / slug / "SOUL.md", HERMES_SOULS[slug]):
-        assert security_rules(path) == canonical, (
-            f"{path.relative_to(REPO_ROOT)} Security Rules differ from personas/sakthai/SOUL.md"
-        )
+    path = PERSONAS_DIR / slug / "SOUL.md"
+    assert security_rules(path) == canonical, (
+        f"{path.relative_to(REPO_ROOT)} Security Rules differ from personas/sakthai/SOUL.md"
+    )
 
 
 def test_shared_soul_lists_all_six_handles() -> None:
@@ -285,6 +275,9 @@ def test_persona_markdown_files_match_disk_skills_and_canonical_paths(slug: str)
         assert "personas/sakthai/agent-self-evolution" not in text, (
             f"personas/{slug}/{md_name} references removed path 'personas/sakthai/agent-self-evolution'"
         )
+        assert "hermes" not in text.lower(), (
+            f"personas/{slug}/{md_name} still contains Hermes reference"
+        )
 
     backpack = (pdir / "BACKPACK.md").read_text(encoding="utf-8")
     assert f"({overlay_count} Overlay Skills + {shared_count} Shared Skills)" in backpack
@@ -295,5 +288,6 @@ def test_persona_markdown_files_match_disk_skills_and_canonical_paths(slug: str)
 
     agents_md = (pdir / "AGENTS.md").read_text(encoding="utf-8")
     assert (
-        "The lead, **SakThai**, lives on the reserved default profile (`~/.hermes`)." in agents_md
+        "The lead, **SakThai**, coordinates the family and runs standalone via `sakthai`."
+        in agents_md
     )

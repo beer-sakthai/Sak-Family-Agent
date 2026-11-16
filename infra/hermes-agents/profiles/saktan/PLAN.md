@@ -1,1 +1,0 @@
-../../../../personas/saktan/PLAN.md

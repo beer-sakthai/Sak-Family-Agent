@@ -6,11 +6,11 @@
 # skill to that agent's OWN GitHub repo (one repo per agent) on a review branch
 # and opens a PR. The live agent is left untouched unless you pass --apply.
 #
-# Supported agents: sakthai, sakjules, sakking, saksee, saksit, saktan, hermes
+# Supported agents: sakthai, sakjules, sakking, saksee, saksit, saktan
 # Defaults to the persona directory in which this script is executed.
 #
 # Usage:
-#   ./evolve_agent.sh <hermes|sakthai|saksee|saksit> --skill <name> [opts...]
+#   ./evolve_agent.sh <sakthai|saksee|saksit|sakking|sakjules|saktan> --skill <name> [opts...]
 #   ./evolve_agent.sh saksit  --skill github-auth --iterations 8
 #   ./evolve_agent.sh saksee  --skill arxiv --dry-run          # validate, $0 spend
 #   ./evolve_agent.sh sakthai --skill arxiv --apply --merge    # evolve, apply live, auto-merge
@@ -24,14 +24,14 @@
 # Any other flag is forwarded verbatim to `python -m evolution.skills.evolve_skill`
 # (e.g. --iterations, --optimizer-model, --eval-source, --run-tests).
 #
-# Env overrides: GH_OWNER (default beer-sakthai), HERMES_SKILLS_REPO_ROOT
-# (default ~/hermes-agent-skills), GIT_AUTHOR_NAME, GIT_AUTHOR_EMAIL,
+# Env overrides: GH_OWNER (default beer-sakthai), SAK_SKILLS_REPO_ROOT
+# (default ~/sak-agent-skills), GIT_AUTHOR_NAME, GIT_AUTHOR_EMAIL,
 # REPO_VISIBILITY (private|public, default private).
 
 set -euo pipefail
 
 EVO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SKILLS_REPO_ROOT="${HERMES_SKILLS_REPO_ROOT:-$HOME/hermes-agent-skills}"
+SKILLS_REPO_ROOT="${SAK_SKILLS_REPO_ROOT:-${HERMES_SKILLS_REPO_ROOT:-$HOME/sak-agent-skills}}"
 GH_OWNER="${GH_OWNER:-beer-sakthai}"
 GIT_NAME="${GIT_AUTHOR_NAME:-SakThai Agents}"
 GIT_EMAIL="${GIT_AUTHOR_EMAIL:-gensandee@gmail.com}"
@@ -51,15 +51,9 @@ else
 fi
 
 case "$AGENT" in
-  hermes)
-    PROFILE_REPO="${HERMES_AGENT_REPO:-$HOME/.hermes}"
-    REPO="hermes-skills"
-    ;;
   sakthai|sakjules|sakking|saksee|saksit|saktan)
     if [ -d "$EVO_DIR/skills" ] && [ "$AGENT" = "$DEFAULT_AGENT" ]; then
       PROFILE_REPO="$EVO_DIR"
-    elif [ -d "$HOME/.hermes/profiles/$AGENT/skills" ]; then
-      PROFILE_REPO="$HOME/.hermes/profiles/$AGENT"
     elif [ -d "$EVO_DIR/../$AGENT/skills" ]; then
       PROFILE_REPO="$EVO_DIR/../$AGENT"
     else
@@ -68,7 +62,7 @@ case "$AGENT" in
     REPO="${AGENT}-skills"
     ;;
   *)
-    echo "usage: $0 [sakthai|sakjules|sakking|saksee|saksit|saktan|hermes] --skill <name> [opts]"; exit 2
+    echo "usage: $0 [sakthai|sakjules|sakking|saksee|saksit|saktan] --skill <name> [opts]"; exit 2
     ;;
 esac
 FULL_REPO="$GH_OWNER/$REPO"
@@ -121,7 +115,7 @@ ensure_repo() {
     if [ "$PUSH" = 1 ]; then
       if ! gh repo view "$FULL_REPO" >/dev/null 2>&1; then
         gh repo create "$FULL_REPO" --"$REPO_VISIBILITY" \
-          --description "Self-evolving Hermes skills for the $AGENT agent (GEPA)." >/dev/null
+          --description "Self-evolving skills for the $AGENT agent (GEPA)." >/dev/null
       fi
       git remote get-url origin >/dev/null 2>&1 || \
         git remote add origin "https://github.com/$FULL_REPO.git"
@@ -156,7 +150,7 @@ echo "[ok] $AGENT repo ready → $FULL_REPO ($LOCAL)"
 setup_venv
 cd "$EVO_DIR"
 echo "[run] evolving '$SKILL' for $AGENT (profile: $PROFILE_REPO)"
-python -m evolution.skills.evolve_skill --hermes-repo "$PROFILE_REPO" "${PASS[@]}"
+python -m evolution.skills.evolve_skill --repo "$PROFILE_REPO" "${PASS[@]}"
 
 [ "$DRYRUN" = 1 ] && { echo "[dry-run] validated, nothing committed."; exit 0; }
 
@@ -186,7 +180,7 @@ git checkout -q -B "$BR"
 git add -A
 if git diff --cached --quiet; then echo "[skip] evolved variant identical to live skill; nothing to commit"; exit 0; fi
 git commit -q -m "evolve($AGENT): $SKILL via GEPA" \
-  -m "Evolved with DSPy+GEPA from hermes-agent-self-evolution. Review the diff before merge." \
+  -m "Evolved with DSPy+GEPA from sak-agent-self-evolution. Review the diff before merge." \
   -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 
 if [ "$PUSH" = 1 ]; then

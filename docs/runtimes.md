@@ -57,25 +57,24 @@ This lets Gemini CLI read from and write to the same shared memory database (`~/
 
 ---
 
-## 🔌 Consuming External MCP Servers (e.g. Hermes)
+## 🔌 Consuming External MCP Servers
 
 The reverse of the above: during `sakthai run`, SakThai auto-loads external MCP
 servers from `~/.sakthai/mcp.json` and merges their tools into the loop,
-namespaced `<server>__<tool>`. For example, to give SakThai the
-[Hermes](https://github.com/) agent's conversation/messaging tools over local
-stdio (no API cost):
+namespaced `<server>__<tool>`. For example, to give SakThai external
+agent conversation/messaging tools over local stdio (no API cost):
 
 ```json
 {
   "mcpServers": {
-    "hermes": { "command": "hermes", "args": ["mcp", "serve"] }
+    "external-tools": { "command": "external-cli", "args": ["mcp", "serve"] }
   }
 }
 ```
 
-Hermes' tools then appear as `hermes__*`. Confirm discovery with a cost-free
-preflight: `sakthai run "list tools" --dry-run`. Full recipes (Hermes both
-directions, Composio, skill sync) are in [integrations.md](./integrations.md).
+The tools then appear as `external-tools__*`. Confirm discovery with a cost-free
+preflight: `sakthai run "list tools" --dry-run`. Full recipes (integrations,
+Composio, skill sync) are in [integrations.md](./integrations.md).
 
 ---
 

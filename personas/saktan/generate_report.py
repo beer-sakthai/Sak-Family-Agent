@@ -121,7 +121,7 @@ def build_report(output_path: str = "reports/phase1_validation_report.pdf"):
 
     # ── TITLE PAGE ──────────────────────────────────────────────────────
     story.append(Spacer(1, 1.5 * inch))
-    story.append(Paragraph("🧬 Hermes Agent Self-Evolution", styles["Title2"]))
+    story.append(Paragraph("🧬 Sak Agent Self-Evolution", styles["Title2"]))
     story.append(Paragraph("Phase 1 Validation Report", styles["Subtitle"]))
     story.append(Spacer(1, 0.3 * inch))
     story.append(HRFlowable(width="60%", thickness=1, color=HexColor("#cccccc")))
@@ -140,7 +140,7 @@ def build_report(output_path: str = "reports/phase1_validation_report.pdf"):
     )
     story.append(
         Paragraph(
-            "Organization: Nous Research",
+            "Organization: House of Sak",
             ParagraphStyle(
                 "OrgStyle",
                 parent=styles["Normal"],
@@ -152,7 +152,7 @@ def build_report(output_path: str = "reports/phase1_validation_report.pdf"):
     )
     story.append(
         Paragraph(
-            "Repository: github.com/NousResearch/hermes-agent-self-evolution",
+            "Repository: github.com/beer-sakthai/Sak-Family-Agent",
             ParagraphStyle(
                 "RepoStyle",
                 parent=styles["Normal"],
@@ -169,8 +169,8 @@ def build_report(output_path: str = "reports/phase1_validation_report.pdf"):
     story.append(Paragraph("Executive Summary", styles["SectionHead"]))
     story.append(
         Paragraph(
-            "Hermes Agent Self-Evolution is a standalone optimization pipeline that uses DSPy and GEPA "
-            "(Genetic-Pareto Prompt Evolution) to automatically improve Hermes Agent's skills, "
+            "Sak Agent Self-Evolution is a standalone optimization pipeline that uses DSPy and GEPA "
+            "(Genetic-Pareto Prompt Evolution) to automatically improve Sak Family Agent's skills, "
             "tool descriptions, system prompts, and code through evolutionary search — all via "
             "API calls with no GPU training required.",
             styles["BodyJust"],
@@ -218,9 +218,9 @@ def build_report(output_path: str = "reports/phase1_validation_report.pdf"):
     story.append(Paragraph("Background", styles["SectionHead"]))
     story.append(
         Paragraph(
-            "Hermes Agent is a general-purpose AI agent built by Nous Research that uses tool-calling "
-            "LLMs to complete tasks via terminal commands, file operations, web search, code execution, "
-            "and more. Its behavior is governed by three layers:",
+            "Sak Family Agent is a family of AI agent personas "
+            "using tool-calling LLMs to complete tasks via terminal commands, file operations, web search, "
+            "code execution, and more. Its behavior is governed by three layers:",
             styles["BodyJust"],
         )
     )
@@ -254,7 +254,7 @@ def build_report(output_path: str = "reports/phase1_validation_report.pdf"):
         Paragraph(
             "The <b>instructions layer</b> (highlighted) is the sweet spot for automated optimization: "
             "it's pure text that LLMs can meaningfully mutate, changes are immediately deployable, and "
-            "results are directly measurable. Hermes Agent Self-Evolution targets this layer.",
+            "results are directly measurable. Sak Agent Self-Evolution targets this layer.",
             styles["BodyJust"],
         )
     )
@@ -301,7 +301,7 @@ def build_report(output_path: str = "reports/phase1_validation_report.pdf"):
 
     story.append(Paragraph("The Optimization Pipeline", styles["SubSection"]))
     pipeline_steps = [
-        "1. <b>Load skill</b> — Read the SKILL.md file from the hermes-agent repository",
+        "1. <b>Load skill</b> — Read the SKILL.md file from the agent repository",
         "2. <b>Generate eval dataset</b> — An LLM reads the skill and generates realistic "
         "(task, expected_behavior) pairs as a rubric-based evaluation set",
         "3. <b>Wrap as DSPy module</b> — The skill text becomes a parameterized DSPy module "
@@ -533,9 +533,9 @@ def build_report(output_path: str = "reports/phase1_validation_report.pdf"):
     story.append(Spacer(1, 0.1 * inch))
     story.append(
         Paragraph(
-            "The hermes-agent repository is never modified directly. All evolution output is written "
-            "to the hermes-agent-self-evolution repository, and improvements are proposed as pull requests "
-            "against hermes-agent for human review.",
+            "The agent repository is never modified directly. All evolution output is written "
+            "to the evolution output repository, and improvements are proposed as pull requests "
+            "for human review.",
             styles["BodyJust"],
         )
     )
@@ -592,7 +592,7 @@ def build_report(output_path: str = "reports/phase1_validation_report.pdf"):
         "multi-dimensional rubric scoring for more accurate fitness signals.",
         "4. <b>Benchmark gating</b> — Run TBLite before/after evolution to ensure no regressions "
         "in overall agent capability.",
-        "5. <b>PR automation</b> — Auto-generate pull requests against hermes-agent with evolved "
+        "5. <b>PR automation</b> — Auto-generate pull requests against the agent repository with evolved "
         "skills, including full metrics and diffs.",
     ]
     for step in next_steps:
@@ -604,11 +604,11 @@ def build_report(output_path: str = "reports/phase1_validation_report.pdf"):
     story.append(Spacer(1, 0.1 * inch))
     story.append(
         Paragraph(
-            f"Hermes Agent Self-Evolution — Phase 1 Validation Report — {datetime.now().strftime('%B %d, %Y')} — Nous Research",
+            f"Sak Agent Self-Evolution — Phase 1 Validation Report — {datetime.now().strftime('%B %d, %Y')} — House of Sak",
             styles["Footer"],
         )
     )
-    story.append(Paragraph("github.com/NousResearch/hermes-agent-self-evolution", styles["Footer"]))
+    story.append(Paragraph("github.com/beer-sakthai/Sak-Family-Agent", styles["Footer"]))
 
     doc.build(story)
     return output_path

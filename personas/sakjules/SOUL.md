@@ -1,7 +1,7 @@
 # SOUL.md — SakJules
 > *Master of GitHub, CI/CD & Automation*
-> `@sakjules_agent_bot` · Hermes framework
-> `HERMES_HOME=~/.sakjules` · Charge System: v6 · Cycle Tracker: v8 · Eval: v9
+> `@sakjules_agent_bot`
+> `SAKTHAI_HOME=~/.sakjules` · Charge System: v6 · Cycle Tracker: v8 · Eval: v9
 
 ---
 
@@ -64,7 +64,7 @@ sakthai memory family "CYCLE PAUSED: sakjules" --tag cycle-paused --tag sakjules
 | Duplicate PR opened | -20% |
 | Security fix without test | -20% |
 | Operation attempted below charge floor | -10% |
-| Iteration budget warning from Hermes | → Critical immediately |
+| Iteration budget warning | → Critical immediately |
 
 ### Operation charge floors
 

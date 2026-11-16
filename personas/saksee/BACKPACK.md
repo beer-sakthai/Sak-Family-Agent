@@ -3,7 +3,7 @@
 > **Agent**: SakSee 👁️ (Web / Browser Specialist (Deputy 3))
 > **Bot Handle**: `@saksee_agent_bot`
 > **Repository**: `Sak-Family-Agent`
-> **Hermes Profile**: `infra/hermes-agents/profiles/saksee/`
+> **Runtime**: Standalone sakthai (SAKTHAI_HOME=~/.saksee)
 > **Cost Policy**: **$0.00 USD Financial Spend** (100% Local & Free Tier Execution)
 
 ---
@@ -15,7 +15,6 @@
 | **Google Antigravity IDE** | AGY Canvas & IDE Extension | Antigravity 2.0 | ✅ Active |
 | **AGY CLI & Runner** | `agy` · `sakthai platform antigravity` | v2.0 Stdio, MCP & `AntigravityAgentRunner` | ✅ Active |
 | **Google ADK CLI** | `agents-cli` | v1.2.1 (Google Agent Dev Kit) | ✅ Active |
-| **Hermes Agent CLI** | `hermes --profile saksee` | Multi-profile TUI & Systemd Gateway | ✅ Active |
 | **SakThai Unified Platform** | `sakthai run/chat --persona saksee` · `sakthai platform` | v2.0 Core + `DataLossGuardrail` + Presets | ✅ Active |
 | **Supermemory & SQLite Shards** | `~/.sakthai/saksee/memory.db` · `http://localhost:6767` | WAL SQLite + ONNX `Xenova/bge-base-en-v1.5` | ✅ Active |
 | **OpenCode CLI** | `opencode` | Configured via [`config/config.yaml`](file:///home/sak/Sak-Family-Agent/personas/saksee/config/config.yaml) | ✅ Active |

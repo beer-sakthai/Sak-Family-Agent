@@ -2,7 +2,7 @@
 
 > **Agent**: SakSit 📣 (Social / Content Specialist)
 > **Repository**: `Sak-Family-Agent`
-> **Hermes Profile**: `infra/hermes-agents/profiles/saksit/`
+> **Runtime**: Standalone sakthai (SAKTHAI_HOME=~/.saksit)
 > **Cycle Target**: >75% Benchmark Accuracy & $0.00 USD Financial Spend
 
 ---
@@ -42,7 +42,7 @@ flowchart LR
 
 ### Stage 1: 💭 Dream (Ideation & Pre-Task Alignment)
 - **Vision**: Tell Beer's and the Sak Family's story authentically across Hugging Face model/dataset cards and social channels without hype, fabrication, or unverified claims.
-- **Goal**: Full alignment across Google Antigravity IDE, AGY CLI (`agy`), Google ADK (`agents-cli`), Hermes Agent (`infra/hermes-agents/profiles/saksit/`), and `sakthai --persona saksit`.
+- **Goal**: Full alignment across Google Antigravity IDE, AGY CLI (`agy`), Google ADK (`agents-cli`), and standalone `sakthai --persona saksit`.
 
 ---
 

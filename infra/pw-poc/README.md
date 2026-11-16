@@ -14,7 +14,7 @@ node test-keyboard.js
 
 Outputs `TAB_ORDER_JSON`, `FOCUS_VISIBILITY`, and `last-focus.png`.
 
-## Run inside a Hermes bot's Modal sandbox
+## Run inside a bot's Modal sandbox
 The sandbox can't see the host filesystem, so clone this repo first:
 ```bash
 cd /tmp && git clone <this-repo-url> pw-poc && cd pw-poc

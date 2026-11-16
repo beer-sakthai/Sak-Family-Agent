@@ -2,7 +2,7 @@
 
 > **Agent**: SakSee 👁️ (Web / Browser Specialist (Deputy 3))
 > **Repository**: `Sak-Family-Agent`
-> **Hermes Profile**: `infra/hermes-agents/profiles/saksee/`
+> **Runtime**: Standalone sakthai (SAKTHAI_HOME=~/.saksee)
 > **Cycle Target**: >75% Benchmark Accuracy & $0.00 USD Financial Spend
 
 ---
@@ -42,7 +42,7 @@ flowchart LR
 
 ### Stage 1: 💭 Dream (Ideation & Pre-Task Alignment)
 - **Vision**: Provide fast, accurate, zero-cost live web intelligence, Space health monitoring, and Playwright visual verification for the entire Sak Family without exposing any sibling to raw web prompt injection.
-- **Goal**: Full alignment across Google Antigravity IDE, AGY CLI (`agy`), Google ADK (`agents-cli`), Hermes Agent (`infra/hermes-agents/profiles/saksee/`), and `sakthai --persona saksee`.
+- **Goal**: Full alignment across Google Antigravity IDE, AGY CLI (`agy`), Google ADK (`agents-cli`), and standalone `sakthai --persona saksee`.
 
 ---
 

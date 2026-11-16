@@ -66,11 +66,11 @@ def _as_str_list(value: Any) -> list[str]:
 
 
 def _metadata_list(front: dict[str, Any], field: str) -> list[str]:
-    """FIELD from ``metadata.sakthai``, else ``metadata.hermes``, else the top level.
+    """FIELD from ``metadata.sakthai``, else legacy metadata, else the top level.
 
-    ``metadata.sakthai`` is where new skills belong; skills written for the
-    Hermes runtime keep their metadata under ``metadata.hermes``, and older
-    ones put it at the top level. Reading all three keeps those visible.
+    ``metadata.sakthai`` is where new skills belong; legacy skills may
+    keep their metadata under ``metadata.hermes``, and older ones put it
+    at the top level. Reading all sections keeps existing skill packages visible.
     """
     metadata = front.get("metadata")
     sections = (

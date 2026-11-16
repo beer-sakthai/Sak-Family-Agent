@@ -3,7 +3,7 @@
 > **Agent**: SakJules 🔧 — Master of GitHub, CI/CD & Automation
 > **Bot Handle**: `@sakjules_agent_bot`
 > **Repository**: `Sak-Family-Agent`
-> **Hermes Profile**: `infra/hermes-agents/profiles/sakjules/`
+> **Runtime**: Standalone sakthai (SAKTHAI_HOME=~/.sakjules)
 > **Source of Truth**: Siblings write tagged observations to their own SQLite shards (`~/.sakthai/<agent>/memory.db`); `sakthai memory family` reads them across all 6 agents.
 
 ---

@@ -82,15 +82,6 @@ EXPECTED_PACKAGE_ITEMS = {
     "telegram",
     "web",
 }
-EXPECTED_HERMES_ITEMS = {
-    "BACKPACK.md",
-    "CYCLE.md",
-    "HANDOFF.md",
-    "MEMORY.md",
-    "PLAN.md",
-    "SOUL.md",
-    "config.yaml",
-}
 
 
 class TestPersonaStructureParity(unittest.TestCase):
@@ -145,15 +136,12 @@ class TestPersonaStructureParity(unittest.TestCase):
                     f"personas/{persona}/agent-self-evolution must not exist",
                 )
 
-    def test_hermes_profiles_expose_all_seven_items(self) -> None:
+    def test_hermes_agents_directory_does_not_exist(self) -> None:
         hermes_root = REPO_ROOT / "infra" / "hermes-agents"
-        targets = [hermes_root / "default"] + [
-            hermes_root / "profiles" / p for p in PERSONAS if p != "sakthai"
-        ]
-        for target in targets:
-            with self.subTest(target=str(target.relative_to(REPO_ROOT))):
-                actual = {item.name for item in target.iterdir()}
-                self.assertEqual(actual, EXPECTED_HERMES_ITEMS)
+        self.assertFalse(
+            hermes_root.exists(),
+            "infra/hermes-agents must not exist; personas run standalone via sakthai",
+        )
 
 
 if __name__ == "__main__":

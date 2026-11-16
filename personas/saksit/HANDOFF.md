@@ -3,7 +3,7 @@
 > **Agent**: SakSit 📣 — Social / Content Specialist
 > **Bot Handle**: `@saksit_agent_bot`
 > **Repository**: `Sak-Family-Agent`
-> **Hermes Profile**: `infra/hermes-agents/profiles/saksit/`
+> **Runtime**: Standalone sakthai (SAKTHAI_HOME=~/.saksit)
 > **Source of Truth**: Siblings write tagged observations to their own SQLite shards (`~/.sakthai/<agent>/memory.db`); `sakthai memory family` reads them across all 6 agents.
 
 ---

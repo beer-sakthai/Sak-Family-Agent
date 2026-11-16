@@ -1,5 +1,5 @@
 #!/bin/bash
-# pre-push — Hermes Zero-Exposure gate
+# pre-push — Zero-Exposure gate
 # Blocks git push to origin/main unless explicitly approved.
 # This enforces the SOUL.md policy: "pushing to GitHub remote requires
 # explicit user approval."
@@ -21,7 +21,7 @@ Only push with Beer's direct instruction.
 "
 
 # Allow --no-verify pushes (user has explicitly opted in)
-if [[ "$HUSKY_SKIP" == "1" ]] || [[ "$HERMES_PUSH_ALLOW" == "1" ]]; then
+if [[ "$HUSKY_SKIP" == "1" ]] || [[ "$SAKTHAI_PUSH_ALLOW" == "1" ]] || [[ "$HERMES_PUSH_ALLOW" == "1" ]]; then
   exit 0
 fi
 

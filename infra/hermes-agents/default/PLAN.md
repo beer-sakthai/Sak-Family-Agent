@@ -1,1 +1,0 @@
-../../../personas/sakthai/PLAN.md

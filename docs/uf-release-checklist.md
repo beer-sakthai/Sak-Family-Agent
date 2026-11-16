@@ -26,7 +26,7 @@ Use before every production cut to `main` or a published HF artifact.
 
 ## Post-release verification
 - [ ] `sakthai doctor` runs clean on a fresh env
-- [ ] `hermes mcp test composio` confirms HF connection end-to-end
+- [ ] `sakthai mcp test composio` confirms HF connection end-to-end
 - [ ] API surface (`/api/stages`, `/api/ecosystem`) responds without exposing secrets
 
 ## Rollback

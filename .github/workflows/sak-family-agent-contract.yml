@@ -10,7 +10,6 @@ on:
       - "personas/**/config/**"
       - "personas/**/skills/**"
       - "personas/shared/**"
-      - "infra/hermes-agents/**"
       - "scripts/compose_persona.py"
       - "scripts/diagnose_personas.py"
       - "scripts/export_agent_repo.py"
@@ -30,7 +29,6 @@ on:
       - "personas/**/config/**"
       - "personas/**/skills/**"
       - "personas/shared/**"
-      - "infra/hermes-agents/**"
       - "scripts/compose_persona.py"
       - "scripts/diagnose_personas.py"
       - "scripts/export_agent_repo.py"
@@ -113,3 +111,4 @@ jobs:
           tests/test_export_agent_repo.py
           tests/test_persona_guardrails_parity.py
           tests/test_persona_security_config.py
+          tests/test_persona_structure_parity.py

@@ -2,9 +2,8 @@
 """Export a standalone agent repo snapshot for one persona.
 
 The source workspace remains the shared engineering tree. This helper materializes
-one standalone repository per persona by copying the shared core, the selected
-persona overlay, and the matching Hermes profile, then generating persona-specific
-root docs.
+one standalone repository per persona by copying the shared core and the selected
+persona overlay, then generating persona-specific root docs.
 """
 
 from __future__ import annotations
@@ -80,7 +79,6 @@ COPY_DIRS = (
     "dashboard",
     "data",
     "docs",
-    "infra/hermes-agents",
     "library",
     "scripts",
     "tests",
@@ -149,8 +147,7 @@ Standalone home for {meta["display"]} ({meta["handle"]}), {meta["summary"]}.
 
 This repo carries the shared Sak agent core plus the persona-specific overlay for
 {meta["display"]}. Shared skills live under `personas/shared/skills/`, and
-persona-owned files live under `personas/{persona}/` and
-`infra/hermes-agents/profiles/{persona}/`.
+persona-owned files live under `personas/{persona}/`.
 
 ## User Context
 
@@ -182,7 +179,6 @@ python -m pytest tests/ -q
 - `sakthai/` - core agent package, memory, tools, and CLI
 - `personas/shared/skills/` - shared skills used by this persona
 - `personas/{persona}/` - persona SOUL, config, and overlay skills
-- `infra/hermes-agents/profiles/{persona}/` - live Hermes deployment profile
 - `packages/agent-self-evolution/` - DSPy + GEPA workflow for improving skills
 - `scripts/` - composition, export, and diagnostics helpers
 - `tests/` - hermetic unit and integration tests
@@ -243,8 +239,7 @@ def _render_agents_md(persona: str) -> str:
 
 This repository is the standalone `{meta["display"]}` agent repo. Core source
 code lives in `sakthai/`, shared skills live in `personas/shared/skills/`, and
-persona-owned files live in `personas/{persona}/` plus
-`infra/hermes-agents/profiles/{persona}/`. Tests live in `tests/` and should
+persona-owned files live in `personas/{persona}/`. Tests live in `tests/` and should
 stay hermetic.
 
 ## Agent Operating Boundary
@@ -276,9 +271,8 @@ changing behavior.
 ## Security & Configuration Tips
 
 Never commit secrets from `.env`, local tool caches, or credential files. Route
-agent-facing changes through the existing seams (`sakthai/` for runtime logic,
-`personas/{persona}/` for persona content, and `infra/hermes-agents/profiles/{persona}/`
-for deployment settings).
+agent-facing changes through the existing seams (`sakthai/` for runtime logic
+and `personas/{persona}/` for persona content and settings).
 """
 
 
@@ -294,7 +288,7 @@ This file provides guidance to Claude Code when working in the standalone
 This repo is the standalone home for {meta["display"]} ({meta["handle"]}).
 The core agent code lives in `sakthai/`; shared skills live in
 `personas/shared/skills/`; persona-specific content lives in
-`personas/{persona}/` and `infra/hermes-agents/profiles/{persona}/`.
+`personas/{persona}/`.
 
 ## Operating Rules
 
@@ -338,8 +332,8 @@ def _render_gemini_md(persona: str) -> str:
     return f"""# {meta["display"]} Agent Repo
 
 This repository is the standalone home for {meta["display"]} ({meta["handle"]}).
-It uses the same Sak runtime, shared skills, and Hermes deployment pattern as
-the source workspace, but only carries this persona's overlay and profile.
+It uses the same Sak runtime and shared skills as the source workspace, but
+only carries this persona's overlay.
 
 ## Operating Rules
 
@@ -370,8 +364,7 @@ python -m pytest tests/ -q
 - Keep shared behavior in the shared core.
 - Use `packages/agent-self-evolution/` when improving this agent through the
   Dream -> Hope -> Care -> Joy -> Trust -> Growth cycle.
-- Keep persona-specific skill and profile changes under `personas/{persona}/`
-  and `infra/hermes-agents/profiles/{persona}/`.
+- Keep persona-specific skill and configuration changes under `personas/{persona}/`.
 - Treat secrets as local runtime state, not source control content.
 """
 
@@ -438,34 +431,6 @@ python scripts/export_agent_repo.py {persona} --out /tmp/{persona}-repo
 """
 
 
-def _prune_hermes_profiles(out: Path, persona: str) -> None:
-    profiles = out / "infra" / "hermes-agents" / "profiles"
-    if profiles.is_dir():
-        for entry in profiles.iterdir():
-            if entry.name != persona:
-                if entry.is_dir():
-                    shutil.rmtree(entry)
-                else:
-                    entry.unlink()
-
-    # SakThai's reserved default profile lives at infra/hermes-agents/default/,
-    # not under profiles/ (SakThai is lead, per CLAUDE.md) — keep it only for
-    # SakThai's own export.
-    default = out / "infra" / "hermes-agents" / "default"
-    if default.is_dir() and persona != "sakthai":
-        shutil.rmtree(default)
-
-
-def _prune_hermes_systemd_services(out: Path, persona: str) -> None:
-    systemd = out / "infra" / "hermes-agents" / "systemd"
-    if not systemd.is_dir():
-        return
-    selected = f"hermes-gateway-{persona}.service"
-    for entry in systemd.glob("hermes-gateway-*.service"):
-        if entry.name != selected:
-            entry.unlink()
-
-
 def _rewrite_cycle_skill_names(out: Path, persona: str) -> None:
     skills = out / "personas" / "shared" / "skills"
     if not skills.is_dir():
@@ -518,10 +483,6 @@ def export_agent_repo(persona: str, out: Path) -> Path:
             src_f = REPO_ROOT / "personas" / "sakthai" / f
             if src_f.is_file():
                 _copy_file(src_f, sakthai_out / f)
-
-    # Only keep the selected persona's deployment material.
-    _prune_hermes_profiles(out, persona)
-    _prune_hermes_systemd_services(out, persona)
 
     # Copy the persona-specific overlay and shared skill library.
     _copy_tree(REPO_ROOT / "personas" / "shared", out / "personas" / "shared")

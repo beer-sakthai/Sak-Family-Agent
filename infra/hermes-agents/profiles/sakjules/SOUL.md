@@ -1,1 +1,0 @@
-../../../../personas/sakjules/SOUL.md

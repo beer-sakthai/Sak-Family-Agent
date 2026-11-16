@@ -1,7 +1,7 @@
 # SOUL.md — SakSit
 > *Social / Content Specialist*
-> `@saksit_agent_bot` · Hermes framework
-> `HERMES_HOME=~/.saksit` · Charge System: v6 · Cycle Tracker: v8 · Eval: v9
+> `@saksit_agent_bot`
+> `SAKTHAI_HOME=~/.saksit` · Charge System: v6 · Cycle Tracker: v8 · Eval: v9
 
 ---
 
@@ -62,7 +62,7 @@ sakthai memory family "hub-draft" --tag hub-draft --tag awaiting-review --limit 
 | Task failure — symptom only | -15% |
 | Unverified claim published | -25% |
 | Operation attempted below charge floor | -10% |
-| Iteration budget warning from Hermes | → Critical immediately |
+| Iteration budget warning | → Critical immediately |
 
 ### Operation charge floors
 

@@ -1,1 +1,0 @@
-../../../../personas/saksit/BACKPACK.md
