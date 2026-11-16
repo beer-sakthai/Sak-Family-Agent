@@ -129,15 +129,14 @@ ensure_repo() {
 # System python3 (3.14) has no working ensurepip here; prefer uv with py3.11.
 setup_venv() {
   local venv="$EVO_DIR/.venv"
+  command -v uv >/dev/null 2>&1 || die "uv is required for self-evolution environment (https://docs.astral.sh/uv/)"
   if [ ! -d "$venv" ]; then
-    if command -v uv >/dev/null 2>&1; then uv venv --python 3.11 "$venv" >/dev/null
-    else python3 -m venv "$venv"; fi
+    uv venv --python 3.11 "$venv" >/dev/null
   fi
   # shellcheck disable=SC1091
   source "$venv/bin/activate"
   if ! python -c "import dspy" 2>/dev/null; then
-    if command -v uv >/dev/null 2>&1; then uv pip install -q -e "$EVO_DIR"'[dev]'
-    else pip install -q -e "$EVO_DIR"'[dev]'; fi
+    uv pip install -q -e "$EVO_DIR"'[dev]'
   fi
 }
 
