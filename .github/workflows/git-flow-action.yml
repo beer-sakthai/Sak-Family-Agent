@@ -1,0 +1,46 @@
+name: Git Flow Action
+
+on:
+  workflow_dispatch:
+    inputs:
+      enable_git_push:
+        description: "Whether to push git tags/releases"
+        required: false
+        default: "false"
+        type: string
+      log_level:
+        description: "Logging verbosity (INFO, DEBUG, ERROR)"
+        required: false
+        default: "INFO"
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gitflow:
+    name: Execute Git Flow Automation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run Git Flow Action
+        uses: kvendingoldo/git-flow-action@ca756ba150c376eb9bf35e3ff3ed591913bb7f11 # v2.16.0
+        with:
+          enable_git_push: ${{ inputs.enable_git_push || 'false' }}
+          log_level: ${{ inputs.log_level || 'INFO' }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
