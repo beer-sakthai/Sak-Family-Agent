@@ -1,0 +1,55 @@
+# Patchbot Vulnerability Scanner Workflow
+# Automated vulnerability scanning, SARIF generation and security alert publication
+
+name: Patchbot Vulnerability Scanner
+
+on:
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+    inputs:
+      fail_on:
+        description: "Minimum severity that fails the job"
+        required: false
+        default: "none"
+        type: choice
+        options:
+          - "none"
+          - "low"
+          - "medium"
+          - "high"
+          - "critical"
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    name: Patchbot Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Scan Vulnerabilities with Patchbot
+        uses: PrismorSec/patchbot@60906559fec33549e4ac97f5f3e707c517342486 # v0.3.0
+        with:
+          path: "."
+          fail-on: ${{ inputs.fail_on || 'none' }}
+          upload-sarif: "true"
+          sarif-output: "patchbot.sarif"
