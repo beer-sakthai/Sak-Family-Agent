@@ -3,6 +3,10 @@ name: Update pull request branches from protected bases
 on:
   push:
     branches: ["main", "staging", "develop"]
+  schedule:
+    # Run a weekly reconciliation so open PR branches stay current even when
+    # no protected-base push event was observed.
+    - cron: "30 3 * * 1"
   workflow_dispatch:
     inputs:
       base_branch:
@@ -42,6 +46,7 @@ jobs:
           # Pushes to staging/develop and manual single-base runs only update
           # pull requests targeting that selected base.
           if [[ "${EVENT_NAME}" == "push" && "${TRIGGER_BRANCH}" == "main" ]] \
+            || [[ "${EVENT_NAME}" == "schedule" ]] \
             || [[ "${REQUESTED_BASE}" == "all" ]]; then
             echo "base_branches=main,staging,develop" >> "${GITHUB_OUTPUT}"
           elif [[ -n "${REQUESTED_BASE}" ]]; then
