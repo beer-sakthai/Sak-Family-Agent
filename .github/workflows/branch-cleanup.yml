@@ -52,12 +52,6 @@ jobs:
       # Read-only: an open pull request's head branch is never eligible.
       pull-requests: read
     steps:
-      - name: Harden the runner
-        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
-        with:
-          use-policy-store: true
-          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
-
       # fetch-depth 0 is what populates refs/remotes/origin/* with every branch,
       # which the classification step below iterates. Credentials are not
       # persisted: the deletions go through the API step, so the git remote never
