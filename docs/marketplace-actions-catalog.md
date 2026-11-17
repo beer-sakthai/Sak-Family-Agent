@@ -16,7 +16,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 
 ---
 
-### 2. Seventy-Four Verified Marketplace Actions
+### 2. Seventy-Eight Verified Marketplace Actions
 
 | Action Name | Upstream Repository | Tag | Immutable Commit SHA | Required Permissions | Purpose |
 |---|---|---|---|---|---|
@@ -94,6 +94,10 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **Dependabot Workflow Action** | [`GavinMeierSonos/dependabot-action`](https://github.com/GavinMeierSonos/dependabot-action) | `v1.10-beta` | `a0789e7b36fd4cf0ba2906e77568ae5deae85f95` | `contents: write`, `pull-requests: write` | Runs containerized Dependabot version updates within custom runner workflows |
 | **Dependabot Fetch Metadata** | [`dependabot/fetch-metadata`](https://github.com/dependabot/fetch-metadata) | `v3.1.0` | `25dd0e34f4fe68f24cc83900b1fe3fe149efef98` | `pull-requests: read` | Extracts structured metadata (semver, ecosystems, alerts) from Dependabot PRs |
 | **Dependabot Issue for PRs** | [`goatandsheep/dependabot-issue-action`](https://github.com/goatandsheep/dependabot-issue-action) | `v1.0.1` | `085384c6fc7247bf455bcd86178c6fc8a5ffc1d5` | `issues: write`, `pull-requests: read` | Automatically creates triage and tracking issues for incoming Dependabot PRs |
+| **Enable Automerge Dependabot** | [`halostatue/dependabot-automerge`](https://github.com/halostatue/dependabot-automerge) | `v1.0.1` | `61a7c53cf7dd144b2e874cb0bc163ed4d3a89f22` | `contents: write`, `pull-requests: write` | Enables GitHub Automerge for Dependabot PRs based on update type |
+| **Automatic Contrib PRs** | [`github/automatic-contrib-prs`](https://github.com/github/automatic-contrib-prs) | `v2.1.8` | `fbb93799968fd54783c29339b95e9fcf888c8709` | `contents: read`, `pull-requests: write` | Opens automated pull request for repositories missing CONTRIBUTING.md guidelines |
+| **Auto Update** | [`chinthakagodawita/autoupdate`](https://github.com/chinthakagodawita/autoupdate) | `v1.7.0` | `0707656cd062a3b0cf8fa9b2cda1d1404d74437e` | `contents: write`, `pull-requests: write` | Automatically updates pull request branches when changes land on base branch |
+| **Generate Roadmap** | [`inat-get/action-is-roadmap`](https://github.com/inat-get/action-is-roadmap) | `v2` | `9fecd4863d39e5033e9c641a381e00d9c1a21265` | `contents: write`, `issues: read` | Generates Mermaid flowchart roadmap from GitHub Milestones and Issues |
 
 
 ---
@@ -1007,6 +1011,58 @@ Automatically creates triage and tracking issues for incoming Dependabot pull re
   uses: goatandsheep/dependabot-issue-action@085384c6fc7247bf455bcd86178c6fc8a5ffc1d5 # v1.0.1
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.74 Enable Automerge for Dependabot ([`.github/workflows/enable-automerge-dependabot.yml`](../.github/workflows/enable-automerge-dependabot.yml))
+Enables GitHub native auto-merge for incoming Dependabot PRs based on target SemVer update rules:
+
+```yaml
+- name: Enable automerge via Dependabot Automerge
+  uses: halostatue/dependabot-automerge@61a7c53cf7dd144b2e874cb0bc163ed4d3a89f22 # v1.0.1
+  with:
+    repo-token: ${{ secrets.GITHUB_TOKEN }}
+    update-type: patch
+    merge-type: squash
+```
+
+### 3.75 Automatic Contrib PRs ([`.github/workflows/auto-contrib-pr.yml`](../.github/workflows/auto-contrib-pr.yml))
+Automatically scans and opens pull requests adding standard CONTRIBUTING.md guidelines to repositories missing contribution documentation:
+
+```yaml
+- name: Open pull request for missing CONTRIBUTING.md
+  uses: github/automatic-contrib-prs@fbb93799968fd54783c29339b95e9fcf888c8709 # v2.1.8
+  env:
+    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    ORGANIZATION: ${{ github.repository_owner }}
+    PR_TITLE: 'docs: add CONTRIBUTING.md guidelines'
+    PR_BODY: 'Standardized CONTRIBUTING.md guidelines for repository development and contribution workflows.'
+    REPOS_JSON_LOCATION: 'repos.json'
+```
+
+### 3.76 Auto Update Branches ([`.github/workflows/autoupdate-branches.yml`](../.github/workflows/autoupdate-branches.yml))
+Automatically updates open pull request branches with latest changes landed on destination branches:
+
+```yaml
+- name: Auto-update branches from destination
+  uses: chinthakagodawita/autoupdate@0707656cd062a3b0cf8fa9b2cda1d1404d74437e # v1.7.0
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    PR_FILTER: 'auto_merge'
+    MERGE_CONFLICT_ACTION: 'ignore'
+    DRY_RUN: 'false'
+```
+
+### 3.77 Generate Roadmap ([`.github/workflows/generate-roadmap.yml`](../.github/workflows/generate-roadmap.yml))
+Generates dynamic Mermaid flowchart roadmaps from repository milestones and issue dependencies:
+
+```yaml
+- name: Generate Mermaid Roadmap
+  uses: inat-get/action-is-roadmap@9fecd4863d39e5033e9c641a381e00d9c1a21265 # v2
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    output_type: 'file'
+    output_path: 'ROADMAP.md'
+    config_file: '.github/roadmap-styles.yml'
 ```
 
 ---

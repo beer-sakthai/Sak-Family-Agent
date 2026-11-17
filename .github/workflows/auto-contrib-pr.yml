@@ -1,0 +1,50 @@
+name: Automatic Contrib PRs
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_org:
+        description: 'Target organization or repository owner'
+        required: false
+        default: 'beer-sakthai'
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  open-contrib-pr:
+    name: Open CONTRIBUTING.md in Repositories
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Ensure repos manifest exists
+        run: |
+          if [ ! -f repos.json ]; then
+            echo "Initializing repos.json manifest for repository"
+            echo '[{"name": "Sak-Family-Agent"}]' > repos.json
+          fi
+
+      - name: Open pull request for missing CONTRIBUTING.md
+        uses: github/automatic-contrib-prs@fbb93799968fd54783c29339b95e9fcf888c8709 # v2.1.8
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ORGANIZATION: ${{ inputs.target_org || github.repository_owner }}
+          PR_TITLE: 'docs: add CONTRIBUTING.md guidelines'
+          PR_BODY: 'Standardized CONTRIBUTING.md guidelines for repository development and contribution workflows.'
+          REPOS_JSON_LOCATION: 'repos.json'

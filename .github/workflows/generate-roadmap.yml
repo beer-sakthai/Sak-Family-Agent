@@ -1,0 +1,44 @@
+name: Generate Roadmap
+
+on:
+  milestone:
+    types: [created, closed, edited]
+  workflow_dispatch:
+    inputs:
+      output_path:
+        description: 'File path for generated roadmap markdown'
+        required: false
+        default: 'ROADMAP.md'
+        type: string
+
+permissions:
+  contents: write
+  issues: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  roadmap:
+    name: Generate Roadmap from Milestones & Issues
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Generate Mermaid Roadmap
+        uses: inat-get/action-is-roadmap@9fecd4863d39e5033e9c641a381e00d9c1a21265 # v2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          output_type: 'file'
+          output_path: ${{ inputs.output_path || 'ROADMAP.md' }}
+          config_file: '.github/roadmap-styles.yml'
