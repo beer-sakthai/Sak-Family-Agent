@@ -35,5 +35,6 @@ jobs:
       - name: Run Auto Merge Bot
         if: github.event.pull_request != null || github.event.issue.pull_request != null
         uses: casassg/auto-merge-bot@5d2a038b1b9ac48a0ac698519001d3e6cd299747 # v0.3.6
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
