@@ -16,7 +16,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 
 ---
 
-## 2. Eighteen Verified Marketplace Actions
+## 2. Thirty Verified Marketplace Actions
 
 | Action Name | Upstream Repository | Tag | Immutable Commit SHA | Required Permissions | Purpose |
 |---|---|---|---|---|---|
@@ -38,6 +38,18 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **Dependabot Auto-Merge** | [`fastify/github-action-merge-dependabot`](https://github.com/fastify/github-action-merge-dependabot) | `v3.15.0` | `73ec4cbb5e56df5591eae286972d5b2201ffe90f` | `contents: write`, `pull-requests: write` | Automated approval and merging for Dependabot PRs |
 | **PR Lint Action** | [`seferov/pr-lint-action`](https://github.com/seferov/pr-lint-action) | `v2.0.0` | `cbef81c153f36262fbcd92fe97d6c6b8736d891d` | `contents: read`, `pull-requests: read` | Conventional Commits regex validation on pull request titles |
 | **PR Label Checker** | [`Optimal-AI/PR-Label-Checker`](https://github.com/Optimal-AI/PR-Label-Checker) | `1.0.3` | `48d46fe6336aedcbb836ca580e86f195f9d14b01` | `contents: read`, `pull-requests: read` | Verifies required category labels on pull requests |
+| **Manual Workflow Approval** | [`trstringer/manual-approval`](https://github.com/trstringer/manual-approval) | `v1.13.1` | `fa642940caf8412403569b28b2db4a1df08a83a3` | `issues: write` | Halts execution until approved by designated reviewers |
+| **Step CI Action** | [`stepci/stepci`](https://github.com/stepci/stepci) | `2.8.2` | `570a42a52dcb9c7864031da79b047ffbaa268847` | `contents: read` | Automated API testing and performance verification |
+| **Workflow Dispatch** | [`benc-uk/workflow-dispatch`](https://github.com/benc-uk/workflow-dispatch) | `v1.3.3` | `d004979be141727c7a17c28f603e2facc40d0855` | `actions: write`, `contents: read` | Dispatches secondary workflows programmatically |
+| **Repo File Sync** | [`BetaHuhn/repo-file-sync-action`](https://github.com/BetaHuhn/repo-file-sync-action) | `v1.21.1` | `8b92be3375cf1d1b0cd579af488a9255572e4619` | `contents: write`, `pull-requests: write` | Synchronizes config/governance files across multiple repositories |
+| **Trigger Workflow and Wait** | [`convictional/trigger-workflow-and-wait`](https://github.com/convictional/trigger-workflow-and-wait) | `v1.6.5` | `f69fa9eedd3c62a599220f4d5745230e237904be` | `actions: write`, `contents: read` | Triggers a workflow and blocks until completion status |
+| **Workflow Conclusion** | [`technote-space/workflow-conclusion-action`](https://github.com/technote-space/workflow-conclusion-action) | `v3.0.3` | `45ce8e0eb155657ab8ccf346ade734257fd196a5` | `actions: read`, `contents: read` | Aggregates and determines conclusions of upstream jobs |
+| **Actions Version Updater** | [`saadmk11/github-actions-version-updater`](https://github.com/saadmk11/github-actions-version-updater) | `v1.0.3` | `764bee6cd2905c6c91624f35332f1472fa736c23` | `contents: write`, `pull-requests: write` | Automated scanner updating action versions across workflows |
+| **Runner Disk Cleaner** | [`rokibhasansagar/slimhub_actions`](https://github.com/rokibhasansagar/slimhub_actions) | `v25.42.5` | `5560c2d964bc240edfc5a0855b4b2c8261a29f29` | `contents: read` | Strips unnecessary runner software to maximize build disk headroom |
+| **Workflow Dispatch & Wait** | [`the-actions-org/workflow-dispatch`](https://github.com/the-actions-org/workflow-dispatch) | `v4.0.0` | `3133c5d135c7dbe4be4f9793872b6ef331b53bc7` | `actions: write`, `contents: read` | Dispatches workflows with input payload and waits for conclusion |
+| **Workflow Queue** | [`ahmadnassri/action-workflow-queue`](https://github.com/ahmadnassri/action-workflow-queue) | `v1.2.0` | `542658b3a8270cac81ae15d401b0d974732808ac` | `actions: read`, `contents: read` | Serializes and queues concurrent workflow executions |
+| **Workflow Sync** | [`varunsridharan/action-github-workflow-sync`](https://github.com/varunsridharan/action-github-workflow-sync) | `3.5` | `3c60cce5ee8e615a7c68ac75fc14893dcac62d49` | `contents: write`, `pull-requests: write` | Synchronizes reusable workflows across ecosystem repositories |
+| **Auto Cancel Redundant** | [`technote-space/auto-cancel-redundant-workflow`](https://github.com/technote-space/auto-cancel-redundant-workflow) | `v1.7.5` | `7d35aba30420fc2368f8aeed50371e99e7fa3239` | `actions: write`, `contents: read` | Automatically cancels redundant prior workflow runs |
 
 ---
 
@@ -65,6 +77,18 @@ graph TD
     ActionChoice -->|Dependabot PR| DependabotMerge[fastify/github-action-merge-dependabot]
     ActionChoice -->|PR Title Lint| PRLint[seferov/pr-lint-action]
     ActionChoice -->|Label Verification| PRLabelChecker[Optimal-AI/PR-Label-Checker]
+    ActionChoice -->|Manual Approval Gate| ApprovalGate[trstringer/manual-approval]
+    ActionChoice -->|API Testing| StepCI[stepci/stepci]
+    ActionChoice -->|Dispatch Workflow| DispatchAction[benc-uk/workflow-dispatch]
+    ActionChoice -->|Repo File Sync| FileSync[BetaHuhn/repo-file-sync-action]
+    ActionChoice -->|Trigger & Wait| TriggerWait[convictional/trigger-workflow-and-wait]
+    ActionChoice -->|Job Conclusion| ConclusionAction[technote-space/workflow-conclusion-action]
+    ActionChoice -->|Actions Updater| ActionsUpdater[saadmk11/github-actions-version-updater]
+    ActionChoice -->|Disk Space Cleaning| SlimHub[rokibhasansagar/slimhub_actions]
+    ActionChoice -->|Dispatch & Wait| DispatchWait[the-actions-org/workflow-dispatch]
+    ActionChoice -->|Workflow Queue| QueueAction[ahmadnassri/action-workflow-queue]
+    ActionChoice -->|Workflow Sync| WfSync[varunsridharan/action-github-workflow-sync]
+    ActionChoice -->|Cancel Redundant| AutoCancel[technote-space/auto-cancel-redundant-workflow]
 ```
 
 ### 3.1 Wiki Sync Workflow ([`.github/workflows/wiki-sync.yml`](../.github/workflows/wiki-sync.yml))
@@ -287,6 +311,132 @@ Automated workflow checking for mandatory classification labels on pull requests
 ```yaml
 - name: Check PR Labels
   uses: Optimal-AI/PR-Label-Checker@48d46fe6336aedcbb836ca580e86f195f9d14b01 # 1.0.3
+```
+
+### 3.18 Manual Workflow Approval Gate ([`.github/workflows/reusable-manual-approval-gate.yml`](../.github/workflows/reusable-manual-approval-gate.yml))
+Enforces human-in-the-loop verification on critical pipelines:
+
+```yaml
+- name: Wait for manual approval
+  uses: trstringer/manual-approval@fa642940caf8412403569b28b2db4a1df08a83a3 # v1.13.1
+  with:
+    secret: ${{ secrets.GITHUB_TOKEN }}
+    approvers: ${{ inputs.approvers }}
+    minimum-approvals: 1
+```
+
+### 3.19 Step CI API Testing ([`.github/workflows/step-ci.yml`](../.github/workflows/step-ci.yml))
+Performs declarative HTTP/REST integration testing with Step CI:
+
+```yaml
+- name: Run Step CI
+  uses: stepci/stepci@570a42a52dcb9c7864031da79b047ffbaa268847 # 2.8.2
+  with:
+    workflow: .stepci/smoke-test.yml
+```
+
+### 3.20 Reusable Workflow Dispatch ([`.github/workflows/reusable-workflow-dispatch.yml`](../.github/workflows/reusable-workflow-dispatch.yml))
+Dispatches dependent downstream workflows programmatically:
+
+```yaml
+- name: Dispatch target workflow
+  uses: benc-uk/workflow-dispatch@d004979be141727c7a17c28f603e2facc40d0855 # v1.3.3
+  with:
+    workflow: ${{ inputs.target_workflow }}
+    token: ${{ github.token }}
+```
+
+### 3.21 Repo File Sync Workflow ([`.github/workflows/repo-file-sync.yml`](../.github/workflows/repo-file-sync.yml))
+Synchronizes configuration and governance templates across repositories:
+
+```yaml
+- name: Run Repo File Sync
+  uses: BetaHuhn/repo-file-sync-action@8b92be3375cf1d1b0cd579af488a9255572e4619 # v1.21.1
+  with:
+    GH_PAT: ${{ github.token }}
+```
+
+### 3.22 Reusable Trigger Workflow and Wait ([`.github/workflows/reusable-trigger-workflow-wait.yml`](../.github/workflows/reusable-trigger-workflow-wait.yml))
+Triggers workflows and polls for final status conclusion:
+
+```yaml
+- name: Trigger remote workflow
+  uses: convictional/trigger-workflow-and-wait@f69fa9eedd3c62a599220f4d5745230e237904be # v1.6.5
+  with:
+    owner: beer-sakthai
+    repo: Sak-Family-Agent
+    github_token: ${{ github.token }}
+    workflow_file_name: ${{ inputs.workflow_file }}
+```
+
+### 3.23 Workflow Conclusion Evaluator ([`.github/workflows/workflow-conclusion.yml`](../.github/workflows/workflow-conclusion.yml))
+Aggregates predecessor status outcomes across multiple asynchronous matrix jobs:
+
+```yaml
+- name: Evaluate conclusions
+  uses: technote-space/workflow-conclusion-action@45ce8e0eb155657ab8ccf346ade734257fd196a5 # v3.0.3
+```
+
+### 3.24 Actions Version Updater ([`.github/workflows/actions-version-updater.yml`](../.github/workflows/actions-version-updater.yml))
+Automated periodic scanner to discover and propose action updates:
+
+```yaml
+- name: Run GitHub Actions Version Updater
+  uses: saadmk11/github-actions-version-updater@764bee6cd2905c6c91624f35332f1472fa736c23 # v1.0.3
+  with:
+    token: ${{ github.token }}
+```
+
+### 3.25 Runner Disk Space Cleaner ([`.github/workflows/runner-disk-cleaner.yml`](../.github/workflows/runner-disk-cleaner.yml))
+Reclaims ephemeral disk space before executing large ML, model, or container builds:
+
+```yaml
+- name: Clean runner environment
+  uses: rokibhasansagar/slimhub_actions@5560c2d964bc240edfc5a0855b4b2c8261a29f29 # v25.42.5
+```
+
+### 3.26 Reusable Workflow Dispatch & Wait ([`.github/workflows/reusable-workflow-dispatch-wait.yml`](../.github/workflows/reusable-workflow-dispatch-wait.yml))
+Triggers a workflow dispatch event and waits for conclusion:
+
+```yaml
+- name: Trigger and wait
+  uses: the-actions-org/workflow-dispatch@3133c5d135c7dbe4be4f9793872b6ef331b53bc7 # v4.0.0
+  with:
+    workflow: ${{ inputs.target_workflow }}
+    token: ${{ github.token }}
+```
+
+### 3.27 Workflow Queue Serializer ([`.github/workflows/workflow-queue.yml`](../.github/workflows/workflow-queue.yml))
+Guarantees strictly serialized execution across concurrent workflow dispatch events:
+
+```yaml
+- name: Queue Execution
+  uses: ahmadnassri/action-workflow-queue@542658b3a8270cac81ae15d401b0d974732808ac # v1.2.0
+  with:
+    queue-name: global-deploy-queue
+    timeout: 600
+```
+
+### 3.28 GitHub Workflow Sync ([`.github/workflows/github-workflow-sync.yml`](../.github/workflows/github-workflow-sync.yml))
+Synchronizes GitHub Actions workflow files across repositories:
+
+```yaml
+- name: Sync workflows
+  uses: varunsridharan/action-github-workflow-sync@3c60cce5ee8e615a7c68ac75fc14893dcac62d49 # 3.5
+  with:
+    GITHUB_TOKEN: ${{ github.token }}
+    REPOSITORIES: beer-sakthai/Sak-Family-Agent
+    WORKFLOW_FILES: lint-check.yml
+```
+
+### 3.29 Auto Cancel Redundant Workflows ([`.github/workflows/auto-cancel-redundant.yml`](../.github/workflows/auto-cancel-redundant.yml))
+Automatically cancels outdated in-flight runs when newer commits arrive:
+
+```yaml
+- name: Cancel redundant workflow runs
+  uses: technote-space/auto-cancel-redundant-workflow@7d35aba30420fc2368f8aeed50371e99e7fa3239 # v1.7.5
+  with:
+    GITHUB_TOKEN: ${{ github.token }}
 ```
 
 ---
