@@ -105,6 +105,8 @@ jobs:
           model: "gemini-1.5-pro"
           provider: "gemini"
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          test_command: "uv run --locked pytest --cov=sakthai --cov-report=xml --cov-fail-under=96 tests/"
-          max_rounds: "1"
+          # Keep reproduction focused on behavioral tests; coverage is enforced by the CI step above.
+          test_command: "uv run --locked pytest tests/"
+          max_rounds: "3"
+          max_budget_usd: "2.00"
           create_pr: "true"
