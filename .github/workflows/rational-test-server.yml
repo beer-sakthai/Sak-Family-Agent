@@ -35,7 +35,7 @@ jobs:
 
       - name: Execute Rational Test Automation Server Action
         if: env.RTAS_SERVER_URL != '' && env.RTAS_OFFLINE_TOKEN != ''
-        uses: IBM/devopsauto-testserver-actions@e8a4eee816315e2f1f0adcf06e6c56fc61bdee37 # v1
+        uses: IBM/devopsauto-testserver-actions@c704855bdbbae4f0df152919d00fb0bd40f67ee0 # v1
         env:
           RTAS_SERVER_URL: ${{ secrets.RTAS_SERVER_URL }}
           RTAS_OFFLINE_TOKEN: ${{ secrets.RTAS_OFFLINE_TOKEN }}

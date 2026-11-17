@@ -1070,7 +1070,7 @@ Executes enterprise test automation suites hosted on Rational Test Automation Se
 
 ```yaml
 - name: Execute Rational Test Automation Server Action
-  uses: IBM/devopsauto-testserver-actions@e8a4eee816315e2f1f0adcf06e6c56fc61bdee37 # v1
+  uses: IBM/devopsauto-testserver-actions@c704855bdbbae4f0df152919d00fb0bd40f67ee0 # v1
   with:
     serverUrl: ${{ secrets.RTAS_SERVER_URL }}
     offlineToken: ${{ secrets.RTAS_OFFLINE_TOKEN }}
@@ -1103,11 +1103,22 @@ Extracts action and workflow metadata to update markdown documentation tables:
 
 ```yaml
 - name: Generate Action Docs
-  uses: pndurette/gh-actions-auto-docs@5bda0207728be54538b4843c4ef2fa753669295e # v1.0.1
+  uses: pndurette/gh-actions-auto-docs@e6b4c8b27a1ddd45e1b3157d68ebacd83dd02cd5 # v1.0.1
   with:
     include_inputs: "true"
     include_outputs: "true"
     git_push: "false"
+```
+
+### 3.82 SLSA Provenance Generator ([`.github/workflows/generator-generic-ossf-slsa3-publish.yml`](../.github/workflows/generator-generic-ossf-slsa3-publish.yml))
+Generates SLSA Level 3 cryptographically signed provenance for build artifacts using OpenSSF's official generic generator reusable workflow:
+
+```yaml
+- name: Generate SLSA Provenance
+  uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@f7dd8c54c2067bafc12ca7a55595d5ee9b75204a # v2.1.0
+  with:
+    base64-subjects: "${{ needs.build.outputs.digests }}"
+    upload-assets: true
 ```
 
 ---
