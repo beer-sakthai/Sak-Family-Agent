@@ -41,7 +41,20 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      - name: Validate Target Branch
+        id: check_branch
+        env:
+          TARGET_BRANCH: ${{ inputs.target_branch }}
+        run: |
+          if ! git ls-remote --exit-code --heads origin "$TARGET_BRANCH" >/dev/null 2>&1; then
+            echo "Target branch '$TARGET_BRANCH' does not exist on remote. Skipping synchronization."
+            echo "branch_exists=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "branch_exists=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Synchronize Branch
+        if: steps.check_branch.outputs.branch_exists == 'true'
         uses: connor-baer/action-sync-branch@f5d20b6a6944c70909c187b558313dfc1d8daa48 # v2
         with:
           branch: ${{ inputs.target_branch }}

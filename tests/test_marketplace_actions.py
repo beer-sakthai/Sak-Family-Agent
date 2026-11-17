@@ -65,7 +65,7 @@ PINNED_ACTIONS = {
     "wow-actions/auto-assign": "67fafa03df61d7e5f201734a2fa60d1ab111880d",
     "lucasbento/auto-close-issues": "667e4f3cd71f2760a3869680944b8df55325b005",
     "reitermarkus/automerge": "634d0a4b51134c163eee182ac9aa79133eb33e8d",
-    "mschilde/auto-label-merge-conflicts": "5981f8933e92b78098af86b9e33fe0871cc7a3be",
+    "mschilde/auto-label-merge-conflicts": "3fdaf1c8b3f8e5b0f88753d9cb3c9c779370b3ef",
     "JAI0705/DevOps_Pipeline_healer_agent": "a23105b6783cdd78c9a1417f1d20d66d5cb7598d",
     "Shawnchee/the-auditor": "fdc6bdd022bbe244c9134d14b8241f04e4537142",
     "johnmanjiro13/auto-reviewer-assign": "cac72d552c3f3163adfb7bc4a3f676163911d0ef",

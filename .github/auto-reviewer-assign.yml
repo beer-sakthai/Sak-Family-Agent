@@ -1,0 +1,9 @@
+# Configuration for johnmanjiro13/auto-reviewer-assign
+reviewers:
+  - name: beer-sakthai
+
+ignore:
+  authors:
+    - beer-sakthai
+    - dependabot[bot]
+    - github-actions[bot]

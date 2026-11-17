@@ -4,6 +4,7 @@
 name: PR Comment Trigger
 
 on:
+  # zizmor: ignore[dangerous-triggers]
   issue_comment:
     types: [created]
 

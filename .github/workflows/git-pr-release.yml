@@ -48,7 +48,20 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      - name: Validate Release Branches
+        id: check_branches
+        env:
+          HEAD_BRANCH: ${{ inputs.head_branch }}
+        run: |
+          if ! git ls-remote --exit-code --heads origin "$HEAD_BRANCH" >/dev/null 2>&1; then
+            echo "Head branch '$HEAD_BRANCH' does not exist on remote. Skipping release PR creation."
+            echo "branches_ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "branches_ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Generate Release Pull Request
+        if: steps.check_branches.outputs.branches_ready == 'true'
         uses: bakunyo/git-pr-release-action@035b7151a53745c03b85c6274ab1ae4bc734eccd # v1.4
         env:
           GITHUB_TOKEN: ${{ github.token }}

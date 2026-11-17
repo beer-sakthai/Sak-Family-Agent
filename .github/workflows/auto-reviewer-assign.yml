@@ -1,6 +1,8 @@
 name: Auto Reviewer Assign
 
 on:
+  pull_request:
+    types: [opened, ready_for_review]
   workflow_dispatch:
 
 permissions:
@@ -27,7 +29,18 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Validate configuration file
+        id: check_config
+        run: |
+          if [ -f .github/auto-reviewer-assign.yml ]; then
+            echo "config_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Configuration file .github/auto-reviewer-assign.yml not found. Skipping auto-assign."
+            echo "config_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Automatically assign reviewers
+        if: github.event_name == 'pull_request' && steps.check_config.outputs.config_exists == 'true'
         uses: johnmanjiro13/auto-reviewer-assign@cac72d552c3f3163adfb7bc4a3f676163911d0ef # v0.2.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

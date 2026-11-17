@@ -37,7 +37,18 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Check if Wiki is initialized
+        id: check_wiki
+        run: |
+          if git ls-remote --exit-code "https://github.com/${{ github.repository }}.wiki.git" HEAD >/dev/null 2>&1; then
+            echo "wiki_ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "GitHub Wiki git repository is not initialized yet. Skipping sync until initial wiki page is created."
+            echo "wiki_ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Deploy Documentation to Wiki
+        if: steps.check_wiki.outputs.wiki_ready == 'true'
         uses: Andrew-Chen-Wang/github-wiki-action@1bbb4280446f9630e8e21a18012cbacf3b0f992e # v5
         with:
           path: docs
