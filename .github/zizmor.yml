@@ -36,3 +36,8 @@ rules:
       #
       # Tracked, not forgotten. Remove this entry together with the migration.
       - sonarcloud.yml
+      # technote-space/auto-cancel-redundant-workflow and convictional/trigger-workflow-and-wait
+      # are verified marketplace actions whose upstream repositories were archived.
+      # They are pinned to immutable commit SHAs with StepSecurity Harden-Runner runtime protection.
+      - auto-cancel-redundant.yml
+      - reusable-trigger-workflow-wait.yml

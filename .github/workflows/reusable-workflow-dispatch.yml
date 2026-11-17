@@ -1,0 +1,39 @@
+name: Reusable Workflow Dispatch
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_workflow:
+        description: Workflow filename to trigger
+        required: false
+        default: lint-check.yml
+  workflow_call:
+    inputs:
+      target_workflow:
+        type: string
+        required: true
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dispatch:
+    name: Dispatch Workflow
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Dispatch target workflow
+        uses: benc-uk/workflow-dispatch@d004979be141727c7a17c28f603e2facc40d0855 # v1.3.3
+        with:
+          workflow: ${{ inputs.target_workflow }}
+          token: ${{ github.token }}
