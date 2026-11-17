@@ -109,6 +109,16 @@ PINNED_ACTIONS = {
     "dtherhtun/google-chat-action": "dec309966ac02aa06cf79fb930096919ed8d7baf",
     "gmolau/codeowners": "efba36333e402884498dc49d216d2f9612bd69a8",
     "jmaxdev/automatic-answer": "18cb23e840a04d7b2644a767f6246cc850475885",
+    "dinakars777/pr-triage-action": "423e4bee6992248223e6bc4f5840c0ca2e9c0dcf",
+    "teohsinyee/ai-pr-opener-bot": "4c36fd7b3830433b7c7f0cd5f8c16ed6cd524351",
+    "gh-bot/fix-labeler": "82c1402f0c82ebadc301f508ab3f1f69184752d2",
+    "AhmedHoussou/action-test-failure-triage": "e0d3f0498d8518bf8a7da1356005b09e7109ed55",
+    "Lucky3028/git-as-gha": "48a4d96a17acfb1f4f54604785693b1f03ba1524",
+    "dohyeon5626/bot-check-action": "4f0b434cd4999aa880bd4ed4855105a1c9cefba5",
+    "SimonMarquis/setup-github-app-as-bot": "a778f68e0790a7d0dbebc9fbc2187048026b1a15",
+    "nolekek/AutoHeal-CI": "eafa410862f761d5a8f96ea946d07c9d0d7f33d7",
+    "kakaotech-25/Hackathon-PR-Review": "17f9b3fe3a8b5333c1828e902276897cdeae8e8b",
+    "drengskapur/gitbot-config": "00aecab0a790b146951f9e0c48f564eaf26a9df6",
 }
 
 
@@ -227,6 +237,16 @@ MARKETPLACE_WORKFLOW_FILES = [
     "google-chat-notification.yml",
     "codeowners-bot.yml",
     "github-bot-auto-answer.yml",
+    "pr-triage-bot.yml",
+    "ai-pr-opener-bot.yml",
+    "fixed-issues-labeler.yml",
+    "playwright-test-failure-triage-bot.yml",
+    "git-as-github-actions-bot.yml",
+    "bot-check-action.yml",
+    "setup-github-app-as-bot.yml",
+    "autoheal-ci.yml",
+    "pull-request-code-review-bot.yml",
+    "config-git-actions-bot.yml",
 ]
 
 

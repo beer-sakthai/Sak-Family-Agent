@@ -1,0 +1,32 @@
+name: Git as GitHub Actions Bot
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  configure-git:
+    name: Configure Git User as Bot
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb605e52c26070c328bc45ebf3f0e5e316812709 # v2.10.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Set Git Config
+        uses: Lucky3028/git-as-gha@48a4d96a17acfb1f4f54604785693b1f03ba1524 # v1.0.1
+        with:
+          config-level: "local"

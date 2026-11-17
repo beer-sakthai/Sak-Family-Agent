@@ -200,6 +200,16 @@ graph TD
     ActionChoice -->|Google Chat Dispatch| GoogleChat[dtherhtun/google-chat-action]
     ActionChoice -->|CODEOWNERS Bot| CodeownersBot[gmolau/codeowners]
     ActionChoice -->|Auto Answer Bot| AutoAnswerBot[jmaxdev/automatic-answer]
+    ActionChoice -->|PR Triage Bot| PRTriageBot[dinakars777/pr-triage-action]
+    ActionChoice -->|AI PR Opener| AIPrOpener[teohsinyee/ai-pr-opener-bot]
+    ActionChoice -->|Fixed Issues Labeler| FixLabeler[gh-bot/fix-labeler]
+    ActionChoice -->|Playwright Triage| PwTriage[AhmedHoussou/action-test-failure-triage]
+    ActionChoice -->|Git as GHA Bot| GitAsGHA[Lucky3028/git-as-gha]
+    ActionChoice -->|Bot Check| BotCheck[dohyeon5626/bot-check-action]
+    ActionChoice -->|Setup App Bot| SetupAppBot[SimonMarquis/setup-github-app-as-bot]
+    ActionChoice -->|AutoHeal CI| AutoHealCI[nolekek/AutoHeal-CI]
+    ActionChoice -->|PR Review Bot| PRReviewBot[kakaotech-25/Hackathon-PR-Review]
+    ActionChoice -->|Gitbot Config| GitbotConfig[drengskapur/gitbot-config]
 ```
 
 ### 3.1 Wiki Sync Workflow ([`.github/workflows/wiki-sync.yml`](../.github/workflows/wiki-sync.yml))
@@ -1307,6 +1317,130 @@ Auto-responds with contributor onboarding guidance and acknowledgement on new is
     issue_comment: "Thank you for creating an issue in House of Sak! Our automated agents and maintainers will review your contribution shortly."
     pr_comment: "Thank you for opening a pull request in House of Sak! Our CI test suite and reviewer workflows are running."
     add_labels: false
+```
+
+### 3.97 PR Triage Bot ([`.github/workflows/pr-triage-bot.yml`](../.github/workflows/pr-triage-bot.yml))
+Triages incoming pull requests at birth: classifies change types, calculates risk scores, detects duplicate submissions, and generates author profiles:
+
+```yaml
+- name: Run PR Triage
+  uses: dinakars777/pr-triage-action@423e4bee6992248223e6bc4f5840c0ca2e9c0dcf # v1.0.0
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    duplicate-threshold: "0.8"
+    enable-labels: "true"
+    enable-duplicate-check: "true"
+    enable-contributor-profile: "true"
+```
+
+### 3.98 AI PR Opener Bot ([`.github/workflows/ai-pr-opener-bot.yml`](../.github/workflows/ai-pr-opener-bot.yml))
+Automates GitHub App-authenticated pull request creation, branching, drafting, and reviewer requests for autonomous agents:
+
+```yaml
+- name: Open Pull Request via App Bot
+  uses: teohsinyee/ai-pr-opener-bot@4c36fd7b3830433b7c7f0cd5f8c16ed6cd524351 # v1.0.0
+  with:
+    app_id: ${{ secrets.BOT_APP_ID }}
+    private_key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+    branch: ${{ inputs.branch }}
+    base: ${{ inputs.base }}
+    title: ${{ inputs.title }}
+    draft: ${{ inputs.draft }}
+```
+
+### 3.99 Fixed Issues Labeler ([`.github/workflows/fixed-issues-labeler.yml`](../.github/workflows/fixed-issues-labeler.yml))
+Labels issues referenced by merged/closed pull requests with configurable resolution tags (`fixed`):
+
+```yaml
+- name: Label Fixed Issues
+  uses: gh-bot/fix-labeler@82c1402f0c82ebadc301f508ab3f1f69184752d2 # v2.0.0
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    label: "fixed"
+```
+
+### 3.100 Playwright Test Failure Triage Bot ([`.github/workflows/playwright-test-failure-triage-bot.yml`](../.github/workflows/playwright-test-failure-triage-bot.yml))
+Analyzes failed Playwright JSON test execution reports using Gemini Flash Lite and comments root-cause explanations on pull requests:
+
+```yaml
+- name: Run Test Failure Triage Bot
+  uses: AhmedHoussou/action-test-failure-triage@e0d3f0498d8518bf8a7da1356005b09e7109ed55 # v1
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
+    report-path: ${{ inputs.report_path }}
+```
+
+### 3.101 Git as GitHub Actions Bot ([`.github/workflows/git-as-github-actions-bot.yml`](../.github/workflows/git-as-github-actions-bot.yml))
+Sets Git committer identity to `github-actions[bot]` at local, global, or system configuration levels:
+
+```yaml
+- name: Set Git Config
+  uses: Lucky3028/git-as-gha@48a4d96a17acfb1f4f54604785693b1f03ba1524 # v1.0.1
+  with:
+    config-level: "local"
+```
+
+### 3.102 Bot Check Action ([`.github/workflows/bot-check-action.yml`](../.github/workflows/bot-check-action.yml))
+Verifies contributor authenticity on newly opened issues and pull requests to filter automated bot spam and apply verification tags:
+
+```yaml
+- name: Run Bot Check
+  uses: dohyeon5626/bot-check-action@4f0b434cd4999aa880bd4ed4855105a1c9cefba5 # v1.1
+  with:
+    comment-account-token: ${{ secrets.GITHUB_TOKEN }}
+    personal-access-token: ${{ secrets.PAT_VERIFICATION_TOKEN }}
+    auto-close: "false"
+    verification-timeout: "5"
+```
+
+### 3.103 Setup GitHub App as Bot ([`.github/workflows/setup-github-app-as-bot.yml`](../.github/workflows/setup-github-app-as-bot.yml))
+Generates short-lived scoped installation tokens and configures Git author credentials for custom GitHub Apps:
+
+```yaml
+- name: Configure GitHub App as Bot
+  uses: SimonMarquis/setup-github-app-as-bot@a778f68e0790a7d0dbebc9fbc2187048026b1a15 # v1
+  with:
+    client-id: ${{ secrets.BOT_APP_CLIENT_ID }}
+    private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+    gh-auth-login: "false"
+    gh-auth-setup-git: "false"
+    set-git-user: "true"
+```
+
+### 3.104 AutoHeal-CI Multi-Agent Self-Healing ([`.github/workflows/autoheal-ci.yml`](../.github/workflows/autoheal-ci.yml))
+Autonomous multi-agent CI/CD self-healing with AST-aware slicing, sandbox test reproduction, and patch generation:
+
+```yaml
+- name: Run AutoHeal Engine
+  uses: nolekek/AutoHeal-CI@eafa410862f761d5a8f96ea946d07c9d0d7f33d7 # v1.3.0
+  with:
+    api_key: ${{ secrets.OPENAI_API_KEY }}
+    model: "gpt-4o"
+    provider: "openai"
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    test_command: ${{ inputs.test_command }}
+    max_rounds: "1"
+    create_pr: "false"
+```
+
+### 3.105 Pull Request Code Review Bot ([`.github/workflows/pull-request-code-review-bot.yml`](../.github/workflows/pull-request-code-review-bot.yml))
+Automates comprehensive code reviews on PR diffs with LLM-backed analysis and constructive suggestions:
+
+```yaml
+- name: Run Review Bot
+  uses: kakaotech-25/Hackathon-PR-Review@17f9b3fe3a8b5333c1828e902276897cdeae8e8b # v1
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    api-key: ${{ secrets.OPENAI_API_KEY }}
+```
+
+### 3.106 Config Git Actions Bot ([`.github/workflows/config-git-actions-bot.yml`](../.github/workflows/config-git-actions-bot.yml))
+Quickly configures Git global committer identity for CI workflows using standard GitHub Actions bot credentials:
+
+```yaml
+- name: Configure Git Actions Bot Committer
+  uses: drengskapur/gitbot-config@00aecab0a790b146951f9e0c48f564eaf26a9df6 # v1.1.2
 ```
 
 ---
