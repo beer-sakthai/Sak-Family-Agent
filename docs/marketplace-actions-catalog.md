@@ -1065,6 +1065,51 @@ Generates dynamic Mermaid flowchart roadmaps from repository milestones and issu
     config_file: '.github/roadmap-styles.yml'
 ```
 
+### 3.78 Rational Test Automation Server ([`.github/workflows/rational-test-server.yml`](../.github/workflows/rational-test-server.yml))
+Executes enterprise test automation suites hosted on Rational Test Automation Server:
+
+```yaml
+- name: Execute Rational Test Automation Server Action
+  uses: IBM/devopsauto-testserver-actions@e8a4eee816315e2f1f0adcf06e6c56fc61bdee37 # v1
+  with:
+    serverUrl: ${{ secrets.RTAS_SERVER_URL }}
+    offlineToken: ${{ secrets.RTAS_OFFLINE_TOKEN }}
+```
+
+### 3.79 GitHub Actions Documenter ([`.github/workflows/gh-actions-documenter.yml`](../.github/workflows/gh-actions-documenter.yml))
+Generates automated agenda and table documentation for repository GitHub Actions workflows:
+
+```yaml
+- name: Document Workflows
+  uses: gizumon/github-actions-documenter@843a0f92e66b5db20f76d3c707beb0329b48c628 # v0.2.2
+  with:
+    target-filepaths: ".github/workflows"
+```
+
+### 3.80 Wiki Page Maintenance ([`.github/workflows/wiki-page-maintenance.yml`](../.github/workflows/wiki-page-maintenance.yml))
+Generates and maintains table of contents and backlinks across repository Markdown wiki documentation:
+
+```yaml
+- name: Maintain Wiki Markdown Structure
+  uses: umonkey/github-wiki-tools@72074b2f45265374a7571550ff7576cbae15af60 # v2.4.2
+  with:
+    path: "docs"
+    update_tocs: "true"
+    update_backlinks: "true"
+```
+
+### 3.81 GitHub Actions Auto-Docs ([`.github/workflows/gh-actions-auto-docs.yml`](../.github/workflows/gh-actions-auto-docs.yml))
+Extracts action and workflow metadata to update markdown documentation tables:
+
+```yaml
+- name: Generate Action Docs
+  uses: pndurette/gh-actions-auto-docs@5bda0207728be54538b4843c4ef2fa753669295e # v1.0.1
+  with:
+    include_inputs: "true"
+    include_outputs: "true"
+    git_push: "false"
+```
+
 ---
 
 ## 4. Threat Modeling & Supply Chain Defense

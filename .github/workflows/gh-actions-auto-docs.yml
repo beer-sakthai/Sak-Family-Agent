@@ -1,0 +1,36 @@
+name: GitHub Actions Auto-Docs
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gh-actions-auto-docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate-docs:
+    name: Generate Action Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Generate Action Docs
+        uses: pndurette/gh-actions-auto-docs@5bda0207728be54538b4843c4ef2fa753669295e # v1.0.1
+        with:
+          include_inputs: "true"
+          include_outputs: "true"
+          git_push: "false"

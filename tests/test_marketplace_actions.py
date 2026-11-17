@@ -91,6 +91,10 @@ PINNED_ACTIONS = {
     "github/automatic-contrib-prs": "fbb93799968fd54783c29339b95e9fcf888c8709",
     "chinthakagodawita/autoupdate": "0707656cd062a3b0cf8fa9b2cda1d1404d74437e",
     "inat-get/action-is-roadmap": "9fecd4863d39e5033e9c641a381e00d9c1a21265",
+    "IBM/devopsauto-testserver-actions": "e8a4eee816315e2f1f0adcf06e6c56fc61bdee37",
+    "gizumon/github-actions-documenter": "843a0f92e66b5db20f76d3c707beb0329b48c628",
+    "umonkey/github-wiki-tools": "72074b2f45265374a7571550ff7576cbae15af60",
+    "pndurette/gh-actions-auto-docs": "5bda0207728be54538b4843c4ef2fa753669295e",
 }
 
 
