@@ -6,11 +6,12 @@ on:
   workflow_dispatch:
     inputs:
       base_branch:
-        description: Base branch whose open pull requests should be updated
+        description: Base branch whose open pull requests should be updated, or all protected bases
         required: true
-        default: main
+        default: all
         type: choice
         options:
+          - all
           - main
           - staging
           - develop
@@ -33,36 +34,55 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-          BASE_BRANCH: ${{ inputs.base_branch || github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+          TRIGGER_BRANCH: ${{ github.ref_name }}
+          REQUESTED_BASE: ${{ inputs.base_branch || '' }}
         run: |
           set -euo pipefail
 
-          mapfile -t pull_requests < <(
-            gh api --paginate \
-              "repos/${REPOSITORY}/pulls?state=open&base=${BASE_BRANCH}&per_page=100" \
-              --jq '.[] | select(.head.repo != null) | [.number, .head.sha, .head.repo.full_name] | @tsv' \
-              | awk -F '\t' -v repository="${REPOSITORY}" '$3 == repository { print $1 "\t" $2 }'
-          )
-
-          if (( ${#pull_requests[@]} == 0 )); then
-            echo "No open same-repository pull requests target ${BASE_BRANCH}."
-            exit 0
+          # A push to main keeps every protected development line current.
+          # Pushes to staging/develop and manual single-base runs only update
+          # pull requests targeting that selected base.
+          if [[ "${EVENT_NAME}" == "push" && "${TRIGGER_BRANCH}" == "main" ]] \
+            || [[ "${REQUESTED_BASE}" == "all" ]]; then
+            base_branches=(main staging develop)
+          elif [[ -n "${REQUESTED_BASE}" ]]; then
+            base_branches=("${REQUESTED_BASE}")
+          else
+            base_branches=("${TRIGGER_BRANCH}")
           fi
 
           failures=0
-          for pull_request in "${pull_requests[@]}"; do
-            IFS=$'\t' read -r number head_sha <<< "${pull_request}"
-            echo "Updating pull request #${number} from ${BASE_BRANCH}..."
-            if gh api --method PUT \
-              "repos/${REPOSITORY}/pulls/${number}/update-branch" \
-              -f expected_head_sha="${head_sha}" >/dev/null; then
-              echo "Requested update for pull request #${number}."
-            else
-              echo "::warning::Could not update pull request #${number}; it may have conflicts." >&2
-              failures=$((failures + 1))
+          updates=0
+          for base_branch in "${base_branches[@]}"; do
+            mapfile -t pull_requests < <(
+              gh api --paginate \
+                "repos/${REPOSITORY}/pulls?state=open&base=${base_branch}&per_page=100" \
+                --jq '.[] | select(.head.repo != null) | [.number, .head.sha, .head.repo.full_name] | @tsv' \
+                | awk -F '\t' -v repository="${REPOSITORY}" '$3 == repository { print $1 "\t" $2 }'
+            )
+
+            if (( ${#pull_requests[@]} == 0 )); then
+              echo "No open same-repository pull requests target ${base_branch}."
+              continue
             fi
+
+            for pull_request in "${pull_requests[@]}"; do
+              IFS=$'\t' read -r number head_sha <<< "${pull_request}"
+              echo "Updating pull request #${number} from ${base_branch}..."
+              if gh api --method PUT \
+                "repos/${REPOSITORY}/pulls/${number}/update-branch" \
+                -f expected_head_sha="${head_sha}" >/dev/null; then
+                echo "Requested update for pull request #${number}."
+                updates=$((updates + 1))
+              else
+                echo "::warning::Could not update pull request #${number}; it may have conflicts." >&2
+                failures=$((failures + 1))
+              fi
+            done
           done
 
+          echo "Requested ${updates} pull request branch update(s)."
           if (( failures > 0 )); then
             echo "${failures} pull request branch update(s) failed." >&2
             exit 1
