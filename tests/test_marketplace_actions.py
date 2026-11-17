@@ -28,6 +28,7 @@ PINNED_ACTIONS = {
     "renovatebot/github-action": "acdd6bda8b035c99ce59d5675816af2aa65a1774",
     "wearerequired/lint-action": "124229c6e2974984ba137c67a499ba28bfc33e33",
     "actions/create-github-app-token": "64ab729a6294000f5aa4a4bc0b73d1f32bc45510",
+    "fastify/github-action-merge-dependabot": "73ec4cbb5e56df5591eae286972d5b2201ffe90f",
 }
 
 
@@ -65,6 +66,7 @@ MARKETPLACE_WORKFLOW_FILES = [
     "renovate.yml",
     "lint-check.yml",
     "reusable-app-token.yml",
+    "dependabot-auto-merge.yml",
 ]
 
 
