@@ -1,0 +1,39 @@
+name: Safe Dependabot Policy
+
+on:
+  pull_request:
+    paths:
+      - ".github/dependabot.yml"
+      - ".github/workflows/safe-dependabot.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Dependabot Configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Run Safe Dependabot Policy Check
+        uses: DiogoRibeiro7/safe-dependabot@6108108e756497ce9c7b4e9e38d76fea453c1181 # v1.1.1
+        with:
+          config-path: ".github/dependabot.yml"
+          max-open-prs: "10"
+          require-major-ignore: "false"
+          detect-ecosystems: "false"

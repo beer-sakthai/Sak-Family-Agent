@@ -81,6 +81,12 @@ PINNED_ACTIONS = {
     "wow-actions/add-badges": "43f2c1eaecfb2596b89a8136a3fbda4f18d1d188",
     "LucasRuy/sync-branch-action": "2208081dfed383bf8e9c13ce862061a3e7a58239",
     "vargiuscuola/genshdoc": "0f2a1895670c474de679631a33eae9369743af5f",
+    "DiogoRibeiro7/safe-dependabot": "6108108e756497ce9c7b4e9e38d76fea453c1181",
+    "onebalaban/DependabotHelper": "9455093e7f3d2338e9eeb42984865e29660e3ad8",
+    "invi5H/dependabot-automerge": "aea0b2bd7e72af2f06118ce377821568046589f6",
+    "GavinMeierSonos/dependabot-action": "a0789e7b36fd4cf0ba2906e77568ae5deae85f95",
+    "dependabot/fetch-metadata": "25dd0e34f4fe68f24cc83900b1fe3fe149efef98",
+    "goatandsheep/dependabot-issue-action": "085384c6fc7247bf455bcd86178c6fc8a5ffc1d5",
 }
 
 
@@ -171,6 +177,12 @@ MARKETPLACE_WORKFLOW_FILES = [
     "add-badges.yml",
     "sync-branch-action.yml",
     "genshdoc.yml",
+    "safe-dependabot.yml",
+    "dependabot-helper.yml",
+    "dependabot-automerge.yml",
+    "dependabot-workflow.yml",
+    "dependabot-fetch-metadata.yml",
+    "dependabot-issue.yml",
 ]
 
 
