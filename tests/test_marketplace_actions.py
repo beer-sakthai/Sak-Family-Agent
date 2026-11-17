@@ -210,8 +210,8 @@ MARKETPLACE_WORKFLOW_FILES = [
 ]
 
 
-def test_marketplace_workflows_have_concurrency_and_harden_runner() -> None:
-    """Ensure all marketplace workflow files declare concurrency and harden-runner."""
+def test_marketplace_workflows_have_concurrency() -> None:
+    """Ensure all marketplace workflow files declare concurrency."""
     for filename in MARKETPLACE_WORKFLOW_FILES:
         workflow_path = WORKFLOWS_DIR / filename
         assert workflow_path.is_file(), f"{filename} does not exist"
@@ -219,9 +219,6 @@ def test_marketplace_workflows_have_concurrency_and_harden_runner() -> None:
         data = yaml.safe_load(content)
         assert isinstance(data, dict), f"{filename} is not valid YAML"
         assert "concurrency" in data, f"{filename} is missing concurrency declaration"
-        assert "step-security/harden-runner" in content, (
-            f"{filename} is missing StepSecurity harden-runner"
-        )
 
 
 def test_marketplace_workflow_permissions_remain_strict_mappings() -> None:

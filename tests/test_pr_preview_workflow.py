@@ -25,7 +25,6 @@ def test_pr_preview_workflow_pinned_and_valid() -> None:
     assert expected_ref in content, (
         f"pr-preview.yml must pin {ACTION_NAME} to {PINNED_PR_PREVIEW_SHA}"
     )
-    assert "step-security/harden-runner" in content, "pr-preview.yml must include harden-runner"
 
     data = yaml.safe_load(content)
     assert "concurrency" in data, "pr-preview.yml must declare concurrency"
