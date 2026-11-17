@@ -70,5 +70,8 @@ jobs:
 
       - name: Report Trigger Detection
         if: steps.check-deploy.outputs.triggered == 'true' || steps.check-benchmark.outputs.triggered == 'true' || steps.check-preview.outputs.triggered == 'true' || steps.check-test.outputs.triggered == 'true'
+        env:
+          PR_NUMBER: ${{ github.event.issue.number }}
+          TRIGGER_ACTOR: ${{ github.actor }}
         run: |
-          echo "Trigger detected on PR #${{ github.event.issue.number }} by @${{ github.actor }}"
+          echo "Trigger detected on PR #${PR_NUMBER} by @${TRIGGER_ACTOR}"
