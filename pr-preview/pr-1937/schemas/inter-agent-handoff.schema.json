@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/beer-sakthai/Sak-Family-Agent/docs/schemas/inter-agent-handoff.schema.json",
+  "title": "InterAgentHandoffEnvelope",
+  "description": "Standard handoff envelope schema for the House of Sak (Sak-Family-Agent) ecosystem",
+  "type": "object",
+  "required": [
+    "protocol_version",
+    "handoff_id",
+    "message_type",
+    "status",
+    "sender",
+    "recipient",
+    "created_at",
+    "updated_at",
+    "task",
+    "payload",
+    "constraints",
+    "recovery"
+  ],
+  "properties": {
+    "protocol_version": {
+      "type": "string",
+      "description": "Version of the handoff protocol",
+      "default": "1.0.0-draft"
+    },
+    "handoff_id": {
+      "type": "string",
+      "description": "Unique stable identifier for the handoff conversation",
+      "pattern": "^ho_[a-zA-Z0-9_-]+$"
+    },
+    "message_type": {
+      "type": "string",
+      "description": "Domain-specific message type / intent",
+      "enum": [
+        "data-request",
+        "monitoring-result",
+        "rate-limit-ban",
+        "hub-draft",
+        "hub-approved",
+        "hub-complete",
+        "schedule-request",
+        "schedule-confirmed",
+        "ci-failure",
+        "ci-stalled",
+        "conflict",
+        "deputy-chain",
+        "cycle-paused",
+        "cycle-interrupted"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "description": "Current lifecycle state of the handoff",
+      "enum": [
+        "requested",
+        "acknowledged",
+        "rejected",
+        "blocked",
+        "in_progress",
+        "completed",
+        "paused",
+        "interrupted",
+        "escalated"
+      ]
+    },
+    "sender": {
+      "type": "object",
+      "required": ["agent", "role"],
+      "properties": {
+        "agent": {
+          "type": "string",
+          "enum": ["sakthai", "sakking", "saktan", "saksee", "saksit", "sakjules"]
+        },
+        "role": {
+          "type": "string"
+        }
+      }
+    },
+    "recipient": {
+      "type": "object",
+      "required": ["agents", "role"],
+      "properties": {
+        "agents": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["sakthai", "sakking", "saktan", "saksee", "saksit", "sakjules"]
+          },
+          "minItems": 1
+        },
+        "role": {
+          "type": "string"
+        }
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "correlation": {
+      "type": "object",
+      "properties": {
+        "parent_handoff_id": {
+          "type": ["string", "null"]
+        },
+        "related_handoff_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "required": ["title", "objective", "scope", "acceptance_criteria"],
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "objective": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "acceptance_criteria": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "required": ["summary"],
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "details": {
+          "type": "string"
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string" },
+          "source": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "value": { "type": ["string", "number", "boolean", "object", "array", "null"] }
+        }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "required": ["charge_required", "approval_required", "cost_limit_usd"],
+      "properties": {
+        "charge_required": {
+          "type": "string",
+          "enum": ["active", "deputy", "minimal", "none"]
+        },
+        "approval_required": {
+          "type": "boolean"
+        },
+        "approval_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cost_limit_usd": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "recovery": {
+      "type": "object",
+      "required": ["resumable"],
+      "properties": {
+        "resumable": {
+          "type": "boolean"
+        },
+        "checkpoint": {
+          "type": ["string", "null"]
+        },
+        "next_action": {
+          "type": ["string", "null"]
+        }
+      }
+    }
+  }
+}
