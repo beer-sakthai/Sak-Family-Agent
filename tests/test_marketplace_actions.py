@@ -20,6 +20,11 @@ PINNED_ACTIONS = {
     "dineshsonachalam/markdown-autodocs": "6596b4a049f087c7abe84cc7457e2c53652df810",
     "Khan/pull-request-comment-trigger": "edab8d9ba7759221187ef7120592a6fbfada0d18",
     "chrnorm/deployment-action": "55729fcebec3d284f60f5bcabbd8376437d696b1",
+    "bakunyo/git-pr-release-action": "035b7151a53745c03b85c6274ab1ae4bc734eccd",
+    "hngprojects/pr-deploy": "2f8b3e0dce07f0c6f7e6e80018dc52081a61b63b",
+    "benchmark-action/github-action-benchmark": "4322e5726e6334590d251fc4f92bec0efafc45dc",
+    "ghalactic/github-release-from-tag": "30770b91acccc8e1e2f14562d813cb30af08f1c6",
+    "jamesgeorge007/github-activity-readme": "4aefbfa1c222d70537dc6a02f0519266aab2b1ea",
 }
 
 
@@ -49,6 +54,11 @@ MARKETPLACE_WORKFLOW_FILES = [
     "reusable-deployment.yml",
     "branch-sync.yml",
     "automated-pr-maintenance.yml",
+    "git-pr-release.yml",
+    "reusable-pr-deploy.yml",
+    "continuous-benchmark.yml",
+    "release-from-tag.yml",
+    "activity-readme.yml",
 ]
 
 
