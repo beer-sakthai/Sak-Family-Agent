@@ -29,7 +29,7 @@ jobs:
           persist-credentials: false
 
       - name: Generate Action Docs
-        uses: pndurette/gh-actions-auto-docs@5bda0207728be54538b4843c4ef2fa753669295e # v1.0.1
+        uses: pndurette/gh-actions-auto-docs@e6b4c8b27a1ddd45e1b3157d68ebacd83dd02cd5 # v1.0.1
         with:
           include_inputs: "true"
           include_outputs: "true"
