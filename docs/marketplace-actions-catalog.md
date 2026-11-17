@@ -16,7 +16,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 
 ---
 
-## 2. Sixteen Verified Marketplace Actions
+## 2. Eighteen Verified Marketplace Actions
 
 | Action Name | Upstream Repository | Tag | Immutable Commit SHA | Required Permissions | Purpose |
 |---|---|---|---|---|---|
@@ -36,6 +36,8 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **Lint Action** | [`wearerequired/lint-action`](https://github.com/wearerequired/lint-action) | `v3.0.2` | `124229c6e2974984ba137c67a499ba28bfc33e33` | `contents: read`, `checks: write` | Automated multi-linter check and auto-fixing |
 | **Create GitHub App Token** | [`actions/create-github-app-token`](https://github.com/actions/create-github-app-token) | `v3.3.0` | `64ab729a6294000f5aa4a4bc0b73d1f32bc45510` | `contents: read` | Generates short-lived installation tokens for bot automation |
 | **Dependabot Auto-Merge** | [`fastify/github-action-merge-dependabot`](https://github.com/fastify/github-action-merge-dependabot) | `v3.15.0` | `73ec4cbb5e56df5591eae286972d5b2201ffe90f` | `contents: write`, `pull-requests: write` | Automated approval and merging for Dependabot PRs |
+| **PR Lint Action** | [`seferov/pr-lint-action`](https://github.com/seferov/pr-lint-action) | `v2.0.0` | `cbef81c153f36262fbcd92fe97d6c6b8736d891d` | `contents: read`, `pull-requests: read` | Conventional Commits regex validation on pull request titles |
+| **PR Label Checker** | [`Optimal-AI/PR-Label-Checker`](https://github.com/Optimal-AI/PR-Label-Checker) | `1.0.3` | `48d46fe6336aedcbb836ca580e86f195f9d14b01` | `contents: read`, `pull-requests: read` | Verifies required category labels on pull requests |
 
 ---
 
@@ -61,6 +63,8 @@ graph TD
     ActionChoice -->|Quality Lint| MultiLint[wearerequired/lint-action]
     ActionChoice -->|Bot Authentication| AppToken[actions/create-github-app-token]
     ActionChoice -->|Dependabot PR| DependabotMerge[fastify/github-action-merge-dependabot]
+    ActionChoice -->|PR Title Lint| PRLint[seferov/pr-lint-action]
+    ActionChoice -->|Label Verification| PRLabelChecker[Optimal-AI/PR-Label-Checker]
 ```
 
 ### 3.1 Wiki Sync Workflow ([`.github/workflows/wiki-sync.yml`](../.github/workflows/wiki-sync.yml))
@@ -264,6 +268,25 @@ Automatically evaluates, approves, and merges eligible Dependabot pull requests 
     target: ${{ inputs.target || 'any' }}
     pr-number: ${{ inputs.pr_number || '' }}
     merge-method: squash
+```
+
+### 3.16 PR Lint Action Workflow ([`.github/workflows/pr-lint.yml`](../.github/workflows/pr-lint.yml))
+Enforces Conventional Commits title structure on incoming pull requests:
+
+```yaml
+- name: Verify PR Title Conventional Commits
+  uses: seferov/pr-lint-action@cbef81c153f36262fbcd92fe97d6c6b8736d891d # v2.0.0
+  with:
+    title-regex: '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert|init)(\([a-zA-Z0-9_\-\/]+\))?: .+'
+    error-message: 'PR title must follow Conventional Commits format (e.g., "feat: add feature", "fix(core): fix issue").'
+```
+
+### 3.17 PR Label Checker Workflow ([`.github/workflows/pr-label-checker.yml`](../.github/workflows/pr-label-checker.yml))
+Automated workflow checking for mandatory classification labels on pull requests:
+
+```yaml
+- name: Check PR Labels
+  uses: Optimal-AI/PR-Label-Checker@48d46fe6336aedcbb836ca580e86f195f9d14b01 # 1.0.3
 ```
 
 ---

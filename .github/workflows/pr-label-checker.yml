@@ -1,0 +1,38 @@
+# PR Label Checker Workflow
+# Checks pull request labels using Optimal-AI/PR-Label-Checker
+
+name: PR Label Checker
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Pull request number to verify labels on'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-label-checker-${{ github.event.inputs.pr_number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-labels:
+    name: Check Labels
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Check PR Labels
+        uses: Optimal-AI/PR-Label-Checker@48d46fe6336aedcbb836ca580e86f195f9d14b01 # 1.0.3
