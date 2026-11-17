@@ -41,10 +41,10 @@ jobs:
         uses: nolekek/AutoHeal-CI@eafa410862f761d5a8f96ea946d07c9d0d7f33d7 # v1.3.0
         with:
           api_key: ${{ secrets.GEMINI_API_KEY }}
-          model: "gemini-3.1-pro-preview"
+          model: "gemini-3.8-flash"
           provider: "gemini"
           github_token: ${{ secrets.GITHUB_TOKEN }}
           test_command: ${{ inputs.test_command }}
-          max_rounds: "3"
-          max_budget_usd: "2.00"
+          max_rounds: "2"
+          max_budget_usd: "1.50"
           create_pr: "false"
