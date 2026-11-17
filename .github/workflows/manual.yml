@@ -17,9 +17,16 @@ on:
         required: true
         # The data type of the input
         type: string
+      require_approval:
+        # Require manual approval gate before execution
+        description: 'Require manual workflow approval gate before proceeding'
+        default: false
+        required: false
+        type: boolean
 
-# This workflow only echoes an input; it needs no repository scopes at all.
-permissions: {}
+permissions:
+  contents: read
+  issues: write
 
 # Two manual dispatches carry different inputs, so never cancel one for another.
 concurrency:
@@ -28,11 +35,38 @@ concurrency:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "greet"
+  # Optional approval gate using trstringer/manual-approval
+  approval-gate:
+    if: ${{ inputs.require_approval }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      issues: write
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Manual Workflow Approval
+        uses: trstringer/manual-approval@fa642940caf8412403569b28b2db4a1df08a83a3 # v1.13.1
+        with:
+          secret: ${{ github.token }}
+          approvers: beer-sakthai
+          minimum-approvals: 1
+          issue-title: "Manual Approval Required: Manual workflow #${{ github.run_number }}"
+          issue-body: "Manual workflow approval requested by @${{ github.actor }} for run ${{ github.run_id }}."
+
+  # This workflow contains a job called "greet"
   greet:
+    needs: [approval-gate]
+    if: ${{ always() && (needs.approval-gate.result == 'success' || needs.approval-gate.result == 'skipped') }}
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:

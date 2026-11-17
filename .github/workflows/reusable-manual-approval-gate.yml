@@ -1,0 +1,56 @@
+# Reusable Manual Approval Gate for House of Sak workflows
+# Halts execution until an authorized human steward (Beer) approves via issue comment/close.
+
+name: Reusable Manual Approval Gate
+
+on:
+  workflow_call:
+    inputs:
+      gate_name:
+        description: 'Name of the gate or operation requiring approval'
+        required: true
+        type: string
+      approvers:
+        description: 'Comma-separated GitHub handles authorized to approve'
+        required: false
+        default: 'beer-sakthai'
+        type: string
+      timeout_minutes:
+        description: 'Timeout in minutes to wait for approval'
+        required: false
+        default: 60
+        type: number
+    secrets:
+      token:
+        description: 'GitHub token for issue creation and management'
+        required: false
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: manual-approval-${{ github.workflow }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout_minutes }}
+    permissions:
+      issues: write
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Manual Workflow Approval
+        uses: trstringer/manual-approval@fa642940caf8412403569b28b2db4a1df08a83a3 # v1.13.1
+        with:
+          secret: ${{ secrets.token || github.token }}
+          approvers: ${{ inputs.approvers }}
+          minimum-approvals: 1
+          issue-title: "Manual Approval Gate: ${{ inputs.gate_name }}"
+          issue-body: "Manual workflow approval requested for **${{ inputs.gate_name }}** by @${{ github.actor }}.\n\nWorkflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\nReply with 'approved' to grant approval or close this issue to reject."
