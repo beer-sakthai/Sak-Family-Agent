@@ -1,0 +1,75 @@
+name: Automated Semantic Tagging
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      fallback_tag:
+        description: "Fallback version if no previous tag exists"
+        required: false
+        default: "v2.0.0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: semantic-tagging
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: Calculate and push semantic tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Determine next semantic version
+        id: semver
+        env:
+          INPUT_FALLBACK_TAG: ${{ inputs.fallback_tag }}
+        run: |
+          FALLBACK="${INPUT_FALLBACK_TAG:-v2.0.0}"
+          python scripts/semantic_tagger.py --fallback "${FALLBACK}"
+
+      - name: Create and push git tag
+        if: steps.semver.outputs.has_bump == 'true'
+        env:
+          NEXT_TAG: ${{ steps.semver.outputs.next_tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -z "${NEXT_TAG}" ]; then
+            echo "No tag computed; skipping push."
+            exit 0
+          fi
+
+          # Verify if tag already exists on remote
+          if git rev-parse "${NEXT_TAG}" >/dev/null 2>&1; then
+            echo "Tag ${NEXT_TAG} already exists locally; skipping."
+            exit 0
+          fi
+
+          echo "Configuring bot identity and creating tag ${NEXT_TAG}..."
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${NEXT_TAG}" -m "Release ${NEXT_TAG}"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "${NEXT_TAG}"
+          echo "Successfully pushed tag ${NEXT_TAG}."

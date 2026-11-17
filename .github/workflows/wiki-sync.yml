@@ -37,6 +37,16 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Prepare Wiki Documentation Structure
+        run: |
+          mkdir -p build/wiki
+          python scripts/sync_wiki.py --docs-dir docs --wiki-dir build/wiki
+
       - name: Check if Wiki is initialized
         id: check_wiki
         run: |
@@ -51,5 +61,5 @@ jobs:
         if: steps.check_wiki.outputs.wiki_ready == 'true'
         uses: Andrew-Chen-Wang/github-wiki-action@1bbb4280446f9630e8e21a18012cbacf3b0f992e # v5
         with:
-          path: docs
+          path: build/wiki
           strategy: clone
