@@ -32,5 +32,6 @@ jobs:
       - name: Autolabel from CODEOWNERS
         if: github.event_name == 'pull_request'
         uses: pratikmallya/autolabeler-codeowners@cca9694441f25116fcb5d5f16757a6e43e5c4375 # 0.1
+        continue-on-error: true
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
