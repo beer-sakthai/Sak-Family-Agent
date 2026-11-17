@@ -1,0 +1,32 @@
+name: Setup GitHub App as Bot
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  setup-app-bot:
+    name: Setup GitHub App Identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Configure GitHub App as Bot
+        if: ${{ secrets.BOT_APP_CLIENT_ID != '' && secrets.BOT_APP_PRIVATE_KEY != '' }}
+        uses: SimonMarquis/setup-github-app-as-bot@a778f68e0790a7d0dbebc9fbc2187048026b1a15 # v1
+        with:
+          client-id: ${{ secrets.BOT_APP_CLIENT_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          gh-auth-login: "false"
+          gh-auth-setup-git: "false"
+          set-git-user: "true"
