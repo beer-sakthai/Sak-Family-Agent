@@ -21,10 +21,14 @@ jobs:
       contents: read
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install YAML validation dependency
-        run: python3 -m pip install --disable-pip-version-check PyYAML
+        run: |
+          python3 -m pip install --disable-pip-version-check \
+            --require-hashes -r .github/workflow-linter-requirements.lock
 
       - name: Parse workflows and check embedded Bash
         run: |

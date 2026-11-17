@@ -10,6 +10,10 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: reusable-update-pr-branches-${{ inputs.base_branches }}
+  cancel-in-progress: false
+
 jobs:
   update-branches:
     name: Update open pull requests

@@ -58,7 +58,7 @@ jobs:
   update-branches:
     name: Synchronize pull request branches
     needs: select-bases
-    uses: ./.github/workflows/reusable-update-pr-branches.yml
+    uses: ./.github/workflows/reusable-update-pr-branches.yml # zizmor: ignore[self-repository]
     with:
       base_branches: ${{ needs.select-bases.outputs.base_branches }}
     permissions:
