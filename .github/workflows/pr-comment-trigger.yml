@@ -50,7 +50,25 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+      - name: Check for preview trigger
+        uses: Khan/pull-request-comment-trigger@edab8d9ba7759221187ef7120592a6fbfada0d18 # v1.1.0
+        id: check-preview
+        with:
+          trigger: '/preview'
+          reaction: eyes
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Check for test trigger
+        uses: Khan/pull-request-comment-trigger@edab8d9ba7759221187ef7120592a6fbfada0d18 # v1.1.0
+        id: check-test
+        with:
+          trigger: '/test'
+          reaction: heart
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
       - name: Report Trigger Detection
-        if: steps.check-deploy.outputs.triggered == 'true' || steps.check-benchmark.outputs.triggered == 'true'
+        if: steps.check-deploy.outputs.triggered == 'true' || steps.check-benchmark.outputs.triggered == 'true' || steps.check-preview.outputs.triggered == 'true' || steps.check-test.outputs.triggered == 'true'
         run: |
           echo "Trigger detected on PR #${{ github.event.issue.number }} by @${{ github.actor }}"

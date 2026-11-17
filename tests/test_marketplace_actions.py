@@ -13,9 +13,12 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
 
 PINNED_ACTIONS = {
+    "devops-infra/action-pull-request": "e66e2ba93519dc63b9884a26e620e2fd0cffab2c",
+    "devops-infra/action-commit-push": "be5ba37125c79eb0016cbd8cc385f0aa160538c5",
     "Andrew-Chen-Wang/github-wiki-action": "1bbb4280446f9630e8e21a18012cbacf3b0f992e",
-    "Khan/pull-request-comment-trigger": "edab8d9ba7759221187ef7120592a6fbfada0d18",
+    "connor-baer/action-sync-branch": "f5d20b6a6944c70909c187b558313dfc1d8daa48",
     "dineshsonachalam/markdown-autodocs": "6596b4a049f087c7abe84cc7457e2c53652df810",
+    "Khan/pull-request-comment-trigger": "edab8d9ba7759221187ef7120592a6fbfada0d18",
     "chrnorm/deployment-action": "55729fcebec3d284f60f5bcabbd8376437d696b1",
 }
 
@@ -44,6 +47,8 @@ MARKETPLACE_WORKFLOW_FILES = [
     "pr-comment-trigger.yml",
     "autodocs.yml",
     "reusable-deployment.yml",
+    "branch-sync.yml",
+    "automated-pr-maintenance.yml",
 ]
 
 

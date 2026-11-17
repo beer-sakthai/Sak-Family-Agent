@@ -15,6 +15,10 @@ on:
         required: false
         default: 'https://houseofsak.vercel.app'
         type: string
+    outputs:
+      deployment_id:
+        description: 'The unique ID of the created GitHub Deployment'
+        value: ${{ jobs.deploy-record.outputs.deployment_id }}
 
 permissions:
   contents: read
@@ -28,6 +32,8 @@ jobs:
   deploy-record:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      deployment_id: ${{ steps.deployment.outputs.deployment_id }}
     permissions:
       contents: read
       deployments: write
