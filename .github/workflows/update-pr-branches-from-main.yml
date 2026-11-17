@@ -1,0 +1,12 @@
+name: Temporary conflict fixture
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  fixture:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "temporary conflict fixture"
