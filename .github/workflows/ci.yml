@@ -9,8 +9,7 @@ on:
     branches: [ "main" ]
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 # A newer push to the same ref supersedes any run still in flight.
 concurrency:
@@ -76,7 +75,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Upload coverage to Codecov
+      - name: Upload Codecov
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -84,8 +83,40 @@ jobs:
           # a failed upload (e.g. no CODECOV_TOKEN secret) must not fail CI.
           fail_ci_if_error: false
 
+  # Keep the write-capable self-healing action out of the matrix job. Normal CI
+  # runs with read-only repository access; this job runs once only after the
+  # matrix has failed and is separately scoped to the permissions it requires.
+  autoheal:
+    name: AutoHeal-CI recovery
+    if: ${{ always() && needs.test.result == 'failure' }}
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --locked --all-extras --dev
+
       - name: Check AutoHeal-CI secret
-        if: failure() && matrix.python-version == '3.12'
         id: autoheal-secret
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -98,7 +129,7 @@ jobs:
           fi
 
       - name: AutoHeal-CI Self-Healing Bot
-        if: failure() && matrix.python-version == '3.12' && steps.autoheal-secret.outputs.available == 'true'
+        if: steps.autoheal-secret.outputs.available == 'true'
         uses: nolekek/AutoHeal-CI@eafa410862f761d5a8f96ea946d07c9d0d7 # v1.3.0
         with:
           api_key: ${{ secrets.GEMINI_API_KEY }}
