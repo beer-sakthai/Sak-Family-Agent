@@ -16,7 +16,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 
 ---
 
-### 2. Sixty-Eight Verified Marketplace Actions
+### 2. Seventy-Four Verified Marketplace Actions
 
 | Action Name | Upstream Repository | Tag | Immutable Commit SHA | Required Permissions | Purpose |
 |---|---|---|---|---|---|
@@ -88,6 +88,13 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **Add Badges** | [`wow-actions/add-badges`](https://github.com/wow-actions/add-badges) | `v1.1.0` | `43f2c1eaecfb2596b89a8136a3fbda4f18d1d188` | `contents: write` | Automatically generates and inserts dynamic status badges into README |
 | **Sync Branch Action** | [`LucasRuy/sync-branch-action`](https://github.com/LucasRuy/sync-branch-action) | `v1.2.0` | `2208081dfed383bf8e9c13ce862061a3e7a58239` | `contents: write` | Synchronizes and merges source branches into target destination branches |
 | **Generate Documentation** | [`vargiuscuola/genshdoc`](https://github.com/vargiuscuola/genshdoc) | `v1.0` | `0f2a1895670c474de679631a33eae9369743af5f` | `contents: read` | Automated documentation generation for shell scripts using shdoc |
+| **Safe Dependabot** | [`DiogoRibeiro7/safe-dependabot`](https://github.com/DiogoRibeiro7/safe-dependabot) | `v1.1.1` | `6108108e756497ce9c7b4e9e38d76fea453c1181` | `contents: read` | Validates Dependabot configuration against conservative dependency-update policies |
+| **Dependabot Helper** | [`onebalaban/DependabotHelper`](https://github.com/onebalaban/DependabotHelper) | `v1` | `9455093e7f3d2338e9eeb42984865e29660e3ad8` | `contents: read` | Records execution time and greets automated dependency maintainers |
+| **Dependabot Automerge** | [`invi5H/dependabot-automerge`](https://github.com/invi5H/dependabot-automerge) | `v1.0.0` | `aea0b2bd7e72af2f06118ce377821568046589f6` | `contents: write`, `pull-requests: write` | Automatically approves and merges Dependabot PRs based on update type |
+| **Dependabot Workflow Action** | [`GavinMeierSonos/dependabot-action`](https://github.com/GavinMeierSonos/dependabot-action) | `v1.10-beta` | `a0789e7b36fd4cf0ba2906e77568ae5deae85f95` | `contents: write`, `pull-requests: write` | Runs containerized Dependabot version updates within custom runner workflows |
+| **Dependabot Fetch Metadata** | [`dependabot/fetch-metadata`](https://github.com/dependabot/fetch-metadata) | `v3.1.0` | `25dd0e34f4fe68f24cc83900b1fe3fe149efef98` | `pull-requests: read` | Extracts structured metadata (semver, ecosystems, alerts) from Dependabot PRs |
+| **Dependabot Issue for PRs** | [`goatandsheep/dependabot-issue-action`](https://github.com/goatandsheep/dependabot-issue-action) | `v1.0.1` | `085384c6fc7247bf455bcd86178c6fc8a5ffc1d5` | `issues: write`, `pull-requests: read` | Automatically creates triage and tracking issues for incoming Dependabot PRs |
+
 
 ---
 
@@ -165,6 +172,12 @@ graph TD
     ActionChoice -->|Add Badges| AddBadges[wow-actions/add-badges]
     ActionChoice -->|Branch Sync Action| SyncBranchAct[LucasRuy/sync-branch-action]
     ActionChoice -->|Gen Shdoc| GenShdoc[vargiuscuola/genshdoc]
+    ActionChoice -->|Safe Dependabot| SafeDep[DiogoRibeiro7/safe-dependabot]
+    ActionChoice -->|Dependabot Helper| DepHelper[onebalaban/DependabotHelper]
+    ActionChoice -->|Dep Automerge| DepAutomerge[invi5H/dependabot-automerge]
+    ActionChoice -->|Dependabot Workflow| DepWorkflow[GavinMeierSonos/dependabot-action]
+    ActionChoice -->|Fetch Metadata| FetchMetadata[dependabot/fetch-metadata]
+    ActionChoice -->|Dependabot Issue| DepIssue[goatandsheep/dependabot-issue-action]
 ```
 
 ### 3.1 Wiki Sync Workflow ([`.github/workflows/wiki-sync.yml`](../.github/workflows/wiki-sync.yml))
@@ -930,6 +943,68 @@ Generates documentation from annotated shell scripts using `genshdoc`:
   uses: vargiuscuola/genshdoc@0f2a1895670c474de679631a33eae9369743af5f # v1.0
   with:
     source: "scripts"
+```
+
+### 3.68 Safe Dependabot Policy ([`.github/workflows/safe-dependabot.yml`](../.github/workflows/safe-dependabot.yml))
+Validates `.github/dependabot.yml` against conservative update policies and ecosystem directory coverage:
+
+```yaml
+- name: Run Safe Dependabot Policy Check
+  uses: DiogoRibeiro7/safe-dependabot@6108108e756497ce9c7b4e9e38d76fea453c1181 # v1.1.1
+  with:
+    config-path: ".github/dependabot.yml"
+    max-open-prs: "5"
+```
+
+### 3.69 Dependabot Helper ([`.github/workflows/dependabot-helper.yml`](../.github/workflows/dependabot-helper.yml))
+Records execution timestamps and greets automated dependency maintainers:
+
+```yaml
+- name: Run Dependabot Helper
+  uses: onebalaban/DependabotHelper@9455093e7f3d2338e9eeb42984865e29660e3ad8 # v1
+  with:
+    who-to-greet: "Dependabot"
+```
+
+### 3.70 Dependabot Automerge ([`.github/workflows/dependabot-automerge.yml`](../.github/workflows/dependabot-automerge.yml))
+Automatically reviews, approves, and merges eligible patch and minor Dependabot pull requests:
+
+```yaml
+- name: Automatically Merge Dependabot PRs
+  uses: invi5H/dependabot-automerge@aea0b2bd7e72af2f06118ce377821568046589f6 # v1.0.0
+```
+
+### 3.71 Dependabot Workflow Action ([`.github/workflows/dependabot-workflow.yml`](../.github/workflows/dependabot-workflow.yml))
+Runs containerized Dependabot version update passes directly inside custom GitHub Actions workflows:
+
+```yaml
+- name: Run Dependabot Action
+  uses: GavinMeierSonos/dependabot-action@a0789e7b36fd4cf0ba2906e77568ae5deae85f95 # v1.10-beta
+  with:
+    repo-name: ${{ github.repository }}
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    registry-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.72 Dependabot Fetch Metadata ([`.github/workflows/dependabot-fetch-metadata.yml`](../.github/workflows/dependabot-fetch-metadata.yml))
+Extracts structured metadata (semver delta, ecosystems, alert CVSS, compatibility scores) from Dependabot pull requests:
+
+```yaml
+- name: Fetch Dependabot metadata
+  uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+  with:
+    github-token: ${{ github.token }}
+    skip-verification: true
+```
+
+### 3.73 Dependabot Issue for PRs ([`.github/workflows/dependabot-issue.yml`](../.github/workflows/dependabot-issue.yml))
+Automatically creates triage and tracking issues for incoming Dependabot pull requests:
+
+```yaml
+- name: Create Dependabot Issue
+  uses: goatandsheep/dependabot-issue-action@085384c6fc7247bf455bcd86178c6fc8a5ffc1d5 # v1.0.1
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ---

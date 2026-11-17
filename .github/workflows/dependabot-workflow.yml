@@ -1,0 +1,59 @@
+name: Dependabot Workflow Action
+
+on:
+  workflow_dispatch:
+    inputs:
+      directory:
+        description: "Target directory to run checks"
+        required: false
+        default: "./"
+      branch:
+        description: "Target branch for update pull requests"
+        required: false
+        default: "main"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  dependabot-workflow:
+    name: Run Dependabot In Workflow
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Check Authentication Token
+        id: check-token
+        env:
+          DEPENDABOT_TOKEN: ${{ secrets.DEPENDABOT_PAT || secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "$DEPENDABOT_TOKEN" ]; then
+            echo "has_token=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_token=false" >> "$GITHUB_OUTPUT"
+            echo "::notice ::No authentication token provided; skipping Dependabot workflow update."
+          fi
+
+      - name: Run Dependabot Action
+        if: steps.check-token.outputs.has_token == 'true'
+        uses: GavinMeierSonos/dependabot-action@a0789e7b36fd4cf0ba2906e77568ae5deae85f95 # v1.10-beta
+        with:
+          repo-name: ${{ github.repository }}
+          github-token: ${{ secrets.DEPENDABOT_PAT || secrets.GITHUB_TOKEN }}
+          registry-token: ${{ secrets.DEPENDABOT_PAT || secrets.GITHUB_TOKEN }}
+          directory: ${{ inputs.directory || './' }}
+          branch: ${{ inputs.branch || 'main' }}
