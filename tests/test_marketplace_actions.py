@@ -29,6 +29,8 @@ PINNED_ACTIONS = {
     "wearerequired/lint-action": "124229c6e2974984ba137c67a499ba28bfc33e33",
     "actions/create-github-app-token": "64ab729a6294000f5aa4a4bc0b73d1f32bc45510",
     "fastify/github-action-merge-dependabot": "73ec4cbb5e56df5591eae286972d5b2201ffe90f",
+    "seferov/pr-lint-action": "cbef81c153f36262fbcd92fe97d6c6b8736d891d",
+    "Optimal-AI/PR-Label-Checker": "48d46fe6336aedcbb836ca580e86f195f9d14b01",
 }
 
 
@@ -67,6 +69,8 @@ MARKETPLACE_WORKFLOW_FILES = [
     "lint-check.yml",
     "reusable-app-token.yml",
     "dependabot-auto-merge.yml",
+    "pr-lint.yml",
+    "pr-label-checker.yml",
 ]
 
 

@@ -1,0 +1,38 @@
+# PR Title Lint Workflow
+# Validates pull request titles against Conventional Commits specification
+
+name: PR Lint
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-lint-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pr-lint:
+    name: Lint PR Title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Verify PR Title Conventional Commits
+        uses: seferov/pr-lint-action@cbef81c153f36262fbcd92fe97d6c6b8736d891d # v2.0.0
+        with:
+          title-regex: '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert|init)(\([a-zA-Z0-9_\-\/]+\))?: .+'
+          error-message: 'PR title must follow Conventional Commits format (e.g., "feat: add feature", "fix(core): fix issue").'
