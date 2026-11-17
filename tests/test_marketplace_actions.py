@@ -53,6 +53,11 @@ PINNED_ACTIONS = {
     "wadackel/checkbox-workflow-action": "39a84e680429bb174302beed9f222e06972cecf9",
     "NejcZdovc/comment-pr": "a423635d183a8259308e80593c96fecf31539c26",
     "ArcticLampyrid/action-wait-for-workflow": "ff297b23789206858260877c4b83026d90c6db8c",
+    "kvendingoldo/git-flow-action": "ca756ba150c376eb9bf35e3ff3ed591913bb7f11",
+    "dortort/gemini-actions": "c7ce09711c46a567055a16a762c0c99fdf181aeb",
+    "hoverkraft-tech/ci-dokumentor": "93a10eb9c637d6b06ef394f12d60189b192b87c2",
+    "rubensflinco/gemini-code-review-action": "eff35325520e8afcd9ed86618920a4804925c05f",
+    "jgunnink/gemini-review-bot": "a1912666a1c394f0f7b51cb0910d02d54c1a93f7",
 }
 
 
@@ -115,6 +120,11 @@ MARKETPLACE_WORKFLOW_FILES = [
     "checkbox-trigger.yml",
     "reusable-comment-pr.yml",
     "wait-for-workflow.yml",
+    "git-flow-action.yml",
+    "gemini-actions.yml",
+    "ci-dokumentor.yml",
+    "gemini-code-review-action.yml",
+    "gemini-review-bot.yml",
 ]
 
 
