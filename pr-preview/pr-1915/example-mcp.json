@@ -1,0 +1,29 @@
+{
+  "servers": [
+    {
+      "name": "sakking",
+      "command": "sakking",
+      "args": ["mcp", "serve"],
+      "env": {}
+    },
+    {
+      "name": "ollama",
+      "command": "ollama",
+      "args": ["mcp", "serve"],
+      "env": {}
+    },
+    {
+      "name": "github",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "your-token-here" },
+      "tools": ["create_issue", "get_file_contents"]
+    },
+    {
+      "name": "feather",
+      "url": "https://mcp.feather.so",
+      "transport": "sse",
+      "tools": ["list_blogs", "create_post"]
+    }
+  ]
+}
