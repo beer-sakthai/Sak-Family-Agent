@@ -25,6 +25,9 @@ PINNED_ACTIONS = {
     "benchmark-action/github-action-benchmark": "4322e5726e6334590d251fc4f92bec0efafc45dc",
     "ghalactic/github-release-from-tag": "30770b91acccc8e1e2f14562d813cb30af08f1c6",
     "jamesgeorge007/github-activity-readme": "4aefbfa1c222d70537dc6a02f0519266aab2b1ea",
+    "renovatebot/github-action": "acdd6bda8b035c99ce59d5675816af2aa65a1774",
+    "wearerequired/lint-action": "124229c6e2974984ba137c67a499ba28bfc33e33",
+    "actions/create-github-app-token": "64ab729a6294000f5aa4a4bc0b73d1f32bc45510",
 }
 
 
@@ -59,6 +62,9 @@ MARKETPLACE_WORKFLOW_FILES = [
     "continuous-benchmark.yml",
     "release-from-tag.yml",
     "activity-readme.yml",
+    "renovate.yml",
+    "lint-check.yml",
+    "reusable-app-token.yml",
 ]
 
 
