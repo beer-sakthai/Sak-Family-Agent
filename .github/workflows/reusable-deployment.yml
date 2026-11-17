@@ -1,0 +1,48 @@
+# Reusable Deployment Workflow
+# Creates a GitHub Deployment and records environment state
+
+name: Reusable Deployment
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Target environment name (e.g. production, staging)'
+        required: true
+        type: string
+      environment_url:
+        description: 'URL of the deployed environment'
+        required: false
+        default: 'https://houseofsak.vercel.app'
+        type: string
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: deployment-${{ inputs.environment }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Create Deployment Record
+        uses: chrnorm/deployment-action@55729fcebec3d284f60f5bcabbd8376437d696b1 # v2.0.7
+        id: deployment
+        with:
+          token: ${{ github.token }}
+          environment: ${{ inputs.environment }}
+          environment-url: ${{ inputs.environment_url }}

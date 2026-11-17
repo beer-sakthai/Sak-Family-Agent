@@ -1,0 +1,56 @@
+# Pull Request Comment Trigger Workflow
+# Detects slash-commands (e.g., @deploy, /benchmark) in pull request comments
+
+name: PR Comment Trigger
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  pull-requests: read
+  issues: write
+
+concurrency:
+  group: pr-comment-${{ github.event.issue.number }}-${{ github.event.comment.id }}
+  cancel-in-progress: false
+
+jobs:
+  check-comment:
+    # Only run on pull requests, not regular issues
+    if: ${{ github.event.issue.pull_request }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pull-requests: read
+      issues: write
+
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Check for deploy trigger
+        uses: Khan/pull-request-comment-trigger@edab8d9ba7759221187ef7120592a6fbfada0d18 # v1.1.0
+        id: check-deploy
+        with:
+          trigger: '@deploy'
+          reaction: rocket
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Check for benchmark trigger
+        uses: Khan/pull-request-comment-trigger@edab8d9ba7759221187ef7120592a6fbfada0d18 # v1.1.0
+        id: check-benchmark
+        with:
+          trigger: '/benchmark'
+          reaction: eyes
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Report Trigger Detection
+        if: steps.check-deploy.outputs.triggered == 'true' || steps.check-benchmark.outputs.triggered == 'true'
+        run: |
+          echo "Trigger detected on PR #${{ github.event.issue.number }} by @${{ github.actor }}"
