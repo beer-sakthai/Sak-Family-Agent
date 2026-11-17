@@ -190,6 +190,16 @@ graph TD
     ActionChoice -->|Dependabot Workflow| DepWorkflow[GavinMeierSonos/dependabot-action]
     ActionChoice -->|Fetch Metadata| FetchMetadata[dependabot/fetch-metadata]
     ActionChoice -->|Dependabot Issue| DepIssue[goatandsheep/dependabot-issue-action]
+    ActionChoice -->|Verified Bot Commit| VerifiedBotCommit[IAreKyleW00t/verified-bot-commit]
+    ActionChoice -->|Issue Bot| IssueBot[imjohnbo/issue-bot]
+    ActionChoice -->|No Free Usage| NoFreeUsage[fluttercandies/no-free-usage-action]
+    ActionChoice -->|Setup Bot Identity| SetupBotIdentity[cli-stuff/setup-github-actions-bot]
+    ActionChoice -->|Auto Issue Bot| AutoIssueBot[autoissue/autoissuebot]
+    ActionChoice -->|Set Git User| SetGitUser[gotmax23/set-bot-git-user-action]
+    ActionChoice -->|GitHub CI Bot| GHciBot[wzshiming/gh-ci-bot]
+    ActionChoice -->|Google Chat Dispatch| GoogleChat[dtherhtun/google-chat-action]
+    ActionChoice -->|CODEOWNERS Bot| CodeownersBot[gmolau/codeowners]
+    ActionChoice -->|Auto Answer Bot| AutoAnswerBot[jmaxdev/automatic-answer]
 ```
 
 ### 3.1 Wiki Sync Workflow ([`.github/workflows/wiki-sync.yml`](../.github/workflows/wiki-sync.yml))
@@ -1178,6 +1188,125 @@ Executes Python linters/type checkers and publishes findings to GitHub Code Scan
     python-version: "3.11"
     target: "personas/sakthai"
     output: "ruff.sarif"
+```
+
+### 3.87 Verified Bot Commit ([`.github/workflows/verified-bot-commit.yml`](../.github/workflows/verified-bot-commit.yml))
+Generates cryptographically verified commits authored by bot accounts via GitHub GraphQL API without local GPG signing keys:
+
+```yaml
+- name: Create Verified Bot Commit
+  uses: IAreKyleW00t/verified-bot-commit@3a1e72c2443cce5574f76a9b2bb36e355d667743 # v2.3.7
+  with:
+    files: ${{ inputs.files || 'docs/*.md' }}
+    message: "${{ inputs.message || 'chore: automated verified bot commit' }}"
+    token: ${{ secrets.GITHUB_TOKEN }}
+    if-no-commit: ignore
+```
+
+### 3.88 Issue Bot Automation ([`.github/workflows/issue-bot.yml`](../.github/workflows/issue-bot.yml))
+Generates scheduled issues, manages project backlogs, and automates assignee rotation and previous issue closure:
+
+```yaml
+- name: Run Issue Bot
+  uses: imjohnbo/issue-bot@3188c6ce06249206709d3b1f274d0d4c5a521601 # v3.4.5
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    title: 'Weekly House of Sak Maintenance & Backlog Sync'
+    body: 'Automated weekly maintenance tracker for House of Sak monorepo.'
+    labels: 'maintenance,automation'
+    close-previous: true
+```
+
+### 3.89 No Free Usage Guard ([`.github/workflows/no-free-usage.yml`](../.github/workflows/no-free-usage.yml))
+Validates community contributor engagement (star/fork status) on new issue creation:
+
+```yaml
+- name: Verify Free Usage Policy
+  uses: fluttercandies/no-free-usage-action@84718b1a36661a646d795bf4a7fd15a3f6f087e2 # v1.0.1
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    forked: false
+    starred: false
+    words: 'Thank you for opening an issue in House of Sak! Please consider starring the repository to support our open-source agent workspace.'
+```
+
+### 3.90 Setup GitHub Actions Bot Identity ([`.github/workflows/setup-github-actions-bot.yml`](../.github/workflows/setup-github-actions-bot.yml))
+Configures canonical git author identity for automated bot commits (`github-actions[bot]`):
+
+```yaml
+- name: Setup GitHub Actions Bot
+  uses: cli-stuff/setup-github-actions-bot@6f48e564efbb89283f4ec530312d3cfd23a95f58 # v0.1
+```
+
+### 3.91 Auto Issue Bot Triage ([`.github/workflows/auto-issue-bot.yml`](../.github/workflows/auto-issue-bot.yml))
+Batch triage and management of repository issues across scheduled intervals:
+
+```yaml
+- name: Run Auto Issue Bot
+  uses: autoissue/autoissuebot@5af0465ff89575e2b7d9650c9a2d3fb3b6faea36 # v1.1.1
+  with:
+    repo-token: ${{ secrets.GITHUB_TOKEN }}
+    per-page: 20
+    mode: 'read'
+```
+
+### 3.92 Set Bot Git User Identity ([`.github/workflows/set-bot-github-user.yml`](../.github/workflows/set-bot-github-user.yml))
+Flexible bot author configuration supporting multiple service accounts (`github-actions`, `dependabot`):
+
+```yaml
+- name: Set Bot User Action
+  uses: gotmax23/set-bot-git-user-action@f098db822a2e5baf8a268d7a0c7529734755b6ae # v1.2.0
+  with:
+    bot: ${{ inputs.bot || 'github-actions' }}
+```
+
+### 3.93 GitHub CI Bot Commands & Automation ([`.github/workflows/github-ci-bot.yml`](../.github/workflows/github-ci-bot.yml))
+Prow-style chat command automation and pull request lifecycle management (`/lgtm`, `/hold`, `/rebase`, `/cherry-pick`):
+
+```yaml
+- name: Run GitHub CI Bot
+  uses: wzshiming/gh-ci-bot@91068dab3f3130054b3569e2b0dd2db07cd53c2a # v1.8.0
+  env:
+    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    BLUNDERBUSS_REVIEWER_COUNT: '2'
+```
+
+### 3.94 Google Chat Dispatcher ([`.github/workflows/google-chat-notification.yml`](../.github/workflows/google-chat-notification.yml))
+Sends build status cards and CI event notifications to Google Chat spaces via webhooks:
+
+```yaml
+- name: Send Google Chat Notification
+  if: env.GOOGLE_CHAT_WEBHOOK != ''
+  uses: dtherhtun/google-chat-action@dec309966ac02aa06cf79fb930096919ed8d7baf # v0.9
+  with:
+    webhook: ${{ secrets.GOOGLE_CHAT_WEBHOOK }}
+    project: 'House of Sak'
+    branch: ${{ github.ref_name }}
+    commit: ${{ github.sha }}
+    status: ${{ inputs.status || 'success' }}
+  env:
+    GOOGLE_CHAT_WEBHOOK: ${{ secrets.GOOGLE_CHAT_WEBHOOK }}
+```
+
+### 3.95 CODEOWNERS Bot Generator ([`.github/workflows/codeowners-bot.yml`](../.github/workflows/codeowners-bot.yml))
+Compiles modular directory-level CODEOWNERS files into the canonical repository `.github/CODEOWNERS`:
+
+```yaml
+- name: Run CODEOWNERS Bot
+  uses: gmolau/codeowners@efba36333e402884498dc49d216d2f9612bd69a8 # v0.1.5
+```
+
+### 3.96 GitHub Bot Auto-Answer ([`.github/workflows/github-bot-auto-answer.yml`](../.github/workflows/github-bot-auto-answer.yml))
+Auto-responds with contributor onboarding guidance and acknowledgement on new issue creation:
+
+```yaml
+- name: Auto-Respond to Contributor
+  uses: jmaxdev/automatic-answer@18cb23e840a04d7b2644a767f6246cc850475885 # v1.0.1
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    issue_comment: "Thank you for creating an issue in House of Sak! Our automated agents and maintainers will review your contribution shortly."
+    pr_comment: "Thank you for opening a pull request in House of Sak! Our CI test suite and reviewer workflows are running."
+    add_labels: false
 ```
 
 ---
