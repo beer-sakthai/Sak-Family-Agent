@@ -1,0 +1,48 @@
+name: Set Bot Git User Identity
+
+on:
+  workflow_dispatch:
+    inputs:
+      bot:
+        description: 'Bot identity to configure (github-actions, dependabot)'
+        required: false
+        default: 'github-actions'
+  workflow_call:
+    inputs:
+      bot:
+        description: 'Bot identity to configure'
+        required: false
+        type: string
+        default: 'github-actions'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  configure-bot-user:
+    name: Set Bot User
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Set Bot User Action
+        uses: gotmax23/set-bot-git-user-action@f098db822a2e5baf8a268d7a0c7529734755b6ae # v1.2.0
+        with:
+          bot: ${{ inputs.bot || 'github-actions' }}
+
+      - name: Verify Identity
+        run: |
+          echo "Bot User: $(git config user.name)"
+          echo "Bot Email: $(git config user.email)"

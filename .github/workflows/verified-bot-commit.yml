@@ -1,0 +1,57 @@
+name: Verified Bot Commit
+
+on:
+  workflow_dispatch:
+    inputs:
+      files:
+        description: 'File path pattern to commit'
+        required: false
+        default: 'docs/*.md'
+      message:
+        description: 'Commit message'
+        required: false
+        default: 'chore: automated verified bot commit'
+  workflow_call:
+    inputs:
+      files:
+        description: 'File path pattern to commit'
+        required: false
+        type: string
+        default: 'docs/*.md'
+      message:
+        description: 'Commit message'
+        required: false
+        type: string
+        default: 'chore: automated verified bot commit'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verified-commit:
+    name: Create Verified Commit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Create Verified Bot Commit
+        uses: IAreKyleW00t/verified-bot-commit@3a1e72c2443cce5574f76a9b2bb36e355d667743 # v2.3.7
+        with:
+          files: ${{ inputs.files || 'docs/*.md' }}
+          message: "${{ inputs.message || 'chore: automated verified bot commit' }}"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          if-no-commit: ignore

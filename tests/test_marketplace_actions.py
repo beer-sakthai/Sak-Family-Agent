@@ -99,6 +99,16 @@ PINNED_ACTIONS = {
     "harishrsk/dependafix-action": "a5c537144e03f8c2d42734060736dacdc22e53d5",
     "PrismorSec/patchbot": "60906559fec33549e4ac97f5f3e707c517342486",
     "advanced-security/python-lint-code-scanning-action": "7ebf81c5860ee4d41849872bc2f95b4243c8dc28",
+    "IAreKyleW00t/verified-bot-commit": "3a1e72c2443cce5574f76a9b2bb36e355d667743",
+    "imjohnbo/issue-bot": "3188c6ce06249206709d3b1f274d0d4c5a521601",
+    "fluttercandies/no-free-usage-action": "84718b1a36661a646d795bf4a7fd15a3f6f087e2",
+    "cli-stuff/setup-github-actions-bot": "6f48e564efbb89283f4ec530312d3cfd23a95f58",
+    "autoissue/autoissuebot": "5af0465ff89575e2b7d9650c9a2d3fb3b6faea36",
+    "gotmax23/set-bot-git-user-action": "f098db822a2e5baf8a268d7a0c7529734755b6ae",
+    "wzshiming/gh-ci-bot": "91068dab3f3130054b3569e2b0dd2db07cd53c2a",
+    "dtherhtun/google-chat-action": "dec309966ac02aa06cf79fb930096919ed8d7baf",
+    "gmolau/codeowners": "efba36333e402884498dc49d216d2f9612bd69a8",
+    "jmaxdev/automatic-answer": "18cb23e840a04d7b2644a767f6246cc850475885",
 }
 
 
@@ -207,6 +217,16 @@ MARKETPLACE_WORKFLOW_FILES = [
     "dependafix-ai-remediation.yml",
     "patchbot-scanner.yml",
     "python-lint-sarif.yml",
+    "verified-bot-commit.yml",
+    "issue-bot.yml",
+    "no-free-usage.yml",
+    "setup-github-actions-bot.yml",
+    "auto-issue-bot.yml",
+    "set-bot-github-user.yml",
+    "github-ci-bot.yml",
+    "google-chat-notification.yml",
+    "codeowners-bot.yml",
+    "github-bot-auto-answer.yml",
 ]
 
 

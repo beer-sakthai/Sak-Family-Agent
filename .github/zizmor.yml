@@ -25,6 +25,9 @@ rules:
       # from forks can be labelled; a plain pull_request trigger gets a
       # read-only token there and the labelling silently no-ops.
       - labeler.yml
+      # github-ci-bot.yml acts as a chat command bot on issues and pull requests
+      # without checking out untrusted code or executing attacker scripts.
+      - github-ci-bot.yml
 
   archived-uses:
     ignore:
