@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-labelledby="title desc">
+<title id="title">House of Sak — Sak Family Agent</title>
+<desc id="desc">Six personas, one shared runtime: SakThai (lead), SakSee, SakJules, SakKing, SakSit and SakTan, working through the Dream, Hope, Care, Joy, Trust and Growth cycle.</desc>
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#070a12"/><stop offset="1" stop-color="#0f172a"/></linearGradient>
+<linearGradient id="tile" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#2563eb"/></linearGradient>
+<pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#e2e8f0" stroke-opacity="0.05"/></pattern>
+</defs>
+<rect x="0.5" y="0.5" width="1199" height="299" rx="24" fill="url(#bg)" stroke="#1e293b"/>
+<rect x="0.5" y="0.5" width="1199" height="299" rx="24" fill="url(#grid)"/>
+<g transform="translate(64 62)">
+<rect width="96" height="96" rx="24" fill="url(#tile)"/>
+<path d="M27 34.5 40.5 48 27 61.5" fill="none" stroke="#fff" stroke-width="7.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M49.5 63h19.5" fill="none" stroke="#fff" stroke-width="7.2" stroke-linecap="round"/>
+</g>
+<text x="188" y="104" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="50" font-weight="700" fill="#f1f5f9" letter-spacing="-0.5">House of Sak</text>
+<text x="190" y="142" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" fill="#94a3b8">Sak Family Agent · six personas, one shared runtime</text>
+<rect x="188.0" y="170" width="150.6" height="34" rx="17" fill="#22d3ee"/>
+<text x="263.3" y="192" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#04121a">SakThai · lead</text>
+<rect x="348.6" y="170" width="91.4" height="34" rx="17" fill="#0f172a" stroke="#334155"/>
+<circle cx="364.6" cy="187" r="4.5" fill="#fbbf24"/>
+<text x="376.6" y="192" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="500" fill="#e2e8f0">SakSee</text>
+<rect x="450.0" y="170" width="109.2" height="34" rx="17" fill="#0f172a" stroke="#334155"/>
+<circle cx="466.0" cy="187" r="4.5" fill="#a78bfa"/>
+<text x="478.0" y="192" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="500" fill="#e2e8f0">SakJules</text>
+<rect x="569.2" y="170" width="100.3" height="34" rx="17" fill="#0f172a" stroke="#334155"/>
+<circle cx="585.2" cy="187" r="4.5" fill="#60a5fa"/>
+<text x="597.2" y="192" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="500" fill="#e2e8f0">SakKing</text>
+<rect x="679.5" y="170" width="91.4" height="34" rx="17" fill="#0f172a" stroke="#334155"/>
+<circle cx="695.5" cy="187" r="4.5" fill="#f472b6"/>
+<text x="707.5" y="192" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="500" fill="#e2e8f0">SakSit</text>
+<rect x="780.9" y="170" width="91.4" height="34" rx="17" fill="#0f172a" stroke="#334155"/>
+<circle cx="796.9" cy="187" r="4.5" fill="#34d399"/>
+<text x="808.9" y="192" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="500" fill="#e2e8f0">SakTan</text>
+<text x="190.0" y="250" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#f1f5f9">Dream</text>
+<text x="249.0" y="250" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" fill="#22d3ee">→</text>
+<text x="277.0" y="250" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#f1f5f9">Hope</text>
+<text x="325.8" y="250" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" fill="#22d3ee">→</text>
+<text x="353.8" y="250" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#f1f5f9">Care</text>
+<text x="402.6" y="250" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" fill="#22d3ee">→</text>
+<text x="430.6" y="250" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#f1f5f9">Joy</text>
+<text x="469.2" y="250" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" fill="#22d3ee">→</text>
+<text x="497.2" y="250" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#f1f5f9">Trust</text>
+<text x="556.2" y="250" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" fill="#22d3ee">→</text>
+<text x="584.2" y="250" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#f1f5f9">Growth</text>
+<circle cx="1040" cy="150" r="88" fill="none" stroke="#334155" stroke-dasharray="4 6"/>
+<line x1="1040" y1="150" x2="1040.0" y2="62.0" stroke="#334155" stroke-opacity="0.8"/>
+<line x1="1040" y1="150" x2="1116.2" y2="106.0" stroke="#334155" stroke-opacity="0.8"/>
+<line x1="1040" y1="150" x2="1116.2" y2="194.0" stroke="#334155" stroke-opacity="0.8"/>
+<line x1="1040" y1="150" x2="1040.0" y2="238.0" stroke="#334155" stroke-opacity="0.8"/>
+<line x1="1040" y1="150" x2="963.8" y2="194.0" stroke="#334155" stroke-opacity="0.8"/>
+<line x1="1040" y1="150" x2="963.8" y2="106.0" stroke="#334155" stroke-opacity="0.8"/>
+<circle cx="1040.0" cy="62.0" r="13" fill="#0b1220" stroke="#22d3ee" stroke-width="3"/>
+<circle cx="1040.0" cy="62.0" r="5" fill="#22d3ee"/>
+<circle cx="1116.2" cy="106.0" r="13" fill="#0b1220" stroke="#fbbf24" stroke-width="3"/>
+<circle cx="1116.2" cy="106.0" r="5" fill="#fbbf24"/>
+<circle cx="1116.2" cy="194.0" r="13" fill="#0b1220" stroke="#a78bfa" stroke-width="3"/>
+<circle cx="1116.2" cy="194.0" r="5" fill="#a78bfa"/>
+<circle cx="1040.0" cy="238.0" r="13" fill="#0b1220" stroke="#60a5fa" stroke-width="3"/>
+<circle cx="1040.0" cy="238.0" r="5" fill="#60a5fa"/>
+<circle cx="963.8" cy="194.0" r="13" fill="#0b1220" stroke="#f472b6" stroke-width="3"/>
+<circle cx="963.8" cy="194.0" r="5" fill="#f472b6"/>
+<circle cx="963.8" cy="106.0" r="13" fill="#0b1220" stroke="#34d399" stroke-width="3"/>
+<circle cx="963.8" cy="106.0" r="5" fill="#34d399"/>
+<g transform="translate(1016 126)">
+<rect width="48" height="48" rx="12" fill="url(#tile)"/>
+<path d="M13.5 17.25 20.25 24 13.5 30.75" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M24.75 31.5h9.75" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/>
+</g>
+</svg>
