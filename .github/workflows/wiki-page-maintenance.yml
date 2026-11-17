@@ -1,0 +1,31 @@
+name: Wiki Page Maintenance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wiki-maintenance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  maintain:
+    name: Format Wiki Pages and TOCs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Maintain Wiki Markdown Structure
+        uses: umonkey/github-wiki-tools@72074b2f45265374a7571550ff7576cbae15af60 # v2.4.2
+        with:
+          path: "docs"
+          update_tocs: "true"
+          update_backlinks: "true"

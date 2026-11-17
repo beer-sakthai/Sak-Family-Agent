@@ -1,0 +1,37 @@
+name: Bot Check Action
+
+on:
+  issues:
+    types: [opened]
+  pull_request:
+    types: [opened]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  check-bot:
+    name: Check Creator Authenticity
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Run Bot Check
+        if: ${{ secrets.PAT_VERIFICATION_TOKEN != '' }}
+        uses: dohyeon5626/bot-check-action@4f0b434cd4999aa880bd4ed4855105a1c9cefba5 # v1.1
+        with:
+          comment-account-token: ${{ secrets.GITHUB_TOKEN }}
+          personal-access-token: ${{ secrets.PAT_VERIFICATION_TOKEN }}
+          auto-close: "false"
+          verification-timeout: "5"

@@ -98,6 +98,14 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **Automatic Contrib PRs** | [`github/automatic-contrib-prs`](https://github.com/github/automatic-contrib-prs) | `v2.1.8` | `fbb93799968fd54783c29339b95e9fcf888c8709` | `contents: read`, `pull-requests: write` | Opens automated pull request for repositories missing CONTRIBUTING.md guidelines |
 | **Auto Update** | [`chinthakagodawita/autoupdate`](https://github.com/chinthakagodawita/autoupdate) | `v1.7.0` | `0707656cd062a3b0cf8fa9b2cda1d1404d74437e` | `contents: write`, `pull-requests: write` | Automatically updates pull request branches when changes land on base branch |
 | **Generate Roadmap** | [`inat-get/action-is-roadmap`](https://github.com/inat-get/action-is-roadmap) | `v2` | `9fecd4863d39e5033e9c641a381e00d9c1a21265` | `contents: write`, `issues: read` | Generates Mermaid flowchart roadmap from GitHub Milestones and Issues |
+| **Rational Test Server** | [`IBM/devopsauto-testserver-actions`](https://github.com/IBM/devopsauto-testserver-actions) | `v1` | `c704855bdbbae4f0df152919d00fb0bd40f67ee0` | `contents: read` | Executes enterprise automated test suites on Rational Test Server |
+| **GitHub Actions Documenter** | [`gizumon/github-actions-documenter`](https://github.com/gizumon/github-actions-documenter) | `v1.3.1` | `843a0f92e66b5db20f76d3c707beb0329b48c628` | `contents: write`, `pull-requests: write` | Automatically generates documentation for composite and Docker actions |
+| **GitHub Wiki Tools** | [`umonkey/github-wiki-tools`](https://github.com/umonkey/github-wiki-tools) | `v1.0.3` | `72074b2f45265374a7571550ff7576cbae15af60` | `contents: write` | Performs wiki page maintenance, sidebar generation, and markdown styling |
+| **GitHub Actions Auto-Docs** | [`pndurette/gh-actions-auto-docs`](https://github.com/pndurette/gh-actions-auto-docs) | `v1.0.1` | `e6b4c8b27a1ddd45e1b3157d68ebacd83dd02cd5` | `contents: write` | Extracts action and workflow metadata to update markdown documentation |
+| **Dependfix Security Auto Fix** | [`dependfix/dependfix`](https://github.com/dependfix/dependfix) | `v1.1.0` | `80883880c7016b093c4721cc5a8b2d51eef102a0` | `contents: read`, `pull-requests: read`, `security-events: read` | Automated remediation of Dependabot & Code Scanning security alerts with reporting |
+| **DependaFix AI Remediation** | [`harishrsk/dependafix-action`](https://github.com/harishrsk/dependafix-action) | `v1.0.0` | `a5c537144e03f8c2d42734060736dacdc22e53d5` | `contents: read`, `pull-requests: read` | AI-powered autonomous remediation of breaking changes in dependency PRs |
+| **Patchbot Vulnerability Scanner** | [`PrismorSec/patchbot`](https://github.com/PrismorSec/patchbot) | `v0.3.0` | `60906559fec33549e4ac97f5f3e707c517342486` | `contents: read`, `security-events: write` | Vulnerability scanning, SARIF generation, and coding-agent fix generation |
+| **Python Lint Code Scanning** | [`advanced-security/python-lint-code-scanning-action`](https://github.com/advanced-security/python-lint-code-scanning-action) | `v1.1.3` | `7ebf81c5860ee4d41849872bc2f95b4243c8dc28` | `contents: read`, `security-events: write` | Multi-linter and type checker for Python with SARIF upload to Code Scanning |
 
 
 ---
@@ -182,6 +190,26 @@ graph TD
     ActionChoice -->|Dependabot Workflow| DepWorkflow[GavinMeierSonos/dependabot-action]
     ActionChoice -->|Fetch Metadata| FetchMetadata[dependabot/fetch-metadata]
     ActionChoice -->|Dependabot Issue| DepIssue[goatandsheep/dependabot-issue-action]
+    ActionChoice -->|Verified Bot Commit| VerifiedBotCommit[IAreKyleW00t/verified-bot-commit]
+    ActionChoice -->|Issue Bot| IssueBot[imjohnbo/issue-bot]
+    ActionChoice -->|No Free Usage| NoFreeUsage[fluttercandies/no-free-usage-action]
+    ActionChoice -->|Setup Bot Identity| SetupBotIdentity[cli-stuff/setup-github-actions-bot]
+    ActionChoice -->|Auto Issue Bot| AutoIssueBot[autoissue/autoissuebot]
+    ActionChoice -->|Set Git User| SetGitUser[gotmax23/set-bot-git-user-action]
+    ActionChoice -->|GitHub CI Bot| GHciBot[wzshiming/gh-ci-bot]
+    ActionChoice -->|Google Chat Dispatch| GoogleChat[dtherhtun/google-chat-action]
+    ActionChoice -->|CODEOWNERS Bot| CodeownersBot[gmolau/codeowners]
+    ActionChoice -->|Auto Answer Bot| AutoAnswerBot[jmaxdev/automatic-answer]
+    ActionChoice -->|PR Triage Bot| PRTriageBot[dinakars777/pr-triage-action]
+    ActionChoice -->|AI PR Opener| AIPrOpener[teohsinyee/ai-pr-opener-bot]
+    ActionChoice -->|Fixed Issues Labeler| FixLabeler[gh-bot/fix-labeler]
+    ActionChoice -->|Playwright Triage| PwTriage[AhmedHoussou/action-test-failure-triage]
+    ActionChoice -->|Git as GHA Bot| GitAsGHA[Lucky3028/git-as-gha]
+    ActionChoice -->|Bot Check| BotCheck[dohyeon5626/bot-check-action]
+    ActionChoice -->|Setup App Bot| SetupAppBot[SimonMarquis/setup-github-app-as-bot]
+    ActionChoice -->|AutoHeal CI| AutoHealCI[nolekek/AutoHeal-CI]
+    ActionChoice -->|PR Review Bot| PRReviewBot[kakaotech-25/Hackathon-PR-Review]
+    ActionChoice -->|Gitbot Config| GitbotConfig[drengskapur/gitbot-config]
 ```
 
 ### 3.1 Wiki Sync Workflow ([`.github/workflows/wiki-sync.yml`](../.github/workflows/wiki-sync.yml))
@@ -1063,6 +1091,356 @@ Generates dynamic Mermaid flowchart roadmaps from repository milestones and issu
     output_type: 'file'
     output_path: 'ROADMAP.md'
     config_file: '.github/roadmap-styles.yml'
+```
+
+### 3.78 Rational Test Automation Server ([`.github/workflows/rational-test-server.yml`](../.github/workflows/rational-test-server.yml))
+Executes enterprise test automation suites hosted on Rational Test Automation Server:
+
+```yaml
+- name: Execute Rational Test Automation Server Action
+  uses: IBM/devopsauto-testserver-actions@c704855bdbbae4f0df152919d00fb0bd40f67ee0 # v1
+  with:
+    serverUrl: ${{ secrets.RTAS_SERVER_URL }}
+    offlineToken: ${{ secrets.RTAS_OFFLINE_TOKEN }}
+```
+
+### 3.79 GitHub Actions Documenter ([`.github/workflows/gh-actions-documenter.yml`](../.github/workflows/gh-actions-documenter.yml))
+Generates automated agenda and table documentation for repository GitHub Actions workflows:
+
+```yaml
+- name: Document Workflows
+  uses: gizumon/github-actions-documenter@843a0f92e66b5db20f76d3c707beb0329b48c628 # v0.2.2
+  with:
+    target-filepaths: ".github/workflows"
+```
+
+### 3.80 Wiki Page Maintenance ([`.github/workflows/wiki-page-maintenance.yml`](../.github/workflows/wiki-page-maintenance.yml))
+Generates and maintains table of contents and backlinks across repository Markdown wiki documentation:
+
+```yaml
+- name: Maintain Wiki Markdown Structure
+  uses: umonkey/github-wiki-tools@72074b2f45265374a7571550ff7576cbae15af60 # v2.4.2
+  with:
+    path: "docs"
+    update_tocs: "true"
+    update_backlinks: "true"
+```
+
+### 3.81 GitHub Actions Auto-Docs ([`.github/workflows/gh-actions-auto-docs.yml`](../.github/workflows/gh-actions-auto-docs.yml))
+Extracts action and workflow metadata to update markdown documentation tables:
+
+```yaml
+- name: Generate Action Docs
+  uses: pndurette/gh-actions-auto-docs@e6b4c8b27a1ddd45e1b3157d68ebacd83dd02cd5 # v1.0.1
+  with:
+    include_inputs: "true"
+    include_outputs: "true"
+    git_push: "false"
+```
+
+### 3.82 SLSA Provenance Generator ([`.github/workflows/generator-generic-ossf-slsa3-publish.yml`](../.github/workflows/generator-generic-ossf-slsa3-publish.yml))
+Generates SLSA Level 3 cryptographically signed provenance for build artifacts using OpenSSF's official generic generator reusable workflow:
+
+```yaml
+- name: Generate SLSA Provenance
+  uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@f7dd8c54c2067bafc12ca7a55595d5ee9b75204a # v2.1.0
+  with:
+    base64-subjects: "${{ needs.build.outputs.digests }}"
+    upload-assets: true
+```
+
+### 3.83 Dependfix Security Auto Fix ([`.github/workflows/dependfix-security-auto-fix.yml`](../.github/workflows/dependfix-security-auto-fix.yml))
+Automates remediation and reporting for Dependabot & Code Scanning security alerts:
+
+```yaml
+- name: Run Dependfix
+  uses: dependfix/dependfix@80883880c7016b093c4721cc5a8b2d51eef102a0 # v1.1.0
+  with:
+    mode: "report-only"
+    severity-threshold: "high"
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    dry-run: "true"
+```
+
+### 3.84 DependaFix AI Remediation ([`.github/workflows/dependafix-ai-remediation.yml`](../.github/workflows/dependafix-ai-remediation.yml))
+AI-powered agent to resolve breaking syntax and API changes introduced by dependency updates:
+
+```yaml
+- name: Run DependaFix AI Remediation
+  uses: harishrsk/dependafix-action@a5c537144e03f8c2d42734060736dacdc22e53d5 # v1.0.0
+  with:
+    gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    license_key: ${{ secrets.DEPENDAFIX_LICENSE_KEY }}
+```
+
+### 3.85 Patchbot Vulnerability Scanner ([`.github/workflows/patchbot-scanner.yml`](../.github/workflows/patchbot-scanner.yml))
+Scans lockfiles and packages against vulnerability threat feeds and exports SARIF findings:
+
+```yaml
+- name: Scan Vulnerabilities with Patchbot
+  uses: PrismorSec/patchbot@60906559fec33549e4ac97f5f3e707c517342486 # v0.3.0
+  with:
+    path: "."
+    fail-on: "none"
+    upload-sarif: "true"
+    sarif-output: "patchbot.sarif"
+```
+
+### 3.86 Python Lint Code Scanning ([`.github/workflows/python-lint-sarif.yml`](../.github/workflows/python-lint-sarif.yml))
+Executes Python linters/type checkers and publishes findings to GitHub Code Scanning:
+
+```yaml
+- name: Run Python Lint with SARIF Export
+  uses: advanced-security/python-lint-code-scanning-action@7ebf81c5860ee4d41849872bc2f95b4243c8dc28 # v1.1.3
+  with:
+    linter: "ruff"
+    python-version: "3.11"
+    target: "personas/sakthai"
+    output: "ruff.sarif"
+```
+
+### 3.87 Verified Bot Commit ([`.github/workflows/verified-bot-commit.yml`](../.github/workflows/verified-bot-commit.yml))
+Generates cryptographically verified commits authored by bot accounts via GitHub GraphQL API without local GPG signing keys:
+
+```yaml
+- name: Create Verified Bot Commit
+  uses: IAreKyleW00t/verified-bot-commit@3a1e72c2443cce5574f76a9b2bb36e355d667743 # v2.3.7
+  with:
+    files: ${{ inputs.files || 'docs/*.md' }}
+    message: "${{ inputs.message || 'chore: automated verified bot commit' }}"
+    token: ${{ secrets.GITHUB_TOKEN }}
+    if-no-commit: ignore
+```
+
+### 3.88 Issue Bot Automation ([`.github/workflows/issue-bot.yml`](../.github/workflows/issue-bot.yml))
+Generates scheduled issues, manages project backlogs, and automates assignee rotation and previous issue closure:
+
+```yaml
+- name: Run Issue Bot
+  uses: imjohnbo/issue-bot@3188c6ce06249206709d3b1f274d0d4c5a521601 # v3.4.5
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    title: 'Weekly House of Sak Maintenance & Backlog Sync'
+    body: 'Automated weekly maintenance tracker for House of Sak monorepo.'
+    labels: 'maintenance,automation'
+    close-previous: true
+```
+
+### 3.89 No Free Usage Guard ([`.github/workflows/no-free-usage.yml`](../.github/workflows/no-free-usage.yml))
+Validates community contributor engagement (star/fork status) on new issue creation:
+
+```yaml
+- name: Verify Free Usage Policy
+  uses: fluttercandies/no-free-usage-action@84718b1a36661a646d795bf4a7fd15a3f6f087e2 # v1.0.1
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    forked: false
+    starred: false
+    words: 'Thank you for opening an issue in House of Sak! Please consider starring the repository to support our open-source agent workspace.'
+```
+
+### 3.90 Setup GitHub Actions Bot Identity ([`.github/workflows/setup-github-actions-bot.yml`](../.github/workflows/setup-github-actions-bot.yml))
+Configures canonical git author identity for automated bot commits (`github-actions[bot]`):
+
+```yaml
+- name: Setup GitHub Actions Bot
+  uses: cli-stuff/setup-github-actions-bot@6f48e564efbb89283f4ec530312d3cfd23a95f58 # v0.1
+```
+
+### 3.91 Auto Issue Bot Triage ([`.github/workflows/auto-issue-bot.yml`](../.github/workflows/auto-issue-bot.yml))
+Batch triage and management of repository issues across scheduled intervals:
+
+```yaml
+- name: Run Auto Issue Bot
+  uses: autoissue/autoissuebot@5af0465ff89575e2b7d9650c9a2d3fb3b6faea36 # v1.1.1
+  with:
+    repo-token: ${{ secrets.GITHUB_TOKEN }}
+    per-page: 20
+    mode: 'read'
+```
+
+### 3.92 Set Bot Git User Identity ([`.github/workflows/set-bot-github-user.yml`](../.github/workflows/set-bot-github-user.yml))
+Flexible bot author configuration supporting multiple service accounts (`github-actions`, `dependabot`):
+
+```yaml
+- name: Set Bot User Action
+  uses: gotmax23/set-bot-git-user-action@f098db822a2e5baf8a268d7a0c7529734755b6ae # v1.2.0
+  with:
+    bot: ${{ inputs.bot || 'github-actions' }}
+```
+
+### 3.93 GitHub CI Bot Commands & Automation ([`.github/workflows/github-ci-bot.yml`](../.github/workflows/github-ci-bot.yml))
+Prow-style chat command automation and pull request lifecycle management (`/lgtm`, `/hold`, `/rebase`, `/cherry-pick`):
+
+```yaml
+- name: Run GitHub CI Bot
+  uses: wzshiming/gh-ci-bot@91068dab3f3130054b3569e2b0dd2db07cd53c2a # v1.8.0
+  env:
+    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    BLUNDERBUSS_REVIEWER_COUNT: '2'
+```
+
+### 3.94 Google Chat Dispatcher ([`.github/workflows/google-chat-notification.yml`](../.github/workflows/google-chat-notification.yml))
+Sends build status cards and CI event notifications to Google Chat spaces via webhooks:
+
+```yaml
+- name: Send Google Chat Notification
+  if: env.GOOGLE_CHAT_WEBHOOK != ''
+  uses: dtherhtun/google-chat-action@dec309966ac02aa06cf79fb930096919ed8d7baf # v0.9
+  with:
+    webhook: ${{ secrets.GOOGLE_CHAT_WEBHOOK }}
+    project: 'House of Sak'
+    branch: ${{ github.ref_name }}
+    commit: ${{ github.sha }}
+    status: ${{ inputs.status || 'success' }}
+  env:
+    GOOGLE_CHAT_WEBHOOK: ${{ secrets.GOOGLE_CHAT_WEBHOOK }}
+```
+
+### 3.95 CODEOWNERS Bot Generator ([`.github/workflows/codeowners-bot.yml`](../.github/workflows/codeowners-bot.yml))
+Compiles modular directory-level CODEOWNERS files into the canonical repository `.github/CODEOWNERS`:
+
+```yaml
+- name: Run CODEOWNERS Bot
+  uses: gmolau/codeowners@efba36333e402884498dc49d216d2f9612bd69a8 # v0.1.5
+```
+
+### 3.96 GitHub Bot Auto-Answer ([`.github/workflows/github-bot-auto-answer.yml`](../.github/workflows/github-bot-auto-answer.yml))
+Auto-responds with contributor onboarding guidance and acknowledgement on new issue creation:
+
+```yaml
+- name: Auto-Respond to Contributor
+  uses: jmaxdev/automatic-answer@18cb23e840a04d7b2644a767f6246cc850475885 # v1.0.1
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    issue_comment: "Thank you for creating an issue in House of Sak! Our automated agents and maintainers will review your contribution shortly."
+    pr_comment: "Thank you for opening a pull request in House of Sak! Our CI test suite and reviewer workflows are running."
+    add_labels: false
+```
+
+### 3.97 PR Triage Bot ([`.github/workflows/pr-triage-bot.yml`](../.github/workflows/pr-triage-bot.yml))
+Triages incoming pull requests at birth: classifies change types, calculates risk scores, detects duplicate submissions, and generates author profiles:
+
+```yaml
+- name: Run PR Triage
+  uses: dinakars777/pr-triage-action@423e4bee6992248223e6bc4f5840c0ca2e9c0dcf # v1.0.0
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    duplicate-threshold: "0.8"
+    enable-labels: "true"
+    enable-duplicate-check: "true"
+    enable-contributor-profile: "true"
+```
+
+### 3.98 AI PR Opener Bot ([`.github/workflows/ai-pr-opener-bot.yml`](../.github/workflows/ai-pr-opener-bot.yml))
+Automates GitHub App-authenticated pull request creation, branching, drafting, and reviewer requests for autonomous agents:
+
+```yaml
+- name: Open Pull Request via App Bot
+  uses: teohsinyee/ai-pr-opener-bot@4c36fd7b3830433b7c7f0cd5f8c16ed6cd524351 # v1.0.0
+  with:
+    app_id: ${{ secrets.BOT_APP_ID }}
+    private_key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+    branch: ${{ inputs.branch }}
+    base: ${{ inputs.base }}
+    title: ${{ inputs.title }}
+    draft: ${{ inputs.draft }}
+```
+
+### 3.99 Fixed Issues Labeler ([`.github/workflows/fixed-issues-labeler.yml`](../.github/workflows/fixed-issues-labeler.yml))
+Labels issues referenced by merged/closed pull requests with configurable resolution tags (`fixed`):
+
+```yaml
+- name: Label Fixed Issues
+  uses: gh-bot/fix-labeler@82c1402f0c82ebadc301f508ab3f1f69184752d2 # v2.0.0
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    label: "fixed"
+```
+
+### 3.100 Playwright Test Failure Triage Bot ([`.github/workflows/playwright-test-failure-triage-bot.yml`](../.github/workflows/playwright-test-failure-triage-bot.yml))
+Analyzes failed Playwright JSON test execution reports using Gemini Flash Lite and comments root-cause explanations on pull requests:
+
+```yaml
+- name: Run Test Failure Triage Bot
+  uses: AhmedHoussou/action-test-failure-triage@e0d3f0498d8518bf8a7da1356005b09e7109ed55 # v1
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
+    report-path: ${{ inputs.report_path }}
+```
+
+### 3.101 Git as GitHub Actions Bot ([`.github/workflows/git-as-github-actions-bot.yml`](../.github/workflows/git-as-github-actions-bot.yml))
+Sets Git committer identity to `github-actions[bot]` at local, global, or system configuration levels:
+
+```yaml
+- name: Set Git Config
+  uses: Lucky3028/git-as-gha@48a4d96a17acfb1f4f54604785693b1f03ba1524 # v1.0.1
+  with:
+    config-level: "local"
+```
+
+### 3.102 Bot Check Action ([`.github/workflows/bot-check-action.yml`](../.github/workflows/bot-check-action.yml))
+Verifies contributor authenticity on newly opened issues and pull requests to filter automated bot spam and apply verification tags:
+
+```yaml
+- name: Run Bot Check
+  uses: dohyeon5626/bot-check-action@4f0b434cd4999aa880bd4ed4855105a1c9cefba5 # v1.1
+  with:
+    comment-account-token: ${{ secrets.GITHUB_TOKEN }}
+    personal-access-token: ${{ secrets.PAT_VERIFICATION_TOKEN }}
+    auto-close: "false"
+    verification-timeout: "5"
+```
+
+### 3.103 Setup GitHub App as Bot ([`.github/workflows/setup-github-app-as-bot.yml`](../.github/workflows/setup-github-app-as-bot.yml))
+Generates short-lived scoped installation tokens and configures Git author credentials for custom GitHub Apps:
+
+```yaml
+- name: Configure GitHub App as Bot
+  uses: SimonMarquis/setup-github-app-as-bot@a778f68e0790a7d0dbebc9fbc2187048026b1a15 # v1
+  with:
+    client-id: ${{ secrets.BOT_APP_CLIENT_ID }}
+    private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+    gh-auth-login: "false"
+    gh-auth-setup-git: "false"
+    set-git-user: "true"
+```
+
+### 3.104 AutoHeal-CI Multi-Agent Self-Healing ([`.github/workflows/autoheal-ci.yml`](../.github/workflows/autoheal-ci.yml))
+Autonomous multi-agent CI/CD self-healing with AST-aware slicing, sandbox test reproduction, and patch generation:
+
+```yaml
+- name: Run AutoHeal Engine
+  uses: nolekek/AutoHeal-CI@eafa410862f761d5a8f96ea946d07c9d0d7f33d7 # v1.3.0
+  with:
+    api_key: ${{ secrets.OPENAI_API_KEY }}
+    model: "gpt-4o"
+    provider: "openai"
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    test_command: ${{ inputs.test_command }}
+    max_rounds: "1"
+    create_pr: "false"
+```
+
+### 3.105 Pull Request Code Review Bot ([`.github/workflows/pull-request-code-review-bot.yml`](../.github/workflows/pull-request-code-review-bot.yml))
+Automates comprehensive code reviews on PR diffs with LLM-backed analysis and constructive suggestions:
+
+```yaml
+- name: Run Review Bot
+  uses: kakaotech-25/Hackathon-PR-Review@17f9b3fe3a8b5333c1828e902276897cdeae8e8b # v1
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    api-key: ${{ secrets.OPENAI_API_KEY }}
+```
+
+### 3.106 Config Git Actions Bot ([`.github/workflows/config-git-actions-bot.yml`](../.github/workflows/config-git-actions-bot.yml))
+Quickly configures Git global committer identity for CI workflows using standard GitHub Actions bot credentials:
+
+```yaml
+- name: Configure Git Actions Bot Committer
+  uses: drengskapur/gitbot-config@00aecab0a790b146951f9e0c48f564eaf26a9df6 # v1.1.2
 ```
 
 ---
