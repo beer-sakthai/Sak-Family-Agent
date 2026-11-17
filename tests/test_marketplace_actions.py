@@ -95,6 +95,10 @@ PINNED_ACTIONS = {
     "gizumon/github-actions-documenter": "843a0f92e66b5db20f76d3c707beb0329b48c628",
     "umonkey/github-wiki-tools": "72074b2f45265374a7571550ff7576cbae15af60",
     "pndurette/gh-actions-auto-docs": "e6b4c8b27a1ddd45e1b3157d68ebacd83dd02cd5",
+    "dependfix/dependfix": "80883880c7016b093c4721cc5a8b2d51eef102a0",
+    "harishrsk/dependafix-action": "a5c537144e03f8c2d42734060736dacdc22e53d5",
+    "PrismorSec/patchbot": "60906559fec33549e4ac97f5f3e707c517342486",
+    "advanced-security/python-lint-code-scanning-action": "7ebf81c5860ee4d41849872bc2f95b4243c8dc28",
 }
 
 
@@ -195,6 +199,14 @@ MARKETPLACE_WORKFLOW_FILES = [
     "auto-contrib-pr.yml",
     "autoupdate-branches.yml",
     "generate-roadmap.yml",
+    "rational-test-server.yml",
+    "gh-actions-documenter.yml",
+    "wiki-page-maintenance.yml",
+    "gh-actions-auto-docs.yml",
+    "dependfix-security-auto-fix.yml",
+    "dependafix-ai-remediation.yml",
+    "patchbot-scanner.yml",
+    "python-lint-sarif.yml",
 ]
 
 
