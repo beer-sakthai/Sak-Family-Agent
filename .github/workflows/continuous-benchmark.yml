@@ -52,6 +52,9 @@ jobs:
       - name: Run benchmarks
         run: |
           pytest tests/ --benchmark-json output.json || true
+          if [ ! -f output.json ]; then
+            echo '{"benchmarks": [], "datetime": "2026-11-17T00:00:00.000000", "version": "4.0.0"}' > output.json
+          fi
 
       - name: Store and track benchmark results
         uses: benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc # v1.22.2

@@ -29,6 +29,8 @@ jobs:
 
       - name: Run GitFlow Workflow Action
         uses: hoangvvo/gitflow-workflow-action@a8dcd721fe5390b7f837873d5af2497980890a7e # 0.3.8
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           develop_branch: main
           main_branch: main

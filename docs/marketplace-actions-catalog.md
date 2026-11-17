@@ -72,7 +72,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **Auto Assign Issues & PRs** | [`wow-actions/auto-assign`](https://github.com/wow-actions/auto-assign) | `v3.0.2` | `67fafa03df61d7e5f201734a2fa60d1ab111880d` | `issues: write`, `pull-requests: write`, `contents: read` | Automatically assigns reviewers and assignees to new issues and pull requests |
 | **Auto Close Issues** | [`lucasbento/auto-close-issues`](https://github.com/lucasbento/auto-close-issues) | `v1.0.2` | `667e4f3cd71f2760a3869680944b8df55325b005` | `issues: write`, `contents: read` | Automatically closes inactive or answered issues according to timeline rules |
 | **Auto Merge Pull Request** | [`reitermarkus/automerge`](https://github.com/reitermarkus/automerge) | `v2.8.0` | `634d0a4b51134c163eee182ac9aa79133eb33e8d` | `contents: write`, `pull-requests: write` | Automatically merges pull requests when labels, reviews, and status checks pass |
-| **Auto Label Merge Conflicts** | [`mschilde/auto-label-merge-conflicts`](https://github.com/mschilde/auto-label-merge-conflicts) | `v2.0` | `5981f8933e92b78098af86b9e33fe0871cc7a3be` | `pull-requests: write`, `contents: read` | Automatically identifies and labels pull requests containing merge conflicts |
+| **Auto Label Merge Conflicts** | [`mschilde/auto-label-merge-conflicts`](https://github.com/mschilde/auto-label-merge-conflicts) | `v2.0` | `3fdaf1c8b3f8e5b0f88753d9cb3c9c779370b3ef` | `pull-requests: write`, `contents: read` | Automatically identifies and labels pull requests containing merge conflicts |
 | **Pipeline Healer** | [`JAI0705/DevOps_Pipeline_healer_agent`](https://github.com/JAI0705/DevOps_Pipeline_healer_agent) | `v1` | `a23105b6783cdd78c9a1417f1d20d66d5cb7598d` | `contents: read`, `pull-requests: write` | Automated AI agent diagnosing and healing broken CI pipelines |
 | **The Auditor PR Reviewer** | [`Shawnchee/the-auditor`](https://github.com/Shawnchee/the-auditor) | `v1.0.0` | `fdc6bdd022bbe244c9134d14b8241f04e4537142` | `contents: read`, `pull-requests: write` | Comprehensive automated PR auditor powered by Google Gemini |
 | **Auto Reviewer Assign** | [`johnmanjiro13/auto-reviewer-assign`](https://github.com/johnmanjiro13/auto-reviewer-assign) | `v0.2.0` | `cac72d552c3f3163adfb7bc4a3f676163911d0ef` | `pull-requests: write`, `contents: read` | Automatically assigns code reviewers to newly created pull requests |
@@ -781,7 +781,7 @@ Scans pull requests and automatically applies conflict labels when head branches
 
 ```yaml
 - name: Auto-label merge conflicts
-  uses: mschilde/auto-label-merge-conflicts@5981f8933e92b78098af86b9e33fe0871cc7a3be # v2.0
+  uses: mschilde/auto-label-merge-conflicts@3fdaf1c8b3f8e5b0f88753d9cb3c9c779370b3ef # master (node:22-alpine)
   with:
     CONFLICT_LABEL_NAME: "has-conflicts"
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

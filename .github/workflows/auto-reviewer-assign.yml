@@ -1,6 +1,8 @@
 name: Auto Reviewer Assign
 
 on:
+  pull_request:
+    types: [opened, ready_for_review]
   workflow_dispatch:
 
 permissions:
@@ -28,6 +30,7 @@ jobs:
           persist-credentials: false
 
       - name: Automatically assign reviewers
+        if: github.event_name == 'pull_request'
         uses: johnmanjiro13/auto-reviewer-assign@cac72d552c3f3163adfb7bc4a3f676163911d0ef # v0.2.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

@@ -241,6 +241,13 @@ uv run python scripts/diagnose_personas.py     # offline validation of all six p
 
 ---
 
+## Recent Activity
+
+<!--START_SECTION:activity-->
+<!--END_SECTION:activity-->
+
+---
+
 ## Security and Privacy
 
 Do not commit API keys, refresh tokens, memory databases, or client data. Use `.env` for local credentials.

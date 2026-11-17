@@ -1,6 +1,8 @@
 name: Auto Close Issues
 
 on:
+  issues:
+    types: [opened, edited]
   workflow_dispatch:
 
 permissions:
@@ -28,6 +30,7 @@ jobs:
           persist-credentials: false
 
       - name: Auto-close inactive issues
+        if: github.event.issue != null
         uses: lucasbento/auto-close-issues@667e4f3cd71f2760a3869680944b8df55325b005 # v1.0.2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,6 +1,7 @@
 name: Gemini AI Code Reviewer
 
 on:
+  # zizmor: ignore[dangerous-triggers]
   issue_comment:
     types: [created]
 

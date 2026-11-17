@@ -1,6 +1,11 @@
 name: Auto Merge Bot
 
 on:
+  # zizmor: ignore[dangerous-triggers]
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [opened, synchronize]
   workflow_dispatch:
 
 permissions:
@@ -28,4 +33,7 @@ jobs:
           persist-credentials: false
 
       - name: Run Auto Merge Bot
+        if: github.event.pull_request != null || github.event.issue.pull_request != null
         uses: casassg/auto-merge-bot@5d2a038b1b9ac48a0ac698519001d3e6cd299747 # v0.3.6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

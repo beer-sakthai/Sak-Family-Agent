@@ -30,3 +30,4 @@ jobs:
         uses: wow-actions/add-badges@43f2c1eaecfb2596b89a8136a3fbda4f18d1d188 # v1.1.0
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          badges: '[]'
