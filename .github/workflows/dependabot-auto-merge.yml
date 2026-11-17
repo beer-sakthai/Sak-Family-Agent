@@ -1,0 +1,60 @@
+# Dependabot Auto-Merge Workflow
+# Automatically evaluates, approves, and auto-merges eligible Dependabot PRs
+
+name: Dependabot Auto-Merge
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Pull request number to evaluate and auto-merge'
+        required: false
+        type: string
+      target:
+        description: 'Target SemVer update level (patch, minor, major, any)'
+        required: false
+        default: 'any'
+        type: choice
+        options:
+          - 'any'
+          - 'minor'
+          - 'patch'
+          - 'major'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependabot-auto-merge-${{ github.event.pull_request.number || github.event.inputs.pr_number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependabot-merge:
+    name: Dependabot Auto-Merge
+    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.user.login == 'dependabot[bot]' &&
+       github.repository == github.event.pull_request.head.repo.full_name) ||
+      github.event_name == 'workflow_dispatch'
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Auto-Merge Dependabot PR
+        uses: fastify/github-action-merge-dependabot@73ec4cbb5e56df5591eae286972d5b2201ffe90f # v3.15.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          target: ${{ inputs.target || 'any' }}
+          pr-number: ${{ inputs.pr_number || '' }}
+          merge-method: squash
