@@ -41,8 +41,10 @@ jobs:
         run: |
           set -euo pipefail
           updates_file="${RUNNER_TEMP}/pr-branch-updates.tsv"
+          current_file="${RUNNER_TEMP}/pr-branch-current.tsv"
           conflicts_file="${RUNNER_TEMP}/pr-branch-conflicts.tsv"
           : > "${updates_file}"
+          : > "${current_file}"
           : > "${conflicts_file}"
 
           # A push to main keeps every protected development line current.
@@ -75,12 +77,16 @@ jobs:
             for pull_request in "${pull_requests[@]}"; do
               IFS=$'\t' read -r number head_sha <<< "${pull_request}"
               echo "Updating pull request #${number} from ${base_branch}..."
+              response_file="${RUNNER_TEMP}/pr-branch-response-${number}.txt"
               if gh api --method PUT \
-                "repos/${REPOSITORY}/pulls/${number}/update-branch" \
-                -f expected_head_sha="${head_sha}" >/dev/null; then
+                  "repos/${REPOSITORY}/pulls/${number}/update-branch" \
+                  -f expected_head_sha="${head_sha}" >/dev/null 2>"${response_file}"; then
                 echo "Requested update for pull request #${number}."
                 printf '%s\t%s\n' "${number}" "${base_branch}" >> "${updates_file}"
                 updates=$((updates + 1))
+              elif grep -Fq "There are no new commits on the base branch." "${response_file}"; then
+                echo "Pull request #${number} is already up to date."
+                printf '%s\t%s\n' "${number}" "${base_branch}" >> "${current_file}"
               else
                 echo "::warning::Could not update pull request #${number}; it may have conflicts." >&2
                 printf '%s\t%s\n' "${number}" "${base_branch}" >> "${conflicts_file}"
@@ -99,6 +105,7 @@ jobs:
         if: always()
         env:
           UPDATES_FILE: ${{ runner.temp }}/pr-branch-updates.tsv
+          CURRENT_FILE: ${{ runner.temp }}/pr-branch-current.tsv
           CONFLICTS_FILE: ${{ runner.temp }}/pr-branch-conflicts.tsv
         run: |
           {
@@ -110,6 +117,13 @@ jobs:
               done < "${UPDATES_FILE}"
             else
               echo "No branch updates were requested."
+            fi
+
+            if [[ -s "${CURRENT_FILE}" ]]; then
+              echo "### Already up to date"
+              while IFS=$'\t' read -r number base_branch; do
+                echo "- Pull request #${number} (targeting \`${base_branch}\`)"
+              done < "${CURRENT_FILE}"
             fi
 
             if [[ -s "${CONFLICTS_FILE}" ]]; then
