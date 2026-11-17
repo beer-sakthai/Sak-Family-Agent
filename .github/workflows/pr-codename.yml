@@ -1,0 +1,53 @@
+name: House of Sak PR codename
+
+on:
+  pull_request:
+    types: [opened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-codename-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  assign-codename:
+    name: Assign House of Sak PR codename
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Generate codename and comment on PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          comment_file="${RUNNER_TEMP}/pr_codename_comment.md"
+          python scripts/generate_pr_codename.py \
+            --pr-number "${PR_NUMBER}" \
+            --pr-title "${PR_TITLE}" \
+            > "${comment_file}"
+
+          if [ -s "${comment_file}" ]; then
+            gh pr comment "${PR_NUMBER}" --body-file "${comment_file}" || echo "Could not post comment; continuing."
+          fi
