@@ -1,14 +1,22 @@
 ---
 name: Labeler
 
-on: [pull_request_target]
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: Pull request number to label
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 # Rapid-fire pushes to a PR only need the final labelling to land.
 concurrency:
-  group: labeler-${{ github.event.pull_request.number }}
+  group: labeler-${{ github.event.pull_request.number || inputs.pr-number }}
   cancel-in-progress: true
 
 jobs:
@@ -22,3 +30,4 @@ jobs:
       - uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7.0.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-number: ${{ inputs.pr-number || github.event.pull_request.number }}
