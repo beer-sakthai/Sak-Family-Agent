@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" role="img" aria-labelledby="title-sakking desc-sakking">
+<title id="title-sakking">SakKing</title>
+<desc id="desc-sakking">SakKing, the general assistant and runner: a blue robot wearing a crown, with a lightning-bolt badge.</desc>
+<defs><linearGradient id="bg-sakking" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#1d4ed8"/></linearGradient></defs>
+<rect width="240" height="240" rx="48" fill="url(#bg-sakking)"/>
+<circle cx="120" cy="116" r="86" fill="#ffffff" fill-opacity="0.12"/>
+<path d="M52 240 C52 196 82 180 120 180 C158 180 188 196 188 240 Z" fill="#ffffff" fill-opacity="0.92"/>
+<rect x="108" y="166" width="24" height="18" rx="6" fill="#0f172a" fill-opacity="0.85"/>
+<rect x="62" y="64" width="116" height="106" rx="38" fill="#ffffff"/>
+<rect x="76" y="84" width="88" height="64" rx="24" fill="#0f172a"/>
+<path d="M84 66 L92 34 L108 54 L120 28 L132 54 L148 34 L156 66 Z" fill="#facc15" stroke="#0f172a" stroke-width="4" stroke-linejoin="round"/><circle cx="120" cy="52" r="4.5" fill="#1d4ed8"/>
+<circle cx="102" cy="110" r="9" fill="#bfdbfe"/><circle cx="138" cy="110" r="9" fill="#bfdbfe"/><path d="M93 97 Q102 93 111 97" fill="none" stroke="#bfdbfe" stroke-width="4" stroke-linecap="round"/><path d="M129 97 Q138 93 147 97" fill="none" stroke="#bfdbfe" stroke-width="4" stroke-linecap="round"/><path d="M110 132 Q120 138 130 132" fill="none" stroke="#bfdbfe" stroke-width="5" stroke-linecap="round"/>
+<circle cx="72" cy="140" r="6" fill="#60a5fa" fill-opacity="0.55"/><circle cx="168" cy="140" r="6" fill="#60a5fa" fill-opacity="0.55"/>
+<circle cx="188" cy="188" r="30" fill="#ffffff" stroke="#0f172a" stroke-opacity="0.15" stroke-width="2"/>
+<path d="M192 170 L178 192 H188 L184 206 L199 183 H189 Z" fill="#1d4ed8" stroke="#1d4ed8" stroke-width="1.5" stroke-linejoin="round"/>
+</svg>
