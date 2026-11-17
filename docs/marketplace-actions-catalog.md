@@ -16,7 +16,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 
 ---
 
-## 2. Fifteen Verified Marketplace Actions
+## 2. Sixteen Verified Marketplace Actions
 
 | Action Name | Upstream Repository | Tag | Immutable Commit SHA | Required Permissions | Purpose |
 |---|---|---|---|---|---|
@@ -35,6 +35,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **Renovate Bot Action** | [`renovatebot/github-action`](https://github.com/renovatebot/github-action) | `v46.3.14` | `acdd6bda8b035c99ce59d5675816af2aa65a1774` | `contents: read` | Automated self-hosted dependency upgrade automation |
 | **Lint Action** | [`wearerequired/lint-action`](https://github.com/wearerequired/lint-action) | `v3.0.2` | `124229c6e2974984ba137c67a499ba28bfc33e33` | `contents: read`, `checks: write` | Automated multi-linter check and auto-fixing |
 | **Create GitHub App Token** | [`actions/create-github-app-token`](https://github.com/actions/create-github-app-token) | `v3.3.0` | `64ab729a6294000f5aa4a4bc0b73d1f32bc45510` | `contents: read` | Generates short-lived installation tokens for bot automation |
+| **Dependabot Auto-Merge** | [`fastify/github-action-merge-dependabot`](https://github.com/fastify/github-action-merge-dependabot) | `v3.15.0` | `73ec4cbb5e56df5591eae286972d5b2201ffe90f` | `contents: write`, `pull-requests: write` | Automated approval and merging for Dependabot PRs |
 
 ---
 
@@ -59,6 +60,7 @@ graph TD
     ActionChoice -->|Nightly Dependency| RenovateBot[renovatebot/github-action]
     ActionChoice -->|Quality Lint| MultiLint[wearerequired/lint-action]
     ActionChoice -->|Bot Authentication| AppToken[actions/create-github-app-token]
+    ActionChoice -->|Dependabot PR| DependabotMerge[fastify/github-action-merge-dependabot]
 ```
 
 ### 3.1 Wiki Sync Workflow ([`.github/workflows/wiki-sync.yml`](../.github/workflows/wiki-sync.yml))
@@ -249,6 +251,19 @@ Exchanges app credentials for short-lived bot installation access tokens:
     app-id: ${{ secrets.APP_ID }}
     private-key: ${{ secrets.PRIVATE_KEY }}
     owner: ${{ inputs.owner || github.repository_owner }}
+```
+
+### 3.15 Dependabot Auto-Merge Workflow ([`.github/workflows/dependabot-auto-merge.yml`](../.github/workflows/dependabot-auto-merge.yml))
+Automatically evaluates, approves, and merges eligible Dependabot pull requests based on SemVer policies and un-spoofable actor verification:
+
+```yaml
+- name: Auto-Merge Dependabot PR
+  uses: fastify/github-action-merge-dependabot@73ec4cbb5e56df5591eae286972d5b2201ffe90f # v3.15.0
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    target: ${{ inputs.target || 'any' }}
+    pr-number: ${{ inputs.pr_number || '' }}
+    merge-method: squash
 ```
 
 ---
