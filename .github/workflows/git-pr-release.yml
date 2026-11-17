@@ -1,0 +1,56 @@
+# Git PR Release Workflow
+# Automatically aggregates merged PRs into a release candidate Pull Request
+
+name: Git PR Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_branch:
+        description: 'Target base branch for release (e.g., main or production)'
+        required: true
+        default: 'main'
+        type: string
+      head_branch:
+        description: 'Candidate head branch (e.g., staging or develop)'
+        required: true
+        default: 'staging'
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: git-pr-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  pr-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Generate Release Pull Request
+        uses: bakunyo/git-pr-release-action@035b7151a53745c03b85c6274ab1ae4bc734eccd # v1.4
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GIT_PR_RELEASE_BRANCH_PRODUCTION: ${{ inputs.base_branch }}
+          GIT_PR_RELEASE_BRANCH_STAGING: ${{ inputs.head_branch }}

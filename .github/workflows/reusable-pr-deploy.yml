@@ -1,0 +1,63 @@
+# Reusable PR Container Deployment Workflow
+# Deploys pull requests to isolated Docker container environments
+
+name: Reusable PR Deploy
+
+on:
+  workflow_call:
+    inputs:
+      docker_context:
+        description: 'Directory path containing the Dockerfile'
+        required: false
+        default: '.'
+        type: string
+      server_port:
+        description: 'Deployment port'
+        required: false
+        default: '3000'
+        type: string
+    secrets:
+      SERVER_HOST:
+        required: false
+      SERVER_USERNAME:
+        required: false
+      SERVER_PASSWORD:
+        required: false
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: pr-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Deploy Pull Request Container
+        uses: hngprojects/pr-deploy@2f8b3e0dce07f0c6f7e6e80018dc52081a61b63b # V2.0.1
+        with:
+          context: ${{ inputs.docker_context }}
+          server_port: ${{ inputs.server_port }}
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USERNAME: ${{ secrets.SERVER_USERNAME }}
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
