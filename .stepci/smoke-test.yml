@@ -1,0 +1,9 @@
+version: "1.1"
+name: HTTP Smoke Test
+test:
+  - name: Status check
+    http:
+      url: https://httpbin.org/status/200
+      method: GET
+      check:
+        status: 200
