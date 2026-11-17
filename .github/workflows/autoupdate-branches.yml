@@ -1,0 +1,44 @@
+name: Auto Update Branches
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      pr_filter:
+        description: 'Filter method for PR selection (all, auto_merge, labelled)'
+        required: false
+        default: 'auto_merge'
+        type: choice
+        options:
+          - all
+          - auto_merge
+          - labelled
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  autoupdate:
+    name: Auto-update Pull Request Branches
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Auto-update branches from destination
+        uses: chinthakagodawita/autoupdate@0707656cd062a3b0cf8fa9b2cda1d1404d74437e # v1.7.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_FILTER: ${{ inputs.pr_filter || 'auto_merge' }}
+          MERGE_CONFLICT_ACTION: 'ignore'
+          DRY_RUN: 'false'

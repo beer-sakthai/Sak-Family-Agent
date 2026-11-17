@@ -87,6 +87,10 @@ PINNED_ACTIONS = {
     "GavinMeierSonos/dependabot-action": "a0789e7b36fd4cf0ba2906e77568ae5deae85f95",
     "dependabot/fetch-metadata": "25dd0e34f4fe68f24cc83900b1fe3fe149efef98",
     "goatandsheep/dependabot-issue-action": "085384c6fc7247bf455bcd86178c6fc8a5ffc1d5",
+    "halostatue/dependabot-automerge": "61a7c53cf7dd144b2e874cb0bc163ed4d3a89f22",
+    "github/automatic-contrib-prs": "fbb93799968fd54783c29339b95e9fcf888c8709",
+    "chinthakagodawita/autoupdate": "0707656cd062a3b0cf8fa9b2cda1d1404d74437e",
+    "inat-get/action-is-roadmap": "9fecd4863d39e5033e9c641a381e00d9c1a21265",
 }
 
 
@@ -183,6 +187,10 @@ MARKETPLACE_WORKFLOW_FILES = [
     "dependabot-workflow.yml",
     "dependabot-fetch-metadata.yml",
     "dependabot-issue.yml",
+    "enable-automerge-dependabot.yml",
+    "auto-contrib-pr.yml",
+    "autoupdate-branches.yml",
+    "generate-roadmap.yml",
 ]
 
 
