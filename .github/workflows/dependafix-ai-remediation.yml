@@ -1,0 +1,56 @@
+# DependaFix AI Remediation Workflow
+# AI-powered remediation of breaking changes in dependency update pull requests
+
+name: DependaFix AI Remediation
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Pull request number to analyze and remediate"
+        required: false
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.inputs.pr_number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependafix:
+    name: DependaFix AI Remediation Agent
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Run DependaFix AI Remediation
+        if: env.GEMINI_API_KEY != '' && env.LICENSE_KEY != ''
+        uses: harishrsk/dependafix-action@a5c537144e03f8c2d42734060736dacdc22e53d5 # v1.0.0
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          license_key: ${{ secrets.DEPENDAFIX_LICENSE_KEY }}
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LICENSE_KEY: ${{ secrets.DEPENDAFIX_LICENSE_KEY }}
+
+      - name: Skip Notice
+        if: env.GEMINI_API_KEY == '' || env.LICENSE_KEY == ''
+        run: echo "DependaFix AI remediation skipped - required credentials (GEMINI_API_KEY, DEPENDAFIX_LICENSE_KEY) are not configured."
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LICENSE_KEY: ${{ secrets.DEPENDAFIX_LICENSE_KEY }}
