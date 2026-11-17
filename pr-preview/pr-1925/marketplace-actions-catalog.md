@@ -98,6 +98,14 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **Automatic Contrib PRs** | [`github/automatic-contrib-prs`](https://github.com/github/automatic-contrib-prs) | `v2.1.8` | `fbb93799968fd54783c29339b95e9fcf888c8709` | `contents: read`, `pull-requests: write` | Opens automated pull request for repositories missing CONTRIBUTING.md guidelines |
 | **Auto Update** | [`chinthakagodawita/autoupdate`](https://github.com/chinthakagodawita/autoupdate) | `v1.7.0` | `0707656cd062a3b0cf8fa9b2cda1d1404d74437e` | `contents: write`, `pull-requests: write` | Automatically updates pull request branches when changes land on base branch |
 | **Generate Roadmap** | [`inat-get/action-is-roadmap`](https://github.com/inat-get/action-is-roadmap) | `v2` | `9fecd4863d39e5033e9c641a381e00d9c1a21265` | `contents: write`, `issues: read` | Generates Mermaid flowchart roadmap from GitHub Milestones and Issues |
+| **Rational Test Server** | [`IBM/devopsauto-testserver-actions`](https://github.com/IBM/devopsauto-testserver-actions) | `v1` | `c704855bdbbae4f0df152919d00fb0bd40f67ee0` | `contents: read` | Executes enterprise automated test suites on Rational Test Server |
+| **GitHub Actions Documenter** | [`gizumon/github-actions-documenter`](https://github.com/gizumon/github-actions-documenter) | `v1.3.1` | `843a0f92e66b5db20f76d3c707beb0329b48c628` | `contents: write`, `pull-requests: write` | Automatically generates documentation for composite and Docker actions |
+| **GitHub Wiki Tools** | [`umonkey/github-wiki-tools`](https://github.com/umonkey/github-wiki-tools) | `v1.0.3` | `72074b2f45265374a7571550ff7576cbae15af60` | `contents: write` | Performs wiki page maintenance, sidebar generation, and markdown styling |
+| **GitHub Actions Auto-Docs** | [`pndurette/gh-actions-auto-docs`](https://github.com/pndurette/gh-actions-auto-docs) | `v1.0.1` | `e6b4c8b27a1ddd45e1b3157d68ebacd83dd02cd5` | `contents: write` | Extracts action and workflow metadata to update markdown documentation |
+| **Dependfix Security Auto Fix** | [`dependfix/dependfix`](https://github.com/dependfix/dependfix) | `v1.1.0` | `80883880c7016b093c4721cc5a8b2d51eef102a0` | `contents: read`, `pull-requests: read`, `security-events: read` | Automated remediation of Dependabot & Code Scanning security alerts with reporting |
+| **DependaFix AI Remediation** | [`harishrsk/dependafix-action`](https://github.com/harishrsk/dependafix-action) | `v1.0.0` | `a5c537144e03f8c2d42734060736dacdc22e53d5` | `contents: read`, `pull-requests: read` | AI-powered autonomous remediation of breaking changes in dependency PRs |
+| **Patchbot Vulnerability Scanner** | [`PrismorSec/patchbot`](https://github.com/PrismorSec/patchbot) | `v0.3.0` | `60906559fec33549e4ac97f5f3e707c517342486` | `contents: read`, `security-events: write` | Vulnerability scanning, SARIF generation, and coding-agent fix generation |
+| **Python Lint Code Scanning** | [`advanced-security/python-lint-code-scanning-action`](https://github.com/advanced-security/python-lint-code-scanning-action) | `v1.1.3` | `7ebf81c5860ee4d41849872bc2f95b4243c8dc28` | `contents: read`, `security-events: write` | Multi-linter and type checker for Python with SARIF upload to Code Scanning |
 
 
 ---
@@ -1119,6 +1127,57 @@ Generates SLSA Level 3 cryptographically signed provenance for build artifacts u
   with:
     base64-subjects: "${{ needs.build.outputs.digests }}"
     upload-assets: true
+```
+
+### 3.83 Dependfix Security Auto Fix ([`.github/workflows/dependfix-security-auto-fix.yml`](../.github/workflows/dependfix-security-auto-fix.yml))
+Automates remediation and reporting for Dependabot & Code Scanning security alerts:
+
+```yaml
+- name: Run Dependfix
+  uses: dependfix/dependfix@80883880c7016b093c4721cc5a8b2d51eef102a0 # v1.1.0
+  with:
+    mode: "report-only"
+    severity-threshold: "high"
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    dry-run: "true"
+```
+
+### 3.84 DependaFix AI Remediation ([`.github/workflows/dependafix-ai-remediation.yml`](../.github/workflows/dependafix-ai-remediation.yml))
+AI-powered agent to resolve breaking syntax and API changes introduced by dependency updates:
+
+```yaml
+- name: Run DependaFix AI Remediation
+  uses: harishrsk/dependafix-action@a5c537144e03f8c2d42734060736dacdc22e53d5 # v1.0.0
+  with:
+    gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    license_key: ${{ secrets.DEPENDAFIX_LICENSE_KEY }}
+```
+
+### 3.85 Patchbot Vulnerability Scanner ([`.github/workflows/patchbot-scanner.yml`](../.github/workflows/patchbot-scanner.yml))
+Scans lockfiles and packages against vulnerability threat feeds and exports SARIF findings:
+
+```yaml
+- name: Scan Vulnerabilities with Patchbot
+  uses: PrismorSec/patchbot@60906559fec33549e4ac97f5f3e707c517342486 # v0.3.0
+  with:
+    path: "."
+    fail-on: "none"
+    upload-sarif: "true"
+    sarif-output: "patchbot.sarif"
+```
+
+### 3.86 Python Lint Code Scanning ([`.github/workflows/python-lint-sarif.yml`](../.github/workflows/python-lint-sarif.yml))
+Executes Python linters/type checkers and publishes findings to GitHub Code Scanning:
+
+```yaml
+- name: Run Python Lint with SARIF Export
+  uses: advanced-security/python-lint-code-scanning-action@7ebf81c5860ee4d41849872bc2f95b4243c8dc28 # v1.1.3
+  with:
+    linter: "ruff"
+    python-version: "3.11"
+    target: "personas/sakthai"
+    output: "ruff.sarif"
 ```
 
 ---
