@@ -1,0 +1,43 @@
+# Markdown Autodocs Workflow
+# Formats markdown and updates doc tables from repository code blocks
+
+name: Markdown Autodocs
+
+on:
+  workflow_dispatch:
+    inputs:
+      check_only:
+        description: 'Verify autodocs formatting without committing changes'
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: autodocs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  autodocs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run Markdown Autodocs
+        uses: dineshsonachalam/markdown-autodocs@6596b4a049f087c7abe84cc7457e2c53652df810 # v1.0.7
+        with:
+          output_file_paths: '["README.md"]'
