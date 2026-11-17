@@ -1,0 +1,50 @@
+name: GitHub Repository Self Approve
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  approve:
+    name: Run Self Approve Action
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Verify Secret Presence
+        id: check_secret
+        env:
+          APP_ID: ${{ secrets.SELF_APPROVE_APP_ID }}
+          PRIVATE_KEY: ${{ secrets.SELF_APPROVE_PRIVATE_KEY }}
+          INSTALLATION_ID: ${{ secrets.SELF_APPROVE_INSTALLATION_ID }}
+        run: |
+          if [ -n "$APP_ID" ] && [ -n "$PRIVATE_KEY" ] && [ -n "$INSTALLATION_ID" ]; then
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::App credentials are not configured; skipping self-approve execution."
+          fi
+
+      - name: Self-approve pull request
+        if: steps.check_secret.outputs.has_key == 'true'
+        uses: nicklegan/github-repo-self-approve-action@bea11671222460fbc41ad06797a0de470985f602 # v1.0.1
+        with:
+          appid: ${{ secrets.SELF_APPROVE_APP_ID }}
+          privatekey: ${{ secrets.SELF_APPROVE_PRIVATE_KEY }}
+          installationid: ${{ secrets.SELF_APPROVE_INSTALLATION_ID }}
