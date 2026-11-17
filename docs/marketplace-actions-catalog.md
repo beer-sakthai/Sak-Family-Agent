@@ -16,7 +16,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 
 ---
 
-## 2. Thirty Verified Marketplace Actions
+### 2. Forty Verified Marketplace Actions
 
 | Action Name | Upstream Repository | Tag | Immutable Commit SHA | Required Permissions | Purpose |
 |---|---|---|---|---|---|
@@ -50,6 +50,16 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **Workflow Queue** | [`ahmadnassri/action-workflow-queue`](https://github.com/ahmadnassri/action-workflow-queue) | `v1.2.0` | `542658b3a8270cac81ae15d401b0d974732808ac` | `actions: read`, `contents: read` | Serializes and queues concurrent workflow executions |
 | **Workflow Sync** | [`varunsridharan/action-github-workflow-sync`](https://github.com/varunsridharan/action-github-workflow-sync) | `3.5` | `3c60cce5ee8e615a7c68ac75fc14893dcac62d49` | `contents: write`, `pull-requests: write` | Synchronizes reusable workflows across ecosystem repositories |
 | **Auto Cancel Redundant** | [`technote-space/auto-cancel-redundant-workflow`](https://github.com/technote-space/auto-cancel-redundant-workflow) | `v1.7.5` | `7d35aba30420fc2368f8aeed50371e99e7fa3239` | `actions: write`, `contents: read` | Automatically cancels redundant prior workflow runs |
+| **Workflow Run Wait** | [`ahmadnassri/action-workflow-run-wait`](https://github.com/ahmadnassri/action-workflow-run-wait) | `v1.4.4` | `2aa3d9e1a12ecaaa9908e368eaf2123bb084323e` | `actions: read`, `contents: read` | Waits for concurrent or preceding workflow runs to complete |
+| **GitFlow Lifecycle** | [`hoangvvo/gitflow-workflow-action`](https://github.com/hoangvvo/gitflow-workflow-action) | `0.3.8` | `a8dcd721fe5390b7f837873d5af2497980890a7e` | `contents: write`, `pull-requests: write` | Automates GitFlow branching, releases, and hotfix merges |
+| **Setup GitHub Licensed** | [`github/setup-licensed`](https://github.com/github/setup-licensed) | `v1.3.1` | `be11bcbb82e3140b6cf260e647c3efeeca8fcefd` | `contents: read` | Installs and configures official licensed cache and tooling |
+| **Workflow Immortality** | [`PhrozenByte/gh-workflow-immortality`](https://github.com/PhrozenByte/gh-workflow-immortality) | `v1` | `39378c27dcacbc17e6fbf83057d1fc40c574000d` | `contents: write` | Prevents automated scheduled workflow disabling from repository inactivity |
+| **Actions Usage Audit** | [`fergusmacd/github-actions-usage`](https://github.com/fergusmacd/github-actions-usage) | `v0.9.2` | `86eef42173b5fe9778e33326468f51cc5a34348c` | `actions: read`, `contents: read` | Audits billable GitHub Actions runner minutes across the organization |
+| **Workflow Status Indicator** | [`martialonline/workflow-status`](https://github.com/martialonline/workflow-status) | `v4.2` | `326830cacf79872efe767e15031f58d1ea0508c4` | `contents: read` | Generates dynamic status summaries and workflow badges |
+| **Dispatch Workflow Method** | [`lasith-kg/dispatch-workflow`](https://github.com/lasith-kg/dispatch-workflow) | `v3.0.0` | `2597e9a3d222d7959052dea1c009560bbeb495e4` | `actions: write`, `contents: read` | Flexible repository_dispatch and workflow_dispatch cross-repo dispatcher |
+| **Checkbox Workflow Action** | [`wadackel/checkbox-workflow-action`](https://github.com/wadackel/checkbox-workflow-action) | `v1.1.0` | `39a84e680429bb174302beed9f222e06972cecf9` | `issues: read`, `pull-requests: read` | Triggers CI steps upon checking checkboxes in PR bodies or comments |
+| **Simple Comment PR** | [`NejcZdovc/comment-pr`](https://github.com/NejcZdovc/comment-pr) | `v2.1.0` | `a423635d183a8259308e80593c96fecf31539c26` | `pull-requests: write`, `contents: read` | Publishes formatted markdown updates directly to pull requests |
+| **Wait for Workflow** | [`ArcticLampyrid/action-wait-for-workflow`](https://github.com/ArcticLampyrid/action-wait-for-workflow) | `v1.3.0` | `ff297b23789206858260877c4b83026d90c6db8c` | `actions: read`, `contents: read` | Polls and halts until target named workflow run reaches completion |
 
 ---
 
@@ -89,6 +99,16 @@ graph TD
     ActionChoice -->|Workflow Queue| QueueAction[ahmadnassri/action-workflow-queue]
     ActionChoice -->|Workflow Sync| WfSync[varunsridharan/action-github-workflow-sync]
     ActionChoice -->|Cancel Redundant| AutoCancel[technote-space/auto-cancel-redundant-workflow]
+    ActionChoice -->|Wait for Run| RunWait[ahmadnassri/action-workflow-run-wait]
+    ActionChoice -->|GitFlow Lifecycle| GitFlow[hoangvvo/gitflow-workflow-action]
+    ActionChoice -->|License Audit| Licensed[github/setup-licensed]
+    ActionChoice -->|Keepalive Immortality| Immortality[PhrozenByte/gh-workflow-immortality]
+    ActionChoice -->|Usage Audit| UsageAudit[fergusmacd/github-actions-usage]
+    ActionChoice -->|Status Indicator| StatusIndicator[martialonline/workflow-status]
+    ActionChoice -->|Custom Dispatch| CustomDispatch[lasith-kg/dispatch-workflow]
+    ActionChoice -->|Checkbox Gate| CheckboxGate[wadackel/checkbox-workflow-action]
+    ActionChoice -->|Comment on PR| CommentPR[NejcZdovc/comment-pr]
+    ActionChoice -->|Wait for Workflow| WaitForWf[ArcticLampyrid/action-wait-for-workflow]
 ```
 
 ### 3.1 Wiki Sync Workflow ([`.github/workflows/wiki-sync.yml`](../.github/workflows/wiki-sync.yml))
@@ -437,6 +457,114 @@ Automatically cancels outdated in-flight runs when newer commits arrive:
   uses: technote-space/auto-cancel-redundant-workflow@7d35aba30420fc2368f8aeed50371e99e7fa3239 # v1.7.5
   with:
     GITHUB_TOKEN: ${{ github.token }}
+```
+
+### 3.30 Workflow Run Wait ([`.github/workflows/workflow-run-wait.yml`](../.github/workflows/workflow-run-wait.yml))
+Waits for previous in-flight workflow runs to complete:
+
+```yaml
+- name: Wait for in-flight runs
+  uses: ahmadnassri/action-workflow-run-wait@2aa3d9e1a12ecaaa9908e368eaf2123bb084323e # v1.4.4
+  with:
+    delay: 10
+    timeout: 600
+```
+
+### 3.31 GitFlow Lifecycle Automation ([`.github/workflows/gitflow-lifecycle.yml`](../.github/workflows/gitflow-lifecycle.yml))
+Automates GitFlow branching, release tags, and hotfix merges:
+
+```yaml
+- name: Run GitFlow Workflow Action
+  uses: hoangvvo/gitflow-workflow-action@a8dcd721fe5390b7f837873d5af2497980890a7e # 0.3.8
+  with:
+    develop_branch: main
+    main_branch: main
+```
+
+### 3.32 Setup GitHub Licensed ([`.github/workflows/licensed-audit.yml`](../.github/workflows/licensed-audit.yml))
+Installs and configures official GitHub Licensed dependency audit tools:
+
+```yaml
+- name: Setup GitHub Licensed
+  uses: github/setup-licensed@be11bcbb82e3140b6cf260e647c3efeeca8fcefd # v1.3.1
+  with:
+    version: '4.4.1'
+```
+
+### 3.33 Workflow Immortality Keepalive ([`.github/workflows/workflow-immortality.yml`](../.github/workflows/workflow-immortality.yml))
+Prevents scheduled GitHub Actions from being disabled due to 60 days of inactivity:
+
+```yaml
+- name: Keep Workflows Active
+  uses: PhrozenByte/gh-workflow-immortality@39378c27dcacbc17e6fbf83057d1fc40c574000d # v1
+  with:
+    secret: ${{ github.token }}
+```
+
+### 3.34 Actions Usage Audit ([`.github/workflows/actions-usage-audit.yml`](../.github/workflows/actions-usage-audit.yml))
+Audits billable GitHub Actions runner minutes across the organization:
+
+```yaml
+- name: Audit Workflow Usage
+  uses: fergusmacd/github-actions-usage@86eef42173b5fe9778e33326468f51cc5a34348c # v0.9.2
+  with:
+    organisation: beer-sakthai
+    gitHubAPIKey: ${{ github.token }}
+```
+
+### 3.35 Workflow Status Indicator ([`.github/workflows/workflow-status-indicator.yml`](../.github/workflows/workflow-status-indicator.yml))
+Generates dynamic status summaries and workflow conclusion indicators:
+
+```yaml
+- name: Output Status Indicator
+  uses: martialonline/workflow-status@326830cacf79872efe767e15031f58d1ea0508c4 # v4.2
+```
+
+### 3.36 Reusable Dispatch Method ([`.github/workflows/reusable-dispatch-method.yml`](../.github/workflows/reusable-dispatch-method.yml))
+Dispatches cross-repository workflows using configurable dispatch methods:
+
+```yaml
+- name: Trigger Dispatch
+  uses: lasith-kg/dispatch-workflow@2597e9a3d222d7959052dea1c009560bbeb495e4 # v3.0.0
+  with:
+    dispatch-method: workflow_dispatch
+    owner: beer-sakthai
+    repo: ${{ inputs.target_repo }}
+    token: ${{ github.token }}
+    workflow: lint-check.yml
+```
+
+### 3.37 Checkbox Workflow Trigger ([`.github/workflows/checkbox-trigger.yml`](../.github/workflows/checkbox-trigger.yml))
+Triggers steps based on checkbox states in issues or pull requests:
+
+```yaml
+- name: Checkbox Action
+  uses: wadackel/checkbox-workflow-action@39a84e680429bb174302beed9f222e06972cecf9 # v1.1.0
+  with:
+    id: test-checkbox
+    number: 1
+```
+
+### 3.38 Reusable Comment PR Helper ([`.github/workflows/reusable-comment-pr.yml`](../.github/workflows/reusable-comment-pr.yml))
+Publishes formatted markdown updates directly to pull requests:
+
+```yaml
+- name: Comment on PR
+  uses: NejcZdovc/comment-pr@a423635d183a8259308e80593c96fecf31539c26 # v2.1.0
+  with:
+    file: ''
+    message: ${{ inputs.comment_body }}
+```
+
+### 3.39 Wait for Workflow ([`.github/workflows/wait-for-workflow.yml`](../.github/workflows/wait-for-workflow.yml))
+Polls and halts until the target named workflow completes:
+
+```yaml
+- name: Wait for target workflow
+  uses: ArcticLampyrid/action-wait-for-workflow@ff297b23789206858260877c4b83026d90c6db8c # v1.3.0
+  with:
+    workflow: lint-check.yml
+    token: ${{ github.token }}
 ```
 
 ---
