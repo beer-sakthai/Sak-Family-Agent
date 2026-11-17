@@ -43,12 +43,6 @@ jobs:
     permissions:
       issues: write
     steps:
-      - name: Harden the runner
-        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
-        with:
-          use-policy-store: true
-          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
-
       - name: Manual Workflow Approval
         uses: trstringer/manual-approval@fa642940caf8412403569b28b2db4a1df08a83a3 # v1.13.1
         with:
@@ -71,12 +65,6 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     # Runs a single command using the runners shell
-    - name: Harden the runner
-      uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
-      with:
-        use-policy-store: true
-        api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
-
     # The input is passed through `env:` rather than interpolated into the
     # script body. A `${{ }}` expression is substituted into the shell source
     # before it runs, so an input containing shell metacharacters would execute
