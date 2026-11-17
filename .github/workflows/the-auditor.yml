@@ -1,0 +1,46 @@
+name: The Auditor PR Reviewer
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Run The Auditor PR Reviewer
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Verify Secret Presence
+        id: check_secret
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -n "$GEMINI_API_KEY" ]; then
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::GEMINI_API_KEY secret is not configured; skipping the-auditor execution."
+          fi
+
+      - name: Run The Auditor Reviewer
+        if: steps.check_secret.outputs.has_key == 'true'
+        uses: Shawnchee/the-auditor@fdc6bdd022bbe244c9134d14b8241f04e4537142 # v1.0.0
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}

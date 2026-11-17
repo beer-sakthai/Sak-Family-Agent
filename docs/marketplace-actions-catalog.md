@@ -16,7 +16,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 
 ---
 
-### 2. Fifty-Three Verified Marketplace Actions
+### 2. Sixty-Eight Verified Marketplace Actions
 
 | Action Name | Upstream Repository | Tag | Immutable Commit SHA | Required Permissions | Purpose |
 |---|---|---|---|---|---|
@@ -73,6 +73,21 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **Auto Close Issues** | [`lucasbento/auto-close-issues`](https://github.com/lucasbento/auto-close-issues) | `v1.0.2` | `667e4f3cd71f2760a3869680944b8df55325b005` | `issues: write`, `contents: read` | Automatically closes inactive or answered issues according to timeline rules |
 | **Auto Merge Pull Request** | [`reitermarkus/automerge`](https://github.com/reitermarkus/automerge) | `v2.8.0` | `634d0a4b51134c163eee182ac9aa79133eb33e8d` | `contents: write`, `pull-requests: write` | Automatically merges pull requests when labels, reviews, and status checks pass |
 | **Auto Label Merge Conflicts** | [`mschilde/auto-label-merge-conflicts`](https://github.com/mschilde/auto-label-merge-conflicts) | `v2.0` | `5981f8933e92b78098af86b9e33fe0871cc7a3be` | `pull-requests: write`, `contents: read` | Automatically identifies and labels pull requests containing merge conflicts |
+| **Pipeline Healer** | [`JAI0705/DevOps_Pipeline_healer_agent`](https://github.com/JAI0705/DevOps_Pipeline_healer_agent) | `v1` | `a23105b6783cdd78c9a1417f1d20d66d5cb7598d` | `contents: read`, `pull-requests: write` | Automated AI agent diagnosing and healing broken CI pipelines |
+| **The Auditor PR Reviewer** | [`Shawnchee/the-auditor`](https://github.com/Shawnchee/the-auditor) | `v1.0.0` | `fdc6bdd022bbe244c9134d14b8241f04e4537142` | `contents: read`, `pull-requests: write` | Comprehensive automated PR auditor powered by Google Gemini |
+| **Auto Reviewer Assign** | [`johnmanjiro13/auto-reviewer-assign`](https://github.com/johnmanjiro13/auto-reviewer-assign) | `v0.2.0` | `cac72d552c3f3163adfb7bc4a3f676163911d0ef` | `pull-requests: write`, `contents: read` | Automatically assigns code reviewers to newly created pull requests |
+| **GH Actions Docs** | [`3lvia/gh-actions-docs`](https://github.com/3lvia/gh-actions-docs) | `v1.2.5` | `2db29362f0d6d92052f6fa49b71743af5f0c11f8` | `contents: read` | Automatically documents GitHub Actions inputs, outputs, and usage |
+| **Merge Dependency PRs** | [`desbo/merge-pr-action`](https://github.com/desbo/merge-pr-action) | `v0.3.2` | `1accf075c170137f89b939d6f5d7b2600d0dc344` | `contents: write`, `pull-requests: write` | Automated approval and merging of dependency update PRs |
+| **Auto Merge Bot** | [`casassg/auto-merge-bot`](https://github.com/casassg/auto-merge-bot) | `v0.3.6` | `5d2a038b1b9ac48a0ac698519001d3e6cd299747` | `contents: write`, `pull-requests: write` | Automated merge bot for pull requests satisfying merge criteria |
+| **Automatically Merge PRs** | [`BaharaJr/merge-pr`](https://github.com/BaharaJr/merge-pr) | `0.0.3` | `28444c475789780e15b5b4f5e67a5309a7f48d6a` | `contents: write`, `pull-requests: write` | Automatically merges pull requests upon passing CI tests |
+| **PR Automation** | [`devjoes/pr-automation`](https://github.com/devjoes/pr-automation) | `v0.1.0` | `b9f61eef9e676ad2253aa4a08a2313468e7e57b7` | `contents: read`, `pull-requests: write` | Automated branch filtering, validation, and PR lifecycle handling |
+| **Self Approve Action** | [`nicklegan/github-repo-self-approve-action`](https://github.com/nicklegan/github-repo-self-approve-action) | `v1.0.1` | `bea11671222460fbc41ad06797a0de470985f602` | `pull-requests: write`, `contents: read` | Automated self-approval gate for repository administrative workflows |
+| **Autolabeler CODEOWNERS** | [`pratikmallya/autolabeler-codeowners`](https://github.com/pratikmallya/autolabeler-codeowners) | `0.1` | `cca9694441f25116fcb5d5f16757a6e43e5c4375` | `pull-requests: write`, `contents: read` | Automatically labels pull requests based on matching CODEOWNERS patterns |
+| **Update PR Reminder** | [`Bhupesh-V/update-pr-reminder-action`](https://github.com/Bhupesh-V/update-pr-reminder-action) | `v1` | `9ccd3478ba932042624093b7153300ce63a68b66` | `pull-requests: write`, `contents: read` | Automated reminder notifications on stale or pending pull requests |
+| **AI Code Guard** | [`salehhashemi1992/ai-code-guard`](https://github.com/salehhashemi1992/ai-code-guard) | `v1.1.0` | `769ff29bf912ecf13a432773cb8bbd076b850207` | `pull-requests: write`, `contents: read` | Automated AI security and code quality review guardrail |
+| **Add Badges** | [`wow-actions/add-badges`](https://github.com/wow-actions/add-badges) | `v1.1.0` | `43f2c1eaecfb2596b89a8136a3fbda4f18d1d188` | `contents: write` | Automatically generates and inserts dynamic status badges into README |
+| **Sync Branch Action** | [`LucasRuy/sync-branch-action`](https://github.com/LucasRuy/sync-branch-action) | `v1.2.0` | `2208081dfed383bf8e9c13ce862061a3e7a58239` | `contents: write` | Synchronizes and merges source branches into target destination branches |
+| **Generate Documentation** | [`vargiuscuola/genshdoc`](https://github.com/vargiuscuola/genshdoc) | `v1.0` | `0f2a1895670c474de679631a33eae9369743af5f` | `contents: read` | Automated documentation generation for shell scripts using shdoc |
 
 ---
 
@@ -135,6 +150,21 @@ graph TD
     ActionChoice -->|Auto Close Issues| AutoCloseIssues[lucasbento/auto-close-issues]
     ActionChoice -->|Automerge PR| AutomergePR[reitermarkus/automerge]
     ActionChoice -->|Label Conflicts| LabelConflicts[mschilde/auto-label-merge-conflicts]
+    ActionChoice -->|Pipeline Healer| PipeHealer[JAI0705/DevOps_Pipeline_healer_agent]
+    ActionChoice -->|PR Auditor| PRAuditor[Shawnchee/the-auditor]
+    ActionChoice -->|Reviewer Assign| AutoRevAssign[johnmanjiro13/auto-reviewer-assign]
+    ActionChoice -->|Actions Docs| GHActionsDocs[3lvia/gh-actions-docs]
+    ActionChoice -->|Merge Dep PRs| MergeDepPRs[desbo/merge-pr-action]
+    ActionChoice -->|Auto Merge Bot| AutoMergeBot[casassg/auto-merge-bot]
+    ActionChoice -->|Merge PRs| MergePRs[BaharaJr/merge-pr]
+    ActionChoice -->|PR Automation| PRAutomation[devjoes/pr-automation]
+    ActionChoice -->|Self Approve| SelfApprove[nicklegan/github-repo-self-approve-action]
+    ActionChoice -->|Codeowners Labels| CodeownersLabel[pratikmallya/autolabeler-codeowners]
+    ActionChoice -->|PR Reminder| PRReminder[Bhupesh-V/update-pr-reminder-action]
+    ActionChoice -->|AI Code Guard| AICodeGuard[salehhashemi1992/ai-code-guard]
+    ActionChoice -->|Add Badges| AddBadges[wow-actions/add-badges]
+    ActionChoice -->|Branch Sync Action| SyncBranchAct[LucasRuy/sync-branch-action]
+    ActionChoice -->|Gen Shdoc| GenShdoc[vargiuscuola/genshdoc]
 ```
 
 ### 3.1 Wiki Sync Workflow ([`.github/workflows/wiki-sync.yml`](../.github/workflows/wiki-sync.yml))
@@ -742,6 +772,164 @@ Scans pull requests and automatically applies conflict labels when head branches
   with:
     CONFLICT_LABEL_NAME: "has-conflicts"
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.53 Pipeline Healer ([`.github/workflows/pipeline-healer.yml`](../.github/workflows/pipeline-healer.yml))
+AI-powered agent to diagnose and suggest remediation steps for failed pipeline steps:
+
+```yaml
+- name: Run Pipeline Healer
+  uses: JAI0705/DevOps_Pipeline_healer_agent@a23105b6783cdd78c9a1417f1d20d66d5cb7598d # v1
+  with:
+    groq-api-key: ${{ secrets.GROQ_API_KEY }}
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.54 The Auditor PR Reviewer ([`.github/workflows/the-auditor.yml`](../.github/workflows/the-auditor.yml))
+Gemini-powered automated pull request reviewer and code quality auditor:
+
+```yaml
+- name: Run The Auditor
+  uses: Shawnchee/the-auditor@fdc6bdd022bbe244c9134d14b8241f04e4537142 # v1.0.0
+  with:
+    gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.55 Auto Reviewer Assign ([`.github/workflows/auto-reviewer-assign.yml`](../.github/workflows/auto-reviewer-assign.yml))
+Automatically assigns reviewers to pull requests based on configurable rules:
+
+```yaml
+- name: Auto Assign Reviewers
+  uses: johnmanjiro13/auto-reviewer-assign@cac72d552c3f3163adfb7bc4a3f676163911d0ef # v0.2.0
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.56 GH Actions Docs ([`.github/workflows/gh-actions-docs.yml`](../.github/workflows/gh-actions-docs.yml))
+Generates documentation tables for composite actions and workflow interfaces:
+
+```yaml
+- name: Run gh-actions-docs
+  uses: 3lvia/gh-actions-docs@2db29362f0d6d92052f6fa49b71743af5f0c11f8 # v1.2.5
+```
+
+### 3.57 Merge Dependency Update PRs ([`.github/workflows/merge-pr-action.yml`](../.github/workflows/merge-pr-action.yml))
+Automatically reviews and merges automated dependency update pull requests:
+
+```yaml
+- name: Merge Dependency Update PRs
+  uses: desbo/merge-pr-action@1accf075c170137f89b939d6f5d7b2600d0dc344 # v0.3.2
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.58 Auto Merge Bot ([`.github/workflows/auto-merge-bot.yml`](../.github/workflows/auto-merge-bot.yml))
+Merges pull requests matching target prefixes or labels when checks succeed:
+
+```yaml
+- name: Run Auto Merge Bot
+  uses: casassg/auto-merge-bot@5d2a038b1b9ac48a0ac698519001d3e6cd299747 # v0.3.6
+  with:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    TAG: "automerge"
+```
+
+### 3.59 Automatically Merge Pull Requests ([`.github/workflows/merge-pr.yml`](../.github/workflows/merge-pr.yml))
+Merges pull requests on demand or schedule based on target branch and merge method:
+
+```yaml
+- name: Auto Merge PR
+  uses: BaharaJr/merge-pr@28444c475789780e15b5b4f5e67a5309a7f48d6a # 0.0.3
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    method: "squash"
+```
+
+### 3.60 PR Automation ([`.github/workflows/pr-automation.yml`](../.github/workflows/pr-automation.yml))
+Automates pull request management and validation with branch blacklisting:
+
+```yaml
+- name: Run PR Automation
+  uses: devjoes/pr-automation@b9f61eef9e676ad2253aa4a08a2313468e7e57b7 # v0.1.0
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    branchBlackList: "main"
+```
+
+### 3.61 GitHub Repository Self Approve Action ([`.github/workflows/self-approve.yml`](../.github/workflows/self-approve.yml))
+Self-approves internal automation pull requests via GitHub App installation authentication:
+
+```yaml
+- name: Self Approve PR
+  uses: nicklegan/github-repo-self-approve-action@bea11671222460fbc41ad06797a0de470985f602 # v1.0.1
+  with:
+    appid: ${{ secrets.APP_ID }}
+    privatekey: ${{ secrets.APP_PRIVATE_KEY }}
+    installationid: ${{ secrets.APP_INSTALLATION_ID }}
+```
+
+### 3.62 Autolabeler CODEOWNERS ([`.github/workflows/autolabeler-codeowners.yml`](../.github/workflows/autolabeler-codeowners.yml))
+Labels pull requests based on path ownership mappings defined in `CODEOWNERS`:
+
+```yaml
+- name: Run Autolabeler CODEOWNERS
+  uses: pratikmallya/autolabeler-codeowners@cca9694441f25116fcb5d5f16757a6e43e5c4375 # 0.1
+  with:
+    githubToken: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.63 Update PR Reminder ([`.github/workflows/update-pr-reminder.yml`](../.github/workflows/update-pr-reminder.yml))
+Reminds contributors to keep PR descriptions up to date when new commits are pushed:
+
+```yaml
+- name: Run Update PR Reminder
+  uses: Bhupesh-V/update-pr-reminder-action@9ccd3478ba932042624093b7153300ce63a68b66 # v1
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.64 AI Code Guard ([`.github/workflows/ai-code-guard.yml`](../.github/workflows/ai-code-guard.yml))
+Automated AI-assisted code review guardrail for pull requests:
+
+```yaml
+- name: Run AI Code Guard
+  uses: salehhashemi1992/ai-code-guard@769ff29bf912ecf13a432773cb8bbd076b850207 # v1.1.0
+  with:
+    openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.65 Add Badges ([`.github/workflows/add-badges.yml`](../.github/workflows/add-badges.yml))
+Appends CI status and coverage badges to markdown files or README documentation:
+
+```yaml
+- name: Add Badges
+  uses: wow-actions/add-badges@43f2c1eaecfb2596b89a8136a3fbda4f18d1d188 # v1.1.0
+  with:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.66 Sync Branch Action ([`.github/workflows/sync-branch-action.yml`](../.github/workflows/sync-branch-action.yml))
+Keeps downstream staging or feature branches synchronized with base branches:
+
+```yaml
+- name: Sync Branch Action
+  uses: LucasRuy/sync-branch-action@2208081dfed383bf8e9c13ce862061a3e7a58239 # v1.2.0
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    SOURCE_BRANCH: "main"
+    DESTINATION_BRANCH: "staging"
+```
+
+### 3.67 Generate Documentation ([`.github/workflows/genshdoc.yml`](../.github/workflows/genshdoc.yml))
+Generates documentation from annotated shell scripts using `genshdoc`:
+
+```yaml
+- name: Run genshdoc
+  uses: vargiuscuola/genshdoc@0f2a1895670c474de679631a33eae9369743af5f # v1.0
+  with:
+    source: "scripts"
 ```
 
 ---

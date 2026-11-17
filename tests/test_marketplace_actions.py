@@ -66,6 +66,21 @@ PINNED_ACTIONS = {
     "lucasbento/auto-close-issues": "667e4f3cd71f2760a3869680944b8df55325b005",
     "reitermarkus/automerge": "634d0a4b51134c163eee182ac9aa79133eb33e8d",
     "mschilde/auto-label-merge-conflicts": "5981f8933e92b78098af86b9e33fe0871cc7a3be",
+    "JAI0705/DevOps_Pipeline_healer_agent": "a23105b6783cdd78c9a1417f1d20d66d5cb7598d",
+    "Shawnchee/the-auditor": "fdc6bdd022bbe244c9134d14b8241f04e4537142",
+    "johnmanjiro13/auto-reviewer-assign": "cac72d552c3f3163adfb7bc4a3f676163911d0ef",
+    "3lvia/gh-actions-docs": "2db29362f0d6d92052f6fa49b71743af5f0c11f8",
+    "desbo/merge-pr-action": "1accf075c170137f89b939d6f5d7b2600d0dc344",
+    "casassg/auto-merge-bot": "5d2a038b1b9ac48a0ac698519001d3e6cd299747",
+    "BaharaJr/merge-pr": "28444c475789780e15b5b4f5e67a5309a7f48d6a",
+    "devjoes/pr-automation": "b9f61eef9e676ad2253aa4a08a2313468e7e57b7",
+    "nicklegan/github-repo-self-approve-action": "bea11671222460fbc41ad06797a0de470985f602",
+    "pratikmallya/autolabeler-codeowners": "cca9694441f25116fcb5d5f16757a6e43e5c4375",
+    "Bhupesh-V/update-pr-reminder-action": "9ccd3478ba932042624093b7153300ce63a68b66",
+    "salehhashemi1992/ai-code-guard": "769ff29bf912ecf13a432773cb8bbd076b850207",
+    "wow-actions/add-badges": "43f2c1eaecfb2596b89a8136a3fbda4f18d1d188",
+    "LucasRuy/sync-branch-action": "2208081dfed383bf8e9c13ce862061a3e7a58239",
+    "vargiuscuola/genshdoc": "0f2a1895670c474de679631a33eae9369743af5f",
 }
 
 
@@ -141,6 +156,21 @@ MARKETPLACE_WORKFLOW_FILES = [
     "auto-close-issues.yml",
     "automerge-pr.yml",
     "auto-label-merge-conflicts.yml",
+    "pipeline-healer.yml",
+    "the-auditor.yml",
+    "auto-reviewer-assign.yml",
+    "gh-actions-docs.yml",
+    "merge-pr-action.yml",
+    "auto-merge-bot.yml",
+    "merge-pr.yml",
+    "pr-automation.yml",
+    "self-approve.yml",
+    "autolabeler-codeowners.yml",
+    "update-pr-reminder.yml",
+    "ai-code-guard.yml",
+    "add-badges.yml",
+    "sync-branch-action.yml",
+    "genshdoc.yml",
 ]
 
 
