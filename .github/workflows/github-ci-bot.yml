@@ -1,0 +1,36 @@
+name: GitHub CI Bot Commands & Automation
+
+# zizmor: ignore[dangerous-triggers]
+on:
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ci-bot:
+    name: Run GitHub CI Bot
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Run GitHub CI Bot
+        uses: wzshiming/gh-ci-bot@91068dab3f3130054b3569e2b0dd2db07cd53c2a # v1.8.0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BLUNDERBUSS_REVIEWER_COUNT: '2'

@@ -1,0 +1,39 @@
+name: No Free Usage Guard
+
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check-engagement:
+    name: Verify Contributor Engagement
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Verify Free Usage Policy
+        uses: fluttercandies/no-free-usage-action@84718b1a36661a646d795bf4a7fd15a3f6f087e2 # v1.0.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          forked: false
+          starred: false
+          words: 'Thank you for opening an issue in House of Sak! Please consider starring the repository to support our open-source agent workspace.'
