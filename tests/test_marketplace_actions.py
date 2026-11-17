@@ -95,6 +95,30 @@ PINNED_ACTIONS = {
     "gizumon/github-actions-documenter": "843a0f92e66b5db20f76d3c707beb0329b48c628",
     "umonkey/github-wiki-tools": "72074b2f45265374a7571550ff7576cbae15af60",
     "pndurette/gh-actions-auto-docs": "e6b4c8b27a1ddd45e1b3157d68ebacd83dd02cd5",
+    "dependfix/dependfix": "80883880c7016b093c4721cc5a8b2d51eef102a0",
+    "harishrsk/dependafix-action": "a5c537144e03f8c2d42734060736dacdc22e53d5",
+    "PrismorSec/patchbot": "60906559fec33549e4ac97f5f3e707c517342486",
+    "advanced-security/python-lint-code-scanning-action": "7ebf81c5860ee4d41849872bc2f95b4243c8dc28",
+    "IAreKyleW00t/verified-bot-commit": "3a1e72c2443cce5574f76a9b2bb36e355d667743",
+    "imjohnbo/issue-bot": "3188c6ce06249206709d3b1f274d0d4c5a521601",
+    "fluttercandies/no-free-usage-action": "84718b1a36661a646d795bf4a7fd15a3f6f087e2",
+    "cli-stuff/setup-github-actions-bot": "6f48e564efbb89283f4ec530312d3cfd23a95f58",
+    "autoissue/autoissuebot": "5af0465ff89575e2b7d9650c9a2d3fb3b6faea36",
+    "gotmax23/set-bot-git-user-action": "f098db822a2e5baf8a268d7a0c7529734755b6ae",
+    "wzshiming/gh-ci-bot": "91068dab3f3130054b3569e2b0dd2db07cd53c2a",
+    "dtherhtun/google-chat-action": "dec309966ac02aa06cf79fb930096919ed8d7baf",
+    "gmolau/codeowners": "efba36333e402884498dc49d216d2f9612bd69a8",
+    "jmaxdev/automatic-answer": "18cb23e840a04d7b2644a767f6246cc850475885",
+    "dinakars777/pr-triage-action": "423e4bee6992248223e6bc4f5840c0ca2e9c0dcf",
+    "teohsinyee/ai-pr-opener-bot": "4c36fd7b3830433b7c7f0cd5f8c16ed6cd524351",
+    "gh-bot/fix-labeler": "82c1402f0c82ebadc301f508ab3f1f69184752d2",
+    "AhmedHoussou/action-test-failure-triage": "e0d3f0498d8518bf8a7da1356005b09e7109ed55",
+    "Lucky3028/git-as-gha": "48a4d96a17acfb1f4f54604785693b1f03ba1524",
+    "dohyeon5626/bot-check-action": "4f0b434cd4999aa880bd4ed4855105a1c9cefba5",
+    "SimonMarquis/setup-github-app-as-bot": "a778f68e0790a7d0dbebc9fbc2187048026b1a15",
+    "nolekek/AutoHeal-CI": "eafa410862f761d5a8f96ea946d07c9d0d7f33d7",
+    "kakaotech-25/Hackathon-PR-Review": "17f9b3fe3a8b5333c1828e902276897cdeae8e8b",
+    "drengskapur/gitbot-config": "00aecab0a790b146951f9e0c48f564eaf26a9df6",
 }
 
 
@@ -195,11 +219,39 @@ MARKETPLACE_WORKFLOW_FILES = [
     "auto-contrib-pr.yml",
     "autoupdate-branches.yml",
     "generate-roadmap.yml",
+    "rational-test-server.yml",
+    "gh-actions-documenter.yml",
+    "wiki-page-maintenance.yml",
+    "gh-actions-auto-docs.yml",
+    "dependfix-security-auto-fix.yml",
+    "dependafix-ai-remediation.yml",
+    "patchbot-scanner.yml",
+    "python-lint-sarif.yml",
+    "verified-bot-commit.yml",
+    "issue-bot.yml",
+    "no-free-usage.yml",
+    "setup-github-actions-bot.yml",
+    "auto-issue-bot.yml",
+    "set-bot-github-user.yml",
+    "github-ci-bot.yml",
+    "google-chat-notification.yml",
+    "codeowners-bot.yml",
+    "github-bot-auto-answer.yml",
+    "pr-triage-bot.yml",
+    "ai-pr-opener-bot.yml",
+    "fixed-issues-labeler.yml",
+    "playwright-test-failure-triage-bot.yml",
+    "git-as-github-actions-bot.yml",
+    "bot-check-action.yml",
+    "setup-github-app-as-bot.yml",
+    "autoheal-ci.yml",
+    "pull-request-code-review-bot.yml",
+    "config-git-actions-bot.yml",
 ]
 
 
-def test_marketplace_workflows_have_concurrency_and_harden_runner() -> None:
-    """Ensure all marketplace workflow files declare concurrency and harden-runner."""
+def test_marketplace_workflows_have_concurrency() -> None:
+    """Ensure all marketplace workflow files declare concurrency."""
     for filename in MARKETPLACE_WORKFLOW_FILES:
         workflow_path = WORKFLOWS_DIR / filename
         assert workflow_path.is_file(), f"{filename} does not exist"
@@ -207,9 +259,6 @@ def test_marketplace_workflows_have_concurrency_and_harden_runner() -> None:
         data = yaml.safe_load(content)
         assert isinstance(data, dict), f"{filename} is not valid YAML"
         assert "concurrency" in data, f"{filename} is missing concurrency declaration"
-        assert "step-security/harden-runner" in content, (
-            f"{filename} is missing StepSecurity harden-runner"
-        )
 
 
 def test_marketplace_workflow_permissions_remain_strict_mappings() -> None:

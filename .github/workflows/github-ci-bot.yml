@@ -1,0 +1,43 @@
+name: GitHub CI Bot Commands & Automation
+
+# zizmor: ignore[dangerous-triggers]
+on:
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ci-bot:
+    name: Run GitHub CI Bot
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Run GitHub CI Bot
+        uses: wzshiming/gh-ci-bot@91068dab3f3130054b3569e2b0dd2db07cd53c2a # v1.8.0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPOSITORY: ${{ github.repository }}
+          LOGIN: ${{ github.event.comment.user.login || github.event.pull_request.user.login || github.actor }}
+          AUTHOR: ${{ github.event.pull_request.user.login || github.event.issue.user.login || github.actor }}
+          MESSAGE: ${{ github.event.comment.body || github.event.pull_request.body || '' }}
+          ISSUE_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number || '1' }}
+          ISSUE_KIND: ${{ github.event.pull_request && 'pr' || 'issue' }}
+          TYPE: ${{ github.event_name == 'issue_comment' && 'comment' || github.event.action || 'synchronize' }}
+          BLUNDERBUSS_REVIEWER_COUNT: '2'

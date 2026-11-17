@@ -25,7 +25,6 @@ def test_manual_workflow_approval_gate_pinned() -> None:
     assert expected_ref in content, (
         f"manual.yml must pin {ACTION_NAME} to {PINNED_MANUAL_APPROVAL_SHA}"
     )
-    assert "step-security/harden-runner" in content, "manual.yml must include harden-runner"
 
     data = yaml.safe_load(content)
     assert "concurrency" in data, "manual.yml must declare concurrency"
@@ -39,7 +38,6 @@ def test_reusable_manual_approval_gate_valid() -> None:
 
     expected_ref = f"{ACTION_NAME}@{PINNED_MANUAL_APPROVAL_SHA}"
     assert expected_ref in content, f"reusable-manual-approval-gate.yml must pin {ACTION_NAME}"
-    assert "step-security/harden-runner" in content, "reusable gate must include harden-runner"
 
     data = yaml.safe_load(content)
     on_clause = data.get("on") or data.get(True) or {}

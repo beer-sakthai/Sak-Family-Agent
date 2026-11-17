@@ -1,0 +1,40 @@
+name: Issue Bot Automation
+
+on:
+  schedule:
+    - cron: '0 8 * * 1' # Weekly on Monday at 08:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  issue-bot:
+    name: Generate Scheduled Issue
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Run Issue Bot
+        uses: imjohnbo/issue-bot@3188c6ce06249206709d3b1f274d0d4c5a521601 # v3.4.5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: 'Weekly House of Sak Maintenance & Backlog Sync'
+          body: 'Automated weekly maintenance tracker for House of Sak monorepo. Please review PLAN.md and active milestones.'
+          labels: 'maintenance,automation'
+          close-previous: true
