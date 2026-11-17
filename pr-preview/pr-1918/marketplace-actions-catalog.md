@@ -953,7 +953,9 @@ Validates `.github/dependabot.yml` against conservative update policies and ecos
   uses: DiogoRibeiro7/safe-dependabot@6108108e756497ce9c7b4e9e38d76fea453c1181 # v1.1.1
   with:
     config-path: ".github/dependabot.yml"
-    max-open-prs: "5"
+    max-open-prs: "10"
+    require-major-ignore: "false"
+    detect-ecosystems: "false"
 ```
 
 ### 3.69 Dependabot Helper ([`.github/workflows/dependabot-helper.yml`](../.github/workflows/dependabot-helper.yml))
