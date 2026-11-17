@@ -31,6 +31,18 @@ PINNED_ACTIONS = {
     "fastify/github-action-merge-dependabot": "73ec4cbb5e56df5591eae286972d5b2201ffe90f",
     "seferov/pr-lint-action": "cbef81c153f36262fbcd92fe97d6c6b8736d891d",
     "Optimal-AI/PR-Label-Checker": "48d46fe6336aedcbb836ca580e86f195f9d14b01",
+    "trstringer/manual-approval": "fa642940caf8412403569b28b2db4a1df08a83a3",
+    "stepci/stepci": "570a42a52dcb9c7864031da79b047ffbaa268847",
+    "benc-uk/workflow-dispatch": "d004979be141727c7a17c28f603e2facc40d0855",
+    "BetaHuhn/repo-file-sync-action": "8b92be3375cf1d1b0cd579af488a9255572e4619",
+    "convictional/trigger-workflow-and-wait": "f69fa9eedd3c62a599220f4d5745230e237904be",
+    "technote-space/workflow-conclusion-action": "45ce8e0eb155657ab8ccf346ade734257fd196a5",
+    "saadmk11/github-actions-version-updater": "764bee6cd2905c6c91624f35332f1472fa736c23",
+    "rokibhasansagar/slimhub_actions": "5560c2d964bc240edfc5a0855b4b2c8261a29f29",
+    "the-actions-org/workflow-dispatch": "3133c5d135c7dbe4be4f9793872b6ef331b53bc7",
+    "ahmadnassri/action-workflow-queue": "542658b3a8270cac81ae15d401b0d974732808ac",
+    "varunsridharan/action-github-workflow-sync": "3c60cce5ee8e615a7c68ac75fc14893dcac62d49",
+    "technote-space/auto-cancel-redundant-workflow": "7d35aba30420fc2368f8aeed50371e99e7fa3239",
 }
 
 
@@ -71,6 +83,18 @@ MARKETPLACE_WORKFLOW_FILES = [
     "dependabot-auto-merge.yml",
     "pr-lint.yml",
     "pr-label-checker.yml",
+    "reusable-manual-approval-gate.yml",
+    "step-ci.yml",
+    "actions-version-updater.yml",
+    "runner-disk-cleaner.yml",
+    "workflow-queue.yml",
+    "workflow-conclusion.yml",
+    "auto-cancel-redundant.yml",
+    "reusable-workflow-dispatch.yml",
+    "reusable-workflow-dispatch-wait.yml",
+    "reusable-trigger-workflow-wait.yml",
+    "repo-file-sync.yml",
+    "github-workflow-sync.yml",
 ]
 
 
