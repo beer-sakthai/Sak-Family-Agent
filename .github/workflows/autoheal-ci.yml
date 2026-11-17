@@ -41,5 +41,6 @@ jobs:
           provider: "gemini"
           github_token: ${{ secrets.GITHUB_TOKEN }}
           test_command: ${{ inputs.test_command }}
-          max_rounds: "1"
+          max_rounds: "3"
+          max_budget_usd: "2.00"
           create_pr: "false"
