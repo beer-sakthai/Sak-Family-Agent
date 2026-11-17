@@ -1,0 +1,65 @@
+# Continuous Benchmark Workflow
+# Tracks performance benchmarks and detects regressions
+
+name: Continuous Benchmark
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - 'personas/sakthai/**'
+      - '.github/workflows/continuous-benchmark.yml'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: continuous-benchmark-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --no-cache-dir pytest pytest-benchmark
+          pip install -e personas/sakthai
+
+      - name: Run benchmarks
+        run: |
+          pytest tests/ --benchmark-json output.json || true
+
+      - name: Store and track benchmark results
+        uses: benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc # v1.22.2
+        with:
+          name: SakThai Core Benchmarks
+          tool: 'pytest'
+          output-file-path: output.json
+          github-token: ${{ github.token }}
+          auto-push: false
+          comment-on-alert: true
+          fail-on-alert: false

@@ -16,7 +16,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 
 ---
 
-## 2. Seven Verified Marketplace Actions
+## 2. Twelve Verified Marketplace Actions
 
 | Action Name | Upstream Repository | Tag | Immutable Commit SHA | Required Permissions | Purpose |
 |---|---|---|---|---|---|
@@ -27,6 +27,11 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **Markdown Autodocs** | [`dineshsonachalam/markdown-autodocs`](https://github.com/dineshsonachalam/markdown-autodocs) | `v1.0.7` | `6596b4a049f087c7abe84cc7457e2c53652df810` | `contents: read` / `write` | Injects code blocks, JSON tables, and workflow artifacts into Markdown |
 | **PR Comment Trigger** | [`Khan/pull-request-comment-trigger`](https://github.com/Khan/pull-request-comment-trigger) | `v1.1.0` | `edab8d9ba7759221187ef7120592a6fbfada0d18` | `pull-requests: read`, `issues: write` | Detects slash commands or keyword triggers in PR comments |
 | **Deployment Action** | [`chrnorm/deployment-action`](https://github.com/chrnorm/deployment-action) | `v2.0.7` | `55729fcebec3d284f60f5bcabbd8376437d696b1` | `deployments: write` | Creates GitHub Deployments and tracks environment URLs |
+| **Git PR Release** | [`bakunyo/git-pr-release-action`](https://github.com/bakunyo/git-pr-release-action) | `v1.4` | `035b7151a53745c03b85c6274ab1ae4bc734eccd` | `contents: write`, `pull-requests: write`, `issues: write` | Automated release PR aggregating merged PR summaries |
+| **PR Deploy** | [`hngprojects/pr-deploy`](https://github.com/hngprojects/pr-deploy) | `V2.0.1` | `2f8b3e0dce07f0c6f7e6e80018dc52081a61b63b` | `contents: read`, `pull-requests: write` | Ephemeral containerized deployments for pull requests |
+| **Continuous Benchmark** | [`benchmark-action/github-action-benchmark`](https://github.com/benchmark-action/github-action-benchmark) | `v1.22.2` | `4322e5726e6334590d251fc4f92bec0efafc45dc` | `contents: write`, `pull-requests: write` | Continuous performance metric tracking and regression alerts |
+| **GitHub Release from Tag** | [`ghalactic/github-release-from-tag`](https://github.com/ghalactic/github-release-from-tag) | `v6` | `30770b91acccc8e1e2f14562d813cb30af08f1c6` | `contents: write`, `issues: write` | Automatic GitHub release creation sourced from git tags |
+| **GitHub Activity Readme** | [`jamesgeorge007/github-activity-readme`](https://github.com/jamesgeorge007/github-activity-readme) | `v0.5.0` | `4aefbfa1c222d70537dc6a02f0519266aab2b1ea` | `contents: write` | Daily repository and contributor activity sync in README |
 
 ---
 
@@ -34,7 +39,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 
 ```mermaid
 graph TD
-    Trigger[PR / Issue / Push / Dispatch] --> Runner[StepSecurity Harden-Runner]
+    Trigger[PR / Issue / Push / Tag / Schedule / Dispatch] --> Runner[StepSecurity Harden-Runner]
     Runner --> Checkout[Actions Checkout @ SHA]
     Checkout --> ActionChoice{Trigger Type}
     ActionChoice -->|Push to main| WikiSync[Andrew-Chen-Wang/github-wiki-action]
@@ -43,6 +48,11 @@ graph TD
     ActionChoice -->|Branch Sync| BranchSync[connor-baer/action-sync-branch]
     ActionChoice -->|Deploy Event| DeployAction[chrnorm/deployment-action]
     ActionChoice -->|Scheduled Hygiene| MaintenancePR[devops-infra/action-commit-push + action-pull-request]
+    ActionChoice -->|Release PR| GitPRRelease[bakunyo/git-pr-release-action]
+    ActionChoice -->|Container Deploy| PRDeploy[hngprojects/pr-deploy]
+    ActionChoice -->|Benchmark Run| Benchmark[benchmark-action/github-action-benchmark]
+    ActionChoice -->|Tag Push v*| TagRelease[ghalactic/github-release-from-tag]
+    ActionChoice -->|Daily Schedule| ActivityReadme[jamesgeorge007/github-activity-readme]
 ```
 
 ### 3.1 Wiki Sync Workflow ([`.github/workflows/wiki-sync.yml`](../.github/workflows/wiki-sync.yml))
@@ -126,6 +136,74 @@ Performs automated hygiene commits and opens structured Pull Requests:
     title: ${{ inputs.pr_title }}
     template: .github/PULL_REQUEST_TEMPLATE.md
     label: automation,maintenance
+```
+
+### 3.7 Git PR Release Workflow ([`.github/workflows/git-pr-release.yml`](../.github/workflows/git-pr-release.yml))
+Aggregates merged pull requests into a release candidate pull request:
+
+```yaml
+- name: Generate Release Pull Request
+  uses: bakunyo/git-pr-release-action@035b7151a53745c03b85c6274ab1ae4bc734eccd # v1.4
+  env:
+    GITHUB_TOKEN: ${{ github.token }}
+    GIT_PR_RELEASE_BRANCH_PRODUCTION: ${{ inputs.base_branch }}
+    GIT_PR_RELEASE_BRANCH_STAGING: ${{ inputs.head_branch }}
+```
+
+### 3.8 Reusable PR Deploy Workflow ([`.github/workflows/reusable-pr-deploy.yml`](../.github/workflows/reusable-pr-deploy.yml))
+Spins up containerized PR preview environments on remote Docker hosts:
+
+```yaml
+- name: Deploy Pull Request Container
+  uses: hngprojects/pr-deploy@2f8b3e0dce07f0c6f7e6e80018dc52081a61b63b # V2.0.1
+  with:
+    context: ${{ inputs.docker_context }}
+    server_port: ${{ inputs.server_port }}
+  env:
+    SERVER_HOST: ${{ secrets.SERVER_HOST }}
+    SERVER_USERNAME: ${{ secrets.SERVER_USERNAME }}
+    SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+```
+
+### 3.9 Continuous Benchmark Workflow ([`.github/workflows/continuous-benchmark.yml`](../.github/workflows/continuous-benchmark.yml))
+Monitors execution performance and tracks metrics across commits:
+
+```yaml
+- name: Store and track benchmark results
+  uses: benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc # v1.22.2
+  with:
+    name: SakThai Core Benchmarks
+    tool: 'pytest'
+    output-file-path: output.json
+    github-token: ${{ github.token }}
+    auto-push: false
+    comment-on-alert: true
+    fail-on-alert: false
+```
+
+### 3.10 Release from Tag Workflow ([`.github/workflows/release-from-tag.yml`](../.github/workflows/release-from-tag.yml))
+Creates GitHub Releases automatically upon pushing SemVer `v*` tags:
+
+```yaml
+- name: Create GitHub Release
+  uses: ghalactic/github-release-from-tag@30770b91acccc8e1e2f14562d813cb30af08f1c6 # v6
+  with:
+    generateReleaseNotes: true
+  env:
+    GITHUB_TOKEN: ${{ github.token }}
+```
+
+### 3.11 Activity in Readme Workflow ([`.github/workflows/activity-readme.yml`](../.github/workflows/activity-readme.yml))
+Periodically synchronizes recent public repository activity into the README:
+
+```yaml
+- name: Update Activity Section
+  uses: jamesgeorge007/github-activity-readme@4aefbfa1c222d70537dc6a02f0519266aab2b1ea # v0.5.0
+  env:
+    GITHUB_TOKEN: ${{ github.token }}
+  with:
+    COMMIT_MSG: "chore(docs): update recent activity section [skip ci]"
+    MAX_LINES: 5
 ```
 
 ---
