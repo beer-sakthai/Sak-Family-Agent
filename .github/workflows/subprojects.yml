@@ -56,7 +56,7 @@ jobs:
           cache-dependency-glob: "sakthai-chat-cli/uv.lock"
 
       - name: Install dependencies
-        run: uv sync --locked --all-extras
+        run: uv sync --locked --all-extras --dev
 
       - name: Run tests
         run: uv run --locked pytest
@@ -86,7 +86,7 @@ jobs:
           cache-dependency-glob: "services/teams-copilot-mcp/uv.lock"
 
       - name: Install dependencies
-        run: uv sync --locked --all-extras
+        run: uv sync --locked --all-extras --dev
 
       - name: Run tests
         run: uv run --locked pytest

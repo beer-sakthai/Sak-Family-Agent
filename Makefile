@@ -43,11 +43,11 @@ export-agent-repos:
 
 test:
 	@echo "Running tests..."
-	@if command -v uv >/dev/null 2>&1; then uv run pytest tests/; else pytest tests/; fi
+	@if command -v uv >/dev/null 2>&1; then uv run --all-extras --group dev pytest tests/; else pytest tests/; fi
 
 lint:
 	@echo "Running linters..."
-	@if command -v uv >/dev/null 2>&1; then uv run ruff check .; else ruff check .; fi
+	@if command -v uv >/dev/null 2>&1; then uv run --extra dev ruff check .; else ruff check .; fi
 
 # Mutation testing on the core seam modules (see [tool.mutmut] in pyproject.toml).
 # A full run is slow and is intentionally NOT part of CI; use it locally to find
@@ -87,7 +87,7 @@ dashboard-test:
 #
 # Get a token first with `sakthai web setup`.
 dashboard-dev:
-	@command -v sakthai >/dev/null 2>&1 || { echo "sakthai not on PATH; run 'uv sync --all-extras' first"; exit 1; }
+	@command -v sakthai >/dev/null 2>&1 || { echo "sakthai not on PATH; run 'uv sync --all-extras --dev' first"; exit 1; }
 	@echo "Starting the SakThai web API on http://127.0.0.1:3001 ..."
 	@SAKTHAI_WEB_CORS_ORIGIN=http://localhost:3000 sakthai web serve --port 3001 & echo $$! > /tmp/sakthai-web.pid
 	@sleep 1

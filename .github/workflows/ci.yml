@@ -44,8 +44,9 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
-        # Install all optional dependencies to ensure linting/testing tools are present.
-        run: uv sync --locked --all-extras
+        # Install optional integrations plus the uv dependency group containing
+        # the linting, typing, security, and test tools used below.
+        run: uv sync --locked --all-extras --dev
 
       - name: Run linters
         run: |

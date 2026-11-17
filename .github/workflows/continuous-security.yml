@@ -50,7 +50,7 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
-        run: uv sync --locked --all-extras
+        run: uv sync --locked --all-extras --dev
 
       - name: Run DevSecOps Skill
         # This command invokes the agent and tells it to use security skills to
