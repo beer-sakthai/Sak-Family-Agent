@@ -1,0 +1,45 @@
+name: CI Dokumentor
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_workflow:
+        description: "Workflow source path to document"
+        required: false
+        default: ".github/workflows/ci.yml"
+        type: string
+      dry_run:
+        description: "Whether to execute as dry-run"
+        required: false
+        default: "true"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  document:
+    name: Generate CI Workflow Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Document CI Workflows
+        uses: hoverkraft-tech/ci-dokumentor@93a10eb9c637d6b06ef394f12d60189b192b87c2 # 0.6.1
+        with:
+          source: ${{ inputs.source_workflow || '.github/workflows/ci.yml' }}
+          dry-run: ${{ inputs.dry_run || 'true' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}

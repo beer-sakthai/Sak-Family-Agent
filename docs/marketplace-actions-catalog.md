@@ -16,7 +16,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 
 ---
 
-### 2. Forty Verified Marketplace Actions
+### 2. Forty-Five Verified Marketplace Actions
 
 | Action Name | Upstream Repository | Tag | Immutable Commit SHA | Required Permissions | Purpose |
 |---|---|---|---|---|---|
@@ -60,6 +60,11 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **Checkbox Workflow Action** | [`wadackel/checkbox-workflow-action`](https://github.com/wadackel/checkbox-workflow-action) | `v1.1.0` | `39a84e680429bb174302beed9f222e06972cecf9` | `issues: read`, `pull-requests: read` | Triggers CI steps upon checking checkboxes in PR bodies or comments |
 | **Simple Comment PR** | [`NejcZdovc/comment-pr`](https://github.com/NejcZdovc/comment-pr) | `v2.1.0` | `a423635d183a8259308e80593c96fecf31539c26` | `pull-requests: write`, `contents: read` | Publishes formatted markdown updates directly to pull requests |
 | **Wait for Workflow** | [`ArcticLampyrid/action-wait-for-workflow`](https://github.com/ArcticLampyrid/action-wait-for-workflow) | `v1.3.0` | `ff297b23789206858260877c4b83026d90c6db8c` | `actions: read`, `contents: read` | Polls and halts until target named workflow run reaches completion |
+| **Git Flow Action** | [`kvendingoldo/git-flow-action`](https://github.com/kvendingoldo/git-flow-action) | `v2.16.0` | `ca756ba150c376eb9bf35e3ff3ed591913bb7f11` | `contents: write` | Automates GitFlow release branches, tags, and GitHub releases |
+| **Gemini Actions** | [`dortort/gemini-actions`](https://github.com/dortort/gemini-actions) | `v0.1.0` | `c7ce09711c46a567055a16a762c0c99fdf181aeb` | `contents: read` | Meta-package and dispatcher for Google Gemini AI repository automation |
+| **CI Dokumentor** | [`hoverkraft-tech/ci-dokumentor`](https://github.com/hoverkraft-tech/ci-dokumentor) | `0.6.1` | `93a10eb9c637d6b06ef394f12d60189b192b87c2` | `contents: read` | Automated generation of comprehensive CI/CD workflow documentation |
+| **Code Review by Gemini AI** | [`rubensflinco/gemini-code-review-action`](https://github.com/rubensflinco/gemini-code-review-action) | `1.0.6` | `eff35325520e8afcd9ed86618920a4804925c05f` | `contents: read`, `pull-requests: write` | Automated pull request code reviews and diff chunk analysis via Gemini API |
+| **Gemini Review Bot** | [`jgunnink/gemini-review-bot`](https://github.com/jgunnink/gemini-review-bot) | `v1.5.0` | `a1912666a1c394f0f7b51cb0910d02d54c1a93f7` | `contents: read`, `pull-requests: write` | Interactive PR code reviews, inline thread commentary, and diff analysis |
 
 ---
 
@@ -109,6 +114,11 @@ graph TD
     ActionChoice -->|Checkbox Gate| CheckboxGate[wadackel/checkbox-workflow-action]
     ActionChoice -->|Comment on PR| CommentPR[NejcZdovc/comment-pr]
     ActionChoice -->|Wait for Workflow| WaitForWf[ArcticLampyrid/action-wait-for-workflow]
+    ActionChoice -->|Git Flow Runner| GitFlowRunner[kvendingoldo/git-flow-action]
+    ActionChoice -->|Gemini Actions| GeminiActions[dortort/gemini-actions]
+    ActionChoice -->|CI Dokumentor| CIDokumentor[hoverkraft-tech/ci-dokumentor]
+    ActionChoice -->|Gemini AI Review| GeminiAICodeReview[rubensflinco/gemini-code-review-action]
+    ActionChoice -->|Gemini Review Bot| GeminiReviewBot[jgunnink/gemini-review-bot]
 ```
 
 ### 3.1 Wiki Sync Workflow ([`.github/workflows/wiki-sync.yml`](../.github/workflows/wiki-sync.yml))
@@ -565,6 +575,70 @@ Polls and halts until the target named workflow completes:
   with:
     workflow: lint-check.yml
     token: ${{ github.token }}
+```
+
+### 3.40 Git Flow Action ([`.github/workflows/git-flow-action.yml`](../.github/workflows/git-flow-action.yml))
+Executes GitFlow release branching and tagging operations:
+
+```yaml
+- name: Run Git Flow Action
+  uses: kvendingoldo/git-flow-action@ca756ba150c376eb9bf35e3ff3ed591913bb7f11 # v2.16.0
+  with:
+    enable_git_push: ${{ inputs.enable_git_push || 'false' }}
+    log_level: ${{ inputs.log_level || 'INFO' }}
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.41 Gemini Actions Dispatcher ([`.github/workflows/gemini-actions.yml`](../.github/workflows/gemini-actions.yml))
+Meta-package and dispatcher for repository tasks automated by Google Gemini AI:
+
+```yaml
+- name: Execute Gemini Actions Dispatcher
+  uses: dortort/gemini-actions@c7ce09711c46a567055a16a762c0c99fdf181aeb # v0.1.0
+  with:
+    action: ${{ inputs.action_mode || 'info' }}
+```
+
+### 3.42 CI Dokumentor Workflow ([`.github/workflows/ci-dokumentor.yml`](../.github/workflows/ci-dokumentor.yml))
+Generates comprehensive documentation for CI/CD workflow manifests:
+
+```yaml
+- name: Document CI Workflows
+  uses: hoverkraft-tech/ci-dokumentor@93a10eb9c637d6b06ef394f12d60189b192b87c2 # 0.6.1
+  with:
+    source: ${{ inputs.source_workflow || '.github/workflows/ci.yml' }}
+    dry-run: ${{ inputs.dry_run || 'true' }}
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.43 Code Review by Gemini AI ([`.github/workflows/gemini-code-review-action.yml`](../.github/workflows/gemini-code-review-action.yml))
+Reviews pull requests and provides automated diff chunk analysis using the Gemini API:
+
+```yaml
+- name: Run Gemini AI Code Review
+  if: steps.check_secret.outputs.has_key == 'true'
+  uses: rubensflinco/gemini-code-review-action@eff35325520e8afcd9ed86618920a4804925c05f # 1.0.6
+  with:
+    gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    github_repository: ${{ github.repository }}
+    github_pull_request_number: ${{ inputs.pull_request_number || '1' }}
+    git_commit_hash: ${{ github.sha }}
+    model: "gemini-3.8-flash"
+    pull_request_diff: "dry-run-diff"
+```
+
+### 3.44 Gemini Review Bot ([`.github/workflows/gemini-review-bot.yml`](../.github/workflows/gemini-review-bot.yml))
+Provides interactive PR code reviews, inline thread commentary, and diff analysis:
+
+```yaml
+- name: Execute Gemini Review Bot
+  if: steps.check_secret.outputs.has_key == 'true'
+  uses: jgunnink/gemini-review-bot@a1912666a1c394f0f7b51cb0910d02d54c1a93f7 # v1.5.0
+  with:
+    gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    instructions: ${{ inputs.instructions || '' }}
 ```
 
 ---
