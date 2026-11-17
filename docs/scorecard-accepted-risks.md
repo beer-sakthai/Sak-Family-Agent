@@ -1,13 +1,14 @@
 # Scorecard: accepted risks
 
-Three OpenSSF Scorecard findings stay open on purpose. Code-Review and
+Four OpenSSF Scorecard findings stay open on purpose or are triaged as accepted risk. Code-Review and
 Branch-Protection measure whether a second person reviews changes, and this
 repository has one maintainer. CII-Best-Practices needs an OpenSSF Best
-Practices badge, and the passing level needs an open-source licence. This
-page records why they are accepted, what gates a merge instead, and what
-would let them close.
+Practices badge, and the passing level needs an open-source licence. SAST
+evaluates recent commits on main where automated SAST suites (CodeQL, SonarCloud,
+Bandit) run on every push and PR. This page records why they are accepted, what
+gates a merge instead, and what would let them close.
 
-All three are dismissed as **Won't fix** on the Security tab with the
+All four are dismissed as **Won't fix** on the Security tab with the
 comments below, so a new finding is not lost among them. The
 `code-scanning-cleanup.yml` workflow dismisses them (see
 [Dismissal comments](#dismissal-comments)); the Security tab works too.
@@ -68,6 +69,18 @@ are not:
 Answering the rest of the questionnaire raises the percentage but not the
 score, which stays at 2 until every MUST is met. The answers are drafted in
 [`cii-best-practices-answers.md`](cii-best-practices-answers.md).
+
+## SAST (alert #15465)
+
+**What Scorecard measures.** It checks whether static application security testing
+(SAST) tools (such as CodeQL, SonarCloud, or Bandit) run on all recent commits (~30)
+on `main`. A project receives 10/10 if all 30 commits ran SAST.
+
+**Why it scored 9/10.** Scorecard detected 27 out of 30 commits ran a SAST tool,
+yielding score 9. Because Scorecard flags any score below 10 with a warning,
+Code Scanning raised medium-severity alert #15465. CodeQL, SonarCloud, and Bandit
+all execute on every push and pull request to `main`. As historical commits roll out
+of the 30-commit evaluation window, the score remains protected by automated CI.
 
 ## What gates a merge instead
 
@@ -134,3 +147,10 @@ and `apply` ticked (leave `apply` unticked for a dry run). The workflow's
 > needs a FLOSS licence (floss_license, test) and tagged releases
 > (version_unique). Answers are drafted in docs/cii-best-practices-answers.md.
 > Revisit if relicensed; see docs/scorecard-accepted-risks.md.
+
+**SAST (#15465):**
+
+> Accepted risk: SAST (CodeQL, SonarCloud, Bandit) runs on every push and PR to
+> main; score 9 reflects historical window in Scorecard. See
+> docs/scorecard-accepted-risks.md.
+
