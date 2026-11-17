@@ -1,0 +1,25 @@
+name: Workflow Status Indicator
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  status-summary:
+    name: Generate Workflow Status
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Output Status Indicator
+        uses: martialonline/workflow-status@326830cacf79872efe767e15031f58d1ea0508c4 # v4.2

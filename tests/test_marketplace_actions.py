@@ -43,6 +43,16 @@ PINNED_ACTIONS = {
     "ahmadnassri/action-workflow-queue": "542658b3a8270cac81ae15d401b0d974732808ac",
     "varunsridharan/action-github-workflow-sync": "3c60cce5ee8e615a7c68ac75fc14893dcac62d49",
     "technote-space/auto-cancel-redundant-workflow": "7d35aba30420fc2368f8aeed50371e99e7fa3239",
+    "ahmadnassri/action-workflow-run-wait": "2aa3d9e1a12ecaaa9908e368eaf2123bb084323e",
+    "hoangvvo/gitflow-workflow-action": "a8dcd721fe5390b7f837873d5af2497980890a7e",
+    "github/setup-licensed": "be11bcbb82e3140b6cf260e647c3efeeca8fcefd",
+    "PhrozenByte/gh-workflow-immortality": "39378c27dcacbc17e6fbf83057d1fc40c574000d",
+    "fergusmacd/github-actions-usage": "86eef42173b5fe9778e33326468f51cc5a34348c",
+    "martialonline/workflow-status": "326830cacf79872efe767e15031f58d1ea0508c4",
+    "lasith-kg/dispatch-workflow": "2597e9a3d222d7959052dea1c009560bbeb495e4",
+    "wadackel/checkbox-workflow-action": "39a84e680429bb174302beed9f222e06972cecf9",
+    "NejcZdovc/comment-pr": "a423635d183a8259308e80593c96fecf31539c26",
+    "ArcticLampyrid/action-wait-for-workflow": "ff297b23789206858260877c4b83026d90c6db8c",
 }
 
 
@@ -95,6 +105,16 @@ MARKETPLACE_WORKFLOW_FILES = [
     "reusable-trigger-workflow-wait.yml",
     "repo-file-sync.yml",
     "github-workflow-sync.yml",
+    "workflow-run-wait.yml",
+    "gitflow-lifecycle.yml",
+    "licensed-audit.yml",
+    "workflow-immortality.yml",
+    "actions-usage-audit.yml",
+    "workflow-status-indicator.yml",
+    "reusable-dispatch-method.yml",
+    "checkbox-trigger.yml",
+    "reusable-comment-pr.yml",
+    "wait-for-workflow.yml",
 ]
 
 
