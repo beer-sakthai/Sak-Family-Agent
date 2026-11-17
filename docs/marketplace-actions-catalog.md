@@ -16,7 +16,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 
 ---
 
-### 2. Forty-Five Verified Marketplace Actions
+### 2. Fifty-Three Verified Marketplace Actions
 
 | Action Name | Upstream Repository | Tag | Immutable Commit SHA | Required Permissions | Purpose |
 |---|---|---|---|---|---|
@@ -65,6 +65,14 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **CI Dokumentor** | [`hoverkraft-tech/ci-dokumentor`](https://github.com/hoverkraft-tech/ci-dokumentor) | `0.6.1` | `93a10eb9c637d6b06ef394f12d60189b192b87c2` | `contents: read` | Automated generation of comprehensive CI/CD workflow documentation |
 | **Code Review by Gemini AI** | [`rubensflinco/gemini-code-review-action`](https://github.com/rubensflinco/gemini-code-review-action) | `1.0.6` | `eff35325520e8afcd9ed86618920a4804925c05f` | `contents: read`, `pull-requests: write` | Automated pull request code reviews and diff chunk analysis via Gemini API |
 | **Gemini Review Bot** | [`jgunnink/gemini-review-bot`](https://github.com/jgunnink/gemini-review-bot) | `v1.5.0` | `a1912666a1c394f0f7b51cb0910d02d54c1a93f7` | `contents: read`, `pull-requests: write` | Interactive PR code reviews, inline thread commentary, and diff analysis |
+| **Git Auto Commit** | [`stefanzweifel/git-auto-commit-action`](https://github.com/stefanzweifel/git-auto-commit-action) | `v7.2.1` | `d0b01107b5db882071f96de5dd4b54961ea93f4c` | `contents: write` | Automatically commits and pushes changed files back to the repository |
+| **Dependabot Auto Merge CLI** | [`ahmadnassri/action-dependabot-auto-merge`](https://github.com/ahmadnassri/action-dependabot-auto-merge) | `v2.6.6` | `45fc124d949b19b6b8bf6645b6c9d55f4f9ac61a` | `contents: write`, `pull-requests: write` | Automatically comments and approves Dependabot PRs based on target semver rules |
+| **Autofix CI** | [`autofix-ci/action`](https://github.com/autofix-ci/action) | `v1.3.4` | `c5b2d67aa2274e7b5a18224e8171550871fc7e4a` | `contents: read` | Seamlessly fixes lint and formatting violations in pull requests |
+| **Auto Request Review** | [`necojackarc/auto-request-review`](https://github.com/necojackarc/auto-request-review) | `v0.14.0` | `9a4b11888f2d60c79120c5413f13eb63febc2b68` | `pull-requests: write`, `contents: read` | Automatically requests reviews from designated owners or teams on PR creation |
+| **Auto Assign Issues & PRs** | [`wow-actions/auto-assign`](https://github.com/wow-actions/auto-assign) | `v3.0.2` | `67fafa03df61d7e5f201734a2fa60d1ab111880d` | `issues: write`, `pull-requests: write`, `contents: read` | Automatically assigns reviewers and assignees to new issues and pull requests |
+| **Auto Close Issues** | [`lucasbento/auto-close-issues`](https://github.com/lucasbento/auto-close-issues) | `v1.0.2` | `667e4f3cd71f2760a3869680944b8df55325b005` | `issues: write`, `contents: read` | Automatically closes inactive or answered issues according to timeline rules |
+| **Auto Merge Pull Request** | [`reitermarkus/automerge`](https://github.com/reitermarkus/automerge) | `v2.8.0` | `634d0a4b51134c163eee182ac9aa79133eb33e8d` | `contents: write`, `pull-requests: write` | Automatically merges pull requests when labels, reviews, and status checks pass |
+| **Auto Label Merge Conflicts** | [`mschilde/auto-label-merge-conflicts`](https://github.com/mschilde/auto-label-merge-conflicts) | `v2.0` | `5981f8933e92b78098af86b9e33fe0871cc7a3be` | `pull-requests: write`, `contents: read` | Automatically identifies and labels pull requests containing merge conflicts |
 
 ---
 
@@ -119,6 +127,14 @@ graph TD
     ActionChoice -->|CI Dokumentor| CIDokumentor[hoverkraft-tech/ci-dokumentor]
     ActionChoice -->|Gemini AI Review| GeminiAICodeReview[rubensflinco/gemini-code-review-action]
     ActionChoice -->|Gemini Review Bot| GeminiReviewBot[jgunnink/gemini-review-bot]
+    ActionChoice -->|Git Auto Commit| GitAutoCommit[stefanzweifel/git-auto-commit-action]
+    ActionChoice -->|Dependabot Merge CLI| DepMergeCLI[ahmadnassri/action-dependabot-auto-merge]
+    ActionChoice -->|Autofix CI| AutofixCI[autofix-ci/action]
+    ActionChoice -->|Auto Request Review| AutoReqReview[necojackarc/auto-request-review]
+    ActionChoice -->|Auto Assign| AutoAssign[wow-actions/auto-assign]
+    ActionChoice -->|Auto Close Issues| AutoCloseIssues[lucasbento/auto-close-issues]
+    ActionChoice -->|Automerge PR| AutomergePR[reitermarkus/automerge]
+    ActionChoice -->|Label Conflicts| LabelConflicts[mschilde/auto-label-merge-conflicts]
 ```
 
 ### 3.1 Wiki Sync Workflow ([`.github/workflows/wiki-sync.yml`](../.github/workflows/wiki-sync.yml))
@@ -639,6 +655,93 @@ Provides interactive PR code reviews, inline thread commentary, and diff analysi
     gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
     github_token: ${{ secrets.GITHUB_TOKEN }}
     instructions: ${{ inputs.instructions || '' }}
+```
+
+### 3.45 Git Auto Commit ([`.github/workflows/git-auto-commit.yml`](../.github/workflows/git-auto-commit.yml))
+Automatically commits changed files during workflow execution back to the repository:
+
+```yaml
+- name: Auto-commit changed files
+  uses: stefanzweifel/git-auto-commit-action@d0b01107b5db882071f96de5dd4b54961ea93f4c # v7.2.1
+  with:
+    commit_message: "${{ inputs.commit_message || 'chore: automated file update' }}"
+    file_pattern: ${{ inputs.file_pattern || '.' }}
+```
+
+### 3.46 Dependabot Auto Merge CLI ([`.github/workflows/dependabot-auto-merge-cli.yml`](../.github/workflows/dependabot-auto-merge-cli.yml))
+Automates approval and merge commands for Dependabot pull requests based on target semantic versioning:
+
+```yaml
+- name: Run Dependabot Auto Merge CLI
+  uses: ahmadnassri/action-dependabot-auto-merge@45fc124d949b19b6b8bf6645b6c9d55f4f9ac61a # v2.6.6
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    command: ${{ inputs.command || 'squash and merge' }}
+    target: ${{ inputs.target || 'patch' }}
+```
+
+### 3.47 Autofix CI ([`.github/workflows/autofix.yml`](../.github/workflows/autofix.yml))
+Automatically applies fixes for lint and formatting violations in pull requests:
+
+```yaml
+- name: Run autofix.ci
+  uses: autofix-ci/action@c5b2d67aa2274e7b5a18224e8171550871fc7e4a # v1.3.4
+  with:
+    fail-fast: false
+```
+
+### 3.48 Auto Request Review ([`.github/workflows/auto-request-review.yml`](../.github/workflows/auto-request-review.yml))
+Automatically requests reviews from designated reviewers and teams upon pull request creation:
+
+```yaml
+- name: Auto-request review
+  uses: necojackarc/auto-request-review@9a4b11888f2d60c79120c5413f13eb63febc2b68 # v0.14.0
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.49 Auto Assign Issues & PRs ([`.github/workflows/auto-assign.yml`](../.github/workflows/auto-assign.yml))
+Automatically assigns reviewers and assignees to new issues and pull requests:
+
+```yaml
+- name: Auto Assign Reviewers and Assignees
+  uses: wow-actions/auto-assign@67fafa03df61d7e5f201734a2fa60d1ab111880d # v3.0.2
+  with:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    addReviewers: true
+    addAssignees: true
+```
+
+### 3.50 Auto Close Issues ([`.github/workflows/auto-close-issues.yml`](../.github/workflows/auto-close-issues.yml))
+Automatically identifies and closes stale or inactive issues according to repository timeline criteria:
+
+```yaml
+- name: Auto-close inactive issues
+  uses: lucasbento/auto-close-issues@667e4f3cd71f2760a3869680944b8df55325b005 # v1.0.2
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.51 Auto Merge Pull Request ([`.github/workflows/automerge-pr.yml`](../.github/workflows/automerge-pr.yml))
+Automatically merges approved pull requests when required labels, reviews, and status checks pass:
+
+```yaml
+- name: Auto-merge pull request
+  uses: reitermarkus/automerge@634d0a4b51134c163eee182ac9aa79133eb33e8d # v2.8.0
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    dry-run: true
+```
+
+### 3.52 Auto Label Merge Conflicts ([`.github/workflows/auto-label-merge-conflicts.yml`](../.github/workflows/auto-label-merge-conflicts.yml))
+Scans pull requests and automatically applies conflict labels when head branches diverge:
+
+```yaml
+- name: Auto-label merge conflicts
+  uses: mschilde/auto-label-merge-conflicts@5981f8933e92b78098af86b9e33fe0871cc7a3be # v2.0
+  with:
+    CONFLICT_LABEL_NAME: "has-conflicts"
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ---

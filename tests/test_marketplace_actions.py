@@ -58,6 +58,14 @@ PINNED_ACTIONS = {
     "hoverkraft-tech/ci-dokumentor": "93a10eb9c637d6b06ef394f12d60189b192b87c2",
     "rubensflinco/gemini-code-review-action": "eff35325520e8afcd9ed86618920a4804925c05f",
     "jgunnink/gemini-review-bot": "a1912666a1c394f0f7b51cb0910d02d54c1a93f7",
+    "stefanzweifel/git-auto-commit-action": "d0b01107b5db882071f96de5dd4b54961ea93f4c",
+    "ahmadnassri/action-dependabot-auto-merge": "45fc124d949b19b6b8bf6645b6c9d55f4f9ac61a",
+    "autofix-ci/action": "c5b2d67aa2274e7b5a18224e8171550871fc7e4a",
+    "necojackarc/auto-request-review": "9a4b11888f2d60c79120c5413f13eb63febc2b68",
+    "wow-actions/auto-assign": "67fafa03df61d7e5f201734a2fa60d1ab111880d",
+    "lucasbento/auto-close-issues": "667e4f3cd71f2760a3869680944b8df55325b005",
+    "reitermarkus/automerge": "634d0a4b51134c163eee182ac9aa79133eb33e8d",
+    "mschilde/auto-label-merge-conflicts": "5981f8933e92b78098af86b9e33fe0871cc7a3be",
 }
 
 
@@ -125,6 +133,14 @@ MARKETPLACE_WORKFLOW_FILES = [
     "ci-dokumentor.yml",
     "gemini-code-review-action.yml",
     "gemini-review-bot.yml",
+    "git-auto-commit.yml",
+    "dependabot-auto-merge-cli.yml",
+    "autofix.yml",
+    "auto-request-review.yml",
+    "auto-assign.yml",
+    "auto-close-issues.yml",
+    "automerge-pr.yml",
+    "auto-label-merge-conflicts.yml",
 ]
 
 
