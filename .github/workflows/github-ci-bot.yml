@@ -33,4 +33,11 @@ jobs:
         uses: wzshiming/gh-ci-bot@91068dab3f3130054b3569e2b0dd2db07cd53c2a # v1.8.0
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPOSITORY: ${{ github.repository }}
+          LOGIN: ${{ github.event.comment.user.login || github.event.pull_request.user.login || github.actor }}
+          AUTHOR: ${{ github.event.pull_request.user.login || github.event.issue.user.login || github.actor }}
+          MESSAGE: ${{ github.event.comment.body || github.event.pull_request.body || '' }}
+          ISSUE_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number || '1' }}
+          ISSUE_KIND: ${{ github.event.pull_request && 'pr' || 'issue' }}
+          TYPE: ${{ github.event_name == 'issue_comment' && 'comment' || github.event.action || 'synchronize' }}
           BLUNDERBUSS_REVIEWER_COUNT: '2'
