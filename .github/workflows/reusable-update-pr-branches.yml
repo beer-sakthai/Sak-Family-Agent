@@ -1,0 +1,125 @@
+name: Reusable update pull request branches
+
+on:
+  workflow_call:
+    inputs:
+      base_branches:
+        description: Comma-separated protected base branches to synchronize
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: reusable-update-pr-branches-${{ inputs.base_branches }}
+  cancel-in-progress: false
+
+jobs:
+  update-branches:
+    name: Update open pull requests
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Update same-repository pull request branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BASE_BRANCHES: ${{ inputs.base_branches }}
+        run: |
+          set -euo pipefail
+          updates_file="${RUNNER_TEMP}/pr-branch-updates.tsv"
+          current_file="${RUNNER_TEMP}/pr-branch-current.tsv"
+          conflicts_file="${RUNNER_TEMP}/pr-branch-conflicts.tsv"
+          : > "${updates_file}"
+          : > "${current_file}"
+          : > "${conflicts_file}"
+
+          IFS=',' read -r -a base_branches <<< "${BASE_BRANCHES}"
+          failures=0
+          updates=0
+          for base_branch in "${base_branches[@]}"; do
+            case "${base_branch}" in
+              main|staging|develop) ;;
+              *)
+                echo "Unsupported protected base branch: ${base_branch}" >&2
+                exit 1
+                ;;
+            esac
+
+            mapfile -t pull_requests < <(
+              gh api --paginate \
+                "repos/${REPOSITORY}/pulls?state=open&base=${base_branch}&per_page=100" \
+                --jq '.[] | select(.head.repo != null) | [.number, .head.sha, .head.repo.full_name] | @tsv' \
+                | awk -F '\t' -v repository="${REPOSITORY}" '$3 == repository { print $1 "\t" $2 }'
+            )
+
+            if (( ${#pull_requests[@]} == 0 )); then
+              echo "No open same-repository pull requests target ${base_branch}."
+              continue
+            fi
+
+            for pull_request in "${pull_requests[@]}"; do
+              IFS=$'\t' read -r number head_sha <<< "${pull_request}"
+              echo "Updating pull request #${number} from ${base_branch}..."
+              response_file="${RUNNER_TEMP}/pr-branch-response-${number}.txt"
+              if gh api --method PUT \
+                  "repos/${REPOSITORY}/pulls/${number}/update-branch" \
+                  -f expected_head_sha="${head_sha}" >/dev/null 2>"${response_file}"; then
+                echo "Requested update for pull request #${number}."
+                printf '%s\t%s\n' "${number}" "${base_branch}" >> "${updates_file}"
+                updates=$((updates + 1))
+              elif grep -Fq "There are no new commits on the base branch." "${response_file}"; then
+                echo "Pull request #${number} is already up to date."
+                printf '%s\t%s\n' "${number}" "${base_branch}" >> "${current_file}"
+              else
+                echo "::warning::Could not update pull request #${number}; it may have conflicts." >&2
+                printf '%s\t%s\n' "${number}" "${base_branch}" >> "${conflicts_file}"
+                failures=$((failures + 1))
+              fi
+            done
+          done
+
+          echo "Requested ${updates} pull request branch update(s)."
+          if (( failures > 0 )); then
+            echo "${failures} pull request branch update(s) failed." >&2
+            exit 1
+          fi
+
+      - name: Notify branch synchronization results
+        if: always()
+        env:
+          UPDATES_FILE: ${{ runner.temp }}/pr-branch-updates.tsv
+          CURRENT_FILE: ${{ runner.temp }}/pr-branch-current.tsv
+          CONFLICTS_FILE: ${{ runner.temp }}/pr-branch-conflicts.tsv
+        run: |
+          {
+            echo "## Pull request branch synchronization"
+            if [[ -s "${UPDATES_FILE}" ]]; then
+              echo "### Branch updates requested"
+              while IFS=$'\t' read -r number base_branch; do
+                echo "- Pull request #${number} (targeting \`${base_branch}\`)"
+              done < "${UPDATES_FILE}"
+            else
+              echo "No branch updates were requested."
+            fi
+
+            if [[ -s "${CURRENT_FILE}" ]]; then
+              echo "### Already up to date"
+              while IFS=$'\t' read -r number base_branch; do
+                echo "- Pull request #${number} (targeting \`${base_branch}\`)"
+              done < "${CURRENT_FILE}"
+            fi
+
+            if [[ -s "${CONFLICTS_FILE}" ]]; then
+              echo "### Branch update conflicts"
+              while IFS=$'\t' read -r number base_branch; do
+                echo "- Pull request #${number} (targeting \`${base_branch}\`) could not be updated; manual conflict resolution may be required."
+                echo "::warning::Pull request #${number} targeting ${base_branch} could not be updated."
+              done < "${CONFLICTS_FILE}"
+            else
+              echo "No branch update conflicts were reported."
+            fi
+          } >> "${GITHUB_STEP_SUMMARY}"
