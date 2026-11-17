@@ -16,7 +16,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 
 ---
 
-## 2. Twelve Verified Marketplace Actions
+## 2. Fifteen Verified Marketplace Actions
 
 | Action Name | Upstream Repository | Tag | Immutable Commit SHA | Required Permissions | Purpose |
 |---|---|---|---|---|---|
@@ -32,6 +32,9 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **Continuous Benchmark** | [`benchmark-action/github-action-benchmark`](https://github.com/benchmark-action/github-action-benchmark) | `v1.22.2` | `4322e5726e6334590d251fc4f92bec0efafc45dc` | `contents: write`, `pull-requests: write` | Continuous performance metric tracking and regression alerts |
 | **GitHub Release from Tag** | [`ghalactic/github-release-from-tag`](https://github.com/ghalactic/github-release-from-tag) | `v6` | `30770b91acccc8e1e2f14562d813cb30af08f1c6` | `contents: write`, `issues: write` | Automatic GitHub release creation sourced from git tags |
 | **GitHub Activity Readme** | [`jamesgeorge007/github-activity-readme`](https://github.com/jamesgeorge007/github-activity-readme) | `v0.5.0` | `4aefbfa1c222d70537dc6a02f0519266aab2b1ea` | `contents: write` | Daily repository and contributor activity sync in README |
+| **Renovate Bot Action** | [`renovatebot/github-action`](https://github.com/renovatebot/github-action) | `v46.3.14` | `acdd6bda8b035c99ce59d5675816af2aa65a1774` | `contents: read` | Automated self-hosted dependency upgrade automation |
+| **Lint Action** | [`wearerequired/lint-action`](https://github.com/wearerequired/lint-action) | `v3.0.2` | `124229c6e2974984ba137c67a499ba28bfc33e33` | `contents: read`, `checks: write` | Automated multi-linter check and auto-fixing |
+| **Create GitHub App Token** | [`actions/create-github-app-token`](https://github.com/actions/create-github-app-token) | `v3.3.0` | `64ab729a6294000f5aa4a4bc0b73d1f32bc45510` | `contents: read` | Generates short-lived installation tokens for bot automation |
 
 ---
 
@@ -53,6 +56,9 @@ graph TD
     ActionChoice -->|Benchmark Run| Benchmark[benchmark-action/github-action-benchmark]
     ActionChoice -->|Tag Push v*| TagRelease[ghalactic/github-release-from-tag]
     ActionChoice -->|Daily Schedule| ActivityReadme[jamesgeorge007/github-activity-readme]
+    ActionChoice -->|Nightly Dependency| RenovateBot[renovatebot/github-action]
+    ActionChoice -->|Quality Lint| MultiLint[wearerequired/lint-action]
+    ActionChoice -->|Bot Authentication| AppToken[actions/create-github-app-token]
 ```
 
 ### 3.1 Wiki Sync Workflow ([`.github/workflows/wiki-sync.yml`](../.github/workflows/wiki-sync.yml))
@@ -204,6 +210,45 @@ Periodically synchronizes recent public repository activity into the README:
   with:
     COMMIT_MSG: "chore(docs): update recent activity section [skip ci]"
     MAX_LINES: 5
+```
+
+### 3.12 Renovate Bot Workflow ([`.github/workflows/renovate.yml`](../.github/workflows/renovate.yml))
+Self-hosted Renovate runner checking dependencies with dry-run support:
+
+```yaml
+- name: Run Renovate
+  uses: renovatebot/github-action@acdd6bda8b035c99ce59d5675816af2aa65a1774 # v46.3.14
+  with:
+    configurationFile: .github/renovate.json5
+    token: ${{ secrets.RENOVATE_TOKEN || github.token }}
+  env:
+    LOG_LEVEL: info
+    RENOVATE_DRY_RUN: ${{ inputs.dry_run || 'full' }}
+```
+
+### 3.13 Multi-Linter Action Workflow ([`.github/workflows/lint-check.yml`](../.github/workflows/lint-check.yml))
+Runs linters and formatters with automatic annotations and optional fixes:
+
+```yaml
+- name: Run Lint Action
+  uses: wearerequired/lint-action@124229c6e2974984ba137c67a499ba28bfc33e33 # v3.0.2
+  with:
+    github_token: ${{ github.token }}
+    ruff: true
+    auto_fix: ${{ inputs.auto_fix || false }}
+```
+
+### 3.14 Reusable GitHub App Token Generator ([`.github/workflows/reusable-app-token.yml`](../.github/workflows/reusable-app-token.yml))
+Exchanges app credentials for short-lived bot installation access tokens:
+
+```yaml
+- name: Generate GitHub App Token
+  uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+  id: app-token
+  with:
+    app-id: ${{ secrets.APP_ID }}
+    private-key: ${{ secrets.PRIVATE_KEY }}
+    owner: ${{ inputs.owner || github.repository_owner }}
 ```
 
 ---
