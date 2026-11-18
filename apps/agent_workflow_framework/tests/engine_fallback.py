@@ -84,7 +84,9 @@ class StateContext:
     def interpolate(self, template: Any) -> Any:
         if isinstance(template, str):
             # Single expression exact match preserving native type
-            match = re.fullmatch(r"\$\{steps\.([a-zA-Z0-9_-]+)\.output(?:\.([a-zA-Z0-9_.-]+))?\}", template.strip())
+            match = re.fullmatch(
+                r"\$\{steps\.([a-zA-Z0-9_-]+)\.output(?:\.([a-zA-Z0-9_.-]+))?\}", template.strip()
+            )
             if match:
                 step_id, key_path = match.groups()
                 if step_id not in self._outputs:
@@ -100,6 +102,7 @@ class StateContext:
                 return val
 
             pattern = r"\$\{steps\.([a-zA-Z0-9_-]+)\.output(?:\.([a-zA-Z0-9_.-]+))?\}"
+
             def replace_match(m):
                 step_id, key_path = m.groups()
                 if step_id not in self._outputs:
@@ -244,7 +247,7 @@ class HistoryStore:
                     "end_time": res.end_time,
                 }
                 for sid, res in history.step_results.items()
-            }
+            },
         }
         file_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         return str(file_path)
@@ -287,7 +290,7 @@ class WorkflowExecutor:
         self,
         workflow: WorkflowDefinition,
         run_id: str | None = None,
-        status_callback: Any | None = None
+        status_callback: Any | None = None,
     ) -> RunHistory:
         val_errors = validate_workflow_dag(workflow)
         if val_errors:
@@ -308,6 +311,7 @@ class WorkflowExecutor:
         semaphore = asyncio.Semaphore(self.max_workers)
 
         for batch in batches:
+
             async def run_step(step: StepDefinition):
                 async with semaphore:
                     if any(dep in failed_steps for dep in step.depends_on):
@@ -333,7 +337,9 @@ class WorkflowExecutor:
                         step_start = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
                         try:
                             interpolated_params = state_ctx.interpolate(step.params)
-                            output = await self._execute_action(step.id, step.action, interpolated_params)
+                            output = await self._execute_action(
+                                step.id, step.action, interpolated_params
+                            )
                             state_ctx.set_step_output(step.id, output)
                             step_end = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
                             res = StepResult(
@@ -379,7 +385,9 @@ class WorkflowExecutor:
         self.history_store.save_run_history(history)
         return history
 
-    async def _execute_action(self, step_id: str, action: str, params: dict[str, Any]) -> dict[str, Any]:
+    async def _execute_action(
+        self, step_id: str, action: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
         if action == "echo":
             return dict(params)
         elif action == "transform":
@@ -418,11 +426,7 @@ class WorkflowExecutor:
                 u = params.get("user_result")
                 t = params.get("tag_result")
                 return {
-                    "summary": {
-                        "user": u,
-                        "tags": t,
-                        "count": len(t) if isinstance(t, list) else 0
-                    }
+                    "summary": {"user": u, "tags": t, "count": len(t) if isinstance(t, list) else 0}
                 }
             return dict(params)
         elif action == "python":

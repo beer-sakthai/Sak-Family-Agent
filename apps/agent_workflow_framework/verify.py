@@ -38,7 +38,9 @@ except ModuleNotFoundError as exc:
 
 
 def print_header(title: str) -> None:
-    print(f"\n========================================\n{title}\n========================================")
+    print(
+        f"\n========================================\n{title}\n========================================"
+    )
 
 
 def run_cli_cmd(args: list) -> int:
@@ -81,6 +83,7 @@ def verify_scenario_1() -> bool:
     wf = parse_workflow_file(str(yaml_path))
     executor = WorkflowExecutor()
     import asyncio
+
     history = asyncio.run(executor.execute_workflow(wf))
     if history.status != RunStatus.COMPLETED:
         print(f"[FAIL] Scenario 1 status was {history.status}, expected COMPLETED.")
@@ -113,6 +116,7 @@ def verify_scenario_2() -> bool:
     wf = parse_workflow_file(str(yaml_path))
     executor = WorkflowExecutor()
     import asyncio
+
     history = asyncio.run(executor.execute_workflow(wf))
     if history.status != RunStatus.COMPLETED:
         print(f"[FAIL] Scenario 2 status was {history.status}, expected COMPLETED.")
@@ -145,21 +149,30 @@ def verify_scenario_3() -> bool:
     wf = parse_workflow_file(str(yaml_path))
     executor = WorkflowExecutor()
     import asyncio
+
     history = asyncio.run(executor.execute_workflow(wf))
     if history.status != RunStatus.FAILED:
         print(f"[FAIL] Scenario 3 history status was {history.status}, expected FAILED.")
         return False
     if history.step_results["step_transient"].status != StepStatus.COMPLETED:
-        print(f"[FAIL] step_transient status was {history.step_results['step_transient'].status}, expected COMPLETED.")
+        print(
+            f"[FAIL] step_transient status was {history.step_results['step_transient'].status}, expected COMPLETED."
+        )
         return False
     if history.step_results["step_transient"].attempts != 2:
-        print(f"[FAIL] step_transient attempts was {history.step_results['step_transient'].attempts}, expected 2.")
+        print(
+            f"[FAIL] step_transient attempts was {history.step_results['step_transient'].attempts}, expected 2."
+        )
         return False
     if history.step_results["step_terminal_fail"].status != StepStatus.FAILED:
-        print(f"[FAIL] step_terminal_fail status was {history.step_results['step_terminal_fail'].status}, expected FAILED.")
+        print(
+            f"[FAIL] step_terminal_fail status was {history.step_results['step_terminal_fail'].status}, expected FAILED."
+        )
         return False
     if history.step_results["step_downstream_blocked"].status != StepStatus.SKIPPED:
-        print(f"[FAIL] step_downstream_blocked status was {history.step_results['step_downstream_blocked'].status}, expected SKIPPED.")
+        print(
+            f"[FAIL] step_downstream_blocked status was {history.step_results['step_downstream_blocked'].status}, expected SKIPPED."
+        )
         return False
 
     print("[PASS] Scenario 3 retry recovery and downstream short-circuit verified.")
@@ -185,12 +198,17 @@ def verify_scenario_4() -> bool:
     wf = parse_workflow_file(str(yaml_path))
     executor = WorkflowExecutor()
     import asyncio
+
     history = asyncio.run(executor.execute_workflow(wf))
     if history.status != RunStatus.COMPLETED:
         print(f"[FAIL] Scenario 4 status was {history.status}, expected COMPLETED.")
         return False
     summary = history.step_results["step_aggregate_mutation"].output.get("summary", {})
-    if summary.get("user", {}).get("role") != "super_admin" or summary.get("tags") != ["alpha", "beta", "gamma"]:
+    if summary.get("user", {}).get("role") != "super_admin" or summary.get("tags") != [
+        "alpha",
+        "beta",
+        "gamma",
+    ]:
         print(f"[FAIL] Scenario 4 summary output mismatch: {summary}")
         return False
 
@@ -201,8 +219,11 @@ def verify_scenario_4() -> bool:
 def verify_cyclic_validation() -> bool:
     print_header("CLI Validation Test: Cyclic Graph Exit Code 2")
     import tempfile
+
     with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as f:
-        f.write("name: cyclic_wf\nsteps:\n  - id: step_a\n    depends_on: [step_b]\n  - id: step_b\n    depends_on: [step_a]\n")
+        f.write(
+            "name: cyclic_wf\nsteps:\n  - id: step_a\n    depends_on: [step_b]\n  - id: step_b\n    depends_on: [step_a]\n"
+        )
         cyclic_file = f.name
     try:
         code = run_cli_cmd(["validate", cyclic_file])
@@ -229,6 +250,7 @@ def verify_adversarial_suite() -> bool:
 
 def main():
     import tempfile
+
     print("Starting E2E Master Verification Runner (verify.py)...")
     with tempfile.TemporaryDirectory() as tmp_dir:
         os.environ["AGENT_WORKFLOW_STORAGE_DIR"] = tmp_dir

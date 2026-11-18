@@ -12,6 +12,7 @@ from typing import Any
 
 class StepStatus(StrEnum):
     """Execution status of an individual workflow step."""
+
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
@@ -29,6 +30,7 @@ class StepStatus(StrEnum):
 
 class RunStatus(StrEnum):
     """Overall status of a workflow run."""
+
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
@@ -49,6 +51,7 @@ class StepDefinition:
     depends_on: list[str] = field(default_factory=list)
     retry: int = 0
     retry_delay: float = 0.0
+    timeout: float | None = None
 
     def validate_schema(self) -> list[str]:
         """Validate step definition fields. Returns list of error messages."""
@@ -63,13 +66,23 @@ class StepDefinition:
             errors.append(f"Step '{self.id}' depends_on must be a list of step IDs.")
         if not isinstance(self.retry, int) or isinstance(self.retry, bool) or self.retry < 0:
             errors.append(f"Step '{self.id}' retry count must be a non-negative integer.")
-        if not isinstance(self.retry_delay, (int, float)) or isinstance(self.retry_delay, bool) or self.retry_delay < 0:
+        if (
+            not isinstance(self.retry_delay, (int, float))
+            or isinstance(self.retry_delay, bool)
+            or self.retry_delay < 0
+        ):
             errors.append(f"Step '{self.id}' retry_delay must be a non-negative number.")
+        if self.timeout is not None and (
+            isinstance(self.timeout, bool)
+            or not isinstance(self.timeout, (int, float))
+            or self.timeout <= 0
+        ):
+            errors.append(f"Step '{self.id}' timeout must be a positive number.")
         return errors
 
     def to_dict(self) -> dict[str, Any]:
         """Convert step definition to a dictionary."""
-        return {
+        d: dict[str, Any] = {
             "id": self.id,
             "action": self.action,
             "params": self.params,
@@ -77,6 +90,9 @@ class StepDefinition:
             "retry": self.retry,
             "retry_delay": self.retry_delay,
         }
+        if self.timeout is not None:
+            d["timeout"] = self.timeout
+        return d
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "StepDefinition":
@@ -87,10 +103,26 @@ class StepDefinition:
                 f"Step '{d.get('id', '')}' retry count must be a non-negative integer, got {retry_val!r}."
             )
         retry_delay_val = d.get("retry_delay", 0.0)
-        if isinstance(retry_delay_val, bool) or not isinstance(retry_delay_val, (int, float)) or retry_delay_val < 0:
+        if (
+            isinstance(retry_delay_val, bool)
+            or not isinstance(retry_delay_val, (int, float))
+            or retry_delay_val < 0
+        ):
             raise ValueError(
                 f"Step '{d.get('id', '')}' retry_delay must be a non-negative number, got {retry_delay_val!r}."
             )
+        timeout_raw = d.get("timeout")
+        timeout_val: float | None = None
+        if timeout_raw is not None:
+            if (
+                isinstance(timeout_raw, bool)
+                or not isinstance(timeout_raw, (int, float))
+                or timeout_raw <= 0
+            ):
+                raise ValueError(
+                    f"Step '{d.get('id', '')}' timeout must be a positive number, got {timeout_raw!r}."
+                )
+            timeout_val = float(timeout_raw)
         return cls(
             id=d["id"],
             action=d["action"],
@@ -98,12 +130,14 @@ class StepDefinition:
             depends_on=list(d.get("depends_on", [])),
             retry=retry_val,
             retry_delay=float(retry_delay_val),
+            timeout=timeout_val,
         )
 
 
 @dataclass
 class WorkflowDefinition:
     """Definition of a multi-step workflow."""
+
     name: str
     description: str | None = None
     steps: list[StepDefinition] = field(default_factory=list)
@@ -153,10 +187,7 @@ class WorkflowDefinition:
     def from_dict(cls, d: dict[str, Any]) -> "WorkflowDefinition":
         """Construct WorkflowDefinition from dictionary."""
         raw_steps = d.get("steps", [])
-        steps = [
-            StepDefinition.from_dict(s) if isinstance(s, dict) else s
-            for s in raw_steps
-        ]
+        steps = [StepDefinition.from_dict(s) if isinstance(s, dict) else s for s in raw_steps]
         return cls(
             name=d["name"],
             description=d.get("description"),
@@ -167,6 +198,7 @@ class WorkflowDefinition:
 @dataclass
 class StepResult:
     """Execution result of an individual step."""
+
     step_id: str
     status: StepStatus
     output: dict[str, Any] = field(default_factory=dict)
@@ -191,7 +223,9 @@ class StepResult:
         """Convert StepResult to dictionary suitable for JSON serialization."""
         return {
             "step_id": self.step_id,
-            "status": self.status.value if isinstance(self.status, StepStatus) else str(self.status),
+            "status": self.status.value
+            if isinstance(self.status, StepStatus)
+            else str(self.status),
             "output": self.output,
             "error": self.error,
             "attempts": self.attempts,
@@ -223,6 +257,7 @@ class StepResult:
 @dataclass
 class RunHistory:
     """Complete history of a workflow execution run."""
+
     run_id: str
     workflow_name: str
     status: RunStatus
@@ -259,8 +294,7 @@ class RunHistory:
             "start_time": self.start_time,
             "end_time": self.end_time,
             "step_results": {
-                k: v.to_dict() if hasattr(v, "to_dict") else v
-                for k, v in self.step_results.items()
+                k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in self.step_results.items()
             },
         }
 
@@ -277,10 +311,11 @@ class RunHistory:
         status = RunStatus(status_val) if isinstance(status_val, str) else status_val
         raw_results = d.get("step_results", {})
         if not isinstance(raw_results, dict):
-            raise ValueError(f"'step_results' must be a dictionary, got {type(raw_results).__name__}")
+            raise ValueError(
+                f"'step_results' must be a dictionary, got {type(raw_results).__name__}"
+            )
         step_results = {
-            k: StepResult.from_dict(v) if isinstance(v, dict) else v
-            for k, v in raw_results.items()
+            k: StepResult.from_dict(v) if isinstance(v, dict) else v for k, v in raw_results.items()
         }
         return cls(
             run_id=d["run_id"],

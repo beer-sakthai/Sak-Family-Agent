@@ -55,9 +55,7 @@ class StateContext:
     )
 
     # Regex detecting malformed ${steps...} constructs:
-    _MALFORMED_STEPS_EXPR_RE = re.compile(
-        r"\$\{\s*steps(?:\.[^\}\s]*)?\s*\}"
-    )
+    _MALFORMED_STEPS_EXPR_RE = re.compile(r"\$\{\s*steps(?:\.[^\}\s]*)?\s*\}")
 
     def __init__(self, initial_outputs: dict[str, dict[str, Any]] | None = None):
         """Initialize StateContext with optional initial step outputs."""
@@ -124,7 +122,7 @@ class StateContext:
                 if key in current:
                     current = current[key]
                 else:
-                    partial_path = ".".join(keys[:idx + 1])
+                    partial_path = ".".join(keys[: idx + 1])
                     raise StateInterpolationError(
                         f"Key '{key}' (path '{partial_path}') not found in step '{step_id}' output."
                     )
@@ -162,7 +160,9 @@ class StateContext:
             return res
         elif isinstance(template, dict):
             return {
-                self.interpolate(k, _depth + 1) if isinstance(k, str) else k: self.interpolate(v, _depth + 1)
+                self.interpolate(k, _depth + 1) if isinstance(k, str) else k: self.interpolate(
+                    v, _depth + 1
+                )
                 for k, v in template.items()
             }
         elif isinstance(template, list):

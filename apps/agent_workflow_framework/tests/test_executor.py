@@ -374,7 +374,9 @@ class TestWorkflowExecutor(unittest.TestCase):
 
         # Explicitly allowing duplicate run_id succeeds
         h2 = asyncio.run(
-            self.executor.execute_workflow(wf, run_id="my_fixed_run_id", allow_duplicate_run_id=True)
+            self.executor.execute_workflow(
+                wf, run_id="my_fixed_run_id", allow_duplicate_run_id=True
+            )
         )
         self.assertEqual(h2.status, RunStatus.COMPLETED)
 
@@ -384,7 +386,9 @@ class TestWorkflowExecutor(unittest.TestCase):
             name="test_failing_callback",
             steps=[
                 StepDefinition(id="step_a", action="echo", params={"msg": "alpha"}),
-                StepDefinition(id="step_b", action="echo", params={"msg": "beta"}, depends_on=["step_a"]),
+                StepDefinition(
+                    id="step_b", action="echo", params={"msg": "beta"}, depends_on=["step_a"]
+                ),
             ],
         )
 
@@ -412,7 +416,9 @@ class TestWorkflowExecutor(unittest.TestCase):
             await asyncio.sleep(0.001)
             raise ValueError("Async callback exploded!")
 
-        history = asyncio.run(self.executor.execute_workflow(wf, status_callback=broken_async_callback))
+        history = asyncio.run(
+            self.executor.execute_workflow(wf, status_callback=broken_async_callback)
+        )
         self.assertEqual(history.status, RunStatus.COMPLETED)
         self.assertEqual(history.step_results["step_1"].status, StepStatus.COMPLETED)
 
@@ -452,10 +458,183 @@ class TestWorkflowExecutor(unittest.TestCase):
                 skipped_callback_invoked.append(step_res.step_id)
                 raise RuntimeError("Skipped callback error")
 
-        history = asyncio.run(self.executor.execute_workflow(wf, status_callback=failing_skip_callback))
+        history = asyncio.run(
+            self.executor.execute_workflow(wf, status_callback=failing_skip_callback)
+        )
         self.assertEqual(history.status, RunStatus.FAILED)
         self.assertEqual(history.step_results["downstream_skip"].status, StepStatus.SKIPPED)
         self.assertEqual(skipped_callback_invoked, ["downstream_skip"])
+
+    def test_step_definition_timeout_validation(self):
+        """Verify schema validation and serialization for StepDefinition.timeout."""
+        # Negative / zero / non-numeric timeouts should be flagged by validate_schema
+        invalid_step = StepDefinition(id="bad_timeout", action="echo", timeout=0)
+        errors = invalid_step.validate_schema()
+        self.assertTrue(any("timeout must be a positive number" in e for e in errors))
+
+        invalid_step_neg = StepDefinition(id="neg_timeout", action="echo", timeout=-2.5)
+        self.assertTrue(
+            any(
+                "timeout must be a positive number" in e for e in invalid_step_neg.validate_schema()
+            )
+        )
+
+        invalid_step_bool = StepDefinition(id="bool_timeout", action="echo", timeout=True)  # type: ignore
+        self.assertTrue(
+            any(
+                "timeout must be a positive number" in e
+                for e in invalid_step_bool.validate_schema()
+            )
+        )
+
+        # from_dict validation
+        with self.assertRaises(ValueError):
+            StepDefinition.from_dict({"id": "s", "action": "echo", "timeout": 0})
+        with self.assertRaises(ValueError):
+            StepDefinition.from_dict({"id": "s", "action": "echo", "timeout": -1})
+        with self.assertRaises(ValueError):
+            StepDefinition.from_dict({"id": "s", "action": "echo", "timeout": "not-a-number"})
+
+        # Valid serialization round-trip
+        valid_step = StepDefinition(id="valid_timeout", action="echo", timeout=12.5)
+        self.assertEqual(valid_step.validate_schema(), [])
+        step_dict = valid_step.to_dict()
+        self.assertEqual(step_dict["timeout"], 12.5)
+        restored = StepDefinition.from_dict(step_dict)
+        self.assertEqual(restored.timeout, 12.5)
+
+    def test_step_level_timeout_failure(self):
+        """Verify that steps exceeding step.timeout fail and record appropriate timeout error."""
+        wf = WorkflowDefinition(
+            name="test_step_timeout",
+            steps=[
+                StepDefinition(id="slow_step", action="slow_action", timeout=0.05),
+            ],
+        )
+
+        async def mock_execute(action, params, step_id):
+            if action == "slow_action":
+                await asyncio.sleep(0.3)
+                return {"done": True}
+            return {}
+
+        self.executor._execute_action = mock_execute  # type: ignore
+
+        history = asyncio.run(self.executor.execute_workflow(wf))
+        self.assertEqual(history.status, RunStatus.FAILED)
+        self.assertEqual(history.step_results["slow_step"].status, StepStatus.FAILED)
+        self.assertIn("timed out after 0.05s", history.step_results["slow_step"].error or "")
+
+    def test_step_level_timeout_retry_recovery(self):
+        """Verify that a timed-out step is retried and can recover successfully."""
+        wf = WorkflowDefinition(
+            name="test_timeout_retry",
+            steps=[
+                StepDefinition(
+                    id="flaky_step", action="flaky_slow", timeout=0.05, retry=1, retry_delay=0.01
+                ),
+            ],
+        )
+
+        attempts = 0
+
+        async def mock_execute(action, params, step_id):
+            nonlocal attempts
+            attempts += 1
+            if attempts == 1:
+                await asyncio.sleep(0.3)
+            return {"attempt": attempts}
+
+        self.executor._execute_action = mock_execute  # type: ignore
+
+        history = asyncio.run(self.executor.execute_workflow(wf))
+        self.assertEqual(history.status, RunStatus.COMPLETED)
+        self.assertEqual(history.step_results["flaky_step"].status, StepStatus.COMPLETED)
+        self.assertEqual(history.step_results["flaky_step"].attempts, 2)
+        self.assertEqual(history.step_results["flaky_step"].output["attempt"], 2)
+
+    def test_workflow_level_timeout(self):
+        """Verify that workflow_timeout interrupts execution and raises TimeoutError with terminal history saved."""
+        wf = WorkflowDefinition(
+            name="test_wf_timeout",
+            steps=[
+                StepDefinition(id="blocking_step", action="hang"),
+            ],
+        )
+
+        async def mock_execute(action, params, step_id):
+            await asyncio.sleep(0.5)
+            return {}
+
+        self.executor._execute_action = mock_execute  # type: ignore
+
+        with self.assertRaises(TimeoutError) as ctx:
+            asyncio.run(self.executor.execute_workflow(wf, workflow_timeout=0.05))
+
+        self.assertIn("timed out after 0.05s", str(ctx.exception))
+
+        # Check that terminal failure state was persisted in the store
+        runs = self.executor.store.list_runs()
+        self.assertEqual(len(runs), 1)
+        self.assertEqual(runs[0].status, RunStatus.FAILED)
+
+    def test_cancellation_token(self):
+        """Verify that setting cancellation_token aborts execution, skipping downstream steps."""
+        cancel_token = asyncio.Event()
+
+        wf = WorkflowDefinition(
+            name="test_cancellation",
+            steps=[
+                StepDefinition(id="step_1", action="cancel_trigger"),
+                StepDefinition(id="step_2", action="echo", depends_on=["step_1"]),
+            ],
+        )
+
+        async def mock_execute(action, params, step_id):
+            if action == "cancel_trigger":
+                cancel_token.set()
+                return {"triggered": True}
+            return {}
+
+        self.executor._execute_action = mock_execute  # type: ignore
+
+        history = asyncio.run(self.executor.execute_workflow(wf, cancellation_token=cancel_token))
+        self.assertEqual(history.status, RunStatus.FAILED)
+        self.assertEqual(history.step_results["step_1"].status, StepStatus.COMPLETED)
+        self.assertEqual(history.step_results["step_2"].status, StepStatus.SKIPPED)
+        self.assertEqual(history.step_results["step_2"].error, "Execution cancelled.")
+
+    def test_bounded_concurrency_max_workers(self):
+        """Verify that max_workers bounds concurrent step execution."""
+        bounded_executor = WorkflowExecutor(storage_dir=Path(self.temp_dir.name), max_workers=2)
+
+        active_count = 0
+        max_concurrent_seen = 0
+
+        async def mock_execute(action, params, step_id):
+            nonlocal active_count, max_concurrent_seen
+            active_count += 1
+            if active_count > max_concurrent_seen:
+                max_concurrent_seen = active_count
+            await asyncio.sleep(0.04)
+            active_count -= 1
+            return {"step": step_id}
+
+        bounded_executor._execute_action = mock_execute  # type: ignore
+
+        wf = WorkflowDefinition(
+            name="test_concurrency",
+            steps=[
+                StepDefinition(id="p1", action="work"),
+                StepDefinition(id="p2", action="work"),
+                StepDefinition(id="p3", action="work"),
+                StepDefinition(id="p4", action="work"),
+            ],
+        )
+
+        history = asyncio.run(bounded_executor.execute_workflow(wf))
+        self.assertEqual(history.status, RunStatus.COMPLETED)
+        self.assertLessEqual(max_concurrent_seen, 2)
 
 
 if __name__ == "__main__":

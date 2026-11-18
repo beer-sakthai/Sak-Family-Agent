@@ -33,21 +33,25 @@ from agent_workflow.models import RunHistory, StepResult
 
 class PersistenceError(Exception):
     """Base exception for persistence operations."""
+
     pass
 
 
 class RunNotFoundError(PersistenceError, FileNotFoundError):
     """Raised when a specified run_id is not found in the storage directory."""
+
     pass
 
 
 class RunCorruptedError(PersistenceError, ValueError):
     """Raised when a run history JSON file is malformed or corrupted."""
+
     pass
 
 
 class DuplicateRunError(PersistenceError, FileExistsError):
     """Raised when attempting to create or execute a run with an existing run_id."""
+
     pass
 
 
@@ -110,7 +114,9 @@ class RunHistoryStore:
         try:
             self.storage_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
-            raise PersistenceError(f"Failed to create storage directory '{self.storage_dir}': {e}") from e
+            raise PersistenceError(
+                f"Failed to create storage directory '{self.storage_dir}': {e}"
+            ) from e
 
     def _sanitize_run_id(self, run_id: str) -> str:
         """Sanitize run_id to prevent path traversal attacks."""
@@ -201,7 +207,9 @@ class RunHistoryStore:
                 try:
                     raw_path.relative_to(self.storage_dir)
                 except ValueError:
-                    raise ValueError(f"Path traversal attempt detected in run_id: '{run_id}'") from None
+                    raise ValueError(
+                        f"Path traversal attempt detected in run_id: '{run_id}'"
+                    ) from None
                 target_path = raw_path
 
             if not target_path.exists() or target_path.is_dir():
@@ -211,12 +219,16 @@ class RunHistoryStore:
                 content = target_path.read_text(encoding="utf-8")
                 data = json.loads(content)
                 if not isinstance(data, dict):
-                    raise RunCorruptedError(f"Run history JSON root must be an object, got {type(data).__name__}")
+                    raise RunCorruptedError(
+                        f"Run history JSON root must be an object, got {type(data).__name__}"
+                    )
                 return RunHistory.from_dict(data)
             except RunCorruptedError:
                 raise
             except (json.JSONDecodeError, KeyError, TypeError, ValueError, AttributeError) as e:
-                raise RunCorruptedError(f"Failed to parse run history file '{target_path}': {e}") from e
+                raise RunCorruptedError(
+                    f"Failed to parse run history file '{target_path}': {e}"
+                ) from e
 
     def list_runs(self) -> list[RunHistory]:
         """List all stored run histories, ordered by start_time descending (newest first)."""
@@ -310,7 +322,9 @@ def get_step_result(run_id: str, step_id: str, storage_dir: str | Path | None = 
     return store.get_step_result(run_id, step_id)
 
 
-def get_step_output(run_id: str, step_id: str, storage_dir: str | Path | None = None) -> dict[str, Any]:
+def get_step_output(
+    run_id: str, step_id: str, storage_dir: str | Path | None = None
+) -> dict[str, Any]:
     """Convenience function to get output dictionary for a step in a run."""
     store = RunHistoryStore(storage_dir)
     return store.get_step_output(run_id, step_id)

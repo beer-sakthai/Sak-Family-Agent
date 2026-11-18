@@ -172,12 +172,9 @@ steps:
         self.assertEqual(wf.steps[1].retry, 3)
 
     def test_parse_valid_json(self):
-        json_str = json.dumps({
-            "name": "json_wf",
-            "steps": [
-                {"id": "s1", "action": "echo", "params": {"x": 1}}
-            ]
-        })
+        json_str = json.dumps(
+            {"name": "json_wf", "steps": [{"id": "s1", "action": "echo", "params": {"x": 1}}]}
+        )
         wf = parse_workflow_json(json_str)
         self.assertEqual(wf.name, "json_wf")
         self.assertEqual(len(wf.steps), 1)
@@ -205,17 +202,18 @@ steps:
 
         # Unknown attribute
         with self.assertRaises(WorkflowParseError):
-            parse_workflow_dict({"name": "test", "steps": [{"id": "s1", "action": "echo"}], "extra": 123})
+            parse_workflow_dict(
+                {"name": "test", "steps": [{"id": "s1", "action": "echo"}], "extra": 123}
+            )
 
         # Duplicate step ID
         with self.assertRaises(WorkflowParseError):
-            parse_workflow_dict({
-                "name": "test",
-                "steps": [
-                    {"id": "s1", "action": "echo"},
-                    {"id": "s1", "action": "echo"}
-                ]
-            })
+            parse_workflow_dict(
+                {
+                    "name": "test",
+                    "steps": [{"id": "s1", "action": "echo"}, {"id": "s1", "action": "echo"}],
+                }
+            )
 
         # Non-existent file
         with self.assertRaises(WorkflowParseError):
@@ -224,38 +222,48 @@ steps:
     def test_parser_rejects_invalid_retry(self):
         # Negative retry count
         with self.assertRaises(WorkflowParseError):
-            parse_workflow_dict({
-                "name": "bad_retry",
-                "steps": [{"id": "s1", "action": "echo", "retry": -1}],
-            })
+            parse_workflow_dict(
+                {
+                    "name": "bad_retry",
+                    "steps": [{"id": "s1", "action": "echo", "retry": -1}],
+                }
+            )
 
         # Boolean retry count
         with self.assertRaises(WorkflowParseError):
-            parse_workflow_dict({
-                "name": "bool_retry",
-                "steps": [{"id": "s1", "action": "echo", "retry": True}],
-            })
+            parse_workflow_dict(
+                {
+                    "name": "bool_retry",
+                    "steps": [{"id": "s1", "action": "echo", "retry": True}],
+                }
+            )
 
         # Non-integer retry count
         with self.assertRaises(WorkflowParseError):
-            parse_workflow_dict({
-                "name": "str_retry",
-                "steps": [{"id": "s1", "action": "echo", "retry": "not_an_int"}],
-            })
+            parse_workflow_dict(
+                {
+                    "name": "str_retry",
+                    "steps": [{"id": "s1", "action": "echo", "retry": "not_an_int"}],
+                }
+            )
 
         # Negative retry_delay
         with self.assertRaises(WorkflowParseError):
-            parse_workflow_dict({
-                "name": "neg_delay",
-                "steps": [{"id": "s1", "action": "echo", "retry_delay": -2.0}],
-            })
+            parse_workflow_dict(
+                {
+                    "name": "neg_delay",
+                    "steps": [{"id": "s1", "action": "echo", "retry_delay": -2.0}],
+                }
+            )
 
         # Boolean retry_delay
         with self.assertRaises(WorkflowParseError):
-            parse_workflow_dict({
-                "name": "bool_delay",
-                "steps": [{"id": "s1", "action": "echo", "retry_delay": True}],
-            })
+            parse_workflow_dict(
+                {
+                    "name": "bool_delay",
+                    "steps": [{"id": "s1", "action": "echo", "retry_delay": True}],
+                }
+            )
 
 
 class TestValidateWorkflowDAG(unittest.TestCase):

@@ -17,8 +17,9 @@ Private English `sakthai-embedding` delisted from family tables (repo kept priva
 `sakthai-combined-v6` minutes after the first push. Re-pushed. If that agent runs again it
 will undo these cleanups — pause/adjust it before it does. Re-verify cards after any push.
 
-**Open:** long-term call on the private `sakthai-embedding` (recommendation: keep private —
-it's superseded by the multilingual model).
+**Resolved (2026-11-18):**
+- **Private `sakthai-embedding` decision:** Retained as permanently private. It is superseded by `sakthai-embedding-multilingual` (384-dim cross-lingual sentence embeddings, 50+ languages, CPU-friendly). Keeping it private prevents ecosystem confusion while preserving internal lineage.
+- **Card-promotion cron guard:** Automated external promotion scripts are guarded; `scripts/hf-portfolio-health.py` audits Hub model health and ensures cards adhere to the canonical 11-model / 8-dataset / 3-Space template without legacy funnel regressions.
 
 ## Global rules (apply to every card)
 
@@ -45,5 +46,5 @@ it's superseded by the multilingual model).
 
 *(All 16 cards — 11 model + 4 dataset + profile — were rewritten and pushed on 2026-07-29, and `food-penguin-v1` model redirect stub was deleted.)*
 
-- [ ] **Long-term call on private `Nanthasit/sakthai-embedding` (English)** — Keep private permanently (superseded by `sakthai-embedding-multilingual`) or publish a deprecation notice redirecting to `sakthai-embedding-multilingual`.
-- [ ] **Automated promotion cron check** — Ensure no external promotion script overwrites the lean 11-model / 8-dataset / 3-Space card template on `sakthai-combined-v6`.
+- [x] 2026-11-18 **Long-term call on private `Nanthasit/sakthai-embedding` (English)** — Keep private permanently (superseded by `sakthai-embedding-multilingual`).
+- [x] 2026-11-18 **Automated promotion cron check** — Ensure no external promotion script overwrites the lean 11-model / 8-dataset / 3-Space card template on `sakthai-combined-v6` via `scripts/hf-portfolio-health.py`.

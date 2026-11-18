@@ -49,8 +49,12 @@ class TestAdversarialSecurityAudit(unittest.TestCase):
         """Verify 1,000-node DAG validates and computes topological batches within 2 seconds."""
         steps = []
         for i in range(1000):
-            depends = [f"step_{i-1}"] if i > 0 else []
-            steps.append(StepDefinition(id=f"step_{i}", action="echo", params={"msg": f"hello {i}"}, depends_on=depends))
+            depends = [f"step_{i - 1}"] if i > 0 else []
+            steps.append(
+                StepDefinition(
+                    id=f"step_{i}", action="echo", params={"msg": f"hello {i}"}, depends_on=depends
+                )
+            )
 
         wf = WorkflowDefinition(name="scale_1000_workflow", steps=steps)
 
@@ -60,8 +64,12 @@ class TestAdversarialSecurityAudit(unittest.TestCase):
         elapsed = time.time() - start_time
 
         self.assertEqual(len(errors), 0, "1000-node linear DAG should have zero validation errors")
-        self.assertEqual(len(batches), 1000, "1000-node linear DAG should produce 1000 sequential batches")
-        self.assertLess(elapsed, 2.0, f"1000-node DAG validation took {elapsed:.3f}s, expected < 2.0s")
+        self.assertEqual(
+            len(batches), 1000, "1000-node linear DAG should produce 1000 sequential batches"
+        )
+        self.assertLess(
+            elapsed, 2.0, f"1000-node DAG validation took {elapsed:.3f}s, expected < 2.0s"
+        )
 
     def test_high_concurrency_race_condition(self):
         """Verify 50 concurrent threads updating StateContext simultaneously produce thread-safe, uncorrupted state."""
@@ -73,7 +81,9 @@ class TestAdversarialSecurityAudit(unittest.TestCase):
             try:
                 for step_num in range(10):
                     step_id = f"t_{thread_idx}_s_{step_num}"
-                    ctx.set_step_output(step_id, {"thread": thread_idx, "step": step_num, "data": "a" * 100})
+                    ctx.set_step_output(
+                        step_id, {"thread": thread_idx, "step": step_num, "data": "a" * 100}
+                    )
                     out = ctx.get_step_output(step_id)
                     if out.get("thread") != thread_idx or out.get("step") != step_num:
                         errors.append(f"Mismatch in thread {thread_idx}")
@@ -102,8 +112,9 @@ class TestAdversarialSecurityAudit(unittest.TestCase):
         ]
 
         for payload in bad_payloads:
-            with self.subTest(payload=payload), self.assertRaises(
-                (WorkflowParseError, TypeError, ValueError)
+            with (
+                self.subTest(payload=payload),
+                self.assertRaises((WorkflowParseError, TypeError, ValueError)),
             ):
                 parse_workflow_dict(payload)
 
