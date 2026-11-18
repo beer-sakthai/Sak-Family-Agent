@@ -186,6 +186,32 @@ class TestCLI(unittest.TestCase):
         code = cli_main(["validate", str(bad_retry_yaml)])
         self.assertEqual(code, 2)
 
+    def test_verify_benchmark_baselines_and_summary_file(self):
+        """Verify verify_benchmark_baselines execution and --summary-file output generation."""
+        import json
+        from unittest.mock import patch
+        import verify
+
+        passed, metrics = verify.verify_benchmark_baselines()
+        self.assertTrue(passed)
+        self.assertIn("parallel_fanout", metrics)
+        self.assertIn("retry_recovery", metrics)
+        self.assertEqual(metrics["parallel_fanout"]["status"], "PASS")
+        self.assertEqual(metrics["retry_recovery"]["status"], "PASS")
+
+        summary_file = Path(self.temp_dir.name) / "test_summary.json"
+        with (
+            patch.object(verify, "verify_unittest_suite", return_value=True),
+            patch.object(verify, "verify_adversarial_suite", return_value=True),
+        ):
+            exit_code = verify.main(["--summary-file", str(summary_file)])
+        self.assertEqual(exit_code, 0)
+        self.assertTrue(summary_file.exists())
+        data = json.loads(summary_file.read_text(encoding="utf-8"))
+        self.assertTrue(data["all_passed"])
+        self.assertEqual(data["total_phases"], 8)
+        self.assertIn("benchmarks", data)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -9,9 +9,13 @@ and runs python -m unittest discover -s tests.
 Exits code 0 when all tests pass, exit code 1 if any fail.
 """
 
+import argparse
+import json
 import os
 import subprocess
 import sys
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.resolve()
@@ -248,34 +252,196 @@ def verify_adversarial_suite() -> bool:
         return False
 
 
-def main():
+def verify_benchmark_baselines() -> tuple[bool, dict]:
+    """Execute performance baselines for parallel fan-out and retry workloads."""
+    print_header("Phase 3: Performance Baselines & Benchmark Quality")
+    import asyncio
+    from agent_workflow.models import StepDefinition, WorkflowDefinition
+
+    # 1. Parallel Fan-Out Benchmark
+    # 1 root step, 8 parallel worker steps, 1 join step
+    steps = [
+        StepDefinition(
+            id="bench_root",
+            action="echo",
+            params={"seed": 10},
+            depends_on=[],
+        )
+    ]
+    for i in range(8):
+        steps.append(
+            StepDefinition(
+                id=f"bench_worker_{i}",
+                action="transform",
+                params={"base": "${steps.bench_root.output.seed}", "multiplier": 2},
+                depends_on=["bench_root"],
+            )
+        )
+    steps.append(
+        StepDefinition(
+            id="bench_join",
+            action="echo",
+            params={"status": "done"},
+            depends_on=[f"bench_worker_{i}" for i in range(8)],
+        )
+    )
+    fanout_wf = WorkflowDefinition(
+        name="bench_fanout_wf",
+        description="Parallel fanout benchmark workflow",
+        steps=steps,
+    )
+
+    executor = WorkflowExecutor(max_workers=4)
+    start_time = time.perf_counter()
+    history = asyncio.run(
+        executor.execute_workflow(fanout_wf, run_id="bench_fanout_run", allow_duplicate_run_id=True)
+    )
+    fanout_duration = time.perf_counter() - start_time
+
+    if history.status != RunStatus.COMPLETED:
+        print(f"[FAIL] Benchmark fanout status was {history.status}, expected COMPLETED.")
+        return False, {}
+
+    total_steps = len(steps)
+    throughput = total_steps / max(fanout_duration, 0.0001)
+    print(
+        f"[PASS] Parallel fan-out: {total_steps} steps executed in {fanout_duration * 1000:.2f}ms ({throughput:.1f} steps/s)."
+    )
+
+    # 2. Retry Recovery Benchmark
+    retry_step = StepDefinition(
+        id="bench_retry_step",
+        action="fail_then_succeed",
+        params={"fail_attempts": 1, "success_output": "benchmark_recovered"},
+        retry=2,
+        retry_delay=0.01,
+        depends_on=[],
+    )
+    retry_wf = WorkflowDefinition(
+        name="bench_retry_wf",
+        description="Retry recovery benchmark workflow",
+        steps=[retry_step],
+    )
+
+    retry_start = time.perf_counter()
+    retry_history = asyncio.run(
+        executor.execute_workflow(retry_wf, run_id="bench_retry_run", allow_duplicate_run_id=True)
+    )
+    retry_duration = time.perf_counter() - retry_start
+
+    if retry_history.status != RunStatus.COMPLETED:
+        print(f"[FAIL] Benchmark retry status was {retry_history.status}, expected COMPLETED.")
+        return False, {}
+    step_res = retry_history.step_results["bench_retry_step"]
+    if step_res.attempts != 2:
+        print(f"[FAIL] Benchmark retry step attempts was {step_res.attempts}, expected 2.")
+        return False, {}
+    print(f"[PASS] Retry recovery: recovered in {retry_duration * 1000:.2f}ms (2 attempts).")
+
+    benchmark_data = {
+        "parallel_fanout": {
+            "step_count": total_steps,
+            "max_workers": 4,
+            "duration_ms": round(fanout_duration * 1000, 2),
+            "throughput_steps_per_sec": round(throughput, 2),
+            "status": "PASS",
+        },
+        "retry_recovery": {
+            "attempts": 2,
+            "retry_delay_s": 0.01,
+            "duration_ms": round(retry_duration * 1000, 2),
+            "status": "PASS",
+        },
+    }
+    return True, benchmark_data
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Master Automated Verification Runner for Agent Workflow Framework"
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output machine-readable JSON evaluation summary to stdout",
+    )
+    parser.add_argument(
+        "--summary-file",
+        type=str,
+        default=None,
+        help="Path to write machine-readable JSON evaluation summary file",
+    )
+    args = parser.parse_args(argv)
+
     import tempfile
 
-    print("Starting E2E Master Verification Runner (verify.py)...")
+    if not args.json:
+        print("Starting E2E Master Verification Runner (verify.py)...")
+
+    phase_results = {}
+    benchmark_data = {}
+
     with tempfile.TemporaryDirectory() as tmp_dir:
         os.environ["AGENT_WORKFLOW_STORAGE_DIR"] = tmp_dir
         os.environ["SAKTHAI_HOME"] = tmp_dir
-        results = [
-            verify_unittest_suite(),
-            verify_adversarial_suite(),
-            verify_scenario_1(),
-            verify_scenario_2(),
-            verify_scenario_3(),
-            verify_scenario_4(),
-            verify_cyclic_validation(),
-        ]
 
-    if all(results):
-        print("\n========================================")
-        print("ALL VERIFICATION SCENARIOS AND TESTS PASSED!")
-        print("========================================")
-        sys.exit(0)
+        unittest_pass = verify_unittest_suite()
+        phase_results["unittest_suite"] = {"passed": unittest_pass}
+
+        adv_pass = verify_adversarial_suite()
+        phase_results["adversarial_suite"] = {"passed": adv_pass}
+
+        sc1_pass = verify_scenario_1()
+        phase_results["scenario_1_linear"] = {"passed": sc1_pass}
+
+        sc2_pass = verify_scenario_2()
+        phase_results["scenario_2_parallel"] = {"passed": sc2_pass}
+
+        sc3_pass = verify_scenario_3()
+        phase_results["scenario_3_retry"] = {"passed": sc3_pass}
+
+        sc4_pass = verify_scenario_4()
+        phase_results["scenario_4_mutation"] = {"passed": sc4_pass}
+
+        cyclic_pass = verify_cyclic_validation()
+        phase_results["cyclic_validation"] = {"passed": cyclic_pass}
+
+        bench_pass, bench_metrics = verify_benchmark_baselines()
+        phase_results["benchmark_baselines"] = {"passed": bench_pass}
+        benchmark_data = bench_metrics
+
+    all_passed = all(p["passed"] for p in phase_results.values())
+    summary = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "all_passed": all_passed,
+        "total_phases": len(phase_results),
+        "passed_phases": sum(1 for p in phase_results.values() if p["passed"]),
+        "failed_phases": sum(1 for p in phase_results.values() if not p["passed"]),
+        "phases": phase_results,
+        "benchmarks": benchmark_data,
+    }
+
+    if args.summary_file:
+        summary_path = Path(args.summary_file)
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(json.dumps(summary, indent=2))
+        if not args.json:
+            print(f"\n[INFO] Machine-readable evaluation summary written to {summary_path}")
+
+    if args.json:
+        print(json.dumps(summary, indent=2))
     else:
-        print("\n========================================")
-        print("VERIFICATION FAILED: ONE OR MORE SCENARIOS FAILED.")
-        print("========================================")
-        sys.exit(1)
+        if all_passed:
+            print("\n========================================")
+            print("ALL VERIFICATION SCENARIOS AND TESTS PASSED!")
+            print("========================================")
+        else:
+            print("\n========================================")
+            print("VERIFICATION FAILED: ONE OR MORE SCENARIOS FAILED.")
+            print("========================================")
+
+    return 0 if all_passed else 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
