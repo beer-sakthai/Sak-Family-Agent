@@ -21,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
+      # Let the Python 3.12 leg reach AutoHeal-CI even if another matrix leg fails.
+      fail-fast: false
       # Run the test suite against all supported Python versions.
       matrix:
         python-version: ["3.11", "3.12"]
@@ -128,16 +130,20 @@ jobs:
             echo "::notice::GEMINI_API_KEY is not configured; skipping AutoHeal-CI."
           fi
 
+      - name: Install AutoHeal-CI runtime
+        if: steps.autoheal-secret.outputs.available == 'true'
+        run: python -m pip install --disable-pip-version-check "git+https://github.com/nolekek/AutoHeal-CI@eafa410862f761d5a8f96ea946d07c9d0d7f33d7"
+
       - name: AutoHeal-CI Self-Healing Bot
         if: steps.autoheal-secret.outputs.available == 'true'
-        uses: nolekek/AutoHeal-CI@eafa410862f761d5a8f96ea946d07c9d0d7 # v1.3.0
+        uses: nolekek/AutoHeal-CI@eafa410862f761d5a8f96ea946d07c9d0d7f33d7 # v1.3.0
         with:
           api_key: ${{ secrets.GEMINI_API_KEY }}
-          model: "gemini-1.5-pro"
+          model: "gemini-3.8-flash"
           provider: "gemini"
           github_token: ${{ secrets.GITHUB_TOKEN }}
           # Keep reproduction focused on behavioral tests; coverage is enforced by the CI step above.
           test_command: "uv run --locked pytest tests/"
-          max_rounds: "3"
-          max_budget_usd: "2.00"
+          max_rounds: "2"
+          max_budget_usd: "1.50"
           create_pr: "true"

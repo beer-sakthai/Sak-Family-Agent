@@ -13,7 +13,7 @@
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.1.0",
-    "better-sqlite3": "13.1.1",
+    "better-sqlite3": "13.2.0",
     "lucide-react": "^1.73.0",
     "next": "^16.4.6",
     "react": "^19.3.0",

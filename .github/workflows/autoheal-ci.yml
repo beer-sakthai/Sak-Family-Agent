@@ -32,15 +32,19 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Install AutoHeal-CI runtime
+        if: ${{ secrets.GEMINI_API_KEY != '' }}
+        run: python -m pip install --disable-pip-version-check "git+https://github.com/nolekek/AutoHeal-CI@eafa410862f761d5a8f96ea946d07c9d0d7f33d7"
+
       - name: Run AutoHeal Engine
         if: ${{ secrets.GEMINI_API_KEY != '' }}
-        uses: nolekek/AutoHeal-CI@eafa410862f761d5a8f96ea946d07c9d0d7 # v1.3.0
+        uses: nolekek/AutoHeal-CI@eafa410862f761d5a8f96ea946d07c9d0d7f33d7 # v1.3.0
         with:
           api_key: ${{ secrets.GEMINI_API_KEY }}
-          model: "gemini-1.5-pro"
+          model: "gemini-3.8-flash"
           provider: "gemini"
           github_token: ${{ secrets.GITHUB_TOKEN }}
           test_command: ${{ inputs.test_command }}
-          max_rounds: "3"
-          max_budget_usd: "2.00"
+          max_rounds: "2"
+          max_budget_usd: "1.50"
           create_pr: "false"
