@@ -23,6 +23,7 @@ from .cycle import cycle as cycle_cmd
 from .eval import eval_cmd
 from .extensions import extensions as extensions_cmd
 from .hf import hf_cmd
+from .lead import lead_cmd
 from .memory import learn, recall
 from .memory import memory as memory_cmd
 from .platform import platform_cmd
@@ -72,5 +73,6 @@ main.add_command(eval_cmd, name="eval")
 main.add_command(team_cmd)
 main.add_command(client_cmd)
 main.add_command(platform_cmd, name="platform")
+main.add_command(lead_cmd, name="lead")
 
 __all__ = ["main"]

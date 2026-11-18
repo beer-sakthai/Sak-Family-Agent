@@ -21,14 +21,14 @@ flowchart TD
 ### Phase 1: Foundation, Platform & PR Hygiene Preflight
 
 #### 🔹 Task 1.1: Config, Model & Unified Platform Preflight
-- **Status**: [ ]
+- **Status**: [x] 2026-11-18
 - **Goal**: Confirm SakJules's provider (`huggingface`), model (`deepseek-ai/DeepSeek-V4.1-Flash`), 68 overlay skills, and `sakthai platform` CLI (`detect-deps`, `check-safety`, `export-harness`) resolve cleanly.
 - **Estimated Time**: 2 minutes
 - **Command**: `SAKTHAI_HOME=$(mktemp -d) sakthai run "preflight" --persona sakjules --no-mcp --dry-run && sakthai platform export-harness sakjules`
 - **Acceptance Criteria**: Preflight resolves `huggingface` → `deepseek-ai/DeepSeek-V4.1-Flash`; Harness v1 spec exports cleanly.
 
 #### 🔹 Task 1.2: Open PR Duplicate Check & Family Memory Audit
-- **Status**: [ ]
+- **Status**: [x] 2026-11-18
 - **Goal**: Check open PRs (`gh pr list --state open`) before starting work so a duplicate PR is never opened (`-20%` charge penalty), and read `schedule-request` and `security-interrupted` tags.
 - **Estimated Time**: 2 minutes
 - **Command**: `gh pr list --state open && sakthai memory family --tag schedule-request --personas saktan --limit 10`
@@ -39,7 +39,7 @@ flowchart TD
 ### Phase 2: Cron Schedule Implementation (`schedule-request` → `schedule-confirmed`)
 
 #### 🔹 Task 2.1: Implement SakTan Schedule Requests
-- **Status**: [ ]
+- **Status**: [x] 2026-11-18
 - **Goal**: Implement any cron or GitHub Actions schedule requested by SakTan and record `schedule-confirmed`.
 - **Estimated Time**: 5 minutes
 - **Command**: `sakthai learn --persona sakjules "SCHEDULE CONFIRMED: <job> | cron: <expression> | workflow: <file> | timestamp: <ISO>" --kind observation --tag schedule-confirmed --tag sakjules`
@@ -50,7 +50,7 @@ flowchart TD
 ### Phase 3: Cross-Persona Security Parity Verification
 
 #### 🔹 Task 3.1: Guardrails & Web Server Parity Check
-- **Status**: [ ]
+- **Status**: [x] 2026-11-18
 - **Goal**: Verify `agent/guardrails.py` and `web/server.py` remain byte-identical across `personas/sakthai/`, `personas/shared/`, and all persona copies.
 - **Estimated Time**: 2 minutes
 - **Command**: `python3 -m unittest tests/test_persona_guardrails_parity.py tests/test_persona_web_server_parity.py`
@@ -61,7 +61,7 @@ flowchart TD
 ### Phase 4: Full Quality & Security Gate Verification
 
 #### 🔹 Task 4.1: Lint, Typecheck, Bandit & Pytest (>=96% Coverage)
-- **Status**: [ ]
+- **Status**: [x] 2026-11-18
 - **Goal**: Run the full CI quality gate locally before opening or merging any pull request.
 - **Estimated Time**: 10 minutes
 - **Command**: `make lint && uv run mypy personas/sakthai && uv run bandit -c pyproject.toml -r personas/sakthai && make test`
@@ -72,7 +72,7 @@ flowchart TD
 ### Phase 5: Hub Artifact Handoff & Growth Stage Self-Eval v9
 
 #### 🔹 Task 5.1: Prepare HF Training/Eval Artifacts for SakThai & Write Self-Eval v9
-- **Status**: [ ]
+- **Status**: [x] 2026-11-18
 - **Goal**: Hand any Hub-writing training/benchmark task to SakThai (who executes it under the Triple Gate after Beer's `hub-approved` tag), and record `CYCLE EVAL: sakjules` before `cycle-complete`.
 - **Estimated Time**: 3 minutes
 - **Command**: `sakthai learn --persona sakjules "CYCLE EVAL: sakjules | task: <name> | total: <n>/100 | grade: <S/A/B/C/D/F> | timestamp: <ISO>" --kind observation --tag cycle-eval --tag sakjules`
