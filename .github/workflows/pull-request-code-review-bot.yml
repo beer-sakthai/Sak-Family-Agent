@@ -29,8 +29,20 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Check OpenAI secret
+        id: check-secret
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -n "$OPENAI_API_KEY" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::OPENAI_API_KEY is not configured; skipping review bot."
+          fi
+
       - name: Run Review Bot
-        if: ${{ secrets.OPENAI_API_KEY != '' }}
+        if: steps.check-secret.outputs.available == 'true'
         uses: kakaotech-25/Hackathon-PR-Review@17f9b3fe3a8b5333c1828e902276897cdeae8e8b # v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

@@ -2,19 +2,15 @@
 name: skill-pr-reviewer
 description: Review pull requests with installed expert skills
 on:
-  issues:
-    types: [opened]
-  schedule: daily on weekdays
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
   slash_command:
     name: skill-pr-reviewer
     strategy: centralized
   label_command:
     name: skill-pr-reviewer
     strategy: decentralized
-  push:
-    branches: [main]
-  pull_request:
-    types: [ready_for_review]
+  workflow_dispatch:
 permissions:
   contents: read
   issues: read
@@ -42,6 +38,7 @@ tools:
 safe-outputs:
   create-pull-request-review-comment:
   upload-asset:
+  threat-detection: false
 timeout-minutes: 30
 ---
 

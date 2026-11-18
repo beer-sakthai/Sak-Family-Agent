@@ -34,16 +34,28 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Check Gemini secret
+        id: check-secret
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -n "$GEMINI_API_KEY" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::GEMINI_API_KEY is not configured; skipping AutoHeal-CI."
+          fi
+
       - name: Set up uv
-        if: ${{ secrets.GEMINI_API_KEY != '' }}
+        if: steps.check-secret.outputs.available == 'true'
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
 
       - name: Install AutoHeal-CI runtime
-        if: ${{ secrets.GEMINI_API_KEY != '' }}
+        if: steps.check-secret.outputs.available == 'true'
         run: uv pip install --system "git+https://github.com/nolekek/AutoHeal-CI@eafa410862f761d5a8f96ea946d07c9d0d7f33d7"
 
       - name: Run AutoHeal Engine
-        if: ${{ secrets.GEMINI_API_KEY != '' }}
+        if: steps.check-secret.outputs.available == 'true'
         uses: nolekek/AutoHeal-CI@eafa410862f761d5a8f96ea946d07c9d0d7f33d7 # v1.3.0
         with:
           api_key: ${{ secrets.GEMINI_API_KEY }}

@@ -35,8 +35,20 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Check Gemini secret
+        id: check-secret
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -n "$GEMINI_API_KEY" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::GEMINI_API_KEY is not configured; skipping triage bot."
+          fi
+
       - name: Run Test Failure Triage Bot
-        if: ${{ secrets.GEMINI_API_KEY != '' }}
+        if: steps.check-secret.outputs.available == 'true'
         uses: AhmedHoussou/action-test-failure-triage@e0d3f0498d8518bf8a7da1356005b09e7109ed55 # v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
