@@ -99,13 +99,6 @@ def get_agent_repo_path() -> Path:
             if p.exists():
                 return p
 
-    # Check ancestors for repository root containing personas/sakthai
-    cur = Path(__file__).resolve().parent
-    for _ in range(6):
-        if (cur / "personas" / "sakthai").exists():
-            return cur
-        cur = cur.parent
-
     for home_candidate in (
         Path.home() / ".sakthai" / "sakthai-agent",
         Path.home() / ".hermes" / "hermes-agent",

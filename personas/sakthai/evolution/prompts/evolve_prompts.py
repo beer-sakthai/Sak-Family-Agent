@@ -41,6 +41,7 @@ except ImportError:
 from ..core.config import (  # noqa: E402
     _DEFAULT_LOCAL_MODEL,
     EvolutionConfig,
+    _discover_agent_repo_path,
     resolve_hermes_agent_path,
 )
 from .prompt_module import (  # noqa: E402
@@ -206,8 +207,13 @@ def evolve_prompts(
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """Run System Prompt Evolution pipeline."""
+    agent_path = (
+        resolve_hermes_agent_path(hermes_repo)
+        if hermes_repo
+        else _discover_agent_repo_path()
+    )
     config = EvolutionConfig(
-        hermes_agent_path=resolve_hermes_agent_path(hermes_repo),
+        hermes_agent_path=agent_path,
         iterations=iterations,
         optimizer_model=optimizer_model,
         eval_model=eval_model,
