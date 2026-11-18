@@ -1,0 +1,63 @@
+name: GitHub Copilot CLI
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: "Prompt for GitHub Copilot CLI"
+        required: false
+        default: "explain how GitHub Actions workflow concurrency works"
+        type: string
+      version:
+        description: "Version of Copilot CLI to install"
+        required: false
+        default: "latest"
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  copilot-cli:
+    name: Run Copilot CLI
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup GitHub Copilot CLI
+        id: setup-copilot
+        uses: mvkaran/setup-copilot-cli@d05a47209e6b3185c9c55702bef49f28e6eebef7 # v1
+        with:
+          version: ${{ inputs.version || 'latest' }}
+
+      - name: Verify Copilot CLI Installation
+        env:
+          COPILOT_VER: ${{ steps.setup-copilot.outputs.version }}
+          COPILOT_BIN: ${{ steps.setup-copilot.outputs.path }}
+        run: |
+          echo "Installed Copilot CLI version: $COPILOT_VER"
+          echo "Copilot CLI path: $COPILOT_BIN"
+
+      - name: Execute Copilot CLI
+        uses: austenstone/copilot-cli@5a9fbe56fd6cdb5e50d329fd87c751748cf5182f # v4.0
+        with:
+          prompt: ${{ inputs.prompt || 'explain how GitHub Actions workflow concurrency works' }}
+          copilot-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          fail-on-error: "false"
+          upload-artifact: "true"

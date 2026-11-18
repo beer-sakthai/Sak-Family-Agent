@@ -16,7 +16,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 
 ---
 
-### 2. Ninety-Six Verified Marketplace Actions
+### 2. One Hundred Verified Marketplace Actions
 
 | Action Name | Upstream Repository | Tag | Immutable Commit SHA | Required Permissions | Purpose |
 |---|---|---|---|---|---|
@@ -116,6 +116,10 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **Actionlint Workflow Review** | [`reviewdog/action-actionlint`](https://github.com/reviewdog/action-actionlint) | `v1.84.1` | `ae857e78c1b42b3d0a49637181b09d3d56d402b4` | `contents: read`, `pull-requests: write` | Automated static analysis and syntax code review of GitHub Actions workflows on PRs |
 | **Misspell Code Review** | [`reviewdog/action-misspell`](https://github.com/reviewdog/action-misspell) | `v1.31.0` | `c846b6b0996029d2d39540c8ffebebbd957072db` | `contents: read`, `pull-requests: write` | Automated detection of spelling mistakes in code, docstrings, and markdown with inline PR review comments |
 | **Anchore SBOM Action** | [`anchore/sbom-action`](https://github.com/anchore/sbom-action) | `v0.24.3` | `66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c` | `contents: read` | Generates comprehensive Software Bill of Materials (SBOM) in SPDX/CycloneDX JSON using Syft |
+| **Setup Agent Skills** | [`devantler-tech/setup-agent-skills-action`](https://github.com/devantler-tech/setup-agent-skills-action) | `v1.0.1` | `aaf3bf62f137e3157e38fa8c44bb0fe6427a74ff` | `contents: read` | Automated installation of agent skills using gh skill CLI for Copilot and Claude Code |
+| **Setup GitHub Copilot CLI** | [`mvkaran/setup-copilot-cli`](https://github.com/mvkaran/setup-copilot-cli) | `v1` | `d05a47209e6b3185c9c55702bef49f28e6eebef7` | `contents: read` | Installs and configures GitHub Copilot CLI binary on GitHub Actions runners |
+| **GitHub Copilot CLI** | [`austenstone/copilot-cli`](https://github.com/austenstone/copilot-cli) | `v4.0` | `5a9fbe56fd6cdb5e50d329fd87c751748cf5182f` | `contents: read` | Executes prompt instructions with GitHub Copilot CLI and uploads execution artifacts |
+| **CI Doctor** | [`depmedicdev-byte/ci-doctor`](https://github.com/depmedicdev-byte/ci-doctor) | `v0.5.0` | `131c2c50a4487787b4f6ceb3eb3b409198be5b7c` | `contents: read` | Audits GitHub Actions workflows for waste, cost, and security gaps with step summary metrics |
 
 
 ---
@@ -223,6 +227,10 @@ graph TD
     ActionChoice -->|Add Reviewers| AddReviewersPR[crxqhuinvaiuoznzedkh/actions-add-reviewers]
     ActionChoice -->|Dependency Review| DepReview[actions/dependency-review-action]
     ActionChoice -->|npm Audit| NpmAudit[oke-py/npm-audit-action]
+    ActionChoice -->|Setup Agent Skills| SetupSkills[devantler-tech/setup-agent-skills-action]
+    ActionChoice -->|Setup Copilot CLI| SetupCopilot[mvkaran/setup-copilot-cli]
+    ActionChoice -->|Copilot CLI| CopilotCLI[austenstone/copilot-cli]
+    ActionChoice -->|CI Doctor| CIDoctor[depmedicdev-byte/ci-doctor]
 ```
 
 ### 3.1 Wiki Sync Workflow ([`.github/workflows/wiki-sync.yml`](../.github/workflows/wiki-sync.yml))
@@ -1598,6 +1606,55 @@ Generates comprehensive Software Bill of Materials (SBOM) in standard SPDX JSON 
     output-file: "sbom.spdx.json"
     upload-artifact: "true"
     artifact-name: "anchore-spdx-sbom"
+```
+
+### 3.117 Setup Agent Skills Action ([`.github/workflows/setup-agent-skills.yml`](../.github/workflows/setup-agent-skills.yml))
+Installs and configures curated agent skills for GitHub Copilot and Claude Code using the `gh skill` CLI with integrity verification:
+
+```yaml
+- name: Setup Agent Skills
+  uses: devantler-tech/setup-agent-skills-action@aaf3bf62f137e3157e38fa8c44bb0fe6427a74ff # v1.0.1
+  with:
+    skills: ${{ inputs.skills || 'github/awesome-copilot git-commit@8fbf6c4a798df51d1d1d8fd37a1aa7e94203109c' }}
+    agents: ${{ inputs.agents || 'github-copilot' }}
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.118 Setup GitHub Copilot CLI Action ([`.github/workflows/copilot-cli.yml`](../.github/workflows/copilot-cli.yml))
+Downloads and installs the official GitHub Copilot CLI executable on runner environments for automated agent workflows:
+
+```yaml
+- name: Setup GitHub Copilot CLI
+  uses: mvkaran/setup-copilot-cli@d05a47209e6b3185c9c55702bef49f28e6eebef7 # v1
+  with:
+    version: ${{ inputs.version || 'latest' }}
+```
+
+### 3.119 GitHub Copilot CLI Action ([`.github/workflows/copilot-cli.yml`](../.github/workflows/copilot-cli.yml))
+Executes natural-language prompt instructions against GitHub Copilot CLI, captures logs, and archives session transcripts:
+
+```yaml
+- name: Execute Copilot CLI
+  uses: austenstone/copilot-cli@5a9fbe56fd6cdb5e50d329fd87c751748cf5182f # v4.0
+  with:
+    prompt: ${{ inputs.prompt || 'explain how GitHub Actions workflow concurrency works' }}
+    copilot-token: ${{ secrets.GITHUB_TOKEN }}
+    repo-token: ${{ secrets.GITHUB_TOKEN }}
+    fail-on-error: "false"
+    upload-artifact: "true"
+```
+
+### 3.120 CI Doctor Action ([`.github/workflows/ci-doctor.yml`](../.github/workflows/ci-doctor.yml))
+Audits repository GitHub Actions workflows for waste, cost inefficiency, and security anti-patterns, generating job summary metrics:
+
+```yaml
+- name: Run CI Doctor
+  uses: depmedicdev-byte/ci-doctor@131c2c50a4487787b4f6ceb3eb3b409198be5b7c # v0.5.0
+  with:
+    directory: ${{ inputs.directory || '.' }}
+    fail-on: ${{ inputs.fail_on || 'never' }}
+    comment: "false"
+    github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ---
