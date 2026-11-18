@@ -123,8 +123,11 @@ PINNED_ACTIONS = {
     "actions/dependency-review-action": "bbc44d14a204704ccc493733616cd1e93a0321ec",
     "oke-py/npm-audit-action": "da53d502b06a0bc95f9ce3c0ebab0c4c713fae4a",
     "mlaplante/githubprreviewhelperextension": "84c713e117ecfb6fa835075bf23f5dc48d6d657b",
-    "sentinelqa-dev/playwright-ci-debugger": "bab033ef5aa646071e0f6bae2a9ca927e14ddbf8",
     "actions/attest-build-provenance": "4d101475d8b20a2381f78447822ac1eab6504dd8",
+    "reviewdog/action-suggester": "fd22a83b1ebc13fd8aee5d57b06793fce6f20fb9",
+    "reviewdog/action-actionlint": "ae857e78c1b42b3d0a49637181b09d3d56d402b4",
+    "reviewdog/action-misspell": "c846b6b0996029d2d39540c8ffebebbd957072db",
+    "rossjrw/pr-preview-action": "873417d2df72380da1f3978378fb58560bcde976",
 }
 
 
@@ -259,6 +262,9 @@ MARKETPLACE_WORKFLOW_FILES = [
     "github-code-review-assistant.yml",
     "playwright-ci-debugger.yml",
     "attest-build-provenance.yml",
+    "reviewdog-suggester.yml",
+    "actionlint-review.yml",
+    "misspell-review.yml",
 ]
 
 
