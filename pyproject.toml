@@ -15,7 +15,7 @@ dependencies = [
     "anthropic>=0.120.2,<3.0",
     "httpx>=0.20.0",
     "google-genai>=2.16.0",
-    "tenacity>=8.0,<10.0",
+    "tenacity>=8.2.3,<9.2.0",
     "python-telegram-bot==22.8",
     "rich>=15.0.0,<16.0",
     "prompt-toolkit>=3.0.53,<4.0",

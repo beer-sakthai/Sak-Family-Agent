@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -246,3 +247,58 @@ def test_workflows_do_not_reference_secrets_context_in_if_conditions() -> None:
                     offenders.append(f"{yml_path.name}:{job_name}:{step_name} (step if)")
 
     assert offenders == [], f"Found invalid secrets.* references in if: conditions: {offenders}"
+
+
+def test_package_json_and_lockfiles_are_valid_json_and_overrides_consistent() -> None:
+    """Ensure all tracked npm manifests and lockfiles parse cleanly and avoid conflicting overrides."""
+    manifest_dirs = [
+        REPO_ROOT / "apps" / "sak_agent_dashboard",
+        REPO_ROOT / "personas" / "saksee" / "skills" / "SakSee-stitch-react-components",
+    ]
+    for pkg_dir in manifest_dirs:
+        pkg_json_path = pkg_dir / "package.json"
+        lock_json_path = pkg_dir / "package-lock.json"
+        assert pkg_json_path.is_file(), f"Missing {pkg_json_path}"
+        assert lock_json_path.is_file(), f"Missing {lock_json_path}"
+
+        pkg_data = json.loads(pkg_json_path.read_text(encoding="utf-8"))
+        lock_data = json.loads(lock_json_path.read_text(encoding="utf-8"))
+        assert isinstance(pkg_data, dict)
+        assert isinstance(lock_data, dict)
+
+        direct_deps = {
+            *(pkg_data.get("dependencies") or {}).keys(),
+            *(pkg_data.get("devDependencies") or {}).keys(),
+        }
+        for override_key, override_val in (pkg_data.get("overrides") or {}).items():
+            if override_key in direct_deps and isinstance(override_val, str):
+                assert override_val == f"${override_key}", (
+                    f"{pkg_json_path}: override for direct dependency '{override_key}' "
+                    f"must use '${override_key}' reference to avoid Dependabot conflicts"
+                )
+
+
+def test_dependabot_config_avoids_known_update_failures() -> None:
+    """Verify .github/dependabot.yml avoids wildcard github-actions groups and ignores incompatible tenacity."""
+    dependabot_path = REPO_ROOT / ".github" / "dependabot.yml"
+    data = yaml.safe_load(dependabot_path.read_text(encoding="utf-8"))
+    assert isinstance(data, dict)
+    updates = data.get("updates") or []
+
+    uv_entry = next((u for u in updates if u.get("package-ecosystem") == "uv"), None)
+    assert uv_entry is not None, "Missing uv ecosystem in dependabot.yml"
+    uv_ignores = uv_entry.get("ignore") or []
+    assert any(item.get("dependency-name") == "tenacity" for item in uv_ignores), (
+        "uv dependabot config must ignore incompatible tenacity >= 9.2.0"
+    )
+
+    gha_entry = next(
+        (u for u in updates if u.get("package-ecosystem") == "github-actions"),
+        None,
+    )
+    assert gha_entry is not None, "Missing github-actions ecosystem in dependabot.yml"
+    for group_cfg in (gha_entry.get("groups") or {}).values():
+        if isinstance(group_cfg, dict):
+            assert "*" not in (group_cfg.get("patterns") or []), (
+                "github-actions dependabot config must not group '*' across all workflows (causes 55m timeout)"
+            )
