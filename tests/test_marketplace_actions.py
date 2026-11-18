@@ -143,6 +143,8 @@ PINNED_ACTIONS = {
     "mtl1979/dependencies-autoupdate": "7230f7c4e5c186601a03e3e9f8d7ad16c6b4e122",
     "ryanclark/lint-action": "316d8bd29e28a292657682f6c6e45ca1dab41496",
     "maxgfr/github-multi-deployments": "ed720d528c8e44c33cca444d1b5375a866ec724c",
+    "oleg-koval/dependabot-lockfile-fixer": "c7002b60b8621ba70c11ec3ab793cc845c1b236d",
+    "oven-sh/setup-bun": "0c5077e51419868618aeaa5fe8019c62421857d6",
 }
 
 
@@ -294,6 +296,7 @@ MARKETPLACE_WORKFLOW_FILES = [
     "ai-pr-reviewer.yml",
     "dependencies-autoupdate.yml",
     "multi-lint-action.yml",
+    "dependabot-lockfile-fixer.yml",
 ]
 
 
