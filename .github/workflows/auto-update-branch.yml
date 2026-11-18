@@ -1,0 +1,99 @@
+name: Auto Update Out-of-Date Branches
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - develop
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+      - labeled
+    branches:
+      - main
+      - staging
+      - develop
+  # zizmor: ignore[dangerous-triggers]
+  issue_comment:
+    types:
+      - created
+  schedule:
+    # Periodically reconcile active pull requests so branches stay up to date
+    - cron: "0 */3 * * *"
+  workflow_dispatch:
+    inputs:
+      base_branch:
+        description: 'Target base branch whose pull requests should be updated (or "all")'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - main
+          - staging
+          - develop
+      pr_number:
+        description: 'Specific PR number to update (optional, default 0 for all eligible)'
+        required: false
+        default: 0
+        type: number
+      dry_run:
+        description: 'Simulate evaluation without requesting branch updates'
+        required: false
+        default: false
+        type: boolean
+
+permissions: {}
+
+concurrency:
+  group: auto-update-branch-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  auto-update:
+    name: Auto Update PR Branches
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11"
+
+      - name: Run Auto-Update PR Branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+          INPUT_BASE_BRANCH: ${{ inputs.base_branch || 'all' }}
+          INPUT_PR_NUMBER: ${{ inputs.pr_number || 0 }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run || false }}
+        run: |
+          set -euo pipefail
+          dry_run_flag=""
+          if [[ "${INPUT_DRY_RUN}" == "true" ]]; then
+            dry_run_flag="--dry-run"
+          fi
+          python3 scripts/auto_update_pr_branch.py \
+            --base-branch "${INPUT_BASE_BRANCH}" \
+            --pr-number "${INPUT_PR_NUMBER}" \
+            ${dry_run_flag}
