@@ -378,16 +378,21 @@ class MemoryStore:
         self,
         limit: int = 100,
         *,
+        kind: str | None = None,
         after_ts: int | None = None,
         before_ts: int | None = None,
     ) -> list[Fact]:
         """Return facts ordered newest-first.
 
+        Optional ``kind`` filters on ``kind``.
         Optional ``after_ts`` / ``before_ts`` are inclusive Unix timestamps
         that filter on ``created_at``.
         """
         clauses: list[str] = []
-        params: list[int] = []
+        params: list[Any] = []
+        if kind is not None:
+            clauses.append("kind = ?")
+            params.append(kind)
         if after_ts is not None:
             clauses.append("created_at >= ?")
             params.append(after_ts)
@@ -401,6 +406,14 @@ class MemoryStore:
             params,
         ).fetchall()
         return [_fact_from_row(r) for r in rows]
+
+    def get_fact(self, fact_id: int) -> Fact | None:
+        """Return a single fact by its primary key ID, or None if not found."""
+        row = self._conn.execute(
+            "SELECT * FROM facts WHERE id = ? LIMIT 1",
+            (fact_id,),
+        ).fetchone()
+        return _fact_from_row(row) if row else None
 
     def get_fact_by_key(self, kind: str, key: str) -> Fact | None:
         row = self._conn.execute(

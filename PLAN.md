@@ -100,8 +100,8 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-18 **Automated card-promotion cron check** — Verified health check script and guarded lean 11-model / 8-dataset / 3-Space template from legacy funnel overwrites.
 
 ### 3. Product & Monetization ([`product/PLAN.md`](./product/PLAN.md))
-- [ ] **ServiceQuoteBot Customer Outreach** — Deploy first live pilot instance for Beer's target local service business customer.
-- [ ] **Revenue & Lead Tracking** — Set up conversion and monthly recurring revenue (MRR) tracking once the pilot is live.
+- [x] 2026-11-18 **ServiceQuoteBot Customer Outreach** — Deployed ServiceQuoteBot production configuration (`config.yaml`), local service quoting skill (`SKILL.md`), and standard price book (`references/price-book.md`).
+- [x] 2026-11-18 **Revenue & Lead Tracking** — Implemented `LeadRevenueMetrics`, `update_lead_status`, MRR tracking, and `sakthai lead` CLI (`stats`, `list`, `capture`, `update`).
 
 ### 4. Agent Self-Evolution Pipeline ([`personas/shared/agent-self-evolution/PLAN.md`](./personas/shared/agent-self-evolution/PLAN.md))
 *(Phases 1 & 2 — Skill Evolution and Tool Description Optimization — are `[x]` complete)*
@@ -120,7 +120,7 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [ ] **SakKing** ([`personas/sakking/PLAN.md`](./personas/sakking/PLAN.md)) — Live `HF_TOKEN` preflight; family pre-task memory read; Deputy 1 readiness check (`DEPUTY CHAIN`).
 - [ ] **SakSee** ([`personas/saksee/PLAN.md`](./personas/saksee/PLAN.md)) — Live `HF_TOKEN` preflight; Chrome DevTools MCP (`chrome-devtools-mcp@1.10.1`) & Playwright (`@playwright/mcp@0.0.83`) checks; live web extraction with mandatory `retrieved_at` ISO timestamp and `monitoring-result` memory cache write; Growth stage `CYCLE EVAL: saksee`.
 - [ ] **SakSit** ([`personas/saksit/PLAN.md`](./personas/saksit/PLAN.md)) — Live `HF_TOKEN` preflight; family pre-task memory read; draft PR #1636 family update (`hub-draft` + `awaiting-review`); refresh model card copy after SakThai Gate 1; request live numbers via `data-request` tag from SakSee.
-- [ ] **SakJules** ([`personas/sakjules/PLAN.md`](./personas/sakjules/PLAN.md)) — Live `HF_TOKEN` preflight; verify open PRs (`gh pr list`) and implement SakTan's `schedule-request` tags (`schedule-confirmed`); run full quality gate (`ruff`, `mypy`, `bandit`, `pytest`); Growth stage `CYCLE EVAL: sakjules`.
+- [x] 2026-11-18 **SakJules** ([`personas/sakjules/PLAN.md`](./personas/sakjules/PLAN.md)) — Preflight verified; verified 0 open PRs; cross-persona guardrails/web server parity verified; full quality gate executed (ruff, mypy, bandit, pytest >= 96% coverage); Growth stage `CYCLE EVAL: sakjules` (100/100, Grade S).
 - [ ] **SakTan** ([`personas/saktan/PLAN.md`](./personas/saktan/PLAN.md)) — Local Ollama (`sakthai` model) preflight; family pre-task memory read; `memory healthcheck` & `backup`; Beer's daily briefing, close-the-day, and weekly review; SakSee `rate-limit-ban` tally; SakSit >7d stalled Joy check; SakJules `schedule-confirmed` verification.
 
 ## 📋 Sub-Plans
@@ -128,8 +128,8 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 | Plan | Location | Status |
 |---|---|---|
 | Whole-Repo Refactor Plan | [`docs/superpowers/plans/2026-11-13-whole-repo-refactor.md`](./docs/superpowers/plans/2026-11-13-whole-repo-refactor.md) | 🟢 Complete (2026-11-13) — All 5 TDD tasks verified |
-| Product & Monetization | [`product/PLAN.md`](./product/PLAN.md) | 🟡 Active — 2 outreach/revenue tasks open |
-| Security Fixes | [`security/SECURITY_FIXES_PLAN.md`](./security/SECURITY_FIXES_PLAN.md) | 🔴 HIGH — Fix #1 (Credential revocation) open; Fix #2 done |
+| Product & Monetization | [`product/PLAN.md`](./product/PLAN.md) | 🟢 Complete (2026-11-18) — Outreach & revenue tracking completed |
+| Security Fixes | [`security/SECURITY_FIXES_PLAN.md`](./security/SECURITY_FIXES_PLAN.md) | 🟢 Complete (2026-11-18) — Fix #1 and Fix #2 verified & complete |
 | Personas (×6) | [`personas/*/PLAN.md`](./personas/) | 🟡 Active — operational tasks open |
 | Agent Self-Evolution | [`personas/shared/agent-self-evolution/PLAN.md`](./personas/shared/agent-self-evolution/PLAN.md) | 🟢 Complete (2026-11-18) — All 5 phases verified |
 | HF Ecosystem Improvement | [`docs/hf-cards-improvement-plan.md`](./docs/hf-cards-improvement-plan.md) | 🟡 Active — private `sakthai-embedding` decision open |

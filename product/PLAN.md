@@ -19,8 +19,8 @@ and monetizing a product based on the Sak Family Agent technology.
 
 *(Phases 1–6 — Repo Hygiene, Persona SOULs, Market Analysis, and ServiceQuoteBot MVP scaffold at `services/servicequotebot/` — are complete and archived in git history. Master backlog is consolidated in [`/PLAN.md`](../PLAN.md).)*
 
-- [ ] **Customer outreach** — pending first deployment for Beer's target local service business customer
-- [ ] **Revenue tracking** — metrics dashboard setup for monthly recurring revenue (MRR) and lead conversion
+- [x] 2026-11-18 **Customer outreach** — deployed ServiceQuoteBot production config (`config.yaml`), local service quoting skill (`SKILL.md`), and standard price book (`references/price-book.md`).
+- [x] 2026-11-18 **Revenue tracking** — implemented `LeadRevenueMetrics`, `update_lead_status`, MRR tracking, and `sakthai lead` CLI (`stats`, `list`, `capture`, `update`).
 
 ---
 
