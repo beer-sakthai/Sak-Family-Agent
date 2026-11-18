@@ -38,6 +38,14 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Install black
+        run: uv pip install --system black==25.1.0
+
       - name: Linting Action
         uses: ryanclark/lint-action@316d8bd29e28a292657682f6c6e45ca1dab41496 # v1.15.0
         with:
