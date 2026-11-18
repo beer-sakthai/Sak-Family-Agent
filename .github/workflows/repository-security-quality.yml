@@ -59,7 +59,7 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
-        run: uv sync --locked --all-extras
+        run: uv sync --locked --all-extras --dev
 
       - name: Validate shared skill frontmatter
         run: uv run --locked sakthai skills validate --source library
@@ -100,7 +100,7 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
-        run: uv sync --locked --all-extras
+        run: uv sync --locked --all-extras --dev
 
       - name: Run Ruff checks
         run: |

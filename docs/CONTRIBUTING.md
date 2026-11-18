@@ -36,7 +36,7 @@ This project uses `uv` for dependency management. See `skills/sakthai-coding-uv/
 ```bash
 cp .env.example .env          # then fill in ANTHROPIC_API_KEY
 uv sync --extra dev           # Install project and development dependencies
-uv sync --all-extras          # Install all optional dependencies
+uv sync --all-extras --dev          # Install all optional dependencies
 ```
 
 Verify your environment with `sakthai doctor` and `sakthai setup`.

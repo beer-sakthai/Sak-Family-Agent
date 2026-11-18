@@ -165,7 +165,7 @@ flowchart TD
 ```bash
 cp .env.example .env
 # Edit .env with your credentials (ANTHROPIC_API_KEY, HF_TOKEN, etc.)
-uv sync --all-extras
+uv sync --all-extras --dev
 ```
 
 ### Essential Commands
@@ -222,7 +222,7 @@ scripts/                       Repository and maintenance tooling
 Install dependencies and run validation checks:
 
 ```bash
-uv sync --all-extras
+uv sync --all-extras --dev
 make test                                      # run full pytest suite (enforces >=96% coverage)
 make lint                                      # run Ruff linter & formatter checks
 uv run mypy personas/sakthai                   # run strict type checker

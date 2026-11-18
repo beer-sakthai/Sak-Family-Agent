@@ -6,7 +6,7 @@ Purpose
 
 1) Build, test, and lint (commands)
 - Install (preferred, reproducible):
-  - uv sync --all-extras
+  - uv sync --all-extras --dev
   - or: pip install -e ".[dev]" (dev toolchain)
   - optional dashboard extras: pip install -e ".[dashboard]"
 
