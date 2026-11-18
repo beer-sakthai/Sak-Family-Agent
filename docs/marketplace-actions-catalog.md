@@ -16,7 +16,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 
 ---
 
-### 2. One Hundred and Two Verified Marketplace Actions
+### 2. One Hundred and Nine Verified Marketplace Actions
 
 | Action Name | Upstream Repository | Tag | Immutable Commit SHA | Required Permissions | Purpose |
 |---|---|---|---|---|---|
@@ -122,6 +122,13 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **CI Doctor** | [`depmedicdev-byte/ci-doctor`](https://github.com/depmedicdev-byte/ci-doctor) | `v0.5.0` | `131c2c50a4487787b4f6ceb3eb3b409198be5b7c` | `contents: read` | Audits GitHub Actions workflows for waste, cost, and security gaps with step summary metrics |
 | **Workflow Doctor** | [`iamarunbrahma/workflow-doctor`](https://github.com/iamarunbrahma/workflow-doctor) | `v1.0.0` | `c7d9497acff1acb398ed1da76add1cc92536afd2` | `contents: read` | Audits GitHub Actions workflows for security, reliability, cost, and maintainability with JSON reporting |
 | **Agent Skills Doctor** | [`ravi-arnan/agent-skills-doctor`](https://github.com/ravi-arnan/agent-skills-doctor) | `v1.2.0` | `bfe08bdbe5ff00ded2a3d8f4afdab47282319826` | `contents: read` | Zero-dependency health check, linter, and token auditor for AI agent skills across agent harnesses |
+| **Auto Close Fixed Issues** | [`wow-actions/auto-close-fixed-issues`](https://github.com/wow-actions/auto-close-fixed-issues) | `v1.1.0` | `d87a73261d3881451f5b35a80cfe0eaed3e95931` | `contents: read`, `issues: write`, `pull-requests: read` | Automatically closes issues fixed in pull requests targeting non-default branches |
+| **npm Audit Fix** | [`grandmasterdev/github-action-npm-audit-fix`](https://github.com/grandmasterdev/github-action-npm-audit-fix) | `v1.1.0` | `acb53f70fb4406f6b03e9df77ab5a76611b024b5` | `contents: write`, `pull-requests: write` | Attempts automated npm security audit fix and creates update branches / reports |
+| **Clean Engine** | [`houselearning/Clean`](https://github.com/houselearning/Clean) | `1.0.0` | `837a968808c96d6c317449b7e9e2bc75af4e5832` | `contents: write`, `pull-requests: write`, `issues: write` | Creates draft PRs, applies issue fixes, and validates pull requests for typos |
+| **Dependabot Risk Report** | [`DigiCatalyst-Systems/dependabot-risk`](https://github.com/DigiCatalyst-Systems/dependabot-risk) | `v1.2.1` | `b52f928fe6f146f7aa29d5c820d7cd1cc57ece41` | `contents: read`, `pull-requests: write`, `issues: write` | Ranks Dependabot and Renovate PRs by release notes risk rather than semver |
+| **PR-Agent Pro AI Reviewer** | [`meanusarcanus/ai-pr-reviewer-action`](https://github.com/meanusarcanus/ai-pr-reviewer-action) | `v1.0.0` | `9a2e09833376f54db095b71ca638d2204485c31a` | `contents: read`, `pull-requests: write`, `issues: write` | Automated AI pull request code review, security leak detection, and diff suggestions |
+| **Dependencies Autoupdate** | [`mtl1979/dependencies-autoupdate`](https://github.com/mtl1979/dependencies-autoupdate) | `v1.2.3` | `7230f7c4e5c186601a03e3e9f8d7ad16c6b4e122` | `contents: write`, `pull-requests: write` | Language-agnostic automated dependency updater with custom branch and PR generation |
+| **Multi-Linter Engine** | [`ryanclark/lint-action`](https://github.com/ryanclark/lint-action) | `v1.15.0` | `316d8bd29e28a292657682f6c6e45ca1dab41496` | `contents: write`, `checks: write`, `pull-requests: write` | Multi-language linter runner and auto-fixer supporting Python, JavaScript, and more |
 
 
 ---
@@ -1684,6 +1691,99 @@ Runs zero-dependency health checks, linting, and token budgeting across AI agent
   with:
     project: ${{ inputs.project || '.' }}
     no-global: ${{ inputs.no_global || 'true' }}
+```
+
+### 3.123 Auto Close Fixed Issues Action ([`.github/workflows/auto-close-fixed-issues.yml`](../.github/workflows/auto-close-fixed-issues.yml))
+Automatically closes issues fixed in pull requests targeting non-default branches with customized closing comments:
+
+```yaml
+- name: Auto Close Fixed Issues
+  uses: wow-actions/auto-close-fixed-issues@d87a73261d3881451f5b35a80cfe0eaed3e95931 # v1.1.0
+  with:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    comment: ${{ inputs.comment || 'This issue was closed by #{{ pr }}.' }}
+```
+
+### 3.124 npm Audit Fix Action ([`.github/workflows/npm-audit-fix.yml`](../.github/workflows/npm-audit-fix.yml))
+Runs automated vulnerability remediation via npm audit fix and creates automated fix branches or reports:
+
+```yaml
+- name: Run npm Audit Fix
+  uses: grandmasterdev/github-action-npm-audit-fix@acb53f70fb4406f6b03e9df77ab5a76611b024b5 # v1.1.0
+  with:
+    working-dir: ${{ inputs.working_dir || 'apps/sak_agent_dashboard' }}
+    github-user: "github-actions[bot]"
+    github-email: "github-actions[bot]@users.noreply.github.com"
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.125 Clean Engine Action ([`.github/workflows/clean-engine.yml`](../.github/workflows/clean-engine.yml))
+Executes automated issue fixes, draft PR generation, and PR typo checking:
+
+```yaml
+- name: Clean — Automated Draft PR & Fix Engine
+  uses: houselearning/Clean@837a968808c96d6c317449b7e9e2bc75af4e5832 # 1.0.0
+  with:
+    mode: ${{ inputs.mode || 'typo-check' }}
+    base-branch: ${{ inputs.base_branch || 'main' }}
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.126 Dependabot Risk Report Action ([`.github/workflows/dependabot-risk-report.yml`](../.github/workflows/dependabot-risk-report.yml))
+Analyzes release notes and changelogs to evaluate real breaking and security risk for dependency updates:
+
+```yaml
+- name: Run Dependabot Risk Report
+  uses: DigiCatalyst-Systems/dependabot-risk@b52f928fe6f146f7aa29d5c820d7cd1cc57ece41 # v1.2.1
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    ecosystem: ${{ inputs.ecosystem || 'auto' }}
+    post-comment: "true"
+    fail-on: ${{ inputs.fail_on || 'none' }}
+```
+
+### 3.127 PR-Agent Pro AI Reviewer Action ([`.github/workflows/ai-pr-reviewer.yml`](../.github/workflows/ai-pr-reviewer.yml))
+Performs automated AI-driven pull request reviews, security leak auditing, and one-click diff suggestions:
+
+```yaml
+- name: PR-Agent Pro — Automated AI PR Reviewer & Security Auditor
+  uses: meanusarcanus/ai-pr-reviewer-action@9a2e09833376f54db095b71ca638d2204485c31a # v1.0.0
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+    model: ${{ inputs.model || 'gpt-4o-mini' }}
+    fail_on_security_risk: ${{ inputs.fail_on_security_risk || 'false' }}
+```
+
+### 3.128 Dependencies Autoupdate Action ([`.github/workflows/dependencies-autoupdate.yml`](../.github/workflows/dependencies-autoupdate.yml))
+Language-agnostic dependency updater that updates lockfiles, runs checks, and creates automated pull requests:
+
+```yaml
+- name: Dependencies Autoupdate with Custom branch and fixes
+  uses: mtl1979/dependencies-autoupdate@7230f7c4e5c186601a03e3e9f8d7ad16c6b4e122 # v1.2.3
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    update-command: ${{ inputs.update_command || 'uv lock --upgrade' }}
+    pr-branch: "dependencies-autoupdate"
+    commit-message: "chore(deps): autoupdate project dependencies"
+    pr-title: "chore(deps): autoupdate project dependencies"
+    pr-body: "Automated dependency updates triggered via mtl1979/dependencies-autoupdate."
+```
+
+### 3.129 Multi-Linter Action ([`.github/workflows/multi-lint-action.yml`](../.github/workflows/multi-lint-action.yml))
+Runs multi-language linters across codebases with optional automated code style fixes:
+
+```yaml
+- name: Linting Action
+  uses: ryanclark/lint-action@316d8bd29e28a292657682f6c6e45ca1dab41496 # v1.15.0
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    continue_on_error: "true"
+    auto_fix: ${{ inputs.auto_fix || 'false' }}
+    black: "true"
+    black_dir: "personas/sakthai"
+    flake8: "false"
+    mypy: "false"
 ```
 
 ---

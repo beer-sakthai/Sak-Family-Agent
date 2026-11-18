@@ -1,0 +1,50 @@
+name: Multi-Linter Action
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  workflow_dispatch:
+    inputs:
+      auto_fix:
+        description: "Automatically fix lint errors"
+        required: false
+        default: "false"
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Run Multi-Linter
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      checks: write
+      pull-requests: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Linting Action
+        uses: ryanclark/lint-action@316d8bd29e28a292657682f6c6e45ca1dab41496 # v1.15.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          continue_on_error: "true"
+          auto_fix: ${{ inputs.auto_fix || 'false' }}
+          black: "true"
+          black_dir: "personas/sakthai"
+          flake8: "false"
+          mypy: "false"

@@ -190,6 +190,7 @@ class TestCLI(unittest.TestCase):
         """Verify verify_benchmark_baselines execution and --summary-file output generation."""
         import json
         from unittest.mock import patch
+
         import verify
 
         passed, metrics = verify.verify_benchmark_baselines()

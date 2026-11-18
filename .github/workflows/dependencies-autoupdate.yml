@@ -1,0 +1,52 @@
+name: Dependencies Autoupdate
+
+on:
+  workflow_dispatch:
+    inputs:
+      update_command:
+        description: "Command to update dependencies"
+        required: false
+        default: "uv lock --upgrade"
+        type: string
+  schedule:
+    - cron: "0 7 * * 1"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  autoupdate:
+    name: Dependencies Autoupdate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Dependencies Autoupdate with Custom branch and fixes
+        uses: mtl1979/dependencies-autoupdate@7230f7c4e5c186601a03e3e9f8d7ad16c6b4e122 # v1.2.3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          update-command: ${{ inputs.update_command || 'uv lock --upgrade' }}
+          pr-branch: "dependencies-autoupdate"
+          commit-message: "chore(deps): autoupdate project dependencies"
+          pr-title: "chore(deps): autoupdate project dependencies"
+          pr-body: "Automated dependency updates triggered via mtl1979/dependencies-autoupdate."
