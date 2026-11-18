@@ -223,3 +223,23 @@ class TestConnectServersMocked:
             assert tools == []
         validate.assert_called_once()
         MockClient.assert_not_called()
+
+    def test_remote_server_passes_headers_to_client(self) -> None:
+        spec = MCPServerSpec(
+            name="stepsecurity",
+            url="https://agent.api.stepsecurity.io/v1/mcp?customer=beer-sakthai",
+            headers={"Authorization": "Bearer test-token"},
+        )
+        mock_client = MagicMock()
+        mock_client.as_tools.return_value = []
+        with (
+            patch("sakthai.mcp.manager.RemoteMCPClient", return_value=mock_client) as MockRemote,
+            connect_servers([spec]) as tools,
+        ):
+            assert tools == []
+        MockRemote.assert_called_once_with(
+            "https://agent.api.stepsecurity.io/v1/mcp?customer=beer-sakthai",
+            name="stepsecurity",
+            headers={"Authorization": "Bearer test-token"},
+            timeout=None,
+        )

@@ -1,4 +1,12 @@
 {
   "_comment": "SakJules — Master of Automation & CI/CD. Load with SAKTHAI_MCP_CONFIG=personas/sakjules/config/mcp.json.",
-  "mcpServers": {}
+  "mcpServers": {
+    "stepsecurity": {
+      "url": "https://agent.api.stepsecurity.io/v1/mcp?customer=beer-sakthai",
+      "headers": {
+        "Authorization": "Bearer ${STEP_SECURITY_API_KEY}"
+      }
+    }
+  }
 }
+

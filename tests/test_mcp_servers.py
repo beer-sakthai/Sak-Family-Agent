@@ -288,3 +288,26 @@ def test_parse_local_type_maps_to_stdio() -> None:
     assert len(specs) == 1
     assert specs[0].transport == "stdio"
     assert specs[0].tools == ["compile", "audit"]
+
+
+def test_parse_headers_with_env_expansion(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("STEP_SECURITY_API_KEY", "step_mock_token_12345")
+    data = {
+        "mcpServers": {
+            "stepsecurity": {
+                "url": "https://agent.api.stepsecurity.io/v1/mcp?customer=beer-sakthai",
+                "headers": {
+                    "Authorization": "Bearer ${STEP_SECURITY_API_KEY}",
+                    "X-Custom-Header": "constant-value",
+                },
+            }
+        }
+    }
+    specs = parse_mcp_servers(data)
+    assert len(specs) == 1
+    spec = specs[0]
+    assert spec.name == "stepsecurity"
+    assert spec.url == "https://agent.api.stepsecurity.io/v1/mcp?customer=beer-sakthai"
+    assert spec.transport == "sse"
+    assert spec.headers["Authorization"] == "Bearer step_mock_token_12345"
+    assert spec.headers["X-Custom-Header"] == "constant-value"

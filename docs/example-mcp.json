@@ -24,6 +24,13 @@
       "url": "https://mcp.feather.so",
       "transport": "sse",
       "tools": ["list_blogs", "create_post"]
+    },
+    {
+      "name": "stepsecurity",
+      "url": "https://agent.api.stepsecurity.io/v1/mcp?customer=beer-sakthai",
+      "headers": {
+        "Authorization": "Bearer ${STEP_SECURITY_API_KEY}"
+      }
     }
   ]
 }
