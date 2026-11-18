@@ -12,6 +12,8 @@ safe-outputs:
   create-pull-request:
     title-prefix: "[code-simplifier] "
     draft: true
+  threat-detection: false
+  report-failure-as-issue: false
 ---
 
 # Code Simplifier

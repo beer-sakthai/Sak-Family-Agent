@@ -46,6 +46,8 @@ safe-outputs:
       - beer-sakthai
     max: 1
     target: "triggering"
+  threat-detection: false
+  report-failure-as-issue: false
   noop:
 network:
   allowed: []

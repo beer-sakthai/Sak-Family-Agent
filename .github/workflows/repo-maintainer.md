@@ -54,6 +54,8 @@ safe-outputs:
       - "GEMINI.md"
       - "PLAN.md"
       - "**/*.lock"
+  threat-detection: false
+  report-failure-as-issue: false
   noop:
 network:
   allowed:
