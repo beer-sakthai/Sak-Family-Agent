@@ -16,7 +16,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 
 ---
 
-### 2. Ninety-Two Verified Marketplace Actions
+### 2. Ninety-Six Verified Marketplace Actions
 
 | Action Name | Upstream Repository | Tag | Immutable Commit SHA | Required Permissions | Purpose |
 |---|---|---|---|---|---|
@@ -115,6 +115,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **Reviewdog Code Suggestions** | [`reviewdog/action-suggester`](https://github.com/reviewdog/action-suggester) | `v1.27.1` | `fd22a83b1ebc13fd8aee5d57b06793fce6f20fb9` | `contents: read`, `pull-requests: write` | Suggests code formatting and linting changes directly via GitHub PR multi-line code suggestions |
 | **Actionlint Workflow Review** | [`reviewdog/action-actionlint`](https://github.com/reviewdog/action-actionlint) | `v1.84.1` | `ae857e78c1b42b3d0a49637181b09d3d56d402b4` | `contents: read`, `pull-requests: write` | Automated static analysis and syntax code review of GitHub Actions workflows on PRs |
 | **Misspell Code Review** | [`reviewdog/action-misspell`](https://github.com/reviewdog/action-misspell) | `v1.31.0` | `c846b6b0996029d2d39540c8ffebebbd957072db` | `contents: read`, `pull-requests: write` | Automated detection of spelling mistakes in code, docstrings, and markdown with inline PR review comments |
+| **Anchore SBOM Action** | [`anchore/sbom-action`](https://github.com/anchore/sbom-action) | `v0.24.3` | `66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c` | `contents: read` | Generates comprehensive Software Bill of Materials (SBOM) in SPDX/CycloneDX JSON using Syft |
 
 
 ---
@@ -1583,6 +1584,20 @@ Automated spell-checking across codebase files and documentation with inline PR 
     filter_mode: added
     fail_level: none
     exclude: "./.git/*,./.venv/*,./uv.lock,./apps/sak_agent_dashboard/package-lock.json"
+```
+
+### 3.116 Anchore SBOM Action ([`.github/workflows/anchore-sbom.yml`](../.github/workflows/anchore-sbom.yml))
+Generates comprehensive Software Bill of Materials (SBOM) in standard SPDX JSON format using Syft, with automated artifact upload:
+
+```yaml
+- name: Anchore SBOM Action
+  uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+  with:
+    path: "."
+    format: "spdx-json"
+    output-file: "sbom.spdx.json"
+    upload-artifact: "true"
+    artifact-name: "anchore-spdx-sbom"
 ```
 
 ---
