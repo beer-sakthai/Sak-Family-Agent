@@ -26,3 +26,6 @@ jobs:
 
       - name: Run update-pr-reminder-action
         uses: Bhupesh-V/update-pr-reminder-action@9ccd3478ba932042624093b7153300ce63a68b66 # v1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
