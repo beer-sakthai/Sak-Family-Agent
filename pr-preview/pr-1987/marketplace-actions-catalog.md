@@ -130,6 +130,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **Dependencies Autoupdate** | [`mtl1979/dependencies-autoupdate`](https://github.com/mtl1979/dependencies-autoupdate) | `v1.2.3` | `7230f7c4e5c186601a03e3e9f8d7ad16c6b4e122` | `contents: write`, `pull-requests: write` | Language-agnostic automated dependency updater with custom branch and PR generation |
 | **Multi-Linter Engine** | [`ryanclark/lint-action`](https://github.com/ryanclark/lint-action) | `v1.15.0` | `316d8bd29e28a292657682f6c6e45ca1dab41496` | `contents: write`, `checks: write`, `pull-requests: write` | Multi-language linter runner and auto-fixer supporting Python, JavaScript, and more |
 | **GitHub Multi Deployments** | [`maxgfr/github-multi-deployments`](https://github.com/maxgfr/github-multi-deployments) | `v1.8.11` | `ed720d528c8e44c33cca444d1b5375a866ec724c` | `deployments: write`, `contents: read` | Manages deployment states across multiple environments and PR preview lifecycles |
+| **Dependabot Lockfile Fixer** | [`oleg-koval/dependabot-lockfile-fixer`](https://github.com/oleg-koval/dependabot-lockfile-fixer) | `v1.0.1` | `c7002b60b8621ba70c11ec3ab793cc845c1b236d` | `contents: write`, `pull-requests: write` | Resolves lockfile merge conflicts in Dependabot PRs by regenerating manager lockfiles |
 
 
 ---
@@ -1802,6 +1803,16 @@ Manages multi-environment deployment states, auto-inactivation of historical dep
     deployment_id: ${{ inputs.deployment_id }}
     status: ${{ inputs.status || 'success' }}
     desc: ${{ inputs.desc || 'Multi-target environment deployment' }}
+```
+
+### 3.131 Dependabot Lockfile Fixer ([`.github/workflows/dependabot-lockfile-fixer.yml`](../.github/workflows/dependabot-lockfile-fixer.yml))
+Resolves lockfile merge conflicts on Dependabot PR branches by rebasing/merging the base branch, regenerating the package manager lockfile, committing, and pushing back to the PR branch:
+
+```yaml
+- name: Fix lockfiles
+  uses: oleg-koval/dependabot-lockfile-fixer@c7002b60b8621ba70c11ec3ab793cc845c1b236d # v1.0.1
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ---
