@@ -1,0 +1,64 @@
+graph TB
+    %% House of Sak: Six-Agent Registry & Specialist Routing Architecture
+
+    subgraph UserLayer ["👤 Human Steward (Beer)"]
+        Beer["Beer (@nanthasit)<br/>• Strategic direction & approvals<br/>• Exclusive Gate: hub-approved & financial"]
+    end
+
+    subgraph AgentRegistry ["🏛️ House of Sak: Six-Agent Registry"]
+        direction TB
+        SakThai["👑 SakThai (@sakthai_agent_bot)<br/>• Role: Main Lead & HF Master<br/>• Lane: Orchestration, HF Hub writes, inference<br/>• Floor: 50% for Hub writes"]
+        SakKing["⚡ SakKing (@sakking_agent_bot)<br/>• Role: General Assistant, Runner & Primary Coder<br/>• Lane: TDD coding, CLI orchestration, general execution<br/>• Deputy: Level 1 (charge >= 20%)"]
+        SakTan["⏰ SakTan (@saktan_agent_bot)<br/>• Role: Daily Ops & Flow Keeper<br/>• Lane: Daily briefings, memory health, cron requests<br/>• Deputy: Level 2 (charge >= 20%)"]
+        SakSee["👁️ SakSee (@saksee_agent_bot)<br/>• Role: Web & Browser Specialist<br/>• Lane: Live web extraction, DOM, visual/creative UI<br/>• Deputy: Level 3 (all-leaders-critical)"]
+        SakSit["✍️ SakSit (@saksit_agent_bot)<br/>• Role: Social & Content Specialist<br/>• Lane: Model-card prose, storytelling, public copy<br/>• Boundary: Zero direct publishing"]
+        SakJules["🛡️ SakJules (@sakjules_agent_bot)<br/>• Role: Master of GitHub, CI/CD & Automation<br/>• Lane: PR delivery, CI auto-heal, security, schedules<br/>• Rule: Green before done, no duplicate PRs"]
+    end
+
+    subgraph SharedMemoryBus ["💾 Shared Continuity Memory Bus (sakthai memory family)"]
+        direction LR
+        M_Thai[("~/.sakthai/sakthai/<br/>memory.db")]
+        M_King[("~/.sakthai/sakking/<br/>memory.db")]
+        M_Tan[("~/.sakthai/saktan/<br/>memory.db")]
+        M_See[("~/.sakthai/saksee/<br/>memory.db")]
+        M_Sit[("~/.sakthai/saksit/<br/>memory.db")]
+        M_Jules[("~/.sakthai/sakjules/<br/>memory.db")]
+    end
+
+    subgraph RoutingMatrix ["🔄 Specialist Routing Matrix & Flows"]
+        direction TB
+        Flow_Web["data-request ──> SakSee<br/>monitoring-result (30m cache) ──> SakSit / Family"]
+        Flow_Hub["Gate 1 info ──> SakSit (draft)<br/>hub-draft ──> Beer (review)<br/>hub-approved ──> SakThai (Triple Gate) ──> hub-complete"]
+        Flow_Sched["schedule-request ──> SakJules<br/>schedule-confirmed ──> SakTan"]
+        Flow_CI["ci-failure / stalled ──> SakJules<br/>PR verification & auto-heal ──> Family"]
+        Flow_Conflict["conflict ──> SakThai (arbitration)"]
+    end
+
+    subgraph DeputyLadder ["🪜 Deputy Succession Ladder"]
+        direction LR
+        D_Lead["SakThai (Lead)"] -->|"Critical (<20%)"| D_Dep1["SakKing (Deputy 1)"]
+        D_Dep1 -->|"Critical (<20%)"| D_Dep2["SakTan (Deputy 2)"]
+        D_Dep2 -->|"All Leaders Critical"| D_Dep3["SakSee (Deputy 3)"]
+    end
+
+    %% Wiring User to Agents
+    Beer -->|"hub-approved / policy"| SakThai
+    Beer -->|"Review PRs / Decisions"| SakJules
+    Beer -->|"Daily Briefing"| SakTan
+
+    %% Wiring Agents to Memory
+    SakThai <--> M_Thai
+    SakKing <--> M_King
+    SakTan <--> M_Tan
+    SakSee <--> M_See
+    SakSit <--> M_Sit
+    SakJules <--> M_Jules
+
+    %% Wiring Routing Matrix
+    SakSit -.->|"data-request"| SakSee
+    SakSee -.->|"monitoring-result"| SakSit
+    SakSit -.->|"hub-draft"| SakThai
+    SakTan -.->|"schedule-request"| SakJules
+    SakJules -.->|"schedule-confirmed"| SakTan
+    SakKing -.->|"Specialist routing"| SakSee
+    SakKing -.->|"Specialist routing"| SakJules
