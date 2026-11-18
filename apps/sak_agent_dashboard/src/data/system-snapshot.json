@@ -1,7 +1,7 @@
 {
   "meta": {
-    "source_commit": "e8b507d",
-    "source_date": "2026-11-18T06:34:39+00:00",
+    "source_commit": "63b01cc",
+    "source_date": "2026-11-18T15:00:15+00:00",
     "generator": "scripts/gen_system_snapshot.py"
   },
   "personas": [
@@ -82,20 +82,14 @@
     {
       "name": "agent",
       "kind": "package",
-      "files": 19,
-      "lines": 6523
+      "files": 23,
+      "lines": 7561
     },
     {
       "name": "agent_platform",
       "kind": "package",
       "files": 8,
       "lines": 1090
-    },
-    {
-      "name": "agent_workflow",
-      "kind": "package",
-      "files": 8,
-      "lines": 2134
     },
     {
       "name": "auth",
@@ -106,8 +100,8 @@
     {
       "name": "cli",
       "kind": "package",
-      "files": 14,
-      "lines": 3165
+      "files": 21,
+      "lines": 4286
     },
     {
       "name": "client",
@@ -154,8 +148,8 @@
     {
       "name": "lead",
       "kind": "package",
-      "files": 2,
-      "lines": 43
+      "files": 3,
+      "lines": 253
     },
     {
       "name": "learn",
@@ -173,7 +167,7 @@
       "name": "memory",
       "kind": "package",
       "files": 7,
-      "lines": 1656
+      "lines": 1669
     },
     {
       "name": "sakking_skills",
@@ -368,6 +362,32 @@
         ]
       },
       {
+        "name": "dashboard",
+        "help": "Manage, test, build, and run the Next.js agent dashboard.",
+        "commands": [
+          {
+            "name": "build",
+            "help": "Build the production Next.js dashboard bundle."
+          },
+          {
+            "name": "dev",
+            "help": "Start the Next.js development server for the dashboard."
+          },
+          {
+            "name": "gen-types",
+            "help": "Regenerate TypeScript data types from agent schemas."
+          },
+          {
+            "name": "install",
+            "help": "Install Node.js dependencies for the dashboard."
+          },
+          {
+            "name": "test",
+            "help": "Run vitest and workflow tests in the dashboard."
+          }
+        ]
+      },
+      {
         "name": "doctor",
         "help": "Report environment, paths, memory, and credential status."
       },
@@ -376,12 +396,20 @@
         "help": "Inspect local model evaluation / MLOps metrics and persona readiness.",
         "commands": [
           {
+            "name": "bench",
+            "help": "Run model evaluation benchmark via scripts/eval/run_bench.py."
+          },
+          {
             "name": "personas",
             "help": "Audit the 6 working files, v9 self-eval rubric, intro line, and skills for each persona."
           },
           {
             "name": "summary",
             "help": "Summarize latency, tokens, and error rate over recent agent runs."
+          },
+          {
+            "name": "tasks",
+            "help": "List registered lm-eval task definitions in evaluation_tasks/."
           }
         ]
       },
@@ -414,6 +442,28 @@
           {
             "name": "info",
             "help": "Show HF model info for REPO_ID."
+          }
+        ]
+      },
+      {
+        "name": "lead",
+        "help": "Manage customer leads, quoting status, and revenue tracking.",
+        "commands": [
+          {
+            "name": "capture",
+            "help": "Capture a new customer lead."
+          },
+          {
+            "name": "list",
+            "help": "List customer leads stored in memory."
+          },
+          {
+            "name": "stats",
+            "help": "Show lead conversion and revenue metrics (pipeline, won revenue, MRR)."
+          },
+          {
+            "name": "update",
+            "help": "Update lead status, deal value, or MRR."
           }
         ]
       },
@@ -544,6 +594,24 @@
         "help": "Recall facts (and observations) matching QUERY, or filter by --tag."
       },
       {
+        "name": "repo",
+        "help": "Discover, inspect, and run repository-wide scripts and tasks.",
+        "commands": [
+          {
+            "name": "list",
+            "help": "List registered repository scripts and tasks."
+          },
+          {
+            "name": "map",
+            "help": "Show top-level repository areas and CLI task coverage."
+          },
+          {
+            "name": "run",
+            "help": "Run a registered repository task by name."
+          }
+        ]
+      },
+      {
         "name": "run",
         "help": "Run TASK through the standalone SakThai agent."
       },
@@ -622,8 +690,48 @@
         ]
       },
       {
+        "name": "telegram",
+        "help": "Manage Telegram bot gateways, message sending, and VM agents.",
+        "commands": [
+          {
+            "name": "send",
+            "help": "Send an ad-hoc message or alert through Telegram."
+          },
+          {
+            "name": "serve",
+            "help": "Run the live Telegram bot gateway."
+          },
+          {
+            "name": "setup-vm",
+            "help": "Provision systemd / background services for VM Telegram agents."
+          },
+          {
+            "name": "verify",
+            "help": "Verify live status of background VM Telegram bot agents."
+          }
+        ]
+      },
+      {
         "name": "tools",
         "help": "List the built-in agent/MCP tools."
+      },
+      {
+        "name": "train",
+        "help": "Inspect model training runs, prepare datasets, and launch fine-tuning.",
+        "commands": [
+          {
+            "name": "dataset",
+            "help": "Build and format fine-tuning datasets via scripts/dataset_prep/build_v12.py."
+          },
+          {
+            "name": "list",
+            "help": "List available model fine-tuning runs and datasets under training/."
+          },
+          {
+            "name": "sft",
+            "help": "Launch SFT QLoRA fine-tuning run via scripts/train/sft_qlora.py."
+          }
+        ]
       },
       {
         "name": "web",
@@ -646,6 +754,18 @@
     ]
   },
   "workflows": [
+    {
+      "file": "actionlint-review.yml",
+      "name": "Actionlint Workflow Code Review",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Actionlint Code Review"
+      ]
+    },
     {
       "file": "actions-usage-audit.yml",
       "name": "GitHub Actions Usage Audit",
@@ -717,6 +837,17 @@
       ]
     },
     {
+      "file": "agent-skills-doctor.yml",
+      "name": "Agent Skills Doctor",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Audit Agent Skills"
+      ]
+    },
+    {
       "file": "agentic_commands.yml",
       "name": "Agentic Commands",
       "triggers": [
@@ -779,6 +910,31 @@
       ]
     },
     {
+      "file": "ai-pr-reviewer.yml",
+      "name": "PR-Agent Pro — Automated AI PR Reviewer",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "AI PR Reviewer & Security Auditor"
+      ]
+    },
+    {
+      "file": "anchore-sbom.yml",
+      "name": "Anchore SBOM",
+      "triggers": [
+        "pull_request",
+        "push",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Generate SBOM"
+      ]
+    },
+    {
       "file": "apps.yml",
       "name": "Apps",
       "triggers": [
@@ -790,6 +946,19 @@
         "agent_workflow_framework",
         "contract types in sync",
         "sak_agent_dashboard"
+      ]
+    },
+    {
+      "file": "attest-build-provenance.yml",
+      "name": "Attest Build Provenance",
+      "triggers": [
+        "push",
+        "release",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Attest Build Provenance"
       ]
     },
     {
@@ -812,6 +981,18 @@
       "gates_prs": false,
       "jobs": [
         "Cancel Redundant Runs"
+      ]
+    },
+    {
+      "file": "auto-close-fixed-issues.yml",
+      "name": "Auto Close Fixed Issues",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Auto Close Fixed Issues"
       ]
     },
     {
@@ -1062,6 +1243,17 @@
       ]
     },
     {
+      "file": "ci-doctor.yml",
+      "name": "CI Doctor",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Audit Workflows"
+      ]
+    },
+    {
       "file": "ci-dokumentor.yml",
       "name": "CI Dokumentor",
       "triggers": [
@@ -1084,6 +1276,17 @@
       "jobs": [
         "AutoHeal-CI recovery",
         "test"
+      ]
+    },
+    {
+      "file": "clean-engine.yml",
+      "name": "Clean — Automated Draft PR & Fix Engine",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Run Clean Engine"
       ]
     },
     {
@@ -1120,7 +1323,6 @@
         "activation",
         "agent",
         "conclusion",
-        "detection",
         "safe_outputs"
       ]
     },
@@ -1185,6 +1387,17 @@
       ]
     },
     {
+      "file": "copilot-cli.yml",
+      "name": "GitHub Copilot CLI",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Run Copilot CLI"
+      ]
+    },
+    {
       "file": "copilot-setup-steps.yml",
       "name": "Copilot Setup Steps",
       "triggers": [
@@ -1194,6 +1407,18 @@
       "gates_prs": false,
       "jobs": [
         "Copilot Setup Steps"
+      ]
+    },
+    {
+      "file": "daily-actions-security-audit.yml",
+      "name": "Daily Actions Security and Concurrency Audit",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Audit workflow security and concurrency"
       ]
     },
     {
@@ -1208,7 +1433,6 @@
         "activation",
         "agent",
         "conclusion",
-        "detection",
         "safe_outputs"
       ]
     },
@@ -1224,7 +1448,6 @@
         "activation",
         "agent",
         "conclusion",
-        "detection",
         "pre_activation",
         "safe_outputs"
       ]
@@ -1323,6 +1546,18 @@
       ]
     },
     {
+      "file": "dependabot-risk-report.yml",
+      "name": "Dependabot Risk Report",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Dependabot Risk Report"
+      ]
+    },
+    {
       "file": "dependabot-workflow.yml",
       "name": "Dependabot Workflow Action",
       "triggers": [
@@ -1342,6 +1577,18 @@
       "gates_prs": false,
       "jobs": [
         "DependaFix AI Remediation Agent"
+      ]
+    },
+    {
+      "file": "dependencies-autoupdate.yml",
+      "name": "Dependencies Autoupdate",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Dependencies Autoupdate"
       ]
     },
     {
@@ -1587,6 +1834,18 @@
       ]
     },
     {
+      "file": "github-code-review-assistant.yml",
+      "name": "GitHub Code Review Assistant",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Code Review Assistant"
+      ]
+    },
+    {
       "file": "github-workflow-sync.yml",
       "name": "GitHub Workflow Sync",
       "triggers": [
@@ -1643,7 +1902,6 @@
         "activation",
         "agent",
         "conclusion",
-        "detection",
         "safe_outputs"
       ]
     },
@@ -1716,6 +1974,30 @@
       ]
     },
     {
+      "file": "misspell-review.yml",
+      "name": "Misspell Code Review",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Misspell Review"
+      ]
+    },
+    {
+      "file": "multi-lint-action.yml",
+      "name": "Multi-Linter Action",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Run Multi-Linter"
+      ]
+    },
+    {
       "file": "no-free-usage.yml",
       "name": "No Free Usage Guard",
       "triggers": [
@@ -1725,6 +2007,18 @@
       "gates_prs": false,
       "jobs": [
         "Verify Contributor Engagement"
+      ]
+    },
+    {
+      "file": "npm-audit-fix.yml",
+      "name": "npm Audit Fix",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Run npm Audit Fix"
       ]
     },
     {
@@ -1790,6 +2084,18 @@
         "conclusion",
         "pre_activation",
         "safe_outputs"
+      ]
+    },
+    {
+      "file": "playwright-ci-debugger.yml",
+      "name": "Playwright CI Debugger",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Playwright CI Debugger"
       ]
     },
     {
@@ -1929,6 +2235,19 @@
       ]
     },
     {
+      "file": "reconstruction.yml",
+      "name": "GitHub Actions Reconstruction Audit",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Authorize manual reconstruction",
+        "Reconstruct workflow inventory and audit races"
+      ]
+    },
+    {
       "file": "release-from-tag.yml",
       "name": "Release from Tag",
       "triggers": [
@@ -1975,7 +2294,6 @@
         "activation",
         "agent",
         "conclusion",
-        "detection",
         "pre_activation",
         "safe_outputs"
       ]
@@ -2120,6 +2438,18 @@
       ]
     },
     {
+      "file": "reviewdog-suggester.yml",
+      "name": "Reviewdog Code Suggestions",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Code Suggestions"
+      ]
+    },
+    {
       "file": "run-evals.yml",
       "name": "Run Evals",
       "triggers": [
@@ -2233,6 +2563,17 @@
       "gates_prs": false,
       "jobs": [
         "Set Bot User"
+      ]
+    },
+    {
+      "file": "setup-agent-skills.yml",
+      "name": "Setup Agent Skills",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Setup Agent Skills"
       ]
     },
     {
@@ -2428,7 +2769,6 @@
         "activation",
         "agent",
         "conclusion",
-        "detection",
         "pre_activation",
         "safe_outputs"
       ]
@@ -2494,6 +2834,17 @@
       ]
     },
     {
+      "file": "workflow-doctor.yml",
+      "name": "Workflow Doctor",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Audit Workflows"
+      ]
+    },
+    {
       "file": "workflow-immortality.yml",
       "name": "Workflow Immortality Keepalive",
       "triggers": [
@@ -2541,12 +2892,12 @@
   ],
   "tests": {
     "coverage_floor": 96.0,
-    "test_functions": 2332,
+    "test_functions": 2492,
     "trees": [
       {
         "name": "sakthai (tests/)",
         "path": "tests",
-        "files": 151,
+        "files": 169,
         "runner": "ci.yml"
       },
       {

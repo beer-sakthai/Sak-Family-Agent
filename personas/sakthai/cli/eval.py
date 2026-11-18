@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import sys
 
 import click
+import yaml
 
+from .. import config
 from ..agent.eval import evaluate_all_personas, evaluate_persona_readiness, summarize_evals
 from ..config import PERSONA_NAMES
+from ._runner import run_repo_argv
 
 
 @click.group()
@@ -113,3 +117,69 @@ def eval_personas(persona: str | None, as_json: bool) -> None:
         )
     if not all_ready:
         sys.exit(1)
+
+
+class _LmEvalYamlLoader(yaml.SafeLoader):  # type: ignore[misc]
+    pass
+
+
+_LmEvalYamlLoader.add_multi_constructor("", lambda loader, tag, node: None)
+
+
+@eval_cmd.command("tasks")
+@click.option("--json", "as_json", is_flag=True, help="Emit evaluation tasks as JSON.")
+def eval_tasks(as_json: bool) -> None:
+    """List registered lm-eval task definitions in evaluation_tasks/."""
+    tasks_dir = config.REPO_ROOT / "evaluation_tasks"
+    tasks: list[dict[str, object]] = []
+    if tasks_dir.is_dir():
+        for path in sorted(tasks_dir.glob("*.yaml")):
+            try:
+                data = (
+                    yaml.load(path.read_text(encoding="utf-8"), Loader=_LmEvalYamlLoader)  # nosec B506
+                    or {}
+                )
+            except Exception:
+                data = {}
+            task_name = data.get("task", path.stem)
+            dataset_file = data.get("dataset_kwargs", {}).get("data_files")
+            rows = 0
+            if dataset_file:
+                dpath = config.REPO_ROOT / str(dataset_file)
+                if dpath.is_file():
+                    with contextlib.suppress(OSError):
+                        rows = sum(
+                            1
+                            for line in dpath.read_text(encoding="utf-8").splitlines()
+                            if line.strip()
+                        )
+            tasks.append(
+                {
+                    "task": task_name,
+                    "file": path.name,
+                    "dataset_file": dataset_file or "",
+                    "rows": rows,
+                }
+            )
+
+    if as_json:
+        click.echo(json.dumps(tasks, indent=2))
+        return
+
+    click.echo("# Registered lm-eval Tasks (evaluation_tasks/)")
+    click.echo(f"  {'TASK NAME':<32} {'ROWS':<6} {'CONFIG FILE'}")
+    click.echo("  " + "-" * 65)
+    for t in tasks:
+        click.echo(f"  {t['task']:<32} {t['rows']:<6} {t['file']}")
+    click.echo(f"\nTotal tasks: {len(tasks)}. Run benchmark with `sakthai eval bench`.")
+
+
+@eval_cmd.command("bench", context_settings={"ignore_unknown_options": True})
+@click.option("--dry-run", is_flag=True, help="Print benchmark command without executing.")
+@click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
+def eval_bench(dry_run: bool, extra_args: tuple[str, ...]) -> None:
+    """Run model evaluation benchmark via scripts/eval/run_bench.py."""
+    argv = ["uv", "run", "python", "scripts/eval/run_bench.py"] + list(extra_args)
+    code = run_repo_argv(argv, dry_run=dry_run)
+    if code != 0:
+        sys.exit(code)

@@ -175,7 +175,14 @@ sakthai status                                             # check environment a
 sakthai doctor --json                                      # comprehensive system diagnostics
 sakthai run "summarize docs/architecture.md"               # run default agent instruction
 sakthai run "review latest memory" --persona sakking       # run instruction as SakKing
-sakthai chat --persona sakthai                             # start interactive chat session
+sakthai chat --persona sakthai                             # start interactive chat session (full-screen Textual TUI)
+sakthai repo map                                           # repository coverage map across all 9 areas
+sakthai repo list --area eval                              # list registered tasks for scripts/training/eval
+sakthai repo run diagnose-personas --dry-run               # run safe registered script or task
+sakthai dashboard dev                                      # start Next.js agent dashboard dev server
+sakthai telegram verify                                    # check background VM Telegram agents
+sakthai train list                                         # list fine-tuning runs and dataset recipes
+sakthai eval tasks                                         # inspect lm-eval task datasets and rows
 sakthai memory family --tag deputy-chain                   # search family-wide memory notes
 sakthai eval personas                                      # verify all 6 personas contracts & rubrics
 sakthai eval summary --all-personas                        # aggregate runtime evals across all shards
