@@ -1067,7 +1067,7 @@ Automatically scans and opens pull requests adding standard CONTRIBUTING.md guid
     REPOS_JSON_LOCATION: 'repos.json'
 ```
 
-### 3.76 Auto Update Branches ([`.github/workflows/autoupdate-branches.yml`](../.github/workflows/autoupdate-branches.yml))
+### 3.76 Auto Update Branches ([`.github/workflows/autoupdate-branches.yml`](../.github/workflows/autoupdate-branches.yml) & [`.github/workflows/auto-update-branch.yml`](../.github/workflows/auto-update-branch.yml))
 Automatically updates open pull request branches with latest changes landed on destination branches:
 
 ```yaml
@@ -1075,10 +1075,14 @@ Automatically updates open pull request branches with latest changes landed on d
   uses: chinthakagodawita/autoupdate@0707656cd062a3b0cf8fa9b2cda1d1404d74437e # v1.7.0
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    PR_FILTER: 'auto_merge'
+    PR_FILTER: 'all'
+    PR_READY_STATE: 'ready_for_review'
     MERGE_CONFLICT_ACTION: 'ignore'
     DRY_RUN: 'false'
 ```
+
+Complementary native workflow [`.github/workflows/auto-update-branch.yml`](../.github/workflows/auto-update-branch.yml) uses [`scripts/auto_update_pr_branch.py`](../scripts/auto_update_pr_branch.py) to provide multi-event triggers (`push`, `pull_request`, `workflow_run`, `issue_comment`, `schedule`, `workflow_dispatch`), non-blocking conflict warnings, and rich Step Summary reporting.
+
 
 ### 3.77 Generate Roadmap ([`.github/workflows/generate-roadmap.yml`](../.github/workflows/generate-roadmap.yml))
 Generates dynamic Mermaid flowchart roadmaps from repository milestones and issue dependencies:
