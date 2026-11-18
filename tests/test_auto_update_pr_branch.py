@@ -92,9 +92,9 @@ def test_fetch_pull_request(mock_urlopen: MagicMock) -> None:
 def test_update_pr_branch_success(mock_urlopen: MagicMock) -> None:
     mock_resp = MagicMock()
     mock_resp.getcode.return_value = 202
-    mock_resp.read.return_value = json.dumps(
-        {"message": "Updating pull request branch."}
-    ).encode("utf-8")
+    mock_resp.read.return_value = json.dumps({"message": "Updating pull request branch."}).encode(
+        "utf-8"
+    )
     mock_resp.__enter__.return_value = mock_resp
     mock_urlopen.return_value = mock_resp
 
@@ -276,9 +276,7 @@ def test_main_push_event_success(
     mock_fetch.return_value = [
         {"number": 20, "title": "PR 20", "draft": False, "base": {"ref": "main"}}
     ]
-    mock_eval.return_value = PRUpdateResult(
-        20, "PR 20", "main", "feat", "updated", "Updated"
-    )
+    mock_eval.return_value = PRUpdateResult(20, "PR 20", "main", "feat", "updated", "Updated")
 
     summary_file = tmp_path / "step_summary.md"
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary_file))
@@ -310,7 +308,6 @@ def test_auto_update_workflow_exists_and_valid() -> None:
     on_clause = data.get("on") or data.get(True) or {}
     assert "push" in on_clause
     assert "pull_request" in on_clause
-    assert "workflow_run" in on_clause
     assert "schedule" in on_clause
     assert "issue_comment" in on_clause
     assert "workflow_dispatch" in on_clause

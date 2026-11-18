@@ -134,9 +134,7 @@ def update_pr_branch(
         return True, msg
 
     error_msg = (
-        response.get("message", "Unknown error")
-        if isinstance(response, dict)
-        else str(response)
+        response.get("message", "Unknown error") if isinstance(response, dict) else str(response)
     )
     return False, f"HTTP {status}: {error_msg}"
 
@@ -307,7 +305,9 @@ def generate_step_summary(results: list[PRUpdateResult]) -> str:
         lines.append("| PR | Title | Base | Head | Outcome |")
         lines.append("|---|---|---|---|---|")
         for r in updated:
-            lines.append(f"| #{r.number} | {r.title} | `{r.base_branch}` | `{r.head_branch}` | {r.message} |")
+            lines.append(
+                f"| #{r.number} | {r.title} | `{r.base_branch}` | `{r.head_branch}` | {r.message} |"
+            )
         lines.append("")
 
     if conflicts:
@@ -315,11 +315,17 @@ def generate_step_summary(results: list[PRUpdateResult]) -> str:
         lines.append("| PR | Title | Base | Head | Status |")
         lines.append("|---|---|---|---|---|")
         for r in conflicts:
-            lines.append(f"| #{r.number} | {r.title} | `{r.base_branch}` | `{r.head_branch}` | {r.message} |")
+            lines.append(
+                f"| #{r.number} | {r.title} | `{r.base_branch}` | `{r.head_branch}` | {r.message} |"
+            )
         lines.append("")
 
     if up_to_date:
-        lines.append("<details><summary><b>Already Up-to-Date Branches (" + str(len(up_to_date)) + ")</b></summary>")
+        lines.append(
+            "<details><summary><b>Already Up-to-Date Branches ("
+            + str(len(up_to_date))
+            + ")</b></summary>"
+        )
         lines.append("")
         for r in up_to_date:
             lines.append(f"- PR #{r.number} (`{r.head_branch}` ➔ `{r.base_branch}`): {r.title}")
@@ -328,7 +334,11 @@ def generate_step_summary(results: list[PRUpdateResult]) -> str:
         lines.append("")
 
     if skipped or errors:
-        lines.append("<details><summary><b>Skipped / Other (" + str(len(skipped) + len(errors)) + ")</b></summary>")
+        lines.append(
+            "<details><summary><b>Skipped / Other ("
+            + str(len(skipped) + len(errors))
+            + ")</b></summary>"
+        )
         lines.append("")
         for r in skipped + errors:
             lines.append(f"- PR #{r.number} [{r.status}]: {r.message}")
@@ -426,11 +436,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Case 4: Push / Schedule / Workflow Run / Dispatch / Default
     else:
-        bases = (
-            ["main", "staging", "develop"]
-            if args.base_branch == "all"
-            else [args.base_branch]
-        )
+        bases = ["main", "staging", "develop"] if args.base_branch == "all" else [args.base_branch]
         seen_prs: set[int] = set()
         for base in bases:
             open_prs = fetch_open_pull_requests(repository, token, base)
@@ -446,7 +452,9 @@ def main(argv: list[str] | None = None) -> int:
     for pr in prs_to_evaluate:
         res = evaluate_and_update_pr(repository, token, pr, dry_run=args.dry_run)
         results.append(res)
-        print(f"PR #{res.number} ({res.head_branch} ➔ {res.base_branch}): [{res.status.upper()}] {res.message}")
+        print(
+            f"PR #{res.number} ({res.head_branch} ➔ {res.base_branch}): [{res.status.upper()}] {res.message}"
+        )
 
     summary_md = generate_step_summary(results)
 

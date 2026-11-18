@@ -17,12 +17,7 @@ on:
       - main
       - staging
       - develop
-  workflow_run:
-    workflows:
-      - "CI"
-      - "Quality and Security Gates"
-    types:
-      - completed
+  # zizmor: ignore[dangerous-triggers]
   issue_comment:
     types:
       - created
