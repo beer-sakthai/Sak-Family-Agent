@@ -128,9 +128,9 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 | Product & Monetization | [`product/PLAN.md`](./product/PLAN.md) | 🟡 Active — 2 outreach/revenue tasks open |
 | Security Fixes | [`security/SECURITY_FIXES_PLAN.md`](./security/SECURITY_FIXES_PLAN.md) | 🔴 HIGH — Fix #1 (Credential revocation) open; Fix #2 done |
 | Personas (×6) | [`personas/*/PLAN.md`](./personas/) | 🟡 Active — operational tasks open |
-| Agent Self-Evolution | [`personas/shared/agent-self-evolution/PLAN.md`](./personas/shared/agent-self-evolution/PLAN.md) | 🟡 Active — Phases 3–5 open (Phases 1–2 done) |
+| Agent Self-Evolution | [`personas/shared/agent-self-evolution/PLAN.md`](./personas/shared/agent-self-evolution/PLAN.md) | 🟢 Complete (2026-11-18) — All 5 phases verified |
 | HF Ecosystem Improvement | [`docs/hf-cards-improvement-plan.md`](./docs/hf-cards-improvement-plan.md) | 🟡 Active — private `sakthai-embedding` decision open |
-| Workflow Framework Backlog | [`apps/sak_agent_dashboard/workflow_engine/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md`](./apps/sak_agent_dashboard/workflow_engine/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md) | 🟡 Active — P2–P3 open (P1 done) |
+| Workflow Framework Backlog | [`apps/sak_agent_dashboard/workflow_engine/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md`](./apps/sak_agent_dashboard/workflow_engine/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md) | 🟢 Complete (2026-11-18) — P1–P3 verified |
 
 ## 🔧 Runtime Notes
 
