@@ -13,6 +13,7 @@ on:
     - cron: '27 8 * * 4'
   push:
     branches: [ "main" ]
+  workflow_dispatch:
 
 # Declare no workflow-level permissions; the analysis job grants only what it needs.
 permissions: {}

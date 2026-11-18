@@ -302,3 +302,22 @@ def test_dependabot_config_avoids_known_update_failures() -> None:
             assert "*" not in (group_cfg.get("patterns") or []), (
                 "github-actions dependabot config must not group '*' across all workflows (causes 55m timeout)"
             )
+
+
+def test_gitattributes_and_scorecard_lockfile_hygiene() -> None:
+    """Ensure generated workflow lockfiles are marked export-ignore to prevent Scorecard noise."""
+    gitattributes_path = REPO_ROOT / ".gitattributes"
+    assert gitattributes_path.is_file(), ".gitattributes must exist"
+    content = gitattributes_path.read_text(encoding="utf-8")
+    assert ".github/workflows/*.lock.yml" in content, "Must configure lock.yml in .gitattributes"
+    lines = [line for line in content.splitlines() if ".github/workflows/*.lock.yml" in line]
+    assert lines, "Must find lock.yml line in .gitattributes"
+    lock_line = lines[0]
+    assert "export-ignore" in lock_line, "Lockfiles must be marked export-ignore"
+    assert "linguist-generated=true" in lock_line, "Lockfiles must be marked linguist-generated"
+
+    scorecard_path = WORKFLOWS_DIR / "scorecard.yml"
+    assert scorecard_path.is_file(), "scorecard.yml must exist"
+    scorecard_data = yaml.safe_load(scorecard_path.read_text(encoding="utf-8"))
+    on_clause = scorecard_data.get("on") or scorecard_data.get(True)
+    assert "workflow_dispatch" in on_clause, "scorecard.yml must support manual workflow_dispatch"

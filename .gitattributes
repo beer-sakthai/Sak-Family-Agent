@@ -1,2 +1,2 @@
-.github/workflows/*.lock.yml linguist-generated=true
+.github/workflows/*.lock.yml linguist-generated=true export-ignore
 *.pdf binary
