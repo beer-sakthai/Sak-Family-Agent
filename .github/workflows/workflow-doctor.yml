@@ -1,0 +1,62 @@
+name: Workflow Doctor
+
+on:
+  workflow_dispatch:
+    inputs:
+      fail_on:
+        description: "Minimum severity that should fail the action (notice, warning, error, never)"
+        required: false
+        default: "never"
+        type: string
+      output_json:
+        description: "Write a JSON report to disk"
+        required: false
+        default: "true"
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit-workflows:
+    name: Audit Workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run Workflow Doctor
+        id: workflow-doctor
+        uses: iamarunbrahma/workflow-doctor@c7d9497acff1acb398ed1da76add1cc92536afd2 # v1.0.0
+        with:
+          fail-on: ${{ inputs.fail_on || 'never' }}
+          annotate: "true"
+          summary: "true"
+          output-json: ${{ inputs.output_json || 'true' }}
+
+      - name: Report Findings Metrics
+        env:
+          FINDING_COUNT: ${{ steps.workflow-doctor.outputs.finding-count }}
+          ERROR_COUNT: ${{ steps.workflow-doctor.outputs.error-count }}
+          WARNING_COUNT: ${{ steps.workflow-doctor.outputs.warning-count }}
+          NOTICE_COUNT: ${{ steps.workflow-doctor.outputs.notice-count }}
+        run: |
+          echo "Workflow Doctor Audit Summary:"
+          echo "Total findings: $FINDING_COUNT"
+          echo "Errors: $ERROR_COUNT"
+          echo "Warnings: $WARNING_COUNT"
+          echo "Notices: $NOTICE_COUNT"
