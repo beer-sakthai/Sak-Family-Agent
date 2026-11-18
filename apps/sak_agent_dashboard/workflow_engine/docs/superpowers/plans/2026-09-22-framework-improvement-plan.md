@@ -40,9 +40,12 @@ Standardized structured status output and error codes across library and CLI lay
 
 Add cancellation and timeout semantics for long-running steps, plus tests for bounded shutdown and preservation of terminal step state. Document the concurrency contract for `max_workers`.
 
-### P3 — Benchmark quality
+### P3 — Benchmark quality (Complete)
 
-Add performance baselines for parallel fan-out and retry workloads, and publish a small machine-readable evaluation summary from `verify.py` in addition to human-readable logs.
+Added performance baselines for parallel fan-out and retry workloads, and published a machine-readable JSON evaluation summary from `verify.py` with `--json` and `--summary-file` options:
+- Added `verify_benchmark_baselines()` testing 10-step parallel fan-out across 4 workers with throughput metrics (steps/s) and transient retry recovery timing.
+- Added structured JSON summary generation with UTC timestamp, phase statuses, and benchmark metrics.
+- Comprehensive unit test coverage added in `test_cli.py`.
 
 ## Acceptance gates
 

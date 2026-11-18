@@ -103,14 +103,14 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 ### 4. Agent Self-Evolution Pipeline ([`personas/shared/agent-self-evolution/PLAN.md`](./personas/shared/agent-self-evolution/PLAN.md))
 *(Phases 1 & 2 — Skill Evolution and Tool Description Optimization — are `[x]` complete)*
 - [x] 2026-11-18 **Phase 3: System Prompt Evolution** (`evolution/prompts/`) — Build section-as-DSPy-parameter wrapper for the 5 evolvable `prompt_builder.py` sections (`DEFAULT_AGENT_IDENTITY`, `MEMORY_GUIDANCE`, `SESSION_SEARCH_GUIDANCE`, `SKILLS_GUIDANCE`, `PLATFORM_HINTS`) and behavioral evaluator.
-- [ ] **Phase 4: Code Evolution via Darwinian Evolver** (`evolution/code/`) — Build `GitBasedOrganism` wrapper and composite pytest + benchmark fitness function for tool implementation code.
-- [ ] **Phase 5: Continuous Self-Improvement Loop** (`evolution/monitor/`) — Build performance monitor, auto-triage ranker, and scheduled optimization trigger.
+- [x] 2026-11-18 **Phase 4: Code Evolution via Darwinian Evolver** (`evolution/code/`) — Build `GitBasedOrganism` wrapper and composite pytest + benchmark fitness function for tool implementation code.
+- [x] 2026-11-18 **Phase 5: Continuous Self-Improvement Loop** (`evolution/monitor/`) — Build performance monitor, auto-triage ranker, and scheduled optimization trigger.
 
 ### 5. Agent Workflow Framework Backlog ([`apps/sak_agent_dashboard/workflow_engine/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md`](./apps/sak_agent_dashboard/workflow_engine/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md))
 *(P1 — Packaging & Import Ergonomics (`pyproject.toml`) and P1 — Evaluation Isolation (`--storage-dir` + `verify.py` isolation) are `[x]` complete)*
 - [x] 2026-11-16 **P2 — Observability & Failure Contracts** — Add tests for malformed persisted history, duplicate run IDs, invalid retry values, and callback exceptions. (PR #1868)
 - [x] 2026-11-18 **P2 — Execution Resilience** — Add cancellation and timeout semantics for long-running workflow steps.
-- [ ] **P3 — Benchmark Quality** — Add parallel fan-out/retry baselines and machine-readable JSON summary output to `verify.py`.
+- [x] 2026-11-18 **P3 — Benchmark Quality** — Add parallel fan-out/retry baselines and machine-readable JSON summary output to `verify.py`.
 
 ### 6. Per-Persona Open Operational Tasks (`personas/*/PLAN.md`)
 - [ ] **SakThai** ([`personas/sakthai/PLAN.md`](./personas/sakthai/PLAN.md)) — Live `HF_TOKEN` preflight; family pre-task memory read; Gate 1 `sakthai hf info <repo_id>` for SakSit; triple-gated Hub writes (`hub-approved`); family status & conflict resolution; Growth stage `CYCLE EVAL: sakthai`.
