@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/beer-sakthai/Sak-Family-Agent/blob/main/schemas/inter-agent-handoff.schema.json",
+  "title": "Sak Family Inter-Agent Handoff",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol_version", "handoff_id", "message_type", "status", "sender", "recipient", "created_at", "updated_at", "correlation", "task", "payload", "evidence", "constraints", "recovery"],
+  "properties": {
+    "protocol_version": {"const": "1.0.0-draft"},
+    "handoff_id": {"type": "string", "pattern": "^ho_[A-Za-z0-9_-]{7,}$"},
+    "message_type": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "status": {"enum": ["requested", "acknowledged", "claimed", "in_progress", "completed", "paused", "blocked", "rejected", "escalated", "interrupted"]},
+    "sender": {"$ref": "#/$defs/agent_ref"},
+    "recipient": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/agent_ref"}},
+    "created_at": {"type": "string", "format": "date-time"},
+    "updated_at": {"type": "string", "format": "date-time"},
+    "correlation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["parent_handoff_id", "related_handoff_ids"],
+      "properties": {
+        "parent_handoff_id": {"type": ["string", "null"]},
+        "related_handoff_ids": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "task": {
+      "type": "object", "additionalProperties": false,
+      "required": ["title", "objective", "scope", "acceptance_criteria"],
+      "properties": {
+        "title": {"type": "string", "minLength": 1},
+        "objective": {"type": "string", "minLength": 1},
+        "scope": {"type": "string"},
+        "acceptance_criteria": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "payload": {
+      "type": "object", "additionalProperties": false,
+      "required": ["summary", "details", "artifacts"],
+      "properties": {
+        "summary": {"type": "string", "minLength": 1},
+        "details": {"type": "string"},
+        "artifacts": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "evidence": {"type": "array", "items": {"$ref": "#/$defs/evidence"}},
+    "constraints": {
+      "type": "object", "additionalProperties": false,
+      "required": ["charge_required", "approval_required", "approval_refs", "cost_limit_usd"],
+      "properties": {
+        "charge_required": {"enum": ["none", "low", "active", "critical"]},
+        "approval_required": {"type": "boolean"},
+        "approval_refs": {"type": "array", "items": {"type": "string"}},
+        "cost_limit_usd": {"type": "number", "minimum": 0}
+      }
+    },
+    "recovery": {
+      "type": "object", "additionalProperties": false,
+      "required": ["resumable", "checkpoint", "next_action"],
+      "properties": {
+        "resumable": {"type": "boolean"},
+        "checkpoint": {"type": "string"},
+        "next_action": {"type": "string"}
+      }
+    }
+  },
+  "$defs": {
+    "agent_ref": {
+      "type": "object", "additionalProperties": false,
+      "required": ["agent", "role"],
+      "properties": {
+        "agent": {"enum": ["sakthai", "sakking", "saktan", "saksee", "saksit", "sakjules", "beer"]},
+        "role": {"type": "string", "minLength": 1}
+      }
+    },
+    "evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "reference", "detail", "retrieved_at"],
+      "properties": {
+        "kind": {"type": "string", "minLength": 1},
+        "reference": {"type": "string", "minLength": 1},
+        "detail": {"type": "string"},
+        "retrieved_at": {"type": ["string", "null"], "format": "date-time"}
+      }
+    }
+  }
+}
