@@ -347,4 +347,3 @@ def test_github_multi_deployments_integration() -> None:
     assert ref_doc.is_file()
     ref_text = ref_doc.read_text(encoding="utf-8")
     assert target_sha in ref_text
-

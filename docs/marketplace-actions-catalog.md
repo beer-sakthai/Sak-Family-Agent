@@ -1780,10 +1780,12 @@ Runs multi-language linters across codebases with optional automated code style 
     github_token: ${{ secrets.GITHUB_TOKEN }}
     continue_on_error: "true"
     auto_fix: ${{ inputs.auto_fix || 'false' }}
-    black: "true"
-    black_dir: "personas/sakthai"
+    black: "false"
     flake8: "false"
-    mypy: "false"
+    mypy: "true"
+    mypy_command_prefix: "uv run"
+    mypy_dir: "."
+    mypy_args: "personas/sakthai"
 ```
 
 ### 3.130 GitHub Multi Deployments Action ([`.github/workflows/reusable-deployment.yml`](../.github/workflows/reusable-deployment.yml) & [`.github/workflows/reusable-pr-deploy.yml`](../.github/workflows/reusable-pr-deploy.yml))

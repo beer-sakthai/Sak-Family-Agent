@@ -48,6 +48,8 @@ jobs:
 
       - name: Install black
         run: uv pip install --system black==25.1.0
+      - name: Install dependencies
+        run: uv sync --all-extras
 
       - name: Linting Action
         uses: ryanclark/lint-action@316d8bd29e28a292657682f6c6e45ca1dab41496 # v1.15.0
@@ -55,7 +57,9 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           continue_on_error: "true"
           auto_fix: ${{ inputs.auto_fix || 'false' }}
-          black: "true"
-          black_dir: "personas/sakthai"
+          black: "false"
           flake8: "false"
-          mypy: "false"
+          mypy: "true"
+          mypy_command_prefix: "uv run"
+          mypy_dir: "."
+          mypy_args: "personas/sakthai"
