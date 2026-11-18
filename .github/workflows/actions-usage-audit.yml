@@ -19,6 +19,14 @@ jobs:
     steps:
       - name: Audit Workflow Usage
         uses: fergusmacd/github-actions-usage@86eef42173b5fe9778e33326468f51cc5a34348c # v0.9.2
+        continue-on-error: true
         with:
           organisation: beer-sakthai
           gitHubAPIKey: ${{ github.token }}
+
+      - name: Fallback Actions Usage Summary
+        if: always()
+        run: |
+          echo "### GitHub Actions Usage Audit" >> $GITHUB_STEP_SUMMARY
+          echo "Note: Full organization billing metrics require an organization account and a PAT with billing permissions." >> $GITHUB_STEP_SUMMARY
+          echo "Repository: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY

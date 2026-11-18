@@ -39,6 +39,7 @@ safe-outputs:
   create-pull-request-review-comment:
   upload-asset:
   threat-detection: false
+  report-failure-as-issue: false
 timeout-minutes: 30
 ---
 
@@ -60,10 +61,11 @@ You are **SakJules · Master of Automation & CI/CD**, acting as the House of Sak
 
 ## 2. Trigger Handling & Memory Deduplication
 
-1. **Activation Source**:
+1. **Activation Source & PR Discovery**:
    - `pull_request` (ready_for_review): Review the active pull request directly.
    - `slash_command` (`/skill-pr-reviewer`) or `label_command` (`skill-pr-reviewer`): Review the triggering pull request or linked PR from the issue.
-   - `schedule` (weekdays) or `push` (main) or `issues` (opened): Discover open, unreviewed, non-draft pull requests via `tools.github` (`pr list --state open`).
+   - `schedule` (weekdays) or `push` (main) or `workflow_dispatch`: Discover open, unreviewed, non-draft pull requests via `tools.github` (`pr list --state open`).
+   - **Zero PRs Pending Graceful Exit**: If no active pull request context exists and `tools.github` finds no open pull requests (such as manual `workflow_dispatch` on `main` when zero PRs are open), state clearly that no pull requests are currently pending review and conclude cleanly with a successful exit. Do NOT emit `report_incomplete` or trigger failure handling when there are no PRs to review.
 2. **Persistent Memory Check (`cache-memory`)**:
    - Query `/tmp/gh-aw/cache-memory/` for the current PR number and `head.sha`.
    - If the PR at the current commit SHA has already been reviewed and no new commits exist, terminate early (`noop`) to prevent duplicate noise.
