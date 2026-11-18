@@ -63,9 +63,7 @@ def test_dependency_review_workflow_references_config_file() -> None:
     steps = review_job.get("steps", [])
 
     review_steps = [
-        step
-        for step in steps
-        if "dependency-review-action" in str(step.get("uses", ""))
+        step for step in steps if "dependency-review-action" in str(step.get("uses", ""))
     ]
     assert len(review_steps) == 1, "Expected exactly 1 dependency review step"
     with_args = review_steps[0].get("with", {})
@@ -79,7 +77,10 @@ def test_dependency_security_guide_document_exists_and_covers_framework() -> Non
     content = GUIDE_FILE.read_text(encoding="utf-8")
 
     assert "Managing Dependency Security in Sak-Family-Agent" in content
-    assert "https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/manage-your-dependency-security" in content
+    assert (
+        "https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/manage-your-dependency-security"
+        in content
+    )
     assert "dependency-review-config.yml" in content
     assert "dependabot.yml" in content
     assert "GHSA-fc5q-39xc-vjpf" in content
