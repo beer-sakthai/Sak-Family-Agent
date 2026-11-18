@@ -135,6 +135,13 @@ PINNED_ACTIONS = {
     "depmedicdev-byte/ci-doctor": "131c2c50a4487787b4f6ceb3eb3b409198be5b7c",
     "iamarunbrahma/workflow-doctor": "c7d9497acff1acb398ed1da76add1cc92536afd2",
     "ravi-arnan/agent-skills-doctor": "bfe08bdbe5ff00ded2a3d8f4afdab47282319826",
+    "wow-actions/auto-close-fixed-issues": "d87a73261d3881451f5b35a80cfe0eaed3e95931",
+    "grandmasterdev/github-action-npm-audit-fix": "acb53f70fb4406f6b03e9df77ab5a76611b024b5",
+    "houselearning/Clean": "837a968808c96d6c317449b7e9e2bc75af4e5832",
+    "DigiCatalyst-Systems/dependabot-risk": "b52f928fe6f146f7aa29d5c820d7cd1cc57ece41",
+    "meanusarcanus/ai-pr-reviewer-action": "9a2e09833376f54db095b71ca638d2204485c31a",
+    "mtl1979/dependencies-autoupdate": "7230f7c4e5c186601a03e3e9f8d7ad16c6b4e122",
+    "ryanclark/lint-action": "316d8bd29e28a292657682f6c6e45ca1dab41496",
 }
 
 
@@ -278,6 +285,13 @@ MARKETPLACE_WORKFLOW_FILES = [
     "ci-doctor.yml",
     "workflow-doctor.yml",
     "agent-skills-doctor.yml",
+    "auto-close-fixed-issues.yml",
+    "npm-audit-fix.yml",
+    "clean-engine.yml",
+    "dependabot-risk-report.yml",
+    "ai-pr-reviewer.yml",
+    "dependencies-autoupdate.yml",
+    "multi-lint-action.yml",
 ]
 
 

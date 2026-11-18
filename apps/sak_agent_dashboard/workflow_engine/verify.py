@@ -15,7 +15,7 @@ import os
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.resolve()
@@ -256,6 +256,7 @@ def verify_benchmark_baselines() -> tuple[bool, dict]:
     """Execute performance baselines for parallel fan-out and retry workloads."""
     print_header("Phase 3: Performance Baselines & Benchmark Quality")
     import asyncio
+
     from agent_workflow.models import StepDefinition, WorkflowDefinition
 
     # 1. Parallel Fan-Out Benchmark
@@ -412,7 +413,7 @@ def main(argv: list[str] | None = None) -> int:
 
     all_passed = all(p["passed"] for p in phase_results.values())
     summary = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "all_passed": all_passed,
         "total_phases": len(phase_results),
         "passed_phases": sum(1 for p in phase_results.values() if p["passed"]),

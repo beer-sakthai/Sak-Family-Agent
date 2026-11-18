@@ -1,0 +1,49 @@
+name: Clean — Automated Draft PR & Fix Engine
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Operation mode: create-pr, apply-fixes, typo-check"
+        required: true
+        default: "typo-check"
+        type: string
+      base_branch:
+        description: "Base branch to target"
+        required: false
+        default: "main"
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  clean-engine:
+    name: Run Clean Engine
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Clean — Automated Draft PR & Fix Engine
+        uses: houselearning/Clean@837a968808c96d6c317449b7e9e2bc75af4e5832 # 1.0.0
+        with:
+          mode: ${{ inputs.mode || 'typo-check' }}
+          base-branch: ${{ inputs.base_branch || 'main' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}

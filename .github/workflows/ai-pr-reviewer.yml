@@ -1,0 +1,52 @@
+name: PR-Agent Pro — Automated AI PR Reviewer
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "AI Model to use for review"
+        required: false
+        default: "gpt-4o-mini"
+        type: string
+      fail_on_security_risk:
+        description: "Fail the workflow if high-severity security risk is found"
+        required: false
+        default: "false"
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ai-review:
+    name: AI PR Reviewer & Security Auditor
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: PR-Agent Pro — Automated AI PR Reviewer & Security Auditor
+        uses: meanusarcanus/ai-pr-reviewer-action@9a2e09833376f54db095b71ca638d2204485c31a # v1.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          model: ${{ inputs.model || 'gpt-4o-mini' }}
+          fail_on_security_risk: ${{ inputs.fail_on_security_risk || 'false' }}

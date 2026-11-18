@@ -1,0 +1,52 @@
+name: Dependabot Risk Report
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      ecosystem:
+        description: "Package ecosystem (auto, npm, pip, etc.)"
+        required: false
+        default: "auto"
+        type: string
+      fail_on:
+        description: "Risk level to fail on (none, low, medium, high, critical)"
+        required: false
+        default: "none"
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  risk-report:
+    name: Dependabot Risk Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run Dependabot Risk Report
+        uses: DigiCatalyst-Systems/dependabot-risk@b52f928fe6f146f7aa29d5c820d7cd1cc57ece41 # v1.2.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          ecosystem: ${{ inputs.ecosystem || 'auto' }}
+          post-comment: "true"
+          fail-on: ${{ inputs.fail_on || 'none' }}
