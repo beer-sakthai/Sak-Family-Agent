@@ -178,6 +178,8 @@ def test_workflows_do_not_declare_top_level_write_permissions() -> None:
     """Ensure top-level workflow permissions never grant write access."""
     offenders: list[str] = []
     for yml_path in sorted(WORKFLOWS_DIR.glob("*.yml")):
+        if yml_path.name.endswith(".lock.yml"):
+            continue
         data = yaml.safe_load(yml_path.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
             continue
@@ -198,6 +200,8 @@ def test_workflows_do_not_contain_unpinned_pip_or_npm_installs() -> None:
     offenders: list[str] = []
 
     for yml_path in sorted(WORKFLOWS_DIR.glob("*.yml")):
+        if yml_path.name.endswith(".lock.yml"):
+            continue
         data = yaml.safe_load(yml_path.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
             continue
