@@ -112,6 +112,9 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **GitHub Code Review Assistant** | [`mlaplante/githubprreviewhelperextension`](https://github.com/mlaplante/githubprreviewhelperextension) | `v1.4.0` | `84c713e117ecfb6fa835075bf23f5dc48d6d657b` | `contents: read`, `pull-requests: write`, `issues: write` | Automated static analysis on pull requests with security rules, false-positive filtering, and inline review comments |
 | **Playwright CI Debugger** | [`sentinelqa-dev/playwright-ci-debugger`](https://github.com/sentinelqa-dev/playwright-ci-debugger) | `v1.2.0` | `bab033ef5aa646071e0f6bae2a9ca927e14ddbf8` | `contents: read` | Debugs Playwright CI test failures with AI root-cause summaries, unified artifacts, and hosted reports |
 | **Attest Build Provenance** | [`actions/attest-build-provenance`](https://github.com/actions/attest-build-provenance) | `v4.2.2` | `4d101475d8b20a2381f78447822ac1eab6504dd8` | `id-token: write`, `attestations: write`, `contents: read` | Generates cryptographically verifiable Sigstore build provenance attestations for workflow artifacts |
+| **Reviewdog Code Suggestions** | [`reviewdog/action-suggester`](https://github.com/reviewdog/action-suggester) | `v1.27.1` | `fd22a83b1ebc13fd8aee5d57b06793fce6f20fb9` | `contents: read`, `pull-requests: write` | Suggests code formatting and linting changes directly via GitHub PR multi-line code suggestions |
+| **Actionlint Workflow Review** | [`reviewdog/action-actionlint`](https://github.com/reviewdog/action-actionlint) | `v1.84.1` | `ae857e78c1b42b3d0a49637181b09d3d56d402b4` | `contents: read`, `pull-requests: write` | Automated static analysis and syntax code review of GitHub Actions workflows on PRs |
+| **Misspell Code Review** | [`reviewdog/action-misspell`](https://github.com/reviewdog/action-misspell) | `v1.31.0` | `c846b6b0996029d2d39540c8ffebebbd957072db` | `contents: read`, `pull-requests: write` | Automated detection of spelling mistakes in code, docstrings, and markdown with inline PR review comments |
 
 
 ---
@@ -1537,6 +1540,49 @@ Generates cryptographically signed build provenance attestations for built Pytho
   uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
   with:
     subject-path: 'dist/*'
+```
+
+### 3.113 Reviewdog Code Suggestions ([`.github/workflows/reviewdog-suggester.yml`](../.github/workflows/reviewdog-suggester.yml))
+Generates multi-line GitHub code suggestions on pull requests based on automated code formatting and linter diffs:
+
+```yaml
+- name: Suggest code changes with reviewdog
+  uses: reviewdog/action-suggester@fd22a83b1ebc13fd8aee5d57b06793fce6f20fb9 # v1.27.1
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    tool_name: ruff-format
+    filter_mode: added
+    fail_level: none
+```
+
+### 3.114 Actionlint Workflow Review ([`.github/workflows/actionlint-review.yml`](../.github/workflows/actionlint-review.yml))
+Automated workflow static analysis with inline PR review comments and annotations on modified GitHub Actions workflow files:
+
+```yaml
+- name: Run actionlint with reviewdog
+  uses: reviewdog/action-actionlint@ae857e78c1b42b3d0a49637181b09d3d56d402b4 # v1.84.1
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    reporter: github-pr-review
+    level: warning
+    filter_mode: added
+    fail_level: none
+```
+
+### 3.115 Misspell Code Review ([`.github/workflows/misspell-review.yml`](../.github/workflows/misspell-review.yml))
+Automated spell-checking across codebase files and documentation with inline PR review comments and suggestions:
+
+```yaml
+- name: Run misspell with reviewdog
+  uses: reviewdog/action-misspell@c846b6b0996029d2d39540c8ffebebbd957072db # v1.31.0
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    reporter: github-pr-review
+    level: warning
+    locale: "US"
+    filter_mode: added
+    fail_level: none
+    exclude: "./.git/*,./.venv/*,./uv.lock,./apps/sak_agent_dashboard/package-lock.json"
 ```
 
 ---
