@@ -124,6 +124,7 @@ PINNED_ACTIONS = {
     "oke-py/npm-audit-action": "da53d502b06a0bc95f9ce3c0ebab0c4c713fae4a",
     "mlaplante/githubprreviewhelperextension": "84c713e117ecfb6fa835075bf23f5dc48d6d657b",
     "sentinelqa-dev/playwright-ci-debugger": "bab033ef5aa646071e0f6bae2a9ca927e14ddbf8",
+    "actions/attest-build-provenance": "4d101475d8b20a2381f78447822ac1eab6504dd8",
 }
 
 
@@ -257,6 +258,7 @@ MARKETPLACE_WORKFLOW_FILES = [
     "npm-audit.yml",
     "github-code-review-assistant.yml",
     "playwright-ci-debugger.yml",
+    "attest-build-provenance.yml",
 ]
 
 

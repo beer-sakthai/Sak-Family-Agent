@@ -16,7 +16,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 
 ---
 
-### 2. Seventy-Eight Verified Marketplace Actions
+### 2. Ninety-Two Verified Marketplace Actions
 
 | Action Name | Upstream Repository | Tag | Immutable Commit SHA | Required Permissions | Purpose |
 |---|---|---|---|---|---|
@@ -111,6 +111,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **npm Audit Action** | [`oke-py/npm-audit-action`](https://github.com/oke-py/npm-audit-action) | `v5.5.2` | `da53d502b06a0bc95f9ce3c0ebab0c4c713fae4a` | `contents: read`, `issues: write`, `pull-requests: write` | Runs `npm audit` against npm lockfiles with GHSA exclusion, PR comment reporting, and auto-resolution |
 | **GitHub Code Review Assistant** | [`mlaplante/githubprreviewhelperextension`](https://github.com/mlaplante/githubprreviewhelperextension) | `v1.4.0` | `84c713e117ecfb6fa835075bf23f5dc48d6d657b` | `contents: read`, `pull-requests: write`, `issues: write` | Automated static analysis on pull requests with security rules, false-positive filtering, and inline review comments |
 | **Playwright CI Debugger** | [`sentinelqa-dev/playwright-ci-debugger`](https://github.com/sentinelqa-dev/playwright-ci-debugger) | `v1.2.0` | `bab033ef5aa646071e0f6bae2a9ca927e14ddbf8` | `contents: read` | Debugs Playwright CI test failures with AI root-cause summaries, unified artifacts, and hosted reports |
+| **Attest Build Provenance** | [`actions/attest-build-provenance`](https://github.com/actions/attest-build-provenance) | `v4.2.2` | `4d101475d8b20a2381f78447822ac1eab6504dd8` | `id-token: write`, `attestations: write`, `contents: read` | Generates cryptographically verifiable Sigstore build provenance attestations for workflow artifacts |
 
 
 ---
@@ -1526,6 +1527,16 @@ Debugs Playwright CI test failures with automated AI root-cause summaries, unifi
     playwright-json-path: "test-results/report.json"
     playwright-report-dir: "playwright-report"
     test-results-dir: "test-results"
+```
+
+### 3.112 Attest Build Provenance ([`.github/workflows/attest-build-provenance.yml`](../.github/workflows/attest-build-provenance.yml))
+Generates cryptographically signed build provenance attestations for built Python artifacts (`.whl`, `.tar.gz`) using GitHub's native Sigstore OIDC integration, verifiable via `gh attestation verify`:
+
+```yaml
+- name: Generate build provenance attestation
+  uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+  with:
+    subject-path: 'dist/*'
 ```
 
 ---
