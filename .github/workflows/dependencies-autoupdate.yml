@@ -36,17 +36,16 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Setup uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
 
       - name: Dependencies Autoupdate with Custom branch and fixes
         uses: mtl1979/dependencies-autoupdate@7230f7c4e5c186601a03e3e9f8d7ad16c6b4e122 # v1.2.3
+        env:
+          UPDATE_COMMAND: ${{ inputs.update_command || 'uv lock --upgrade' }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          update-command: ${{ inputs.update_command || 'uv lock --upgrade' }}
-          pr-branch: "dependencies-autoupdate"
-          commit-message: "chore(deps): autoupdate project dependencies"
-          pr-title: "chore(deps): autoupdate project dependencies"
-          pr-body: "Automated dependency updates triggered via mtl1979/dependencies-autoupdate."
+          update-command: scripts/autoupdate-dependencies.sh
+          pr-branch: main
