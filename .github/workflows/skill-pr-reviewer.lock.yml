@@ -742,7 +742,7 @@ jobs:
           GH_AW_MIN_INTEGRITY: approved
         run: bash "${RUNNER_TEMP}/gh-aw/actions/setup_cache_memory_git.sh"
       - name: Install Language Server Protocol tools
-        run: npm add -g --ignore-scripts pyright@1.1.399 typescript@5.8.3 typescript-language-server@4.3.3
+        run: npm install -g --ignore-scripts pyright@1.1.399 typescript@5.8.3 typescript-language-server@4.3.3
 
       - name: Configure Git credentials
         env:
@@ -777,12 +777,12 @@ jobs:
           GH_HOST: github.com
         run: bash "${RUNNER_TEMP}/gh-aw/actions/install_awf_binary.sh" v0.29.11 --rootless
       - name: Install Gemini CLI
-        run: npm add -g @google/gemini-cli@0.64.0
+        run: npm install -g @google/gemini-cli@0.64.0
         env:
           NPM_CONFIG_IGNORE_SCRIPTS: 'true'
           NPM_CONFIG_MIN_RELEASE_AGE: '3'
       - name: Install Playwright CLI
-        run: npm add -g @playwright/cli@0.1.23
+        run: npm install -g @playwright/cli@0.1.23
         env:
           NPM_CONFIG_MIN_RELEASE_AGE: '3'
         timeout-minutes: 10
