@@ -2,7 +2,7 @@ import re
 
 import yaml
 
-from app.agent_platform.harness_exporter import (
+from sakthai.agent_platform.harness_exporter import (
     export_harness_agent_spec,
     export_v1_pipeline_step,
     generate_harness_uid,

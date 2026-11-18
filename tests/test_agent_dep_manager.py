@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from app.agent_platform.dep_manager import detect_dependency_manager
+from sakthai.agent_platform.dep_manager import detect_dependency_manager
 
 
 def test_detect_uv_from_uv_lock(tmp_path: Path):

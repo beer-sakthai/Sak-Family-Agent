@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from app.agent_platform.customizations import (
+from sakthai.agent_platform.customizations import (
     CustomizationRegistry,
 )
 

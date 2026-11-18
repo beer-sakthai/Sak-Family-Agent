@@ -1,6 +1,6 @@
 import pytest
 
-from app.agent_platform.jules_worker import (
+from sakthai.agent_platform.jules_worker import (
     build_apply_commands,
     build_jules_task_command,
     parse_git_repo_url,
