@@ -9,9 +9,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 FORBIDDEN_PATHS = (
     REPO_ROOT / ".manus",
     REPO_ROOT / "profiles",
-    REPO_ROOT / "apps" / "agent_workflow_framework" / ".agents",
-    REPO_ROOT / "apps" / "agent_workflow_framework" / "ORIGINAL_REQUEST.md",
+    REPO_ROOT / "apps" / "agent_workflow_framework",
     REPO_ROOT / "apps" / "sak_agent_dashboard" / ".agents",
+    REPO_ROOT / "apps" / "sak_agent_dashboard" / "workflow_engine" / ".agents",
 )
 
 

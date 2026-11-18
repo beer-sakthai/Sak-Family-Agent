@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:workflows": "python3 workflow_engine/verify.py",
+    "test:all": "vitest run && python3 workflow_engine/verify.py"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",

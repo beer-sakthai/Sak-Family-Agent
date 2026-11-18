@@ -1,6 +1,6 @@
 """Contract test between agent_workflow's writer and sakthai's reader.
 
-``apps/agent_workflow_framework`` writes workflow run histories; ``web/api.py``
+``apps/sak_agent_dashboard/workflow_engine`` writes workflow run histories; ``web/api.py``
 reads them. The two are separate packages — the framework deliberately does not
 import ``sakthai`` — so the on-disk JSON *is* the interface between them, and
 nothing else would notice if it drifted.
@@ -24,13 +24,17 @@ import pytest
 from sakthai.config import workflow_runs_dir
 from sakthai.web import api
 
-_FRAMEWORK_DIR = Path(__file__).resolve().parents[1] / "apps" / "agent_workflow_framework"
+_FRAMEWORK_DIR = (
+    Path(__file__).resolve().parents[1] / "apps" / "sak_agent_dashboard" / "workflow_engine"
+)
+_CORE_DIR = Path(__file__).resolve().parents[1] / "personas" / "sakthai"
 
-if _FRAMEWORK_DIR.is_dir() and str(_FRAMEWORK_DIR) not in sys.path:
-    sys.path.insert(0, str(_FRAMEWORK_DIR))
+for p in (_FRAMEWORK_DIR, _CORE_DIR):
+    if p.is_dir() and str(p) not in sys.path:
+        sys.path.insert(0, str(p))
 
 agent_workflow = pytest.importorskip(
-    "agent_workflow.persistence", reason="apps/agent_workflow_framework not available"
+    "agent_workflow.persistence", reason="agent_workflow not available"
 )
 from agent_workflow.models import RunHistory, RunStatus, StepResult, StepStatus  # noqa: E402
 from agent_workflow.persistence import RunHistoryStore, default_storage_dir  # noqa: E402

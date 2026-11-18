@@ -51,7 +51,7 @@ MCP_ONLY_TOOLS = frozenset({"run_agent_loop"})
 
 # Test trees outside tests/, per CLAUDE.md. Each is (label, dir, glob, runner).
 _OTHER_TEST_TREES = (
-    ("agent_workflow_framework", "apps/agent_workflow_framework/tests", "test_*.py", "apps.yml"),
+    ("workflow_engine", "apps/sak_agent_dashboard/workflow_engine/tests", "test_*.py", "apps.yml"),
     ("sak_agent_dashboard", "apps/sak_agent_dashboard/src/tests", "*.test.ts*", "apps.yml"),
     ("sakthai-chat-cli", "sakthai-chat-cli/tests", "test_*.py", "subprojects.yml"),
     ("teams-copilot-mcp", "services/teams-copilot-mcp/tests", "test_*.py", "subprojects.yml"),

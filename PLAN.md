@@ -90,6 +90,7 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-18 **Implement GitHub Dependency Security Architecture & Configuration** — Implement external configuration file (`.github/dependency-review-config.yml`), update dependency review workflow (`.github/workflows/dependency-review.yml`), author comprehensive repository dependency security guide (`docs/manage-your-dependency-security.md`) implementing GitHub's supply chain security framework (https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/manage-your-dependency-security), and add automated regression tests.
 - [x] 2026-11-18 **Triaged Workflow Decisions** — Hardened `sonarcloud.yml` and `ossar.yml` with StepSecurity Harden-Runner; retained `ossar.yml` with MSDO Trivy analysis and isolated dormant SonarCloud checks when token is unconfigured.
 - [x] 2026-11-18 **Marketplace Actions Wave 18 (GitHub Code Review Assistant & Playwright CI Debugger Actions)** — Integrate and pin 2 new marketplace actions (`mlaplante/githubprreviewhelperextension` and `sentinelqa-dev/playwright-ci-debugger`) with immutable commit SHAs, configure automated workflows with StepSecurity Harden-Runner and explicit permissions mappings, expand `docs/marketplace-actions-catalog.md`, and add regression tests in `tests/test_marketplace_actions.py`.
+- [x] 2026-11-18 **Refactor apps/agent_workflow_framework and apps/sak_agent_dashboard into Single Unified App** — Consolidate the standalone workflow framework into 'apps/sak_agent_dashboard/workflow_engine' as a unified application (frontend dashboard + embedded workflow engine), eliminate the separate 'apps/agent_workflow_framework' directory, and update all tests, scripts, and CI workflows.
 
 ### 2. Hugging Face Ecosystem ([`docs/hf-cards-improvement-plan.md`](./docs/hf-cards-improvement-plan.md))
 - [x] 2026-11-18 **Private `Nanthasit/sakthai-embedding` repo decision** — Retained as permanently private; superseded by `sakthai-embedding-multilingual` with 100% healthy portfolio telemetry.
@@ -105,7 +106,7 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [ ] **Phase 4: Code Evolution via Darwinian Evolver** (`evolution/code/`) — Build `GitBasedOrganism` wrapper and composite pytest + benchmark fitness function for tool implementation code.
 - [ ] **Phase 5: Continuous Self-Improvement Loop** (`evolution/monitor/`) — Build performance monitor, auto-triage ranker, and scheduled optimization trigger.
 
-### 5. Agent Workflow Framework Backlog ([`apps/agent_workflow_framework/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md`](./apps/agent_workflow_framework/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md))
+### 5. Agent Workflow Framework Backlog ([`apps/sak_agent_dashboard/workflow_engine/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md`](./apps/sak_agent_dashboard/workflow_engine/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md))
 *(P1 — Packaging & Import Ergonomics (`pyproject.toml`) and P1 — Evaluation Isolation (`--storage-dir` + `verify.py` isolation) are `[x]` complete)*
 - [x] 2026-11-16 **P2 — Observability & Failure Contracts** — Add tests for malformed persisted history, duplicate run IDs, invalid retry values, and callback exceptions. (PR #1868)
 - [x] 2026-11-18 **P2 — Execution Resilience** — Add cancellation and timeout semantics for long-running workflow steps.
@@ -129,7 +130,7 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 | Personas (×6) | [`personas/*/PLAN.md`](./personas/) | 🟡 Active — operational tasks open |
 | Agent Self-Evolution | [`personas/shared/agent-self-evolution/PLAN.md`](./personas/shared/agent-self-evolution/PLAN.md) | 🟡 Active — Phases 3–5 open (Phases 1–2 done) |
 | HF Ecosystem Improvement | [`docs/hf-cards-improvement-plan.md`](./docs/hf-cards-improvement-plan.md) | 🟡 Active — private `sakthai-embedding` decision open |
-| Workflow Framework Backlog | [`apps/agent_workflow_framework/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md`](./apps/agent_workflow_framework/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md) | 🟡 Active — P2–P3 open (P1 done) |
+| Workflow Framework Backlog | [`apps/sak_agent_dashboard/workflow_engine/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md`](./apps/sak_agent_dashboard/workflow_engine/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md) | 🟡 Active — P2–P3 open (P1 done) |
 
 ## 🔧 Runtime Notes
 
