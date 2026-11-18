@@ -216,3 +216,29 @@ def test_workflows_do_not_contain_unpinned_pip_or_npm_installs() -> None:
                     offenders.append(f"{yml_path.name}:{job_name} (unpinned npm install)")
 
     assert offenders == [], f"Found unpinned workflow package installs: {offenders}"
+
+
+def test_workflows_do_not_reference_secrets_context_in_if_conditions() -> None:
+    """Ensure workflows do not reference secrets.<NAME> in job or step if: expressions."""
+    secrets_ctx_re = re.compile(r"(?<![A-Za-z0-9_.-])secrets\.[A-Za-z0-9_]+\b")
+    offenders: list[str] = []
+
+    for yml_path in sorted(WORKFLOWS_DIR.glob("*.yml")):
+        data = yaml.safe_load(yml_path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            continue
+        for job_name, job_data in (data.get("jobs") or {}).items():
+            if not isinstance(job_data, dict):
+                continue
+            job_if = str(job_data.get("if", ""))
+            if secrets_ctx_re.search(job_if):
+                offenders.append(f"{yml_path.name}:{job_name} (job if)")
+            for step in job_data.get("steps") or []:
+                if not isinstance(step, dict):
+                    continue
+                step_if = str(step.get("if", ""))
+                if secrets_ctx_re.search(step_if):
+                    step_name = step.get("name", "<unnamed>")
+                    offenders.append(f"{yml_path.name}:{job_name}:{step_name} (step if)")
+
+    assert offenders == [], f"Found invalid secrets.* references in if: conditions: {offenders}"
