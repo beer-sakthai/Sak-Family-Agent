@@ -1,0 +1,41 @@
+name: GitHub Code Review Assistant
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  code-review-assistant:
+    name: Code Review Assistant
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run GitHub Code Review Assistant
+        uses: mlaplante/githubprreviewhelperextension@84c713e117ecfb6fa835075bf23f5dc48d6d657b # v1.4.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          fail-on-critical: 'false'
+          severity-threshold: 'info'
+          label-on-critical: ''
