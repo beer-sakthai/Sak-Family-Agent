@@ -44,7 +44,9 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="subcommand", help="Available subcommands")
 
     # 1. validate
-    val_p = subparsers.add_parser("validate", help="Pre-flight validation of workflow definition files.")
+    val_p = subparsers.add_parser(
+        "validate", help="Pre-flight validation of workflow definition files."
+    )
     val_p.add_argument("file", help="Path to YAML or JSON workflow definition file.")
 
     # 2. run
@@ -122,7 +124,9 @@ def cmd_run(
     executor = WorkflowExecutor(storage_dir=storage_dir)
 
     def status_cb(r_id: str, step_res):
-        print(f"  Step '{step_res.step_id}': {step_res.status.value} (attempts: {step_res.attempts})")
+        print(
+            f"  Step '{step_res.step_id}': {step_res.status.value} (attempts: {step_res.attempts})"
+        )
 
     try:
         history = asyncio.run(

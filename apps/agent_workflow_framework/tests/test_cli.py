@@ -48,10 +48,21 @@ class TestCLI(unittest.TestCase):
 
     def test_cli_inspect_and_list(self):
         """Test 'inspect' and 'list' subcommands."""
-        run_code = cli_main(["--storage-dir", self.temp_dir.name, "run", str(self.valid_yaml), "--run-id", "test_cli_inspect_run"])
+        run_code = cli_main(
+            [
+                "--storage-dir",
+                self.temp_dir.name,
+                "run",
+                str(self.valid_yaml),
+                "--run-id",
+                "test_cli_inspect_run",
+            ]
+        )
         self.assertEqual(run_code, 0)
 
-        inspect_code = cli_main(["--storage-dir", self.temp_dir.name, "inspect", "test_cli_inspect_run"])
+        inspect_code = cli_main(
+            ["--storage-dir", self.temp_dir.name, "inspect", "test_cli_inspect_run"]
+        )
         self.assertEqual(inspect_code, 0)
 
         list_code = cli_main(["--storage-dir", self.temp_dir.name, "list"])
@@ -60,7 +71,16 @@ class TestCLI(unittest.TestCase):
     def test_cli_storage_dir_flag_isolates_runs(self):
         """Verify --storage-dir writes and lists runs exclusively in the custom directory."""
         with tempfile.TemporaryDirectory() as custom_dir:
-            code = cli_main(["--storage-dir", custom_dir, "run", str(self.valid_yaml), "--run-id", "isolated-run-1"])
+            code = cli_main(
+                [
+                    "--storage-dir",
+                    custom_dir,
+                    "run",
+                    str(self.valid_yaml),
+                    "--run-id",
+                    "isolated-run-1",
+                ]
+            )
             self.assertEqual(code, 0)
             self.assertTrue((Path(custom_dir) / "isolated-run-1.json").is_file())
 
@@ -73,8 +93,11 @@ class TestCLI(unittest.TestCase):
     def test_pyproject_toml_defines_console_entry_point(self):
         """Verify pyproject.toml exists and registers agent-workflow CLI script."""
         import tomllib
+
         pyproject_path = Path(__file__).resolve().parents[1] / "pyproject.toml"
-        self.assertTrue(pyproject_path.is_file(), "apps/agent_workflow_framework/pyproject.toml must exist")
+        self.assertTrue(
+            pyproject_path.is_file(), "apps/agent_workflow_framework/pyproject.toml must exist"
+        )
         data = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
         self.assertEqual(data["project"]["name"], "agent-workflow-framework")
         self.assertEqual(
@@ -84,15 +107,43 @@ class TestCLI(unittest.TestCase):
 
     def test_cli_duplicate_run_id_contract(self):
         """Verify CLI 'run' fails with code 1 on duplicate run ID unless --allow-duplicate is set."""
-        code1 = cli_main(["--storage-dir", self.temp_dir.name, "run", str(self.valid_yaml), "--run-id", "cli_dup_run"])
+        code1 = cli_main(
+            [
+                "--storage-dir",
+                self.temp_dir.name,
+                "run",
+                str(self.valid_yaml),
+                "--run-id",
+                "cli_dup_run",
+            ]
+        )
         self.assertEqual(code1, 0)
 
         # Duplicate run ID without flag returns exit code 1
-        code2 = cli_main(["--storage-dir", self.temp_dir.name, "run", str(self.valid_yaml), "--run-id", "cli_dup_run"])
+        code2 = cli_main(
+            [
+                "--storage-dir",
+                self.temp_dir.name,
+                "run",
+                str(self.valid_yaml),
+                "--run-id",
+                "cli_dup_run",
+            ]
+        )
         self.assertEqual(code2, 1)
 
         # With --allow-duplicate returns exit code 0
-        code3 = cli_main(["--storage-dir", self.temp_dir.name, "run", str(self.valid_yaml), "--run-id", "cli_dup_run", "--allow-duplicate"])
+        code3 = cli_main(
+            [
+                "--storage-dir",
+                self.temp_dir.name,
+                "run",
+                str(self.valid_yaml),
+                "--run-id",
+                "cli_dup_run",
+                "--allow-duplicate",
+            ]
+        )
         self.assertEqual(code3, 0)
 
     def test_cli_inspect_malformed_run_history_exit_code_1(self):
@@ -105,10 +156,21 @@ class TestCLI(unittest.TestCase):
 
     def test_cli_json_output_flags(self):
         """Verify --json flag on inspect and list subcommands."""
-        run_code = cli_main(["--storage-dir", self.temp_dir.name, "run", str(self.valid_yaml), "--run-id", "json_test_run"])
+        run_code = cli_main(
+            [
+                "--storage-dir",
+                self.temp_dir.name,
+                "run",
+                str(self.valid_yaml),
+                "--run-id",
+                "json_test_run",
+            ]
+        )
         self.assertEqual(run_code, 0)
 
-        insp_code = cli_main(["--storage-dir", self.temp_dir.name, "inspect", "json_test_run", "--json"])
+        insp_code = cli_main(
+            ["--storage-dir", self.temp_dir.name, "inspect", "json_test_run", "--json"]
+        )
         self.assertEqual(insp_code, 0)
 
         list_code = cli_main(["--storage-dir", self.temp_dir.name, "list", "--json"])
@@ -117,7 +179,9 @@ class TestCLI(unittest.TestCase):
     def test_cli_validate_invalid_retry_exit_code_2(self):
         """Verify CLI validate returns exit code 2 when step retry is invalid."""
         bad_retry_yaml = Path(self.temp_dir.name) / "bad_retry.yaml"
-        bad_retry_yaml.write_text("name: bad_wf\nsteps:\n  - id: s1\n    action: echo\n    retry: -1\n")
+        bad_retry_yaml.write_text(
+            "name: bad_wf\nsteps:\n  - id: s1\n    action: echo\n    retry: -1\n"
+        )
 
         code = cli_main(["validate", str(bad_retry_yaml)])
         self.assertEqual(code, 2)

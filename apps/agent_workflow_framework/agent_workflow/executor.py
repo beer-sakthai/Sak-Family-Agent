@@ -305,9 +305,16 @@ class WorkflowExecutor:
     """Asynchronous workflow execution engine."""
 
     def __init__(self, storage_dir: Path | None = None, max_workers: int = 4):
-        """Initialize WorkflowExecutor with optional custom history store directory."""
+        """Initialize WorkflowExecutor with optional custom history store directory.
+
+        Concurrency Contract:
+            `max_workers` defines the maximum number of step actions permitted to
+            execute concurrently across parallel fan-out DAG batches, enforced via
+            an internal asyncio.Semaphore.
+        """
         self.store = RunHistoryStore(storage_dir)
-        self.max_workers = max_workers
+        self.max_workers = max(1, max_workers)
+        self._semaphore = asyncio.Semaphore(self.max_workers)
 
     async def _execute_action(
         self, action: str, params: dict[str, Any], step_id: str
@@ -535,8 +542,10 @@ class WorkflowExecutor:
         status_callback: Callable[[str, StepResult], None] | None = None,
         allow_duplicate_run_id: bool = False,
         raise_callback_exceptions: bool = False,
+        cancellation_token: asyncio.Event | None = None,
+        workflow_timeout: float | None = None,
     ) -> RunHistory:
-        """Execute a WorkflowDefinition asynchronously."""
+        """Execute a WorkflowDefinition asynchronously with cancellation and timeout semantics."""
         # 1. Pre-flight DAG validation
         validation_errors = validate_workflow_dag(workflow)
         if validation_errors:
@@ -545,9 +554,7 @@ class WorkflowExecutor:
         # 2. Check for duplicate run_id if provided
         if run_id:
             if not allow_duplicate_run_id and self.store.has_run(run_id):
-                raise DuplicateRunError(
-                    f"Workflow run with ID '{run_id}' already exists in store."
-                )
+                raise DuplicateRunError(f"Workflow run with ID '{run_id}' already exists in store.")
         else:
             run_id = f"run_{uuid.uuid4().hex[:8]}"
             while self.store.has_run(run_id):
@@ -562,105 +569,176 @@ class WorkflowExecutor:
         )
         self.store.save_run_history(history)
 
-        state_ctx = StateContext()
-        failed_step_ids: set[str] = set()
-        skipped_step_ids: set[str] = set()
+        async def _execute_batches() -> RunHistory:
+            state_ctx = StateContext()
+            failed_step_ids: set[str] = set()
+            skipped_step_ids: set[str] = set()
 
-        # Build topological execution batches
-        batches = build_topological_batches(workflow)
-        for batch in batches:
-            # Filter out skipped steps whose upstream dependencies failed
-            runnable_steps: list[StepDefinition] = []
-            for step in batch:
-                # Check if any dependency failed or was skipped
-                has_failed_dep = any(
-                    dep in failed_step_ids or dep in skipped_step_ids for dep in step.depends_on
-                )
-                if has_failed_dep:
-                    skipped_step_ids.add(step.id)
-                    res = StepResult(
+            # Build topological execution batches
+            batches = build_topological_batches(workflow)
+            for batch in batches:
+                # Check cancellation token at batch boundary
+                if cancellation_token and cancellation_token.is_set():
+                    for step in batch:
+                        if step.id not in history.step_results:
+                            res = StepResult(
+                                step_id=step.id,
+                                status=StepStatus.SKIPPED,
+                                output={},
+                                error="Execution cancelled.",
+                                attempts=0,
+                                start_time=datetime.now().isoformat(),
+                                end_time=datetime.now().isoformat(),
+                            )
+                            history.add_step_result(res)
+                    failed_step_ids.add("cancelled")
+                    break
+
+                # Filter out skipped steps whose upstream dependencies failed
+                runnable_steps: list[StepDefinition] = []
+                for step in batch:
+                    # Check if any dependency failed or was skipped
+                    has_failed_dep = any(
+                        dep in failed_step_ids or dep in skipped_step_ids for dep in step.depends_on
+                    )
+                    if has_failed_dep:
+                        skipped_step_ids.add(step.id)
+                        res = StepResult(
+                            step_id=step.id,
+                            status=StepStatus.SKIPPED,
+                            output={},
+                            error="Skipped due to upstream step failure.",
+                            attempts=0,
+                            start_time=datetime.now().isoformat(),
+                            end_time=datetime.now().isoformat(),
+                        )
+                        history.add_step_result(res)
+                        await self._invoke_callback(
+                            status_callback,
+                            run_id,
+                            res,
+                            raise_exceptions=raise_callback_exceptions,
+                        )
+                    else:
+                        runnable_steps.append(step)
+
+                if not runnable_steps:
+                    continue
+
+                # Execute runnable batch in parallel via asyncio.gather with bounded workers and timeouts
+                async def _run_single_step(step: StepDefinition) -> StepResult:
+                    step_start = datetime.now().isoformat()
+                    max_attempts = max(1, (step.retry or 0) + 1)
+                    last_error: str | None = None
+
+                    for attempt in range(1, max_attempts + 1):
+                        if cancellation_token and cancellation_token.is_set():
+                            return StepResult(
+                                step_id=step.id,
+                                status=StepStatus.SKIPPED,
+                                output={},
+                                error="Execution cancelled.",
+                                attempts=attempt - 1,
+                                start_time=step_start,
+                                end_time=datetime.now().isoformat(),
+                            )
+
+                        try:
+                            # Interpolate step parameters using current state context
+                            interpolated_params = state_ctx.interpolate(step.params)
+
+                            # Bounded concurrency via Semaphore
+                            async with self._semaphore:
+                                if cancellation_token and cancellation_token.is_set():
+                                    raise asyncio.CancelledError("Execution cancelled.")
+
+                                action_coro = self._execute_action(
+                                    step.action, interpolated_params, step.id
+                                )
+                                if step.timeout is not None and step.timeout > 0:
+                                    out = await asyncio.wait_for(action_coro, timeout=step.timeout)
+                                else:
+                                    out = await action_coro
+
+                            step_res = StepResult(
+                                step_id=step.id,
+                                status=StepStatus.COMPLETED,
+                                output=out if isinstance(out, dict) else {"result": out},
+                                attempts=attempt,
+                                start_time=step_start,
+                                end_time=datetime.now().isoformat(),
+                            )
+                            state_ctx.set_step_result(step_res)
+                            return step_res
+
+                        except TimeoutError:
+                            last_error = f"Step '{step.id}' timed out after {step.timeout}s."
+                            if attempt < max_attempts and step.retry_delay > 0:
+                                await asyncio.sleep(step.retry_delay)
+                        except asyncio.CancelledError:
+                            return StepResult(
+                                step_id=step.id,
+                                status=StepStatus.SKIPPED,
+                                output={},
+                                error="Execution cancelled.",
+                                attempts=attempt,
+                                start_time=step_start,
+                                end_time=datetime.now().isoformat(),
+                            )
+                        except Exception as e:
+                            last_error = str(e)
+                            if attempt < max_attempts and step.retry_delay > 0:
+                                await asyncio.sleep(step.retry_delay)
+
+                    # All attempts exhausted -> FAILED
+                    return StepResult(
                         step_id=step.id,
-                        status=StepStatus.SKIPPED,
+                        status=StepStatus.FAILED,
                         output={},
-                        error="Skipped due to upstream step failure.",
-                        attempts=0,
-                        start_time=datetime.now().isoformat(),
+                        error=last_error or "Execution failed.",
+                        attempts=max_attempts,
+                        start_time=step_start,
                         end_time=datetime.now().isoformat(),
                     )
-                    history.add_step_result(res)
+
+                # Execute batch tasks concurrently
+                batch_results: list[StepResult] = await asyncio.gather(
+                    *[_run_single_step(step) for step in runnable_steps]
+                )
+
+                for step_res in batch_results:
+                    history.add_step_result(step_res)
+                    if (
+                        step_res.status == StepStatus.FAILED
+                        or step_res.error == "Execution cancelled."
+                    ):
+                        failed_step_ids.add(step_res.step_id)
                     await self._invoke_callback(
                         status_callback,
                         run_id,
-                        res,
+                        step_res,
                         raise_exceptions=raise_callback_exceptions,
                     )
-                else:
-                    runnable_steps.append(step)
 
-            if not runnable_steps:
-                continue
+            # Determine final workflow run status
+            history.end_time = datetime.now().isoformat()
+            if failed_step_ids:
+                history.status = RunStatus.FAILED
+            else:
+                history.status = RunStatus.COMPLETED
 
-            # Execute runnable batch in parallel via asyncio.gather
-            async def _run_single_step(step: StepDefinition) -> StepResult:
-                step_start = datetime.now().isoformat()
-                max_attempts = max(1, (step.retry or 0) + 1)
-                last_error: str | None = None
+            self.store.save_run_history(history)
+            return history
 
-                for attempt in range(1, max_attempts + 1):
-                    try:
-                        # Interpolate step parameters using current state context
-                        interpolated_params = state_ctx.interpolate(step.params)
-                        out = await self._execute_action(step.action, interpolated_params, step.id)
-
-                        step_res = StepResult(
-                            step_id=step.id,
-                            status=StepStatus.COMPLETED,
-                            output=out if isinstance(out, dict) else {"result": out},
-                            attempts=attempt,
-                            start_time=step_start,
-                            end_time=datetime.now().isoformat(),
-                        )
-                        state_ctx.set_step_result(step_res)
-                        return step_res
-
-                    except Exception as e:
-                        last_error = str(e)
-                        if attempt < max_attempts and step.retry_delay > 0:
-                            await asyncio.sleep(step.retry_delay)
-
-                # All attempts exhausted -> FAILED
-                return StepResult(
-                    step_id=step.id,
-                    status=StepStatus.FAILED,
-                    output={},
-                    error=last_error or "Execution failed.",
-                    attempts=max_attempts,
-                    start_time=step_start,
-                    end_time=datetime.now().isoformat(),
-                )
-
-            # Execute batch tasks concurrently
-            batch_results: list[StepResult] = await asyncio.gather(
-                *[_run_single_step(step) for step in runnable_steps]
-            )
-
-            for step_res in batch_results:
-                history.add_step_result(step_res)
-                if step_res.status == StepStatus.FAILED:
-                    failed_step_ids.add(step_res.step_id)
-                await self._invoke_callback(
-                    status_callback,
-                    run_id,
-                    step_res,
-                    raise_exceptions=raise_callback_exceptions,
-                )
-
-        # Determine final workflow run status
-        history.end_time = datetime.now().isoformat()
-        if failed_step_ids:
-            history.status = RunStatus.FAILED
+        if workflow_timeout is not None and workflow_timeout > 0:
+            try:
+                return await asyncio.wait_for(_execute_batches(), timeout=workflow_timeout)
+            except TimeoutError as err:
+                history.status = RunStatus.FAILED
+                history.end_time = datetime.now().isoformat()
+                self.store.save_run_history(history)
+                raise TimeoutError(
+                    f"Workflow '{workflow.name}' timed out after {workflow_timeout}s."
+                ) from err
         else:
-            history.status = RunStatus.COMPLETED
-
-        self.store.save_run_history(history)
-        return history
+            return await _execute_batches()

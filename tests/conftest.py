@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import tempfile
 from collections.abc import Iterator
 from pathlib import Path
@@ -10,6 +11,12 @@ from pathlib import Path
 import pytest
 
 from sakthai.memory.store import MemoryStore
+
+# Append personas/sakthai to sys.path so subpackages like evolution resolve
+# without shadowing installed third-party site-packages (e.g. python-telegram-bot).
+_sakthai_pkg_dir = str(Path(__file__).resolve().parent.parent / "personas" / "sakthai")
+if _sakthai_pkg_dir not in sys.path:
+    sys.path.append(_sakthai_pkg_dir)
 
 # Ensure loopback addresses bypass any ambient HTTP/HTTPS proxy during test runs.
 for _k in ("NO_PROXY", "no_proxy"):

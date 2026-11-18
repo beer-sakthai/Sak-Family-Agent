@@ -137,8 +137,18 @@ class TestHistoryStore(unittest.TestCase):
 
     def test_list_runs(self):
         self.assertEqual(self.store.list_runs(), [])
-        h1 = RunHistory(run_id="run1", workflow_name="w1", status=RunStatus.COMPLETED, start_time="2026-08-01T12:00:00Z")
-        h2 = RunHistory(run_id="run2", workflow_name="w2", status=RunStatus.FAILED, start_time="2026-08-01T12:00:05Z")
+        h1 = RunHistory(
+            run_id="run1",
+            workflow_name="w1",
+            status=RunStatus.COMPLETED,
+            start_time="2026-08-01T12:00:00Z",
+        )
+        h2 = RunHistory(
+            run_id="run2",
+            workflow_name="w2",
+            status=RunStatus.FAILED,
+            start_time="2026-08-01T12:00:05Z",
+        )
         self.store.save_run_history(h1)
         self.store.save_run_history(h2)
 
@@ -149,7 +159,12 @@ class TestHistoryStore(unittest.TestCase):
         self.assertEqual(runs[1].run_id, "run1")
 
     def test_delete_run_history(self):
-        history = RunHistory(run_id="run_del", workflow_name="wf", status=RunStatus.COMPLETED, start_time="2026-08-01T12:00:00Z")
+        history = RunHistory(
+            run_id="run_del",
+            workflow_name="wf",
+            status=RunStatus.COMPLETED,
+            start_time="2026-08-01T12:00:00Z",
+        )
         self.store.save_run_history(history)
         self.assertTrue(self.store.delete_run_history("run_del"))
         self.assertFalse(self.store.delete_run_history("run_del"))
@@ -159,7 +174,13 @@ class TestHistoryStore(unittest.TestCase):
 
     def test_get_step_result_and_output(self):
         res1 = StepResult(step_id="s1", status=StepStatus.COMPLETED, output={"val": 42})
-        history = RunHistory(run_id="run_query", workflow_name="wf", status=RunStatus.COMPLETED, start_time="2026-08-01T12:00:00Z", step_results={"s1": res1})
+        history = RunHistory(
+            run_id="run_query",
+            workflow_name="wf",
+            status=RunStatus.COMPLETED,
+            start_time="2026-08-01T12:00:00Z",
+            step_results={"s1": res1},
+        )
         self.store.save_run_history(history)
 
         step_res = self.store.get_step_result("run_query", "s1")
@@ -224,7 +245,12 @@ class TestHistoryStore(unittest.TestCase):
         self.assertIs(ExecutionStore, RunHistoryStore)
 
     def test_module_convenience_functions(self):
-        history = RunHistory(run_id="run_conv", workflow_name="wf", status=RunStatus.COMPLETED, start_time="2026-08-01T12:00:00Z")
+        history = RunHistory(
+            run_id="run_conv",
+            workflow_name="wf",
+            status=RunStatus.COMPLETED,
+            start_time="2026-08-01T12:00:00Z",
+        )
         res = StepResult(step_id="s1", status=StepStatus.COMPLETED, output={"conv": True})
         history.add_step_result(res)
 
@@ -294,15 +320,89 @@ class TestHistoryStore(unittest.TestCase):
             ("root_str.json", json.dumps("hello_world")),
             ("root_number.json", json.dumps(12345)),
             ("empty_dict.json", json.dumps({})),
-            ("missing_name.json", json.dumps({"run_id": "r1", "status": "COMPLETED", "start_time": "2026-01-01"})),
-            ("missing_status.json", json.dumps({"run_id": "r1", "workflow_name": "w1", "start_time": "2026-01-01"})),
-            ("missing_start_time.json", json.dumps({"run_id": "r1", "workflow_name": "w1", "status": "COMPLETED"})),
-            ("invalid_run_status.json", json.dumps({"run_id": "r1", "workflow_name": "w1", "status": "NONEXISTENT", "start_time": "2026-01-01"})),
-            ("step_results_list.json", json.dumps({"run_id": "r1", "workflow_name": "w1", "status": "COMPLETED", "start_time": "2026-01-01", "step_results": ["not_a_dict"]})),
-            ("step_results_str.json", json.dumps({"run_id": "r1", "workflow_name": "w1", "status": "COMPLETED", "start_time": "2026-01-01", "step_results": "invalid_string"})),
-            ("step_missing_id.json", json.dumps({"run_id": "r1", "workflow_name": "w1", "status": "COMPLETED", "start_time": "2026-01-01", "step_results": {"s1": {"status": "COMPLETED"}}})),
-            ("step_missing_status.json", json.dumps({"run_id": "r1", "workflow_name": "w1", "status": "COMPLETED", "start_time": "2026-01-01", "step_results": {"s1": {"step_id": "s1"}}})),
-            ("step_invalid_status.json", json.dumps({"run_id": "r1", "workflow_name": "w1", "status": "COMPLETED", "start_time": "2026-01-01", "step_results": {"s1": {"step_id": "s1", "status": "INVALID"}}}))
+            (
+                "missing_name.json",
+                json.dumps({"run_id": "r1", "status": "COMPLETED", "start_time": "2026-01-01"}),
+            ),
+            (
+                "missing_status.json",
+                json.dumps({"run_id": "r1", "workflow_name": "w1", "start_time": "2026-01-01"}),
+            ),
+            (
+                "missing_start_time.json",
+                json.dumps({"run_id": "r1", "workflow_name": "w1", "status": "COMPLETED"}),
+            ),
+            (
+                "invalid_run_status.json",
+                json.dumps(
+                    {
+                        "run_id": "r1",
+                        "workflow_name": "w1",
+                        "status": "NONEXISTENT",
+                        "start_time": "2026-01-01",
+                    }
+                ),
+            ),
+            (
+                "step_results_list.json",
+                json.dumps(
+                    {
+                        "run_id": "r1",
+                        "workflow_name": "w1",
+                        "status": "COMPLETED",
+                        "start_time": "2026-01-01",
+                        "step_results": ["not_a_dict"],
+                    }
+                ),
+            ),
+            (
+                "step_results_str.json",
+                json.dumps(
+                    {
+                        "run_id": "r1",
+                        "workflow_name": "w1",
+                        "status": "COMPLETED",
+                        "start_time": "2026-01-01",
+                        "step_results": "invalid_string",
+                    }
+                ),
+            ),
+            (
+                "step_missing_id.json",
+                json.dumps(
+                    {
+                        "run_id": "r1",
+                        "workflow_name": "w1",
+                        "status": "COMPLETED",
+                        "start_time": "2026-01-01",
+                        "step_results": {"s1": {"status": "COMPLETED"}},
+                    }
+                ),
+            ),
+            (
+                "step_missing_status.json",
+                json.dumps(
+                    {
+                        "run_id": "r1",
+                        "workflow_name": "w1",
+                        "status": "COMPLETED",
+                        "start_time": "2026-01-01",
+                        "step_results": {"s1": {"step_id": "s1"}},
+                    }
+                ),
+            ),
+            (
+                "step_invalid_status.json",
+                json.dumps(
+                    {
+                        "run_id": "r1",
+                        "workflow_name": "w1",
+                        "status": "COMPLETED",
+                        "start_time": "2026-01-01",
+                        "step_results": {"s1": {"step_id": "s1", "status": "INVALID"}},
+                    }
+                ),
+            ),
         ]
 
         for filename, content in malformed_cases:
@@ -328,7 +428,12 @@ class TestHistoryStore(unittest.TestCase):
         # Create corrupted files
         (self.storage_dir / "bad_syntax.json").write_text("invalid json", encoding="utf-8")
         (self.storage_dir / "bad_root.json").write_text(json.dumps([1, 2, 3]), encoding="utf-8")
-        (self.storage_dir / "bad_enum.json").write_text(json.dumps({"run_id": "bad", "workflow_name": "w", "status": "BAD", "start_time": "2026-01-01"}), encoding="utf-8")
+        (self.storage_dir / "bad_enum.json").write_text(
+            json.dumps(
+                {"run_id": "bad", "workflow_name": "w", "status": "BAD", "start_time": "2026-01-01"}
+            ),
+            encoding="utf-8",
+        )
 
         # list_runs should ignore the corrupted files and return only the valid run
         runs = self.store.list_runs()

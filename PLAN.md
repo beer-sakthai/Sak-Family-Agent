@@ -88,11 +88,11 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-18 **Consolidate Dashboard, Workflow Framework & Agent Platform into Unified Architecture** — Consolidate 'app/agent_platform' into 'apps/', unify the Next.js Dashboard ('apps/sak_agent_dashboard'), Workflow Framework ('apps/agent_workflow_framework') and Agent Platform under a single clean architecture, eliminate rogue 'app/' directory, and update all imports, tests, and CI workflows.
 - [x] 2026-11-18 **Audit & Fix Failed GitHub Actions Workflows** — Resolve runtime failures in `update-pr-reminder.yml` (missing GH_TOKEN / GITHUB_TOKEN environment variables), `workflow-immortality.yml` (missing repos parameter and actions: write permission), `actions-usage-audit.yml` (upstream Python 3.9 distroless incompatibility & organization billing guard with graceful fallback), and `skill-pr-reviewer.md` (no-op clean exit when triggered with no open PRs; disable report-failure-as-issue).
 - [x] 2026-11-18 **Implement GitHub Dependency Security Architecture & Configuration** — Implement external configuration file (`.github/dependency-review-config.yml`), update dependency review workflow (`.github/workflows/dependency-review.yml`), author comprehensive repository dependency security guide (`docs/manage-your-dependency-security.md`) implementing GitHub's supply chain security framework (https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/manage-your-dependency-security), and add automated regression tests.
-- [ ] **Triaged Workflow Decisions** — Decide whether to retire or replace `sonarcloud.yml` (archived upstream action) and `ossar.yml`.
+- [x] 2026-11-18 **Triaged Workflow Decisions** — Hardened `sonarcloud.yml` and `ossar.yml` with StepSecurity Harden-Runner; retained `ossar.yml` with MSDO Trivy analysis and isolated dormant SonarCloud checks when token is unconfigured.
 
 ### 2. Hugging Face Ecosystem ([`docs/hf-cards-improvement-plan.md`](./docs/hf-cards-improvement-plan.md))
-- [ ] **Private `Nanthasit/sakthai-embedding` repo decision** — Decide whether to keep `sakthai-embedding` (English) permanently private or publish a deprecation notice redirecting to `sakthai-embedding-multilingual`.
-- [ ] **Automated card-promotion cron check** — Ensure no external promotion script overwrites the lean 11-model / 8-dataset / 3-Space card template on `sakthai-combined-v6`.
+- [x] 2026-11-18 **Private `Nanthasit/sakthai-embedding` repo decision** — Retained as permanently private; superseded by `sakthai-embedding-multilingual` with 100% healthy portfolio telemetry.
+- [x] 2026-11-18 **Automated card-promotion cron check** — Verified health check script and guarded lean 11-model / 8-dataset / 3-Space template from legacy funnel overwrites.
 
 ### 3. Product & Monetization ([`product/PLAN.md`](./product/PLAN.md))
 - [ ] **ServiceQuoteBot Customer Outreach** — Deploy first live pilot instance for Beer's target local service business customer.
@@ -100,14 +100,14 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 
 ### 4. Agent Self-Evolution Pipeline ([`personas/shared/agent-self-evolution/PLAN.md`](./personas/shared/agent-self-evolution/PLAN.md))
 *(Phases 1 & 2 — Skill Evolution and Tool Description Optimization — are `[x]` complete)*
-- [ ] **Phase 3: System Prompt Evolution** (`evolution/prompts/`) — Build section-as-DSPy-parameter wrapper for the 5 evolvable `prompt_builder.py` sections (`DEFAULT_AGENT_IDENTITY`, `MEMORY_GUIDANCE`, `SESSION_SEARCH_GUIDANCE`, `SKILLS_GUIDANCE`, `PLATFORM_HINTS`) and behavioral evaluator.
+- [x] 2026-11-18 **Phase 3: System Prompt Evolution** (`evolution/prompts/`) — Build section-as-DSPy-parameter wrapper for the 5 evolvable `prompt_builder.py` sections (`DEFAULT_AGENT_IDENTITY`, `MEMORY_GUIDANCE`, `SESSION_SEARCH_GUIDANCE`, `SKILLS_GUIDANCE`, `PLATFORM_HINTS`) and behavioral evaluator.
 - [ ] **Phase 4: Code Evolution via Darwinian Evolver** (`evolution/code/`) — Build `GitBasedOrganism` wrapper and composite pytest + benchmark fitness function for tool implementation code.
 - [ ] **Phase 5: Continuous Self-Improvement Loop** (`evolution/monitor/`) — Build performance monitor, auto-triage ranker, and scheduled optimization trigger.
 
 ### 5. Agent Workflow Framework Backlog ([`apps/agent_workflow_framework/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md`](./apps/agent_workflow_framework/docs/superpowers/plans/2026-09-22-framework-improvement-plan.md))
 *(P1 — Packaging & Import Ergonomics (`pyproject.toml`) and P1 — Evaluation Isolation (`--storage-dir` + `verify.py` isolation) are `[x]` complete)*
 - [x] 2026-11-16 **P2 — Observability & Failure Contracts** — Add tests for malformed persisted history, duplicate run IDs, invalid retry values, and callback exceptions. (PR #1868)
-- [ ] **P2 — Execution Resilience** — Add cancellation and timeout semantics for long-running workflow steps.
+- [x] 2026-11-18 **P2 — Execution Resilience** — Add cancellation and timeout semantics for long-running workflow steps.
 - [ ] **P3 — Benchmark Quality** — Add parallel fan-out/retry baselines and machine-readable JSON summary output to `verify.py`.
 
 ### 6. Per-Persona Open Operational Tasks (`personas/*/PLAN.md`)
