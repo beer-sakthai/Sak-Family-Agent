@@ -13,7 +13,8 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.issue.number || github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  # Newer PR/comment input supersedes an older bot response for the same item.
+  cancel-in-progress: true
 
 jobs:
   ci-bot:
