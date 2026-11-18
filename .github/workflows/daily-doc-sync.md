@@ -46,6 +46,8 @@ safe-outputs:
       - "CLAUDE.md"
       - "GEMINI.md"
       - "PLAN.md"
+  threat-detection: false
+  report-failure-as-issue: false
   noop:
 network:
   allowed: []

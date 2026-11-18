@@ -21,24 +21,54 @@ MARKER = "# repository patch: PR-scoped concurrency added after gh-aw compile\n"
 
 def patch(path: Path, check: bool) -> int:
     text = path.read_text(encoding="utf-8")
-    has_expected = CONCURRENCY in text and MARKER in text
+    has_expected_concurrency = CONCURRENCY in text and MARKER in text
+    has_expected_review_alias = '"review":' in text
+
     if check:
-        if not has_expected:
+        if not has_expected_concurrency:
             raise SystemExit(f"{path} is missing the repository gh-aw concurrency patch")
+        if not has_expected_review_alias:
+            raise SystemExit(f"{path} is missing the /review slash command alias")
         return 0
 
-    if has_expected:
-        return 0
+    patched = text
+    if not has_expected_concurrency:
+        if "\npermissions: {}\n" not in patched:
+            raise SystemExit(f"cannot locate generated permissions boundary in {path}")
+        patched = patched.replace(
+            "\npermissions: {}\n",
+            f"\n{MARKER}{CONCURRENCY}\npermissions: {{}}\n",
+            1,
+        )
 
-    if "\npermissions: {}\n" not in text:
-        raise SystemExit(f"cannot locate generated permissions boundary in {path}")
+    if not has_expected_review_alias:
+        import json
+        import re
 
-    patched = text.replace(
-        "\npermissions: {}\n",
-        f"\n{MARKER}{CONCURRENCY}\npermissions: {{}}\n",
-        1,
-    )
-    path.write_text(patched, encoding="utf-8")
+        m_routing = re.search(r"GH_AW_SLASH_ROUTING: '(.*?)'", patched)
+        if m_routing:
+            routing = json.loads(m_routing.group(1))
+            if "review" not in routing and "skill-pr-reviewer" in routing:
+                routing["review"] = routing["skill-pr-reviewer"]
+                new_routing = json.dumps(routing, separators=(",", ":"))
+                patched = patched.replace(m_routing.group(0), f"GH_AW_SLASH_ROUTING: '{new_routing}'")
+
+        m_help = re.search(r"GH_AW_HELP_COMMANDS: '(.*?)'", patched)
+        if m_help:
+            helps = json.loads(m_help.group(1))
+            if not any(h.get("command") == "review" for h in helps):
+                helps.append({
+                    "command": "review",
+                    "description": "Review pull requests with installed expert skills",
+                    "centralized": True,
+                    "decentralized": False,
+                    "source_file": "skill-pr-reviewer",
+                })
+                new_help = json.dumps(helps, separators=(",", ":"))
+                patched = patched.replace(m_help.group(0), f"GH_AW_HELP_COMMANDS: '{new_help}'")
+
+    if patched != text:
+        path.write_text(patched, encoding="utf-8")
     return 0
 
 

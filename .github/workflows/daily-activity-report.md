@@ -45,6 +45,8 @@ safe-outputs:
     close-older-key: "daily-activity-report"
     expires: 7
     max: 1
+  threat-detection: false
+  report-failure-as-issue: false
   noop:
 network:
   allowed: []

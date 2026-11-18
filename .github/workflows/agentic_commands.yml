@@ -24,8 +24,6 @@
 #
 # To regenerate this workflow, run:
 #   gh aw compile
-# Then apply the repository-owned safety patch:
-#   python3 scripts/patch_agentic_commands_concurrency.py
 # Not all edits will cause changes to this file.
 #
 # For more information: https://github.github.com/gh-aw/introduction/overview/
@@ -71,7 +69,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup Scripts
-        uses: github/gh-aw-actions/setup@862164f9ffbcce2e24e5397da938e3b19f839dce # v1.2.3
+        uses: github/gh-aw-actions/setup@53d0749e19424a918acd82b4d140264ce48f2f14 # v1.2.2
         with:
           destination: ${{ runner.temp }}/gh-aw/actions
 
@@ -79,9 +77,9 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         # runner-guard:ignore RGS-016 -- routing tables below contain emoji variation selectors (U+FE0F) and zero-width joiners (U+200D) used to render standard emoji sequences, not steganographic payloads.
         env:
-          GH_AW_SLASH_ROUTING: '{"plan":[{"workflow":"plan","events":["discussion","discussion_comment","issue_comment","issues","pull_request","pull_request_comment","pull_request_review_comment"],"ai_reaction":"eyes","status_comment":true}],"skill-pr-reviewer":[{"workflow":"skill-pr-reviewer","events":["discussion","discussion_comment","issue_comment","issues","pull_request","pull_request_comment","pull_request_review_comment"],"ai_reaction":"eyes","status_comment":true}]}'
+          GH_AW_SLASH_ROUTING: '{"plan":[{"workflow":"plan","events":["discussion","discussion_comment","issue_comment","issues","pull_request","pull_request_comment","pull_request_review_comment"],"ai_reaction":"eyes","status_comment":true}],"skill-pr-reviewer":[{"workflow":"skill-pr-reviewer","events":["discussion","discussion_comment","issue_comment","issues","pull_request","pull_request_comment","pull_request_review_comment"],"ai_reaction":"eyes","status_comment":true}],"review":[{"workflow":"skill-pr-reviewer","events":["discussion","discussion_comment","issue_comment","issues","pull_request","pull_request_comment","pull_request_review_comment"],"ai_reaction":"eyes","status_comment":true}]}'
           GH_AW_LABEL_ROUTING: '{"skill-pr-reviewer":[{"workflow":"skill-pr-reviewer","events":["discussion","issues","pull_request"],"ai_reaction":"eyes","status_comment":true}]}'
-          GH_AW_HELP_COMMANDS: '[{"command":"plan","description":"Generate structured implementation plans and architectural blueprints","centralized":true,"decentralized":false,"source_file":"plan"},{"command":"skill-pr-reviewer","description":"Review pull requests with installed expert skills","centralized":true,"decentralized":false,"source_file":"skill-pr-reviewer"},{"command":"skill-pr-reviewer","description":"Review pull requests with installed expert skills","centralized":false,"decentralized":false,"label":true,"source_file":"skill-pr-reviewer"}]'
+          GH_AW_HELP_COMMANDS: '[{"command":"plan","description":"Generate structured implementation plans and architectural blueprints","centralized":true,"decentralized":false,"source_file":"plan"},{"command":"skill-pr-reviewer","description":"Review pull requests with installed expert skills","centralized":true,"decentralized":false,"source_file":"skill-pr-reviewer"},{"command":"skill-pr-reviewer","description":"Review pull requests with installed expert skills","centralized":false,"decentralized":false,"label":true,"source_file":"skill-pr-reviewer"},{"command":"review","description":"Review pull requests with installed expert skills","centralized":true,"decentralized":false,"source_file":"skill-pr-reviewer"}]'
           GH_AW_HELP_COMMAND_ENABLED: 'true'
           GH_AW_SLASH_COMMAND_DOCS_URL: 'https://github.github.com/gh-aw/reference/command-triggers/'
         with:

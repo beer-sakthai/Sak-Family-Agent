@@ -40,6 +40,8 @@ safe-outputs:
     allowed-files:
       - "AGENTS.md"
     protected-files: request-review
+  threat-detection: false
+  report-failure-as-issue: false
   noop:
 network:
   allowed: []
