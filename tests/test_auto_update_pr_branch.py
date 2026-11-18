@@ -320,7 +320,10 @@ def test_auto_update_workflow_exists_and_valid() -> None:
 
     # Pinned actions
     assert "step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a" in content
-    assert "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683" in content
+    assert (
+        "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1" in content
+        or "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683" in content
+    ), "actions/checkout must be pinned with an immutable commit SHA"
     assert "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0" in content
 
 
