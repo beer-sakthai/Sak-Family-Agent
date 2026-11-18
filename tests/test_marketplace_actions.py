@@ -127,6 +127,7 @@ PINNED_ACTIONS = {
     "reviewdog/action-suggester": "fd22a83b1ebc13fd8aee5d57b06793fce6f20fb9",
     "reviewdog/action-actionlint": "ae857e78c1b42b3d0a49637181b09d3d56d402b4",
     "reviewdog/action-misspell": "c846b6b0996029d2d39540c8ffebebbd957072db",
+    "rossjrw/pr-preview-action": "873417d2df72380da1f3978378fb58560bcde976",
 }
 
 
