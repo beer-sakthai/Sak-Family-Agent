@@ -1,23 +1,49 @@
 # Reusable Deployment Workflow
-# Creates a GitHub Deployment and records environment state
+# Creates and updates GitHub Deployment records for single or multiple environments
 
 name: Reusable Deployment
 
 on:
   workflow_call:
     inputs:
+      step:
+        description: 'Deployment step to execute (start, finish, deactivate-env, delete-env, get-env)'
+        required: false
+        default: 'start'
+        type: string
       environment:
-        description: 'Target environment name (e.g. production, staging)'
-        required: true
+        description: "Target environment name(s): JSON array '[\"a\",\"b\"]' or single string"
+        required: false
+        default: 'production'
         type: string
       environment_url:
-        description: 'URL of the deployed environment'
+        description: 'URL(s) of the deployed environment(s)'
         required: false
         default: 'https://houseofsak.vercel.app'
         type: string
+      deployment_id:
+        description: 'Deployment ID(s) to update (required for finish step)'
+        required: false
+        default: ''
+        type: string
+      status:
+        description: 'Deployment status for finish step (success, failure, in_progress, etc.)'
+        required: false
+        default: 'success'
+        type: string
+      desc:
+        description: 'Optional description to set in the deployment status'
+        required: false
+        default: 'Deployment via Reusable Workflow'
+        type: string
+      engine:
+        description: 'Deployment engine: "multi" (maxgfr/github-multi-deployments) or "chrnorm" (legacy)'
+        required: false
+        default: 'multi'
+        type: string
     outputs:
       deployment_id:
-        description: 'The unique ID of the created GitHub Deployment'
+        description: 'The unique ID(s) of the created GitHub Deployment(s)'
         value: ${{ jobs.deploy-record.outputs.deployment_id }}
 
 permissions:
@@ -32,15 +58,34 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
-      deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+      deployment_id: ${{ steps.multi-deployment.outputs.deployment_id || steps.legacy-deployment.outputs.deployment_id }}
     permissions:
       contents: read
       deployments: write
 
     steps:
-      - name: Create Deployment Record
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Manage Multi Deployments
+        if: inputs.engine != 'chrnorm'
+        id: multi-deployment
+        uses: maxgfr/github-multi-deployments@ed720d528c8e44c33cca444d1b5375a866ec724c # v1.8.11
+        with:
+          step: ${{ inputs.step }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: ${{ inputs.environment }}
+          env_url: ${{ inputs.environment_url }}
+          deployment_id: ${{ inputs.deployment_id }}
+          status: ${{ inputs.status }}
+          desc: ${{ inputs.desc }}
+
+      - name: Legacy Deployment Record
+        if: inputs.engine == 'chrnorm'
+        id: legacy-deployment
         uses: chrnorm/deployment-action@55729fcebec3d284f60f5bcabbd8376437d696b1 # v2.0.7
-        id: deployment
         with:
           token: ${{ github.token }}
           environment: ${{ inputs.environment }}

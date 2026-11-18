@@ -142,6 +142,7 @@ PINNED_ACTIONS = {
     "meanusarcanus/ai-pr-reviewer-action": "9a2e09833376f54db095b71ca638d2204485c31a",
     "mtl1979/dependencies-autoupdate": "7230f7c4e5c186601a03e3e9f8d7ad16c6b4e122",
     "ryanclark/lint-action": "316d8bd29e28a292657682f6c6e45ca1dab41496",
+    "maxgfr/github-multi-deployments": "ed720d528c8e44c33cca444d1b5375a866ec724c",
 }
 
 
@@ -310,3 +311,40 @@ def test_marketplace_workflow_permissions_remain_strict_mappings() -> None:
     """Ensure no scalar permissions exist across any workflow file."""
     findings = find_scalar_permissions(WORKFLOWS_DIR)
     assert findings == [], f"Found scalar permissions: {findings}"
+
+
+def test_github_multi_deployments_integration() -> None:
+    """Ensure maxgfr/github-multi-deployments is properly integrated and documented."""
+    target_sha = PINNED_ACTIONS["maxgfr/github-multi-deployments"]
+
+    # 1. reusable-deployment.yml integration
+    reusable_dep = WORKFLOWS_DIR / "reusable-deployment.yml"
+    assert reusable_dep.is_file()
+    dep_content = reusable_dep.read_text(encoding="utf-8")
+    assert f"maxgfr/github-multi-deployments@{target_sha}" in dep_content
+    dep_data = yaml.safe_load(dep_content)
+    assert dep_data["jobs"]["deploy-record"]["permissions"]["deployments"] == "write"
+
+    # 2. reusable-pr-deploy.yml integration
+    pr_dep = WORKFLOWS_DIR / "reusable-pr-deploy.yml"
+    assert pr_dep.is_file()
+    pr_content = pr_dep.read_text(encoding="utf-8")
+    assert f"maxgfr/github-multi-deployments@{target_sha}" in pr_content
+    pr_data = yaml.safe_load(pr_content)
+    assert pr_data["jobs"]["deploy"]["permissions"]["deployments"] == "write"
+    assert pr_data["jobs"]["teardown"]["permissions"]["deployments"] == "write"
+
+    # 3. Documentation exists
+    ref_doc = (
+        REPO_ROOT
+        / "personas"
+        / "sakjules"
+        / "skills"
+        / "SakJules-github-pr-workflow"
+        / "references"
+        / "github-multi-deployments.md"
+    )
+    assert ref_doc.is_file()
+    ref_text = ref_doc.read_text(encoding="utf-8")
+    assert target_sha in ref_text
+
