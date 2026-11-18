@@ -1,0 +1,71 @@
+# Reusable StepSecurity API Token Minting via GitHub Actions Keyless OIDC
+# Exchanges a repository GitHub OIDC token for a short-lived StepSecurity API token.
+# No long-lived secret stored in repository secrets.
+
+name: Reusable StepSecurity Token
+
+on:
+  workflow_call:
+    inputs:
+      customer:
+        description: 'StepSecurity tenant/customer identifier'
+        required: false
+        default: 'beer-sakthai'
+        type: string
+      audience:
+        description: 'StepSecurity OIDC audience for token federation'
+        required: false
+        default: 'beer-sakthai.api.stepsecurity.io'
+        type: string
+    outputs:
+      token:
+        description: 'The minted short-lived StepSecurity API token'
+        value: ${{ jobs.mint-token.outputs.token }}
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: stepsecurity-token-${{ github.workflow }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  mint-token:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      token: ${{ steps.ss.outputs.token }}
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Mint StepSecurity API token
+        id: ss
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          CUSTOMER: ${{ inputs.customer }}
+          AUDIENCE: ${{ inputs.audience }}
+        with:
+          script: |
+            const audience = process.env.AUDIENCE;
+            const customer = process.env.CUSTOMER;
+            const token = await core.getIDToken(audience);
+            const res = await fetch(`https://agent.api.stepsecurity.io/v1/${customer}/oidc/token`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ github_oidc_token: token })
+            });
+            if (!res.ok) {
+              core.setFailed(`Exchange failed: ${res.status}`);
+              return;
+            }
+            const data = await res.json();
+            core.setSecret(data.token);
+            core.setOutput('token', data.token);
