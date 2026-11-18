@@ -119,6 +119,9 @@ PINNED_ACTIONS = {
     "nolekek/AutoHeal-CI": "eafa410862f761d5a8f96ea946d07c9d0d7f33d7",
     "kakaotech-25/Hackathon-PR-Review": "17f9b3fe3a8b5333c1828e902276897cdeae8e8b",
     "drengskapur/gitbot-config": "00aecab0a790b146951f9e0c48f564eaf26a9df6",
+    "crxqhuinvaiuoznzedkh/actions-add-reviewers": "31c8c487b1642f4b7cad9556bf9b759882b57914",
+    "actions/dependency-review-action": "bbc44d14a204704ccc493733616cd1e93a0321ec",
+    "oke-py/npm-audit-action": "da53d502b06a0bc95f9ce3c0ebab0c4c713fae4a",
 }
 
 
@@ -247,6 +250,9 @@ MARKETPLACE_WORKFLOW_FILES = [
     "autoheal-ci.yml",
     "pull-request-code-review-bot.yml",
     "config-git-actions-bot.yml",
+    "add-reviewers.yml",
+    "dependency-review.yml",
+    "npm-audit.yml",
 ]
 
 
