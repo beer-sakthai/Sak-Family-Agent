@@ -128,6 +128,7 @@ PINNED_ACTIONS = {
     "reviewdog/action-actionlint": "ae857e78c1b42b3d0a49637181b09d3d56d402b4",
     "reviewdog/action-misspell": "c846b6b0996029d2d39540c8ffebebbd957072db",
     "rossjrw/pr-preview-action": "873417d2df72380da1f3978378fb58560bcde976",
+    "anchore/sbom-action": "66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c",
 }
 
 
@@ -265,6 +266,7 @@ MARKETPLACE_WORKFLOW_FILES = [
     "reviewdog-suggester.yml",
     "actionlint-review.yml",
     "misspell-review.yml",
+    "anchore-sbom.yml",
 ]
 
 
