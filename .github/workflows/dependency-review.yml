@@ -47,11 +47,5 @@ jobs:
       - name: Review dependencies
         uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
         with:
-          # Start at `high` rather than the action's `low` default. The npm
-          # trees under apps/ and personas/saksee/skills/ pull in large
-          # transitive graphs, and a gate that fires on every low-severity
-          # transitive advisory would be turned off within a week. Tighten this
-          # to `moderate` once the backlog is known to be clean.
-          fail-on-severity: high
-          allow-ghsas: GHSA-fc5q-39xc-vjpf
+          config-file: './.github/dependency-review-config.yml'
           comment-summary-in-pr: on-failure

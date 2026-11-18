@@ -1,0 +1,47 @@
+# GitHub Dependency Review Action Configuration
+# Reference: https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/manage-your-dependency-security/configuring-the-dependency-review-action
+#
+# This file centralizes dependency security policy and open-source license governance
+# for all pull requests targeting main in beer-sakthai/Sak-Family-Agent.
+# It is evaluated by actions/dependency-review-action in .github/workflows/dependency-review.yml.
+
+# Severity threshold to block merge.
+# Possible values: "critical", "high", "moderate", "low"
+# Started at `high` for monorepo sustainability (npm trees under apps/ and skills/
+# carry deep transitive dependency trees).
+fail-on-severity: high
+
+# Target dependency scopes to inspect for vulnerabilities.
+# Possible values: "development", "runtime", "unknown"
+fail-on-scopes:
+  - runtime
+  - development
+
+# Allowed Open Source Licenses (SPDX License Identifiers)
+# Reference: https://spdx.org/licenses/
+# Only dependencies matching this approved permissive and standard weak-copyleft list
+# are allowed without explicit security review.
+allow-licenses:
+  - 0BSD
+  - Apache-2.0
+  - BSD-2-Clause
+  - BSD-3-Clause
+  - CC-BY-3.0
+  - CC-BY-4.0
+  - CC0-1.0
+  - ISC
+  - LGPL-2.1
+  - LGPL-3.0
+  - MIT
+  - MPL-2.0
+  - PSF-2.0
+  - Python-2.0
+  - Unlicense
+  - Zlib
+
+# Exempted GitHub Advisory Database IDs.
+# Each entry MUST have an documented justification and corresponding audit record
+# in docs/scorecard-accepted-risks.md or docs/manage-your-dependency-security.md.
+allow-ghsas:
+  # Upstream unpatched transitive advisory documented in docs/scorecard-accepted-risks.md
+  - GHSA-fc5q-39xc-vjpf

@@ -14,6 +14,7 @@ Project documentation for SakThai.
 - [replication.md](./replication.md) — multi-agent memory sync options.
 - [workspace.md](./workspace.md) — dev environment setup.
 - [og_parity_audit.md](./og_parity_audit.md) — comparison with the original SakThai.
+- [manage-your-dependency-security.md](./manage-your-dependency-security.md) — GitHub supply chain security, Dependabot, and Dependency Review Action architecture.
 - [sakthai-live-connect-plan.md](./sakthai-live-connect-plan.md) — Phase 5–8 Live Connect & Robust Agent Runtime execution plan.
 
 ## Architecture Specifications & Implementation Plans
