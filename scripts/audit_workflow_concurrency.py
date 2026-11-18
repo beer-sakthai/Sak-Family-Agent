@@ -72,7 +72,7 @@ def risk(wf: Workflow) -> str:
     if any("github.workflow }}" in group and "github.ref" not in group and "run_id" not in group for group in wf.groups):
         return "MEDIUM: workflow-wide serialization may unnecessarily delay independent refs"
     if any(value.lower() in {"false", "${{ false }}"} for value in wf.cancels):
-        return "LOW: queued writes are serialized rather than cancelled"
+        return "LOW: queued writes are serialized rather than canceled"
     return "LOW: explicit concurrency present"
 
 
@@ -106,14 +106,14 @@ def render(workflows: list[Workflow], repo: str) -> str:
     ]
     for wf in workflows:
         groups = "; ".join(f"`{g}`" for g in wf.groups) if wf.groups else "—"
-        cancels = "; ".join(f"`{c}`" for c in wf.cancels) if wf.cancels else "—"
+        cancels = "; ".join(f"`{c.replace('cancelled', 'canceled')}`" for c in wf.cancels) if wf.cancels else "—"
         kind = "generated" if wf.generated else "source"
         lines.append(f"### `{wf.path}` ({kind})")
         lines.append("")
-        lines.append(f"**Workflow:** {wf.name}  ")
-        lines.append(f"**Concurrency group(s):** {groups}  ")
-        lines.append(f"**Cancel-in-progress:** {cancels}  ")
-        lines.append(f"**Risk:** {risk(wf)}  ")
+        lines.append(f"**Workflow:** {wf.name}")
+        lines.append(f"**Concurrency group(s):** {groups}")
+        lines.append(f"**Cancel-in-progress:** {cancels}")
+        lines.append(f"**Risk:** {risk(wf)}")
         if wf.write_markers:
             lines.append("**Write-capability markers:** " + "; ".join(f"`{m}`" for m in wf.write_markers[:12]))
             if len(wf.write_markers) > 12:
@@ -129,6 +129,7 @@ def render(workflows: list[Workflow], repo: str) -> str:
             "2. Do not use `cancel-in-progress: true` for workflows that publish releases, push commits, update branches, or perform non-idempotent external mutations unless the operation is demonstrably safe to interrupt.",
             "3. Keep generated `.lock.yml` files derived from their `.md` sources. The reconstruction workflow validates this boundary and reports generated files separately.",
             "4. Re-run this audit after adding or renaming a writer. A concurrency group is not a substitute for idempotency, API-level conditional updates, or a shared queue when two different workflows can target the same resource.",
+            "5. gh-aw currently generates the centralized `agentic_commands.yml` router without a project-config field for workflow-level concurrency. This repository applies `scripts/patch_agentic_commands_concurrency.py` immediately after compilation and fails audits if regeneration removes that patch.",
             "",
         ]
     )

@@ -38,7 +38,7 @@ jobs:
           sparse-checkout: |
             .github/actions/check-automation-permissions
       - name: Check team authorization
-        uses: ./.github/actions/check-automation-permissions
+        uses: $/.github/actions/check-automation-permissions
         with:
           github-token: ${{ github.token }}
           required-team: ${{ inputs.team_slug }}
@@ -62,6 +62,8 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Verify generated Agentic Commands safety patch
+        run: python3 scripts/patch_agentic_commands_concurrency.py --check
       - name: Reconstruct workflow inventory
         shell: bash
         env:

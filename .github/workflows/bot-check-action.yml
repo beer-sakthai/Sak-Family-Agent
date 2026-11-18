@@ -38,7 +38,7 @@ jobs:
 
       - name: Check creator verification authorization
         id: authorization
-        uses: ./.github/actions/check-automation-permissions
+        uses: $/.github/actions/check-automation-permissions
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           verification-token: ${{ secrets.PAT_VERIFICATION_TOKEN }}
