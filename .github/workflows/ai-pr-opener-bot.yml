@@ -44,8 +44,21 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Check Bot App secrets
+        id: check-secrets
+        env:
+          BOT_APP_ID: ${{ secrets.BOT_APP_ID }}
+          BOT_APP_PRIVATE_KEY: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+        run: |
+          if [ -n "$BOT_APP_ID" ] && [ -n "$BOT_APP_PRIVATE_KEY" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::BOT_APP_ID or BOT_APP_PRIVATE_KEY is not configured; skipping AI PR opener."
+          fi
+
       - name: Open Pull Request via App Bot
-        if: ${{ secrets.BOT_APP_ID != '' && secrets.BOT_APP_PRIVATE_KEY != '' }}
+        if: steps.check-secrets.outputs.available == 'true'
         uses: teohsinyee/ai-pr-opener-bot@4c36fd7b3830433b7c7f0cd5f8c16ed6cd524351 # v1.0.0
         with:
           app_id: ${{ secrets.BOT_APP_ID }}

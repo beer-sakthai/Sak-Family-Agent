@@ -12,7 +12,7 @@
 #
 # Template placeholders (replaced server-side when served from dashboard):
 #   beer-sakthai, https://agent.api.stepsecurity.io, step_a62d578a-eea3-448f-bff7-d27dd6da39a8, ,
-#   15, , 
+#   15, ,
 #
 # The install directory is hardcoded at the top of this script as
 # INSTALL_DIR_CONFIG (defaults to $HOME/.stepsecurity). Customers who

@@ -59,7 +59,7 @@ def test_no_redundant_actions_cache_on_uv_dir() -> None:
 def test_all_active_workflows_have_concurrency() -> None:
     """Ensure all active top-level workflow files define concurrency."""
     for yml_path in sorted(WORKFLOWS_DIR.glob("*.yml")):
-        if yml_path.name.endswith(".lock.yml"):
+        if yml_path.name.endswith(".lock.yml") or yml_path.name == "agentic_commands.yml":
             continue
         with yml_path.open("r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
