@@ -900,7 +900,7 @@ class TestDefaultHomeResolution:
 
 
 class TestWorkflowsPayload:
-    """Workflow runs written by apps/agent_workflow_framework.
+    """Workflow runs written by apps/sak_agent_dashboard/workflow_engine.
 
     The framework is a separate package outside this one's
     dependency graph, so these fixtures mirror the on-disk format

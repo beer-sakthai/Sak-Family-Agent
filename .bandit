@@ -38,7 +38,7 @@ skips = B101,B404,B603,B606,B607
 # `training/hf-jobs/build_toolcalling_dataset.py` — measured: 13 B311 findings
 # in that one file vanished before the prefix was added. `./build` can only
 # match the directory at the root, which is what is meant.
-exclude = ./tests,./apps/agent_workflow_framework/tests,./services/teams-copilot-mcp/tests,./library,./sakthai-chat-cli,./personas/sakthai/skills,./personas/sakking/skills,./personas/saksee/skills,./personas/saksit/skills,./personas/sakjules/skills,./personas/saktan/skills,./personas/shared/skills,./.venv,./node_modules,./build,./dist
+exclude = ./tests,./apps/sak_agent_dashboard/workflow_engine/tests,./services/teams-copilot-mcp/tests,./library,./sakthai-chat-cli,./personas/sakthai/skills,./personas/sakking/skills,./personas/saksee/skills,./personas/saksit/skills,./personas/sakjules/skills,./personas/saktan/skills,./personas/shared/skills,./.venv,./node_modules,./build,./dist
 
 # The two out-of-tree test suites are named individually because this key
 # cannot express "any directory called tests". `pyproject.toml`'s

@@ -1,7 +1,7 @@
 {
   "meta": {
-    "source_commit": "5bddd75f",
-    "source_date": "2026-11-13T19:53:29Z",
+    "source_commit": "e8b507d",
+    "source_date": "2026-11-18T06:34:39+00:00",
     "generator": "scripts/gen_system_snapshot.py"
   },
   "personas": [
@@ -12,11 +12,12 @@
       "domain": "TDD execution, CLI runner, utility refactoring, subagents",
       "provider": "huggingface",
       "model": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
-      "skill_count": 63,
+      "skill_count": 59,
       "mcp_servers": [
         "chrome-devtools",
         "hf-media",
-        "playwright"
+        "playwright",
+        "stepsecurity"
       ]
     },
     {
@@ -26,7 +27,7 @@
       "domain": "Hugging Face Hub, Model Lifecycle, 6-Stage Energy Cycle, QLoRA",
       "provider": "huggingface",
       "model": "deepseek-ai/DeepSeek-V4.1-Flash",
-      "skill_count": 285,
+      "skill_count": 170,
       "mcp_servers": []
     },
     {
@@ -36,7 +37,7 @@
       "domain": "Playwright, Live Web Scraping, Chrome DevTools, OCR & extraction",
       "provider": "huggingface",
       "model": "deepseek-ai/DeepSeek-V4.1-Flash",
-      "skill_count": 139,
+      "skill_count": 106,
       "mcp_servers": [
         "chrome-devtools",
         "playwright"
@@ -61,8 +62,10 @@
       "domain": "GitHub Actions, Cron Fleet, DevSecOps, Release Automation",
       "provider": "huggingface",
       "model": "deepseek-ai/DeepSeek-V4.1-Flash",
-      "skill_count": 68,
-      "mcp_servers": []
+      "skill_count": 56,
+      "mcp_servers": [
+        "stepsecurity"
+      ]
     },
     {
       "name": "saktan",
@@ -71,7 +74,7 @@
       "domain": "Schedule, alarms, rhythm, health checks, eval aggregation",
       "provider": "ollama",
       "model": "sakthai",
-      "skill_count": 9,
+      "skill_count": 26,
       "mcp_servers": []
     }
   ],
@@ -80,13 +83,19 @@
       "name": "agent",
       "kind": "package",
       "files": 19,
-      "lines": 6331
+      "lines": 6523
     },
     {
       "name": "agent_platform",
       "kind": "package",
       "files": 8,
-      "lines": 872
+      "lines": 1090
+    },
+    {
+      "name": "agent_workflow",
+      "kind": "package",
+      "files": 8,
+      "lines": 2134
     },
     {
       "name": "auth",
@@ -98,7 +107,7 @@
       "name": "cli",
       "kind": "package",
       "files": 14,
-      "lines": 2969
+      "lines": 3165
     },
     {
       "name": "client",
@@ -110,7 +119,7 @@
       "name": "config",
       "kind": "module",
       "files": 1,
-      "lines": 594
+      "lines": 597
     },
     {
       "name": "cycle",
@@ -158,7 +167,7 @@
       "name": "mcp",
       "kind": "package",
       "files": 6,
-      "lines": 767
+      "lines": 1153
     },
     {
       "name": "memory",
@@ -188,13 +197,13 @@
       "name": "skills",
       "kind": "module",
       "files": 1,
-      "lines": 417
+      "lines": 449
     },
     {
       "name": "team",
       "kind": "package",
-      "files": 4,
-      "lines": 723
+      "files": 6,
+      "lines": 1495
     },
     {
       "name": "telegram",
@@ -364,8 +373,12 @@
       },
       {
         "name": "eval",
-        "help": "Inspect local model evaluation / MLOps metrics.",
+        "help": "Inspect local model evaluation / MLOps metrics and persona readiness.",
         "commands": [
+          {
+            "name": "personas",
+            "help": "Audit the 6 working files, v9 self-eval rubric, intro line, and skills for each persona."
+          },
           {
             "name": "summary",
             "help": "Summarize latency, tokens, and error rate over recent agent runs."
@@ -410,7 +423,25 @@
       },
       {
         "name": "mcp",
-        "help": "Serve the memory tools over MCP (stdio JSON-RPC)."
+        "help": "Serve or inspect Model Context Protocol (MCP) integrations.",
+        "commands": [
+          {
+            "name": "list",
+            "help": "List configured external MCP servers."
+          },
+          {
+            "name": "ping",
+            "help": "Ping configured MCP servers to verify responsiveness."
+          },
+          {
+            "name": "serve",
+            "help": "Serve the memory tools over MCP (stdio JSON-RPC)."
+          },
+          {
+            "name": "tools",
+            "help": "List tools exposed by configured external MCP servers."
+          }
+        ]
       },
       {
         "name": "memory",
@@ -616,6 +647,63 @@
   },
   "workflows": [
     {
+      "file": "actions-usage-audit.yml",
+      "name": "GitHub Actions Usage Audit",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Audit Actions Minutes Usage"
+      ]
+    },
+    {
+      "file": "actions-version-updater.yml",
+      "name": "GitHub Actions Version Updater",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Check and Update GitHub Actions"
+      ]
+    },
+    {
+      "file": "activity-readme.yml",
+      "name": "Activity Readme",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "update-activity"
+      ]
+    },
+    {
+      "file": "add-badges.yml",
+      "name": "Add Badges",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Add README Badges"
+      ]
+    },
+    {
+      "file": "add-reviewers.yml",
+      "name": "Add Reviewers to GitHub PR",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Add Reviewers to PR"
+      ]
+    },
+    {
       "file": "agent-self-evolution.yml",
       "name": "agent-self-evolution",
       "triggers": [
@@ -629,6 +717,22 @@
       ]
     },
     {
+      "file": "agentic_commands.yml",
+      "name": "Agentic Commands",
+      "triggers": [
+        "discussion",
+        "discussion_comment",
+        "issue_comment",
+        "issues",
+        "pull_request",
+        "pull_request_review_comment"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "route"
+      ]
+    },
+    {
       "file": "agentics-maintenance.yml",
       "name": "Agentic Maintenance",
       "triggers": [
@@ -639,6 +743,7 @@
       "gates_prs": false,
       "jobs": [
         "Apply safe outputs",
+        "Cleanup cache memory",
         "Close agentic workflows issues",
         "Close expired discussions",
         "Close expired issues",
@@ -649,6 +754,28 @@
         "Validate workflows",
         "activity report",
         "forecast report"
+      ]
+    },
+    {
+      "file": "ai-code-guard.yml",
+      "name": "AI Code Guard",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Run AI Code Guard"
+      ]
+    },
+    {
+      "file": "ai-pr-opener-bot.yml",
+      "name": "AI PR Opener Bot",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Open AI Pull Request"
       ]
     },
     {
@@ -666,6 +793,204 @@
       ]
     },
     {
+      "file": "auto-assign.yml",
+      "name": "Auto Assign Reviewers and Assignees",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Auto Assign Issues and PRs"
+      ]
+    },
+    {
+      "file": "auto-cancel-redundant.yml",
+      "name": "Auto Cancel Redundant Workflows",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Cancel Redundant Runs"
+      ]
+    },
+    {
+      "file": "auto-close-issues.yml",
+      "name": "Auto Close Issues",
+      "triggers": [
+        "issues",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Auto Close Inactive Issues"
+      ]
+    },
+    {
+      "file": "auto-contrib-pr.yml",
+      "name": "Automatic Contrib PRs",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Open CONTRIBUTING.md in Repositories"
+      ]
+    },
+    {
+      "file": "auto-issue-bot.yml",
+      "name": "Auto Issue Bot Triage",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Run Auto Issue Bot Triage"
+      ]
+    },
+    {
+      "file": "auto-label-merge-conflicts.yml",
+      "name": "Auto Label Merge Conflicts",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Auto Label Merge Conflicts"
+      ]
+    },
+    {
+      "file": "auto-merge-bot.yml",
+      "name": "Auto Merge Bot",
+      "triggers": [
+        "issue_comment",
+        "pull_request_target",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Auto Merge Bot"
+      ]
+    },
+    {
+      "file": "auto-request-review.yml",
+      "name": "Auto Request Review",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Auto Request Reviewers"
+      ]
+    },
+    {
+      "file": "auto-reviewer-assign.yml",
+      "name": "Auto Reviewer Assign",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Automatically Assign Reviewers"
+      ]
+    },
+    {
+      "file": "auto-update-branch.yml",
+      "name": "Auto Update Out-of-Date Branches",
+      "triggers": [
+        "issue_comment",
+        "pull_request",
+        "push",
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Auto Update PR Branches"
+      ]
+    },
+    {
+      "file": "autodocs.yml",
+      "name": "Markdown Autodocs",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "autodocs"
+      ]
+    },
+    {
+      "file": "autofix.yml",
+      "name": "Autofix CI",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Run Autofix CI"
+      ]
+    },
+    {
+      "file": "autoheal-ci.yml",
+      "name": "AutoHeal-CI",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "AutoHeal CI Self-Healing"
+      ]
+    },
+    {
+      "file": "autolabeler-codeowners.yml",
+      "name": "Autolabeler CODEOWNERS",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Autolabel by CODEOWNERS"
+      ]
+    },
+    {
+      "file": "automated-pr-maintenance.yml",
+      "name": "Automated Maintenance PR",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "maintenance-pr"
+      ]
+    },
+    {
+      "file": "automerge-pr.yml",
+      "name": "Auto Merge Pull Request",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Auto Merge PR"
+      ]
+    },
+    {
+      "file": "autoupdate-branches.yml",
+      "name": "Auto Update Branches",
+      "triggers": [
+        "push",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Auto-update Pull Request Branches"
+      ]
+    },
+    {
       "file": "bandit.yml",
       "name": "Bandit",
       "triggers": [
@@ -676,6 +1001,19 @@
       "gates_prs": true,
       "jobs": [
         "Bandit"
+      ]
+    },
+    {
+      "file": "bot-check-action.yml",
+      "name": "Bot Check Action",
+      "triggers": [
+        "issues",
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Check Creator Authenticity"
       ]
     },
     {
@@ -690,14 +1028,61 @@
       ]
     },
     {
+      "file": "branch-sync.yml",
+      "name": "Branch Sync",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "sync"
+      ]
+    },
+    {
+      "file": "cache-cleanup.yml",
+      "name": "Cleanup PR Caches",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Purge closed PR caches"
+      ]
+    },
+    {
+      "file": "checkbox-trigger.yml",
+      "name": "Checkbox Workflow Trigger",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Evaluate Checkbox Triggers"
+      ]
+    },
+    {
+      "file": "ci-dokumentor.yml",
+      "name": "CI Dokumentor",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Generate CI Workflow Documentation"
+      ]
+    },
+    {
       "file": "ci.yml",
       "name": "CI",
       "triggers": [
         "pull_request",
-        "push"
+        "push",
+        "workflow_dispatch"
       ],
       "gates_prs": true,
       "jobs": [
+        "AutoHeal-CI recovery",
         "test"
       ]
     },
@@ -724,6 +1109,34 @@
       ]
     },
     {
+      "file": "code-simplifier.lock.yml",
+      "name": "Code Simplifier",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "activation",
+        "agent",
+        "conclusion",
+        "detection",
+        "safe_outputs"
+      ]
+    },
+    {
+      "file": "codeowners-bot.yml",
+      "name": "CODEOWNERS Bot Generator",
+      "triggers": [
+        "push",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Compile Monorepo CODEOWNERS"
+      ]
+    },
+    {
       "file": "codeql.yml",
       "name": "CodeQL Advanced",
       "triggers": [
@@ -735,6 +1148,29 @@
       "gates_prs": true,
       "jobs": [
         "Analyze (${{ matrix.language }})"
+      ]
+    },
+    {
+      "file": "config-git-actions-bot.yml",
+      "name": "Config Git Actions Bot",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Configure Git Bot Committer"
+      ]
+    },
+    {
+      "file": "continuous-benchmark.yml",
+      "name": "Continuous Benchmark",
+      "triggers": [
+        "push",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "benchmark"
       ]
     },
     {
@@ -818,6 +1254,97 @@
       ]
     },
     {
+      "file": "dependabot-auto-merge-cli.yml",
+      "name": "Dependabot Auto Merge CLI",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Auto-merge Dependabot PRs"
+      ]
+    },
+    {
+      "file": "dependabot-auto-merge.yml",
+      "name": "Dependabot Auto-Merge",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Dependabot Auto-Merge"
+      ]
+    },
+    {
+      "file": "dependabot-automerge.yml",
+      "name": "Dependabot Automerge",
+      "triggers": [
+        "pull_request_target"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Automerge Dependabot PR"
+      ]
+    },
+    {
+      "file": "dependabot-fetch-metadata.yml",
+      "name": "Dependabot Fetch Metadata",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Fetch Dependabot PR Metadata"
+      ]
+    },
+    {
+      "file": "dependabot-helper.yml",
+      "name": "Dependabot Helper",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Run Dependabot Helper"
+      ]
+    },
+    {
+      "file": "dependabot-issue.yml",
+      "name": "Dependabot Issue for PRs",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Create Issue for Dependabot PR"
+      ]
+    },
+    {
+      "file": "dependabot-workflow.yml",
+      "name": "Dependabot Workflow Action",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Run Dependabot In Workflow"
+      ]
+    },
+    {
+      "file": "dependafix-ai-remediation.yml",
+      "name": "DependaFix AI Remediation",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "DependaFix AI Remediation Agent"
+      ]
+    },
+    {
       "file": "dependency-audit.yml",
       "name": "Dependency Audit",
       "triggers": [
@@ -842,6 +1369,247 @@
       ]
     },
     {
+      "file": "dependfix-security-auto-fix.yml",
+      "name": "Dependfix Security Auto Fix",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Dependfix Security Remediation"
+      ]
+    },
+    {
+      "file": "enable-automerge-dependabot.yml",
+      "name": "Enable Automerge for Dependabot",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Enable Automerge for Dependabot PRs"
+      ]
+    },
+    {
+      "file": "fixed-issues-labeler.yml",
+      "name": "Fixed Issues Labeler",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Label Fixed Issues"
+      ]
+    },
+    {
+      "file": "gemini-actions.yml",
+      "name": "Gemini Actions",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Run Gemini Actions Meta-Package"
+      ]
+    },
+    {
+      "file": "gemini-code-review-action.yml",
+      "name": "Gemini AI Code Review",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Review PR with Gemini AI"
+      ]
+    },
+    {
+      "file": "gemini-review-bot.yml",
+      "name": "Gemini Review Bot",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Run Gemini Review Bot"
+      ]
+    },
+    {
+      "file": "generate-roadmap.yml",
+      "name": "Generate Roadmap",
+      "triggers": [
+        "milestone",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Generate Roadmap from Milestones & Issues"
+      ]
+    },
+    {
+      "file": "generator-generic-ossf-slsa3-publish.yml",
+      "name": "SLSA generic generator",
+      "triggers": [
+        "release",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "build",
+        "provenance"
+      ]
+    },
+    {
+      "file": "genshdoc.yml",
+      "name": "Generate Documentation",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Generate Shell Documentation"
+      ]
+    },
+    {
+      "file": "gh-actions-auto-docs.yml",
+      "name": "GitHub Actions Auto-Docs",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Generate Action Documentation"
+      ]
+    },
+    {
+      "file": "gh-actions-docs.yml",
+      "name": "GH Actions Docs",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Generate Action Documentation"
+      ]
+    },
+    {
+      "file": "gh-actions-documenter.yml",
+      "name": "GitHub Actions Documenter",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Generate Action & Workflow Documentation"
+      ]
+    },
+    {
+      "file": "git-as-github-actions-bot.yml",
+      "name": "Git as GitHub Actions Bot",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Configure Git User as Bot"
+      ]
+    },
+    {
+      "file": "git-auto-commit.yml",
+      "name": "Git Auto Commit",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Auto Commit Changed Files"
+      ]
+    },
+    {
+      "file": "git-flow-action.yml",
+      "name": "Git Flow Action",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Execute Git Flow Automation"
+      ]
+    },
+    {
+      "file": "git-pr-release.yml",
+      "name": "Git PR Release",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "pr-release"
+      ]
+    },
+    {
+      "file": "gitflow-lifecycle.yml",
+      "name": "GitFlow Lifecycle Automation",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Manage GitFlow Release Branches"
+      ]
+    },
+    {
+      "file": "github-bot-auto-answer.yml",
+      "name": "GitHub Bot Auto-Answer",
+      "triggers": [
+        "issues",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Auto-Acknowledge Issue"
+      ]
+    },
+    {
+      "file": "github-ci-bot.yml",
+      "name": "GitHub CI Bot Commands & Automation",
+      "triggers": [
+        "issue_comment",
+        "pull_request_target",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Run GitHub CI Bot"
+      ]
+    },
+    {
+      "file": "github-workflow-sync.yml",
+      "name": "GitHub Workflow Sync",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Sync Workflows Across Repositories"
+      ]
+    },
+    {
+      "file": "google-chat-notification.yml",
+      "name": "Google Chat Dispatcher",
+      "triggers": [
+        "workflow_call",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Dispatch Google Chat Card"
+      ]
+    },
+    {
       "file": "huggingface-integration.yml",
       "name": "Hugging Face integration",
       "triggers": [
@@ -850,6 +1618,18 @@
       "gates_prs": false,
       "jobs": [
         "live-inference"
+      ]
+    },
+    {
+      "file": "issue-bot.yml",
+      "name": "Issue Bot Automation",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Generate Scheduled Issue"
       ]
     },
     {
@@ -871,11 +1651,34 @@
       "file": "labeler.yml",
       "name": "Labeler",
       "triggers": [
-        "pull_request_target"
+        "pull_request_target",
+        "workflow_dispatch"
       ],
       "gates_prs": true,
       "jobs": [
         "labeler"
+      ]
+    },
+    {
+      "file": "licensed-audit.yml",
+      "name": "Licensed License Compliance Audit",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Audit Dependencies Licenses"
+      ]
+    },
+    {
+      "file": "lint-check.yml",
+      "name": "Lint Action",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "lint"
       ]
     },
     {
@@ -886,7 +1689,56 @@
       ],
       "gates_prs": false,
       "jobs": [
+        "approval-gate",
         "greet"
+      ]
+    },
+    {
+      "file": "merge-pr-action.yml",
+      "name": "Merge Dependency Update PRs",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Merge PR Action"
+      ]
+    },
+    {
+      "file": "merge-pr.yml",
+      "name": "Automatically Merge Pull Requests",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Run Merge PR"
+      ]
+    },
+    {
+      "file": "no-free-usage.yml",
+      "name": "No Free Usage Guard",
+      "triggers": [
+        "issues",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Verify Contributor Engagement"
+      ]
+    },
+    {
+      "file": "npm-audit.yml",
+      "name": "npm Audit Action",
+      "triggers": [
+        "pull_request",
+        "push",
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Run npm Audit"
       ]
     },
     {
@@ -903,6 +1755,145 @@
       ]
     },
     {
+      "file": "patchbot-scanner.yml",
+      "name": "Patchbot Vulnerability Scanner",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Patchbot Scan"
+      ]
+    },
+    {
+      "file": "pipeline-healer.yml",
+      "name": "Pipeline Healer",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Run DevOps Pipeline Healer"
+      ]
+    },
+    {
+      "file": "plan.lock.yml",
+      "name": "plan",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "activation",
+        "agent",
+        "conclusion",
+        "pre_activation",
+        "safe_outputs"
+      ]
+    },
+    {
+      "file": "playwright-test-failure-triage-bot.yml",
+      "name": "Playwright Test Failure Triage Bot",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Triage Playwright Failure"
+      ]
+    },
+    {
+      "file": "pr-automation.yml",
+      "name": "PR Automation",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Run PR Automation"
+      ]
+    },
+    {
+      "file": "pr-codename.yml",
+      "name": "House of Sak PR codename",
+      "triggers": [
+        "pull_request"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Assign House of Sak PR codename"
+      ]
+    },
+    {
+      "file": "pr-comment-trigger.yml",
+      "name": "PR Comment Trigger",
+      "triggers": [
+        "issue_comment"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "check-comment"
+      ]
+    },
+    {
+      "file": "pr-label-checker.yml",
+      "name": "PR Label Checker",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Check Labels"
+      ]
+    },
+    {
+      "file": "pr-lint.yml",
+      "name": "PR Lint",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Lint PR Title"
+      ]
+    },
+    {
+      "file": "pr-preview.yml",
+      "name": "Pull Request Preview",
+      "triggers": [
+        "pull_request"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "preview"
+      ]
+    },
+    {
+      "file": "pr-triage-bot.yml",
+      "name": "PR Triage Bot",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Triage Pull Request"
+      ]
+    },
+    {
+      "file": "pull-request-code-review-bot.yml",
+      "name": "Pull Request Code Review Bot",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Review Pull Request"
+      ]
+    },
+    {
       "file": "pylint.yml",
       "name": "Pylint",
       "triggers": [
@@ -912,6 +1903,64 @@
       "gates_prs": true,
       "jobs": [
         "build"
+      ]
+    },
+    {
+      "file": "python-lint-sarif.yml",
+      "name": "Python Lint Code Scanning",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Python Lint SARIF"
+      ]
+    },
+    {
+      "file": "rational-test-server.yml",
+      "name": "Rational Test Automation Server",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Run RTAS Test Suite"
+      ]
+    },
+    {
+      "file": "release-from-tag.yml",
+      "name": "Release from Tag",
+      "triggers": [
+        "push",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "release"
+      ]
+    },
+    {
+      "file": "renovate.yml",
+      "name": "Renovate",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "renovate"
+      ]
+    },
+    {
+      "file": "repo-file-sync.yml",
+      "name": "Repository File Sync",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Sync Repository Files"
       ]
     },
     {
@@ -945,6 +1994,132 @@
       ]
     },
     {
+      "file": "reusable-app-token.yml",
+      "name": "Reusable App Token",
+      "triggers": [
+        "workflow_call"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "token-generator"
+      ]
+    },
+    {
+      "file": "reusable-comment-pr.yml",
+      "name": "Reusable PR Comment Helper",
+      "triggers": [
+        "workflow_call",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Post PR Comment"
+      ]
+    },
+    {
+      "file": "reusable-deployment.yml",
+      "name": "Reusable Deployment",
+      "triggers": [
+        "workflow_call"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "deploy-record"
+      ]
+    },
+    {
+      "file": "reusable-dispatch-method.yml",
+      "name": "Reusable Dispatch Method",
+      "triggers": [
+        "workflow_call",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Dispatch Workflow Event"
+      ]
+    },
+    {
+      "file": "reusable-manual-approval-gate.yml",
+      "name": "Reusable Manual Approval Gate",
+      "triggers": [
+        "workflow_call"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "gate"
+      ]
+    },
+    {
+      "file": "reusable-pr-deploy.yml",
+      "name": "Reusable PR Deploy",
+      "triggers": [
+        "workflow_call"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "deploy"
+      ]
+    },
+    {
+      "file": "reusable-stepsecurity-token.yml",
+      "name": "Reusable StepSecurity Token",
+      "triggers": [
+        "workflow_call"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "mint-token"
+      ]
+    },
+    {
+      "file": "reusable-trigger-workflow-wait.yml",
+      "name": "Reusable Trigger Workflow and Wait",
+      "triggers": [
+        "workflow_call",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Trigger and Wait"
+      ]
+    },
+    {
+      "file": "reusable-update-pr-branches.yml",
+      "name": "Reusable update pull request branches",
+      "triggers": [
+        "workflow_call"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Update open pull requests"
+      ]
+    },
+    {
+      "file": "reusable-workflow-dispatch-wait.yml",
+      "name": "Reusable Workflow Dispatch and Wait",
+      "triggers": [
+        "workflow_call",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Dispatch and Wait"
+      ]
+    },
+    {
+      "file": "reusable-workflow-dispatch.yml",
+      "name": "Reusable Workflow Dispatch",
+      "triggers": [
+        "workflow_call",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Dispatch Workflow"
+      ]
+    },
+    {
       "file": "run-evals.yml",
       "name": "Run Evals",
       "triggers": [
@@ -957,6 +2132,30 @@
         "check-regressions",
         "post-summary",
         "run-evaluations"
+      ]
+    },
+    {
+      "file": "runner-disk-cleaner.yml",
+      "name": "Runner Disk Cleaner",
+      "triggers": [
+        "workflow_call",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Free Runner Disk Space"
+      ]
+    },
+    {
+      "file": "safe-dependabot.yml",
+      "name": "Safe Dependabot Policy",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "Validate Dependabot Configuration"
       ]
     },
     {
@@ -978,7 +2177,8 @@
       "triggers": [
         "branch_protection_rule",
         "push",
-        "schedule"
+        "schedule",
+        "workflow_dispatch"
       ],
       "gates_prs": false,
       "jobs": [
@@ -998,6 +2198,81 @@
       "jobs": [
         "Branch sweep",
         "gitleaks"
+      ]
+    },
+    {
+      "file": "self-approve.yml",
+      "name": "GitHub Repository Self Approve",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Run Self Approve Action"
+      ]
+    },
+    {
+      "file": "semantic-tagging.yml",
+      "name": "Automated Semantic Tagging",
+      "triggers": [
+        "push",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Calculate and push semantic tag"
+      ]
+    },
+    {
+      "file": "set-bot-github-user.yml",
+      "name": "Set Bot Git User Identity",
+      "triggers": [
+        "workflow_call",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Set Bot User"
+      ]
+    },
+    {
+      "file": "setup-github-actions-bot.yml",
+      "name": "Setup GitHub Actions Bot Identity",
+      "triggers": [
+        "workflow_call",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Configure Bot Git Identity"
+      ]
+    },
+    {
+      "file": "setup-github-app-as-bot.yml",
+      "name": "Setup GitHub App as Bot",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Setup GitHub App Identity"
+      ]
+    },
+    {
+      "file": "skill-pr-reviewer.lock.yml",
+      "name": "skill-pr-reviewer",
+      "triggers": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "gates_prs": true,
+      "jobs": [
+        "activation",
+        "agent",
+        "conclusion",
+        "pre_activation",
+        "safe_outputs",
+        "upload_assets"
       ]
     },
     {
@@ -1025,6 +2300,17 @@
       ]
     },
     {
+      "file": "step-ci.yml",
+      "name": "Step CI API Testing",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Run Step CI Tests"
+      ]
+    },
+    {
       "file": "subprojects.yml",
       "name": "Sub-project tests",
       "triggers": [
@@ -1049,6 +2335,65 @@
       ]
     },
     {
+      "file": "sync-branch-action.yml",
+      "name": "Sync Branch Action",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Sync Branch Runner"
+      ]
+    },
+    {
+      "file": "the-auditor.yml",
+      "name": "The Auditor PR Reviewer",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Run The Auditor PR Reviewer"
+      ]
+    },
+    {
+      "file": "update-pr-branches-from-main.yml",
+      "name": "Update pull request branches from protected bases",
+      "triggers": [
+        "push",
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Select protected base branches",
+        "Synchronize pull request branches"
+      ]
+    },
+    {
+      "file": "update-pr-reminder.yml",
+      "name": "Update PR Reminder",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Remind Stale PRs"
+      ]
+    },
+    {
+      "file": "verified-bot-commit.yml",
+      "name": "Verified Bot Commit",
+      "triggers": [
+        "workflow_call",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Create Verified Commit"
+      ]
+    },
+    {
       "file": "verify-assets.yml",
       "name": "Verify Public Hugging Face Assets",
       "triggers": [
@@ -1058,6 +2403,17 @@
       "gates_prs": false,
       "jobs": [
         "verify"
+      ]
+    },
+    {
+      "file": "wait-for-workflow.yml",
+      "name": "Wait for Workflow Conclusion",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Poll Workflow Completion"
       ]
     },
     {
@@ -1076,21 +2432,126 @@
         "pre_activation",
         "safe_outputs"
       ]
+    },
+    {
+      "file": "weekly-workflow-sync-validation.yml",
+      "name": "Weekly workflow and synchronization validation",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Validate workflows and synchronization status"
+      ]
+    },
+    {
+      "file": "weekly-workflow-validation.yml",
+      "name": "Weekly workflow validation and synchronization status",
+      "triggers": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Report synchronization statuses",
+        "Validate repository workflows"
+      ]
+    },
+    {
+      "file": "wiki-page-maintenance.yml",
+      "name": "Wiki Page Maintenance",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Format Wiki Pages and TOCs"
+      ]
+    },
+    {
+      "file": "wiki-sync.yml",
+      "name": "Wiki Sync",
+      "triggers": [
+        "push",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "sync"
+      ]
+    },
+    {
+      "file": "workflow-conclusion.yml",
+      "name": "Workflow Conclusion Evaluator",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Evaluate Job Conclusions",
+        "Upstream Task"
+      ]
+    },
+    {
+      "file": "workflow-immortality.yml",
+      "name": "Workflow Immortality Keepalive",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Prevent Inactivity Workflow Disabling"
+      ]
+    },
+    {
+      "file": "workflow-queue.yml",
+      "name": "Workflow Queue",
+      "triggers": [
+        "workflow_call",
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Synchronize Workflow Queue"
+      ]
+    },
+    {
+      "file": "workflow-run-wait.yml",
+      "name": "Workflow Run Wait",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Wait for Workflow Runs"
+      ]
+    },
+    {
+      "file": "workflow-status-indicator.yml",
+      "name": "Workflow Status Indicator",
+      "triggers": [
+        "workflow_dispatch"
+      ],
+      "gates_prs": false,
+      "jobs": [
+        "Generate Workflow Status"
+      ]
     }
   ],
   "tests": {
     "coverage_floor": 96.0,
-    "test_functions": 2122,
+    "test_functions": 2332,
     "trees": [
       {
         "name": "sakthai (tests/)",
         "path": "tests",
-        "files": 126,
+        "files": 151,
         "runner": "ci.yml"
       },
       {
-        "name": "agent_workflow_framework",
-        "path": "apps/agent_workflow_framework/tests",
+        "name": "workflow_engine",
+        "path": "apps/sak_agent_dashboard/workflow_engine/tests",
         "files": 7,
         "runner": "apps.yml"
       },
