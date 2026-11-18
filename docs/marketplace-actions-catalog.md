@@ -16,7 +16,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 
 ---
 
-### 2. One Hundred and Nine Verified Marketplace Actions
+### 2. One Hundred and Ten Verified Marketplace Actions
 
 | Action Name | Upstream Repository | Tag | Immutable Commit SHA | Required Permissions | Purpose |
 |---|---|---|---|---|---|
@@ -129,6 +129,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **PR-Agent Pro AI Reviewer** | [`meanusarcanus/ai-pr-reviewer-action`](https://github.com/meanusarcanus/ai-pr-reviewer-action) | `v1.0.0` | `9a2e09833376f54db095b71ca638d2204485c31a` | `contents: read`, `pull-requests: write`, `issues: write` | Automated AI pull request code review, security leak detection, and diff suggestions |
 | **Dependencies Autoupdate** | [`mtl1979/dependencies-autoupdate`](https://github.com/mtl1979/dependencies-autoupdate) | `v1.2.3` | `7230f7c4e5c186601a03e3e9f8d7ad16c6b4e122` | `contents: write`, `pull-requests: write` | Language-agnostic automated dependency updater with custom branch and PR generation |
 | **Multi-Linter Engine** | [`ryanclark/lint-action`](https://github.com/ryanclark/lint-action) | `v1.15.0` | `316d8bd29e28a292657682f6c6e45ca1dab41496` | `contents: write`, `checks: write`, `pull-requests: write` | Multi-language linter runner and auto-fixer supporting Python, JavaScript, and more |
+| **GitHub Multi Deployments** | [`maxgfr/github-multi-deployments`](https://github.com/maxgfr/github-multi-deployments) | `v1.8.11` | `ed720d528c8e44c33cca444d1b5375a866ec724c` | `deployments: write`, `contents: read` | Manages deployment states across multiple environments and PR preview lifecycles |
 
 
 ---
@@ -1784,6 +1785,22 @@ Runs multi-language linters across codebases with optional automated code style 
     black_dir: "personas/sakthai"
     flake8: "false"
     mypy: "false"
+```
+
+### 3.130 GitHub Multi Deployments Action ([`.github/workflows/reusable-deployment.yml`](../.github/workflows/reusable-deployment.yml) & [`.github/workflows/reusable-pr-deploy.yml`](../.github/workflows/reusable-pr-deploy.yml))
+Manages multi-environment deployment states, auto-inactivation of historical deployments, and transient PR preview lifecycles:
+
+```yaml
+- name: Manage Multi Deployments
+  uses: maxgfr/github-multi-deployments@ed720d528c8e44c33cca444d1b5375a866ec724c # v1.8.11
+  with:
+    step: ${{ inputs.step || 'start' }}
+    token: ${{ secrets.GITHUB_TOKEN }}
+    env: ${{ inputs.environment || '["staging", "production"]' }}
+    env_url: ${{ inputs.environment_url }}
+    deployment_id: ${{ inputs.deployment_id }}
+    status: ${{ inputs.status || 'success' }}
+    desc: ${{ inputs.desc || 'Multi-target environment deployment' }}
 ```
 
 ---
