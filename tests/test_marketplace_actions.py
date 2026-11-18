@@ -129,6 +129,10 @@ PINNED_ACTIONS = {
     "reviewdog/action-misspell": "c846b6b0996029d2d39540c8ffebebbd957072db",
     "rossjrw/pr-preview-action": "873417d2df72380da1f3978378fb58560bcde976",
     "anchore/sbom-action": "66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c",
+    "devantler-tech/setup-agent-skills-action": "aaf3bf62f137e3157e38fa8c44bb0fe6427a74ff",
+    "mvkaran/setup-copilot-cli": "d05a47209e6b3185c9c55702bef49f28e6eebef7",
+    "austenstone/copilot-cli": "5a9fbe56fd6cdb5e50d329fd87c751748cf5182f",
+    "depmedicdev-byte/ci-doctor": "131c2c50a4487787b4f6ceb3eb3b409198be5b7c",
 }
 
 
@@ -267,6 +271,9 @@ MARKETPLACE_WORKFLOW_FILES = [
     "actionlint-review.yml",
     "misspell-review.yml",
     "anchore-sbom.yml",
+    "setup-agent-skills.yml",
+    "copilot-cli.yml",
+    "ci-doctor.yml",
 ]
 
 

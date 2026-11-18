@@ -1,0 +1,62 @@
+name: CI Doctor
+
+on:
+  workflow_dispatch:
+    inputs:
+      directory:
+        description: "Root directory to scan for workflows"
+        required: false
+        default: "."
+        type: string
+      fail_on:
+        description: "Fail threshold (error | warn | info | never)"
+        required: false
+        default: "never"
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit-workflows:
+    name: Audit Workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run CI Doctor
+        id: ci-doctor
+        uses: depmedicdev-byte/ci-doctor@131c2c50a4487787b4f6ceb3eb3b409198be5b7c # v0.5.0
+        with:
+          directory: ${{ inputs.directory || '.' }}
+          fail-on: ${{ inputs.fail_on || 'never' }}
+          comment: "false"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Report Audit Metrics
+        env:
+          TOTAL_FINDINGS: ${{ steps.ci-doctor.outputs.total }}
+          ERROR_COUNT: ${{ steps.ci-doctor.outputs.error-count }}
+          WARN_COUNT: ${{ steps.ci-doctor.outputs.warn-count }}
+          INFO_COUNT: ${{ steps.ci-doctor.outputs.info-count }}
+        run: |
+          echo "CI Doctor Audit Summary:"
+          echo "Total findings: $TOTAL_FINDINGS"
+          echo "Errors: $ERROR_COUNT"
+          echo "Warnings: $WARN_COUNT"
+          echo "Info: $INFO_COUNT"

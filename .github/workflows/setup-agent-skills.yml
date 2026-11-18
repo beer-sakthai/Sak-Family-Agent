@@ -1,0 +1,54 @@
+name: Setup Agent Skills
+
+on:
+  workflow_dispatch:
+    inputs:
+      skills:
+        description: "Newline-separated list of skills to install (<owner/repo> <skill>[@pin])"
+        required: false
+        default: |
+          github/awesome-copilot git-commit@8fbf6c4a798df51d1d1d8fd37a1aa7e94203109c
+      agents:
+        description: "Target agents (e.g. github-copilot, claude-code)"
+        required: false
+        default: "github-copilot"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  setup-skills:
+    name: Setup Agent Skills
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Agent Skills
+        id: install-skills
+        uses: devantler-tech/setup-agent-skills-action@aaf3bf62f137e3157e38fa8c44bb0fe6427a74ff # v1.0.1
+        with:
+          skills: ${{ inputs.skills || 'github/awesome-copilot git-commit@8fbf6c4a798df51d1d1d8fd37a1aa7e94203109c' }}
+          agents: ${{ inputs.agents || 'github-copilot' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Report installed skills
+        env:
+          INSTALLED_SKILLS: ${{ steps.install-skills.outputs.installed-skills }}
+        run: |
+          echo "Installed agent skills:"
+          echo "$INSTALLED_SKILLS"
