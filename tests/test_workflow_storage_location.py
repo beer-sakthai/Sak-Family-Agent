@@ -24,7 +24,9 @@ import pytest
 from sakthai.config import workflow_runs_dir
 from sakthai.web import api
 
-_FRAMEWORK_DIR = Path(__file__).resolve().parents[1] / "apps" / "sak_agent_dashboard" / "workflow_engine"
+_FRAMEWORK_DIR = (
+    Path(__file__).resolve().parents[1] / "apps" / "sak_agent_dashboard" / "workflow_engine"
+)
 _CORE_DIR = Path(__file__).resolve().parents[1] / "personas" / "sakthai"
 
 for p in (_FRAMEWORK_DIR, _CORE_DIR):

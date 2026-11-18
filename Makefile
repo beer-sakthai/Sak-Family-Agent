@@ -47,7 +47,7 @@ test:
 
 lint:
 	@echo "Running linters..."
-	@if command -v uv >/dev/null 2>&1; then uv run --extra dev ruff check .; else ruff check .; fi
+	@if command -v uv >/dev/null 2>&1; then uv run --extra dev ruff check personas/sakthai tests && uv run --extra dev ruff format --check personas/sakthai tests; else ruff check personas/sakthai tests && ruff format --check personas/sakthai tests; fi
 
 # Mutation testing on the core seam modules (see [tool.mutmut] in pyproject.toml).
 # A full run is slow and is intentionally NOT part of CI; use it locally to find
