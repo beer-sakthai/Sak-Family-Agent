@@ -106,6 +106,9 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **DependaFix AI Remediation** | [`harishrsk/dependafix-action`](https://github.com/harishrsk/dependafix-action) | `v1.0.0` | `a5c537144e03f8c2d42734060736dacdc22e53d5` | `contents: read`, `pull-requests: read` | AI-powered autonomous remediation of breaking changes in dependency PRs |
 | **Patchbot Vulnerability Scanner** | [`PrismorSec/patchbot`](https://github.com/PrismorSec/patchbot) | `v0.3.0` | `60906559fec33549e4ac97f5f3e707c517342486` | `contents: read`, `security-events: write` | Vulnerability scanning, SARIF generation, and coding-agent fix generation |
 | **Python Lint Code Scanning** | [`advanced-security/python-lint-code-scanning-action`](https://github.com/advanced-security/python-lint-code-scanning-action) | `v1.1.3` | `7ebf81c5860ee4d41849872bc2f95b4243c8dc28` | `contents: read`, `security-events: write` | Multi-linter and type checker for Python with SARIF upload to Code Scanning |
+| **Add Reviewers to GitHub PR** | [`crxqhuinvaiuoznzedkh/actions-add-reviewers`](https://github.com/crxqhuinvaiuoznzedkh/actions-add-reviewers) | `v1.1.0` | `31c8c487b1642f4b7cad9556bf9b759882b57914` | `contents: read`, `pull-requests: write` | Automatically assigns reviewers to pull requests with self-author omission and re-request controls |
+| **Dependency Review** | [`actions/dependency-review-action`](https://github.com/actions/dependency-review-action) | `v5.0.1` | `bbc44d14a204704ccc493733616cd1e93a0321ec` | `contents: read`, `pull-requests: write` | Prevents introduction of dependencies with known vulnerabilities or non-compliant licenses |
+| **npm Audit Action** | [`oke-py/npm-audit-action`](https://github.com/oke-py/npm-audit-action) | `v5.5.2` | `da53d502b06a0bc95f9ce3c0ebab0c4c713fae4a` | `contents: read`, `issues: write`, `pull-requests: write` | Runs `npm audit` against npm lockfiles with GHSA exclusion, PR comment reporting, and auto-resolution |
 
 
 ---
@@ -210,6 +213,9 @@ graph TD
     ActionChoice -->|AutoHeal CI| AutoHealCI[nolekek/AutoHeal-CI]
     ActionChoice -->|PR Review Bot| PRReviewBot[kakaotech-25/Hackathon-PR-Review]
     ActionChoice -->|Gitbot Config| GitbotConfig[drengskapur/gitbot-config]
+    ActionChoice -->|Add Reviewers| AddReviewersPR[crxqhuinvaiuoznzedkh/actions-add-reviewers]
+    ActionChoice -->|Dependency Review| DepReview[actions/dependency-review-action]
+    ActionChoice -->|npm Audit| NpmAudit[oke-py/npm-audit-action]
 ```
 
 ### 3.1 Wiki Sync Workflow ([`.github/workflows/wiki-sync.yml`](../.github/workflows/wiki-sync.yml))
@@ -1445,6 +1451,52 @@ Quickly configures Git global committer identity for CI workflows using standard
 ```yaml
 - name: Configure Git Actions Bot Committer
   uses: drengskapur/gitbot-config@00aecab0a790b146951f9e0c48f564eaf26a9df6 # v1.1.2
+```
+
+### 3.107 Add Reviewers to GitHub PR ([`.github/workflows/add-reviewers.yml`](../.github/workflows/add-reviewers.yml))
+Automatically assigns reviewers (`beer-sakthai`) to pull requests with self-author omission and configurable re-request rules:
+
+```yaml
+- name: Add Reviewers
+  if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'beer-sakthai'
+  uses: crxqhuinvaiuoznzedkh/actions-add-reviewers@31c8c487b1642f4b7cad9556bf9b759882b57914 # v1.1.0
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    reviewers: "beer-sakthai"
+    omit-reviewer: "true"
+    re-request-when-changes-requested: "true"
+    re-request-when-approved: "false"
+```
+
+### 3.108 Dependency Review ([`.github/workflows/dependency-review.yml`](../.github/workflows/dependency-review.yml))
+Scans dependency manifest changes in pull requests and blocks newly introduced high/critical vulnerabilities:
+
+```yaml
+- name: Review dependencies
+  uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
+  with:
+    fail-on-severity: high
+    allow-ghsas: GHSA-fc5q-39xc-vjpf
+    comment-summary-in-pr: on-failure
+```
+
+### 3.109 npm Audit Action ([`.github/workflows/npm-audit.yml`](../.github/workflows/npm-audit.yml))
+Audits npm dependencies in `apps/sak_agent_dashboard` with GHSA exclusion (`GHSA-fc5q-39xc-vjpf`) and Markdown pull request comment reporting:
+
+```yaml
+- name: Run npm audit action
+  uses: oke-py/npm-audit-action@da53d502b06a0bc95f9ce3c0ebab0c4c713fae4a # v5.5.2
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    working_directory: "apps/sak_agent_dashboard"
+    audit_level: "high"
+    production_flag: "true"
+    ignore_ghsas: "GHSA-fc5q-39xc-vjpf"
+    create_issues: "false"
+    create_pr_comments: "true"
+    resolve_pr_comments: "true"
+    report_format: "markdown"
+    fail_on_vulnerabilities: "true"
 ```
 
 ---

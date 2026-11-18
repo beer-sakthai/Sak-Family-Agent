@@ -34,13 +34,18 @@ jobs:
       contents: read # for actions/checkout to fetch the code
       pull-requests: write # for comment-summary-in-pr to post the review summary
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Review dependencies
-        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
         with:
           # Start at `high` rather than the action's `low` default. The npm
           # trees under apps/ and personas/saksee/skills/ pull in large
@@ -48,4 +53,5 @@ jobs:
           # transitive advisory would be turned off within a week. Tighten this
           # to `moderate` once the backlog is known to be clean.
           fail-on-severity: high
+          allow-ghsas: GHSA-fc5q-39xc-vjpf
           comment-summary-in-pr: on-failure

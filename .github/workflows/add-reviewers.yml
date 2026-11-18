@@ -1,0 +1,42 @@
+name: Add Reviewers to GitHub PR
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, synchronize]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  add-reviewers:
+    name: Add Reviewers to PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Add Reviewers
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'beer-sakthai'
+        uses: crxqhuinvaiuoznzedkh/actions-add-reviewers@31c8c487b1642f4b7cad9556bf9b759882b57914 # v1.1.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          reviewers: "beer-sakthai"
+          omit-reviewer: "true"
+          re-request-when-changes-requested: "true"
+          re-request-when-approved: "false"
