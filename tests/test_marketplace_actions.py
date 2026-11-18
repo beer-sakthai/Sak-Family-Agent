@@ -122,6 +122,8 @@ PINNED_ACTIONS = {
     "crxqhuinvaiuoznzedkh/actions-add-reviewers": "31c8c487b1642f4b7cad9556bf9b759882b57914",
     "actions/dependency-review-action": "bbc44d14a204704ccc493733616cd1e93a0321ec",
     "oke-py/npm-audit-action": "da53d502b06a0bc95f9ce3c0ebab0c4c713fae4a",
+    "mlaplante/githubprreviewhelperextension": "84c713e117ecfb6fa835075bf23f5dc48d6d657b",
+    "sentinelqa-dev/playwright-ci-debugger": "bab033ef5aa646071e0f6bae2a9ca927e14ddbf8",
 }
 
 
@@ -253,6 +255,8 @@ MARKETPLACE_WORKFLOW_FILES = [
     "add-reviewers.yml",
     "dependency-review.yml",
     "npm-audit.yml",
+    "github-code-review-assistant.yml",
+    "playwright-ci-debugger.yml",
 ]
 
 

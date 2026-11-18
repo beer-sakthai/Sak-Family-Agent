@@ -109,6 +109,8 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **Add Reviewers to GitHub PR** | [`crxqhuinvaiuoznzedkh/actions-add-reviewers`](https://github.com/crxqhuinvaiuoznzedkh/actions-add-reviewers) | `v1.1.0` | `31c8c487b1642f4b7cad9556bf9b759882b57914` | `contents: read`, `pull-requests: write` | Automatically assigns reviewers to pull requests with self-author omission and re-request controls |
 | **Dependency Review** | [`actions/dependency-review-action`](https://github.com/actions/dependency-review-action) | `v5.0.1` | `bbc44d14a204704ccc493733616cd1e93a0321ec` | `contents: read`, `pull-requests: write` | Prevents introduction of dependencies with known vulnerabilities or non-compliant licenses |
 | **npm Audit Action** | [`oke-py/npm-audit-action`](https://github.com/oke-py/npm-audit-action) | `v5.5.2` | `da53d502b06a0bc95f9ce3c0ebab0c4c713fae4a` | `contents: read`, `issues: write`, `pull-requests: write` | Runs `npm audit` against npm lockfiles with GHSA exclusion, PR comment reporting, and auto-resolution |
+| **GitHub Code Review Assistant** | [`mlaplante/githubprreviewhelperextension`](https://github.com/mlaplante/githubprreviewhelperextension) | `v1.4.0` | `84c713e117ecfb6fa835075bf23f5dc48d6d657b` | `contents: read`, `pull-requests: write`, `issues: write` | Automated static analysis on pull requests with security rules, false-positive filtering, and inline review comments |
+| **Playwright CI Debugger** | [`sentinelqa-dev/playwright-ci-debugger`](https://github.com/sentinelqa-dev/playwright-ci-debugger) | `v1.2.0` | `bab033ef5aa646071e0f6bae2a9ca927e14ddbf8` | `contents: read` | Debugs Playwright CI test failures with AI root-cause summaries, unified artifacts, and hosted reports |
 
 
 ---
@@ -1497,6 +1499,33 @@ Audits npm dependencies in `apps/sak_agent_dashboard` with GHSA exclusion (`GHSA
     resolve_pr_comments: "true"
     report_format: "markdown"
     fail_on_vulnerabilities: "true"
+```
+
+### 3.110 GitHub Code Review Assistant ([`.github/workflows/github-code-review-assistant.yml`](../.github/workflows/github-code-review-assistant.yml))
+Static analysis on pull requests to detect security issues, debug code, and quality anti-patterns across JS/TS/HTML/CSS/C# with inline comments and PR summaries:
+
+```yaml
+- name: Run GitHub Code Review Assistant
+  uses: mlaplante/githubprreviewhelperextension@84c713e117ecfb6fa835075bf23f5dc48d6d657b # v1.4.0
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    fail-on-critical: 'false'
+    severity-threshold: 'info'
+    label-on-critical: ''
+```
+
+### 3.111 Playwright CI Debugger ([`.github/workflows/playwright-ci-debugger.yml`](../.github/workflows/playwright-ci-debugger.yml))
+Debugs Playwright CI test failures with automated AI root-cause summaries, unified test artifacts, and shareable reports:
+
+```yaml
+- name: Debug Playwright CI
+  uses: sentinelqa-dev/playwright-ci-debugger@bab033ef5aa646071e0f6bae2a9ca927e14ddbf8 # v1.2.0
+  if: always()
+  with:
+    fail-on-missing-json: "false"
+    playwright-json-path: "test-results/report.json"
+    playwright-report-dir: "playwright-report"
+    test-results-dir: "test-results"
 ```
 
 ---
