@@ -1762,13 +1762,12 @@ Language-agnostic dependency updater that updates lockfiles, runs checks, and cr
 ```yaml
 - name: Dependencies Autoupdate with Custom branch and fixes
   uses: mtl1979/dependencies-autoupdate@7230f7c4e5c186601a03e3e9f8d7ad16c6b4e122 # v1.2.3
+  env:
+    UPDATE_COMMAND: ${{ inputs.update_command || 'uv lock --upgrade' }}
   with:
     token: ${{ secrets.GITHUB_TOKEN }}
-    update-command: ${{ inputs.update_command || 'uv lock --upgrade' }}
-    pr-branch: "dependencies-autoupdate"
-    commit-message: "chore(deps): autoupdate project dependencies"
-    pr-title: "chore(deps): autoupdate project dependencies"
-    pr-body: "Automated dependency updates triggered via mtl1979/dependencies-autoupdate."
+    update-command: scripts/autoupdate-dependencies.sh
+    pr-branch: main
 ```
 
 ### 3.129 Multi-Linter Action ([`.github/workflows/multi-lint-action.yml`](../.github/workflows/multi-lint-action.yml))
