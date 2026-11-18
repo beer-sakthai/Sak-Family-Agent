@@ -1,4 +1,4 @@
-from app.agent_platform.safety import DataLossGuardrail
+from sakthai.agent_platform.safety import DataLossGuardrail
 
 
 def test_guardrail_allows_safe_command():

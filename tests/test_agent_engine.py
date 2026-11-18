@@ -2,12 +2,12 @@ import dataclasses
 
 import pytest
 
-from app.agent_platform.agent_engine import (
+from sakthai.agent_platform.agent_engine import (
     AgentEngineMode,
     UnifiedAgentConfig,
     UnifiedAgentRuntime,
 )
-from app.agent_platform.safety import DataLossGuardrail
+from sakthai.agent_platform.safety import DataLossGuardrail
 
 
 def sample_add_tool(a: int, b: int) -> int:
