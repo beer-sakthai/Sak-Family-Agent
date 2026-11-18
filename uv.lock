@@ -3475,7 +3475,7 @@ requires-dist = [
     { name = "rich", specifier = ">=15.0.0,<16.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.16.1" },
     { name = "sakthai-agent", extras = ["dev", "antigravity"], marker = "extra == 'all'" },
-    { name = "tenacity", specifier = ">=8.0,<10.0" },
+    { name = "tenacity", specifier = ">=8.2.3,<9.2.0" },
 ]
 provides-extras = ["dev", "antigravity", "mutation", "all"]
 

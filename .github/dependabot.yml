@@ -36,6 +36,10 @@ updates:
     # recurring on the next setuptools release.
     ignore:
       - dependency-name: "setuptools"
+      # google-genai>=2.16.0 caps tenacity at <9.2.0; ignore >=9.2.0 until
+      # google-genai lifts that upper bound so Dependabot uv resolution succeeds.
+      - dependency-name: "tenacity"
+        versions: [">= 9.2.0"]
     groups:
       python-minor-patch:
         update-types: ["minor", "patch"]
@@ -52,28 +56,28 @@ updates:
         update-types: ["minor", "patch"]
 
   # Pinned action versions in .github/workflows/.
+  # Scoped to core security/CI action namespaces without a catch-all `*` group:
+  # grouping 115+ actions across 120+ workflows into a single wildcard group
+  # triggers O(N^2) workflow re-parsing inside Dependabot's GroupUpdateCreation
+  # and hits the 45-minute job timeout.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     open-pull-requests-limit: 5
-    # Same cooldown reasoning as the uv ecosystem above, and it matters most
-    # here: a workflow `uses:` runs with the job's token, so a compromised
-    # third-party action release is the highest-value supply-chain target in
-    # the repo. First-party `actions/*` are exempt — they are the ones whose
-    # security fixes we want immediately.
-    cooldown:
-      default-days: 7
-      exclude:
-        - "actions/*"
-    groups:
-      actions:
-        patterns: ["*"]
+    allow:
+      - dependency-name: "actions/*"
+      - dependency-name: "github/*"
+      - dependency-name: "step-security/*"
+      - dependency-name: "astral-sh/*"
+      - dependency-name: "ossf/*"
+      - dependency-name: "PyCQA/*"
 
   - package-ecosystem: npm
     directory: /apps/sak_agent_dashboard
     schedule:
       interval: daily
+    open-pull-requests-limit: 5
     ignore:
       # The dashboard is written against Tailwind v3: globals.css uses the v3
       # `@tailwind base/components/utilities` directives and tailwind.config.ts
@@ -94,6 +98,9 @@ updates:
       # Lift both together once eslint-config-next ships TS 7 support.
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+    groups:
+      dashboard-minor-patch:
+        update-types: ["minor", "patch"]
 
   # The two stitch skill trees. Both carry an explicit PR limit and grouping:
   # without them each entry defaults to 5 ungrouped PRs, so these two alone
@@ -102,7 +109,7 @@ updates:
     directory: /personas/saksee/skills/SakSee-stitch-react-components
     schedule:
       interval: daily
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 5
     groups:
       stitch-react-components:
         update-types: ["minor", "patch"]
