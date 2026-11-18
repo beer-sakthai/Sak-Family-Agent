@@ -50,8 +50,9 @@ on:
 permissions: {}
 
 concurrency:
-  group: auto-update-branch-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  # A newer PR event or scheduled reconciliation supersedes stale branch work.
+  group: auto-update-branch-${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   auto-update:

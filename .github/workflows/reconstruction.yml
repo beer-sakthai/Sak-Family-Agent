@@ -1,0 +1,107 @@
+name: GitHub Actions Reconstruction Audit
+
+on:
+  schedule:
+    - cron: '23 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      team_slug:
+        description: Organization team allowed to run the privileged manual reconstruction audit
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: reconstruction-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  authorize:
+    name: Authorize manual reconstruction
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Checkout shared authorization action
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/actions/check-automation-permissions
+      - name: Check team authorization
+        uses: $/.github/actions/check-automation-permissions
+        with:
+          github-token: ${{ github.token }}
+          required-team: ${{ inputs.team_slug }}
+          require-team: 'true'
+
+  audit:
+    name: Reconstruct workflow inventory and audit races
+    needs: authorize
+    if: always() && (github.event_name == 'schedule' || needs.authorize.result == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify generated Agentic Commands safety patch
+        run: python3 scripts/patch_agentic_commands_concurrency.py --check
+      - name: Reconstruct workflow inventory
+        shell: bash
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/reconstruction
+          python3 scripts/audit_workflow_concurrency.py \
+            --workflow-dir .github/workflows \
+            --repo "$GITHUB_REPOSITORY" \
+            --output artifacts/reconstruction/concurrency-audit.md
+
+          # Agentic Workflow lock files are generated from same-named markdown
+          # sources. Fail closed when a generated source boundary is broken.
+          while IFS= read -r lock; do
+            source="${lock%.lock.yml}.md"
+            if [[ ! -f "$source" ]]; then
+              echo "Missing Agentic Workflow source for $lock: expected $source" >&2
+              exit 1
+            fi
+          done < <(find .github/workflows -maxdepth 1 -type f -name '*.lock.yml' | sort)
+
+          {
+            echo "# Reconstruction manifest"
+            echo
+            echo "Commit: \\`$(git rev-parse HEAD)\\`"
+            echo
+            echo '## Workflow sources'
+            find .github/workflows -maxdepth 1 -type f \\
+              \( -name '*.yml' -o -name '*.yaml' -o -name '*.md' \) -printf '%f\\n' | sort
+            echo
+            echo '## Generated lock/source pairs'
+            find .github/workflows -maxdepth 1 -type f -name '*.lock.yml' -printf '%f\\n' | sort
+          } > artifacts/reconstruction/manifest.md
+      - name: Upload reconstruction artifacts
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: github-actions-reconstruction-${{ github.run_id }}
+          path: artifacts/reconstruction
+          if-no-files-found: error
+          retention-days: 14

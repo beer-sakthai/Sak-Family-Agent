@@ -1,0 +1,63 @@
+name: Daily Actions Security and Concurrency Audit
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: daily-actions-security-audit
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Audit workflow security and concurrency
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify generated Agentic Commands safety patch
+        run: python3 scripts/patch_agentic_commands_concurrency.py --check
+      - name: Generate concurrency audit
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          mkdir -p artifacts/actions-audit
+          python3 scripts/audit_workflow_concurrency.py \
+            --workflow-dir .github/workflows \
+            --repo "$GITHUB_REPOSITORY" \
+            --output artifacts/actions-audit/concurrency-audit.md \
+            --fail-on-high
+      - name: Install workflow linter dependencies
+        run: |
+          python -m pip install --disable-pip-version-check \
+            --require-hashes -r .github/workflow-linter-requirements.lock
+      - name: Lint workflow permission declarations
+        run: python3 scripts/lint_workflow_permissions.py
+      - name: Install zizmor
+        run: |
+          python -m pip install --disable-pip-version-check \
+            --require-hashes -r .github/zizmor-requirements.lock
+      - name: Scan workflows for supply-chain and injection issues
+        run: zizmor --no-online-audits --config .github/zizmor.yml .github/workflows/
+      - name: Upload audit report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: daily-actions-audit-${{ github.run_id }}
+          path: artifacts/actions-audit
+          if-no-files-found: error
+          retention-days: 14

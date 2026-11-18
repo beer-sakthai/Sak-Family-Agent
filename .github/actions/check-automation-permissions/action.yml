@@ -1,0 +1,78 @@
+name: Check automation permissions
+description: Shared creator-token and optional organization-team authorization gate
+inputs:
+  github-token:
+    description: Token used for GitHub API checks
+    required: true
+  verification-token:
+    description: Optional token whose presence authorizes creator verification
+    required: false
+    default: ''
+  require-verification-token:
+    description: Mark the check unauthorized when verification-token is empty
+    required: false
+    default: 'false'
+  required-team:
+    description: Organization team slug required for privileged operations
+    required: false
+    default: ''
+  require-team:
+    description: Require the triggering actor to belong to required-team
+    required: false
+    default: 'false'
+outputs:
+  authorized:
+    description: Whether all requested checks passed
+    value: ${{ steps.check.outputs.authorized }}
+  reason:
+    description: Human-readable authorization result
+    value: ${{ steps.check.outputs.reason }}
+runs:
+  using: composite
+  steps:
+    - name: Check creator and team authorization
+      id: check
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        VERIFICATION_TOKEN: ${{ inputs.verification-token }}
+        REQUIRE_VERIFICATION_TOKEN: ${{ inputs.require-verification-token }}
+        REQUIRED_TEAM: ${{ inputs.required-team }}
+        REQUIRE_TEAM: ${{ inputs.require-team }}
+        ACTOR: ${{ github.actor }}
+        REPOSITORY: ${{ github.repository }}
+      run: |
+        set -euo pipefail
+        fail() {
+          echo "authorized=false" >> "$GITHUB_OUTPUT"
+          echo "reason=$1" >> "$GITHUB_OUTPUT"
+          echo "::error::$1"
+          exit 1
+        }
+        deny() {
+          echo "authorized=false" >> "$GITHUB_OUTPUT"
+          echo "reason=$1" >> "$GITHUB_OUTPUT"
+          echo "::notice::$1"
+          exit 0
+        }
+
+        if [[ "$REQUIRE_VERIFICATION_TOKEN" == "true" && -z "$VERIFICATION_TOKEN" ]]; then
+          deny "The creator verification token is not configured; skipping bot verification."
+        fi
+
+        if [[ "$REQUIRE_TEAM" == "true" ]]; then
+          [[ -n "$REQUIRED_TEAM" ]] || fail "A team slug is required when team authorization is enabled."
+          org="${REPOSITORY%%/*}"
+          if ! gh api --silent "orgs/$org/teams/$REQUIRED_TEAM/memberships/$ACTOR" >/dev/null 2>&1; then
+            fail "Actor $ACTOR is not a member of required team $org/$REQUIRED_TEAM."
+          fi
+        fi
+
+        echo "authorized=true" >> "$GITHUB_OUTPUT"
+        if [[ "$REQUIRE_TEAM" == "true" ]]; then
+          echo "reason=creator verification and team authorization passed" >> "$GITHUB_OUTPUT"
+        elif [[ "$REQUIRE_VERIFICATION_TOKEN" == "true" ]]; then
+          echo "reason=creator verification token is available" >> "$GITHUB_OUTPUT"
+        else
+          echo "reason=no privileged authorization check requested" >> "$GITHUB_OUTPUT"
+        fi

@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -29,20 +29,23 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Check PAT verification secret
-        id: check-secret
-        env:
-          PAT_VERIFICATION_TOKEN: ${{ secrets.PAT_VERIFICATION_TOKEN }}
-        run: |
-          if [ -n "$PAT_VERIFICATION_TOKEN" ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::PAT_VERIFICATION_TOKEN is not configured; skipping bot verification check."
-          fi
+      - name: Checkout shared authorization action
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/actions/check-automation-permissions
+
+      - name: Check creator verification authorization
+        id: authorization
+        uses: $/.github/actions/check-automation-permissions
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          verification-token: ${{ secrets.PAT_VERIFICATION_TOKEN }}
+          require-verification-token: 'true'
 
       - name: Run Bot Check
-        if: steps.check-secret.outputs.available == 'true'
+        if: steps.authorization.outputs.authorized == 'true'
         uses: dohyeon5626/bot-check-action@4f0b434cd4999aa880bd4ed4855105a1c9cefba5 # v1.1
         with:
           comment-account-token: ${{ secrets.GITHUB_TOKEN }}
