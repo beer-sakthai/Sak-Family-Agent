@@ -10,8 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   automerge:
@@ -19,6 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Automatically Merge Dependabot PRs
         uses: invi5H/dependabot-automerge@aea0b2bd7e72af2f06118ce377821568046589f6 # v1.0.0

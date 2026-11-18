@@ -33,8 +33,10 @@ def test_pr_preview_workflow_pinned_and_valid() -> None:
     assert "pull_request" in on_clause, "pr-preview.yml must trigger on pull_request"
 
     perms = data.get("permissions", {})
-    assert perms.get("contents") == "write"
-    assert perms.get("pull-requests") == "write"
+    assert perms == {"contents": "read"}
+    job_perms = data.get("jobs", {}).get("preview", {}).get("permissions", {})
+    assert job_perms.get("contents") == "write"
+    assert job_perms.get("pull-requests") == "write"
 
 
 def test_no_unpinned_pr_preview_in_any_workflow() -> None:

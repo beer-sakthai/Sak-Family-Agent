@@ -4,7 +4,6 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: write
   contents: read
 
 concurrency:
@@ -16,6 +15,9 @@ jobs:
     name: Cancel Redundant Runs
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
     steps:
       - name: Cancel redundant workflow runs
         uses: technote-space/auto-cancel-redundant-workflow@7d35aba30420fc2368f8aeed50371e99e7fa3239 # v1.7.5

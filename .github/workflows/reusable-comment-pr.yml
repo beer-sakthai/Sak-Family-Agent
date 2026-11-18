@@ -14,7 +14,6 @@ on:
         required: true
 
 permissions:
-  pull-requests: write
   contents: read
 
 concurrency:
@@ -26,6 +25,9 @@ jobs:
     name: Post PR Comment
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      pull-requests: write
+      contents: read
     steps:
       - name: Comment on PR
         uses: NejcZdovc/comment-pr@a423635d183a8259308e80593c96fecf31539c26 # v2.1.0

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -171,3 +172,47 @@ def test_root_uv_workflows_use_locked_execution() -> None:
         assert all("--locked" in line for line in uv_commands), (
             f"{workflow_name} must use --locked for every uv sync/run command"
         )
+
+
+def test_workflows_do_not_declare_top_level_write_permissions() -> None:
+    """Ensure top-level workflow permissions never grant write access."""
+    offenders: list[str] = []
+    for yml_path in sorted(WORKFLOWS_DIR.glob("*.yml")):
+        data = yaml.safe_load(yml_path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            continue
+        top_perms = data.get("permissions")
+        if isinstance(top_perms, dict):
+            write_scopes = [k for k, v in top_perms.items() if v == "write"]
+            if write_scopes:
+                offenders.append(f"{yml_path.name}: {write_scopes}")
+    assert offenders == [], (
+        f"Workflows must scope write permissions to jobs, not top-level: {offenders}"
+    )
+
+
+def test_workflows_do_not_contain_unpinned_pip_or_npm_installs() -> None:
+    """Ensure workflows do not run unpinned pip install or npm install commands."""
+    unpinned_pip_re = re.compile(r"(?<!uv )(?:\bpython3?\s+-m\s+)?\bpip3?\s+install\b")
+    unpinned_npm_re = re.compile(r"\bnpm\s+(?:install|i|update)\b")
+    offenders: list[str] = []
+
+    for yml_path in sorted(WORKFLOWS_DIR.glob("*.yml")):
+        data = yaml.safe_load(yml_path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            continue
+        for job_name, job_data in (data.get("jobs") or {}).items():
+            if not isinstance(job_data, dict):
+                continue
+            for step in job_data.get("steps") or []:
+                if not isinstance(step, dict):
+                    continue
+                run_script = step.get("run")
+                if not isinstance(run_script, str):
+                    continue
+                if unpinned_pip_re.search(run_script) and "--require-hashes" not in run_script:
+                    offenders.append(f"{yml_path.name}:{job_name} (unpinned pip install)")
+                if unpinned_npm_re.search(run_script):
+                    offenders.append(f"{yml_path.name}:{job_name} (unpinned npm install)")
+
+    assert offenders == [], f"Found unpinned workflow package installs: {offenders}"

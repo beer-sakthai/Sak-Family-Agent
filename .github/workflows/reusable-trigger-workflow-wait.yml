@@ -14,7 +14,6 @@ on:
         required: true
 
 permissions:
-  actions: write
   contents: read
 
 concurrency:
@@ -26,6 +25,9 @@ jobs:
     name: Trigger and Wait
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      actions: write
+      contents: read
     steps:
       - name: Trigger remote workflow
         uses: convictional/trigger-workflow-and-wait@f69fa9eedd3c62a599220f4d5745230e237904be # v1.6.5

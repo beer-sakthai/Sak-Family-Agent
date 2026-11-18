@@ -24,7 +24,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: stepsecurity-token-${{ github.workflow }}-${{ github.run_id }}
