@@ -133,6 +133,8 @@ PINNED_ACTIONS = {
     "mvkaran/setup-copilot-cli": "d05a47209e6b3185c9c55702bef49f28e6eebef7",
     "austenstone/copilot-cli": "5a9fbe56fd6cdb5e50d329fd87c751748cf5182f",
     "depmedicdev-byte/ci-doctor": "131c2c50a4487787b4f6ceb3eb3b409198be5b7c",
+    "iamarunbrahma/workflow-doctor": "c7d9497acff1acb398ed1da76add1cc92536afd2",
+    "ravi-arnan/agent-skills-doctor": "bfe08bdbe5ff00ded2a3d8f4afdab47282319826",
 }
 
 
@@ -274,6 +276,8 @@ MARKETPLACE_WORKFLOW_FILES = [
     "setup-agent-skills.yml",
     "copilot-cli.yml",
     "ci-doctor.yml",
+    "workflow-doctor.yml",
+    "agent-skills-doctor.yml",
 ]
 
 

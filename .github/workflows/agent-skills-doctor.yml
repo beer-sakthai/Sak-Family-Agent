@@ -1,0 +1,47 @@
+name: Agent Skills Doctor
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: "Directory to resolve project roots against"
+        required: false
+        default: "."
+        type: string
+      no_global:
+        description: "Skip scanning user-level global roots"
+        required: false
+        default: "true"
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit-skills:
+    name: Audit Agent Skills
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run agent-skills-doctor
+        uses: ravi-arnan/agent-skills-doctor@bfe08bdbe5ff00ded2a3d8f4afdab47282319826 # v1.2.0
+        continue-on-error: true
+        with:
+          project: ${{ inputs.project || '.' }}
+          no-global: ${{ inputs.no_global || 'true' }}

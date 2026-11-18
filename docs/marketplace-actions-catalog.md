@@ -16,7 +16,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 
 ---
 
-### 2. One Hundred Verified Marketplace Actions
+### 2. One Hundred and Two Verified Marketplace Actions
 
 | Action Name | Upstream Repository | Tag | Immutable Commit SHA | Required Permissions | Purpose |
 |---|---|---|---|---|---|
@@ -120,6 +120,8 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **Setup GitHub Copilot CLI** | [`mvkaran/setup-copilot-cli`](https://github.com/mvkaran/setup-copilot-cli) | `v1` | `d05a47209e6b3185c9c55702bef49f28e6eebef7` | `contents: read` | Installs and configures GitHub Copilot CLI binary on GitHub Actions runners |
 | **GitHub Copilot CLI** | [`austenstone/copilot-cli`](https://github.com/austenstone/copilot-cli) | `v4.0` | `5a9fbe56fd6cdb5e50d329fd87c751748cf5182f` | `contents: read` | Executes prompt instructions with GitHub Copilot CLI and uploads execution artifacts |
 | **CI Doctor** | [`depmedicdev-byte/ci-doctor`](https://github.com/depmedicdev-byte/ci-doctor) | `v0.5.0` | `131c2c50a4487787b4f6ceb3eb3b409198be5b7c` | `contents: read` | Audits GitHub Actions workflows for waste, cost, and security gaps with step summary metrics |
+| **Workflow Doctor** | [`iamarunbrahma/workflow-doctor`](https://github.com/iamarunbrahma/workflow-doctor) | `v1.0.0` | `c7d9497acff1acb398ed1da76add1cc92536afd2` | `contents: read` | Audits GitHub Actions workflows for security, reliability, cost, and maintainability with JSON reporting |
+| **Agent Skills Doctor** | [`ravi-arnan/agent-skills-doctor`](https://github.com/ravi-arnan/agent-skills-doctor) | `v1.2.0` | `bfe08bdbe5ff00ded2a3d8f4afdab47282319826` | `contents: read` | Zero-dependency health check, linter, and token auditor for AI agent skills across agent harnesses |
 
 
 ---
@@ -231,6 +233,8 @@ graph TD
     ActionChoice -->|Setup Copilot CLI| SetupCopilot[mvkaran/setup-copilot-cli]
     ActionChoice -->|Copilot CLI| CopilotCLI[austenstone/copilot-cli]
     ActionChoice -->|CI Doctor| CIDoctor[depmedicdev-byte/ci-doctor]
+    ActionChoice -->|Workflow Doctor| WorkflowDoctor[iamarunbrahma/workflow-doctor]
+    ActionChoice -->|Skills Doctor| SkillsDoctor[ravi-arnan/agent-skills-doctor]
 ```
 
 ### 3.1 Wiki Sync Workflow ([`.github/workflows/wiki-sync.yml`](../.github/workflows/wiki-sync.yml))
@@ -1655,6 +1659,31 @@ Audits repository GitHub Actions workflows for waste, cost inefficiency, and sec
     fail-on: ${{ inputs.fail_on || 'never' }}
     comment: "false"
     github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.121 Workflow Doctor Action ([`.github/workflows/workflow-doctor.yml`](../.github/workflows/workflow-doctor.yml))
+Audits repository GitHub Actions workflows for security, reliability, cost, and maintainability issues, generating JSON reports and job summaries:
+
+```yaml
+- name: Run Workflow Doctor
+  uses: iamarunbrahma/workflow-doctor@c7d9497acff1acb398ed1da76add1cc92536afd2 # v1.0.0
+  with:
+    fail-on: ${{ inputs.fail_on || 'never' }}
+    annotate: "true"
+    summary: "true"
+    output-json: ${{ inputs.output_json || 'true' }}
+```
+
+### 3.122 Agent Skills Doctor Action ([`.github/workflows/agent-skills-doctor.yml`](../.github/workflows/agent-skills-doctor.yml))
+Runs zero-dependency health checks, linting, and token budgeting across AI agent skills directories:
+
+```yaml
+- name: Run agent-skills-doctor
+  uses: ravi-arnan/agent-skills-doctor@bfe08bdbe5ff00ded2a3d8f4afdab47282319826 # v1.2.0
+  continue-on-error: true
+  with:
+    project: ${{ inputs.project || '.' }}
+    no-global: ${{ inputs.no_global || 'true' }}
 ```
 
 ---
