@@ -123,7 +123,7 @@ PINNED_ACTIONS = {
     "actions/dependency-review-action": "bbc44d14a204704ccc493733616cd1e93a0321ec",
     "oke-py/npm-audit-action": "da53d502b06a0bc95f9ce3c0ebab0c4c713fae4a",
     "mlaplante/githubprreviewhelperextension": "84c713e117ecfb6fa835075bf23f5dc48d6d657b",
-    "actions/attest-build-provenance": "4d101475d8b20a2381f78447822ac1eab6504dd8",
+    "actions/attest": "1e69f48acb82d1966a394da916b4c1698aa569d6",
     "reviewdog/action-suggester": "fd22a83b1ebc13fd8aee5d57b06793fce6f20fb9",
     "reviewdog/action-actionlint": "ae857e78c1b42b3d0a49637181b09d3d56d402b4",
     "reviewdog/action-misspell": "c846b6b0996029d2d39540c8ffebebbd957072db",
@@ -277,6 +277,7 @@ MARKETPLACE_WORKFLOW_FILES = [
     "github-code-review-assistant.yml",
     "playwright-ci-debugger.yml",
     "attest-build-provenance.yml",
+    "reusable-artifact-attestation.yml",
     "reviewdog-suggester.yml",
     "actionlint-review.yml",
     "misspell-review.yml",
@@ -343,6 +344,50 @@ def test_github_multi_deployments_integration() -> None:
         / "SakJules-github-pr-workflow"
         / "references"
         / "github-multi-deployments.md"
+    )
+    assert ref_doc.is_file()
+    ref_text = ref_doc.read_text(encoding="utf-8")
+    assert target_sha in ref_text
+
+
+def test_actions_attest_integration() -> None:
+    """Ensure actions/attest is properly integrated, pinned, and documented."""
+    target_sha = PINNED_ACTIONS["actions/attest"]
+
+    # 1. Workflow attest-build-provenance.yml integration
+    attest_workflow = WORKFLOWS_DIR / "attest-build-provenance.yml"
+    assert attest_workflow.is_file()
+    attest_content = attest_workflow.read_text(encoding="utf-8")
+    assert f"actions/attest@{target_sha}" in attest_content
+    attest_data = yaml.safe_load(attest_content)
+    job_perms = attest_data["jobs"]["attest-build-provenance"]["permissions"]
+    assert job_perms["id-token"] == "write"
+    assert job_perms["attestations"] == "write"
+    assert job_perms["contents"] == "read"
+
+    # 2. Reusable workflow reusable-artifact-attestation.yml integration
+    reusable_attest = WORKFLOWS_DIR / "reusable-artifact-attestation.yml"
+    assert reusable_attest.is_file()
+    reusable_content = reusable_attest.read_text(encoding="utf-8")
+    assert f"actions/attest@{target_sha}" in reusable_content
+    reusable_data = yaml.safe_load(reusable_content)
+    on_clause = reusable_data.get("on") or reusable_data.get(True)
+    assert on_clause is not None
+    assert "workflow_call" in on_clause
+    reusable_job_perms = reusable_data["jobs"]["attest"]["permissions"]
+    assert reusable_job_perms["id-token"] == "write"
+    assert reusable_job_perms["attestations"] == "write"
+    assert reusable_job_perms["contents"] == "read"
+
+    # 3. Documentation exists
+    ref_doc = (
+        REPO_ROOT
+        / "personas"
+        / "sakjules"
+        / "skills"
+        / "SakJules-github-pr-workflow"
+        / "references"
+        / "artifact-attestations.md"
     )
     assert ref_doc.is_file()
     ref_text = ref_doc.read_text(encoding="utf-8")

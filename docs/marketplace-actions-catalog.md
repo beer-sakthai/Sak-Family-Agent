@@ -111,7 +111,7 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **npm Audit Action** | [`oke-py/npm-audit-action`](https://github.com/oke-py/npm-audit-action) | `v5.5.2` | `da53d502b06a0bc95f9ce3c0ebab0c4c713fae4a` | `contents: read`, `issues: write`, `pull-requests: write` | Runs `npm audit` against npm lockfiles with GHSA exclusion, PR comment reporting, and auto-resolution |
 | **GitHub Code Review Assistant** | [`mlaplante/githubprreviewhelperextension`](https://github.com/mlaplante/githubprreviewhelperextension) | `v1.4.0` | `84c713e117ecfb6fa835075bf23f5dc48d6d657b` | `contents: read`, `pull-requests: write`, `issues: write` | Automated static analysis on pull requests with security rules, false-positive filtering, and inline review comments |
 | **Playwright CI Debugger** | [`sentinelqa-dev/playwright-ci-debugger`](https://github.com/sentinelqa-dev/playwright-ci-debugger) | `v1.2.0` | `bab033ef5aa646071e0f6bae2a9ca927e14ddbf8` | `contents: read` | Debugs Playwright CI test failures with AI root-cause summaries, unified artifacts, and hosted reports |
-| **Attest Build Provenance** | [`actions/attest-build-provenance`](https://github.com/actions/attest-build-provenance) | `v4.2.2` | `4d101475d8b20a2381f78447822ac1eab6504dd8` | `id-token: write`, `attestations: write`, `contents: read` | Generates cryptographically verifiable Sigstore build provenance attestations for workflow artifacts |
+| **Artifact Attestations** | [`actions/attest`](https://github.com/actions/attest) | `v4.2.2` | `1e69f48acb82d1966a394da916b4c1698aa569d6` | `id-token: write`, `attestations: write`, `contents: read` | Generates cryptographically verifiable Sigstore build provenance, SBOM, and custom attestations for workflow artifacts |
 | **Reviewdog Code Suggestions** | [`reviewdog/action-suggester`](https://github.com/reviewdog/action-suggester) | `v1.27.1` | `fd22a83b1ebc13fd8aee5d57b06793fce6f20fb9` | `contents: read`, `pull-requests: write` | Suggests code formatting and linting changes directly via GitHub PR multi-line code suggestions |
 | **Actionlint Workflow Review** | [`reviewdog/action-actionlint`](https://github.com/reviewdog/action-actionlint) | `v1.84.1` | `ae857e78c1b42b3d0a49637181b09d3d56d402b4` | `contents: read`, `pull-requests: write` | Automated static analysis and syntax code review of GitHub Actions workflows on PRs |
 | **Misspell Code Review** | [`reviewdog/action-misspell`](https://github.com/reviewdog/action-misspell) | `v1.31.0` | `c846b6b0996029d2d39540c8ffebebbd957072db` | `contents: read`, `pull-requests: write` | Automated detection of spelling mistakes in code, docstrings, and markdown with inline PR review comments |
@@ -1553,12 +1553,12 @@ Debugs Playwright CI test failures with automated AI root-cause summaries, unifi
     test-results-dir: "test-results"
 ```
 
-### 3.112 Attest Build Provenance ([`.github/workflows/attest-build-provenance.yml`](../.github/workflows/attest-build-provenance.yml))
-Generates cryptographically signed build provenance attestations for built Python artifacts (`.whl`, `.tar.gz`) using GitHub's native Sigstore OIDC integration, verifiable via `gh attestation verify`:
+### 3.112 Artifact Attestations ([`.github/workflows/attest-build-provenance.yml`](../.github/workflows/attest-build-provenance.yml) & [`.github/workflows/reusable-artifact-attestation.yml`](../.github/workflows/reusable-artifact-attestation.yml))
+Generates cryptographically signed Sigstore build provenance, SBOM, and custom predicate attestations for workflow artifacts (`.whl`, `.tar.gz`) using GitHub's native Sigstore OIDC integration, verifiable via `gh attestation verify`:
 
 ```yaml
 - name: Generate build provenance attestation
-  uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+  uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
   with:
     subject-path: 'dist/*'
 ```
