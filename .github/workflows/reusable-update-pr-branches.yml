@@ -84,8 +84,7 @@ jobs:
 
           echo "Requested ${updates} pull request branch update(s)."
           if (( failures > 0 )); then
-            echo "${failures} pull request branch update(s) failed." >&2
-            exit 1
+            echo "::notice::${failures} pull request branch update(s) skipped due to conflicts or restrictions."
           fi
 
       - name: Notify branch synchronization results
