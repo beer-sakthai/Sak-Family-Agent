@@ -27,7 +27,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 concurrency:
   group: manual-approval-${{ github.workflow }}-${{ github.run_id }}

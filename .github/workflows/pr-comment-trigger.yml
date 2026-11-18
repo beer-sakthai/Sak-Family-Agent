@@ -9,8 +9,7 @@ on:
     types: [created]
 
 permissions:
-  pull-requests: read
-  issues: write
+  contents: read
 
 concurrency:
   group: pr-comment-${{ github.event.issue.number }}-${{ github.event.comment.id }}

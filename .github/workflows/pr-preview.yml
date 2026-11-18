@@ -11,8 +11,7 @@ on:
       - '.github/workflows/pr-preview.yml'
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: pr-preview-${{ github.event.number }}

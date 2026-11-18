@@ -14,7 +14,6 @@ on:
         required: true
 
 permissions:
-  actions: write
   contents: read
 
 concurrency:
@@ -26,6 +25,9 @@ jobs:
     name: Dispatch Workflow Event
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
     steps:
       - name: Trigger Dispatch
         uses: lasith-kg/dispatch-workflow@2597e9a3d222d7959052dea1c009560bbeb495e4 # v3.0.0

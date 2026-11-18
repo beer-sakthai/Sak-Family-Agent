@@ -82,6 +82,19 @@ Code Scanning raised medium-severity alert #15465. CodeQL, SonarCloud, and Bandi
 all execute on every push and pull request to `main`. As historical commits roll out
 of the 30-commit evaluation window, the score remains protected by automated CI.
 
+## Vulnerabilities (`GHSA-fc5q-39xc-vjpf` / `CVE-2026-112366`)
+
+**What Scorecard measures.** It queries the OSV database against lockfiles in the
+repository (`uv.lock` and `apps/sak_agent_dashboard/package-lock.json`).
+
+**Why it scored 9/10.** On 2026-11-17, `GHSA-fc5q-39xc-vjpf` (`CVE-2026-112366`,
+affecting `picomatch <= 4.0.7`) was published to OSV with `first_patched_version: null`
+(no upstream patched release exists yet; `4.0.7` is the latest release on npm while
+`micromatch/picomatch` PR #194 is pending). In this repository, `picomatch` is only a
+transitive development/test dependency (`vitest` / `vite` / `tinyglobby` / `micromatch`)
+in `apps/sak_agent_dashboard/package-lock.json` and is not shipped in the production
+Next.js runtime or Python agent core.
+
 ## What gates a merge instead
 
 Every pull request runs the checks below. The required checks listed under
@@ -119,6 +132,10 @@ licence and starts tagging releases: enter the drafted answers, switching the
 three blockers to Met, and reopen the alert. It closes once the badge reaches
 passing.
 
+**Vulnerabilities (`GHSA-fc5q-39xc-vjpf`)**, once `picomatch` publishes a patched
+release (`> 4.0.7`) to npm: update `apps/sak_agent_dashboard/package-lock.json`
+via `npm audit fix` or a `"picomatch"` override in `apps/sak_agent_dashboard/package.json`.
+
 ## Dismissal comments
 
 GitHub limits a dismissal comment to 280 characters; each of these fits.
@@ -153,4 +170,10 @@ and `apply` ticked (leave `apply` unticked for a dry run). The workflow's
 > Accepted risk: SAST (CodeQL, SonarCloud, Bandit) runs on every push and PR to
 > main; score 9 reflects historical window in Scorecard. See
 > docs/scorecard-accepted-risks.md.
+
+**Vulnerabilities (`GHSA-fc5q-39xc-vjpf`):**
+
+> Accepted risk: GHSA-fc5q-39xc-vjpf (picomatch <= 4.0.7) has no upstream patch
+> yet (first_patched_version: null) and is dev-only in apps/sak_agent_dashboard.
+> Bump once picomatch > 4.0.7 releases; see docs/scorecard-accepted-risks.md.
 

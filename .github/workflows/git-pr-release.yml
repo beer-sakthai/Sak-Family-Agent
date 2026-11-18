@@ -18,9 +18,7 @@ on:
         type: string
 
 permissions:
-  contents: write
-  pull-requests: write
-  issues: write
+  contents: read
 
 concurrency:
   group: git-pr-release-${{ github.ref }}

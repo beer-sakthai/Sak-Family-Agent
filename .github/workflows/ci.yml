@@ -133,7 +133,7 @@ jobs:
 
       - name: Install AutoHeal-CI runtime
         if: steps.autoheal-secret.outputs.available == 'true'
-        run: python -m pip install --disable-pip-version-check "git+https://github.com/nolekek/AutoHeal-CI@eafa410862f761d5a8f96ea946d07c9d0d7f33d7"
+        run: uv pip install --system "git+https://github.com/nolekek/AutoHeal-CI@eafa410862f761d5a8f96ea946d07c9d0d7f33d7"
 
       - name: AutoHeal-CI Self-Healing Bot
         if: steps.autoheal-secret.outputs.available == 'true'

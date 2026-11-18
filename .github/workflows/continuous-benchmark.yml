@@ -12,8 +12,7 @@ on:
       - '.github/workflows/continuous-benchmark.yml'
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: continuous-benchmark-${{ github.ref }}
@@ -38,10 +37,13 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
       - name: Install dependencies
         run: |
-          pip install --no-cache-dir pytest pytest-benchmark
-          pip install -e personas/sakthai
+          uv pip install --system pytest pytest-benchmark
+          uv pip install --system -e personas/sakthai
 
       - name: Run benchmarks
         run: |

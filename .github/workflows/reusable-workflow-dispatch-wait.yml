@@ -14,7 +14,6 @@ on:
         required: true
 
 permissions:
-  actions: write
   contents: read
 
 concurrency:
@@ -26,6 +25,9 @@ jobs:
     name: Dispatch and Wait
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      actions: write
+      contents: read
     steps:
       - name: Trigger and wait
         uses: the-actions-org/workflow-dispatch@3133c5d135c7dbe4be4f9793872b6ef331b53bc7 # v4.0.0
