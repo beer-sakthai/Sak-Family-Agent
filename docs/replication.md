@@ -33,4 +33,4 @@ def connect_db(db_path, sync_url=None, auth_token=None):
 ```
 
 ## Conclusion
-For v2, the improved Git/JSONL auto-merge mechanism satisfies the synchronization requirement without forcing users into a SaaS ecosystem. The Turso wrapper architecture is documented here and can be cleanly dropped into `sakthai/memory/store.py` in Phase 12 or v3 if the Git-based sync proves insufficient at scale.
+For v2, the improved Git/JSONL auto-merge mechanism satisfies the synchronization requirement without forcing users into a SaaS ecosystem. The Turso wrapper architecture is documented here and can be cleanly dropped into `personas/sakthai/sakthai/memory/store.py` if Git-based sync proves insufficient at scale.
