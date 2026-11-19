@@ -59,10 +59,10 @@ sakthai run "list your tools" --dry-run     # preflight: prints tool_count, no A
 ### Mirror SakKing-learned skills
 
 SakKing accumulates *learned* (agent-created) skills over time. Import them into
-this repo as first-class `sakthai-` skills:
+this repo as first-class `SakKing-` skills:
 
 ```bash
-sakthai skills sync-sakking            # import learned skills into skills/
+sakthai skills sync-sakking            # import learned skills into personas/sakking/skills/
 sakthai skills sync-sakking --dry-run  # preview (idempotent: created / updated / unchanged)
 sakthai skills sync-sakking --sakking-home /custom/.sakking/skills
 ```
@@ -70,7 +70,7 @@ sakthai skills sync-sakking --sakking-home /custom/.sakking/skills
 The importer reads `$SAKKING_HOME/skills` (default `~/.sakking/skills`), skips
 bundled and `sakking-*` internal skills, rewrites each with this repo's canonical
 frontmatter (recording `metadata.sakthai.source: sakking:<slug>`), and prefixes the
-name with `sakthai-`. See [`plugins.md`](./plugins.md#-syncing-skills-sakking-has-learned).
+name with `SakKing-`. See [`plugins.md`](./plugins.md#syncing-skills-sakking-has-learned).
 
 ---
 

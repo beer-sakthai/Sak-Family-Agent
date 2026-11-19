@@ -1,53 +1,65 @@
-# SakThai v2 Workspace Layout
+# House of Sak Workspace Layout & Developer Guide
 
-This document describes the directories, testing setup, and MCP details for the `sakthai-agent-v2` repository.
+This document describes the repository layout, development toolchain, testing setup, and MCP details for the `Sak-Family-Agent` monorepo.
 
 ---
 
 ## 📂 Repository Layout
 
-The active rewrite repository contains the following:
+The monorepo contains the following primary directories:
 
 | Path | Description |
 | :--- | :--- |
-| `sakthai/` | Core Python package source (agent, memory, CLI, utilities) |
-| `library/` | Corpus of default skills and instructional files |
-| `skills/` | Curated prompts injected into agent loop |
-| `tests/` | Unit and CLI integration test suite |
-| `docs/` | Architecture, plugins, replication, and workspace documentation |
-| `dashboard/` | Source code for the Streamlit memory/activity dashboard |
+| `personas/sakthai/` | Core Python package source (`sakthai`), installed editably (agent, cli, cycle, memory, mcp, team, web) |
+| `personas/<name>/` | Persona overlays, identity (`SOUL.md`), skills, evolution, and configurations |
+| `personas/shared/skills/` | Universal shared skills available across all six personas (19 skills) |
+| `apps/sak_agent_dashboard/` | Unified Next.js 15+ dashboard embedding the durable workflow engine (`workflow_engine/`) |
+| `tests/` | Comprehensive pytest suite (3,086 unit tests across Python 3.11 & 3.12, $\ge 96\%$ coverage) |
+| `docs/` | Architecture, operations, security policies, wiki hub, and formal Superpowers specifications |
+| `scripts/` | Development, maintenance, and synchronization tooling |
+| `infra/` | Deployment runbooks, VM systemd agents, and container sandboxes |
+| `services/` | ServiceQuoteBot, inference gateways, and external integrations |
+| `training/` | Fine-tuning recipes, LoRA configurations, and dataset publishing scripts |
 
-The same source workspace can also export standalone repo snapshots for each
-persona with `make export-agent-repos` or
-`python scripts/export_agent_repo.py <persona> --out <dir>`.
+Standalone persona repository snapshots can be exported via `make export-agent-repos` or `python scripts/export_agent_repo.py <persona> --out <dir>`.
 
 ---
 
 ## ⚡ Development & Testing Commands
 
-SakThai v2 uses `uv` for package management and testing:
+House of Sak uses `uv` for fast, deterministic Python environment management:
 
 ```bash
-# Install package in editable development mode
-uv pip install -e ".[dev]"
+# Install full local Python environment with all optional dependencies
+uv sync --all-extras
 
-# Run all non-integration tests (used in CI)
-uv run pytest -q -m "not integration"
+# Run full pytest suite (enforces >=96% coverage floor)
+make test
 
-# Run integration tests (requires provider API keys/endpoints)
-uv run pytest -q -m "integration"
+# Run Ruff linter and formatter checks
+make lint
 
-# Check code style and formatting
-uv run ruff check sakthai/ tests/
-uv run ruff format sakthai/ tests/
+# Run strict static type checking on the core package
+uv run mypy personas/sakthai
+
+# Run security vulnerability scan
+uv run bandit -c pyproject.toml -r personas/sakthai
+
+# Run offline persona diagnostic
+uv run python scripts/diagnose_personas.py
 ```
 
 ---
 
 ## 🔌 Configured MCP Servers
 
-MCP configurations are stored in `~/.sakthai/mcp.json` (or persona configs under `personas/<name>/config/mcp.json`). External stdio servers and remote HTTP/SSE endpoints can be registered there or dynamically loaded from Gemini CLI directories (`~/.gemini/extensions/`).
+MCP configurations are stored in `~/.sakthai/mcp.json` (or persona configs under `personas/<name>/config/mcp.json`). External stdio servers and remote HTTP/SSE endpoints can be registered there or dynamically loaded from extension directories (`~/.sakthai/extensions/`).
 
-During runtime, tools are automatically discovered, filtered against any configured `tools` allowlists, and prefixed with `<server_name>__` to prevent namespace collisions.
+During runtime, tools are automatically discovered, filtered against configured `tools` allowlists, and prefixed with `<server_name>__` to prevent namespace collisions.
 
-Developers can inspect, ping, and explore MCP tools using `sakthai mcp list`, `sakthai mcp ping [name]`, and `sakthai mcp tools`.
+Developers can inspect, probe, and list MCP tools using:
+```bash
+sakthai mcp list [--persona <name>] [--json]
+sakthai mcp ping [<server_name>] [--persona <name>]
+sakthai mcp tools [--persona <name>]
+```

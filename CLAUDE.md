@@ -46,7 +46,7 @@ scripts/           dev + maintenance scripts (compose_persona, export_agent_repo
 infra/             vm-agents systemd/env, pw-poc (npm), servicequotebot,
                    sakthai-training-space
 services/          servicequotebot, inference-endpoint, HF dataset publishing, teams-copilot-mcp
-apps/              agent_workflow_framework, sak_agent_dashboard
+apps/              sak_agent_dashboard (with embedded workflow_engine/)
 training/          LoRA/model runs, HF jobs, serving configs
 evaluation_tasks/  lm-evaluation-harness task YAML + datasets (run-evals.yml)
 sakthai-chat-cli/  folded-in copy of the standalone chat-CLI repo (see below)
@@ -68,7 +68,7 @@ find personas/<persona>/skills -maxdepth 1 -mindepth 1 -type d | wc -l
 diff -rq personas/shared/sakthai personas/sakthai/sakthai
 # test files, then test count + real coverage
 ls tests/test_*.py | wc -l
-uv run pytest tests/ -q --cov=sakthai --cov-branch   # ~2,305 pass, 8 skip
+uv run pytest tests/ -q --cov=sakthai --cov-branch   # 3,086+ pass, 8 skip
 ```
 
 Everything quoted below was measured on 2026-08-28 at `8e6d785`, except the
@@ -125,8 +125,8 @@ sakjules, saktan); **SakThai is lead**. Each persona directory has:
   Cross-persona consistency is CI-enforced by `tests/test_soul_consistency.py`.
 - `skills/` — that persona's own skill overlay, one directory per skill directly
   under `skills/` (no category subdirectories, no duplicate-named skill folders).
-  Counts on disk: SakThai 299, SakSee 182, SakJules 180, SakKing 106, SakSit 43,
-  SakTan 13. A skill directory may
+  Counts on disk: SakThai 170, SakSee 106, SakKing 59, SakJules 56, SakSit 45,
+  SakTan 26 (+ 19 universal shared skills under `personas/shared/skills/`). A skill directory may
   itself contain a documented "umbrella" sub-skill (see
   `SakThai-environment-automation`'s `cron-watchdog-self-heal`) reached by direct
   file reads rather than the skill index.
@@ -426,10 +426,12 @@ get the same per-persona shard without setting `SAKTHAI_HOME` yourself — see
      provisioning and verification (`client/manager.py`, `client/verifier.py`)
    - Hugging Face: `hf info|download <repo_id>`
    - System: `doctor`, `setup`, `status`, `tools`
-   - There is **no `dashboard` command** — the CLI wiring was removed (a stale
-     copy still registering it survives under `personas/saksee|saksit/sakthai/cli/`),
-     but `dashboard/data.py` was later re-added as the KPI module behind the web
-     API. See the dashboard note under "Other subsystems".
+   - Dashboard: `dashboard dev|build|test|install|gen-types` — manages and builds the Next.js agent dashboard in `apps/sak_agent_dashboard/`.
+   - Telegram: `telegram send|status`
+   - Train: `train status|start|eval`
+   - Lead: `lead list|show|stats|export`
+   - Platform: `platform list|stats|export|sync`
+   - Repo: `repo register|list|status|update`
 
 2. **Agent loop** — `sakthai run` drives a provider-agnostic tool-using loop
    (Claude, Gemini, or any OpenAI-compatible/Ollama/gateway/HF endpoint).
@@ -710,8 +712,12 @@ resolving to the *module* rather than the command object:
 - `hf.py` — `hf` group
 - `team.py` — `team` group
 - `client.py` — `client` group
-
-There is no `dashboard.py` here — see the dashboard note below.
+- `dashboard.py` — `dashboard` group (`dev`, `build`, `test`, `install`, `gen-types`)
+- `telegram.py` — `telegram` group
+- `train.py` — `train` group
+- `lead.py` — `lead` group
+- `platform.py` — `platform` group
+- `repo.py` — `repo` group
 
 ### Other subsystems
 
@@ -732,16 +738,16 @@ There is no `dashboard.py` here — see the dashboard note below.
   Gemini extensions dir if it exists. The **root-level `skills/` directory is not
   a root** — it's orphaned content. Skills reach the system prompt via
   `render_skills_prompt_block()`.
-- **Dashboard — backend only.** The CLI's `dashboard` command and the frontend
-  (both the old in-package bundle and the repo-root Vite project) are gone, but
-  `personas/sakthai/dashboard/data.py` was re-added: it collects
-  KPI/lead/revenue metrics from the memory store and is served by
-  `web/server.py`'s `/api/stages` endpoint (covered by
-  `tests/test_dashboard_data.py`). `_find_static_root()` walks up from
+- **Dashboard — backend and CLI runner.** The CLI's `dashboard` command group
+  delegates to the modern Next.js frontend in `apps/sak_agent_dashboard/`
+  (which also embeds `workflow_engine/`). In the Python core,
+  `personas/sakthai/dashboard/data.py` collects KPI/lead/revenue metrics from the
+  memory store and is served by `web/server.py`'s `/api/stages` endpoint
+  (covered by `tests/test_dashboard_data.py`). `_find_static_root()` walks up from
   `web/server.py` for the first `dashboard/dist/` that exists and otherwise
   falls back to the repo-root `dashboard/dist/`; neither is present, so the web
   server runs API-only and static requests fall through to 404. The frontend
-  that consumes the API is `apps/sak_agent_dashboard/` (Next.js).
+  that consumes the API is `apps/sak_agent_dashboard/` (Next.js 15+).
 - **`web/server.py`** — HTTP API server exposing `/health`, `/api/stages`,
   `/api/ecosystem`, and the dashboard endpoints `/api/personas`,
   `/api/metrics`, `/api/sessions`, `/api/memory`, `/api/audit`,
