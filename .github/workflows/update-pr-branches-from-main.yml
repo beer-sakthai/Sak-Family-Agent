@@ -30,9 +30,16 @@ jobs:
   select-bases:
     name: Select protected base branches
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
     outputs:
       base_branches: ${{ steps.select.outputs.base_branches }}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
       - name: Select synchronization scope
         id: select
         env:
