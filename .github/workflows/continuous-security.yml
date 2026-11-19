@@ -20,7 +20,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}
+  # This workflow is manual-only and read-only. Scope runs by ref so an audit
+  # on a maintenance branch does not block an unrelated audit elsewhere.
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
