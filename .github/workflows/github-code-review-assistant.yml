@@ -33,7 +33,7 @@ jobs:
           persist-credentials: false
 
       - name: Run GitHub Code Review Assistant
-        uses: mlaplante/githubprreviewhelperextension@84c713e117ecfb6fa835075bf23f5dc48d6d657b # v1.4.0
+        uses: mlaplante/githubprreviewhelperextension@84c713e117ecfb6fa835075bf23f5dc48d6d657b # reviewed commit; no matching release tag
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           fail-on-critical: 'false'
