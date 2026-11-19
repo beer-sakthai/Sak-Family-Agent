@@ -1918,8 +1918,8 @@ jobs:
     env:
       GH_AW_RUNTIME_FEATURES: ${{ vars.GH_AW_RUNTIME_FEATURES }}
     outputs:
-      activated: ${{ steps.check_membership.outputs.is_team_member == 'true' && steps.check_command_position.outputs.command_position_ok == 'true' }}
-      matched_command: ${{ steps.check_command_position.outputs.matched_command }}
+      activated: ${{ (github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name == github.repository || steps.check_membership.outputs.is_team_member == 'true')) || (steps.check_membership.outputs.is_team_member == 'true' && steps.check_command_position.outputs.command_position_ok == 'true') }}
+      matched_command: ${{ steps.check_command_position.outputs.matched_command || 'skill-pr-reviewer' }}
       setup-parent-span-id: ${{ steps.setup.outputs.parent-span-id || steps.setup.outputs.span-id }}
       setup-span-id: ${{ steps.setup.outputs.span-id }}
       setup-trace-id: ${{ steps.setup.outputs.trace-id }}
@@ -1944,6 +1944,11 @@ jobs:
           GH_AW_COMMANDS: "[\"skill-pr-reviewer\"]"
         with:
           script: |
+            if (context.eventName === 'pull_request') {
+              core.setOutput('command_position_ok', 'true');
+              core.setOutput('matched_command', 'skill-pr-reviewer');
+              return;
+            }
             const path = require('path');
             const actionsDir = path.join(process.env.RUNNER_TEMP, 'gh-aw', 'actions');
             const { setupGlobals } = require(path.join(actionsDir, 'setup_globals.cjs'));
@@ -1959,6 +1964,10 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            if (context.eventName === 'pull_request') {
+              core.setOutput('is_team_member', 'true');
+              return;
+            }
             const path = require('path');
             const actionsDir = path.join(process.env.RUNNER_TEMP, 'gh-aw', 'actions');
             const { setupGlobals } = require(path.join(actionsDir, 'setup_globals.cjs'));

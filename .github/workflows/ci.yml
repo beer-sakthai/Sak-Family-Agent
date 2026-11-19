@@ -95,7 +95,7 @@ jobs:
   # matrix has failed and is separately scoped to the permissions it requires.
   autoheal:
     name: AutoHeal-CI recovery
-    if: ${{ always() && needs.test.result == 'failure' }}
+    if: always() && !cancelled()
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -104,26 +104,47 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Verify CI test health
+        id: health-check
+        run: |
+          if [ "${{ needs.test.result }}" = "failure" ]; then
+            echo "needs_heal=true" >> "$GITHUB_OUTPUT"
+            echo "Test suite failed; initiating AutoHeal recovery evaluation."
+          else
+            echo "needs_heal=false" >> "$GITHUB_OUTPUT"
+            echo "All CI matrix tests succeeded; test suite is healthy. AutoHeal recovery not required."
+          fi
+
       - name: Checkout repository
+        if: steps.health-check.outputs.needs_heal == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Set up Python 3.12
+        if: steps.health-check.outputs.needs_heal == 'true'
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
 
       - name: Install uv
+        if: steps.health-check.outputs.needs_heal == 'true'
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
+        if: steps.health-check.outputs.needs_heal == 'true'
         run: uv sync --locked --all-extras --dev
 
       - name: Check AutoHeal-CI secret
+        if: steps.health-check.outputs.needs_heal == 'true'
         id: autoheal-secret
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -136,11 +157,11 @@ jobs:
           fi
 
       - name: Install AutoHeal-CI runtime
-        if: steps.autoheal-secret.outputs.available == 'true'
+        if: steps.health-check.outputs.needs_heal == 'true' && steps.autoheal-secret.outputs.available == 'true'
         run: uv pip install --system "git+https://github.com/nolekek/AutoHeal-CI@eafa410862f761d5a8f96ea946d07c9d0d7f33d7"
 
       - name: AutoHeal-CI Self-Healing Bot
-        if: steps.autoheal-secret.outputs.available == 'true'
+        if: steps.health-check.outputs.needs_heal == 'true' && steps.autoheal-secret.outputs.available == 'true'
         uses: nolekek/AutoHeal-CI@eafa410862f761d5a8f96ea946d07c9d0d7f33d7 # v1.3.0
         with:
           api_key: ${{ secrets.GEMINI_API_KEY }}

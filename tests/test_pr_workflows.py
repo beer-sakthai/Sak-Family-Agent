@@ -124,3 +124,54 @@ def test_pr_workflows_pinned_actions() -> None:
             assert len(ref) == 40 and all(c in "0123456789abcdefABCDEF" for c in ref), (
                 f"{filename} uses action not pinned to 40-character SHA: {action_ref}"
             )
+
+
+def test_skipped_workflows_unblocked() -> None:
+    """Ensure previously skipped workflows are unblocked to run across PRs."""
+    # 1. secret-scan.yml branch-sweep runs without schedule-only gate
+    secret_scan = yaml.safe_load((WORKFLOWS_DIR / "secret-scan.yml").read_text(encoding="utf-8"))
+    branch_sweep = secret_scan["jobs"]["branch-sweep"]
+    assert "if" not in branch_sweep or "schedule" not in branch_sweep.get("if", ""), (
+        "secret-scan.yml branch-sweep must not be restricted to schedule-only"
+    )
+    secret_scan_text = (WORKFLOWS_DIR / "secret-scan.yml").read_text(encoding="utf-8")
+    assert HARDEN_RUNNER_ACTION in secret_scan_text, "secret-scan.yml must include Harden-Runner"
+
+    # 2. ci.yml autoheal runs with verification step instead of skipping on green builds
+    ci_data = yaml.safe_load((WORKFLOWS_DIR / "ci.yml").read_text(encoding="utf-8"))
+    autoheal = ci_data["jobs"]["autoheal"]
+    assert autoheal.get("if") == "always() && !cancelled()", (
+        "ci.yml autoheal must run verification check on completed CI runs"
+    )
+
+    # 3. dependabot-lockfile-fixer.yml runs across all repo PRs
+    lockfile_fixer = yaml.safe_load(
+        (WORKFLOWS_DIR / "dependabot-lockfile-fixer.yml").read_text(encoding="utf-8")
+    )
+    fix_job = lockfile_fixer["jobs"]["fix-lockfiles"]
+    assert "dependabot[bot]" not in fix_job.get("if", ""), (
+        "dependabot-lockfile-fixer.yml must run across all repo PRs, not just dependabot"
+    )
+
+    # 4. dependabot workflows have repo-scoped job if without blocking non-dependabot PRs
+    dependabot_files = [
+        "dependabot-fetch-metadata.yml",
+        "dependabot-issue.yml",
+        "dependabot-automerge.yml",
+        "dependabot-auto-merge.yml",
+        "enable-automerge-dependabot.yml",
+    ]
+    for filename in dependabot_files:
+        data = yaml.safe_load((WORKFLOWS_DIR / filename).read_text(encoding="utf-8"))
+        for job_def in data["jobs"].values():
+            if isinstance(job_def, dict) and "if" in job_def:
+                job_if = job_def["if"]
+                assert not job_if.strip().startswith(
+                    "github.event.pull_request.user.login == 'dependabot[bot]'"
+                ), f"{filename} job if must allow repository PRs to execute verification"
+
+    # 5. skill-pr-reviewer.lock.yml activates on pull requests
+    lock_text = (WORKFLOWS_DIR / "skill-pr-reviewer.lock.yml").read_text(encoding="utf-8")
+    assert "github.event_name == 'pull_request'" in lock_text, (
+        "skill-pr-reviewer.lock.yml must activate on pull_request events"
+    )

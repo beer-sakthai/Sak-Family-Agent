@@ -27,11 +27,7 @@ jobs:
     name: Enable Automerge for Dependabot PRs
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: >-
-      (github.event_name == 'pull_request' &&
-       github.event.pull_request.user.login == 'dependabot[bot]' &&
-       github.repository == github.event.pull_request.head.repo.full_name) ||
-      github.event_name == 'workflow_dispatch'
+    if: github.repository == (github.event.pull_request.head.repo.full_name || github.repository) || github.event_name == 'workflow_dispatch'
     permissions:
       contents: write
       pull-requests: write
@@ -41,12 +37,24 @@ jobs:
         with:
           egress-policy: audit
 
+      - name: Check PR author
+        id: check
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            echo "is_dependabot=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_dependabot=false" >> "$GITHUB_OUTPUT"
+            echo "PR authored by ${{ github.event.pull_request.user.login }}; halostatue automerge bypassed."
+          fi
+
       - name: Check out repository
+        if: steps.check.outputs.is_dependabot == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Enable automerge via Dependabot Automerge
+        if: steps.check.outputs.is_dependabot == 'true'
         uses: halostatue/dependabot-automerge@61a7c53cf7dd144b2e874cb0bc163ed4d3a89f22 # v1.0.1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}

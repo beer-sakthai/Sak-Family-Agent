@@ -34,11 +34,7 @@ jobs:
   dependabot-merge:
     name: Dependabot Auto-Merge
     runs-on: ubuntu-latest
-    if: >-
-      (github.event_name == 'pull_request' &&
-       github.event.pull_request.user.login == 'dependabot[bot]' &&
-       github.repository == github.event.pull_request.head.repo.full_name) ||
-      github.event_name == 'workflow_dispatch'
+    if: github.repository == (github.event.pull_request.head.repo.full_name || github.repository) || github.event_name == 'workflow_dispatch'
     timeout-minutes: 10
     permissions:
       contents: write
@@ -49,7 +45,17 @@ jobs:
         uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
+      - name: Check PR author
+        id: check
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            echo "is_dependabot=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_dependabot=false" >> "$GITHUB_OUTPUT"
+            echo "PR authored by ${{ github.event.pull_request.user.login }}; Dependabot fastify merge bypassed."
+          fi
       - name: Auto-Merge Dependabot PR
+        if: steps.check.outputs.is_dependabot == 'true'
         uses: fastify/github-action-merge-dependabot@73ec4cbb5e56df5591eae286972d5b2201ffe90f # v3.15.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

@@ -17,11 +17,7 @@ jobs:
     name: Create Issue for Dependabot PR
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    if: >-
-      (github.event_name == 'pull_request' &&
-       github.event.pull_request.user.login == 'dependabot[bot]' &&
-       github.repository == github.event.pull_request.head.repo.full_name) ||
-      github.event_name == 'workflow_dispatch'
+    if: github.repository == (github.event.pull_request.head.repo.full_name || github.repository) || github.event_name == 'workflow_dispatch'
     permissions:
       issues: write
       pull-requests: read
@@ -30,12 +26,23 @@ jobs:
         uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
+      - name: Verify PR author
+        id: author-check
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            echo "create_issue=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "create_issue=false" >> "$GITHUB_OUTPUT"
+            echo "PR authored by ${{ github.event.pull_request.user.login }}; Dependabot issue tracking not required."
+          fi
       - name: Checkout repository
+        if: steps.author-check.outputs.create_issue == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Create Dependabot Issue
+        if: steps.author-check.outputs.create_issue == 'true'
         uses: goatandsheep/dependabot-issue-action@085384c6fc7247bf455bcd86178c6fc8a5ffc1d5 # v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
