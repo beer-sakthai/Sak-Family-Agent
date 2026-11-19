@@ -39,12 +39,14 @@ jobs:
 
       - name: Check PR author
         id: check
+        env:
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
-          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+          if [ "$PR_AUTHOR" = "dependabot[bot]" ]; then
             echo "is_dependabot=true" >> "$GITHUB_OUTPUT"
           else
             echo "is_dependabot=false" >> "$GITHUB_OUTPUT"
-            echo "PR authored by ${{ github.event.pull_request.user.login }}; halostatue automerge bypassed."
+            echo "PR authored by $PR_AUTHOR; halostatue automerge bypassed."
           fi
 
       - name: Check out repository
