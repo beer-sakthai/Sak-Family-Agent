@@ -1,0 +1,98 @@
+# Reusable Artifact Attestation Workflow
+# Generates cryptographically verifiable Sigstore build provenance, SBOM,
+# and custom predicate attestations for workflow artifacts using actions/attest.
+
+name: Reusable Artifact Attestation
+
+on:
+  workflow_call:
+    inputs:
+      subject-path:
+        description: 'Path or glob to the artifact(s) serving as subject of the attestation'
+        required: false
+        type: string
+        default: 'dist/*'
+      subject-digest:
+        description: 'Digest of the subject for the attestation (algorithm:hex_digest)'
+        required: false
+        type: string
+      subject-name:
+        description: 'Subject name as it should appear in the attestation'
+        required: false
+        type: string
+      subject-checksums:
+        description: 'Path to checksums file containing digest and name of subjects'
+        required: false
+        type: string
+      sbom-path:
+        description: 'Path to JSON-formatted SBOM file (SPDX or CycloneDX) to attest'
+        required: false
+        type: string
+      predicate-type:
+        description: 'URI identifying the type of predicate for custom attestations'
+        required: false
+        type: string
+      predicate-path:
+        description: 'Path to file containing content for custom predicate attestation'
+        required: false
+        type: string
+      push-to-registry:
+        description: 'Whether to push attestation to container registry'
+        required: false
+        type: boolean
+        default: false
+      show-summary:
+        description: 'Whether to attach list of generated attestations to job summary'
+        required: false
+        type: boolean
+        default: true
+    outputs:
+      bundle-path:
+        description: 'Path to file containing attestation bundle'
+        value: ${{ jobs.attest.outputs.bundle-path }}
+      attestation-id:
+        description: 'The ID of the attestation'
+        value: ${{ jobs.attest.outputs.attestation-id }}
+      attestation-url:
+        description: 'The URL for the attestation summary'
+        value: ${{ jobs.attest.outputs.attestation-url }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-attest
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  attest:
+    name: Attest Artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    outputs:
+      bundle-path: ${{ steps.attest.outputs.bundle-path }}
+      attestation-id: ${{ steps.attest.outputs.attestation-id }}
+      attestation-url: ${{ steps.attest.outputs.attestation-url }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Attest Artifacts
+        id: attest
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ inputs.subject-path }}
+          subject-digest: ${{ inputs.subject-digest }}
+          subject-name: ${{ inputs.subject-name }}
+          subject-checksums: ${{ inputs.subject-checksums }}
+          sbom-path: ${{ inputs.sbom-path }}
+          predicate-type: ${{ inputs.predicate-type }}
+          predicate-path: ${{ inputs.predicate-path }}
+          push-to-registry: ${{ inputs.push-to-registry }}
+          show-summary: ${{ inputs.show-summary }}
