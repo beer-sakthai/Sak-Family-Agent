@@ -75,3 +75,37 @@ def test_main_cli(tmp_path: Path) -> None:
     ret = main(["--docs-dir", str(docs_dir), "--wiki-dir", str(wiki_dir)])
     assert ret == 0
     assert (wiki_dir / "guide.md").exists()
+
+
+def test_sync_docs_with_images_and_footer(tmp_path: Path) -> None:
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    images_dir = docs_dir / "images" / "personas"
+    images_dir.mkdir(parents=True)
+    (images_dir / "sakjules.svg").write_text("<svg>sakjules</svg>", encoding="utf-8")
+    (docs_dir / "_Footer.md").write_text("Custom Footer", encoding="utf-8")
+    (docs_dir / "page.md").write_text("Hello [Sub Link](./nested/sub/target.md)", encoding="utf-8")
+
+    wiki_dir = tmp_path / "wiki"
+    synced = sync_docs_to_wiki(docs_dir, wiki_dir)
+
+    assert "images/personas/sakjules.svg" in synced
+    assert (wiki_dir / "images" / "personas" / "sakjules.svg").exists()
+    assert "_Footer.md" in synced
+    assert (wiki_dir / "_Footer.md").read_text(encoding="utf-8") == "Custom Footer"
+    assert "[[target|Sub Link]]" in (wiki_dir / "page.md").read_text(encoding="utf-8")
+
+
+def test_sync_docs_with_custom_home_and_sidebar(tmp_path: Path) -> None:
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    (docs_dir / "Home.md").write_text("# Official Custom Home", encoding="utf-8")
+    (docs_dir / "_Sidebar.md").write_text("- [[Custom Sidebar]]", encoding="utf-8")
+
+    wiki_dir = tmp_path / "wiki"
+    synced = sync_docs_to_wiki(docs_dir, wiki_dir)
+
+    assert "Home.md" in synced
+    assert "_Sidebar.md" in synced
+    assert (wiki_dir / "Home.md").read_text(encoding="utf-8") == "# Official Custom Home"
+    assert (wiki_dir / "_Sidebar.md").read_text(encoding="utf-8") == "- [[Custom Sidebar]]"
