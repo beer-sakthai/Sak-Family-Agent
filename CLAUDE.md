@@ -419,7 +419,7 @@ get the same per-persona shard without setting `SAKTHAI_HOME` yourself — see
    - Skills: `skills list|show|validate|create|sync-sakking`
    - Extensions: `extensions install|list|remove`
    - Sessions: `sessions list|show|clean`
-   - Eval: `eval summary [--limit N] [--json]`
+   - Eval: `eval summary [--limit N] [--persona NAME] [--all-personas] [--json]`, `eval personas [--persona NAME] [--json]`, `eval audit [--persona NAME] [--json]`, `eval soul [--persona NAME] [--json]`, `eval skills [--persona NAME] [--json]`, `eval safety [--persona NAME] [--json]`, `eval tasks [--json]`, `eval bench [--dry-run]`
    - Team: `team list|show|run` — declarative multi-agent pipelines
      (`team/engine.py`, `team/builtin_pipelines.py`)
    - Client: `client list|show|onboard|test` — ServiceQuoteBot client

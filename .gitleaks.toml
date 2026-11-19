@@ -28,6 +28,8 @@ regexes = [
   '''Access via: Hub web UI, `hf` CLI, `huggingface_hub` Python API, S3-compatible API \(AWS CLI, boto3, s5cmd\)$''',
   # Documentation placeholders like `sk-xxxxxxxxxxxxxxxx`.
   '''sk-x{8,}''',
+  # Mock API token placeholder for DLP/eval testing.
+  '''mockapikeytoken''',
   # Skill-bundle integrity hash (`github-auth:<md5>` in `.bundled_manifest`) —
   # a content digest, not a credential, so allowlisting it hides nothing secret.
   '''2a2ad52aedb7cb9019df9cab263845f0''',
