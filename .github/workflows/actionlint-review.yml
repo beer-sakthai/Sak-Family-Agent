@@ -38,6 +38,8 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           reporter: github-pr-review
-          level: warning
+          # Treat actionlint errors as a failed check so malformed or unsafe
+          # workflow changes cannot merge after a comment-only review.
+          level: error
           filter_mode: added
-          fail_level: none
+          fail_level: error
