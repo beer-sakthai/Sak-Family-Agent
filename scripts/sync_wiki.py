@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import shutil
 import sys
 from pathlib import Path
 
@@ -40,22 +41,36 @@ def generate_sidebar(doc_files: list[Path], docs_root: Path) -> str:
 
 
 def sync_docs_to_wiki(docs_dir: Path, wiki_dir: Path) -> list[str]:
-    """Copy and transform Markdown files from docs_dir to wiki_dir."""
+    """Copy and transform Markdown files and assets from docs_dir to wiki_dir."""
     if not docs_dir.exists():
         raise FileNotFoundError(f"Source docs directory not found: {docs_dir}")
     wiki_dir.mkdir(parents=True, exist_ok=True)
 
     synced_files: list[str] = []
+
+    # Sync images if present
+    images_src = docs_dir / "images"
+    if images_src.exists():
+        images_dest = wiki_dir / "images"
+        images_dest.mkdir(parents=True, exist_ok=True)
+        for img in sorted(images_src.glob("**/*")):
+            if img.is_file():
+                rel = img.relative_to(images_src)
+                target = images_dest / rel
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(img, target)
+                synced_files.append(f"images/{rel.as_posix()}")
+
     markdown_files = list(docs_dir.glob("**/*.md"))
 
     for doc in markdown_files:
-        dest_filename = f"{doc.stem}.md"
+        dest_filename = f"{doc.stem}.md" if doc.name.lower() != "home.md" else "Home.md"
         dest_path = wiki_dir / dest_filename
         content = doc.read_text(encoding="utf-8")
 
-        # Rewrite standard relative markdown links [text](./other.md) -> [[other|text]] or [text](other)
+        # Rewrite standard relative markdown links [text](./other.md) or [text](./path/other.md) -> [[other|text]]
         rewritten = re.sub(
-            r"\[([^\]]+)\]\((?:\./)?([a-zA-Z0-9_\-]+)\.md\)",
+            r"\[([^\]]+)\]\((?:\./)?(?:[a-zA-Z0-9_\-\./]+/)?([a-zA-Z0-9_\-]+)\.md\)",
             r"[[\2|\1]]",
             content,
         )
@@ -63,27 +78,42 @@ def sync_docs_to_wiki(docs_dir: Path, wiki_dir: Path) -> list[str]:
         dest_path.write_text(rewritten, encoding="utf-8")
         synced_files.append(dest_filename)
 
-    # Generate Home.md if not explicitly present
+    # Generate or copy Home.md if not already synced from docs
     home_file = wiki_dir / "Home.md"
     if not home_file.exists():
-        docs_readme = docs_dir / "README.md"
-        if docs_readme.exists():
-            home_file.write_text(docs_readme.read_text(encoding="utf-8"), encoding="utf-8")
+        docs_home = docs_dir / "Home.md"
+        if docs_home.exists():
+            home_file.write_text(docs_home.read_text(encoding="utf-8"), encoding="utf-8")
         else:
-            home_content = (
-                "# House of Sak — Agent Workspace\n\n"
-                "Welcome to the official **House of Sak** documentation wiki.\n\n"
-                "> Dream → Hope → Care → Joy → Trust → Growth\n\n"
-                "Please navigate using the sidebar on the right.\n"
-            )
-            home_file.write_text(home_content, encoding="utf-8")
+            docs_readme = docs_dir / "README.md"
+            if docs_readme.exists():
+                home_file.write_text(docs_readme.read_text(encoding="utf-8"), encoding="utf-8")
+            else:
+                home_content = (
+                    "# House of Sak — Agent Workspace\n\n"
+                    "Welcome to the official **House of Sak** documentation wiki.\n\n"
+                    "> Dream → Hope → Care → Joy → Trust → Growth\n\n"
+                    "Please navigate using the sidebar on the right.\n"
+                )
+                home_file.write_text(home_content, encoding="utf-8")
         synced_files.append("Home.md")
 
-    # Generate _Sidebar.md
+    # Generate or copy _Sidebar.md
     sidebar_file = wiki_dir / "_Sidebar.md"
-    sidebar_content = generate_sidebar(markdown_files, docs_dir)
-    sidebar_file.write_text(sidebar_content, encoding="utf-8")
+    docs_sidebar = docs_dir / "_Sidebar.md"
+    if docs_sidebar.exists():
+        sidebar_file.write_text(docs_sidebar.read_text(encoding="utf-8"), encoding="utf-8")
+    else:
+        sidebar_content = generate_sidebar(markdown_files, docs_dir)
+        sidebar_file.write_text(sidebar_content, encoding="utf-8")
     synced_files.append("_Sidebar.md")
+
+    # Copy _Footer.md if present
+    docs_footer = docs_dir / "_Footer.md"
+    if docs_footer.exists():
+        footer_file = wiki_dir / "_Footer.md"
+        footer_file.write_text(docs_footer.read_text(encoding="utf-8"), encoding="utf-8")
+        synced_files.append("_Footer.md")
 
     return sorted(set(synced_files))
 
