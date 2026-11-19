@@ -4,8 +4,6 @@
 name: PR Label Checker
 
 on:
-  pull_request:
-    types: [opened, labeled, unlabeled, synchronize, reopened]
   workflow_dispatch:
     inputs:
       pr_number:
@@ -17,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: pr-label-checker-${{ github.event.pull_request.number || github.event.inputs.pr_number || github.ref }}
+  group: pr-label-checker-${{ github.event.inputs.pr_number || github.ref }}
   cancel-in-progress: true
 
 jobs:
