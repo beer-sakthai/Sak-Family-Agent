@@ -65,12 +65,11 @@ All are normalised to one response shape, so the loop logic is provider-agnostic
 Each `run_agent` call writes a JSON session log to `~/.sakthai/sessions/`
 (task, model, messages, and the result with tool calls).
 
-## Dashboard
+## Dashboard & Telemetry
 
-There is **no `sakthai dashboard` command** — the CLI wiring and the in-package
-frontend were both removed. What remains is `dashboard/data.py`, a KPI/lead/
-revenue snapshot built from the memory store, served over HTTP by
-`web/server.py` alongside the other API endpoints:
+The dashboard is managed via the `sakthai dashboard` CLI command group (`dev`, `build`, `test`, `start`, `status`) and served by the Next.js application at `apps/sak_agent_dashboard/` (which embeds `apps/sak_agent_dashboard/workflow_engine/`).
+
+Under the hood, `personas/sakthai/sakthai/dashboard/data.py` builds an honest snapshot of the memory store (testable, with zero UI dependencies), which is served over HTTP by `web/server.py` alongside the core API endpoints:
 
 | Endpoint | Payload |
 |---|---|
@@ -79,8 +78,7 @@ revenue snapshot built from the memory store, served over HTTP by
 | `/api/ecosystem` | ecosystem status |
 | `/api/personas` · `/api/metrics` · `/api/sessions` · `/api/memory` · `/api/audit` · `/api/workflows` | the dashboard payloads built by `web/api.py`, shaped by `web/contracts.py` |
 
-Every path except `/health` requires the bearer token from `sakthai web setup`.
-The frontend that consumes these lives at `apps/sak_agent_dashboard/` (Next.js).
+Every path except `/health` requires the bearer token configured via `sakthai web setup`.
 
 ## Unified Agent Platform
 
