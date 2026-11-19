@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -29,6 +31,8 @@ def test_cache_cleanup_workflow_exists_and_valid() -> None:
     assert "pull_request" in on_clause
     assert "types" in on_clause["pull_request"]
     assert "closed" in on_clause["pull_request"]["types"]
+    assert "workflow_dispatch" in on_clause
+    assert on_clause["workflow_dispatch"]["inputs"]["dry_run"]["default"] is True
 
     # Check permissions (either top-level or job-level grants actions: write)
     perms = data.get("permissions")
@@ -39,6 +43,16 @@ def test_cache_cleanup_workflow_exists_and_valid() -> None:
         else job_perms.get("actions")
     )
     assert actions_perm == "write"
+
+    cleanup_job = data["jobs"]["cleanup-cache"]
+    assert cleanup_job["permissions"] == {
+        "actions": "write",
+        "contents": "read",
+        "pull-requests": "read",
+    }
+    assert cleanup_job["timeout-minutes"] <= 15
+    run_blocks = [step.get("run", "") for step in cleanup_job["steps"]]
+    assert any("scripts/cleanup_pr_caches.sh" in run for run in run_blocks)
 
     # Check concurrency
     assert "concurrency" in data
@@ -321,3 +335,103 @@ def test_gitattributes_and_scorecard_lockfile_hygiene() -> None:
     scorecard_data = yaml.safe_load(scorecard_path.read_text(encoding="utf-8"))
     on_clause = scorecard_data.get("on") or scorecard_data.get(True)
     assert "workflow_dispatch" in on_clause, "scorecard.yml must support manual workflow_dispatch"
+
+
+CACHE_CLEANUP_SCRIPT = REPO_ROOT / "scripts" / "cleanup_pr_caches.sh"
+CACHE_CLEANUP_FIXTURES = REPO_ROOT / "tests" / "fixtures" / "cache_cleanup"
+
+
+def _run_cache_cleanup(tmp_path: Path, **env_overrides: str) -> subprocess.CompletedProcess[str]:
+    """Run cleanup against fixture-backed fake gh and return the completed process."""
+    delete_log = tmp_path / "deletes.log"
+    fake_gh = tmp_path / "gh"
+    fake_gh.write_text(
+        """#!/usr/bin/env python3
+import json
+import os
+import sys
+from pathlib import Path
+from urllib.parse import parse_qs, urlparse
+
+args = sys.argv[1:]
+fixture_dir = Path(os.environ["FIXTURE_DIR"])
+delete_log = Path(os.environ["DELETE_LOG"])
+
+if "-X" in args and "DELETE" in args:
+    cache_id = args[-1].rsplit("/", 1)[-1]
+    with delete_log.open("a", encoding="utf-8") as handle:
+        handle.write(cache_id + "\\n")
+    if cache_id == os.environ.get("FAIL_DELETE_ID"):
+        raise SystemExit(1)
+    raise SystemExit(0)
+
+endpoint = next(arg for arg in args if arg.startswith("repos/"))
+parsed = urlparse("https://fixture/" + endpoint)
+query = parse_qs(parsed.query)
+page = query.get("page", ["1"])[0]
+kind = "open_prs" if "/pulls" in parsed.path else "caches"
+if kind == os.environ.get("FAIL_ENDPOINT"):
+    raise SystemExit(1)
+fixture = fixture_dir / f"{kind}_page_{page}.json"
+print(fixture.read_text(encoding="utf-8"), end="")
+""",
+        encoding="utf-8",
+    )
+    fake_gh.chmod(0o755)
+    env = os.environ.copy()
+    env.update(
+        {
+            "GITHUB_REPOSITORY": "beer-sakthai/Sak-Family-Agent",
+            "FIXTURE_DIR": str(CACHE_CLEANUP_FIXTURES),
+            "DELETE_LOG": str(delete_log),
+            "CACHE_CLEANUP_PAGE_SIZE": "2",
+            **env_overrides,
+            "PATH": f"{tmp_path}:{env['PATH']}",
+        }
+    )
+    return subprocess.run(
+        ["bash", str(CACHE_CLEANUP_SCRIPT)],
+        cwd=REPO_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def test_cache_cleanup_paginates_and_preserves_open_pr_caches(tmp_path: Path) -> None:
+    result = _run_cache_cleanup(tmp_path, DRY_RUN="false")
+
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "deletes.log").read_text(encoding="utf-8").splitlines() == [
+        "102",
+        "103",
+    ]
+    assert "Keeping cache 101 for open PR #10" in result.stdout
+
+
+@pytest.mark.parametrize("failed_endpoint", ["open_prs", "caches"])
+def test_cache_cleanup_fails_closed_when_discovery_fails(
+    tmp_path: Path, failed_endpoint: str
+) -> None:
+    result = _run_cache_cleanup(tmp_path, FAIL_ENDPOINT=failed_endpoint)
+
+    assert result.returncode != 0
+    assert "GitHub API read failed" in result.stderr
+    assert not (tmp_path / "deletes.log").exists()
+
+
+def test_cache_cleanup_dry_run_never_deletes(tmp_path: Path) -> None:
+    result = _run_cache_cleanup(tmp_path, DRY_RUN="true")
+
+    assert result.returncode == 0, result.stderr
+    assert not (tmp_path / "deletes.log").exists()
+    assert "DRY RUN: would delete cache 102" in result.stdout
+
+
+def test_cache_cleanup_reports_failed_deletion(tmp_path: Path) -> None:
+    result = _run_cache_cleanup(tmp_path, PR_NUMBER="10", FAIL_DELETE_ID="101")
+
+    assert result.returncode != 0
+    assert "Failed to delete cache 101" in result.stderr
+    assert (tmp_path / "deletes.log").read_text(encoding="utf-8").splitlines()[0] == "101"
