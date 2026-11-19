@@ -1,123 +1,139 @@
 # Architecture
 
-SakThai is a small, layered Python package. Each layer has one job; keep them
-separate. Above the package sits a read-only presentation layer — an HTTP API
-and the Next.js dashboard in `apps/sak_agent_dashboard/`.
+House of Sak (`Sak-Family-Agent`) is a local-first, layered multi-agent architecture built in Python 3.11+. The core engine (`sakthai`) lives under `personas/sakthai/` — not at the repo root — and is editable-installed across the workspace. Above the core sits the web presentation layer (stdlib HTTP API) and the unified Next.js dashboard (`apps/sak_agent_dashboard/`) with its embedded durable workflow engine.
 
-```
-   ┌──────────────────────────────────────────────────────────────────────┐
-   │            apps/sak_agent_dashboard  (Next.js · read-only)           │
-   │   src/lib/source.ts → LocalFsSource | ApiSource | DemoSource         │
-   └───────────────┬──────────────────────────────────┬───────────────────┘
-        direct fs reads                        HTTP (bearer token)
-                   │                                  │
-                   │                    ┌─────────────▼──────────────┐
-                   │                    │   web/server.py (stdlib)   │
-                   │                    │   web/api.py  — payloads   │
-                   │                    │   web/contracts.py — types │
-                   │                    └─────────────┬──────────────┘
-                   │                                  │
-                ┌──────────────────────────────────────────────┐
-   sakthai run  │                   CLI (click)                 │  sakthai mcp
-   ───────────▶ │   cli/ — learn, recall, memory, run, mcp,     │ ◀───────────
-                │      cycle, skills, extensions, eval, web     │
-                └───────────────┬───────────────┬───────────────┘
-                                │               │
-                  ┌─────────────▼──┐      ┌──────▼───────────┐
-                  │  agent/loop    │      │  mcp/server      │
-                  │  (Claude/Gemini│      │  (JSON-RPC stdio)│
-                  │   tool loop)   │      └──────┬───────────┘
-                  └───────┬────────┘             │
-                          │   shared tool registry (agent/tools.py)
-                          └──────────────┬───────┘
-                                         │
-                            ┌────────────▼────────────┐
-                            │   memory/store.py        │
-                            │   MemoryStore (SQLite)   │
-                            └────────────┬─────────────┘
-                                         │
-   ~/.sakthai/  memory.db · <persona>/memory.db · sessions/ · eval.jsonl
-                audit.log · workflow_runs/
-```
-
-`web/contracts.py` is the single definition of every payload shape. The
-TypeScript equivalents are **generated** from it by
-`scripts/gen_dashboard_types.py`; CI fails if the committed
-`src/lib/contracts.generated.ts` is stale. See
-[the unified-system design](./superpowers/specs/2026-08-26-sak-agent-dashboard-unified-design.md).
-
-## Layers
-
-**`config.py`** — the single source of truth for paths and env-var names
-(`sakthai_home`, `memory_db_path`, `sessions_dir`, `check_env`). Nothing else
-hard-codes a path.
-
-**`auth.py`** — credential resolution. Anthropic chain: `ANTHROPIC_API_KEY` →
-`ANTHROPIC_AUTH_TOKEN` → Claude CLI OAuth token. Google: the Gemini CLI OAuth
-token. OpenAI/Ollama: `resolve_openai_credentials` resolves to `OPENAI_API_BASE` or `OLLAMA_HOST`. Use `resolve_anthropic_client()` rather than constructing a client.
-
-**`memory/`** — `store.MemoryStore` is the only code that touches SQLite. It
-holds *facts* and *observations*, with search, tagging, dedupe, consolidation,
-stats, and snapshot import/export. `provider.SakThaiMemoryProvider` adapts the
-store into a system-prompt block; `backup.py` makes timestamped copies.
-
-**`learn/capture.py`** — the explicit write path: open store, add one fact,
-close. Backs `sakthai learn`.
-
-**`agent/`** — `tools.py` defines the tool registry (one schema + handler per
-tool) shared by both the agent loop and the MCP server. `loop.run_agent`
-injects `store.render_prompt_block()` into the system prompt and dispatches tool
-calls against Claude, Gemini, OpenAI, or Ollama compatible backends. The client and store are injectable for testing.
-
-**`mcp/server.py`** — a dependency-free JSON-RPC 2.0 stdio server.
-`handle_request` is a pure function, so the protocol is unit-testable without a
-process. It reuses the same tool registry as the loop.
-
-**`cycle/`** — the six-stage Dream → Growth state machine, persisted as a single
-fact in the store.
-
-**`skills.py`** — parse, catalog, and validate `SKILL.md` files under `skills/`
-and `library/`.
-
-**`extensions/`** — clone skill/MCP bundles from git into `~/.sakthai`.
-
-**`dashboard/`** — `data.py` only. It builds an honest snapshot of the store
-(testable, no UI deps) and is served by `web/server.py`'s `/api/stages`. There is
-no in-package UI: the Streamlit `app.py` this doc used to describe is gone, and
-the frontend now lives in `apps/sak_agent_dashboard/`.
-
-**`web/`** — the read-only HTTP surface. `contracts.py` defines every payload
-shape (the source of truth the TypeScript types are generated from), `api.py`
-builds those payloads by reusing the existing parsers — `summarize_evals`, the
-session readers, `FamilyMemoryView`, `store.get_dashboard_aggregates` — and
-`server.py` is a thin stdlib `http.server` dispatcher. Loopback-bound unless
-`SAKTHAI_WEB_ALLOW_PUBLIC` is set; every path except `/health` requires the
-bearer token. Started with `sakthai web serve`.
-
-**`agent_platform/`** — unified agent integration subsystem (`sakthai.agent_platform`).
-Provides accidental data loss guardrails (`safety.py`) with HMAC bypass, dependency
-manager detection (`dep_manager.py`), progressive disclosure rule/skill registry
-(`customizations.py`), Jules remote delegation worker (`jules_worker.py`), dual
-runtime bridging Google Antigravity and ADK (`agent_engine.py`), and Harness v1
-pipeline/spec generator (`harness_exporter.py`).
-
-
-## Memory schema
-
-```sql
-facts(id, kind DEFAULT 'note', key, value NOT NULL,
-      source_session, created_at, updated_at, tags)   -- tags: JSON array, NULL when empty
-
-observations(id, summary NOT NULL, evidence_session_id,
-             weight DEFAULT 1.0, confidence DEFAULT 0.5, created_at)
+```text
+   ┌─────────────────────────────────────────────────────────────────────────────────┐
+   │                  apps/sak_agent_dashboard/  (Next.js 15+ App)                   │
+   │      Overview · Personas · Memory · Metrics · Workflows (embedded engine)       │
+   │      apps/sak_agent_dashboard/workflow_engine/ (consolidated workflow engine)  │
+   └────────────────────────┬────────────────────────────────┬───────────────────────┘
+         direct fs reads    │                                │  HTTP (bearer token)
+                            │                   ┌────────────▼──────────────┐
+                            │                   │   web/server.py (stdlib)  │
+                            │                   │   web/api.py  — payloads  │
+                            │                   │   web/contracts.py — types│
+                            │                   └────────────┬──────────────┘
+                            │                                │
+                 ┌──────────▼────────────────────────────────▼──────────┐
+                 │                     CLI (click)                      │
+                 │   cli/ — run, chat (TUI), memory, mcp, cycle,        │
+                 │   skills, platform, repo (registry), lead, team,     │
+                 │   eval, train, telegram, dashboard, doctor, status   │
+                 └──────────────┬────────────────────────────┬──────────┘
+                                │                            │
+                 ┌──────────────▼─────────────┐     ┌────────▼────────────────┐
+                 │   agent/loop.py            │     │  mcp/server.py          │
+                 │   (Claude · Gemini · HF    │     │  (JSON-RPC stdio & SSE) │
+                 │    OpenAI · Ollama backends│     │  mcp/client.py (remote) │
+                 │   team/engine.py pipelines)│     └────────┬────────────────┘
+                 └──────────────┬─────────────┘              │
+                                │   shared tool registry     │
+                                └─────────────┬──────────────┘
+                                              │
+                                ┌─────────────▼──────────────┐
+                                │   agent/guardrails.py      │
+                                │   agent_platform/safety.py │
+                                │   (Path jailing, shell gate│
+                                │    DataLossGuardrail HMAC) │
+                                └─────────────┬──────────────┘
+                                              │
+                                ┌─────────────▼──────────────┐
+                                │   memory/store.py          │
+                                │   MemoryStore (SQLite)     │
+                                │   memory/session_search.py │
+                                │   memory/merged.py (family)│
+                                └─────────────┬──────────────┘
+                                              │
+    ~/.sakthai/  <persona>/memory.db · memory.db (unscoped) · sessions/ · eval.jsonl
+                 audit.log · workflow_runs/
 ```
 
-Schema changes are additive migrations in `_migrate_schema()` (ALTER TABLE only,
-run under `BEGIN IMMEDIATE`).
+`web/contracts.py` is the single source of truth for all API payload schemas. TypeScript equivalents are generated into `apps/sak_agent_dashboard/src/lib/contracts.generated.ts` via `scripts/gen_dashboard_types.py` (enforced by CI).
 
-## Conventions
+---
 
-- The test suite runs with no network and no GCP credentials.
-- `config.py` owns all paths; new paths go there.
-- `read_file` is sandboxed to cwd + `~/.sakthai` + `SAKTHAI_READ_ALLOW`.
-- `run_command` is opt-in via `SAKTHAI_SHELL_ALLOW`.
+## Subsystems & Repository Paths
+
+### 1. Core Package Structure (`personas/sakthai/`)
+The canonical installable package is rooted at `personas/sakthai/` (configured in `pyproject.toml`). It contains the following modules:
+- **`agent/`**: The tool-using agent loop (`loop.py`), shared tool registry (`tools.py`), and safety guardrails (`guardrails.py`).
+- **`cli/`**: Modular Click CLI commands (`run.py`, `chat.py`, `memory.py`, `mcp.py`, `cycle.py`, `skills.py`, `platform.py`, `repo.py`, `lead.py`, `train.py`, `eval.py`, `telegram.py`, `dashboard.py`, `doctor.py`, `system.py`).
+- **`client/`**: Model provider client resolvers (`manager.py`, `verifier.py`, `models.py`).
+- **`cycle/`**: Six-stage `Dream` → `Hope` → `Care` → `Joy` → `Trust` → `Growth` state machine (`stages.py`, `state.py`).
+- **`dashboard/`**: Testable store aggregations and telemetry payloads (`data.py`).
+- **`extensions/`**: Git-based MCP/skill extension bundle management (`install.py`).
+- **`lead/`**: ServiceQuoteBot customer outreach, lead capture, and MRR metrics (`capture.py`, `revenue.py`).
+- **`learn/`**: Fact extraction and document ingestion (`capture.py`, `ingest.py`).
+- **`mcp/`**: JSON-RPC stdio server (`server.py`), resource/prompt protocols, and outbound client manager (`client.py`, `manager.py`, `servers.py`).
+- **`memory/`**: SQLite persistence (`store.py`), family merged view (`merged.py`), session search (`session_search.py`), backups (`backup.py`), and sync replication (`sync.py`).
+- **`team/`**: Declarative multi-agent pipeline engine (`engine.py`), persona handoff protocol (`handoff.py`), and orchestrator (`orchestrator.py`).
+- **`telegram/`**: Telegram bot gateway and VM agent execution (`workflow_executor.py`).
+- **`web/`**: Stdlib HTTP API server (`server.py`), endpoints (`api.py`), and payload contracts (`contracts.py`).
+- **`agent_platform/`**: Enterprise agent runtime bridge (`agent_engine.py`), destructive command guardrails (`safety.py`), dependency manager isolation (`dep_manager.py`), progressive disclosure (`customizations.py`), and Harness AI pipeline generator (`harness_exporter.py`).
+
+### 2. Skills Architecture (`personas/*/skills/` & `personas/shared/skills/`)
+There is **no root-level `skills/` directory**. Skills live in structured overlays:
+- **Persona Skill Overlays (`personas/<persona>/skills/`)**:
+  - `personas/sakthai/skills/` — **170 skills** (MLOps, Hugging Face Hub, model evaluation, spaces)
+  - `personas/saksee/skills/` — **106 skills** (Playwright, web scraping, Chrome DevTools Protocol, DOM analysis)
+  - `personas/sakking/skills/` — **59 skills** (Coding, Test-Driven Development, refactoring, algorithms)
+  - `personas/sakjules/skills/` — **56 skills** (GitHub Actions, CI/CD, release automation, branch hygiene)
+  - `personas/saksit/skills/` — **45 skills** (Content creation, social strategy, model cards, storytelling)
+  - `personas/saktan/skills/` — **26 skills** (Daily rhythm, Ollama ops, memory health, system monitoring)
+- **Shared Skills (`personas/shared/skills/`)**:
+  - **19 universal shared skills** accessible by all six family agents.
+- **Taxonomy & Standards**:
+  - Total on-disk skills: **481 skills** (462 persona overlays + 19 universal shared).
+  - Searchable taxonomy: `Sak<Agent>-<domain>-<topic>`.
+  - Parsed and validated by `personas/sakthai/sakthai/skills.py`.
+
+### 3. Persistent Memory Subsystem (`memory/`)
+Persistence is sharded across SQLite databases under `~/.sakthai/` (or `$SAKTHAI_HOME`):
+- **Persona Shards (`~/.sakthai/<persona>/memory.db`)**: Dedicated database per persona for identity, observations, and domain facts.
+- **Unscoped Core Shard (`~/.sakthai/memory.db`)**: Global system facts and cross-persona defaults.
+- **`MemoryStore` (`personas/sakthai/sakthai/memory/store.py`)**: SQLite interface executing parameterized queries under `BEGIN IMMEDIATE` transactions with automatic schema migrations (`_migrate_schema()`).
+- **Session Search (`personas/sakthai/sakthai/memory/session_search.py`)**: Substring and vector index searches over past session runs recorded in `~/.sakthai/sessions/*.json`.
+- **Family Merged Memory (`personas/sakthai/sakthai/memory/merged.py`)**: `FamilyMemoryView` aggregates across all six shards concurrently (`sakthai memory family`).
+- **Memory Schema**:
+  ```sql
+  facts(id, kind DEFAULT 'note', key, value NOT NULL,
+        source_session, created_at, updated_at, tags)
+
+  observations(id, summary NOT NULL, evidence_session_id,
+               weight DEFAULT 1.0, confidence DEFAULT 0.5, created_at)
+  ```
+
+### 4. Safety & Security Guardrails
+Safety is enforced through multiple concentric defense-in-depth layers:
+- **Tool Guardrails (`personas/sakthai/sakthai/agent/guardrails.py`)**:
+  - Validates every tool call before invocation.
+  - `read_file` is strictly jailed to `Path.cwd()`, `~/.sakthai/`, and `SAKTHAI_READ_ALLOW`.
+  - `run_command` is disabled by default, requiring explicit opt-in via `SAKTHAI_SHELL_ALLOW=1` with a 20,000 character output cap and 120-second timeout.
+- **Data Loss Guardrail (`personas/sakthai/sakthai/agent_platform/safety.py`)**:
+  - `DataLossGuardrail` intercepts destructive shell patterns (`rm -rf`, `gsutil rm`, `bq rm`, `git reset --hard`, `git clean -f`, `mkfs`, `dd`, `terraform destroy`) and raw SQL mutations (`DROP TABLE`, `TRUNCATE`, unconstrained `DELETE`).
+  - Destructive operations require HMAC-signed authorization tokens (`check_data_loss_guardrail`).
+- **Supply Chain & Workflow Hardening**:
+  - StepSecurity Harden-Runner runtime network egress monitoring and blocklists.
+  - SLSA Generic Generator Level 3 artifact provenance attestation (`actions/attest@v4.2.2`).
+  - Strict SHA-pinned marketplace actions documented in `docs/marketplace-actions-catalog.md`.
+  - Bandit AST security scanning (`bandit -c pyproject.toml -r personas/sakthai`).
+  - Dependency Review Action enforcing external policy (`.github/dependency-review-config.yml`).
+
+### 5. Operation & Execution Pipelines
+- **Agent Loop (`personas/sakthai/sakthai/agent/loop.py`)**: Single-agent tool loop supporting Anthropic, Google Gemini, OpenAI-compatible APIs, Ollama local models, and Hugging Face router backends with streaming and dry-run preflight.
+- **Team Pipelines (`personas/sakthai/sakthai/team/`)**:
+  - `engine.py`: Multi-persona pipeline orchestration.
+  - `handoff.py`: Cross-persona task delegation contracts.
+  - **Deputy Chain**: If SakThai exhausts charge, execution delegates sequentially to **SakKing** (Deputy 1, TDD & Coding) → **SakTan** (Deputy 2, Daily Ops) → **SakSee** (Deputy 3, Browser & Web).
+- **CLI Task Registry (`personas/sakthai/sakthai/cli/repo.py`)**: Declarative whole-repo task registry (`sakthai repo map|list|run`) spanning scripts, apps, training, evaluation, services, and infra.
+- **Unified Dashboard & Embedded Engine (`apps/sak_agent_dashboard/`)**: Next.js 15+ frontend embedding the consolidated durable workflow engine (`apps/sak_agent_dashboard/workflow_engine/`), backed by the HTTP API in `web/server.py`.
+
+---
+
+## Conventions & Invariants
+
+1. **Monorepo Module Resolution**: `import sakthai` resolves from `personas/sakthai/`. Standalone scripts must explicitly insert `REPO_ROOT / "personas" / "sakthai"` into `sys.path`.
+2. **Central Configuration**: `personas/sakthai/sakthai/config.py` is the single source of truth for runtime paths and environment variables (`sakthai_home`, `memory_db_path`, `sessions_dir`). Never hardcode paths elsewhere.
+3. **Strict Coverage Floor**: Enforced at $\ge 96.0\%$ by CI (`--cov-fail-under=96`).
+4. **Hermes Framework Elimination**: Personas execute standalone on `sakthai`. Legacy Hermes metadata and dependencies are permanently removed.

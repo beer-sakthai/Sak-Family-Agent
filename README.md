@@ -40,7 +40,7 @@
 | **Personas** | 6 Family Agents (`personas/<name>/`) | `🟢 6/6 ONLINE` | `SakThai` · `SakSee` · `SakJules` · `SakKing` · `SakSit` · `SakTan` |
 | **Skills Catalog** | 481 On-Disk Skills (462 overlay + 19 shared) | `🟢 STANDARDIZED`| Structured `Sak<Agent>-<domain>-<topic>` taxonomy |
 | **Memory Store** | SQLite per Persona (`~/.sakthai/`) | `🟢 SYNCED` | Sharded persistence & multi-agent `sakthai memory family` |
-| **Test Quality** | 2,823 Unit Tests across Python 3.11 & 3.12 | `🟢 PASS (≥96%)` | Enforced strict coverage floor (`--cov-fail-under=96`) |
+| **Test Quality** | 3,086 Unit Tests across Python 3.11 & 3.12 | `🟢 PASS (≥96%)` | Enforced strict coverage floor (`--cov-fail-under=96`) |
 | **Security Gates** | Guardrails, Secret Scan, CodeQL & Bandit | `🛡️ ENFORCED` | Safe execution, credential isolation & automated scanning |
 
 > **Six personas, one shared runtime.**
@@ -122,32 +122,64 @@ The Next.js dashboard in [`apps/sak_agent_dashboard`](apps/sak_agent_dashboard) 
 
 ## Architecture
 
-Every entry point shares one unified tool registry, guardrail policy, and persistent memory store. Detailed architecture documentation is available in [`docs/architecture.md`](docs/architecture.md).
+Every entry point shares one unified tool registry, concentric guardrails, and persistent memory store. Detailed architecture documentation is available in [`docs/architecture.md`](docs/architecture.md).
 
 ```mermaid
 flowchart TD
-    DASH["Dashboard<br/>Next.js, read-only"]
-    WEB["Web API<br/>web/server.py, bearer token"]
-    CLI["CLI<br/>sakthai run · chat · memory · team"]
-    LOOP["Agent loop<br/>agent/loop.py"]
-    MCP["MCP stdio server<br/>sakthai mcp"]
-    GUARD["Guardrail policy<br/>checks every tool call"]
-    TOOLS["Shared tool registry<br/>agent/tools.py"]
-    STORE["MemoryStore<br/>memory/store.py"]
-    HOME[("~/.sakthai<br/>memory.db per persona · sessions · eval log")]
-    PROV["Model providers<br/>Anthropic · Gemini · OpenAI-compatible · Ollama · Hugging Face"]
-    EXT["External MCP servers"]
+    subgraph Presentation ["Presentation & UI"]
+        DASH["Dashboard<br/>apps/sak_agent_dashboard (Next.js 15+)"]
+        ENG["Embedded Workflow Engine<br/>workflow_engine/"]
+        DASH --- ENG
+    end
+
+    subgraph Entrypoints ["Entry Points & APIs"]
+        WEB["Web API<br/>web/server.py (Bearer token)"]
+        CLI["CLI Commands<br/>sakthai run · chat · memory · mcp · repo · platform"]
+    end
+
+    subgraph Execution ["Execution & Orchestration"]
+        LOOP["Agent Loop<br/>agent/loop.py"]
+        TEAM["Team Engine & Pipelines<br/>team/engine.py · orchestrator.py"]
+        MCP["MCP Server & Client<br/>mcp/server.py (stdio) · mcp/client.py (SSE/HTTP)"]
+    end
+
+    subgraph Safety ["Concentric Guardrails"]
+        GUARD["Tool Guardrails<br/>agent/guardrails.py (path jailing, shell gate)"]
+        SAFE["Data Loss Guardrail<br/>agent_platform/safety.py (HMAC token)"]
+    end
+
+    subgraph Capabilities ["Capabilities & Tools"]
+        TOOLS["Shared Tool Registry<br/>agent/tools.py"]
+        SKILLS["Skills Architecture (481)<br/>personas/*/skills/ · personas/shared/skills/"]
+        EXT["External MCP Servers<br/>remote tools & resources"]
+    end
+
+    subgraph Storage ["Persistence (~/.sakthai)"]
+        STORE["MemoryStore<br/>memory/store.py (SQLite)"]
+        SEARCH["Session Search<br/>memory/session_search.py"]
+        FAMILY["Family Merged View<br/>memory/merged.py"]
+        HOME[("~/.sakthai/<persona>/memory.db<br/>sessions · audit.log · eval.jsonl")]
+    end
+
+    subgraph Providers ["Model Providers"]
+        PROV["Anthropic · Google Gemini · Hugging Face Router · OpenAI · Ollama"]
+    end
 
     DASH -- HTTP --> WEB
     DASH -. direct reads .-> HOME
     WEB --> STORE
     CLI --> LOOP
+    CLI --> TEAM
     CLI --> MCP
     LOOP <--> PROV
-    LOOP --> GUARD --> TOOLS
+    LOOP --> GUARD --> SAFE --> TOOLS
+    TEAM --> LOOP
     MCP --> TOOLS
     TOOLS <--> EXT
-    TOOLS --> STORE --> HOME
+    TOOLS <--> SKILLS
+    TOOLS --> STORE
+    STORE --> FAMILY --> HOME
+    STORE --> SEARCH --> HOME
 ```
 
 ---
@@ -211,13 +243,13 @@ cd apps/sak_agent_dashboard && npm ci && npm run dev
 ## Repository Layout
 
 ```text
-personas/sakthai/              Canonical installable Python package
-personas/<name>/               Persona overlays, skills, and configuration
-apps/sak_agent_dashboard/      Next.js dashboard
-apps/agent_workflow_framework/ Standalone durable workflow execution framework & CLI
+personas/sakthai/              Canonical installable Python package (agent, cli, cycle, memory, mcp, team, web)
+personas/<name>/               Persona overlays, skills, evolution, and configurations
+personas/shared/skills/        Universal shared skills across all personas (19 skills)
+apps/sak_agent_dashboard/      Next.js dashboard with embedded workflow engine (workflow_engine/)
 services/                      Service integrations and supporting services
-tests/                         Pytest test suite (2,811 unit tests)
-docs/                          Architecture, operations, security, and user guides
+tests/                         Pytest test suite (3,086 unit tests across Python 3.11 & 3.12)
+docs/                          Architecture, operations, security, wiki, and user guides
 scripts/                       Repository and maintenance tooling
 .github/workflows/             CI, security, evaluation, and maintenance workflows
 ```
