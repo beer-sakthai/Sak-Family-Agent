@@ -1,7 +1,7 @@
 # GitHub Artifact Attestations (`actions/attest`) Reference
 
-> **Persona Domain:** SakJules · Master of Automation & CI/CD  
-> **Source Action:** [`actions/attest`](https://github.com/actions/attest)  
+> **Persona Domain:** SakJules · Master of Automation & CI/CD
+> **Source Action:** [`actions/attest`](https://github.com/actions/attest)
 > **Pinned SHA:** `1e69f48acb82d1966a394da916b4c1698aa569d6` (`v4.2.2`)
 
 ---
