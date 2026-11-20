@@ -125,7 +125,7 @@ def render(workflows: list[Workflow], repo: str) -> str:
         [
             "## Workflow-wide serialization review",
             "",
-            "The workflow-wide findings were reviewed for safe throughput improvements. `continuous-security.yml` is manual-only and read-only, so its group is now scoped by ref and no longer blocks audits on unrelated branches.",
+            "The workflow-wide findings were reviewed for safe throughput improvements. `continuous-security.yml` is manual-only and read-only, so its group is now scoped by ref and no longer blocks audits on unrelated branches. `reusable-dispatch-method.yml` now also includes its target repository in the group, allowing dispatches to different repositories to proceed independently while preserving serialization for repeated dispatches to the same repository.",
             "",
             "The remaining workflow-wide groups are intentionally retained. `agentics-maintenance.yml` performs repository-level maintenance operations involving issues, pull requests, labels, branches, and caches. The generated `code-simplifier.lock.yml`, `daily-activity-report.lock.yml`, `daily-doc-sync.lock.yml`, `repo-maintainer.lock.yml`, and `weekly-agents-md-sync.lock.yml` workflows publish safe outputs such as issues or pull requests; their generated queue and conclusion locks prevent duplicate or out-of-order mutations. `verify-assets.yml` also retains its repository-wide lock because scheduled failures create or comment on one tracking issue.",
             "",
