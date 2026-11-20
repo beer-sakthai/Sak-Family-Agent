@@ -22,6 +22,7 @@ jobs:
   auto-close:
     name: Auto Close Fixed Issues
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     timeout-minutes: 10
     permissions:
       contents: read
