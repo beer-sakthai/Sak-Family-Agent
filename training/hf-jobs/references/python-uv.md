@@ -1,23 +1,6 @@
----
-name: python-uv
-description: "Manage Python dependencies and virtual environments with uv, the fast, all-in-one project and package manager."
-version: 1.0.0
-author: Gemini Code Assist
-license: MIT
-tags: [python, uv, dependencies, packaging, pip, venv, virtualenv, performance]
-platforms: [linux, macos, windows]
----
-
 # Python Project Management with `uv`
 
-`uv` is an extremely fast Python package installer and resolver, written in Rust. It is designed as a drop-in replacement for `pip`, `pip-tools`, `virtualenv`, and `venv`. This skill covers the most common `uv` commands for modern Python development.
-
-## When to use this skill
-
-- When starting a new Python project.
-- When managing dependencies for an existing project.
-- When you need to create or manage a Python virtual environment.
-- When you want a faster, more efficient alternative to `pip` and `venv`.
+`uv` is an extremely fast Python package installer and resolver, written in Rust. It is designed as a drop-in replacement for `pip`, `pip-tools`, `virtualenv`, and `venv`. This reference covers the most common `uv` commands for modern Python development across the training and serving workflows.
 
 ## Installation
 
@@ -99,17 +82,35 @@ The `uv run` command executes a command within the project's virtual environment
 # Run a Python script
 uv run python my_script.py
 
-# Run a tool like pytest or ruff
-uv run pytest tests/
+# Run a CLI tool installed in the environment
+uv run pytest
 ```
 
-## Common Commands Quick Reference
+## Standalone Script Execution (PEP 723)
 
-| Action | `venv` + `pip` | `uv` |
-|--------------------------------|-----------------------------------------|------------------------------------------|
-| Create environment | `python -m venv .venv` | `uv venv` |
-| Install packages | `pip install fastapi` | `uv pip install fastapi` |
-| Generate lock file | `pip-compile requirements.in` | `uv pip compile requirements.in` |
-| Install from lock file | `pip-sync requirements.txt` | `uv pip sync requirements.txt` |
-| List installed packages | `pip freeze` | `uv pip freeze` |
-| Run command in venv | `source .venv/bin/activate; pytest` | `uv run pytest` |
+`uv run` can execute standalone Python scripts that declare their own dependencies inline using PEP 723 metadata:
+
+```python
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "torch==2.14.1",
+#     "transformers==5.19.0",
+#     "trl==1.15.0",
+#     "peft==0.21.2",
+#     "accelerate==1.15.0",
+#     "datasets==5.0.1",
+#     "bitsandbytes==0.50.2",
+#     "huggingface_hub",
+# ]
+# ///
+
+import torch
+print(f"CUDA available: {torch.cuda.is_available()}")
+```
+
+Execute directly without activating a virtual environment:
+
+```bash
+uv run script.py
+```

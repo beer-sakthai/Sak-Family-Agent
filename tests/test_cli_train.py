@@ -50,12 +50,52 @@ def test_train_sft_dry_run(runner: CliRunner) -> None:
     assert "--epochs 3" in result.output
 
 
+def test_train_sft_recipe_dry_run(runner: CliRunner) -> None:
+    result = runner.invoke(
+        main, ["train", "sft", "--recipe", "toolcalling", "--dry-run", "--", "--epochs", "4"]
+    )
+    assert result.exit_code == 0
+    assert "[dry-run]" in result.output
+    assert "training/hf-jobs/train_toolcalling_lora.py" in result.output
+    assert "--epochs 4" in result.output
+
+
 def test_train_dataset_dry_run(runner: CliRunner) -> None:
     result = runner.invoke(main, ["train", "dataset", "--dry-run", "--", "--limit", "100"])
     assert result.exit_code == 0
     assert "[dry-run]" in result.output
     assert "scripts/dataset_prep/build_v12.py" in result.output
     assert "--limit 100" in result.output
+
+
+def test_train_dataset_synthetic_tools_dry_run(runner: CliRunner) -> None:
+    result = runner.invoke(main, ["train", "dataset", "--synthetic-tools", "--dry-run"])
+    assert result.exit_code == 0
+    assert "[dry-run]" in result.output
+    assert "training/hf-jobs/build_toolcalling_dataset.py" in result.output
+
+
+def test_train_eval_dry_run(runner: CliRunner) -> None:
+    result = runner.invoke(main, ["train", "eval", "--dry-run"])
+    assert result.exit_code == 0
+    assert "[dry-run]" in result.output
+    assert "training/serving/eval_toolcalling.py" in result.output
+
+
+def test_train_export_dry_run(runner: CliRunner) -> None:
+    result = runner.invoke(main, ["train", "export", "--dry-run", "--", "--out", "./test-out"])
+    assert result.exit_code == 0
+    assert "[dry-run]" in result.output
+    assert "training/serving/export_ollama.py" in result.output
+    assert "--out ./test-out" in result.output
+
+
+def test_train_deploy_dry_run(runner: CliRunner) -> None:
+    result = runner.invoke(main, ["train", "deploy", "--dry-run", "--", "--repo", "test/repo"])
+    assert result.exit_code == 0
+    assert "[dry-run]" in result.output
+    assert "training/serving/deploy_hf_endpoint.py" in result.output
+    assert "--repo test/repo" in result.output
 
 
 def test_train_read_title_oserror(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -79,3 +119,6 @@ def test_train_exit_code_propagation(monkeypatch: pytest.MonkeyPatch, runner: Cl
     monkeypatch.setattr(train_mod, "run_repo_argv", lambda argv, **kw: 11)
     assert runner.invoke(main, ["train", "sft"]).exit_code == 11
     assert runner.invoke(main, ["train", "dataset"]).exit_code == 11
+    assert runner.invoke(main, ["train", "eval"]).exit_code == 11
+    assert runner.invoke(main, ["train", "export"]).exit_code == 11
+    assert runner.invoke(main, ["train", "deploy"]).exit_code == 11

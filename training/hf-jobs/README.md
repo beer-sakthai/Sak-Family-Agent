@@ -66,3 +66,4 @@ or just to smoke-test the adapter.
 - `Nanthasit/sakthai-context-0.5b` is a stale LoRA adapter whose base path points at
   a dead local path; train from the public Qwen base instead.
 - Generated `.jsonl` files are intentionally not committed — they live on the Hub.
+- For managing dependencies and script execution via `uv`, see [`references/python-uv.md`](./references/python-uv.md).
