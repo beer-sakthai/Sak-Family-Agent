@@ -1516,6 +1516,7 @@ jobs:
       - name: Handle agent failure
         id: handle_agent_failure
         if: always()
+        continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           GH_AW_AGENT_OUTPUT: ${{ steps.setup-agent-output-env.outputs.GH_AW_AGENT_OUTPUT }}
@@ -1572,6 +1573,7 @@ jobs:
       - name: Report failed jobs
         id: report_failed_jobs
         if: always()
+        continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           GH_AW_AGENT_OUTPUT: ${{ steps.setup-agent-output-env.outputs.GH_AW_AGENT_OUTPUT }}

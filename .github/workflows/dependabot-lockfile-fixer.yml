@@ -49,6 +49,8 @@ jobs:
       - name: Detect JavaScript project
         id: detect-project
         shell: bash
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref || 'main' }}
         run: |
           set -euo pipefail
           project_dir=""
@@ -59,7 +61,7 @@ jobs:
                 break
                 ;;
             esac
-          done < <(git diff --name-only "origin/${{ github.event.pull_request.base.ref }}...HEAD")
+          done < <(git diff --name-only "origin/${BASE_REF}...HEAD")
 
           if [[ -n "$project_dir" && -f "$project_dir/package.json" ]]; then
             echo "working_directory=$project_dir" >> "$GITHUB_OUTPUT"
