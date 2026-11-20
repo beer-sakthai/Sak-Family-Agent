@@ -51,7 +51,6 @@ PINNED_ACTIONS = {
     "martialonline/workflow-status": "326830cacf79872efe767e15031f58d1ea0508c4",
     "lasith-kg/dispatch-workflow": "2597e9a3d222d7959052dea1c009560bbeb495e4",
     "wadackel/checkbox-workflow-action": "39a84e680429bb174302beed9f222e06972cecf9",
-    "NejcZdovc/comment-pr": "a423635d183a8259308e80593c96fecf31539c26",
     "ArcticLampyrid/action-wait-for-workflow": "ff297b23789206858260877c4b83026d90c6db8c",
     "kvendingoldo/git-flow-action": "ca756ba150c376eb9bf35e3ff3ed591913bb7f11",
     "dortort/gemini-actions": "c7ce09711c46a567055a16a762c0c99fdf181aeb",
