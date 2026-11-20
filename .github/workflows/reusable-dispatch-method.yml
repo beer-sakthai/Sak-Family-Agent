@@ -17,7 +17,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Dispatches to different repositories cannot corrupt the same repository state.
+  # Keep dispatches to the same target repository serialized.
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.target_repo }}
   cancel-in-progress: true
 
 jobs:
