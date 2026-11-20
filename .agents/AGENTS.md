@@ -19,3 +19,11 @@ Rules specific to the `Sak-Family-Agent` repository. These supplement global rul
 - **Never overwrite `PLAN.md` entirely.** Use `multi_replace_file_content` with targeted chunk replacements only.
 - When marking tasks complete, find and replace only the specific `- [ ]` or `- [/]` line(s) — not whole sections.
 - After any edit to `PLAN.md`, immediately re-read it to verify the surrounding content is intact before continuing.
+
+---
+
+## Pull Request and Merge Protocol
+
+- **Never merge pull requests automatically (`gh pr merge` or `--auto`)** — even if all GitHub Actions workflows pass.
+- All pull requests must remain open for Beer's review and manual merge.
+- Always provide the pull request link to the user once CI checks are verified and await user action.
