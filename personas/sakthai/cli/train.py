@@ -64,12 +64,28 @@ def train_list(as_json: bool) -> None:
     )
 
 
+_RECIPES = {
+    "sft_qlora": "scripts/train/sft_qlora.py",
+    "toolcalling": "training/hf-jobs/train_toolcalling_lora.py",
+    "persona": "training/hf-jobs/train_persona_lora.py",
+    "coder": "training/hf-jobs/train_eval_coder_lora.py",
+    "7b": "training/sakthai-7b-lora/train.py",
+}
+
+
 @train_cmd.command("sft", context_settings={"ignore_unknown_options": True})
 @click.option("--dry-run", is_flag=True, help="Print command without executing.")
+@click.option(
+    "--recipe",
+    type=click.Choice(list(_RECIPES.keys()), case_sensitive=False),
+    default="sft_qlora",
+    help="Target training recipe to run (default: sft_qlora).",
+)
 @click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
-def train_sft(dry_run: bool, extra_args: tuple[str, ...]) -> None:
-    """Launch SFT QLoRA fine-tuning run via scripts/train/sft_qlora.py."""
-    argv = ["uv", "run", "python", "scripts/train/sft_qlora.py"] + list(extra_args)
+def train_sft(dry_run: bool, recipe: str, extra_args: tuple[str, ...]) -> None:
+    """Launch SFT QLoRA fine-tuning run using the specified recipe."""
+    script = _RECIPES.get(recipe.lower(), "scripts/train/sft_qlora.py")
+    argv = ["uv", "run", "python", script] + list(extra_args)
     code = run_repo_argv(argv, dry_run=dry_run)
     if code != 0:
         sys.exit(code)
@@ -77,10 +93,53 @@ def train_sft(dry_run: bool, extra_args: tuple[str, ...]) -> None:
 
 @train_cmd.command("dataset", context_settings={"ignore_unknown_options": True})
 @click.option("--dry-run", is_flag=True, help="Print command without executing.")
+@click.option(
+    "--synthetic-tools",
+    is_flag=True,
+    help="Build synthetic tool-calling dataset via training/hf-jobs/build_toolcalling_dataset.py.",
+)
 @click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
-def train_dataset(dry_run: bool, extra_args: tuple[str, ...]) -> None:
-    """Build and format fine-tuning datasets via scripts/dataset_prep/build_v12.py."""
-    argv = ["uv", "run", "python", "scripts/dataset_prep/build_v12.py"] + list(extra_args)
+def train_dataset(dry_run: bool, synthetic_tools: bool, extra_args: tuple[str, ...]) -> None:
+    """Build and format fine-tuning datasets (v12 corpus or synthetic tool-calling)."""
+    script = (
+        "training/hf-jobs/build_toolcalling_dataset.py"
+        if synthetic_tools
+        else "scripts/dataset_prep/build_v12.py"
+    )
+    argv = ["uv", "run", "python", script] + list(extra_args)
+    code = run_repo_argv(argv, dry_run=dry_run)
+    if code != 0:
+        sys.exit(code)
+
+
+@train_cmd.command("eval", context_settings={"ignore_unknown_options": True})
+@click.option("--dry-run", is_flag=True, help="Print command without executing.")
+@click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
+def train_eval(dry_run: bool, extra_args: tuple[str, ...]) -> None:
+    """Evaluate tool-calling fidelity on fine-tuned models via training/serving/eval_toolcalling.py."""
+    argv = ["uv", "run", "python", "training/serving/eval_toolcalling.py"] + list(extra_args)
+    code = run_repo_argv(argv, dry_run=dry_run)
+    if code != 0:
+        sys.exit(code)
+
+
+@train_cmd.command("export", context_settings={"ignore_unknown_options": True})
+@click.option("--dry-run", is_flag=True, help="Print command without executing.")
+@click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
+def train_export(dry_run: bool, extra_args: tuple[str, ...]) -> None:
+    """Merge LoRA adapter and export Ollama Modelfile via training/serving/export_ollama.py."""
+    argv = ["uv", "run", "python", "training/serving/export_ollama.py"] + list(extra_args)
+    code = run_repo_argv(argv, dry_run=dry_run)
+    if code != 0:
+        sys.exit(code)
+
+
+@train_cmd.command("deploy", context_settings={"ignore_unknown_options": True})
+@click.option("--dry-run", is_flag=True, help="Print command without executing.")
+@click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
+def train_deploy(dry_run: bool, extra_args: tuple[str, ...]) -> None:
+    """Plan or provision cloud TGI endpoint via training/serving/deploy_hf_endpoint.py."""
+    argv = ["uv", "run", "python", "training/serving/deploy_hf_endpoint.py"] + list(extra_args)
     code = run_repo_argv(argv, dry_run=dry_run)
     if code != 0:
         sys.exit(code)
