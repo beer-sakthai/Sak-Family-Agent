@@ -111,3 +111,14 @@ The `sakthai.agent_platform` subsystem unifies advanced agent engineering and en
   - `sakthai mcp ping [<name>] [--persona <name>]`: Probe responsiveness and health of external servers.
   - `sakthai mcp tools [--persona <name>]`: List discovered external tools and schemas.
 
+## Model Training & Serving (`sakthai train`)
+
+The `sakthai train` CLI command group provides end-to-end tooling to generate synthetic agent datasets, fine-tune models, evaluate tool-calling fidelity, and export adapters for offline or cloud serving:
+
+- `sakthai train list [--json]`: Discovers available fine-tuning runs and datasets under `training/`.
+- `sakthai train dataset [--synthetic-tools]`: Compiles instruction datasets (`build_v12.py`) or generates synthetic tool-calling examples (`build_toolcalling_dataset.py`) for the 8 core SakThai built-in tools.
+- `sakthai train sft [--recipe <recipe>] [--dry-run]`: Launches parameter-efficient fine-tuning (QLoRA) using targeted recipes (`sft_qlora`, `toolcalling`, `persona`, `coder`, `7b`).
+- `sakthai train eval [--dry-run]`: Runs probe evaluation prompts against fine-tuned adapters (`eval_toolcalling.py`) to verify tool call emission and direct answering behavior.
+- `sakthai train export [--out <dir>] [--dry-run]`: Merges LoRA adapter weights and writes an Ollama `Modelfile` (`export_ollama.py`) to enable running the agent loop 100% offline via `sakthai run --provider ollama --model sakthai`.
+- `sakthai train deploy [--repo <id>] [--create] [--dry-run]`: Dry-runs or provisions a Hugging Face Text Generation Inference (TGI) endpoint exposing an OpenAI-compatible `/v1` endpoint (`deploy_hf_endpoint.py`).
+

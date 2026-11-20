@@ -129,6 +129,14 @@ Safety is enforced through multiple concentric defense-in-depth layers:
 - **CLI Task Registry (`personas/sakthai/sakthai/cli/repo.py`)**: Declarative whole-repo task registry (`sakthai repo map|list|run`) spanning scripts, apps, training, evaluation, services, and infra.
 - **Unified Dashboard & Embedded Engine (`apps/sak_agent_dashboard/`)**: Next.js 15+ frontend embedding the consolidated durable workflow engine (`apps/sak_agent_dashboard/workflow_engine/`), backed by the HTTP API in `web/server.py`.
 
+### 6. Model Training & Serving Subsystem (`training/`)
+The repository contains a standalone, reproducible training and model serving subsystem:
+- **Synthetic Dataset Builder (`training/hf-jobs/build_toolcalling_dataset.py`)**: Generates structured tool-calling SFT examples for SakThai's 8 built-in tools (`learn`, `recall`, `search`, `forget`, `read_file`, `run_command`, `send_telegram_message`, `run_agent_loop`) along with no-tool negative prompts in Qwen chat template format (`messages` + `tools`).
+- **PEP 723 Training Recipes (`training/hf-jobs/*.py`)**: Zero-infrastructure remote compute runs on Hugging Face Jobs (`train_toolcalling_lora.py`, `train_persona_lora.py`, `train_eval_coder_lora.py`) with pinned base model commit SHAs.
+- **Local Ollama Serving (`training/serving/export_ollama.py`)**: Merges fine-tuned LoRA adapters with base models and generates Ollama `Modelfile` definitions for 100% offline agent loop execution (`sakthai run --provider ollama --model sakthai`).
+- **Cloud TGI Deployment (`training/serving/deploy_hf_endpoint.py`)**: Provisions Text Generation Inference endpoints exposing OpenAI-compatible `/v1` APIs for cloud agent operation (`sakthai run --provider openai --model tgi`).
+- **CLI Command Group (`personas/sakthai/cli/train.py`)**: Unified management via `sakthai train list`, `sakthai train sft`, `sakthai train dataset`, `sakthai train eval`, `sakthai train export`, and `sakthai train deploy`.
+
 ---
 
 ## Conventions & Invariants
