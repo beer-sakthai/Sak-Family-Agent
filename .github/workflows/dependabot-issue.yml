@@ -1,12 +1,15 @@
 name: Dependabot Issue for PRs
 
 on:
-  pull_request:
-    types: [opened, reopened]
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Pull request number'
+        required: false
+        type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.inputs.pr_number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -17,11 +20,6 @@ jobs:
     name: Create Issue for Dependabot PR
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    if: >-
-      (github.event_name == 'pull_request' &&
-       github.event.pull_request.user.login == 'dependabot[bot]' &&
-       github.repository == github.event.pull_request.head.repo.full_name) ||
-      github.event_name == 'workflow_dispatch'
     permissions:
       issues: write
       pull-requests: read
@@ -34,7 +32,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
       - name: Create Dependabot Issue
         uses: goatandsheep/dependabot-issue-action@085384c6fc7247bf455bcd86178c6fc8a5ffc1d5 # v1.0.1
         env:
