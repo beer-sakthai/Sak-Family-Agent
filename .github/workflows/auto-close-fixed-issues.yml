@@ -8,7 +8,7 @@ on:
       comment:
         description: "Comment on the closing issue(s)"
         required: false
-        default: "This issue was closed by #{{ pr }}."
+        default: ""
         type: string
 
 concurrency:
@@ -43,4 +43,4 @@ jobs:
         uses: wow-actions/auto-close-fixed-issues@d87a73261d3881451f5b35a80cfe0eaed3e95931 # v1.1.0
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          comment: ${{ inputs.comment || 'This issue was closed by #{{ pr }}.' }}
+          comment: ${{ inputs.comment != '' && inputs.comment || '' }}
