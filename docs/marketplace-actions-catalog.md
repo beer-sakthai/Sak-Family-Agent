@@ -685,11 +685,17 @@ Publishes formatted markdown updates directly to pull requests:
 
 ```yaml
 - name: Comment on PR
-  uses: NejcZdovc/comment-pr@a423635d183a8259308e80593c96fecf31539c26 # v2.1.0
+  uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
   with:
-    file: ''
-    message: ${{ inputs.comment_body }}
+    script: ...
+  env:
+    COMMENT_BODY: ${{ inputs.comment_body }}
+    PR_NUMBER: ${{ inputs.pr_number }}
 ```
+
+The reusable workflow requires `comment_body` and `pr_number`. It updates the
+existing marked comment when present and otherwise creates a new comment on the
+specified pull request.
 
 ### 3.39 Wait for Workflow ([`.github/workflows/wait-for-workflow.yml`](../.github/workflows/wait-for-workflow.yml))
 Polls and halts until the target named workflow completes:
