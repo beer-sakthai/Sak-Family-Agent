@@ -1,3 +1,17 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "torch==2.14.1",
+#     "transformers==5.19.0",
+#     "trl==1.15.0",
+#     "peft==0.21.2",
+#     "accelerate==1.15.0",
+#     "datasets==5.0.1",
+#     "bitsandbytes==0.50.2",
+#     "sentencepiece",
+#     "huggingface_hub",
+# ]
+# ///
 #!/usr/bin/env python3
 """SakThai 7B LoRA training — simpler version for HF Jobs."""
 
@@ -38,35 +52,39 @@ MAX_SEQ_LEN = 2048
 print("=== Starting 7B training ===", flush=True)
 print(f"BASE_MODEL={BASE_MODEL}, DATASET={DATASET_ID}", flush=True)
 
-# ── Install deps ──────────────────────────────────────────────────
-subprocess.run(
-    [
-        sys.executable,
-        "-m",
-        "pip",
-        "install",
-        "-q",
-        "transformers",
-        "peft",
-        "trl",
-        "accelerate",
-        "bitsandbytes",
-        "datasets",
-        "sentencepiece",
-        "huggingface_hub",
-        "torch",
-    ],
-    check=True,
-)
-print("Deps installed", flush=True)
+# ── Install deps (optional fallback when not running under uv) ─────
+if os.environ.get("INSTALL_DEPS_PIP") == "1":
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "-q",
+            "transformers",
+            "peft",
+            "trl",
+            "accelerate",
+            "bitsandbytes",
+            "datasets",
+            "sentencepiece",
+            "huggingface_hub",
+            "torch",
+        ],
+        check=True,
+    )
+    print("Deps installed", flush=True)
 
-# ── Auth (HF_TOKEN env var or file) ────────────────────────────────
-from huggingface_hub import HfApi  # noqa: E402
+# ── Auth (HF_TOKEN env var, file, or default store) ────────────────
+from huggingface_hub import HfApi, get_token  # noqa: E402
 
 token = os.environ.get("HF_TOKEN", "")
 if not token:
-    token_path = os.path.expanduser("~/.cache/huggingface/token")
-    token = Path(token_path).read_text(encoding="utf-8").strip()
+    token_path = Path(os.path.expanduser("~/.cache/huggingface/token"))
+    if token_path.is_file():
+        token = token_path.read_text(encoding="utf-8").strip()
+    else:
+        token = get_token() or ""
 api = HfApi(token=token)
 print(f"Auth OK: {api.whoami()['name']}", flush=True)
 
