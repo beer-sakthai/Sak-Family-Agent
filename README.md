@@ -196,6 +196,10 @@ flowchart TD
     STORE --> SEARCH --> HOME
 ```
 
+<p align="center">
+  <img src="docs/images/training-eval-lab.jpg" alt="House of Sak — AI Model Training, Offline Serving & 5-Pillar Evaluation Laboratory" width="100%">
+</p>
+
 ---
 
 ## Quick Start
