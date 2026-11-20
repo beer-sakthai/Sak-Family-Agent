@@ -46,7 +46,33 @@ jobs:
         with:
           bun-version: "latest"
 
+      - name: Detect JavaScript project
+        id: detect-project
+        shell: bash
+        run: |
+          set -euo pipefail
+          project_dir=""
+          while IFS= read -r changed_file; do
+            case "$changed_file" in
+              */package.json|*/package-lock.json|*/pnpm-lock.yaml|*/yarn.lock|*/bun.lockb|*/bun.lock)
+                project_dir="${changed_file%/*}"
+                break
+                ;;
+            esac
+          done < <(git diff --name-only "origin/${{ github.event.pull_request.base.ref }}...HEAD")
+
+          if [[ -n "$project_dir" && -f "$project_dir/package.json" ]]; then
+            echo "working_directory=$project_dir" >> "$GITHUB_OUTPUT"
+            echo "has_project=true" >> "$GITHUB_OUTPUT"
+            echo "Detected JavaScript project: $project_dir"
+          else
+            echo "has_project=false" >> "$GITHUB_OUTPUT"
+            echo "No changed JavaScript project manifest; lockfile repair is not needed."
+          fi
+
       - name: Fix lockfiles
+        if: steps.detect-project.outputs.has_project == 'true'
         uses: oleg-koval/dependabot-lockfile-fixer@c7002b60b8621ba70c11ec3ab793cc845c1b236d # v1.0.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          working_directory: ${{ steps.detect-project.outputs.working_directory }}
