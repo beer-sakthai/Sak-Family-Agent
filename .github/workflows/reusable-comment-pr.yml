@@ -7,17 +7,25 @@ on:
         description: Comment body
         required: false
         default: "Automated verification comment"
+      pr_number:
+        description: Pull request number to comment on
+        required: true
+        type: number
   workflow_call:
     inputs:
       comment_body:
         type: string
+        required: true
+      pr_number:
+        description: Pull request number to comment on
+        type: number
         required: true
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ inputs.pr_number || github.event.pull_request.number || github.event.issue.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -34,7 +42,41 @@ jobs:
         with:
           egress-policy: audit
       - name: Comment on PR
-        uses: NejcZdovc/comment-pr@a423635d183a8259308e80593c96fecf31539c26 # v2.1.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
-          file: ''
-          message: ${{ inputs.comment_body }}
+          script: |
+            const prNumber = Number(process.env.PR_NUMBER);
+            if (!Number.isInteger(prNumber) || prNumber <= 0) {
+              core.setFailed('A positive pull request number is required.');
+              return;
+            }
+
+            const identifier = '<!-- GITHUB_ACTION_COMMENT_PR -->';
+            const body = `${identifier}\n${process.env.COMMENT_BODY}`;
+            const { owner, repo } = context.repo;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: prNumber,
+              per_page: 100,
+            });
+            const existing = comments.find((comment) => comment.body?.startsWith(identifier));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNumber,
+                body,
+              });
+            }
+        env:
+          COMMENT_BODY: ${{ inputs.comment_body }}
+          PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number || github.event.issue.number || '' }}
