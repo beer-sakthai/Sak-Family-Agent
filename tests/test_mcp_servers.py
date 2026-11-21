@@ -335,7 +335,9 @@ def test_parse_mcp_servers_additional_branches() -> None:
     assert specs[0].transport == "websocket"
 
     # 2. servers list with non-dict and missing name
-    specs_list = parse_mcp_servers({"servers": ["junk", {"no_name": True}, {"name": "valid", "command": "python"}]})
+    specs_list = parse_mcp_servers(
+        {"servers": ["junk", {"no_name": True}, {"name": "valid", "command": "python"}]}
+    )
     assert len(specs_list) == 1
     assert specs_list[0].name == "valid"
 
@@ -346,6 +348,5 @@ def test_parse_mcp_servers_additional_branches() -> None:
 
     # 4. _parse_server_entry directly with non-dict
     from sakthai.mcp.servers import _parse_server_entry
+
     assert _parse_server_entry("bad", "not_dict") is None
-
-

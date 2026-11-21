@@ -266,7 +266,9 @@ class TestConnectServersMocked:
             assert tools == []
 
     def test_manager_skips_stdio_missing_command(self) -> None:
-        spec = MCPServerSpec(name="empty_cmd", transport="stdio", url="https://example.com", command=None)
+        spec = MCPServerSpec(
+            name="empty_cmd", transport="stdio", url="https://example.com", command=None
+        )
         with connect_servers([spec]) as tools:
             assert tools == []
 
@@ -280,7 +282,3 @@ class TestConnectServersMocked:
         ):
             pass
         mock_client.close.assert_called_once()
-
-
-
-

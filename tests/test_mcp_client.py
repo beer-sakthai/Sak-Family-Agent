@@ -440,7 +440,9 @@ def test_remote_mcp_client_edge_cases() -> None:
 
     # 2. tools/list error
     c2 = RemoteMCPClient("https://example.com", name="test_c2")
-    c2._send_http = MagicMock(return_value={"jsonrpc": "2.0", "id": 1, "error": {"message": "unauthorized"}})
+    c2._send_http = MagicMock(
+        return_value={"jsonrpc": "2.0", "id": 1, "error": {"message": "unauthorized"}}
+    )
     with pytest.raises(MCPClientError, match="tools/list failed: unauthorized"):
         c2.list_tools()
 
@@ -469,11 +471,19 @@ def test_remote_mcp_client_edge_cases() -> None:
 
     # 5. call_tool error response
     c5 = RemoteMCPClient("https://example.com", name="test_c5")
-    c5._send_http = MagicMock(return_value={"jsonrpc": "2.0", "id": 1, "error": {"message": "failed execution"}})
+    c5._send_http = MagicMock(
+        return_value={"jsonrpc": "2.0", "id": 1, "error": {"message": "failed execution"}}
+    )
     with pytest.raises(MCPToolError, match="failed execution"):
         c5.call_tool("my_tool", {})
 
-    c5._send_http = MagicMock(return_value={"jsonrpc": "2.0", "id": 1, "result": {"isError": True, "content": [{"type": "text", "text": "tool fail"}]}})
+    c5._send_http = MagicMock(
+        return_value={
+            "jsonrpc": "2.0",
+            "id": 1,
+            "result": {"isError": True, "content": [{"type": "text", "text": "tool fail"}]},
+        }
+    )
     with pytest.raises(MCPToolError, match="tool fail"):
         c5.call_tool("my_tool", {})
 
@@ -509,7 +519,7 @@ def test_remote_mcp_client_send_http_urllib() -> None:
         assert res_empty == {}
 
     # Non-dict JSON response
-    list_resp = io.BytesIO(b'[1, 2, 3]')
+    list_resp = io.BytesIO(b"[1, 2, 3]")
     list_resp.__enter__ = lambda self: self  # type: ignore[attr-defined]
     list_resp.__exit__ = lambda self, *args: None  # type: ignore[attr-defined]
     with patch("urllib.request.urlopen", return_value=list_resp):
@@ -537,7 +547,9 @@ def test_remote_mcp_client_start_failures() -> None:
 
     # 1. Initialize error payload
     c1 = RemoteMCPClient("https://example.com/mcp", name="r1")
-    c1._request = MagicMock(return_value={"jsonrpc": "2.0", "id": 1, "error": {"message": "protocol mismatch"}})
+    c1._request = MagicMock(
+        return_value={"jsonrpc": "2.0", "id": 1, "error": {"message": "protocol mismatch"}}
+    )
     with pytest.raises(MCPClientError, match="initialize failed: protocol mismatch"):
         c1.start()
 
@@ -554,6 +566,3 @@ def test_remote_mcp_client_start_failures() -> None:
     with pytest.raises(MCPClientError, match="http timed out"):
         c3._request("tools/call", {})
     c3.cancel_request.assert_called_once()
-
-
-

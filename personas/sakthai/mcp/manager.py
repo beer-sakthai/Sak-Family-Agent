@@ -74,10 +74,9 @@ def connect_servers(
                     continue
                 cmd = spec.command
                 args = list(spec.args)
-                is_sandboxed = (
-                    spec.sandbox
-                    or os.environ.get("SAKTHAI_MCP_SANDBOX", "").strip().lower() in ("1", "true")
-                )
+                is_sandboxed = spec.sandbox or os.environ.get(
+                    "SAKTHAI_MCP_SANDBOX", ""
+                ).strip().lower() in ("1", "true")
                 if is_sandboxed and os.name == "posix":
                     wrapped = MCPServerValidator.get_sandbox_wrapper(
                         cmd, args=args, timeout_sec=int(timeout or 30)
