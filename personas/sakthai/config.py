@@ -133,6 +133,7 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "SAKTHAI_HF_API_BASE": "Hugging Face Inference Providers router base URL (default: https://router.huggingface.co/v1)",
     "SAKTHAI_HOME": "Override the data directory (default: ~/.sakthai)",
     "SAKTHAI_READ_ALLOW": "Extra paths the read_file tool may read (os.pathsep-separated)",
+    "SAKTHAI_MAIL_ALLOW": "Recipients send_outlook_mail may email: addresses or @domain, comma/space separated (unset = none)",
     "SAKTHAI_MCP_CONFIG": "Path to a per-persona mcp.json whose servers override the defaults",
     "SAKTHAI_PERSONA": "Which Sak Family persona a Telegram/systemd launch is running as",
     "SAKTHAI_MCP_TIMEOUT": "Seconds to wait for an external MCP server reply (default: 30)",
@@ -355,6 +356,18 @@ def telegram_bot_token() -> str | None:
     """Return the Telegram bot token, or None when not configured."""
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     return token.strip() if token and token.strip() else None
+
+
+def mail_allowlist() -> list[str]:
+    """Return the recipients ``send_outlook_mail`` may send to, lower-cased.
+
+    ``SAKTHAI_MAIL_ALLOW`` takes comma- or space-separated entries, each a full
+    address (``beer@example.com``) or a domain (``@example.com``). Unset or
+    blank means no recipient is allowed: the tool takes its recipient from the
+    model, so an injected instruction must not be able to pick one.
+    """
+    raw = os.environ.get("SAKTHAI_MAIL_ALLOW", "")
+    return [item.strip().lower() for item in raw.replace(",", " ").split() if item.strip()]
 
 
 def telegram_allowed_user_ids() -> list[int]:

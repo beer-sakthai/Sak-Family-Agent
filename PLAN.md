@@ -133,6 +133,7 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-21 **Implement Native Gateway Client SDK & Agent Loop Provider Adapter (`sakthai.client.gateway`, `agent/providers/`)** — Build GatewayClient with streaming SSE chunk parsing and auto-credential discovery, add 'gateway' provider backend adapter for the agent loop, enforce 6-persona parity, and add unit tests maintaining ≥96% coverage.
 - [x] 2026-11-21 **Correct CLAUDE.md drift found by repo health check** — package layout (no `personas/sakthai/sakthai/` or `personas/shared/sakthai/`; every persona carries a full package copy), live `security_hardening` import in `mcp/manager.py`, and stale test/workflow/coverage counts.
 - [x] 2026-11-21 **Refresh CLAUDE.md test and coverage counts after #2015/#2016** — 181 test files, 3,320 passing tests, 96.63% branch coverage, measured at `e603791`.
+- [x] 2026-11-21 **Security audit Stage 2: prompt-injection exfiltration path (`agent/loop.py`, `agent/guardrails.py`, `agent/coordinator.py`, `telegram/bot.py`)** — Wrap tool output as untrusted by default (short trusted list instead of a 4-tool untrusted list, so email, MCP, family-memory and delegation output is marked); deny `send_outlook_mail` to any recipient not in `SAKTHAI_MAIL_ALLOW` (deny when unset); default a wall-clock budget on unattended runs (persona delegation, Telegram); regression test per change; sync all 6 persona copies.
 
 
 

@@ -11,7 +11,7 @@ from pathlib import Path
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 
-from ..agent.loop import run_agent
+from ..agent.loop import DEFAULT_UNATTENDED_MAX_SECONDS, AgentError, run_agent
 from ..config import (
     sakthai_default_model,
     sakthai_default_provider,
@@ -118,17 +118,23 @@ async def _reply_with_agent_result(
     combined_skills = tuple(skills) + tuple(sakthai_with_skills())
     # run_agent is a long, synchronous LLM round-trip; run it in a worker
     # thread so the polling loop keeps serving other chats meanwhile.
-    result = await asyncio.to_thread(
-        run_agent,
-        task,
-        store=session.store,
-        skills=list(combined_skills),
-        provider=provider,
-        model=model,
-        fast=sakthai_fast_mode(),
-        stateless=_env_bool("SAKTHAI_STATELESS", False),
-        system_prompt_prefix=system_prompt_prefix,
-    )
+    try:
+        result = await asyncio.to_thread(
+            run_agent,
+            task,
+            store=session.store,
+            skills=list(combined_skills),
+            provider=provider,
+            model=model,
+            fast=sakthai_fast_mode(),
+            stateless=_env_bool("SAKTHAI_STATELESS", False),
+            system_prompt_prefix=system_prompt_prefix,
+            # Nobody watches a Telegram run; bound it so a stuck one frees the worker.
+            max_seconds=DEFAULT_UNATTENDED_MAX_SECONDS,
+        )
+    except AgentError as exc:
+        await update.message.reply_text(f"Sorry, that request could not finish: {exc}")
+        return
     await update.message.reply_text(result.text)
 
 

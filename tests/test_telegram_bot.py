@@ -141,3 +141,37 @@ def test_unauthorized_user_gets_only_the_refusal(
 
     assert update.message.replies == [_REFUSAL]
     assert ran == []
+
+
+def test_agent_run_is_time_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Nobody watches a Telegram run, so it gets the unattended wall-clock budget."""
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "999")
+    monkeypatch.setattr(bot, "MemoryStore", _FakeStore)
+    seen: dict[str, object] = {}
+
+    def fake_run_agent(task: str, **kwargs: object) -> object:
+        seen.update(kwargs)
+        return type("Result", (), {"text": "agent ran"})()
+
+    monkeypatch.setattr(bot, "run_agent", fake_run_agent)
+    update = _Update(999, text="hello")
+    asyncio.run(bot._reply_with_agent_result(update, _Context(), "hello"))
+
+    assert seen["max_seconds"] == bot.DEFAULT_UNATTENDED_MAX_SECONDS
+    assert update.message.replies == ["agent ran"]
+
+
+def test_agent_error_is_reported_to_the_user(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A run that exhausts its budget raises AgentError; the user gets told, not silence."""
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "999")
+    monkeypatch.setattr(bot, "MemoryStore", _FakeStore)
+
+    def fake_run_agent(task: str, **_: object) -> object:
+        raise bot.AgentError("Agent time budget exhausted (max_seconds=300.0).")
+
+    monkeypatch.setattr(bot, "run_agent", fake_run_agent)
+    update = _Update(999, text="hello")
+    asyncio.run(bot._reply_with_agent_result(update, _Context(), "hello"))
+
+    assert len(update.message.replies) == 1
+    assert "time budget exhausted" in update.message.replies[0]
