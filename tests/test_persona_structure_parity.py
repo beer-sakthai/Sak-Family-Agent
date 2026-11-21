@@ -263,6 +263,111 @@ class TestPersonaStructureParity(unittest.TestCase):
         )
         self.assertNotIn("permissions:\n  actions: write", workflow_text)
 
+    def test_all_core_subpackages_byte_identical_across_personas(self) -> None:
+        """Ensure all core Python subpackages are byte-identical to canonical personas/sakthai/."""
+        canonical_root = REPO_ROOT / "personas" / "sakthai"
+        subpackages = (
+            "agent",
+            "agent_platform",
+            "cli",
+            "client",
+            "cycle",
+            "dashboard",
+            "extensions",
+            "lead",
+            "learn",
+            "mcp",
+            "memory",
+            "team",
+            "telegram",
+            "web",
+        )
+        for persona in PERSONAS[1:]:
+            p_root = REPO_ROOT / "personas" / persona
+            for pkg in subpackages:
+                c_pkg = canonical_root / pkg
+                p_pkg = p_root / pkg
+                self.assertTrue(p_pkg.is_dir(), f"Missing subpackage {pkg} in personas/{persona}")
+                for c_file in c_pkg.rglob("*.py"):
+                    rel = c_file.relative_to(c_pkg)
+                    p_file = p_pkg / rel
+                    self.assertTrue(
+                        p_file.is_file(),
+                        f"Missing file {rel} in personas/{persona}/{pkg}",
+                    )
+                    self.assertEqual(
+                        p_file.read_bytes(),
+                        c_file.read_bytes(),
+                        f"personas/{persona}/{pkg}/{rel} differs from canonical personas/sakthai/{pkg}/{rel}",
+                    )
+
+    def test_handoff_md_skill_counts_match_actual_on_disk_counts(self) -> None:
+        """Ensure Overlay Skills counts in HANDOFF.md match actual on-disk counts."""
+        import re
+
+        for persona in PERSONAS:
+            sdir = REPO_ROOT / "personas" / persona / "skills"
+            actual_count = (
+                sum(1 for d in sdir.iterdir() if d.is_dir() and (d / "SKILL.md").is_file())
+                if sdir.is_dir()
+                else 0
+            )
+            handoff_path = REPO_ROOT / "personas" / persona / "HANDOFF.md"
+            handoff_text = handoff_path.read_text(encoding="utf-8")
+            pattern = rf"\*\*{persona}\*\*.*\|\s*(\d+)\s*\|"
+            m = re.search(pattern, handoff_text, re.IGNORECASE)
+            self.assertIsNotNone(m, f"Could not find {persona} row in {handoff_path}")
+            declared = int(m.group(1))  # type: ignore[union-attr]
+            self.assertEqual(
+                declared,
+                actual_count,
+                f"{handoff_path} declares {declared} skills for {persona}, but disk has {actual_count}",
+            )
+
+    def test_memory_md_skill_counts_match_actual_on_disk_counts(self) -> None:
+        """Ensure Skills Overlay counts in MEMORY.md match actual on-disk counts."""
+        import re
+
+        for persona in PERSONAS:
+            sdir = REPO_ROOT / "personas" / persona / "skills"
+            actual_count = (
+                sum(1 for d in sdir.iterdir() if d.is_dir() and (d / "SKILL.md").is_file())
+                if sdir.is_dir()
+                else 0
+            )
+            mem_path = REPO_ROOT / "personas" / persona / "MEMORY.md"
+            mem_text = mem_path.read_text(encoding="utf-8")
+            m = re.search(r"Skills Overlay\*\*:\s*(\d+)\s*skills", mem_text)
+            self.assertIsNotNone(m, f"Missing Skills Overlay declaration in {mem_path}")
+            declared = int(m.group(1))  # type: ignore[union-attr]
+            self.assertEqual(
+                declared,
+                actual_count,
+                f"{mem_path} declares {declared} skills for {persona}, but disk has {actual_count}",
+            )
+
+    def test_plan_md_skill_counts_match_actual_on_disk_counts(self) -> None:
+        """Ensure overlay skills counts in PLAN.md match actual on-disk counts."""
+        import re
+
+        for persona in PERSONAS:
+            sdir = REPO_ROOT / "personas" / persona / "skills"
+            actual_count = (
+                sum(1 for d in sdir.iterdir() if d.is_dir() and (d / "SKILL.md").is_file())
+                if sdir.is_dir()
+                else 0
+            )
+            plan_path = REPO_ROOT / "personas" / persona / "PLAN.md"
+            plan_text = plan_path.read_text(encoding="utf-8")
+            m = re.search(r"(\d+)\s+overlay skills", plan_text)
+            self.assertIsNotNone(m, f"Missing overlay skills declaration in {plan_path}")
+            declared = int(m.group(1))  # type: ignore[union-attr]
+            self.assertEqual(
+                declared,
+                actual_count,
+                f"{plan_path} declares {declared} skills for {persona}, but disk has {actual_count}",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
