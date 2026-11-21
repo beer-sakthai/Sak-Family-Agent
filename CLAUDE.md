@@ -68,11 +68,11 @@ find personas/<persona>/skills -maxdepth 1 -mindepth 1 -type d | wc -l
 diff -rq personas/sakthai personas/<persona> -x skills -x config -x '*.md' -x evolution -x __pycache__
 # test files, then test count + real coverage
 ls tests/test_*.py | wc -l
-uv run pytest tests/ -q --cov=sakthai --cov-branch   # 3,313 pass, 9 skip
+uv run pytest tests/ -q --cov=sakthai --cov-branch   # 3,320 pass, 9 skip
 ```
 
 The package layout, test, workflow and coverage figures below were re-measured on
-2026-11-21 at `f7b9cd3`; other counts date from 2026-08-28 at `8e6d785`.
+2026-11-21 at `e603791`; other counts date from 2026-08-28 at `8e6d785`.
 
 ### The persona package copies (read this before editing `sakthai/`)
 
@@ -320,8 +320,8 @@ available tooling, not an enforced gate.
 
 Coverage floor is **96%** (branch coverage on) over the `sakthai` package,
 with `telegram/bot.py` omitted from measurement. The suite sits at **96.63%**
-(258 uncovered statements and 225 partial branches out of 11,646 measured
-statements / 3,874 branches, measured 2026-11-21) — above the floor, with
+(258 uncovered statements and 225 partial branches out of 11,657 measured
+statements / 3,880 branches, measured 2026-11-21) — above the floor, with
 0.63pp of headroom.
 
 **The gate is `--cov-fail-under=96` on `ci.yml`'s pytest step, not
@@ -789,7 +789,7 @@ resolving to the *module* rather than the command object:
 
 ## Tests
 
-Tests live in `tests/` (181 `test_*.py` files, 3,313 passing tests as of
+Tests live in `tests/` (181 `test_*.py` files, 3,320 passing tests as of
 2026-11-21). This is the only suite for the `sakthai`
 package — there is no per-persona test tree. Two files in `tests/` are not test
 modules: `conftest.py` and `security_audit.py` (a helper, not collected).
