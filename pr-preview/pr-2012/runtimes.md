@@ -197,7 +197,7 @@ Any OpenAI-compatible client (Cursor, Claude Code, Aider, OpenCode, Python OpenA
 
 ```bash
 export OPENAI_BASE_URL="http://localhost:8080/v1"
-export OPENAI_API_KEY="secret123"  # or nokey if unauthenticated
+export OPENAI_API_KEY="$SAKTHAI_GATEWAY_BEARER_TOKEN"  # or leave empty if unauthenticated
 
 # Query available models via curl
 curl http://localhost:8080/v1/models
@@ -205,7 +205,7 @@ curl http://localhost:8080/v1/models
 # Chat completion with streaming
 curl http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer secret123" \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
   -d '{
     "model": "sakthai",
     "messages": [{"role": "user", "content": "Hello SakThai!"}],
