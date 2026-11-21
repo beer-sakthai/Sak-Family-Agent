@@ -57,6 +57,43 @@ carried forward here.
   `GOOGLE_CLOUD_*` / `GOOGLE_GENAI_USE_VERTEXAI` config helpers, and `docs/cloud.md`.
   v2 is local-first; a cloud port is no longer tracked here.
 
+## [2.34.6] - 2026-11-20
+
+### Security
+- **OpenSSF Scorecard Dangerous-Workflow Remediation (#21815)**: Remediated critical `DangerousWorkflowID` alert by converting `.github/workflows/dependabot-lockfile-fixer.yml` from `pull_request_target` to safe `pull_request` and eliminating untrusted branch checkouts, elevating Scorecard `Dangerous-Workflow` score from 0/10 to a perfect 10/10.
+- **Workflow Security & Anti-Injection**: Resolved Zizmor template-injection risks in lockfile fixer, hardened PR auto-close workflow expressions, and integrated `.github/renovate.json5`.
+
+### Added
+- **Visual Concept Artwork**: Created and integrated high-definition 16:9 concept art banners:
+  - Command Center hero photo (`docs/images/house-of-sak-hero.jpg`) featuring the six robotic personas, floating HUDs, and twilight metropolis.
+  - Model Training & Evaluation Laboratory photo (`docs/images/training-eval-lab.jpg`) visualizing the offline Ollama cluster, LoRA adapter weights, synthetic tool-calling datasets, and 5-pillar evaluation dials.
+- **Whole-Repository README.md Alignment**: Expanded System Status Bar with live workflow badges (Multi-Linter, StepSecurity Harden-Runner), release v2.34.6 telemetry, 3,142 passing tests metric, comprehensive 13 top-level trees repository layout, and essential CLI command reference.
+
+### Changed
+- **Pull Request & Governance Protocol**: Codified maintainer review policy across `AGENTS.md`, `README.md`, and `CONTRIBUTING.md`, strictly prohibiting automated agent merges (`gh pr merge` / `--auto`) and keeping all pull requests open for manual review and merge by Beer.
+
+## [2.34.0] - 2026-11-19
+
+### Added
+- **Model Training & Offline Serving Subsystem (`training/`, `sakthai train`)**:
+  - Fine-tuning recipes for LoRA/QLoRA on SakThai 7B and coder models.
+  - Synthetic tool-calling dataset generators (`build_toolcalling_dataset.py`) and adapter evaluation probes (`eval_toolcalling.py`).
+  - Ollama GGUF export generating production `Modelfile`s for 100% offline local edge execution.
+- **5-Pillar Persona Evaluation Framework (`sakthai eval`)**:
+  - Deep evaluation suite assessing Soul Alignment, Skill Ecosystem Health, Memory Store Integrity, Concentric Safety Compliance, and Composite Fleet Audit with letter grades (S/A/B/C/F).
+  - CLI commands: `sakthai eval audit`, `soul`, `skills`, `safety`, `tasks`, and `bench`.
+- **481 Standardized Skills**: Normalized 462 persona overlays and 19 universal shared skills under the `Sak<Agent>-<domain>-<topic>` taxonomy with schema validation.
+
+## [2.33.0] - 2026-11-18
+
+### Added
+- **Unified Agent Integration Platform (`sakthai.agent_platform`)**:
+  - `DataLossGuardrail`: Intercepts destructive shell commands (`git reset --hard`, `mkfs`, `dd`, `terraform destroy`) requiring HMAC approval tokens.
+  - `wrap_with_isolated_runner`: Automatic environment package manager detection and command isolation (`uv`, `pipenv`, `poetry`).
+  - Progressive skills disclosure rendering (`render_skills_progressive_summary`).
+  - `ModelTier` presets (`fast`, `reasoning`, `local`, `lead`) and Harness AI pipeline specification exporter.
+- **ServiceQuoteBot & Revenue Telemetry**: Customer outreach configuration, price book references, MRR metrics tracking, and `sakthai lead` CLI (`stats`, `list`, `capture`, `update`).
+
 ## [2.0.0]
 
 First release of the clean-room rewrite. A personal learning agent with a

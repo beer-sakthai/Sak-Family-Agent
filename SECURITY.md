@@ -1,6 +1,16 @@
 # Security Policy
 
-This document outlines the security posture of the Sak-Family-Agent project, including our automated security measures and how to report vulnerabilities.
+This document outlines the security posture of the Sak-Family-Agent project, including our automated security measures, supported versions, and how to report vulnerabilities.
+
+## Supported Versions
+
+| Version | Supported | Notes |
+| :--- | :---: | :--- |
+| **2.34.x** | :white_check_mark: | Active release stream (`main`), receiving security and feature patches |
+| **2.x** | :white_check_mark: | Supported v2 architecture |
+| **1.x** | :x: | Legacy archived prototype (unsupported) |
+
+Only the `main` branch of this repository (v2.x) receives security updates.
 
 ## Enforced security gates (GitHub Actions)
 
@@ -12,9 +22,14 @@ These run automatically and are the controls actually enforced on this repositor
 | Secret scanning | `secret-scan.yml` | `gitleaks` over the full git history (config: `.gitleaks.toml`) on pushes to `main` and every pull request |
 | Dependency vulnerability audit | `dependency-audit.yml` | `pip-audit` over the locked dependency set (`uv.lock`) — weekly, on dependency changes, and on demand |
 | Code scanning (SAST) | `codeql.yml` | GitHub CodeQL, advanced setup (Python, JavaScript/TypeScript, Actions); default setup must stay off in repository settings or every run fails |
+| Runtime Protection & Egress Audit | `stepsecurity.io` | StepSecurity Harden-Runner runtime protection and outbound network egress auditing across all workflows |
+| Supply Chain Security | `scorecard.yml` | OpenSSF Scorecard automated analysis (pinned dependencies, token permissions, dangerous workflow detection) |
+| Workflow Security Audit | `zizmor` | Automated static analysis of GitHub Actions workflows detecting template injection and risky triggers |
 | Container and dependency scanning | `ossar.yml` | Microsoft Security DevOps running Trivy, results uploaded to the Security tab |
+| Multi-Linter Action | `multi-lint-action.yml` | Multi-linter validation across workflows, scripts, and configuration manifests |
 | Quality/security hotspots | `sonarcloud.yml`, `pylint.yml` | SonarCloud analysis and pylint |
-| Dependency updates | `.github/dependabot.yml` | Weekly update PRs for Python (uv), npm (`infra/pw-poc`), and pinned GitHub Actions versions |
+| Dependency updates | `.github/dependabot.yml` | Weekly update PRs for Python (uv), npm (`infra/pw-poc`, `apps/sak_agent_dashboard`), and pinned GitHub Actions versions |
+| Concentric Guardrails | `sakthai/agent/guardrails.py` | Filesystem path jailing, shell allowlisting, and `DataLossGuardrail` HMAC-gated destructive command interceptor |
 
 ## Intelligent Digital Immune System
 
@@ -51,9 +66,11 @@ We take all security reports seriously. If you discover a security vulnerability
 Instead, report it privately through GitHub: open
 **[Report a vulnerability](https://github.com/beer-sakthai/Sak-Family-Agent/security/advisories/new)**
 (Security tab → Advisories → Report a vulnerability). Only the maintainer and
-you can see the report. To report by email instead, use the address in
-[`docs/SECURITY.md`](docs/SECURITY.md); the `users.noreply.github.com`
-address on commits does not receive mail.
+you can see the report.
+
+To report by email instead, contact the maintainer directly at **beernanthasit@gmail.com**
+with the subject `[SECURITY] sakthai-agent-v2` (as documented in [`docs/SECURITY.md`](docs/SECURITY.md);
+the `users.noreply.github.com` commit address does not receive mail).
 
 In your report, please include:
 

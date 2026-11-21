@@ -23,8 +23,8 @@
 
 header:
   schema-version: "2.0.0"
-  last-updated: "2026-08-19"
-  last-reviewed: "2026-08-19"
+  last-updated: "2026-11-20"
+  last-reviewed: "2026-11-20"
   url: https://github.com/beer-sakthai/Sak-Family-Agent/blob/main/SECURITY-INSIGHTS.yml
   comment: |
     Sak-Family-Agent — six AI agent personas sharing one Python package
@@ -173,3 +173,44 @@ repository:
           - SonarCloud default quality profile
         integration: { adhoc: true, ci: true, release: false }
         results: {}
+
+      - name: StepSecurity Harden-Runner
+        type: runtime
+        comment: |
+          Monitors network egress, prevents command injection / tampering, and enforces
+          least-privilege runtime security across GitHub Actions workflows.
+        rulesets:
+          - default
+        integration: { adhoc: false, ci: true, release: true }
+        results: {}
+
+      - name: OpenSSF Scorecard
+        type: posture
+        comment: |
+          scorecard.yml runs weekly and on main pushes to evaluate supply-chain security,
+          branch protection, dangerous workflows, and dependency pinning.
+        rulesets:
+          - OpenSSF Scorecard default checks
+        integration: { adhoc: true, ci: true, release: false }
+        results: {}
+
+      - name: Zizmor
+        type: SAST
+        comment: |
+          zizmor.yml analyzes GitHub Actions workflows for security anti-patterns,
+          privilege escalation, and credential exposure.
+        rulesets:
+          - default
+        integration: { adhoc: true, ci: true, release: false }
+        results: {}
+
+      - name: CodeQL
+        type: SAST
+        comment: |
+          codeql.yml scans Python and JavaScript/TypeScript codebases for security
+          vulnerabilities using GitHub CodeQL queries.
+        rulesets:
+          - security-extended
+        integration: { adhoc: false, ci: true, release: false }
+        results: {}
+
