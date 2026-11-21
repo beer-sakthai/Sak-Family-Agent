@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import os
 from collections.abc import Iterator, Sequence
 
 from ..agent.security_hardening import MCPServerValidator, SecurityLevel
@@ -71,9 +72,21 @@ def connect_servers(
                 if not spec.command:
                     logger.warning("skipping MCP server %r: missing command", spec.name)
                     continue
+                cmd = spec.command
+                args = list(spec.args)
+                is_sandboxed = (
+                    spec.sandbox
+                    or os.environ.get("SAKTHAI_MCP_SANDBOX", "").strip().lower() in ("1", "true")
+                )
+                if is_sandboxed and os.name == "posix":
+                    wrapped = MCPServerValidator.get_sandbox_wrapper(
+                        cmd, args=args, timeout_sec=int(timeout or 30)
+                    )
+                    cmd = wrapped[0]
+                    args = wrapped[1:]
                 client = StdioMCPClient(
-                    spec.command,
-                    spec.args,
+                    cmd,
+                    args,
                     env=spec.env or None,
                     cwd=spec.cwd,
                     name=spec.name,

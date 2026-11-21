@@ -35,6 +35,7 @@ class MCPServerSpec:
     transport: str = "stdio"
     tools: list[str] | None = None
     headers: dict[str, str] = field(default_factory=dict)
+    sandbox: bool = False
 
 
 def mcp_config_path() -> Path:
@@ -73,6 +74,9 @@ def _parse_server_entry(name: str, entry: dict[str, Any]) -> MCPServerSpec | Non
         else {}
     )
 
+    raw_sandbox = entry.get("sandbox")
+    sandbox = bool(raw_sandbox) if raw_sandbox is not None else False
+
     raw_type = entry.get("type") or entry.get("transport")
     if isinstance(raw_type, str):
         t_lower = raw_type.lower()
@@ -95,6 +99,7 @@ def _parse_server_entry(name: str, entry: dict[str, Any]) -> MCPServerSpec | Non
         transport=transport,
         tools=tools,
         headers=headers,
+        sandbox=sandbox,
     )
 
 
