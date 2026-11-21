@@ -3,8 +3,9 @@
 > **Agent**: SakSit 📣 (Social / Content Specialist)
 > **Bot Handle**: `@saksit_agent_bot`
 > **Repository**: `Sak-Family-Agent`
-> **Runtime**: Standalone sakthai (SAKTHAI_HOME=~/.saksit)
+> **Runtime**: Standalone sakthai (Base: ~/.sakthai · Shard: ~/.sakthai/saksit/memory.db)
 > **Cost Policy**: **$0.00 USD Financial Spend** (100% Local & Free Tier Execution)
+> **Fleet Comparison**: See [Fleet-Wide Comparison Matrix](../../docs/capabilities.md#fleet-wide-persona-comparison-matrix)
 
 ---
 
@@ -17,11 +18,11 @@
 | **Google ADK CLI** | `agents-cli` | v1.2.1 (Google Agent Dev Kit) | ✅ Active |
 | **SakThai Unified Platform** | `sakthai run/chat --persona saksit` · `sakthai platform` | v2.0 Core + `DataLossGuardrail` + Presets | ✅ Active |
 | **Supermemory & SQLite Shards** | `~/.sakthai/saksit/memory.db` · `http://localhost:6767` | WAL SQLite + ONNX `Xenova/bge-base-en-v1.5` | ✅ Active |
-| **OpenCode CLI** | `opencode` | Configured via [`config/config.yaml`](file:///home/sak/Sak-Family-Agent/personas/saksit/config/config.yaml) | ✅ Active |
+| **OpenCode CLI** | `opencode` | Configured via [`config/config.yaml`](./config/config.yaml) | ✅ Active |
 
 ---
 
-## 🤖 2. Active Model Loadout ([`config/config.yaml`](file:///home/sak/Sak-Family-Agent/personas/saksit/config/config.yaml))
+## 🤖 2. Active Model Loadout ([`config/config.yaml`](./config/config.yaml))
 
 | Slot | Model ID / Identifier | Provider / Tier | Role |
 |:---|:---|:---|:---|
@@ -45,15 +46,18 @@
 - **📊 Zero-Scrape Data Request Protocol (`data-request`)**:
   - SakSit never scrapes the web directly; writes `data-request` for SakSee and cites SakSee's `monitoring-result` (`retrieved_at`)
   - Marks any unverified claim with explicit `[PENDING VERIFICATION]` (`-15` eval penalty if omitted)
+- **🎙️ Gateway Voice Mode (`config/gateway_voice_mode.json`)**:
+  - Configured for `telegram:8618306046: "all"` via the OpenAI-compatible runtime gateway.
 - **🛡️ Unified Agent Platform Pro-Tips (`sakthai.agent_platform`)**:
+  - **Tool Schema Validation & Quality Gates**: Zero-dependency argument validation (`Tool.validate_args`), safe execution with error containment & secret redaction (`Tool.safe_call`), and 6-factor Tool Quality Rubric & benchmarks (`sakthai eval tools`)
   - **Safety Interception**: `check_data_loss_guardrail` (`safety.py` & `guardrails_hardened.py`) blocks destructive shell/SQL commands unless authorized by HMAC digest token
   - **Isolated Environment Runner**: `sakthai platform wrap-cmd "<cmd>"` (`dep_manager.py`) auto-wraps commands in the detected `uv` virtual environment
   - **Progressive Skill Disclosure**: `sakthai platform skills` (`render_skills_progressive_summary`) renders lightweight skill metadata tables to prevent prompt bloat
   - **Harness Pipeline Exporter**: `sakthai platform export-harness saksit` (`harness_exporter.py`) exports declarative Harness v1 agent & pipeline specs
 - **🧰 Skill Overlay Inventory (45 Overlay Skills + 19 Shared Skills)**:
-  - **Overlay Root**: [`personas/saksit/skills/`](file:///home/sak/Sak-Family-Agent/personas/saksit/skills) (45 specialized `SakSaksit-*` skills)
-  - **Shared Root**: [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills) (19 shared `Sak-*` skills including `Sak-auto-cycle-loop`, `Sak-dogfood`, `Sak-ocr-and-documents`, `Sak-yuanbao`)
-  - **Primary Workspace Skills** ([`config/workspace.yaml`](file:///home/sak/Sak-Family-Agent/personas/saksit/config/workspace.yaml)):
+  - **Overlay Root**: [`personas/saksit/skills/`](./skills) (45 specialized `SakSaksit-*` skills)
+  - **Shared Root**: [`personas/shared/skills/`](../shared/skills) (19 shared `Sak-*` skills including `Sak-auto-cycle-loop`, `Sak-dogfood`, `Sak-ocr-and-documents`, `Sak-yuanbao`)
+  - **Primary Workspace Skills** ([`config/workspace.yaml`](./config/workspace.yaml)):
   - `SakSit-ai-seo-content-strategy-2026`
   - `SakSit-b2b-saas-brand-journalism-storytelling-2026`
   - `SakSit-hf-hub-model-card-seo-social-meta-tags`
@@ -71,13 +75,13 @@
 
 ## 📜 5. Permanent Configuration Files (`personas/saksit/`)
 
-- [`personas/saksit/SOUL.md`](file:///home/sak/Sak-Family-Agent/personas/saksit/SOUL.md) — Persona identity, Charge System v6, Cycle Tracker v8, Self-Eval v9 & Security Rules
-- [`personas/saksit/PLAN.md`](file:///home/sak/Sak-Family-Agent/personas/saksit/PLAN.md) — Deep-dive step-by-step task roadmap & Mermaid execution flow
-- [`personas/saksit/CYCLE.md`](file:///home/sak/Sak-Family-Agent/personas/saksit/CYCLE.md) — 6-Stage Growth Cycle workflow record, v9 rubric & v8 recovery protocol
-- [`personas/saksit/MEMORY.md`](file:///home/sak/Sak-Family-Agent/personas/saksit/MEMORY.md) — Shard bindings (`~/.sakthai/saksit/memory.db`), read/write CLI commands & execution log
-- [`personas/saksit/HANDOFF.md`](file:///home/sak/Sak-Family-Agent/personas/saksit/HANDOFF.md) — Incoming/outgoing sibling handoff contracts & family coordination matrix
-- [`personas/saksit/BACKPACK.md`](file:///home/sak/Sak-Family-Agent/personas/saksit/BACKPACK.md) — This complete installation & equipment inventory
-- [`personas/saksit/config/`](file:///home/sak/Sak-Family-Agent/personas/saksit/config) — `config.yaml`, `mcp.json`, `workspace.yaml`, `gateway_voice_mode.json`
+- [`personas/saksit/SOUL.md`](./SOUL.md) — Persona identity, Charge System v6, Cycle Tracker v8, Self-Eval v9 & Security Rules
+- [`personas/saksit/PLAN.md`](./PLAN.md) — Deep-dive step-by-step task roadmap & Mermaid execution flow
+- [`personas/saksit/CYCLE.md`](./CYCLE.md) — 6-Stage Growth Cycle workflow record, v9 rubric & v8 recovery protocol
+- [`personas/saksit/MEMORY.md`](./MEMORY.md) — Shard bindings (`~/.sakthai/saksit/memory.db`), read/write CLI commands & execution log
+- [`personas/saksit/HANDOFF.md`](./HANDOFF.md) — Incoming/outgoing sibling handoff contracts & family coordination matrix
+- [`personas/saksit/BACKPACK.md`](./BACKPACK.md) — This complete installation & equipment inventory
+- [`personas/saksit/config/`](./config) — `config.yaml`, `mcp.json`, `workspace.yaml`, `gateway_voice_mode.json`
 
 ---
 

@@ -1,9 +1,29 @@
 # Capabilities
 
+## Fleet-Wide Persona Comparison Matrix
+
+The House of Sak operates six distinct personas sharing a single modular Python core package (`sakthai`), unified under the **$0.00 USD Financial Spend Policy** (100% local and free tier execution):
+
+| Dimension | SakThai 🤗 | SakKing 👑 | SakSee 👁️ | SakSit 📣 | SakJules 🔧 | SakTan 📗 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Role & Title** | Main Lead & HF Master | General Assistant & Runner (Deputy 1) | Web / Browser Specialist (Deputy 3) | Social / Content Specialist | Master of GitHub, CI/CD & Automation | Daily Ops & Rhythm (Deputy 2) |
+| **Bot Handle** | `@sakthai_agent_bot` | `@sakking_agent_bot` | `@saksee_agent_bot` | `@saksit_agent_bot` | `@sakjules_agent_bot` | `@saktan_agent_bot` |
+| **Runtime Base** | `~/.sakthai` | `~/.sakthai` | `~/.sakthai` | `~/.sakthai` | `~/.sakthai` | `~/.sakthai` |
+| **Memory Shard** | `~/.sakthai/sakthai/memory.db` | `~/.sakthai/sakking/memory.db` | `~/.sakthai/saksee/memory.db` | `~/.sakthai/saksit/memory.db` | `~/.sakthai/sakjules/memory.db` | `~/.sakthai/saktan/memory.db` |
+| **Cost Policy** | $0.00 USD (100% Local / Free Tier) | $0.00 USD (100% Local / Free Tier) | $0.00 USD (100% Local / Free Tier) | $0.00 USD (100% Local / Free Tier) | $0.00 USD (100% Local / Free Tier) | $0.00 USD (100% Local / Free Tier) |
+| **Primary Engine** | `DeepSeek-V4.1-Flash` (`huggingface`) | `Qwen/Qwen3-Coder-30B-A3B` (`huggingface`) | `DeepSeek-V4.1-Flash` (`huggingface`) | `DeepSeek-V4-Flash` (`huggingface`) | `DeepSeek-V4.1-Flash` (`huggingface`) | `sakthai` (`ollama` local) |
+| **Fallback Engine** | `ollama-cloud / gpt-oss:120b` | `ollama-cloud / gpt-oss:120b` | `ollama-cloud / gpt-oss:120b` | `ollama-cloud / gpt-oss:120b` | `ollama-cloud / gpt-oss:120b` | Local Ollama (`11434`) + `DeepSeek-V4-Flash` |
+| **Platform Tier** | `ModelTier.LEAD` | `ModelTier.REASONING` | `ModelTier.FAST` | `ModelTier.FAST` | `ModelTier.REASONING` | `ModelTier.LOCAL` |
+| **MCP Servers** | Native HF Hub (`{}`) | `playwright`, `chrome-devtools`, `hf-media`, `stepsecurity` | `playwright`, `chrome-devtools` | `hf-media` (FLUX, LTX-Video) | `stepsecurity` (remote SSE) | Native Local (`{}`) |
+| **Voice Mode** | `telegram:8618306046` ("all") | `telegram:8618306046` ("all") | `telegram:8618306046` ("all") | `telegram:8618306046` ("all") | `telegram:8618306046` ("all") | None (`{}`) — Strict text ops |
+| **Skills Loadout** | 170 overlay + 19 shared | 59 overlay + 19 shared | 106 overlay + 19 shared | 45 overlay + 19 shared | 56 overlay + 19 shared | 26 overlay + 19 shared |
+| **Primary Skills** | SpecKit-Bridge, SpecKit, HF-CLI, Learning Loop | Subagents, Coding-TDD, Plan Execution, Debugging | Chrome DevTools CLI, Playwright Visual Snapshot, OCR | AI SEO Strategy, Brand Journalism, HF Model Card SEO | GitHub CI Fix, Triage Issues, Workflows | Daily Briefing, Close Day, Weekly Review |
+| **Key Credentials** | `HF_TOKEN`, `GOOGLE_API_KEY` | `HF_TOKEN`, `SAKTHAI_SHELL_ALLOW`, `STEP_SECURITY_API_KEY` | `HF_TOKEN`, `GOOGLE_API_KEY` | `HF_TOKEN` | `HF_TOKEN`, `GH_TOKEN`, `STEP_SECURITY_API_KEY`, `JULES_API_KEY` | `OLLAMA_HOST`, `MS_GRAPH_REFRESH_TOKEN` |
+
 ## Tools
 
 These are exposed both to the agent loop (`sakthai run`) and over MCP
-(`sakthai mcp`). The registry lives in `personas/sakthai/sakthai/agent/tools.py`.
+(`sakthai mcp`). The registry lives in `personas/sakthai/agent/tools.py`.
 
 | Tool | What it does | Notes |
 |------|--------------|-------|
