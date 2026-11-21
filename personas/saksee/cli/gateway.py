@@ -223,3 +223,47 @@ def chat_cmd(prompt: str, url: str, model: str, token: str | None, stream: bool)
         except Exception as exc:
             click.echo(f"\n❌ Streaming error: {exc}", err=True)
             sys.exit(1)
+
+
+@gateway_cmd.command("bench")
+@click.option("--concurrency", "-c", default=10, type=int, help="Number of concurrent workers.")
+@click.option("--requests", "-n", default=50, type=int, help="Total benchmark requests.")
+@click.option("--persona", "-p", default="sakjules", help="Target persona to benchmark.")
+@click.option("--stream/--no-stream", default=True, help="Benchmark streaming SSE vs buffered.")
+@click.option("--json", "as_json", is_flag=True, help="Output benchmark results as JSON.")
+def bench_cmd(
+    concurrency: int,
+    requests: int,
+    persona: str,
+    stream: bool,
+    as_json: bool,
+) -> None:
+    """Run high-concurrency performance and TTFT benchmarks against the Gateway."""
+    from ..gateway.bench import run_gateway_benchmark
+
+    result = run_gateway_benchmark(
+        concurrency=concurrency,
+        num_requests=requests,
+        persona=persona,
+        stream=stream,
+    )
+    if as_json:
+        click.echo(json.dumps(result, indent=2))
+        return
+
+    lat = result["latency_ms"]
+    ttft = result["ttft_ms"]
+    click.echo(
+        f"⚡ SakThai Gateway Benchmark ({result['requests']} reqs @ {result['concurrency']} workers)"
+    )
+    click.echo(f"  • Persona      : {result['persona']} (stream={result['stream']})")
+    click.echo(
+        f"  • Throughput   : {result['requests_per_sec']} req/s | {result['tokens_per_sec']} tok/s"
+    )
+    click.echo(
+        f"  • Latency (ms) : avg={lat['avg']} | p50={lat['p50']} | p95={lat['p95']} | p99={lat['p99']}"
+    )
+    click.echo(
+        f"  • TTFT (ms)    : avg={ttft['avg']} | p50={ttft['p50']} | p95={ttft['p95']} | p99={ttft['p99']}"
+    )
+    click.echo(f"  • Errors       : {result['errors']}")

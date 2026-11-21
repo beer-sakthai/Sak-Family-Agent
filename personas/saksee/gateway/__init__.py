@@ -6,9 +6,12 @@ agents, model tiers, and tools with DataLossGuardrail security.
 
 from __future__ import annotations
 
+from .bench import GatewayTelemetryTracker, run_gateway_benchmark
 from .config import GatewayConfig, resolve_gateway_config
+from .memory import GatewayMemoryManager
 from .router import GatewayRouter
 from .server import RuntimeGatewayServer
+from .voice import VOICE_PROFILES, GatewayVoiceHandler
 
 
 def create_gateway_server(
@@ -31,9 +34,14 @@ def create_gateway_server(
 
 
 __all__ = [
+    "VOICE_PROFILES",
     "GatewayConfig",
+    "GatewayMemoryManager",
     "GatewayRouter",
+    "GatewayTelemetryTracker",
+    "GatewayVoiceHandler",
     "RuntimeGatewayServer",
     "create_gateway_server",
     "resolve_gateway_config",
+    "run_gateway_benchmark",
 ]

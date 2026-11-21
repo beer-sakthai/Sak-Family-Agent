@@ -17,6 +17,7 @@ from ..agent_platform.agent_engine import MODEL_PRESETS
 from ..agent_platform.safety import DataLossGuardrail
 from ..config import redact_secrets
 from .config import GatewayConfig
+from .memory import GatewayMemoryManager
 
 logger = logging.getLogger(__name__)
 
@@ -81,11 +82,13 @@ class GatewayRouter:
         chat_executor: Callable[..., Any] | None = None,
         guardrail: DataLossGuardrail | None = None,
         policy: GuardrailPolicy = DEFAULT_POLICY,
+        memory_manager: GatewayMemoryManager | None = None,
     ) -> None:
         self.config = config or GatewayConfig()
         self.chat_executor = chat_executor
         self.guardrail = guardrail or DataLossGuardrail()
         self.policy = policy
+        self.memory_manager = memory_manager or GatewayMemoryManager()
         self._start_time = time.time()
 
     def handle_models(self) -> dict[str, Any]:
@@ -136,6 +139,14 @@ class GatewayRouter:
         """Return detail for single persona, or None if unknown."""
         key = persona_name.lower().strip()
         return PERSONA_METADATA.get(key)
+
+    def handle_persona_memory(self, persona_name: str, limit: int = 10) -> dict[str, Any]:
+        """Return memory statistics and recent facts for a persona."""
+        key = persona_name.lower().strip()
+        if key not in PERSONA_METADATA and key != "default":
+            return {"ok": False, "error": f"Unknown persona '{persona_name}'"}
+        target = key if key in PERSONA_METADATA else self.config.default_persona
+        return self.memory_manager.get_memory_stats(target, limit=limit)
 
     def handle_tools(self) -> dict[str, Any]:
         """Return registered tools formatted as OpenAI functions."""
@@ -223,7 +234,7 @@ class GatewayRouter:
             return {"status": "error", "tool": tool_name, "error": redact_secrets(str(exc))}
 
     def handle_chat_completion(
-        self, body: dict[str, Any]
+        self, body: dict[str, Any], headers: dict[str, str] | None = None
     ) -> tuple[dict[str, Any] | Generator[str, None, None], bool]:
         """Handle OpenAI-compatible chat completion.
 
@@ -256,19 +267,49 @@ class GatewayRouter:
             if isinstance(last, dict):
                 prompt = str(last.get("content", ""))
 
+        # Check memory control flags
+        hdr = headers or {}
+        disable_mem = hdr.get("x-sakthai-disable-memory", "").lower() in ("true", "1") or bool(
+            body.get("disable_memory", False)
+        )
+        try:
+            mem_limit = int(hdr.get("x-sakthai-memory-limit") or body.get("memory_limit", 5))
+        except (ValueError, TypeError):
+            mem_limit = 5
+
+        # Memory context injection
+        messages_to_use = [dict(m) for m in messages if isinstance(m, dict)]
+        if not disable_mem:
+            mem_ctx = self.memory_manager.get_memory_context(
+                target_persona, query=prompt, limit=mem_limit
+            )
+            if mem_ctx:
+                if messages_to_use and messages_to_use[0].get("role") == "system":
+                    messages_to_use[0]["content"] = (
+                        str(messages_to_use[0].get("content", "")) + f"\n\n{mem_ctx}"
+                    )
+                else:
+                    messages_to_use.insert(0, {"role": "system", "content": mem_ctx})
+
         completion_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
         created = int(time.time())
+
+        def _on_finish(text: str) -> None:
+            if not disable_mem and text.strip():
+                self.memory_manager.record_turn(target_persona, prompt, text)
 
         if self.chat_executor is not None:
             raw_output = self.chat_executor(
                 prompt=prompt,
                 persona=target_persona,
                 model=model,
-                messages=messages,
+                messages=messages_to_use,
                 stream=stream,
             )
             if stream and isinstance(raw_output, Generator):
-                return self._stream_sse(completion_id, created, model, raw_output), True
+                return self._stream_sse(
+                    completion_id, created, model, raw_output, on_done=_on_finish
+                ), True
             response_text = str(raw_output)
         else:
             # Fallback simulated response acknowledging persona and request
@@ -284,9 +325,12 @@ class GatewayRouter:
                 for i, w in enumerate(words):
                     yield w + (" " if i < len(words) - 1 else "")
 
-            return self._stream_sse(completion_id, created, model, _token_gen()), True
+            return self._stream_sse(
+                completion_id, created, model, _token_gen(), on_done=_on_finish
+            ), True
 
         # Non-streaming response
+        _on_finish(response_text)
         result = {
             "id": completion_id,
             "object": "chat.completion",
@@ -311,10 +355,17 @@ class GatewayRouter:
         return result, False
 
     def _stream_sse(
-        self, completion_id: str, created: int, model: str, tokens: Generator[str, None, None]
+        self,
+        completion_id: str,
+        created: int,
+        model: str,
+        tokens: Generator[str, None, None],
+        on_done: Callable[[str], None] | None = None,
     ) -> Generator[str, None, None]:
         """Format tokens as Server-Sent Events (SSE)."""
+        accumulated: list[str] = []
         for token in tokens:
+            accumulated.append(token)
             chunk = {
                 "id": completion_id,
                 "object": "chat.completion.chunk",
@@ -329,6 +380,12 @@ class GatewayRouter:
                 ],
             }
             yield f"data: {json.dumps(chunk)}\n\n"
+
+        if on_done:
+            try:
+                on_done("".join(accumulated))
+            except Exception as exc:
+                logger.warning("Error in on_done stream callback: %s", exc)
 
         # Final stop chunk
         final_chunk = {
@@ -385,3 +442,51 @@ class GatewayRouter:
             "speed": "48.2 tok/s",
             "debug": "Inference completed via Runtime Gateway",
         }
+
+    def handle_voice_profiles(self) -> dict[str, Any]:
+        """Return voice synthesis profiles across all 6 personas."""
+        from .voice import GatewayVoiceHandler
+
+        return GatewayVoiceHandler(router=self).list_voice_profiles()
+
+    def handle_duplex_event(self, body: dict[str, Any]) -> list[dict[str, Any]]:
+        """Process a duplex/WebSocket JSON event and return frame list."""
+        from .voice import GatewayVoiceHandler
+
+        handler = GatewayVoiceHandler(router=self)
+        return list(handler.handle_duplex_event(body, router=self))
+
+    def handle_team_pipelines(self) -> dict[str, Any]:
+        """Return registered multi-agent team pipelines."""
+        from ..team.gateway import GatewayTeamOrchestrator
+
+        return GatewayTeamOrchestrator(router=self).list_pipelines()
+
+    def handle_team_run(self, body: dict[str, Any]) -> dict[str, Any]:
+        """Execute a multi-agent team pipeline."""
+        from ..team.gateway import GatewayTeamOrchestrator
+
+        pipeline_name = str(body.get("pipeline") or body.get("name") or "")
+        task = str(body.get("task") or body.get("prompt") or "")
+        gateway_url = body.get("gateway_url")
+        return GatewayTeamOrchestrator(router=self).execute_pipeline(
+            pipeline_name=pipeline_name,
+            task=task,
+            gateway_url=str(gateway_url) if gateway_url else None,
+        )
+
+    def handle_benchmark(self, body: dict[str, Any]) -> dict[str, Any]:
+        """Execute a high-concurrency gateway benchmark."""
+        from .bench import run_gateway_benchmark
+
+        concurrency = int(body.get("concurrency", 10))
+        num_requests = int(body.get("requests", 50))
+        persona = str(body.get("persona") or self.config.default_persona)
+        stream = bool(body.get("stream", True))
+        return run_gateway_benchmark(
+            router=self,
+            concurrency=concurrency,
+            num_requests=num_requests,
+            persona=persona,
+            stream=stream,
+        )

@@ -129,6 +129,18 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
             self._send_json(200, self.gateway_router.handle_models())
         elif path in ("/v1/personas", "/v1/agents", "/personas", "/agents"):
             self._send_json(200, self.gateway_router.handle_personas())
+        elif path.startswith("/v1/personas/") and path.endswith("/memory"):
+            parts = path.strip("/").split("/")
+            if (
+                len(parts) == 4
+                and parts[0] == "v1"
+                and parts[1] == "personas"
+                and parts[3] == "memory"
+            ):
+                persona_name = parts[2]
+                mem_data = self.gateway_router.handle_persona_memory(persona_name)
+                self._send_json(200 if mem_data.get("ok") else 404, mem_data)
+                return
         elif path.startswith("/v1/personas/") or path.startswith("/v1/agents/"):
             name = path.rsplit("/", 1)[-1]
             detail = self.gateway_router.handle_persona_detail(name)
@@ -138,6 +150,10 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
                 self._send_error(404, f"Persona '{name}' not found")
         elif path in ("/v1/tools", "/tools"):
             self._send_json(200, self.gateway_router.handle_tools())
+        elif path in ("/v1/voice/profiles", "/voice/profiles"):
+            self._send_json(200, self.gateway_router.handle_voice_profiles())
+        elif path in ("/v1/team/pipelines", "/team/pipelines"):
+            self._send_json(200, self.gateway_router.handle_team_pipelines())
         elif path == "/api/status":
             self._send_json(200, self.gateway_router.handle_status())
         elif path == "/api/saksee/status":
@@ -165,7 +181,8 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
 
         if path in ("/v1/chat/completions", "/chat/completions"):
             try:
-                res, is_stream = self.gateway_router.handle_chat_completion(body)
+                headers = {k.lower(): v for k, v in self.headers.items()}
+                res, is_stream = self.gateway_router.handle_chat_completion(body, headers=headers)
             except ValueError as err:
                 self._send_error(400, str(err))
                 return
@@ -192,6 +209,18 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
             res = self.gateway_router.handle_tools_execute(body)
             status_code = 200 if res.get("status") in ("success", "blocked") else 400
             self._send_json(status_code, res)
+
+        elif path in ("/v1/chat/ws", "/v1/voice/duplex", "/chat/ws"):
+            frames = self.gateway_router.handle_duplex_event(body)
+            self._send_json(200, {"ok": True, "frames": frames})
+
+        elif path in ("/v1/team/pipelines", "/v1/team/run", "/team/run"):
+            res = self.gateway_router.handle_team_run(body)
+            self._send_json(200 if res.get("ok") else 400, res)
+
+        elif path in ("/v1/bench", "/bench"):
+            res = self.gateway_router.handle_benchmark(body)
+            self._send_json(200, res)
 
         elif path == "/api/model/chat":
             res = self.gateway_router.handle_model_chat(body)
