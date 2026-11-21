@@ -463,6 +463,12 @@ def evaluate_persona_soul_alignment(
         or "signature" in soul_text.lower()
     )
 
+    v9_rubric_found = f"CYCLE EVAL: {persona}" in soul_text
+    security_rules_found = "## Security Rules" in soul_text
+    charge_system_found = any(
+        kw in soul_text.lower() for kw in ("charge system", "## charge", "charge states")
+    )
+
     checks = {
         "soul_file_present": soul_exists,
         "intro_line_present": bool(intro_line),
@@ -471,6 +477,9 @@ def evaluate_persona_soul_alignment(
         "beer_first_aligned": beer_focus_found,
         "anti_patterns_clean": anti_patterns_clean,
         "signature_guidance_present": signature_guidance,
+        "v9_rubric_present": v9_rubric_found,
+        "security_rules_present": security_rules_found,
+        "charge_system_present": charge_system_found,
     }
 
     diagnostics: list[str] = []
@@ -490,6 +499,12 @@ def evaluate_persona_soul_alignment(
         )
     if not signature_guidance:
         diagnostics.append("Missing reply intro line directive in SOUL.md")
+    if not v9_rubric_found:
+        diagnostics.append(f"Missing CYCLE EVAL: {persona} v9 rubric in SOUL.md")
+    if not security_rules_found:
+        diagnostics.append("Missing Security Rules section in SOUL.md")
+    if not charge_system_found:
+        diagnostics.append("Missing Charge System specification in SOUL.md")
 
     passed_checks = sum(1 for v in checks.values() if v)
     total_checks = len(checks)
@@ -724,6 +739,78 @@ def evaluate_skills_trials(
         "persona": persona,
         "trials": trial_count,
         "all_trials_healthy": all_trials_healthy,
+        "consistent": consistent,
+        "latencies_ms": latencies_ms,
+        "avg_latency_ms": avg_latency,
+        "min_latency_ms": min_latency,
+        "max_latency_ms": max_latency,
+        "jitter_ms": jitter,
+        "trial_history": trial_history,
+        "latest_report": latest_report,
+    }
+
+
+def evaluate_soul_trials(
+    persona: str | None = None,
+    trials: int = 1,
+    personas_dir: Path | None = None,
+) -> dict[str, Any]:
+    """Execute soul alignment evaluation across one or all personas for multiple trials (e.g. 10 or 100 times).
+
+    Measures consistency, deterministic repeatability, execution latency, and jitter.
+    """
+    if persona is not None and persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+
+    trial_count = max(1, int(trials))
+    targets = (persona,) if persona else PERSONA_NAMES
+
+    trial_history: list[dict[str, Any]] = []
+    latencies_ms: list[float] = []
+    latest_report: dict[str, dict[str, Any]] = {}
+
+    for i in range(1, trial_count + 1):
+        t0 = time.perf_counter()
+        run_report = {
+            p: evaluate_persona_soul_alignment(p, personas_dir=personas_dir) for p in targets
+        }
+        elapsed_ms = round((time.perf_counter() - t0) * 1000.0, 2)
+        latencies_ms.append(elapsed_ms)
+        latest_report = run_report
+
+        all_aligned = all(r["aligned"] for r in run_report.values())
+        tot_checks = sum(r["checks_total"] for r in run_report.values())
+        passed_checks = sum(r["checks_passed"] for r in run_report.values())
+        avg_score = (
+            round(sum(r["soul_score"] for r in run_report.values()) / len(targets), 2)
+            if targets
+            else 0.0
+        )
+
+        trial_history.append(
+            {
+                "trial": i,
+                "latency_ms": elapsed_ms,
+                "all_aligned": all_aligned,
+                "total_checks": tot_checks,
+                "passed_checks": passed_checks,
+                "average_score": avg_score,
+                "scores": {p: run_report[p]["soul_score"] for p in targets},
+            }
+        )
+
+    first_scores = trial_history[0]["scores"]
+    consistent = all(t["scores"] == first_scores for t in trial_history)
+    all_trials_aligned = all(t["all_aligned"] for t in trial_history)
+    avg_latency = round(sum(latencies_ms) / len(latencies_ms), 2)
+    min_latency = round(min(latencies_ms), 2)
+    max_latency = round(max(latencies_ms), 2)
+    jitter = round(max_latency - min_latency, 2)
+
+    return {
+        "persona": persona,
+        "trials": trial_count,
+        "all_trials_aligned": all_trials_aligned,
         "consistent": consistent,
         "latencies_ms": latencies_ms,
         "avg_latency_ms": avg_latency,

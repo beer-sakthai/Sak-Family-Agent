@@ -18,6 +18,7 @@ from ..agent.eval import (
     evaluate_persona_skills_health,
     evaluate_persona_soul_alignment,
     evaluate_skills_trials,
+    evaluate_soul_trials,
     summarize_evals,
     summarize_fleet_audit,
 )
@@ -211,9 +212,46 @@ def eval_audit(persona: str | None, as_json: bool) -> None:
     default=None,
     help="Evaluate soul alignment for a single persona.",
 )
+@click.option(
+    "--times",
+    "-t",
+    "times",
+    default=1,
+    type=click.IntRange(min=1),
+    help="Number of evaluation trials to run (e.g. 10 or 100 for consistency benchmark).",
+)
 @click.option("--json", "as_json", is_flag=True, help="Emit the soul report as JSON.")
-def eval_soul(persona: str | None, as_json: bool) -> None:
+def eval_soul(persona: str | None, times: int, as_json: bool) -> None:
     """Evaluate persona intro line and behavioral soul alignment with SOUL.md."""
+    if times > 1:
+        bench = evaluate_soul_trials(persona=persona, trials=times)
+        if as_json:
+            click.echo(json.dumps(bench, indent=2, ensure_ascii=False))
+            if not bench["all_trials_aligned"]:
+                sys.exit(1)
+            return
+
+        click.echo(f"# Sak Family Soul Alignment Benchmark ({times} trials)")
+        click.echo(
+            f"  Consistency: {'100% Deterministic' if bench['consistent'] else 'Inconsistent'} | "
+            f"Avg Latency: {bench['avg_latency_ms']:.2f}ms | Jitter: {bench['jitter_ms']:.2f}ms"
+        )
+        all_ok = bench["all_trials_aligned"]
+        for p_name, res in bench["latest_report"].items():
+            status = "ALIGNED" if res["aligned"] else "DIVERGENT"
+            click.echo(
+                f"  [{status}] {p_name:<10} score={res['soul_score']:.0%} "
+                f"checks={res['checks_passed']}/{res['checks_total']} "
+                f"trials={times}/{times} passed "
+                f"intro={repr(res['intro_line'])}"
+            )
+            if res["diagnostics"]:
+                for d in res["diagnostics"]:
+                    click.echo(f"    - warning: {d}")
+        if not all_ok:
+            sys.exit(1)
+        return
+
     targets = [persona] if persona else sorted(PERSONA_NAMES)
     results = {p: evaluate_persona_soul_alignment(p) for p in targets}
     if as_json:
