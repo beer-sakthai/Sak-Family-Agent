@@ -122,3 +122,21 @@ The `sakthai train` CLI command group provides end-to-end tooling to generate sy
 - `sakthai train export [--out <dir>] [--dry-run]`: Merges LoRA adapter weights and writes an Ollama `Modelfile` (`export_ollama.py`) to enable running the agent loop 100% offline via `sakthai run --provider ollama --model sakthai`.
 - `sakthai train deploy [--repo <id>] [--create] [--dry-run]`: Dry-runs or provisions a Hugging Face Text Generation Inference (TGI) endpoint exposing an OpenAI-compatible `/v1` endpoint (`deploy_hf_endpoint.py`).
 
+## Runtime Gateway (OpenAI-Compatible & REST API)
+
+The `sakthai.gateway` subsystem provides a unified, multi-threaded HTTP server exposing an OpenAI-compatible API and comprehensive REST endpoints for the House of Sak fleet:
+
+- **OpenAI Compatibility**:
+  - `/v1/chat/completions`: Supports standard message payloads, temperature, max tokens, and both buffered JSON and streaming Server-Sent Events (`stream: true`).
+  - `/v1/models`: Enumerates available personas (`sakthai`, `sakking`, `saksee`, `sakjules`, `saksit`, `saktan`) and model tiers.
+- **Dynamic Persona Routing**: Requests targeting a specific persona model ID execute in that persona's identity context with access to their curated skills and memory shard.
+- **DataLossGuardrail Protection**: The `/v1/tools/execute` endpoint intercepts high-risk commands (`rm -rf`, `DROP TABLE`, destructive disk/network mutations) and requires an explicit HMAC approval token.
+- **Filesystem Isolation**: File access tools enforce safe root isolation (`Path.cwd()`, `~/.sakthai`, `SAKTHAI_READ_ALLOW`) and block access to sensitive files.
+- **Constant-Time Authentication**: Bearer tokens are verified using `secrets.compare_digest` to prevent timing side-channels.
+- **External Client Integration**: Drop-in compatible with Cursor, Claude Code, Aider, OpenCode, and standard OpenAI SDKs (`OPENAI_BASE_URL="http://localhost:8080/v1"`).
+- **Developer CLI Tools**:
+  - `sakthai gateway serve [--host <host>] [--port <port>] [--token <tok>] [--cors <origin>]`: Start gateway server.
+  - `sakthai gateway status [--url <url>]`: Inspect gateway health, uptime, and active personas.
+  - `sakthai gateway models [--url <url>] [--token <tok>]`: List served personas and model presets.
+  - `sakthai gateway chat <prompt> [--model <model>] [--stream]`: Test chat completions interactively.
+
