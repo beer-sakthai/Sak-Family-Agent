@@ -21,21 +21,21 @@ flowchart TD
 ### Phase 1: Foundation & Coder Environment Preflight
 
 #### 🔹 Task 1.1: Config, Coder Model & Pinned MCP Preflight
-- **Status**: [ ]
+- **Status**: [x] 2026-11-21
 - **Goal**: Confirm SakKing's provider (`huggingface`), model (`Qwen/Qwen3-Coder-30B-A3B-Instruct`), 59 overlay skills, and 3 pinned MCP servers (`playwright@0.0.83`, `chrome-devtools-mcp@1.10.1`, `mcp-hfspace@0.5.4`) resolve cleanly.
 - **Estimated Time**: 2 minutes
 - **Command**: `SAKTHAI_HOME=$(mktemp -d) sakthai run "preflight" --persona sakking --no-mcp --dry-run && sakthai platform check-safety "pytest tests/ -q"`
 - **Acceptance Criteria**: Preflight resolves `huggingface` → `Qwen/Qwen3-Coder-30B-A3B-Instruct`; safety check reports `SAFE`.
 
 #### 🔹 Task 1.2: Pre-Task Family Memory & Deputy Chain Audit
-- **Status**: [ ]
+- **Status**: [x] 2026-11-21
 - **Goal**: Read charge, conservation mode, deputy chain, and any interrupted or paused cycle before starting execution.
 - **Estimated Time**: 2 minutes
 - **Command**: `sakthai memory family "CHARGE: sakking" --tag charge-report --limit 1 && sakthai memory family "DEPUTY CHAIN" --tag deputy-chain --limit 1`
 - **Acceptance Criteria**: Task starts from verified family state in `~/.sakthai/*/memory.db`.
 
 #### 🔹 Task 1.3: 3-Second Intent Preflight & Delegation Routing
-- **Status**: [ ]
+- **Status**: [x] 2026-11-21
 - **Goal**: Apply the **3-Second Intent Preflight** filter to incoming tasks before executing to avoid generalist execution bottlenecks.
 - **Core Law**: **Specialist beats generalist**. Route early, not late.
 - **Classification Rules**:
@@ -50,7 +50,7 @@ flowchart TD
 ### Phase 2: Deputy 1 Readiness & Cache Check
 
 #### 🔹 Task 2.1: Deputy 1 Protocol & 30-Minute Cache Check
-- **Status**: [ ]
+- **Status**: [x] 2026-11-21
 - **Goal**: Act on `DEPUTY CHAIN` if SakThai is Critical (requires SakKing charge >= 20%, else escalate to SakTan), and check SakSee's `monitoring-result` cache before any web operation.
 - **Estimated Time**: 3 minutes
 - **Command**: `sakthai memory family "DEPUTY CHAIN" --tag deputy-chain --limit 1 && sakthai memory family --tag monitoring-result --limit 20`

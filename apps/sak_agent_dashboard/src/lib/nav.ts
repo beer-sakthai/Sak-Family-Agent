@@ -13,6 +13,7 @@ import {
   Database,
   GitBranch,
   MessageSquare,
+  Radio,
   Shield,
   Sparkles,
   type LucideIcon,
@@ -21,6 +22,7 @@ import {
 export type TabId =
   | "system"
   | "overview"
+  | "gateway"
   | "analytics"
   | "sessions"
   | "memory"
@@ -52,6 +54,13 @@ export const NAV_ITEMS: readonly NavItem[] = [
     description: "Per-persona activity, memory shards, and configured models",
     icon: Activity,
     accent: "text-hue-cyan",
+  },
+  {
+    id: "gateway",
+    label: "Gateway",
+    description: "Live OpenAI-compatible Runtime Gateway console, streaming chat, and tool execution",
+    icon: Radio,
+    accent: "text-hue-violet",
   },
   {
     id: "analytics",

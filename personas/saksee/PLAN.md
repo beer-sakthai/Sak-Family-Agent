@@ -21,14 +21,14 @@ flowchart TD
 ### Phase 1: Foundation & Browser MCP Preflight
 
 #### 🔹 Task 1.1: Config & Model Preflight
-- **Status**: [ ]
+- **Status**: [x] 2026-11-21
 - **Goal**: Confirm SakSee's provider (`huggingface`), model (`deepseek-ai/DeepSeek-V4.1-Flash`), and 106 overlay skills resolve cleanly.
 - **Estimated Time**: 2 minutes
 - **Command**: `SAKTHAI_HOME=$(mktemp -d) sakthai run "preflight" --persona saksee --no-mcp --dry-run`
 - **Acceptance Criteria**: Preflight resolves `huggingface` → `deepseek-ai/DeepSeek-V4.1-Flash`.
 
 #### 🔹 Task 1.2: Pre-Task Family Memory, Cache & `data-request` Audit
-- **Status**: [ ]
+- **Status**: [x] 2026-11-21
 - **Goal**: Read charge, conservation mode, existing 30-minute `monitoring-result` cache, and any pending `data-request` tags from SakSit before making network calls.
 - **Estimated Time**: 2 minutes
 - **Command**: `sakthai memory family --tag monitoring-result --limit 20 && sakthai memory family --tag data-request --personas saksit --limit 10`
@@ -39,7 +39,7 @@ flowchart TD
 ### Phase 2: Chrome DevTools & Playwright MCP Audit
 
 #### 🔹 Task 2.1: Pinned Browser MCP Server Verification
-- **Status**: [ ]
+- **Status**: [x] 2026-11-21
 - **Goal**: Verify pinned `chrome-devtools-mcp@1.10.1` and `@playwright/mcp@0.0.83` stdio servers configured in `config/mcp.json`.
 - **Estimated Time**: 2 minutes
 - **Command**: `npx -y chrome-devtools-mcp@1.10.1 --help && npx -y @playwright/mcp@0.0.83 --help`

@@ -59,6 +59,7 @@ _detect_provider = providers.detect_provider
 _build_client = providers.build_client
 _call_anthropic = providers.call_anthropic
 _call_gemini = providers.call_gemini
+_call_gateway = providers.call_gateway
 _call_openai_compat = providers.call_openai_compat
 
 SYSTEM_BASE = (
@@ -375,7 +376,12 @@ def _agent_turn(
             client, model, system, tools, messages, iteration, on_token=on_token
         )
         usage_tracker.record(**response.usage)
-    elif provider in ("openai", "gateway", "huggingface"):
+    elif provider == "gateway":
+        response = _call_gateway(
+            client, model, system, tools, messages, iteration, on_token=on_token
+        )
+        usage_tracker.record(**response.usage)
+    elif provider in ("openai", "huggingface"):
         response = _call_openai_compat(
             client, model, system, tools, messages, iteration, on_token=on_token
         )

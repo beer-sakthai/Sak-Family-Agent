@@ -6,6 +6,7 @@ import AgentOverview from "@/components/AgentOverview";
 import AnalyticsCharts from "@/components/AnalyticsCharts";
 import AuditLogs from "@/components/AuditLogs";
 import CommandPalette, { type Command } from "@/components/CommandPalette";
+import GatewayPlayground from "@/components/GatewayPlayground";
 import HostedNotice from "@/components/HostedNotice";
 import KpiStrip from "@/components/KpiStrip";
 import MemoryExplorer from "@/components/MemoryExplorer";
@@ -881,6 +882,8 @@ export default function Home() {
               ) : (
                 <CardGridSkeleton />
               ))}
+
+            {activeTab === "gateway" && <GatewayPlayground />}
 
             {activeTab === "analytics" &&
               (metrics ? (

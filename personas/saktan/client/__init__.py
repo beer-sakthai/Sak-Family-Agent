@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from .gateway import (
+    DEFAULT_GATEWAY_URL,
+    GatewayClient,
+    GatewayError,
+)
 from .manager import (
     generate_client_env,
     generate_docker_compose,
@@ -28,7 +33,10 @@ from .verifier import (
 
 __all__ = [
     "ClientConfig",
+    "DEFAULT_GATEWAY_URL",
     "DEFAULT_TEST_CASES",
+    "GatewayClient",
+    "GatewayError",
     "OnboardResult",
     "SyntheticTestCase",
     "SyntheticTestResult",

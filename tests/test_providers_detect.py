@@ -288,14 +288,17 @@ def test_build_client_openai_auth_error_raises_agent_error() -> None:
         build_client("openai", None)
 
 
-def test_build_client_gateway_returns_httpx_client() -> None:
+def test_build_client_gateway_returns_gateway_client() -> None:
+    from sakthai.client.gateway import GatewayClient
+
     with patch(
         "sakthai.auth.resolve_gateway_credentials",
         return_value=("https://openrouter.ai/api/v1", "sk-test"),
     ):
         result = build_client("gateway", None)
-    assert isinstance(result, httpx.Client)
+    assert isinstance(result, GatewayClient)
     assert result.headers["Authorization"] == "Bearer sk-test"
+    result.close()
 
 
 def test_build_client_gateway_auth_error_raises_agent_error() -> None:

@@ -245,7 +245,12 @@ def resolve_gateway_credentials() -> tuple[str, str]:
             "No AI gateway configured. Set SAKTHAI_GATEWAY_URL to an "
             "OpenAI-compatible gateway endpoint (e.g. https://openrouter.ai/api/v1)."
         )
-    api_key = os.environ.get("SAKTHAI_GATEWAY_API_KEY") or "nokey"
+    api_key = (
+        os.environ.get("SAKTHAI_GATEWAY_API_KEY")
+        or os.environ.get("SAKTHAI_GATEWAY_TOKEN")
+        or os.environ.get("SAKTHAI_GATEWAY_BEARER_TOKEN")
+        or "nokey"
+    )
     return base_url.rstrip("/"), api_key
 
 

@@ -33,6 +33,7 @@ from .base import (
     is_retryable,
     with_retry,
 )
+from .gateway_provider import call_gateway
 from .gemini_provider import call_gemini, to_gemini_contents
 from .openai_provider import call_openai_compat, to_openai_messages
 
@@ -43,6 +44,7 @@ __all__ = [
     "block_field",
     "build_client",
     "call_anthropic",
+    "call_gateway",
     "call_gemini",
     "call_openai_compat",
     "detect_provider",
@@ -89,6 +91,8 @@ def _detect_from_client_type(client: Any) -> str | None:
     module = client.__class__.__module__
     if "google.genai" in module:
         return "google"
+    if "gateway" in module or client.__class__.__name__ == "GatewayClient":
+        return "gateway"
     if "openai" in module:
         return "openai"
     # Any other client is assumed to be Anthropic-compatible.
@@ -247,13 +251,14 @@ def _build_local_client() -> Any:
 def _build_gateway_client() -> Any:
     """Build a client for an OpenAI-compatible AI gateway."""
     from ...auth import resolve_gateway_credentials
+    from ...client.gateway import GatewayClient
 
     try:
         api_base, api_key = resolve_gateway_credentials()
     except AuthError as exc:
         raise AgentError(str(exc)) from exc
 
-    return _openai_compat_client(api_base, api_key)
+    return GatewayClient(base_url=api_base, api_token=api_key)
 
 
 def _build_huggingface_client() -> Any:
