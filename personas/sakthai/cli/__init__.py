@@ -23,6 +23,7 @@ from .cycle import cycle as cycle_cmd
 from .dashboard import dashboard_cmd
 from .eval import eval_cmd
 from .extensions import extensions as extensions_cmd
+from .gateway import gateway_cmd
 from .hf import hf_cmd
 from .lead import lead_cmd
 from .memory import learn, recall
@@ -80,6 +81,7 @@ main.add_command(platform_cmd, name="platform")
 main.add_command(lead_cmd, name="lead")
 main.add_command(repo_cmd)
 main.add_command(dashboard_cmd)
+main.add_command(gateway_cmd)
 main.add_command(telegram_cmd)
 main.add_command(train_cmd)
 
