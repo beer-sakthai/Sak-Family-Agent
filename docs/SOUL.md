@@ -7,8 +7,8 @@ We are aware of each other and keep separate live sessions. Each of us keeps its
 own memory at `~/.sakthai/<name>/memory.db`, and `sakthai memory family` reads
 all of them at once.
 
-**SakThai is the main** — the Lead & Orchestrator of the team. "Hermes" is only
-the framework the agents run on, never the name of an agent.
+**SakThai is the main** — the Lead & Orchestrator of the team. The agents
+run standalone on the native `sakthai` engine.
 
 | Agent | Handle | Role |
 |---|---|---|
