@@ -48,6 +48,17 @@ TOOL_RUBRIC_CRITERIA: tuple[str, ...] = (
     "registry_integrity",
 )
 
+AGENTS_MD_RUBRIC_CRITERIA: tuple[str, ...] = (
+    "file_present",
+    "lead_directive_present",
+    "role_and_domain_matched",
+    "model_loadout_matched",
+    "primary_skills_matched",
+    "allowed_tools_matched",
+    "skill_counts_matched",
+    "evolution_workflow_matched",
+)
+
 
 PERSONA_WORKING_FILES: tuple[str, ...] = (
     "SOUL.md",
@@ -1139,6 +1150,199 @@ def evaluate_tools_trials(
         ),
         "latest_scorecard": latest_report,
         "trial_history": trial_history,
+    }
+
+
+def evaluate_persona_agents_md_alignment(
+    persona: str, personas_dir: Path | None = None
+) -> dict[str, Any]:
+    """Evaluate a persona's AGENTS.md against its configured requirements (workspace.yaml, config.yaml, skills)."""
+    if persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+
+    base_dir = personas_dir or PERSONAS_DIR
+    root = base_dir / persona
+    agents_file = root / "AGENTS.md"
+    file_present = agents_file.is_file()
+    agents_text = agents_file.read_text(encoding="utf-8") if file_present else ""
+
+    ws_data = _load_yaml_dict(root / "config" / "workspace.yaml")
+    cfg_data = _load_yaml_dict(root / "config" / "config.yaml")
+    raw_model = cfg_data.get("model")
+    model_cfg = raw_model if isinstance(raw_model, dict) else {}
+
+    role = str(ws_data.get("role") or "").strip()
+    domain = str(ws_data.get("domain") or "").strip()
+    primary_skills: list[str] = list(ws_data.get("primary_skills") or [])
+    allowed_tools: list[str] = list(ws_data.get("allowed_tools") or [])
+    provider = str(model_cfg.get("provider") or "").strip()
+    default_model = str(model_cfg.get("default") or "").strip()
+
+    skills_dir = root / "skills"
+    overlay_count = (
+        sum(1 for d in skills_dir.iterdir() if d.is_dir() and (d / "SKILL.md").is_file())
+        if skills_dir.is_dir()
+        else 0
+    )
+    shared_dir = base_dir / "shared" / "skills"
+    shared_count = (
+        sum(1 for d in shared_dir.iterdir() if d.is_dir() and (d / "SKILL.md").is_file())
+        if shared_dir.is_dir()
+        else 0
+    )
+
+    lead_directive = (
+        "The lead, **SakThai**, coordinates the family and runs standalone via `sakthai`."
+    )
+    lead_present = lead_directive in agents_text
+
+    role_and_domain_ok = bool(role and role in agents_text and domain and domain in agents_text)
+    model_loadout_ok = bool(
+        provider and provider in agents_text and default_model and default_model in agents_text
+    )
+    missing_primary = [s for s in primary_skills if s not in agents_text]
+    primary_skills_ok = bool(primary_skills) and not missing_primary
+
+    missing_tools = [t for t in allowed_tools if t not in agents_text]
+    allowed_tools_ok = bool(allowed_tools) and not missing_tools
+
+    skill_count_phrase = f"{overlay_count} Overlay Skills + {shared_count} Shared Skills"
+    skill_counts_ok = overlay_count > 0 and skill_count_phrase in agents_text
+
+    evo_cmd = f"./evolve_agent.sh {persona}"
+    eval_marker = f"CYCLE EVAL: {persona}"
+    evolution_workflow_ok = (
+        evo_cmd in agents_text
+        and eval_marker in agents_text
+        and f"build/agent-repos/{persona}" in agents_text
+    )
+
+    checks: dict[str, bool] = {
+        "file_present": file_present,
+        "lead_directive_present": lead_present,
+        "role_and_domain_matched": role_and_domain_ok,
+        "model_loadout_matched": model_loadout_ok,
+        "primary_skills_matched": primary_skills_ok,
+        "allowed_tools_matched": allowed_tools_ok,
+        "skill_counts_matched": skill_counts_ok,
+        "evolution_workflow_matched": evolution_workflow_ok,
+    }
+
+    diagnostics: list[str] = []
+    if not file_present:
+        diagnostics.append("Missing AGENTS.md")
+    if not lead_present:
+        diagnostics.append("Missing mandatory lead SakThai standalone directive in AGENTS.md")
+    if not role_and_domain_ok:
+        diagnostics.append(f"Missing role ({role!r}) or domain ({domain!r}) in AGENTS.md")
+    if not model_loadout_ok:
+        diagnostics.append(
+            f"Missing configured model loadout ({provider}:{default_model}) in AGENTS.md"
+        )
+    if not primary_skills_ok:
+        diagnostics.append(
+            f"Missing primary skills in AGENTS.md: {', '.join(missing_primary) or 'none configured'}"
+        )
+    if not allowed_tools_ok:
+        diagnostics.append(
+            f"Missing allowed tools in AGENTS.md: {', '.join(missing_tools) or 'none configured'}"
+        )
+    if not skill_counts_ok:
+        diagnostics.append(f"Missing skill count phrase '{skill_count_phrase}' in AGENTS.md")
+    if not evolution_workflow_ok:
+        diagnostics.append(
+            f"Missing persona evolution workflow ('{evo_cmd}', '{eval_marker}', or export path) in AGENTS.md"
+        )
+
+    passed_checks = sum(1 for v in checks.values() if v)
+    total_checks = len(checks)
+    agents_md_score = round(passed_checks / total_checks, 2)
+
+    return {
+        "persona": persona,
+        "role": role,
+        "domain": domain,
+        "provider": provider,
+        "model": default_model,
+        "overlay_skills": overlay_count,
+        "shared_skills": shared_count,
+        "primary_skills": primary_skills,
+        "allowed_tools": allowed_tools,
+        "checks": checks,
+        "checks_passed": passed_checks,
+        "checks_total": total_checks,
+        "agents_md_score": agents_md_score,
+        "diagnostics": diagnostics,
+        "aligned": passed_checks == total_checks,
+    }
+
+
+def evaluate_agents_md_trials(
+    persona: str | None = None,
+    trials: int = 1,
+    personas_dir: Path | None = None,
+) -> dict[str, Any]:
+    """Execute AGENTS.md requirement alignment evaluation across one or all personas for multiple trials."""
+    if persona is not None and persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+
+    trial_count = max(1, int(trials))
+    targets = (persona,) if persona else PERSONA_NAMES
+
+    trial_history: list[dict[str, Any]] = []
+    latencies_ms: list[float] = []
+    latest_report: dict[str, dict[str, Any]] = {}
+
+    for i in range(1, trial_count + 1):
+        t0 = time.perf_counter()
+        run_report = {
+            p: evaluate_persona_agents_md_alignment(p, personas_dir=personas_dir) for p in targets
+        }
+        elapsed_ms = round((time.perf_counter() - t0) * 1000.0, 2)
+        latencies_ms.append(elapsed_ms)
+        latest_report = run_report
+
+        all_aligned = all(r["aligned"] for r in run_report.values())
+        tot_checks = sum(r["checks_total"] for r in run_report.values())
+        passed_checks = sum(r["checks_passed"] for r in run_report.values())
+        avg_score = (
+            round(sum(r["agents_md_score"] for r in run_report.values()) / len(targets), 2)
+            if targets
+            else 0.0
+        )
+
+        trial_history.append(
+            {
+                "trial": i,
+                "latency_ms": elapsed_ms,
+                "all_aligned": all_aligned,
+                "total_checks": tot_checks,
+                "passed_checks": passed_checks,
+                "average_score": avg_score,
+                "scores": {p: run_report[p]["agents_md_score"] for p in targets},
+            }
+        )
+
+    first_scores = trial_history[0]["scores"]
+    consistent = all(t["scores"] == first_scores for t in trial_history)
+    all_trials_aligned = all(t["all_aligned"] for t in trial_history)
+    avg_latency = round(sum(latencies_ms) / len(latencies_ms), 2)
+    min_latency = round(min(latencies_ms), 2)
+    max_latency = round(max(latencies_ms), 2)
+    jitter = round(max_latency - min_latency, 2)
+
+    return {
+        "persona": persona,
+        "trials": trial_count,
+        "all_trials_aligned": all_trials_aligned,
+        "consistent": consistent,
+        "latencies_ms": latencies_ms,
+        "avg_latency_ms": avg_latency,
+        "min_latency_ms": min_latency,
+        "max_latency_ms": max_latency,
+        "jitter_ms": jitter,
+        "trial_history": trial_history,
+        "latest_report": latest_report,
     }
 
 

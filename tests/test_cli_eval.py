@@ -439,3 +439,65 @@ def test_eval_summary_with_models_and_personas(runner: CliRunner) -> None:
     assert "# Per-persona" in res.output
     assert "model-1" in res.output
     assert "sakthai" in res.output
+
+
+def test_eval_agents_cli_all_single_and_trials(runner: CliRunner) -> None:
+    res = runner.invoke(main, ["eval", "agents"])
+    assert res.exit_code == 0
+    assert "[MATCHED]" in res.output
+
+    res_single = runner.invoke(main, ["eval", "agents", "--persona", "sakjules"])
+    assert res_single.exit_code == 0
+    assert "sakjules" in res_single.output
+
+    res_json = runner.invoke(main, ["eval", "agents", "--json"])
+    assert res_json.exit_code == 0
+    data = json.loads(res_json.output)
+    assert len(data) == 6
+    assert all(r["aligned"] for r in data.values())
+
+    res_trials = runner.invoke(main, ["eval", "agents", "-t", "3"])
+    assert res_trials.exit_code == 0
+    assert "AGENTS.md Requirements Benchmark (3 trials)" in res_trials.output
+
+    res_trials_json = runner.invoke(main, ["eval", "agents", "-t", "3", "--json"])
+    assert res_trials_json.exit_code == 0
+    tdata = json.loads(res_trials_json.output)
+    assert tdata["trials"] == 3
+    assert tdata["all_trials_aligned"] is True
+
+    mock_fail = {
+        "aligned": False,
+        "agents_md_score": 0.5,
+        "checks_passed": 4,
+        "checks_total": 8,
+        "overlay_skills": 10,
+        "shared_skills": 19,
+        "primary_skills": [],
+        "allowed_tools": [],
+        "provider": "huggingface",
+        "model": "m",
+        "diagnostics": ["Missing primary skills in AGENTS.md"],
+    }
+    with patch("sakthai.cli.eval.evaluate_persona_agents_md_alignment", return_value=mock_fail):
+        fail_res = runner.invoke(main, ["eval", "agents", "--persona", "saktan"])
+        assert fail_res.exit_code == 1
+        assert "[DRIFTED]" in fail_res.output
+        assert "Missing primary skills in AGENTS.md" in fail_res.output
+
+        fail_json = runner.invoke(main, ["eval", "agents", "--persona", "saktan", "--json"])
+        assert fail_json.exit_code == 1
+
+    mock_trial_fail = {
+        "trials": 2,
+        "all_trials_aligned": False,
+        "consistent": False,
+        "avg_latency_ms": 5.0,
+        "jitter_ms": 1.0,
+        "latest_report": {"saktan": mock_fail},
+    }
+    with patch("sakthai.cli.eval.evaluate_agents_md_trials", return_value=mock_trial_fail):
+        tfail = runner.invoke(main, ["eval", "agents", "-t", "2"])
+        assert tfail.exit_code == 1
+        tfail_json = runner.invoke(main, ["eval", "agents", "-t", "2", "--json"])
+        assert tfail_json.exit_code == 1
