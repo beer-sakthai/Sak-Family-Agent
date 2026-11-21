@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import secrets
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from ..web.server import _is_loopback_host
 from .config import GatewayConfig
 from .router import GatewayRouter
 
@@ -84,7 +86,8 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
     def _check_auth(self) -> bool:
         expected = self.gateway_config.bearer_token
         if not expected:
-            return True
+            # Fail closed: with no token configured, nothing but /health is served.
+            return False
 
         # Check Authorization header: Bearer <token>
         auth_header = self.headers.get("Authorization", "")
@@ -218,6 +221,12 @@ class RuntimeGatewayServer:
         """Start the HTTP server."""
         if self.is_running:
             return
+
+        if not _is_loopback_host(self.host) and not os.environ.get("SAKTHAI_GATEWAY_ALLOW_PUBLIC"):
+            raise PermissionError(
+                f"Refusing to bind the Runtime Gateway to non-loopback host {self.host!r}. "
+                "Set SAKTHAI_GATEWAY_ALLOW_PUBLIC=1 to expose it beyond this machine."
+            )
 
         # Bind server
         server_address = (self.host, self.port)

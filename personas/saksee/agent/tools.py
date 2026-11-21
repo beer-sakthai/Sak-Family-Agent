@@ -167,6 +167,7 @@ _SENSITIVE_READ_BASENAMES: frozenset[str] = frozenset(
     {
         ".env",
         "memory.db",
+        _GRAPH_TOKEN_CACHE_NAME,  # the Microsoft Graph refresh-token cache
         ".bash_history",
         ".zsh_history",
         ".python_history",

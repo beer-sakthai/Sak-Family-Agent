@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import pytest
@@ -78,7 +79,63 @@ def test_router_handle_tools_execute_guardrail_block() -> None:
     # Attempt destructive SQL drop table
     res = router.handle_tools_execute({"tool": "run_command", "arguments": {"command": "rm -rf /"}})
     assert res["status"] == "blocked"
-    assert "approval_token_required" in res
+    # Regression: the block used to hand back the token that unblocks it.
+    assert "approval_token_required" not in res
+
+
+def test_router_ignores_caller_supplied_approval_token() -> None:
+    """Regression: resending a blocked call with the self-issued APPROVE_<sha256>
+    token used to get past the destructive-input check."""
+    from sakthai.agent_platform.safety import DataLossGuardrail
+
+    router = GatewayRouter()
+    args = {"command": "rm -rf /"}
+    forged = DataLossGuardrail().generate_approval_token("rm -rf /")
+    res = router.handle_tools_execute(
+        {"tool": "run_command", "arguments": args, "approval_token": forged}
+    )
+    assert res["status"] == "blocked"
+
+
+def test_router_enforces_guardrail_policy(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Regression: /v1/tools/execute called tool handlers directly, skipping the
+    GuardrailPolicy that the agent loop and MCP server enforce."""
+    from sakthai.agent.tools import tool_by_name
+    from sakthai.memory.store import MemoryStore
+
+    monkeypatch.setenv("SAKTHAI_READ_ALLOW", str(tmp_path))
+    target = tmp_path / "note.txt"
+    target.write_text("SHOULD_NOT_LEAK", encoding="utf-8")
+
+    # The handler alone allows it (SAKTHAI_READ_ALLOW) ...
+    tool = tool_by_name("read_file")
+    assert tool is not None
+    assert "SHOULD_NOT_LEAK" in tool.handler({"path": str(target)}, MemoryStore(":memory:"))
+
+    # ... but DEFAULT_POLICY denies absolute paths under /tmp, and the gateway must too.
+    res = GatewayRouter().handle_tools_execute(
+        {"tool": "read_file", "arguments": {"path": str(target)}}
+    )
+    assert res["status"] == "blocked"
+    assert "SHOULD_NOT_LEAK" not in json.dumps(res)
+
+
+def test_router_uses_injected_policy(monkeypatch: pytest.MonkeyPatch) -> None:
+    from sakthai.agent.guardrails import GuardrailAction, GuardrailPolicy, GuardrailResult
+    from sakthai.agent.tools import Tool
+
+    calls: list[str] = []
+    tool = Tool(name="ok_tool", description="", input_schema={}, handler=lambda a, s: "fine")
+    monkeypatch.setattr("sakthai.gateway.router.BUILTIN_TOOLS", (tool,))
+
+    def deny_post(tool: Any, args: Any, output: Any, is_error: Any, store: Any) -> Any:
+        calls.append(output)
+        return GuardrailResult(action=GuardrailAction.DENY, reason="post says no")
+
+    policy = GuardrailPolicy(pre_rules=[], post_rules=[deny_post])
+    res = GatewayRouter(policy=policy).handle_tools_execute({"tool": "ok_tool"})
+    assert res == {"status": "blocked", "tool": "ok_tool", "reason": "post says no"}
+    assert calls == ["fine"]
 
 
 def test_router_handle_chat_completion_validation() -> None:
@@ -167,11 +224,11 @@ def test_router_handle_health_and_status() -> None:
 def test_router_handle_tools_execute_success(
     tmp_path: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("SAKTHAI_READ_ALLOW", str(tmp_path))
-    test_file = tmp_path / "hello.txt"
-    test_file.write_text("Hello Gateway", encoding="utf-8")
+    # Relative to cwd: GuardrailPolicy denies absolute paths under /tmp, as in the agent loop.
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "hello.txt").write_text("Hello Gateway", encoding="utf-8")
     router = GatewayRouter()
-    res = router.handle_tools_execute({"tool": "read_file", "arguments": {"path": str(test_file)}})
+    res = router.handle_tools_execute({"tool": "read_file", "arguments": {"path": "hello.txt"}})
     assert res["status"] == "success"
     assert "Hello Gateway" in res["output"]
 
@@ -205,7 +262,7 @@ def test_router_handle_tools_execute_output_blocked(monkeypatch: pytest.MonkeyPa
 
     res = router.handle_tools_execute({"tool": "dangerous_output_tool", "arguments": {}})
     assert res["status"] == "blocked"
-    assert "approval_token_required" in res
+    assert "approval_token_required" not in res
 
 
 def test_router_handle_chat_completion_streaming_with_generator_executor() -> None:
@@ -243,15 +300,14 @@ def test_router_handle_chat_completion_system_and_assistant_messages() -> None:
 def test_router_handle_tools_execute_non_string_arguments(
     tmp_path: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("SAKTHAI_READ_ALLOW", str(tmp_path))
-    test_file = tmp_path / "hello_int.txt"
-    test_file.write_text("Integer arg test", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "hello_int.txt").write_text("Integer arg test", encoding="utf-8")
     router = GatewayRouter()
     # Path is string, but timeout is int (exercises non-string argument branch in safety check)
     res = router.handle_tools_execute(
         {
             "tool": "read_file",
-            "arguments": {"path": str(test_file), "offset": 0},
+            "arguments": {"path": "hello_int.txt", "offset": 0},
         }
     )
     assert res["status"] == "success"

@@ -255,13 +255,38 @@ def test_server_tools_execute_error_status(running_server: RuntimeGatewayServer)
     assert "Missing required field" in str(data)
 
 
-def test_server_open_access_mode() -> None:
+def test_server_without_token_fails_closed() -> None:
+    """Regression: no configured token used to mean open access to every route,
+    including /v1/tools/execute. Now only /health answers."""
     cfg = GatewayConfig(host="127.0.0.1", port=0, bearer_token=None)
     with RuntimeGatewayServer(config=cfg) as server:
-        status, data, _ = _http_request(f"http://127.0.0.1:{server.port}/v1/models")
+        base = f"http://127.0.0.1:{server.port}"
+        status, _, _ = _http_request(f"{base}/v1/models")
+        assert status == 401
+        status, _, _ = _http_request(
+            f"{base}/v1/tools/execute",
+            method="POST",
+            body={"tool": "recall", "arguments": {}},
+        )
+        assert status == 401
+        status, _, _ = _http_request(f"{base}/health")
         assert status == 200
-        assert isinstance(data, dict)
-        assert "data" in data
+
+
+def test_server_refuses_public_bind_without_opt_in(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SAKTHAI_GATEWAY_ALLOW_PUBLIC", raising=False)
+    cfg = GatewayConfig(host="0.0.0.0", port=0, bearer_token="t")  # nosec B104
+    server = RuntimeGatewayServer(config=cfg)
+    with pytest.raises(PermissionError, match="SAKTHAI_GATEWAY_ALLOW_PUBLIC"):
+        server.start(background=True)
+    assert not server.is_running
+
+
+def test_server_allows_public_bind_with_opt_in(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SAKTHAI_GATEWAY_ALLOW_PUBLIC", "1")
+    cfg = GatewayConfig(host="0.0.0.0", port=0, bearer_token="t")  # nosec B104
+    with RuntimeGatewayServer(config=cfg) as server:
+        assert server.is_running
 
 
 def test_server_root_path_and_unauthenticated_post(running_server: RuntimeGatewayServer) -> None:

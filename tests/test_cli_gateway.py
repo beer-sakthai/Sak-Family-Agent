@@ -185,7 +185,7 @@ def test_make_request_raw_text_and_http_error(test_server: RuntimeGatewayServer)
     assert code2 == 401
 
 
-def test_cli_gateway_serve_open_access_logging(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cli_gateway_serve_no_token_warns_fail_closed(monkeypatch: pytest.MonkeyPatch) -> None:
     runner = CliRunner()
 
     def mock_start(self: Any, background: bool = False) -> None:
@@ -195,7 +195,8 @@ def test_cli_gateway_serve_open_access_logging(monkeypatch: pytest.MonkeyPatch) 
 
     res = runner.invoke(main, ["gateway", "serve", "--port", "8091"])
     assert res.exit_code == 0
-    assert "Authentication:  Disabled (Open Access)" in res.output
+    assert "NO TOKEN CONFIGURED" in res.output
+    assert "Open Access" not in res.output
 
 
 def test_cli_gateway_models_exception(monkeypatch: pytest.MonkeyPatch) -> None:
