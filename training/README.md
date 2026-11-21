@@ -109,6 +109,34 @@ sakthai train deploy --repo Nanthasit/sakthai-toolcalling-1.5b-merged
 HF_TOKEN=... sakthai train deploy --repo Nanthasit/sakthai-toolcalling-1.5b-merged --create
 ```
 
+### 7. OpenEnv RL (GRPO) Ecosystem Bridge (`beer-sakthai/openenv-rl-training`)
+When [`beer-sakthai/openenv-rl-training`](https://github.com/beer-sakthai/openenv-rl-training) is cloned as a sibling repository (`../openenv-rl-training`) or pointed to via `SAKTHAI_OPENENV_ROOT`, `sakthai train openenv` orchestrates its 5 independent workspaces in process-isolated `uv run` environments:
+
+```bash
+# Inspect OpenEnv RL workspace discovery and readiness:
+sakthai train openenv status
+sakthai train openenv status --json
+
+# Run CPU environment_factory contract verification:
+sakthai train openenv verify
+
+# Run all 149 tests across the 5 OpenEnv RL workspaces in a single invocation:
+sakthai train openenv test
+sakthai train openenv test --workspace custom
+
+# Run CPU heuristic policy competition and GRPO reward-variance checks:
+sakthai train openenv baselines
+
+# Run deterministic Evaluation Manager Agent rubric benchmark:
+sakthai train openenv benchmark --json
+
+# Launch or dry-run GRPO training (simple, mcp, agent_tools, browsergym, multi, catalog):
+sakthai train openenv grpo --env mcp --dry-run
+
+# Launch or dry-run the 8-catalog A2A protocol server:
+sakthai train openenv a2a --port 9000 --dry-run
+```
+
 ---
 
 ## 🛡️ Security & Operational Guardrails
@@ -117,3 +145,5 @@ HF_TOKEN=... sakthai train deploy --repo Nanthasit/sakthai-toolcalling-1.5b-merg
 2. **Secret Forwarding**: Tokens (`HF_TOKEN`) are read from environment variables or secure credential stores (`~/.cache/huggingface/token`) only — never baked into code, committed, or hardcoded.
 3. **Reproducibility**: All base models are pinned to immutable commit SHAs in accordance with Bandit rule B615.
 4. **Hermetic Workspaces**: Training artifacts and temp files use private directories (`tempfile.mkdtemp` with 0700 permissions) to prevent shared directory vulnerabilities (Bandit B108).
+5. **Process-Isolated RL Pinsets**: `openenv-rl-training` runs via `uv run --with ...` subprocess isolation so `Sak-Family-Agent`'s locked runtime environment never collides with SFT/GRPO `torch`/`trl`/`vllm` pinsets.
+
