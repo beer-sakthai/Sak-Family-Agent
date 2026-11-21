@@ -17,8 +17,10 @@ from ..agent.eval import (
     evaluate_persona_safety_compliance,
     evaluate_persona_skills_health,
     evaluate_persona_soul_alignment,
+    evaluate_persona_tools_health,
     evaluate_skills_trials,
     evaluate_soul_trials,
+    evaluate_tools_trials,
     summarize_evals,
     summarize_fleet_audit,
 )
@@ -421,6 +423,91 @@ def eval_safety(persona: str | None, as_json: bool) -> None:
             f"  [{status}] {p_name:<10} score={res['safety_score']:.0%} "
             f"checks={res['checks_passed']}/{res['checks_total']}"
         )
+        if res["diagnostics"]:
+            for d in res["diagnostics"]:
+                click.echo(f"    - warning: {d}")
+    if not all_ok:
+        sys.exit(1)
+
+
+@eval_cmd.command("tools")
+@click.option(
+    "--persona",
+    type=click.Choice(PERSONA_NAMES),
+    default=None,
+    help="Filter tool evaluation to a single persona.",
+)
+@click.option(
+    "--detailed",
+    is_flag=True,
+    help="Show detailed 6-factor rubric breakdown and diagnostics.",
+)
+@click.option("--json", "as_json", is_flag=True, help="Emit the tools evaluation report as JSON.")
+@click.option(
+    "--times",
+    "-t",
+    "trials",
+    default=1,
+    type=click.IntRange(min=1, max=100),
+    help="Number of evaluation trials to run (e.g. -t 10 for consistency benchmark).",
+)
+def eval_tools(persona: str | None, detailed: bool, as_json: bool, trials: int) -> None:
+    """Evaluate built-in and persona tools: 6-factor rubric, schemas, validation, and repeatability."""
+    if trials > 1:
+        trial_res = evaluate_tools_trials(persona=persona, trials=trials)
+        if as_json:
+            click.echo(json.dumps(trial_res, indent=2, ensure_ascii=False))
+            if not trial_res["all_healthy"] or not trial_res["deterministic"]:
+                sys.exit(1)
+            return
+
+        click.echo(f"# Sak Family Tools Evaluation — {trials} Trials Benchmark")
+        click.echo(f"  Target:       {trial_res['target']}")
+        click.echo(f"  Trials:       {trial_res['trials']} runs")
+        click.echo(
+            f"  Consistency:  {trial_res['consistency']:.0%} "
+            f"({'deterministic' if trial_res['deterministic'] else 'variance detected'})"
+        )
+        l_stats = trial_res["latency_stats"]
+        click.echo(
+            f"  Latency:      avg={l_stats['avg_ms']:.2f}ms "
+            f"(min={l_stats['min_ms']:.2f}ms, max={l_stats['max_ms']:.2f}ms, jitter={l_stats['jitter_ms']:.2f}ms)"
+        )
+        click.echo(f"  Fleet Status: [{trial_res['status']}]")
+
+        click.echo("\n  Final Scorecard:")
+        for p_name, res in trial_res["latest_scorecard"].items():
+            status = "HEALTHY" if res["healthy"] else "UNHEALTHY"
+            click.echo(
+                f"  [{status}] {p_name:<10} score={res['tools_score']:.0%} "
+                f"valid={res['valid_tools']}/{res['total_tools']}"
+            )
+        if not trial_res["all_healthy"] or not trial_res["deterministic"]:
+            sys.exit(1)
+        return
+
+    targets = [persona] if persona else sorted(PERSONA_NAMES)
+    results = {p: evaluate_persona_tools_health(p) for p in targets}
+    if as_json:
+        click.echo(json.dumps(results, indent=2, ensure_ascii=False))
+        if not all(r["healthy"] for r in results.values()):
+            sys.exit(1)
+        return
+
+    click.echo("# Sak Family Tool Health & Schema Evaluation")
+    all_ok = True
+    for p_name, res in results.items():
+        status = "HEALTHY" if res["healthy"] else "UNHEALTHY"
+        if not res["healthy"]:
+            all_ok = False
+        click.echo(
+            f"  [{status}] {p_name:<10} score={res['tools_score']:.0%} "
+            f"valid={res['valid_tools']}/{res['total_tools']}"
+        )
+        if detailed and res.get("dimensions_breakdown"):
+            dims = res["dimensions_breakdown"]
+            dim_str = " ".join(f"{k}={v}" for k, v in dims.items())
+            click.echo(f"    - 6-factor rubric: {dim_str}")
         if res["diagnostics"]:
             for d in res["diagnostics"]:
                 click.echo(f"    - warning: {d}")
