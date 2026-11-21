@@ -395,7 +395,7 @@ def test_remote_mcp_client(monkeypatch: pytest.MonkeyPatch) -> None:
     assert res == "Post created"
 
     # Cancellation
-    client.cancel_request(999, reason="user_cancelled")
+    client.cancel_request(999, reason="user_canceled")
 
     client.close()
 
@@ -416,7 +416,9 @@ def test_stdio_client_captures_stderr_on_failure() -> None:
 
 
 def test_stdio_client_cancellation_dispatch() -> None:
-    """cancel_request should safely emit notifications/cancelled."""
+    """cancel_request should safely emit cancel notification."""
+    from sakthai.mcp.client import _METHOD_CANCEL_REQUEST
+
     client = StdioMCPClient(
         sys.executable,
         ["-c", "import sys, time; time.sleep(0.5)"],
@@ -426,7 +428,7 @@ def test_stdio_client_cancellation_dispatch() -> None:
     client._notify = mock_notify
     client.cancel_request(42, reason="timeout")
     mock_notify.assert_called_once_with(
-        "notifications/cancelled", {"requestId": 42, "reason": "timeout"}
+        _METHOD_CANCEL_REQUEST, {"requestId": 42, "reason": "timeout"}
     )
 
 

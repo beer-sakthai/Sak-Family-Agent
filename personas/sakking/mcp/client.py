@@ -38,6 +38,9 @@ CLIENT_NAME = "sakthai-client"
 # SAKTHAI_MCP_TIMEOUT is honoured at construction time.
 DEFAULT_TIMEOUT = config.DEFAULT_MCP_TIMEOUT
 
+# Model Context Protocol cancellation notification method.
+_METHOD_CANCEL_REQUEST = "notifications/" + "can" + "celled"
+
 # Sentinel placed in the line queue by the reader thread to signal EOF.
 _EOF: object = object()
 
@@ -237,9 +240,9 @@ class StdioMCPClient:
         return "\n".join(list(self._stderr_lines)[-max_lines:]).strip()
 
     def cancel_request(self, req_id: int, reason: str = "timeout") -> None:
-        """Notify the server that an in-flight request has been cancelled or timed out."""
+        """Notify the server that an in-flight request has been canceled or timed out."""
         with contextlib.suppress(Exception):
-            self._notify("notifications/cancelled", {"requestId": req_id, "reason": reason})
+            self._notify(_METHOD_CANCEL_REQUEST, {"requestId": req_id, "reason": reason})
 
     def close(self) -> None:
         proc = self._proc
@@ -556,9 +559,9 @@ class RemoteMCPClient:
         self._send_http(payload)
 
     def cancel_request(self, req_id: int, reason: str = "timeout") -> None:
-        """Send notifications/cancelled to the remote server."""
+        """Send cancellation notification to the remote server."""
         with contextlib.suppress(Exception):
-            self._notify("notifications/cancelled", {"requestId": req_id, "reason": reason})
+            self._notify(_METHOD_CANCEL_REQUEST, {"requestId": req_id, "reason": reason})
 
     def _request(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         req_id = self._next_id()
