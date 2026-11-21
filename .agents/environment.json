@@ -1,0 +1,3 @@
+{
+  "install": "sed -i '/case \\$- in/,/esac/d' ~/.bashrc 2>/dev/null || true && (grep -qxF \"export PATH=\\\"$PWD/.venv/bin:\\$PATH\\\"\" ~/.bashrc 2>/dev/null || echo \"export PATH=\\\"$PWD/.venv/bin:\\$PATH\\\"\" >> ~/.bashrc) && uv sync --all-extras && ([ -f .env ] || cp -n .env.example .env 2>/dev/null || true) && (cd apps/sak_agent_dashboard && npm ci --no-audit --no-fund)"
+}

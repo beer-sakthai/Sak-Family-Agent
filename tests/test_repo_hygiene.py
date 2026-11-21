@@ -27,8 +27,9 @@ class TestRepoHygiene(unittest.TestCase):
     def test_root_agents_dir_contains_only_project_rules(self) -> None:
         agents_dir = REPO_ROOT / ".agents"
         self.assertTrue(agents_dir.is_dir())
-        items = [p.name for p in agents_dir.iterdir()]
-        self.assertEqual(items, ["AGENTS.md"])
+        items = {p.name for p in agents_dir.iterdir()}
+        self.assertIn("AGENTS.md", items)
+        self.assertTrue(items.issubset({"AGENTS.md", "environment.json"}))
 
     def test_gitignore_blocks_subproject_agents_and_workflow_runs(self) -> None:
         gitignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")

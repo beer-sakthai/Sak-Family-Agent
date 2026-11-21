@@ -140,6 +140,7 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-21 **Real-Time WebSocket Duplex Streaming & Voice Audio Mode (`sakthai.gateway.voice`)** — Implement `/v1/chat/ws` bidirectional WebSocket endpoint with audio chunk streaming, add Web Audio microphone recording and SpeechSynthesis playback in Next.js dashboard, and map character voice profiles across all 6 personas.
 - [x] 2026-11-21 **Distributed Multi-Agent Team Orchestration via Gateway (`sakthai.team.gateway`)** — Extend TeamEngine and HandoffEngine to delegate pipeline stages across networked Gateway instances via GatewayClient, expose `/v1/team/pipelines` endpoints, and add live interactive DAG visualizer in the dashboard.
 - [x] 2026-11-21 **High-Concurrency Benchmarks & Telemetry Dashboard (`sakthai gateway bench`)** — Implement CLI benchmark suite measuring TTFT, tokens/sec, and latency across up to 100 concurrent workers, add live performance telemetry meters to Gateway playground, and maintain ≥96% test coverage.
+- [x] 2026-11-21 **Cloud Environment Provisioning Manifest (`.agents/environment.json`, `tests/test_repo_hygiene.py`)** — Configure idempotent, non-interactive repo-scoped environment bootstrap (`uv sync --all-extras`, Next.js dashboard `npm ci`, and `.bashrc` PATH/OpenEnv exports) and update `.agents/` hygiene test invariants.
 
 
 
