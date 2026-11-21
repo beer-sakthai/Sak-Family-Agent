@@ -39,7 +39,7 @@ personas, deployment config, training assets, or docs.
 
 ```
 personas/          the six agents, each a full copy of the package (see below)
-tests/             the one pytest suite (imports `sakthai`, 178 test files)
+tests/             the one pytest suite (imports `sakthai`, 181 test files)
 library/           31 curated skills across 11 categories (a live skill root)
 docs/              architecture, security, plans/specs under docs/superpowers/
 scripts/           dev + maintenance scripts (compose_persona, export_agent_repo, …)
@@ -68,11 +68,11 @@ find personas/<persona>/skills -maxdepth 1 -mindepth 1 -type d | wc -l
 diff -rq personas/sakthai personas/<persona> -x skills -x config -x '*.md' -x evolution -x __pycache__
 # test files, then test count + real coverage
 ls tests/test_*.py | wc -l
-uv run pytest tests/ -q --cov=sakthai --cov-branch   # 3,264 pass, 9 skip
+uv run pytest tests/ -q --cov=sakthai --cov-branch   # 3,320 pass, 9 skip
 ```
 
 The package layout, test, workflow and coverage figures below were re-measured on
-2026-11-21 at `6b89bc6`; other counts date from 2026-08-28 at `8e6d785`.
+2026-11-21 at `e603791`; other counts date from 2026-08-28 at `8e6d785`.
 
 ### The persona package copies (read this before editing `sakthai/`)
 
@@ -319,10 +319,10 @@ advanced run fails while default setup is on. See the header of `codeql.yml`.
 available tooling, not an enforced gate.
 
 Coverage floor is **96%** (branch coverage on) over the `sakthai` package,
-with `telegram/bot.py` omitted from measurement. The suite sits at **96.68%**
-(247 uncovered statements and 215 partial branches out of 11,317 measured
-statements / 3,748 branches, measured 2026-11-21) — above the floor, with
-0.68pp of headroom.
+with `telegram/bot.py` omitted from measurement. The suite sits at **96.63%**
+(258 uncovered statements and 225 partial branches out of 11,657 measured
+statements / 3,880 branches, measured 2026-11-21) — above the floor, with
+0.63pp of headroom.
 
 **The gate is `--cov-fail-under=96` on `ci.yml`'s pytest step, not
 `pyproject.toml`.** `[tool.coverage.report] fail_under` alone printed
@@ -361,7 +361,7 @@ coverage. Three things to know before touching it:
   does `monkeypatch.delenv("SAKTHAI_HOME")` because it exercises the
   `Path.home()` fallback that `SAKTHAI_HOME` would otherwise shadow.
 
-The headroom is ~0.68pp, or about 100 statements-or-branches. Treat it as the
+The headroom is ~0.63pp, or about 100 statements-or-branches. Treat it as the
 working budget and raise coverage rather than lowering the floor.
 
 Run the lint→pytest sequence locally before pushing — a drop below the floor now
@@ -789,7 +789,7 @@ resolving to the *module* rather than the command object:
 
 ## Tests
 
-Tests live in `tests/` (178 `test_*.py` files, 3,264 passing tests as of
+Tests live in `tests/` (181 `test_*.py` files, 3,320 passing tests as of
 2026-11-21). This is the only suite for the `sakthai`
 package — there is no per-persona test tree. Two files in `tests/` are not test
 modules: `conftest.py` and `security_audit.py` (a helper, not collected).
@@ -798,7 +798,7 @@ It is not, however, the repo's only test tree. Four others exist:
 
 | Tree | Files | Run by |
 |---|---:|---|
-| `tests/` | 178 | `ci.yml` |
+| `tests/` | 181 | `ci.yml` |
 | `apps/agent_workflow_framework/tests/` | 9 | `apps.yml` (no coverage measured) |
 | `apps/sak_agent_dashboard` (TypeScript) | 14 | `apps.yml` |
 | `sakthai-chat-cli/` | 86 | `subprojects.yml` (tests only; not linted in CI) |
