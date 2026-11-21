@@ -83,7 +83,7 @@ Connected MCP & Platform Tools:
   - Runs on local Ollama (`sakthai` model) with zero external MCP servers and zero API token spend
   - Uses built-in memory, calendar, and mail tools (`list_calendar_events`, `create_calendar_event`, `read_outlook_mail`, `send_telegram_message`)
 - **Unified Agent Platform (`sakthai.agent_platform`)**: `check_data_loss_guardrail`, `wrap_with_isolated_runner`, `render_skills_progressive_summary`, `AntigravityAgentRunner`, `harness_exporter`
-- **Skills Overlay**: 9 skills in [`personas/saktan/skills/`](file:///home/sak/Sak-Family-Agent/personas/saktan/skills) + 19 shared skills in [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills)
+- **Skills Overlay**: 26 skills in [`personas/saktan/skills/`](file:///home/sak/Sak-Family-Agent/personas/saktan/skills) + 19 shared skills in [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills)
 
 ---
 

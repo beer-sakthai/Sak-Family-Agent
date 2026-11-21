@@ -22,7 +22,7 @@ flowchart TD
 
 #### 🔹 Task 1.1: Config, Model Preset & `HF_TOKEN` Preflight
 - **Status**: [ ]
-- **Goal**: Confirm SakThai's provider (`huggingface`), model (`deepseek-ai/DeepSeek-V4.1-Flash`), 285 overlay skills, and `sakthai platform` CLI resolve cleanly.
+- **Goal**: Confirm SakThai's provider (`huggingface`), model (`deepseek-ai/DeepSeek-V4.1-Flash`), 170 overlay skills, and `sakthai platform` CLI resolve cleanly.
 - **Estimated Time**: 2 minutes
 - **Command**: `SAKTHAI_HOME=$(mktemp -d) sakthai run "preflight" --persona sakthai --no-mcp --dry-run && sakthai platform detect-deps`
 - **Acceptance Criteria**: Preflight resolves `huggingface` → `deepseek-ai/DeepSeek-V4.1-Flash` and detects `uv` environment with 0 errors.

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,7 @@ class MCPServerSpec:
     url: str | None = None
     transport: str = "stdio"
     tools: list[str] | None = None
+    headers: dict[str, str] = field(default_factory=dict)
 
 
 def mcp_config_path() -> Path:
@@ -64,6 +66,13 @@ def _parse_server_entry(name: str, entry: dict[str, Any]) -> MCPServerSpec | Non
     raw_tools = entry.get("tools")
     tools = [str(t) for t in raw_tools] if isinstance(raw_tools, list) else None
 
+    raw_headers = entry.get("headers")
+    headers = (
+        {str(k): os.path.expandvars(str(v)) for k, v in raw_headers.items()}
+        if isinstance(raw_headers, dict)
+        else {}
+    )
+
     raw_type = entry.get("type") or entry.get("transport")
     if isinstance(raw_type, str):
         t_lower = raw_type.lower()
@@ -85,6 +94,7 @@ def _parse_server_entry(name: str, entry: dict[str, Any]) -> MCPServerSpec | Non
         url=url,
         transport=transport,
         tools=tools,
+        headers=headers,
     )
 
 

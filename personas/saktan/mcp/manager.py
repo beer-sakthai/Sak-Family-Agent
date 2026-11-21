@@ -64,6 +64,7 @@ def connect_servers(
                 client = RemoteMCPClient(
                     spec.url,
                     name=spec.name,
+                    headers=spec.headers,
                     timeout=timeout,
                 )
             else:

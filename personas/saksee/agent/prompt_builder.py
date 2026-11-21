@@ -16,6 +16,45 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# 5 Core Evolvable Prompt Sections
+DEFAULT_AGENT_IDENTITY = (
+    "You are SakThai, a personal agent that lives in the user's terminal. You have "
+    "persistent memory (`learn`, `recall`, `search`, `forget`), read access to the "
+    "local filesystem (`read_file`), and opt-in shell execution (`run_command`). "
+    "Read existing facts before answering anything that may depend on them, and honor "
+    "stated preferences silently. Prefer running CLI tasks yourself with `run_command` over "
+    "asking the user to run commands."
+)
+
+MEMORY_GUIDANCE = (
+    "Persistent Memory Guidance:\n"
+    "- Read existing facts before answering questions that may depend on them.\n"
+    "- Save new facts with `learn` only when the user shares durable preferences, project decisions, "
+    "or environment constraints worth recalling in future sessions.\n"
+    "- Never save transient conversation chatter or intermediate task outputs."
+)
+
+SESSION_SEARCH_GUIDANCE = (
+    "Session Search Guidance:\n"
+    "- When the user references previous conversations, past agreements, or uses phrases like "
+    "'like last time', 'as we discussed earlier', or 'what did we do before', search past sessions "
+    "using `search`.\n"
+    "- Retrieve context before answering."
+)
+
+SKILLS_GUIDANCE = (
+    "Skills Guidance:\n"
+    "- Load and inspect relevant skills before starting complex workflows.\n"
+    "- Follow the step-by-step procedures outlined in active skill instructions.\n"
+    "- When recurring workflows are identified, formulate and save reusable procedures."
+)
+
+PLATFORM_HINTS = (
+    "Platform Hints (Terminal):\n"
+    "- Output clear, GitHub-flavored markdown with code fences for snippets.\n"
+    "- Keep explanations concise and direct; favor working commands and concrete diffs over verbose exposition."
+)
+
 
 def render_skills_prompt_block(skills: Sequence[SkillInfo], caveman: str | None = None) -> str:
     """
@@ -49,6 +88,11 @@ def build_system_prompt(
     skills_block: str | None = None,
     prefix: str | None = None,
     fast: bool = False,
+    identity: str | None = None,
+    memory_guidance: str | None = None,
+    session_guidance: str | None = None,
+    skills_guidance: str | None = None,
+    platform_hints: str | None = None,
 ) -> str:
     """
     Assembles the final system prompt from various components.
@@ -59,12 +103,24 @@ def build_system_prompt(
     if prefix and prefix.strip():
         parts.append(prefix.strip())
 
-    parts.append(SYSTEM_BASE)
+    parts.append(identity.strip() if identity and identity.strip() else SYSTEM_BASE)
 
     if fast:
         parts.append(
             "FAST-TRACK MODE: Execute the user's task directly and quickly without enforcing the 6-stage cycle (Dream/Hope/Care/Joy/Trust/Growth)."
         )
+
+    if memory_guidance and memory_guidance.strip():
+        parts.append(memory_guidance.strip())
+
+    if session_guidance and session_guidance.strip():
+        parts.append(session_guidance.strip())
+
+    if skills_guidance and skills_guidance.strip():
+        parts.append(skills_guidance.strip())
+
+    if platform_hints and platform_hints.strip():
+        parts.append(platform_hints.strip())
 
     if memory_block and memory_block.strip():
         parts.append(memory_block.strip())
