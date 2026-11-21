@@ -325,6 +325,10 @@ def metrics_payload(
     N — otherwise a quiet persona would report nothing while a busy one filled
     the window.
     """
+    # Clamp like the other payloads: a non-positive limit would otherwise make
+    # ``[-limit:]`` return the whole window (limit=0) or drop the oldest N runs
+    # (limit<0) instead of windowing to the last N.
+    limit = max(1, min(EVAL_WINDOW, limit))
     attributed = _eval_records_with_attribution(home)
     if personas is not None:
         wanted = set(personas)
