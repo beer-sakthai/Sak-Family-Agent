@@ -137,6 +137,14 @@ export function GatewayPlayground() {
   const [isSending, setIsSending] = useState(false);
   const [guardrailAlert, setGuardrailAlert] = useState<Record<string, unknown> | null>(null);
   const [guardrailTesting, setGuardrailTesting] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(false);
+  const [memoryData, setMemoryData] = useState<Record<string, unknown> | null>(null);
+  const [memoryLoading, setMemoryLoading] = useState(false);
+  const [selectedPipeline, setSelectedPipeline] = useState("daily-sync");
+  const [teamResult, setTeamResult] = useState<Record<string, unknown> | null>(null);
+  const [teamRunning, setTeamRunning] = useState(false);
+  const [benchResult, setBenchResult] = useState<Record<string, unknown> | null>(null);
+  const [benchRunning, setBenchRunning] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "initial",
@@ -335,6 +343,64 @@ export function GatewayPlayground() {
     }
   };
 
+  const handleInspectMemory = async () => {
+    setMemoryLoading(true);
+    try {
+      const res = await fetch(`/api/gateway/memory?persona=${encodeURIComponent(selectedPersona)}`);
+      const data = await res.json();
+      setMemoryData(data);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setMemoryData({ ok: false, error: msg });
+    } finally {
+      setMemoryLoading(false);
+    }
+  };
+
+  const handleRunTeamPipeline = async () => {
+    setTeamRunning(true);
+    try {
+      const res = await fetch("/api/gateway/team", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pipeline: selectedPipeline,
+          task: `Execute ${selectedPipeline} pipeline via Gateway Console`,
+        }),
+      });
+      const data = await res.json();
+      setTeamResult(data);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setTeamResult({ ok: false, error: msg });
+    } finally {
+      setTeamRunning(false);
+    }
+  };
+
+  const handleRunBenchmark = async () => {
+    setBenchRunning(true);
+    try {
+      const res = await fetch("/api/gateway/bench", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          concurrency: 4,
+          requests: 12,
+          persona: selectedPersona,
+          stream: streamMode,
+        }),
+      });
+      const data = await res.json();
+      setBenchResult(data);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setBenchResult({ ok: false, error: msg });
+    } finally {
+      setBenchRunning(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Banner & Gateway Pulse */}
@@ -530,6 +596,93 @@ export function GatewayPlayground() {
               </div>
             )}
           </div>
+
+          {/* Memory & Episodic Context Inspector */}
+          <div className="rounded-2xl border border-line-subtle bg-surface-raised p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-content-secondary">
+                Memory Middleware
+              </span>
+              <button
+                type="button"
+                onClick={handleInspectMemory}
+                disabled={memoryLoading}
+                className="rounded-lg border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-[11px] font-medium text-purple-300 hover:bg-purple-500/20 disabled:opacity-50"
+              >
+                {memoryLoading ? "Loading..." : "Inspect Memory"}
+              </button>
+            </div>
+            <p className="text-[11px] text-content-muted">
+              Auto-injects SQLite facts &amp; records episodic chat turns per persona.
+            </p>
+            {memoryData && (
+              <div className="mt-2 rounded-xl border border-line-subtle bg-surface-base p-2.5 text-[11px]">
+                <div className="flex justify-between font-mono text-purple-300">
+                  <span>Facts: {String(memoryData.facts_count ?? 0)}</span>
+                  <span>Observations: {String(memoryData.observations_count ?? 0)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Distributed Multi-Agent Team Orchestration */}
+          <div className="rounded-2xl border border-line-subtle bg-surface-raised p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-content-secondary">
+                Team DAG Dispatch
+              </span>
+              <button
+                type="button"
+                onClick={handleRunTeamPipeline}
+                disabled={teamRunning}
+                className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-[11px] font-medium text-blue-300 hover:bg-blue-500/20 disabled:opacity-50"
+              >
+                {teamRunning ? "Running..." : "Run Pipeline"}
+              </button>
+            </div>
+            <select
+              aria-label="Select team pipeline"
+              value={selectedPipeline}
+              onChange={(e) => setSelectedPipeline(e.target.value)}
+              className="w-full rounded-lg border border-line-subtle bg-surface-base px-2.5 py-1.5 text-xs text-content-primary"
+            >
+              <option value="daily-sync">daily-sync (SakThai)</option>
+              <option value="code-review">code-review (3-agent DAG)</option>
+              <option value="feature-delivery">feature-delivery (4-agent DAG)</option>
+              <option value="parallel-deep-dive">parallel-deep-dive (Fan-out DAG)</option>
+            </select>
+            {teamResult && (
+              <div className="mt-2 rounded-xl border border-line-subtle bg-surface-base p-2.5 text-[11px]">
+                <div className="font-mono text-emerald-300">
+                  Status: {String(teamResult.status ?? "completed")} · Steps:{" "}
+                  {String(teamResult.steps_completed ?? 0)}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* High-Concurrency Benchmarks & Telemetry */}
+          <div className="rounded-2xl border border-line-subtle bg-surface-raised p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-content-secondary">
+                Concurrency Benchmark
+              </span>
+              <button
+                type="button"
+                onClick={handleRunBenchmark}
+                disabled={benchRunning}
+                className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-50"
+              >
+                {benchRunning ? "Benchmarking..." : "Run Benchmark"}
+              </button>
+            </div>
+            {benchResult && (
+              <div className="mt-2 rounded-xl border border-line-subtle bg-surface-base p-2.5 font-mono text-[11px] text-content-secondary">
+                <div>RPS: {String(benchResult.requests_per_sec ?? 0)} req/s</div>
+                <div>TPS: {String(benchResult.tokens_per_sec ?? 0)} tok/s</div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right Column: Interactive Chat & SSE Stream Window */}
@@ -545,11 +698,23 @@ export function GatewayPlayground() {
                 <p className="text-[11px] text-content-muted">
                   Model: <span className="font-mono text-purple-400">{effectiveModel}</span> · Streaming:{" "}
                   {streamMode ? "SSE Enabled" : "JSON"}
+                  {voiceMode ? " · Voice Duplex Active" : ""}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setVoiceMode((v) => !v)}
+                className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
+                  voiceMode
+                    ? "border-purple-500 bg-purple-500/20 text-purple-200"
+                    : "border-line-subtle bg-surface-base text-content-secondary"
+                }`}
+              >
+                {voiceMode ? "Voice Duplex: ON" : "Voice Duplex: OFF"}
+              </button>
               <label className="flex cursor-pointer items-center gap-1.5 text-xs text-content-secondary">
                 <input
                   type="checkbox"

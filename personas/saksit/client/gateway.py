@@ -115,6 +115,63 @@ class GatewayClient:
         data = resp.json()
         return data.get("tools", [])  # type: ignore[no-any-return]
 
+    def get_persona_memory(self, persona: str) -> dict[str, Any]:
+        """Fetch memory statistics and recent facts for a persona."""
+        resp = self.get(f"/v1/personas/{persona}/memory")
+        resp.raise_for_status()
+        return resp.json()  # type: ignore[no-any-return]
+
+    def list_voice_profiles(self) -> dict[str, Any]:
+        """List voice synthesis profiles across all 6 personas."""
+        resp = self.get("/v1/voice/profiles")
+        resp.raise_for_status()
+        return resp.json()  # type: ignore[no-any-return]
+
+    def send_duplex_event(self, event: dict[str, Any]) -> dict[str, Any]:
+        """Send a duplex/WebSocket JSON event to /v1/chat/ws."""
+        resp = self.post("/v1/chat/ws", json=event)
+        resp.raise_for_status()
+        return resp.json()  # type: ignore[no-any-return]
+
+    def list_team_pipelines(self) -> dict[str, Any]:
+        """List multi-agent team pipelines registered on the gateway."""
+        resp = self.get("/v1/team/pipelines")
+        resp.raise_for_status()
+        return resp.json()  # type: ignore[no-any-return]
+
+    def run_team_pipeline(
+        self,
+        pipeline: str,
+        task: str,
+        *,
+        gateway_url: str | None = None,
+    ) -> dict[str, Any]:
+        """Execute a multi-agent team pipeline on the gateway."""
+        payload: dict[str, Any] = {"pipeline": pipeline, "task": task}
+        if gateway_url:
+            payload["gateway_url"] = gateway_url
+        resp = self.post("/v1/team/pipelines", json=payload)
+        return resp.json()  # type: ignore[no-any-return]
+
+    def run_benchmark(
+        self,
+        *,
+        concurrency: int = 10,
+        requests: int = 50,
+        persona: str = "sakjules",
+        stream: bool = True,
+    ) -> dict[str, Any]:
+        """Run a high-concurrency benchmark on the gateway."""
+        payload = {
+            "concurrency": concurrency,
+            "requests": requests,
+            "persona": persona,
+            "stream": stream,
+        }
+        resp = self.post("/v1/bench", json=payload)
+        resp.raise_for_status()
+        return resp.json()  # type: ignore[no-any-return]
+
     def execute_tool(
         self,
         tool: str,

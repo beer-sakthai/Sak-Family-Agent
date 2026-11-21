@@ -18,6 +18,7 @@ from .engine import (
     run_pipeline,
     stream_pipeline_events,
 )
+from .gateway import GatewayTeamOrchestrator
 from .handoff import (
     AgentName,
     AgentRef,
@@ -57,6 +58,7 @@ __all__ = [
     "Constraints",
     "Correlation",
     "Evidence",
+    "GatewayTeamOrchestrator",
     "HandoffEnvelope",
     "HandoffOrchestrator",
     "HandoffStatus",
