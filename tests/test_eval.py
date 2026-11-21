@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from sakthai.agent.eval import (
+    SKILL_RUBRIC_CRITERIA,
     EvalRecord,
     _score_to_grade,
     evaluate_all_personas,
@@ -17,6 +18,7 @@ from sakthai.agent.eval import (
     evaluate_persona_safety_compliance,
     evaluate_persona_skills_health,
     evaluate_persona_soul_alignment,
+    evaluate_skills_trials,
     extract_soul_intro_line,
     persona_eval_log_path,
     record_eval,
@@ -464,6 +466,71 @@ class TestSkillsHealth:
         assert res["total_skills"] == 5
         assert res["valid_skills"] == 0
         assert len(res["diagnostics"]) >= 5
+
+    def test_all_real_personas_pass_10_criteria(self) -> None:
+        assert len(SKILL_RUBRIC_CRITERIA) == 10
+        for p in PERSONA_NAMES:
+            res = evaluate_persona_skills_health(p)
+            assert res["criteria_count"] == 10
+            assert res["skills_passed_all_criteria"] == res["total_skills"]
+            assert res["valid_skills"] == res["total_skills"]
+            assert res["skills_score"] == 1.0
+            breakdown = res["dimensions_breakdown"]
+            assert set(breakdown.keys()) == set(SKILL_RUBRIC_CRITERIA)
+            for crit, count in breakdown.items():
+                assert count == res["total_skills"], (
+                    f"{p} {crit} only passed {count}/{res['total_skills']}"
+                )
+
+    def test_evaluate_skills_trials_10x(self) -> None:
+        report = evaluate_skills_trials(trials=10)
+        assert report["trials"] == 10
+        assert report["consistent"] is True
+        assert report["all_trials_healthy"] is True
+        assert len(report["latencies_ms"]) == 10
+        assert len(report["trial_history"]) == 10
+        assert report["avg_latency_ms"] > 0
+        assert report["min_latency_ms"] > 0
+        assert report["max_latency_ms"] >= report["min_latency_ms"]
+        assert report["jitter_ms"] >= 0
+        assert len(report["latest_report"]) == 6
+
+    def test_evaluate_skills_trials_single_persona(self) -> None:
+        report = evaluate_skills_trials(persona="sakjules", trials=3)
+        assert report["trials"] == 3
+        assert report["persona"] == "sakjules"
+        assert report["consistent"] is True
+        assert report["all_trials_healthy"] is True
+        assert len(report["latest_report"]) == 1
+        assert "sakjules" in report["latest_report"]
+
+    def test_evaluate_skills_trials_invalid_persona_raises(self) -> None:
+        with pytest.raises(ValueError, match="Unknown persona"):
+            evaluate_skills_trials(persona="invalid_agent")
+
+    def test_evaluate_skills_trials_drift_detection(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import sakthai.agent.eval as eval_mod
+
+        calls = 0
+
+        def _mock_eval(persona: str, personas_dir: Path | None = None) -> dict[str, object]:
+            nonlocal calls
+            calls += 1
+            score = 1.0 if calls <= 6 else 0.8
+            return {
+                "persona": persona,
+                "skills_score": score,
+                "healthy": score >= 0.9,
+                "total_skills": 10,
+                "valid_skills": 10,
+                "skills_passed_all_criteria": 10,
+            }
+
+        monkeypatch.setattr(eval_mod, "evaluate_persona_skills_health", _mock_eval)
+        drift_report = evaluate_skills_trials(trials=2)
+        assert drift_report["trials"] == 2
+        assert drift_report["consistent"] is False
+        assert drift_report["all_trials_healthy"] is False
 
 
 class TestMemoryHealth:
