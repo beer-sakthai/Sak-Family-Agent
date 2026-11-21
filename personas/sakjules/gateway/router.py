@@ -11,9 +11,11 @@ from datetime import UTC, datetime
 from typing import Any
 
 from .. import __version__
+from ..agent.guardrails import DEFAULT_POLICY, GuardrailAction, GuardrailPolicy
 from ..agent.tools import BUILTIN_TOOLS
 from ..agent_platform.agent_engine import MODEL_PRESETS
 from ..agent_platform.safety import DataLossGuardrail
+from ..config import redact_secrets
 from .config import GatewayConfig
 
 logger = logging.getLogger(__name__)
@@ -78,10 +80,12 @@ class GatewayRouter:
         config: GatewayConfig | None = None,
         chat_executor: Callable[..., Any] | None = None,
         guardrail: DataLossGuardrail | None = None,
+        policy: GuardrailPolicy = DEFAULT_POLICY,
     ) -> None:
         self.config = config or GatewayConfig()
         self.chat_executor = chat_executor
         self.guardrail = guardrail or DataLossGuardrail()
+        self.policy = policy
         self._start_time = time.time()
 
     def handle_models(self) -> dict[str, Any]:
@@ -159,43 +163,54 @@ class GatewayRouter:
         if not isinstance(arguments, dict):
             return {"status": "error", "error": "'arguments' must be a dictionary"}
 
-        approval_token = body.get("approval_token")
-
         # Find tool
         target_tool = next((t for t in BUILTIN_TOOLS if t.name == tool_name), None)
         if target_tool is None:
             return {"status": "error", "error": f"Unknown tool '{tool_name}'"}
 
-        # Safety check for any string arguments
+        # Destructive-input check. A block is final: the gateway never issues a
+        # token that lets the same caller approve its own blocked request.
         for val in arguments.values():
             if isinstance(val, str):
-                check = self.guardrail.verify_or_halt(val, approval_token=approval_token)
+                check = self.guardrail.verify_or_halt(val)
                 if check.blocked:
-                    expected_tok = self.guardrail.generate_approval_token(val)
                     return {
                         "status": "blocked",
                         "tool": tool_name,
                         "reason": check.reason,
                         "impact": check.impact,
-                        "approval_token_required": expected_tok,
                     }
 
         try:
             from ..memory.store import MemoryStore
 
             with MemoryStore() as store:
-                result_str = target_tool.handler(arguments, store)
+                # The same pre/post GuardrailPolicy the agent loop and MCP server enforce.
+                pre_check = self.policy.check_pre_execution(target_tool, dict(arguments), store)
+                if pre_check.action == GuardrailAction.DENY:
+                    return {"status": "blocked", "tool": tool_name, "reason": pre_check.reason}
+                final_args = (
+                    pre_check.modified_args
+                    if pre_check.modified_args is not None
+                    else dict(arguments)
+                )
+
+                result_str = redact_secrets(target_tool.handler(final_args, store))
+
+                post_check = self.policy.check_post_execution(
+                    target_tool, final_args, result_str, False, store
+                )
+                if post_check.action == GuardrailAction.DENY:
+                    return {"status": "blocked", "tool": tool_name, "reason": post_check.reason}
 
             # Output safety check
-            output_check = self.guardrail.verify_or_halt(result_str, approval_token=approval_token)
+            output_check = self.guardrail.verify_or_halt(result_str)
             if output_check.blocked:
-                expected_tok = self.guardrail.generate_approval_token(result_str)
                 return {
                     "status": "blocked",
                     "tool": tool_name,
                     "reason": output_check.reason,
                     "impact": output_check.impact,
-                    "approval_token_required": expected_tok,
                 }
 
             return {
@@ -205,7 +220,7 @@ class GatewayRouter:
             }
         except Exception as exc:
             logger.exception("Failed to execute tool %s", tool_name)
-            return {"status": "error", "tool": tool_name, "error": str(exc)}
+            return {"status": "error", "tool": tool_name, "error": redact_secrets(str(exc))}
 
     def handle_chat_completion(
         self, body: dict[str, Any]

@@ -83,7 +83,12 @@ def serve_cmd(
     if cfg.bearer_token:
         click.echo("  Authentication:  Enabled (Bearer Token)")
     else:
-        click.echo("  Authentication:  Disabled (Open Access)")
+        click.echo(
+            "  Authentication:  NO TOKEN CONFIGURED — every request except /health "
+            "will be refused (401).\n"
+            "                   Pass --token, set SAKTHAI_GATEWAY_TOKEN, or run "
+            "`sakthai web setup`."
+        )
     click.echo("Press Ctrl+C to stop.\n")
 
     try:
