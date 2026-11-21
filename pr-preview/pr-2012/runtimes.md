@@ -170,7 +170,7 @@ SakThai includes a built-in, multi-threaded Runtime Gateway (`sakthai.gateway`) 
 sakthai gateway serve
 
 # Or customize host, port, authentication token, and CORS
-sakthai gateway serve --host 127.0.0.1 --port 8080 --token secret123 --cors "*"
+sakthai gateway serve --host 127.0.0.1 --port 8080 --token "$TOKEN" --cors "*"
 ```
 
 Or run via the standalone script:
