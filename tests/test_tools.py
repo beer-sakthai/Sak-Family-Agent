@@ -13,8 +13,10 @@ from unittest.mock import MagicMock
 import pytest
 
 import sakthai.agent.tools as _tools_mod
+from sakthai.agent.registry import ToolRegistry
 from sakthai.agent.tools import (
     BUILTIN_TOOLS,
+    Tool,
     _allowed_read_roots,
     _coerce_limit,
     _path_under_any_root,
@@ -1374,34 +1376,41 @@ def test_load_tool_overrides(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     from sakthai.agent.tools import _load_tool_overrides, tool_by_name
     from sakthai.config import tool_descriptions_path
 
-    # Write a test overrides file
-    overrides = {
-        "learn": {
-            "description": "Custom overridden learn description.",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "value": {"type": "string", "description": "Overridden param description."}
-                },
-            },
-        }
-    }
-    path = tool_descriptions_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(overrides, f)
-
-    # Call override loader
-    _load_tool_overrides()
-
-    # Find the learn tool and assert overridden descriptions
     learn_tool = tool_by_name("learn")
     assert learn_tool is not None
-    assert learn_tool.description == "Custom overridden learn description."
-    assert (
-        learn_tool.input_schema["properties"]["value"]["description"]
-        == "Overridden param description."
-    )
+    orig_desc = learn_tool.description
+    orig_schema = dict(learn_tool.input_schema)
+
+    try:
+        # Write a test overrides file
+        overrides = {
+            "learn": {
+                "description": "Custom overridden learn description.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "value": {"type": "string", "description": "Overridden param description."}
+                    },
+                },
+            }
+        }
+        path = tool_descriptions_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(overrides, f)
+
+        # Call override loader
+        _load_tool_overrides()
+
+        # Find the learn tool and assert overridden descriptions
+        assert learn_tool.description == "Custom overridden learn description."
+        assert (
+            learn_tool.input_schema["properties"]["value"]["description"]
+            == "Overridden param description."
+        )
+    finally:
+        object.__setattr__(learn_tool, "description", orig_desc)
+        object.__setattr__(learn_tool, "input_schema", orig_schema)
 
 
 def test_family_recall_and_search_tools(
@@ -1508,3 +1517,247 @@ def test_search_sessions_tool_no_matches(sakthai_home: Path, store: MemoryStore)
 def test_search_sessions_tool_requires_query(sakthai_home: Path, store: MemoryStore) -> None:
     with pytest.raises(ValueError, match="`query` is required"):
         tool_by_name("search_sessions").handler({"query": "  "}, store)
+
+
+# ---------------------------------------------------------------------------
+# Tool Schema Validation, Safe Execution & Registry Diagnostics
+# ---------------------------------------------------------------------------
+
+
+def test_tool_validate_args_non_mapping() -> None:
+    tool = tool_by_name("learn")
+    assert tool is not None
+
+    ok, errs = tool.validate_args(None)
+    assert not ok
+    assert any("mapping" in e for e in errs)
+
+    ok, errs = tool.validate_args("not-a-dict")  # type: ignore[arg-type]
+    assert not ok
+    assert any("mapping" in e for e in errs)
+
+    ok, errs = tool.validate_args([1, 2])  # type: ignore[arg-type]
+    assert not ok
+    assert any("mapping" in e for e in errs)
+
+
+def test_tool_validate_args_required_fields() -> None:
+    tool = tool_by_name("learn")
+    assert tool is not None
+
+    # Missing required parameter
+    ok, errs = tool.validate_args({})
+    assert not ok
+    assert any("Missing required parameter 'value'" in e for e in errs)
+
+    # Null required parameter
+    ok, errs = tool.validate_args({"value": None})
+    assert not ok
+    assert any("cannot be null" in e for e in errs)
+
+    # Blank required string parameter
+    ok, errs = tool.validate_args({"value": "   "})
+    assert not ok
+    assert any("cannot be blank" in e for e in errs)
+
+    # Valid required parameter
+    ok, errs = tool.validate_args({"value": "valid text"})
+    assert ok
+    assert len(errs) == 0
+
+
+def test_tool_validate_args_types_and_enums() -> None:
+    schema = {
+        "type": "object",
+        "properties": {
+            "str_field": {"type": "string"},
+            "int_field": {"type": "integer"},
+            "num_field": {"type": "number"},
+            "bool_field": {"type": "boolean"},
+            "arr_field": {"type": "array"},
+            "obj_field": {"type": "object"},
+            "enum_field": {"type": "string", "enum": ["alpha", "beta"]},
+        },
+    }
+    tool = Tool(
+        name="test_schema_tool",
+        description="A comprehensive testing tool for all JSON schema property types.",
+        input_schema=schema,
+        handler=lambda args, store: "ok",
+    )
+
+    # Valid all types
+    ok, errs = tool.validate_args(
+        {
+            "str_field": "hello",
+            "int_field": 42,
+            "num_field": 3.14,
+            "bool_field": True,
+            "arr_field": [1, 2],
+            "obj_field": {"k": "v"},
+            "enum_field": "alpha",
+        }
+    )
+    assert ok
+    assert len(errs) == 0
+
+    # Number accepting int
+    ok, errs = tool.validate_args({"num_field": 100})
+    assert ok
+
+    # Invalids: bool passed for int or number
+    ok, errs = tool.validate_args({"int_field": True})
+    assert not ok
+    assert any("expected integer" in e for e in errs)
+
+    ok, errs = tool.validate_args({"num_field": False})
+    assert not ok
+    assert any("expected number" in e for e in errs)
+
+    # Invalids: wrong types for string, boolean, array, object
+    ok, errs = tool.validate_args({"str_field": 123})
+    assert not ok
+    assert any("expected string" in e for e in errs)
+
+    ok, errs = tool.validate_args({"bool_field": "true"})
+    assert not ok
+    assert any("expected boolean" in e for e in errs)
+
+    ok, errs = tool.validate_args({"arr_field": "not_an_array"})
+    assert not ok
+    assert any("expected array" in e for e in errs)
+
+    ok, errs = tool.validate_args({"obj_field": ["not_a_mapping"]})
+    assert not ok
+    assert any("expected object" in e for e in errs)
+
+    # Enum mismatch
+    ok, errs = tool.validate_args({"enum_field": "gamma"})
+    assert not ok
+    assert any("must be one of ['alpha', 'beta']" in e for e in errs)
+
+
+def test_tool_safe_call_validation_failure(store: MemoryStore) -> None:
+    tool = tool_by_name("learn")
+    assert tool is not None
+
+    output, is_error = tool.safe_call({"value": "   "}, store)
+    assert is_error is True
+    assert "Invalid arguments for tool 'learn'" in output
+    assert "cannot be blank" in output
+
+
+def test_tool_safe_call_execution_success(store: MemoryStore) -> None:
+    tool = tool_by_name("learn")
+    assert tool is not None
+
+    output, is_error = tool.safe_call({"value": "safe call fact"}, store)
+    assert is_error is False
+    assert "Stored fact id=" in output
+
+
+def test_tool_safe_call_handler_exception_handling(store: MemoryStore) -> None:
+    tool = Tool(
+        name="failing_tool",
+        description="A tool that raises an unexpected runtime exception during execution.",
+        input_schema={"type": "object"},
+        handler=lambda args, s: (_ for _ in ()).throw(RuntimeError("something crashed internally")),
+    )
+
+    output, is_error = tool.safe_call({}, store)
+    assert is_error is True
+    assert "RuntimeError: something crashed internally" in output
+
+
+def test_tool_safe_call_redacts_secrets(
+    monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+) -> None:
+    from sakthai.config import register_secret
+
+    secret_key = "super-secret-token-xyz"
+    register_secret(secret_key)
+
+    tool = Tool(
+        name="secret_tool",
+        description="A tool that inadvertently outputs a registered secret token value.",
+        input_schema={"type": "object"},
+        handler=lambda args, s: f"Output with {secret_key}",
+    )
+
+    output, is_error = tool.safe_call({}, store)
+    assert is_error is False
+    assert secret_key not in output
+    assert "[REDACTED]" in output
+
+
+def test_tool_registry_diagnostics_and_stats() -> None:
+    from sakthai.agent.registry import builtin_registry
+
+    reg = builtin_registry()
+    assert len(reg) >= 19
+    assert "learn" in reg
+    assert reg.get("learn") is not None
+    assert reg.get("nonexistent") is None
+
+    # validate_all on built-in tools should be completely clean
+    report = reg.validate_all()
+    assert len(report) >= 19
+    for name, errs in report.items():
+        assert errs == [], f"Tool {name} had validation errors: {errs}"
+
+    # stats
+    stats = reg.stats()
+    assert stats["total_tools"] == len(reg)
+    assert stats["valid_tools"] == len(reg)
+    assert stats["healthy"] is True
+    assert "learn" in stats["names"]
+
+    # to_dict
+    meta = reg.to_dict()
+    assert len(meta) == len(reg)
+    learn_meta = next(m for m in meta if m["name"] == "learn")
+    assert "description" in learn_meta
+    assert "schema" in learn_meta
+    assert "value" in learn_meta["required"]
+    assert learn_meta["properties_count"] >= 1
+
+
+def test_tool_registry_validate_all_catches_flaws() -> None:
+    flawed_tools = [
+        Tool(
+            name="NotSnakeCase",
+            description="A proper description that is long enough.",
+            input_schema={"type": "object"},
+            handler=lambda a, s: "ok",
+        ),
+        Tool(
+            name="short_desc",
+            description="Too short",
+            input_schema={"type": "object"},
+            handler=lambda a, s: "ok",
+        ),
+        Tool(
+            name="bad_schema",
+            description="A proper description that is long enough.",
+            input_schema={"type": "string"},
+            handler=lambda a, s: "ok",
+        ),
+        Tool(
+            name="bad_handler",
+            description="A proper description that is long enough.",
+            input_schema={"type": "object"},
+            handler="not_callable",  # type: ignore[arg-type]
+        ),
+    ]
+    reg = ToolRegistry(flawed_tools)
+    report = reg.validate_all()
+
+    assert any("must be snake_case" in e for e in report["NotSnakeCase"])
+    assert any("at least 20 characters" in e for e in report["short_desc"])
+    assert any("'type': 'object'" in e for e in report["bad_schema"])
+    assert any("must be a callable" in e for e in report["bad_handler"])
+
+    stats = reg.stats()
+    assert stats["total_tools"] == 4
+    assert stats["valid_tools"] == 0
+    assert stats["healthy"] is False

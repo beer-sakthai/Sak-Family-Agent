@@ -21,14 +21,14 @@ flowchart TD
 ### Phase 1: Foundation & Unified Platform Preflight
 
 #### 🔹 Task 1.1: Config, Model Preset & `HF_TOKEN` Preflight
-- **Status**: [ ]
+- **Status**: [x] 2026-11-21
 - **Goal**: Confirm SakThai's provider (`huggingface`), model (`deepseek-ai/DeepSeek-V4.1-Flash`), 170 overlay skills, and `sakthai platform` CLI resolve cleanly.
 - **Estimated Time**: 2 minutes
 - **Command**: `SAKTHAI_HOME=$(mktemp -d) sakthai run "preflight" --persona sakthai --no-mcp --dry-run && sakthai platform detect-deps`
 - **Acceptance Criteria**: Preflight resolves `huggingface` → `deepseek-ai/DeepSeek-V4.1-Flash` and detects `uv` environment with 0 errors.
 
 #### 🔹 Task 1.2: Pre-Task Family Memory & Charge Audit
-- **Status**: [ ]
+- **Status**: [x] 2026-11-21
 - **Goal**: Read household charge summary, conservation mode, deputy chain, and any interrupted cycle before dispatching work.
 - **Estimated Time**: 2 minutes
 - **Command**: `sakthai memory family "CHARGE: sakthai" --tag charge-report --limit 1 && sakthai memory family "DEPUTY CHAIN" --tag deputy-chain --limit 1`
@@ -39,7 +39,7 @@ flowchart TD
 ### Phase 2: Gate 1 Hub Inspection & Card Preparation
 
 #### 🔹 Task 2.1: Gate 1 Live Hub State for SakSit
-- **Status**: [ ]
+- **Status**: [x] 2026-11-21
 - **Goal**: Fetch live model/dataset card state so SakSit can draft against real Hub metadata rather than stale assumptions.
 - **Estimated Time**: 3 minutes
 - **Command**: `sakthai hf info Nanthasit/sakthai-combined-v6`
