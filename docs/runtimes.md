@@ -156,3 +156,73 @@ sakthai run "your task" --model gateway/anthropic/claude-3.5-sonnet
 When no other provider is selected, SakThai also falls back to the gateway if
 `SAKTHAI_GATEWAY_URL` is set and no Anthropic/Google/OpenAI credentials are
 present.
+
+---
+
+## 🚪 Runtime Gateway (OpenAI-Compatible & REST API)
+
+SakThai includes a built-in, multi-threaded Runtime Gateway (`sakthai.gateway`) that exposes an OpenAI-compatible API and REST endpoints for all 6 personas and agent tools.
+
+### Running the Gateway
+
+```bash
+# Start the live Runtime Gateway on default port 8080
+sakthai gateway serve
+
+# Or customize host, port, authentication token, and CORS
+sakthai gateway serve --host 127.0.0.1 --port 8080 --token "$TOKEN" --cors "*"
+```
+
+Or run via the standalone script:
+
+```bash
+python scripts/serve_gateway.py --port 8080
+```
+
+### Endpoints
+
+- `GET /health` or `GET /v1/health`: Gateway health status, active personas, uptime.
+- `GET /v1/models`: Returns available models/personas (`sakthai`, `sakking`, `saksee`, `sakjules`, `saksit`, `saktan`, plus tier presets like `gemini-2.5-flash`).
+- `POST /v1/chat/completions`: Standard OpenAI chat completions endpoint (supports both non-streaming JSON and streaming SSE `stream: true`).
+- `GET /v1/personas`: Persona metadata, handles, roles, and default models.
+- `GET /v1/personas/<name>`: Specific persona details.
+- `GET /v1/tools`: Registered tools in OpenAI function/tool format.
+- `POST /v1/tools/execute`: Executes a tool with DataLossGuardrail protection.
+- `GET /api/status`: System status check.
+- `GET /api/saksee/status`: SakSee dashboard compatibility status check.
+
+### Connecting External Clients
+
+Any OpenAI-compatible client (Cursor, Claude Code, Aider, OpenCode, Python OpenAI SDK, curl) can target the gateway:
+
+```bash
+export OPENAI_BASE_URL="http://localhost:8080/v1"
+export OPENAI_API_KEY="$SAKTHAI_GATEWAY_BEARER_TOKEN"  # or leave empty if unauthenticated
+
+# Query available models via curl
+curl http://localhost:8080/v1/models
+
+# Chat completion with streaming
+curl http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -d '{
+    "model": "sakthai",
+    "messages": [{"role": "user", "content": "Hello SakThai!"}],
+    "stream": true
+  }'
+```
+
+### CLI Inspection Commands
+
+```bash
+# Check gateway health
+sakthai gateway status --url http://127.0.0.1:8080
+
+# List models served by the gateway
+sakthai gateway models --url http://127.0.0.1:8080
+
+# Quick chat test via the gateway
+sakthai gateway chat "Tell me your role" --model sakjules --stream
+```
+

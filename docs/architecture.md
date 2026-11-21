@@ -63,6 +63,7 @@ The canonical installable package is rooted at `personas/sakthai/` (configured i
 - **`cycle/`**: Six-stage `Dream` → `Hope` → `Care` → `Joy` → `Trust` → `Growth` state machine (`stages.py`, `state.py`).
 - **`dashboard/`**: Testable store aggregations and telemetry payloads (`data.py`).
 - **`extensions/`**: Git-based MCP/skill extension bundle management (`install.py`).
+- **`gateway/`**: OpenAI-compatible and REST API Runtime Gateway (`server.py`, `router.py`, `config.py`) exposing all 6 personas, streaming chat completions, and tool execution with DataLossGuardrail security.
 - **`lead/`**: ServiceQuoteBot customer outreach, lead capture, and MRR metrics (`capture.py`, `revenue.py`).
 - **`learn/`**: Fact extraction and document ingestion (`capture.py`, `ingest.py`).
 - **`mcp/`**: JSON-RPC stdio server (`server.py`), resource/prompt protocols, and outbound client manager (`client.py`, `manager.py`, `servers.py`).

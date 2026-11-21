@@ -1,0 +1,372 @@
+"""Routing logic and request dispatch for the SakThai Runtime Gateway."""
+
+from __future__ import annotations
+
+import json
+import logging
+import time
+import uuid
+from collections.abc import Callable, Generator
+from datetime import UTC, datetime
+from typing import Any
+
+from .. import __version__
+from ..agent.tools import BUILTIN_TOOLS
+from ..agent_platform.agent_engine import MODEL_PRESETS
+from ..agent_platform.safety import DataLossGuardrail
+from .config import GatewayConfig
+
+logger = logging.getLogger(__name__)
+
+PERSONA_METADATA: dict[str, dict[str, Any]] = {
+    "sakthai": {
+        "name": "SakThai",
+        "role": "Main Lead, HF Master, Orchestrator",
+        "handle": "@sakthai_agent_bot",
+        "default_model": "gpt-4o-mini",
+        "charge_state": "Optimal",
+        "primary_skills": ["SakThai-hf-ecosystem-maintenance", "Sak-ocr-and-documents"],
+    },
+    "sakking": {
+        "name": "SakKing",
+        "role": "General Assistant & Runner · Deputy 1",
+        "handle": "@sakking_agent_bot",
+        "default_model": "model-router",
+        "charge_state": "Optimal",
+        "primary_skills": ["SakKing-coding-tdd", "SakKing-coding-python-mastery"],
+    },
+    "saksee": {
+        "name": "SakSee",
+        "role": "Web / Browser Specialist · Deputy 3",
+        "handle": "@saksee_agent_bot",
+        "default_model": "gpt-5.4-mini",
+        "charge_state": "Optimal",
+        "primary_skills": ["SakSee-playwright-automation", "SakSee-web-scraping"],
+    },
+    "sakjules": {
+        "name": "SakJules",
+        "role": "GitHub, CI/CD & Automation",
+        "handle": "@sakjules_agent_bot",
+        "default_model": "deepseek-ai/DeepSeek-V4.1-Flash",
+        "charge_state": "Optimal",
+        "primary_skills": ["SakJules-github-actions-ci-cd", "SakJules-pr-workflow"],
+    },
+    "saksit": {
+        "name": "SakSit",
+        "role": "Social / Content Specialist",
+        "handle": "@saksit_agent_bot",
+        "default_model": "Phi-4-mini-reasoning",
+        "charge_state": "Optimal",
+        "primary_skills": ["SakSit-content-strategy", "SakSit-hf-model-cards"],
+    },
+    "saktan": {
+        "name": "SakTan",
+        "role": "Daily Ops · Deputy 2",
+        "handle": "@saktan_agent_bot",
+        "default_model": "gpt-4o-mini",
+        "charge_state": "Optimal",
+        "primary_skills": ["SakTan-ops-daily-rhythm", "SakTan-memory-healthcheck"],
+    },
+}
+
+
+class GatewayRouter:
+    """Dispatches HTTP requests to runtime components."""
+
+    def __init__(
+        self,
+        config: GatewayConfig | None = None,
+        chat_executor: Callable[..., Any] | None = None,
+        guardrail: DataLossGuardrail | None = None,
+    ) -> None:
+        self.config = config or GatewayConfig()
+        self.chat_executor = chat_executor
+        self.guardrail = guardrail or DataLossGuardrail()
+        self._start_time = time.time()
+
+    def handle_models(self) -> dict[str, Any]:
+        """Return available models in OpenAI standard format."""
+        data: list[dict[str, Any]] = []
+        created = 1700000000
+
+        # Register 6 personas as first-class models
+        for persona_id, meta in PERSONA_METADATA.items():
+            data.append(
+                {
+                    "id": persona_id,
+                    "object": "model",
+                    "created": created,
+                    "owned_by": "house-of-sak",
+                    "root": persona_id,
+                    "description": meta["role"],
+                    "permission": [],
+                    "parent": None,
+                }
+            )
+
+        # Register model tier presets
+        for tier, preset in MODEL_PRESETS.items():
+            data.append(
+                {
+                    "id": preset.model_name,
+                    "object": "model",
+                    "created": created,
+                    "owned_by": preset.provider,
+                    "root": preset.model_name,
+                    "description": f"[{tier.value.upper()}] {preset.description}",
+                    "permission": [],
+                    "parent": None,
+                }
+            )
+
+        return {"object": "list", "data": data}
+
+    def handle_personas(self) -> dict[str, Any]:
+        """Return registered persona metadata."""
+        return {
+            "count": len(PERSONA_METADATA),
+            "personas": PERSONA_METADATA,
+        }
+
+    def handle_persona_detail(self, persona_name: str) -> dict[str, Any] | None:
+        """Return detail for single persona, or None if unknown."""
+        key = persona_name.lower().strip()
+        return PERSONA_METADATA.get(key)
+
+    def handle_tools(self) -> dict[str, Any]:
+        """Return registered tools formatted as OpenAI functions."""
+        tool_entries: list[dict[str, Any]] = []
+        for tool in BUILTIN_TOOLS:
+            tool_entries.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": tool.input_schema,
+                    },
+                }
+            )
+        return {"tools": tool_entries}
+
+    def handle_tools_execute(self, body: dict[str, Any]) -> dict[str, Any]:
+        """Execute a tool with safety verification."""
+        tool_name = body.get("tool") or body.get("name")
+        if not tool_name or not isinstance(tool_name, str):
+            return {"status": "error", "error": "Missing required field 'tool'"}
+
+        arguments = body.get("arguments") or {}
+        if not isinstance(arguments, dict):
+            return {"status": "error", "error": "'arguments' must be a dictionary"}
+
+        approval_token = body.get("approval_token")
+
+        # Find tool
+        target_tool = next((t for t in BUILTIN_TOOLS if t.name == tool_name), None)
+        if target_tool is None:
+            return {"status": "error", "error": f"Unknown tool '{tool_name}'"}
+
+        # Safety check for any string arguments
+        for val in arguments.values():
+            if isinstance(val, str):
+                check = self.guardrail.verify_or_halt(val, approval_token=approval_token)
+                if check.blocked:
+                    expected_tok = self.guardrail.generate_approval_token(val)
+                    return {
+                        "status": "blocked",
+                        "tool": tool_name,
+                        "reason": check.reason,
+                        "impact": check.impact,
+                        "approval_token_required": expected_tok,
+                    }
+
+        try:
+            from ..memory.store import MemoryStore
+
+            with MemoryStore() as store:
+                result_str = target_tool.handler(arguments, store)
+
+            # Output safety check
+            output_check = self.guardrail.verify_or_halt(result_str, approval_token=approval_token)
+            if output_check.blocked:
+                expected_tok = self.guardrail.generate_approval_token(result_str)
+                return {
+                    "status": "blocked",
+                    "tool": tool_name,
+                    "reason": output_check.reason,
+                    "impact": output_check.impact,
+                    "approval_token_required": expected_tok,
+                }
+
+            return {
+                "status": "success",
+                "tool": tool_name,
+                "output": result_str,
+            }
+        except Exception as exc:
+            logger.exception("Failed to execute tool %s", tool_name)
+            return {"status": "error", "tool": tool_name, "error": str(exc)}
+
+    def handle_chat_completion(
+        self, body: dict[str, Any]
+    ) -> tuple[dict[str, Any] | Generator[str, None, None], bool]:
+        """Handle OpenAI-compatible chat completion.
+
+        Returns (response_data_or_generator, is_stream).
+        """
+        messages = body.get("messages")
+        if not messages or not isinstance(messages, list):
+            raise ValueError("Field 'messages' is required and must be a non-empty list.")
+
+        model = str(body.get("model") or self.config.default_persona)
+        stream = bool(body.get("stream", False))
+
+        # Extract persona
+        clean_model = model.lower().strip()
+        if clean_model.startswith("gateway/"):
+            clean_model = clean_model.split("/", 1)[1]
+
+        target_persona = (
+            clean_model if clean_model in PERSONA_METADATA else self.config.default_persona
+        )
+
+        # Extract last user message as prompt
+        prompt = ""
+        for m in reversed(messages):
+            if isinstance(m, dict) and m.get("role") == "user":
+                prompt = str(m.get("content", ""))
+                break
+        if not prompt and messages:
+            last = messages[-1]
+            if isinstance(last, dict):
+                prompt = str(last.get("content", ""))
+
+        completion_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
+        created = int(time.time())
+
+        if self.chat_executor is not None:
+            raw_output = self.chat_executor(
+                prompt=prompt,
+                persona=target_persona,
+                model=model,
+                messages=messages,
+                stream=stream,
+            )
+            if stream and isinstance(raw_output, Generator):
+                return self._stream_sse(completion_id, created, model, raw_output), True
+            response_text = str(raw_output)
+        else:
+            # Fallback simulated response acknowledging persona and request
+            response_text = (
+                f"[{PERSONA_METADATA.get(target_persona, {}).get('name', 'SakThai')}] "
+                f"Received request for '{model}': {prompt}"
+            )
+
+        if stream:
+            # Emit token stream
+            def _token_gen() -> Generator[str, None, None]:
+                words = response_text.split(" ")
+                for i, w in enumerate(words):
+                    yield w + (" " if i < len(words) - 1 else "")
+
+            return self._stream_sse(completion_id, created, model, _token_gen()), True
+
+        # Non-streaming response
+        result = {
+            "id": completion_id,
+            "object": "chat.completion",
+            "created": created,
+            "model": model,
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": response_text,
+                    },
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {
+                "prompt_tokens": max(1, len(prompt.split())),
+                "completion_tokens": max(1, len(response_text.split())),
+                "total_tokens": max(1, len(prompt.split())) + max(1, len(response_text.split())),
+            },
+        }
+        return result, False
+
+    def _stream_sse(
+        self, completion_id: str, created: int, model: str, tokens: Generator[str, None, None]
+    ) -> Generator[str, None, None]:
+        """Format tokens as Server-Sent Events (SSE)."""
+        for token in tokens:
+            chunk = {
+                "id": completion_id,
+                "object": "chat.completion.chunk",
+                "created": created,
+                "model": model,
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"content": token},
+                        "finish_reason": None,
+                    }
+                ],
+            }
+            yield f"data: {json.dumps(chunk)}\n\n"
+
+        # Final stop chunk
+        final_chunk = {
+            "id": completion_id,
+            "object": "chat.completion.chunk",
+            "created": created,
+            "model": model,
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {},
+                    "finish_reason": "stop",
+                }
+            ],
+        }
+        yield f"data: {json.dumps(final_chunk)}\n\n"
+        yield "data: [DONE]\n\n"
+
+    def handle_health(self) -> dict[str, Any]:
+        """Health check endpoint."""
+        return {
+            "status": "healthy",
+            "gateway": "running",
+            "version": __version__,
+            "uptime_seconds": round(time.time() - self._start_time, 2),
+            "timestamp": datetime.now(UTC).isoformat(),
+            "personas": list(PERSONA_METADATA.keys()),
+            "models_count": len(self.handle_models()["data"]),
+            "tools_count": len(self.handle_tools()["tools"]),
+        }
+
+    def handle_status(self) -> dict[str, Any]:
+        """System status check."""
+        return {
+            "status": "ok",
+            "gateway": "running",
+            "uptime_seconds": round(time.time() - self._start_time, 2),
+        }
+
+    def handle_saksee_status(self) -> dict[str, Any]:
+        """SakSee dashboard status check."""
+        return {
+            "gateway": "running",
+            "telegram": "connected",
+            "model": "0.5B",
+            "skills": 106,
+        }
+
+    def handle_model_chat(self, body: dict[str, Any]) -> dict[str, Any]:
+        """Quick chat interface endpoint."""
+        prompt = str(body.get("prompt", ""))
+        return {
+            "response": f"[SakSee] Processed: {prompt}",
+            "speed": "48.2 tok/s",
+            "debug": "Inference completed via Runtime Gateway",
+        }

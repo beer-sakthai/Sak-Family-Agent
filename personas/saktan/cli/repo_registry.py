@@ -51,6 +51,7 @@ AREAS: dict[str, str] = {
     "infra": "infra/ & scripts/infra-audit.sh",
     "evolution": "personas/sakthai/evolution/",
     "ci": "scripts/ (CI, healing & workflow maintenance)",
+    "gateway": "personas/sakthai/gateway/ & scripts/serve_gateway.py",
 }
 
 
@@ -442,6 +443,20 @@ TASKS: tuple[RepoTask, ...] = (
         cwd="personas/sakthai",
         file_path="personas/sakthai/evolution/monitor/monitor.py",
         requires=("uv",),
+    ),
+    # --- Gateway ---
+    RepoTask(
+        name="gateway-serve",
+        area="gateway",
+        summary="Run the live OpenAI-compatible Runtime Gateway HTTP server.",
+        argv=("python", "scripts/serve_gateway.py"),
+        file_path="scripts/serve_gateway.py",
+    ),
+    RepoTask(
+        name="gateway-status",
+        area="gateway",
+        summary="Check health and operational telemetry of the Runtime Gateway.",
+        argv=("sakthai", "gateway", "status"),
     ),
 )
 

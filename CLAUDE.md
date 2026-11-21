@@ -427,6 +427,7 @@ get the same per-persona shard without setting `SAKTHAI_HOME` yourself — see
    - Hugging Face: `hf info|download <repo_id>`
    - System: `doctor`, `setup`, `status`, `tools`
    - Dashboard: `dashboard dev|build|test|install|gen-types` — manages and builds the Next.js agent dashboard in `apps/sak_agent_dashboard/`.
+   - Gateway: `gateway serve|status|models|chat` — manages and serves the live OpenAI-compatible and REST API Runtime Gateway.
    - Telegram: `telegram send|status`
    - Train: `train status|start|eval`
    - Lead: `lead list|show|stats|export`
