@@ -3,8 +3,9 @@
 > **Agent**: SakKing 👑 (General Assistant & Runner (Deputy 1))
 > **Bot Handle**: `@sakking_agent_bot`
 > **Repository**: `Sak-Family-Agent`
-> **Runtime**: Standalone sakthai (SAKTHAI_HOME=~/.sakking)
+> **Runtime**: Standalone sakthai (Base: ~/.sakthai · Shard: ~/.sakthai/sakking/memory.db)
 > **Cost Policy**: **$0.00 USD Financial Spend** (100% Local & Free Tier Execution)
+> **Fleet Comparison**: See [Fleet-Wide Comparison Matrix](../../docs/capabilities.md#fleet-wide-persona-comparison-matrix)
 
 ---
 
@@ -17,11 +18,11 @@
 | **Google ADK CLI** | `agents-cli` | v1.2.1 (Google Agent Dev Kit) | ✅ Active |
 | **SakThai Unified Platform** | `sakthai run/chat --persona sakking` · `sakthai platform` | v2.0 Core + `DataLossGuardrail` + Presets | ✅ Active |
 | **Supermemory & SQLite Shards** | `~/.sakthai/sakking/memory.db` · `http://localhost:6767` | WAL SQLite + ONNX `Xenova/bge-base-en-v1.5` | ✅ Active |
-| **OpenCode CLI** | `opencode` | Configured via [`config/config.yaml`](file:///home/sak/Sak-Family-Agent/personas/sakking/config/config.yaml) | ✅ Active |
+| **OpenCode CLI** | `opencode` | Configured via [`config/config.yaml`](./config/config.yaml) | ✅ Active |
 
 ---
 
-## 🤖 2. Active Model Loadout ([`config/config.yaml`](file:///home/sak/Sak-Family-Agent/personas/sakking/config/config.yaml))
+## 🤖 2. Active Model Loadout ([`config/config.yaml`](./config/config.yaml))
 
 | Slot | Model ID / Identifier | Provider / Tier | Role |
 |:---|:---|:---|:---|
@@ -43,21 +44,26 @@
   - `npx -y chrome-devtools-mcp@1.10.1` (pinned in `config/mcp.json`, never `@latest`)
 - **🎨 Hugging Face Media Spaces MCP (`hf-media`)**:
   - `npx -y @llmindset/mcp-hfspace@0.5.4 black-forest-labs/FLUX.1-schnell Lightricks/LTX-Video` (pinned in `config/mcp.json`)
+- **🔒 StepSecurity Agent MCP (`stepsecurity`)**:
+  - `https://agent.api.stepsecurity.io/v1/mcp?customer=beer-sakthai` (remote SSE endpoint configured in `config/mcp.json`)
 - **⚡ Isolated Command & TDD Runner (`sakthai platform wrap-cmd` & `run_command`)**:
   - Opt-in via `SAKTHAI_SHELL_ALLOW`, 120s timeout, guarded by `DataLossGuardrail` (`check_data_loss_guardrail`)
   - Automatic virtualenv command wrapping via `wrap_with_isolated_runner` (`uv run ...`)
 - **🔄 Cross-Persona Delegation (`delegate_to_persona` & `sakthai skills sync-sakking`)**:
   - Depth-bounded (`DEFAULT_MAX_DELEGATION_DEPTH = 2`), cycle-safe delegation in `sakthai/agent/coordinator.py`
   - Aggregates learned skills across the family (`59` overlay skills)
+- **🎙️ Gateway Voice Mode (`config/gateway_voice_mode.json`)**:
+  - Configured for `telegram:8618306046: "all"` via the OpenAI-compatible runtime gateway.
 - **🛡️ Unified Agent Platform Pro-Tips (`sakthai.agent_platform`)**:
+  - **Tool Schema Validation & Quality Gates**: Zero-dependency argument validation (`Tool.validate_args`), safe execution with error containment & secret redaction (`Tool.safe_call`), and 6-factor Tool Quality Rubric & benchmarks (`sakthai eval tools`)
   - **Safety Interception**: `check_data_loss_guardrail` (`safety.py` & `guardrails_hardened.py`) blocks destructive shell/SQL commands unless authorized by HMAC digest token
   - **Isolated Environment Runner**: `sakthai platform wrap-cmd "<cmd>"` (`dep_manager.py`) auto-wraps commands in the detected `uv` virtual environment
   - **Progressive Skill Disclosure**: `sakthai platform skills` (`render_skills_progressive_summary`) renders lightweight skill metadata tables to prevent prompt bloat
   - **Harness Pipeline Exporter**: `sakthai platform export-harness sakking` (`harness_exporter.py`) exports declarative Harness v1 agent & pipeline specs
 - **🧰 Skill Overlay Inventory (59 Overlay Skills + 19 Shared Skills)**:
-  - **Overlay Root**: [`personas/sakking/skills/`](file:///home/sak/Sak-Family-Agent/personas/sakking/skills) (59 specialized `SakSakking-*` skills)
-  - **Shared Root**: [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills) (19 shared `Sak-*` skills including `Sak-auto-cycle-loop`, `Sak-dogfood`, `Sak-ocr-and-documents`, `Sak-yuanbao`)
-  - **Primary Workspace Skills** ([`config/workspace.yaml`](file:///home/sak/Sak-Family-Agent/personas/sakking/config/workspace.yaml)):
+  - **Overlay Root**: [`personas/sakking/skills/`](./skills) (59 specialized `SakSakking-*` skills)
+  - **Shared Root**: [`personas/shared/skills/`](../shared/skills) (19 shared `Sak-*` skills including `Sak-auto-cycle-loop`, `Sak-dogfood`, `Sak-ocr-and-documents`, `Sak-yuanbao`)
+  - **Primary Workspace Skills** ([`config/workspace.yaml`](./config/workspace.yaml)):
   - `SakKing-subagent-driven-development`
   - `SakKing-coding-tdd`
   - `SakKing-executing-plans`
@@ -69,6 +75,7 @@
 
 - **`HF_TOKEN`**: Authenticated for `Qwen/Qwen3-Coder-30B-A3B-Instruct` on Hugging Face Inference Providers and `hf-media` Spaces
 - **`SAKTHAI_SHELL_ALLOW`**: Explicit opt-in gate required before `run_command` executes shell tasks
+- **`STEP_SECURITY_API_KEY`**: Authenticated bearer token for remote StepSecurity MCP endpoint
 - **VM Env Template (`infra/vm-agents/env-templates/sakking.env.example`)**: `SAKTHAI_FAST`, `SAKTHAI_HOME`, `SAKTHAI_PERSONA`, `SAKTHAI_MODEL`, `SAKTHAI_SYSTEM_PROMPT_FILE`, `SAKTHAI_WITH_SKILLS`, `TELEGRAM_ALLOWED_USER_IDS`, `TELEGRAM_BOT_TOKEN`
 - **Security & Approval Posture (`config/config.yaml`)**:
   - `command_allowlist: []` · `tirith_enabled: true` · `tirith_fail_open: false` · `allow_lazy_installs: false` · `redact_secrets: true` · `allow_private_urls: false` · `approvals.mode: manual` · `approvals.cron_mode: deny`
@@ -77,13 +84,13 @@
 
 ## 📜 5. Permanent Configuration Files (`personas/sakking/`)
 
-- [`personas/sakking/SOUL.md`](file:///home/sak/Sak-Family-Agent/personas/sakking/SOUL.md) — Persona identity, Charge System v6, Cycle Tracker v8, Self-Eval v9 & Security Rules
-- [`personas/sakking/PLAN.md`](file:///home/sak/Sak-Family-Agent/personas/sakking/PLAN.md) — Deep-dive step-by-step task roadmap & Mermaid execution flow
-- [`personas/sakking/CYCLE.md`](file:///home/sak/Sak-Family-Agent/personas/sakking/CYCLE.md) — 6-Stage Growth Cycle workflow record, v9 rubric & v8 recovery protocol
-- [`personas/sakking/MEMORY.md`](file:///home/sak/Sak-Family-Agent/personas/sakking/MEMORY.md) — Shard bindings (`~/.sakthai/sakking/memory.db`), read/write CLI commands & execution log
-- [`personas/sakking/HANDOFF.md`](file:///home/sak/Sak-Family-Agent/personas/sakking/HANDOFF.md) — Incoming/outgoing sibling handoff contracts & family coordination matrix
-- [`personas/sakking/BACKPACK.md`](file:///home/sak/Sak-Family-Agent/personas/sakking/BACKPACK.md) — This complete installation & equipment inventory
-- [`personas/sakking/config/`](file:///home/sak/Sak-Family-Agent/personas/sakking/config) — `config.yaml`, `mcp.json`, `workspace.yaml`, `gateway_voice_mode.json`
+- [`personas/sakking/SOUL.md`](./SOUL.md) — Persona identity, Charge System v6, Cycle Tracker v8, Self-Eval v9 & Security Rules
+- [`personas/sakking/PLAN.md`](./PLAN.md) — Deep-dive step-by-step task roadmap & Mermaid execution flow
+- [`personas/sakking/CYCLE.md`](./CYCLE.md) — 6-Stage Growth Cycle workflow record, v9 rubric & v8 recovery protocol
+- [`personas/sakking/MEMORY.md`](./MEMORY.md) — Shard bindings (`~/.sakthai/sakking/memory.db`), read/write CLI commands & execution log
+- [`personas/sakking/HANDOFF.md`](./HANDOFF.md) — Incoming/outgoing sibling handoff contracts & family coordination matrix
+- [`personas/sakking/BACKPACK.md`](./BACKPACK.md) — This complete installation & equipment inventory
+- [`personas/sakking/config/`](./config) — `config.yaml`, `mcp.json`, `workspace.yaml`, `gateway_voice_mode.json`
 
 ---
 
