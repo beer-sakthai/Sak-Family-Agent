@@ -211,6 +211,30 @@ TASKS: tuple[RepoTask, ...] = (
         file_path="training/serving/deploy_hf_endpoint.py",
         requires=("uv",),
     ),
+    RepoTask(
+        name="openenv-verify",
+        area="training",
+        summary="Run CPU OpenEnv RL environment_factory contract verification via openenv-rl-training.",
+        argv=("uv", "run", "python", "scripts/train/openenv_ecosystem.py", "verify"),
+        file_path="scripts/train/openenv_ecosystem.py",
+        requires=("uv",),
+    ),
+    RepoTask(
+        name="openenv-test",
+        area="training",
+        summary="Run the 149-test OpenEnv RL training suite across all 5 workspaces.",
+        argv=("uv", "run", "python", "scripts/train/openenv_ecosystem.py", "test"),
+        file_path="scripts/train/openenv_ecosystem.py",
+        requires=("uv",),
+    ),
+    RepoTask(
+        name="openenv-baselines",
+        area="training",
+        summary="Run CPU heuristic baseline policy competition and GRPO reward-variance checks.",
+        argv=("uv", "run", "python", "scripts/train/openenv_ecosystem.py", "baselines"),
+        file_path="scripts/train/openenv_ecosystem.py",
+        requires=("uv",),
+    ),
     # --- Hugging Face Hub ---
     RepoTask(
         name="hf-portfolio-health",

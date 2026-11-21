@@ -143,3 +143,274 @@ def train_deploy(dry_run: bool, extra_args: tuple[str, ...]) -> None:
     code = run_repo_argv(argv, dry_run=dry_run)
     if code != 0:
         sys.exit(code)
+
+
+OPENENV_WORKSPACES: dict[str, str] = {
+    "sakthai-sft-training": "SFT QLoRA trainers, 10-cycle augmentation, and data governance",
+    "openenv-custom-training": "Custom OpenEnv environments (Simple, MCP, Sandbox, BrowserGym) & GRPO",
+    "openenv-multi-catalog-training": "8 OpenEnv catalog environments & A2A protocol server",
+    "sakthai-agentic-eval-train": "Agentic evaluation harness, PEFT benchmark runner, and FINDINGS.md",
+    "browsergym-space": "BrowserGym OpenEnv server Dockerfile & Space configuration",
+}
+
+OPENENV_TEST_TARGETS: dict[str, tuple[str, ...]] = {
+    "all": (
+        "test_browsergym_contract.py",
+        "sakthai-agentic-eval-train/tests/",
+        "openenv-custom-training/tests/",
+        "openenv-multi-catalog-training/tests/",
+        "sakthai-sft-training/tests/",
+    ),
+    "contract": ("test_browsergym_contract.py",),
+    "agentic": ("sakthai-agentic-eval-train/tests/",),
+    "custom": ("openenv-custom-training/tests/",),
+    "catalog": ("openenv-multi-catalog-training/tests/",),
+    "sft": ("sakthai-sft-training/tests/",),
+}
+
+
+def _require_openenv_root(dry_run: bool = False) -> Path:
+    """Resolve and validate the openenv-rl-training repository root."""
+    root = config.resolve_openenv_root()
+    if not dry_run and not root.is_dir():
+        raise click.ClickException(
+            f"openenv-rl-training workspace not found at {root}. "
+            "Clone beer-sakthai/openenv-rl-training alongside Sak-Family-Agent "
+            "or set SAKTHAI_OPENENV_ROOT."
+        )
+    return root
+
+
+def get_openenv_status() -> dict[str, object]:
+    """Build a structured readiness report for the openenv-rl-training ecosystem repo."""
+    root = config.resolve_openenv_root()
+    exists = root.is_dir()
+    workspaces: list[dict[str, object]] = []
+    for ws_name, desc in OPENENV_WORKSPACES.items():
+        ws_dir = root / ws_name
+        workspaces.append(
+            {
+                "name": ws_name,
+                "description": desc,
+                "present": ws_dir.is_dir(),
+            }
+        )
+    entrypoints = {
+        "verify_grpo_contract": (root / "verify_grpo_contract.py").is_file(),
+        "test_browsergym_contract": (root / "test_browsergym_contract.py").is_file(),
+        "evaluate_baselines": (
+            root / "openenv-custom-training" / "evaluate_baselines.py"
+        ).is_file(),
+        "benchmark_eval_manager": (
+            root
+            / "sakthai-agentic-eval-train"
+            / "scripts"
+            / "benchmark_evaluation_manager_agent.py"
+        ).is_file(),
+        "custom_grpo_train": (root / "openenv-custom-training" / "train.py").is_file(),
+        "multi_catalog_train": (
+            root / "openenv-multi-catalog-training" / "train_multi_env.py"
+        ).is_file(),
+        "a2a_server": (
+            root / "openenv-multi-catalog-training" / "a2a_agent" / "server.py"
+        ).is_file(),
+    }
+    ready = exists and all(bool(w["present"]) for w in workspaces) and all(entrypoints.values())
+    return {
+        "root": str(root),
+        "exists": exists,
+        "ready": ready,
+        "workspaces": workspaces,
+        "entrypoints": entrypoints,
+    }
+
+
+@train_cmd.group("openenv")
+def openenv_cmd() -> None:
+    """Run OpenEnv RL (GRPO) training, contract checks, baselines, and tests."""
+
+
+@openenv_cmd.command("status")
+@click.option("--json", "as_json", is_flag=True, help="Emit ecosystem status as JSON.")
+def openenv_status(as_json: bool) -> None:
+    """Inspect openenv-rl-training workspace discovery and readiness."""
+    report = get_openenv_status()
+    if as_json:
+        click.echo(json.dumps(report, indent=2))
+        return
+
+    click.echo("# OpenEnv RL Training Ecosystem Status")
+    click.echo(f"  Root Path : {report['root']}")
+    click.echo(f"  Present   : {'yes' if report['exists'] else 'no'}")
+    click.echo(f"  Ready     : {'READY' if report['ready'] else 'INCOMPLETE'}")
+    click.echo("\n  Workspaces:")
+    workspaces = report["workspaces"]
+    if isinstance(workspaces, list):
+        for ws in workspaces:
+            if isinstance(ws, dict):
+                mark = "OK" if ws.get("present") else "MISSING"
+                click.echo(
+                    f"    [{mark:<7}] {str(ws.get('name', '')):<32} {ws.get('description', '')}"
+                )
+
+
+@openenv_cmd.command("verify", context_settings={"ignore_unknown_options": True})
+@click.option("--dry-run", is_flag=True, help="Print command without executing.")
+@click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
+def openenv_verify(dry_run: bool, extra_args: tuple[str, ...]) -> None:
+    """Run CPU-only OpenEnv RL environment_factory contract verification."""
+    root = _require_openenv_root(dry_run=dry_run)
+    argv = [
+        "uv",
+        "run",
+        "--with",
+        "datasets",
+        "python3",
+        "verify_grpo_contract.py",
+        *extra_args,
+    ]
+    code = run_repo_argv(argv, cwd=root, dry_run=dry_run)
+    if code != 0:
+        sys.exit(code)
+
+
+@openenv_cmd.command("test", context_settings={"ignore_unknown_options": True})
+@click.option(
+    "--workspace",
+    type=click.Choice(list(OPENENV_TEST_TARGETS.keys()), case_sensitive=False),
+    default="all",
+    help="Target workspace test suite to execute (default: all 149 tests in one invocation).",
+)
+@click.option("--dry-run", is_flag=True, help="Print command without executing.")
+@click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
+def openenv_test(workspace: str, dry_run: bool, extra_args: tuple[str, ...]) -> None:
+    """Execute openenv-rl-training pytest suites with isolated CPU stubs."""
+    root = _require_openenv_root(dry_run=dry_run)
+    targets = OPENENV_TEST_TARGETS[workspace.lower()]
+    argv = [
+        "uv",
+        "run",
+        "--with",
+        "datasets",
+        "--with",
+        "pytest",
+        "--with",
+        "pydantic",
+        "--with",
+        "httpx",
+        "--with",
+        "anyio",
+        "pytest",
+        *targets,
+        *extra_args,
+    ]
+    code = run_repo_argv(argv, cwd=root, dry_run=dry_run)
+    if code != 0:
+        sys.exit(code)
+
+
+@openenv_cmd.command("baselines", context_settings={"ignore_unknown_options": True})
+@click.option("--dry-run", is_flag=True, help="Print command without executing.")
+@click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
+def openenv_baselines(dry_run: bool, extra_args: tuple[str, ...]) -> None:
+    """Run CPU heuristic baseline policy competition and GRPO reward-variance checks."""
+    root = _require_openenv_root(dry_run=dry_run)
+    argv = [
+        "uv",
+        "run",
+        "--with",
+        "datasets",
+        "--with",
+        "pydantic",
+        "python3",
+        "openenv-custom-training/evaluate_baselines.py",
+        *extra_args,
+    ]
+    code = run_repo_argv(argv, cwd=root, dry_run=dry_run)
+    if code != 0:
+        sys.exit(code)
+
+
+@openenv_cmd.command("benchmark", context_settings={"ignore_unknown_options": True})
+@click.option("--json", "as_json", is_flag=True, help="Emit evaluation manager benchmark as JSON.")
+@click.option("--dry-run", is_flag=True, help="Print command without executing.")
+@click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
+def openenv_benchmark(as_json: bool, dry_run: bool, extra_args: tuple[str, ...]) -> None:
+    """Run the deterministic Evaluation Manager Agent rubric benchmark."""
+    root = _require_openenv_root(dry_run=dry_run)
+    argv = [
+        "python3",
+        "sakthai-agentic-eval-train/scripts/benchmark_evaluation_manager_agent.py",
+    ]
+    if as_json:
+        argv.append("--json")
+    argv.extend(extra_args)
+    code = run_repo_argv(argv, cwd=root, dry_run=dry_run)
+    if code != 0:
+        sys.exit(code)
+
+
+_GRPO_ENVS = ("simple", "mcp", "agent_tools", "browsergym", "multi", "catalog")
+
+
+@openenv_cmd.command("grpo", context_settings={"ignore_unknown_options": True})
+@click.option(
+    "--env",
+    "env_name",
+    type=click.Choice(list(_GRPO_ENVS), case_sensitive=False),
+    default="mcp",
+    help="Target OpenEnv RL environment or multi-env runner (default: mcp).",
+)
+@click.option("--dry-run", is_flag=True, help="Print command without executing.")
+@click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
+def openenv_grpo(env_name: str, dry_run: bool, extra_args: tuple[str, ...]) -> None:
+    """Launch GRPO training across OpenEnv custom or catalog environments."""
+    root = _require_openenv_root(dry_run=dry_run)
+    choice = env_name.lower()
+    if choice == "multi":
+        argv = ["uv", "run", "python3", "openenv-custom-training/multi_env.py", *extra_args]
+    elif choice == "catalog":
+        argv = [
+            "uv",
+            "run",
+            "python3",
+            "openenv-multi-catalog-training/train_multi_env.py",
+            *extra_args,
+        ]
+    else:
+        argv = [
+            "uv",
+            "run",
+            "python3",
+            "openenv-custom-training/train.py",
+            "--env",
+            choice,
+            *extra_args,
+        ]
+    code = run_repo_argv(argv, cwd=root, dry_run=dry_run)
+    if code != 0:
+        sys.exit(code)
+
+
+@openenv_cmd.command("a2a", context_settings={"ignore_unknown_options": True})
+@click.option("--host", default="127.0.0.1", help="Host interface to bind (default: 127.0.0.1).")
+@click.option("--port", type=int, default=9000, help="Port to listen on (default: 9000).")
+@click.option("--dry-run", is_flag=True, help="Print command without executing.")
+@click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
+def openenv_a2a(host: str, port: int, dry_run: bool, extra_args: tuple[str, ...]) -> None:
+    """Launch the OpenEnv 8-catalog A2A protocol server."""
+    root = _require_openenv_root(dry_run=dry_run)
+    argv = [
+        "uv",
+        "run",
+        "python3",
+        "openenv-multi-catalog-training/a2a_agent/server.py",
+        "--host",
+        host,
+        "--port",
+        str(port),
+        *extra_args,
+    ]
+    code = run_repo_argv(argv, cwd=root, dry_run=dry_run)
+    if code != 0:
+        sys.exit(code)

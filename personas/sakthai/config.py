@@ -141,10 +141,34 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "TELEGRAM_BOT_TOKEN": "Telegram bot token used by the Telegram gateway",
     "SAKKING_HOME": "Override the SakKing data directory (default: ~/.sakking) for skill sync",
     "SAKTHAI_EVAL_LOG": "Override the local model eval/MLOps log path (default: SAKTHAI_HOME/eval.jsonl)",
+    "SAKTHAI_OPENENV_ROOT": "Override the openenv-rl-training repository root path (default: ../openenv-rl-training)",
 }
 
 # Seconds to wait for an external MCP server's reply, before SAKTHAI_MCP_TIMEOUT.
 DEFAULT_MCP_TIMEOUT = 30.0
+
+
+def resolve_openenv_root() -> Path:
+    """Resolve the openenv-rl-training repository root path.
+
+    Priority order:
+      1. ``SAKTHAI_OPENENV_ROOT`` environment variable (if set and non-empty).
+      2. Sibling checkout: ``<REPO_ROOT>/../openenv-rl-training`` (if present).
+      3. Nested checkout: ``<REPO_ROOT>/training/openenv-rl-training`` or ``<REPO_ROOT>/openenv-rl-training`` (if present).
+      4. Default fallback to ``<REPO_ROOT>/../openenv-rl-training``.
+    """
+    override = os.environ.get("SAKTHAI_OPENENV_ROOT", "").strip()
+    if override:
+        return Path(override).expanduser().resolve()
+    candidates = (
+        REPO_ROOT.parent / "openenv-rl-training",
+        REPO_ROOT / "training" / "openenv-rl-training",
+        REPO_ROOT / "openenv-rl-training",
+    )
+    for cand in candidates:
+        if cand.is_dir():
+            return cand.resolve()
+    return (REPO_ROOT.parent / "openenv-rl-training").resolve()
 
 
 def sakthai_home() -> Path:
