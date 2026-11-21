@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from ..config import SECRET_PATTERN
+from ..config import SECRET_PATTERN, mail_allowlist
 from ..memory.store import MemoryStore
 from .tools import Tool
 
@@ -58,6 +58,36 @@ def _block_run_command_if_not_allowed(
             reason="Tool 'run_command' is disabled. Set SAKTHAI_SHELL_ALLOW to enable it.",
         )
     return GuardrailResult(GuardrailAction.ALLOW)
+
+
+def _block_mail_to_unlisted_recipients(
+    tool: Tool, args: dict[str, Any], _store: MemoryStore
+) -> GuardrailResult:
+    """Deny `send_outlook_mail` unless its recipient is in SAKTHAI_MAIL_ALLOW.
+
+    The recipient comes from the model, so a prompt injection in an email,
+    document or MCP result could otherwise mail private memory to anyone.
+    Entries are full addresses or ``@domain``; unset denies every recipient.
+    """
+    if tool.name != "send_outlook_mail":
+        return GuardrailResult(GuardrailAction.ALLOW)
+    recipient = args.get("to")
+    if not isinstance(recipient, str) or not recipient.strip():
+        return GuardrailResult(GuardrailAction.ALLOW)  # the handler rejects it
+    recipient = recipient.strip().lower()
+    allowed = mail_allowlist()
+    domain = recipient.rpartition("@")[2]
+    if recipient in allowed or (domain and f"@{domain}" in allowed):
+        return GuardrailResult(GuardrailAction.ALLOW)
+    hint = (
+        "SAKTHAI_MAIL_ALLOW is not set, so no recipient is allowed."
+        if not allowed
+        else "Add the address or its @domain to SAKTHAI_MAIL_ALLOW to permit it."
+    )
+    return GuardrailResult(
+        GuardrailAction.DENY,
+        reason=f"Recipient {recipient!r} is not in the mail allow-list. {hint}",
+    )
 
 
 def _is_binary(part: str, names: str | tuple[str, ...]) -> bool:
@@ -1404,6 +1434,7 @@ def _block_output_with_secrets(
 # Default set of rules to check *before* a tool is executed.
 DEFAULT_PRE_RULES: list[PreGuardrailRule] = [
     _block_run_command_if_not_allowed,
+    _block_mail_to_unlisted_recipients,
     _block_dangerous_shell_commands,
     _block_sensitive_path_args,
     _enforce_verbose_listing,
