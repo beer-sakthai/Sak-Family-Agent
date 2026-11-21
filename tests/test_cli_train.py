@@ -122,3 +122,132 @@ def test_train_exit_code_propagation(monkeypatch: pytest.MonkeyPatch, runner: Cl
     assert runner.invoke(main, ["train", "eval"]).exit_code == 11
     assert runner.invoke(main, ["train", "export"]).exit_code == 11
     assert runner.invoke(main, ["train", "deploy"]).exit_code == 11
+
+
+def test_resolve_openenv_root_priority(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # 1. Explicit SAKTHAI_OPENENV_ROOT override
+    explicit_dir = tmp_path / "custom-openenv"
+    explicit_dir.mkdir()
+    monkeypatch.setenv("SAKTHAI_OPENENV_ROOT", str(explicit_dir))
+    assert train_mod.config.resolve_openenv_root() == explicit_dir.resolve()
+
+    # 2. Sibling checkout discovery
+    monkeypatch.delenv("SAKTHAI_OPENENV_ROOT", raising=False)
+    fake_parent = tmp_path / "workspace"
+    fake_repo = fake_parent / "Sak-Family-Agent"
+    fake_sibling = fake_parent / "openenv-rl-training"
+    fake_repo.mkdir(parents=True)
+    fake_sibling.mkdir(parents=True)
+    monkeypatch.setattr(train_mod.config, "REPO_ROOT", fake_repo)
+    assert train_mod.config.resolve_openenv_root() == fake_sibling.resolve()
+
+    # 3. Fallback when no directory exists
+    fake_sibling.rmdir()
+    assert train_mod.config.resolve_openenv_root() == fake_sibling.resolve()
+
+
+def _create_fake_openenv_root(base: Path) -> Path:
+    root = base / "openenv-rl-training"
+    for ws in train_mod.OPENENV_WORKSPACES:
+        (root / ws).mkdir(parents=True, exist_ok=True)
+    (root / "verify_grpo_contract.py").write_text("# contract")
+    (root / "test_browsergym_contract.py").write_text("# test")
+    (root / "openenv-custom-training" / "evaluate_baselines.py").write_text("# baselines")
+    (root / "openenv-custom-training" / "train.py").write_text("# train")
+    (root / "openenv-multi-catalog-training" / "train_multi_env.py").write_text("# multi")
+    (root / "openenv-multi-catalog-training" / "a2a_agent").mkdir(parents=True, exist_ok=True)
+    (root / "openenv-multi-catalog-training" / "a2a_agent" / "server.py").write_text("# a2a")
+    (root / "sakthai-agentic-eval-train" / "scripts").mkdir(parents=True, exist_ok=True)
+    (
+        root / "sakthai-agentic-eval-train" / "scripts" / "benchmark_evaluation_manager_agent.py"
+    ).write_text("# bench")
+    return root
+
+
+def test_openenv_status_text_and_json(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, runner: CliRunner
+) -> None:
+    root = _create_fake_openenv_root(tmp_path)
+    monkeypatch.setenv("SAKTHAI_OPENENV_ROOT", str(root))
+
+    res_text = runner.invoke(main, ["train", "openenv", "status"])
+    assert res_text.exit_code == 0
+    assert "OpenEnv RL Training Ecosystem Status" in res_text.output
+    assert "READY" in res_text.output
+    assert "openenv-custom-training" in res_text.output
+
+    res_json = runner.invoke(main, ["train", "openenv", "status", "--json"])
+    assert res_json.exit_code == 0
+    payload = json.loads(res_json.output)
+    assert payload["exists"] is True
+    assert payload["ready"] is True
+    assert len(payload["workspaces"]) == 5
+
+
+def test_openenv_missing_root_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, runner: CliRunner
+) -> None:
+    missing_dir = tmp_path / "missing-openenv"
+    monkeypatch.setenv("SAKTHAI_OPENENV_ROOT", str(missing_dir))
+
+    res = runner.invoke(main, ["train", "openenv", "verify"])
+    assert res.exit_code != 0
+    assert "openenv-rl-training workspace not found" in res.output
+
+
+def test_openenv_subcommands_dry_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, runner: CliRunner
+) -> None:
+    root = _create_fake_openenv_root(tmp_path)
+    monkeypatch.setenv("SAKTHAI_OPENENV_ROOT", str(root))
+
+    res_verify = runner.invoke(main, ["train", "openenv", "verify", "--dry-run"])
+    assert res_verify.exit_code == 0
+    assert "verify_grpo_contract.py" in res_verify.output
+
+    res_test = runner.invoke(
+        main, ["train", "openenv", "test", "--workspace", "custom", "--dry-run", "--", "-v"]
+    )
+    assert res_test.exit_code == 0
+    assert "openenv-custom-training/tests/" in res_test.output
+    assert "-v" in res_test.output
+
+    res_base = runner.invoke(main, ["train", "openenv", "baselines", "--dry-run"])
+    assert res_base.exit_code == 0
+    assert "openenv-custom-training/evaluate_baselines.py" in res_base.output
+
+    res_bench = runner.invoke(main, ["train", "openenv", "benchmark", "--json", "--dry-run"])
+    assert res_bench.exit_code == 0
+    assert "benchmark_evaluation_manager_agent.py" in res_bench.output
+    assert "--json" in res_bench.output
+
+    for env_choice, expected in (
+        ("mcp", "openenv-custom-training/train.py --env mcp"),
+        ("multi", "openenv-custom-training/multi_env.py"),
+        ("catalog", "openenv-multi-catalog-training/train_multi_env.py"),
+    ):
+        res_grpo = runner.invoke(
+            main, ["train", "openenv", "grpo", "--env", env_choice, "--dry-run"]
+        )
+        assert res_grpo.exit_code == 0
+        assert expected in res_grpo.output
+
+    res_a2a = runner.invoke(main, ["train", "openenv", "a2a", "--port", "9005", "--dry-run"])
+    assert res_a2a.exit_code == 0
+    assert "openenv-multi-catalog-training/a2a_agent/server.py" in res_a2a.output
+    assert "9005" in res_a2a.output
+
+
+def test_openenv_exit_code_propagation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, runner: CliRunner
+) -> None:
+    root = _create_fake_openenv_root(tmp_path)
+    monkeypatch.setenv("SAKTHAI_OPENENV_ROOT", str(root))
+    monkeypatch.setattr(train_mod, "run_repo_argv", lambda argv, **kw: 17)
+
+    assert runner.invoke(main, ["train", "openenv", "verify"]).exit_code == 17
+    assert runner.invoke(main, ["train", "openenv", "test"]).exit_code == 17
+    assert runner.invoke(main, ["train", "openenv", "baselines"]).exit_code == 17
+    assert runner.invoke(main, ["train", "openenv", "benchmark"]).exit_code == 17
+    assert runner.invoke(main, ["train", "openenv", "grpo"]).exit_code == 17
+    assert runner.invoke(main, ["train", "openenv", "a2a"]).exit_code == 17
