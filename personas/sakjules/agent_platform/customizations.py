@@ -24,29 +24,39 @@ class CustomizationRegistry:
 
     def _index_skills(self) -> None:
         search_paths = [
-            self.workspace_root,
             self.workspace_root / ".agents" / "skills",
             self.workspace_root / ".gemini" / "skills",
             self.workspace_root / "skills",
+            self.workspace_root,
         ]
         for base in search_paths:
             if base.exists() and base.is_dir():
-                for skill_md in base.glob("*/SKILL.md"):
+                for skill_md in sorted(base.glob("*/SKILL.md")):
                     skill_name = skill_md.parent.name
-                    self._skills_index[skill_name] = skill_md
+                    if skill_name not in self._skills_index:
+                        self._skills_index[skill_name] = skill_md
 
     def list_available_skills(self) -> list[SkillSummary]:
         results: list[SkillSummary] = []
         for name, path in self._skills_index.items():
             content = path.read_text(encoding="utf-8")
             description = ""
-            desc_match = re.search(r"^description:\s*(.+)$", content, re.MULTILINE)
+            desc_match = None
+            fm_match = re.search(r"^---\s*\n(.*?)\n---", content, re.DOTALL)
+            if fm_match:
+                desc_match = re.search(r"^description:\s*(.+)$", fm_match.group(1), re.MULTILINE)
+
             if desc_match:
                 description = desc_match.group(1).strip()
+                if (description.startswith('"') and description.endswith('"')) or (
+                    description.startswith("'") and description.endswith("'")
+                ):
+                    description = description[1:-1].strip()
             else:
+                body = content[fm_match.end() :] if fm_match else content
                 lines = [
                     line.strip()
-                    for line in content.splitlines()
+                    for line in body.splitlines()
                     if line.strip() and not line.startswith("#") and not line.startswith("---")
                 ]
                 description = lines[0] if lines else "Custom agent skill"
@@ -62,8 +72,13 @@ class CustomizationRegistry:
     def resolve_rules_for_path(self, target_path: Path) -> list[RuleDocument]:
         rules: list[RuleDocument] = []
         current = target_path.resolve()
-        if current.is_file():
+        if current.is_file() or (not current.is_dir() and current.suffix != ""):
             current = current.parent
+
+        try:
+            current.relative_to(self.workspace_root)
+        except ValueError:
+            return []
 
         checkpoints: list[Path] = []
         while True:
@@ -79,7 +94,7 @@ class CustomizationRegistry:
                 if rule_file.exists():
                     rules.append(
                         RuleDocument(
-                            scope=str(rule_file.relative_to(self.workspace_root)),
+                            scope=rule_file.relative_to(self.workspace_root).as_posix(),
                             content=rule_file.read_text(encoding="utf-8").strip(),
                         )
                     )

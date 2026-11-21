@@ -85,7 +85,7 @@ Connected MCP & Platform Tools:
 - **🏗️ Harness v1 AI Agent & Pipeline Exporter (`sakthai platform export-harness`)**:
   - Deterministic canonical identifier generation (`ca_<slug>`) and declarative Harness v1 agent template & pipeline step export (`sakthai/agent_platform/harness_exporter.py`)
 - **Unified Agent Platform (`sakthai.agent_platform`)**: `check_data_loss_guardrail`, `wrap_with_isolated_runner`, `render_skills_progressive_summary`, `AntigravityAgentRunner`, `harness_exporter`
-- **Skills Overlay**: 68 skills in [`personas/sakjules/skills/`](file:///home/sak/Sak-Family-Agent/personas/sakjules/skills) + 19 shared skills in [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills)
+- **Skills Overlay**: 56 skills in [`personas/sakjules/skills/`](file:///home/sak/Sak-Family-Agent/personas/sakjules/skills) + 19 shared skills in [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills)
 
 ---
 

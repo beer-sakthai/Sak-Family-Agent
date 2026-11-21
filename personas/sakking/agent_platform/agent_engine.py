@@ -1,3 +1,9 @@
+"""Unified Agent Execution Engine and Runtime.
+
+Coordinates execution modes (Antigravity and ADK), tool dispatching,
+and safety interceptors.
+"""
+
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
@@ -87,7 +93,7 @@ def resolve_model_preset(tier: ModelTier | str) -> ModelPreset:
     return MODEL_PRESETS[tier_enum]
 
 
-@dataclass
+@dataclass(frozen=True)
 class UnifiedAgentConfig:
     name: str
     engine: AgentEngineMode = AgentEngineMode.ANTIGRAVITY
@@ -99,7 +105,21 @@ class UnifiedAgentConfig:
     def __post_init__(self) -> None:
         if self.tier is not None:
             preset = resolve_model_preset(self.tier)
-            self.model = preset.model_name
+            object.__setattr__(self, "model", preset.model_name)
+
+
+def _extract_string_values(obj: Any) -> list[str]:
+    """Extract all string values from primitive values, dictionaries, or sequences."""
+    strings: list[str] = []
+    if isinstance(obj, str):
+        strings.append(obj)
+    elif isinstance(obj, dict):
+        for v in obj.values():
+            strings.extend(_extract_string_values(v))
+    elif isinstance(obj, (list, tuple, set)):
+        for item in obj:
+            strings.extend(_extract_string_values(item))
+    return strings
 
 
 class UnifiedAgentRuntime:
@@ -118,6 +138,20 @@ class UnifiedAgentRuntime:
         if tool_name not in self._tools:
             return {"status": "error", "error": f"Tool '{tool_name}' not registered"}
 
+        # Pre-execution safety inspection on arguments
+        for arg_str in _extract_string_values(arguments):
+            pre_check = self.guardrail.verify_or_halt(arg_str, approval_token=approval_token)
+            if pre_check.blocked:
+                event = {
+                    "tool": tool_name,
+                    "arguments": dict(arguments),
+                    "status": "blocked",
+                    "reason": pre_check.reason,
+                    "impact": pre_check.impact,
+                }
+                self.history.append(event)
+                return event
+
         func = self._tools[tool_name]
         try:
             raw_output = func(**arguments)
@@ -128,7 +162,7 @@ class UnifiedAgentRuntime:
             if safety_check.blocked:
                 event = {
                     "tool": tool_name,
-                    "arguments": arguments,
+                    "arguments": dict(arguments),
                     "status": "blocked",
                     "reason": safety_check.reason,
                     "impact": safety_check.impact,
@@ -138,7 +172,7 @@ class UnifiedAgentRuntime:
 
             event = {
                 "tool": tool_name,
-                "arguments": arguments,
+                "arguments": dict(arguments),
                 "status": "success",
                 "output": raw_output,
             }
@@ -147,7 +181,7 @@ class UnifiedAgentRuntime:
         except Exception as exc:
             event = {
                 "tool": tool_name,
-                "arguments": arguments,
+                "arguments": dict(arguments),
                 "status": "error",
                 "error": str(exc),
             }

@@ -22,7 +22,7 @@ flowchart TD
 
 #### 🔹 Task 1.1: Config, Model & Unified Platform Preflight
 - **Status**: [x] 2026-11-18
-- **Goal**: Confirm SakJules's provider (`huggingface`), model (`deepseek-ai/DeepSeek-V4.1-Flash`), 68 overlay skills, and `sakthai platform` CLI (`detect-deps`, `check-safety`, `export-harness`) resolve cleanly.
+- **Goal**: Confirm SakJules's provider (`huggingface`), model (`deepseek-ai/DeepSeek-V4.1-Flash`), 56 overlay skills, and `sakthai platform` CLI (`detect-deps`, `check-safety`, `export-harness`) resolve cleanly.
 - **Estimated Time**: 2 minutes
 - **Command**: `SAKTHAI_HOME=$(mktemp -d) sakthai run "preflight" --persona sakjules --no-mcp --dry-run && sakthai platform export-harness sakjules`
 - **Acceptance Criteria**: Preflight resolves `huggingface` → `deepseek-ai/DeepSeek-V4.1-Flash`; Harness v1 spec exports cleanly.

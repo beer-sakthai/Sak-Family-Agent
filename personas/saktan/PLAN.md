@@ -22,7 +22,7 @@ flowchart TD
 
 #### 🔹 Task 1.1: Config & Local Ollama (`sakthai`) Preflight
 - **Status**: [ ]
-- **Goal**: Confirm SakTan's provider (`ollama`), local model (`sakthai`), and 9 overlay skills resolve with $0.00 API spend.
+- **Goal**: Confirm SakTan's provider (`ollama`), local model (`sakthai`), and 26 overlay skills resolve with $0.00 API spend.
 - **Estimated Time**: 2 minutes
 - **Command**: `SAKTHAI_HOME=$(mktemp -d) sakthai run "preflight" --persona saktan --no-mcp --dry-run`
 - **Acceptance Criteria**: Preflight resolves `ollama` → `sakthai` (verify local server via `curl -s http://127.0.0.1:11434/api/tags`).

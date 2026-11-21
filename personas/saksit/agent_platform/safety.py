@@ -14,16 +14,18 @@ class SafetyCheckResult:
 class DataLossGuardrail:
     DESTRUCTIVE_SHELL_PATTERNS = [
         (
-            re.compile(r"\brm\s+(-[a-zA-Z]*r[a-zA-Z]*f?|-[a-zA-Z]*f[a-zA-Z]*r?)\s+(.+)"),
-            "Destructive file deletion",
-        ),
-        (
-            re.compile(r"\bgsutil\s+rm\s+(-[a-zA-Z]*r[a-zA-Z]*\s+)?(.+)"),
+            re.compile(r"\bgsutil\s+rm\s+((?:-[a-zA-Z-]+\s+)*)(.+)"),
             "Cloud Storage bucket/object deletion",
         ),
         (
-            re.compile(r"\bbq\s+rm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+)?(.+)"),
+            re.compile(r"\bbq\s+rm\s+((?:-[a-zA-Z-]+\s+)*)(.+)"),
             "BigQuery table/dataset deletion",
+        ),
+        (
+            re.compile(
+                r"(?:^|[;&|]\s*)\brm\s+(-[a-zA-Z]*r[a-zA-Z]*f?|-[a-zA-Z]*f[a-zA-Z]*r?)\s+(.+)"
+            ),
+            "Destructive file deletion",
         ),
         (
             re.compile(r"\bgit\s+reset\s+--hard\b"),
@@ -57,11 +59,11 @@ class DataLossGuardrail:
             "Destructive database operation (DROP)",
         ),
         (
-            re.compile(r"\bTRUNCATE\s+TABLE\b", re.IGNORECASE),
+            re.compile(r"\bTRUNCATE\s+(?:TABLE\s+)?", re.IGNORECASE),
             "Destructive database operation (TRUNCATE)",
         ),
         (
-            re.compile(r"\bDELETE\s+FROM\s+\w+\s*(?:;|$)", re.IGNORECASE),
+            re.compile(r"\bDELETE\s+FROM\s+[`\"'\w.-]+\s*(?:;|$)", re.IGNORECASE),
             "Unbounded DELETE operation without WHERE clause",
         ),
     ]
