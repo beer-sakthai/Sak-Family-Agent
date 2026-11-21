@@ -291,3 +291,20 @@ def test_persona_markdown_files_match_disk_skills_and_canonical_paths(slug: str)
         "The lead, **SakThai**, coordinates the family and runs standalone via `sakthai`."
         in agents_md
     )
+    assert f"{overlay_count} Overlay Skills + {shared_count} Shared Skills" in agents_md
+    assert ws["role"] in agents_md
+    assert ws["domain"] in agents_md
+    for primary_skill in ws.get("primary_skills") or []:
+        assert primary_skill in agents_md, (
+            f"personas/{slug}/AGENTS.md is missing primary skill {primary_skill!r}"
+        )
+    for allowed_tool in ws.get("allowed_tools") or []:
+        assert allowed_tool in agents_md, (
+            f"personas/{slug}/AGENTS.md is missing allowed tool {allowed_tool!r}"
+        )
+    provider, default_model = persona_model_defaults(slug)
+    assert provider in agents_md and default_model in agents_md, (
+        f"personas/{slug}/AGENTS.md is missing configured model {provider}:{default_model}"
+    )
+    assert f"./evolve_agent.sh {slug}" in agents_md
+    assert f"CYCLE EVAL: {slug}" in agents_md

@@ -9,10 +9,13 @@ from pathlib import Path
 import pytest
 
 from sakthai.agent.eval import (
+    AGENTS_MD_RUBRIC_CRITERIA,
     SKILL_RUBRIC_CRITERIA,
     EvalRecord,
     _score_to_grade,
+    evaluate_agents_md_trials,
     evaluate_all_personas,
+    evaluate_persona_agents_md_alignment,
     evaluate_persona_audit,
     evaluate_persona_readiness,
     evaluate_persona_safety_compliance,
@@ -647,3 +650,41 @@ class TestAuditAndFleetSummary:
         assert summary["fleet_grade"] == "A+"
         assert summary["all_passed"] is True
         assert len(summary["scorecards"]) == 6
+
+
+class TestAgentsMdAlignment:
+    def test_all_real_personas_agents_md_aligned(self) -> None:
+        assert len(AGENTS_MD_RUBRIC_CRITERIA) == 8
+        for p in PERSONA_NAMES:
+            res = evaluate_persona_agents_md_alignment(p)
+            assert res["aligned"] is True, f"{p} AGENTS.md diagnostics: {res['diagnostics']}"
+            assert res["agents_md_score"] == 1.0
+            assert res["checks_passed"] == res["checks_total"] == 8
+            assert res["diagnostics"] == []
+
+    def test_unknown_persona_raises(self) -> None:
+        with pytest.raises(ValueError, match="Unknown persona"):
+            evaluate_persona_agents_md_alignment("unknown_bot")
+        with pytest.raises(ValueError, match="Unknown persona"):
+            evaluate_agents_md_trials(persona="unknown_bot")
+
+    def test_incomplete_agents_md_reports_diagnostics(self, tmp_path: Path) -> None:
+        pdir = tmp_path / "sakking"
+        pdir.mkdir(parents=True)
+        res = evaluate_persona_agents_md_alignment("sakking", personas_dir=tmp_path)
+        assert res["aligned"] is False
+        assert res["agents_md_score"] == 0.0
+        assert "Missing AGENTS.md" in res["diagnostics"]
+
+    def test_evaluate_agents_md_trials_10x(self) -> None:
+        bench = evaluate_agents_md_trials(trials=10)
+        assert bench["trials"] == 10
+        assert bench["consistent"] is True
+        assert bench["all_trials_aligned"] is True
+        assert len(bench["trial_history"]) == 10
+        assert len(bench["latest_report"]) == 6
+
+        single = evaluate_agents_md_trials(persona="sakjules", trials=3)
+        assert single["persona"] == "sakjules"
+        assert single["trials"] == 3
+        assert single["all_trials_aligned"] is True

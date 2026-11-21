@@ -11,7 +11,9 @@ import yaml
 
 from .. import config
 from ..agent.eval import (
+    evaluate_agents_md_trials,
     evaluate_all_personas,
+    evaluate_persona_agents_md_alignment,
     evaluate_persona_audit,
     evaluate_persona_readiness,
     evaluate_persona_safety_compliance,
@@ -508,6 +510,82 @@ def eval_tools(persona: str | None, detailed: bool, as_json: bool, trials: int) 
             dims = res["dimensions_breakdown"]
             dim_str = " ".join(f"{k}={v}" for k, v in dims.items())
             click.echo(f"    - 6-factor rubric: {dim_str}")
+        if res["diagnostics"]:
+            for d in res["diagnostics"]:
+                click.echo(f"    - warning: {d}")
+    if not all_ok:
+        sys.exit(1)
+
+
+@eval_cmd.command("agents")
+@click.option(
+    "--persona",
+    type=click.Choice(PERSONA_NAMES),
+    default=None,
+    help="Evaluate AGENTS.md requirement alignment for a single persona.",
+)
+@click.option(
+    "--times",
+    "-t",
+    "times",
+    default=1,
+    type=click.IntRange(min=1),
+    help="Number of evaluation trials to run (e.g. 10 for consistency benchmark).",
+)
+@click.option("--json", "as_json", is_flag=True, help="Emit the AGENTS.md report as JSON.")
+def eval_agents(persona: str | None, times: int, as_json: bool) -> None:
+    """Evaluate persona AGENTS.md alignment with workspace requirements, models, skills, and tools."""
+    if times > 1:
+        bench = evaluate_agents_md_trials(persona=persona, trials=times)
+        if as_json:
+            click.echo(json.dumps(bench, indent=2, ensure_ascii=False))
+            if not bench["all_trials_aligned"] or not bench["consistent"]:
+                sys.exit(1)
+            return
+
+        click.echo(f"# Sak Family AGENTS.md Requirements Benchmark ({times} trials)")
+        click.echo(
+            f"  Consistency: {'100% Deterministic' if bench['consistent'] else 'Inconsistent'} | "
+            f"Avg Latency: {bench['avg_latency_ms']:.2f}ms | Jitter: {bench['jitter_ms']:.2f}ms"
+        )
+        all_ok = bench["all_trials_aligned"] and bench["consistent"]
+        for p_name, res in bench["latest_report"].items():
+            status = "MATCHED" if res["aligned"] else "DRIFTED"
+            click.echo(
+                f"  [{status}] {p_name:<10} score={res['agents_md_score']:.0%} "
+                f"checks={res['checks_passed']}/{res['checks_total']} "
+                f"skills={res['overlay_skills']}+{res['shared_skills']} "
+                f"model={res['provider']}:{res['model']}"
+            )
+            if res["diagnostics"]:
+                for d in res["diagnostics"]:
+                    click.echo(f"    - warning: {d}")
+        if not all_ok:
+            sys.exit(1)
+        return
+
+    targets = [persona] if persona else sorted(PERSONA_NAMES)
+    results = {p: evaluate_persona_agents_md_alignment(p) for p in targets}
+    if as_json:
+        click.echo(json.dumps(results, indent=2, ensure_ascii=False))
+        if not all(r["aligned"] for r in results.values()):
+            sys.exit(1)
+        return
+
+    click.echo("# Sak Family AGENTS.md Requirements Alignment")
+    all_ok = True
+    for p_name, res in results.items():
+        status = "MATCHED" if res["aligned"] else "DRIFTED"
+        if not res["aligned"]:
+            all_ok = False
+        click.echo(
+            f"  [{status}] {p_name:<10} score={res['agents_md_score']:.0%} "
+            f"checks={res['checks_passed']}/{res['checks_total']} "
+            f"skills={res['overlay_skills']}+{res['shared_skills']} "
+            f"primary={len(res['primary_skills'])} "
+            f"tools={len(res['allowed_tools'])} "
+            f"model={res['provider']}:{res['model']}"
+        )
         if res["diagnostics"]:
             for d in res["diagnostics"]:
                 click.echo(f"    - warning: {d}")

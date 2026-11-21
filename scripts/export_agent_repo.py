@@ -18,42 +18,42 @@ PERSONA_DETAILS: dict[str, dict[str, str]] = {
     "sakking": {
         "display": "SakKing Agent",
         "handle": "@sakking_agent_bot",
-        "role": "Lead & Orchestrator · Master of Code & Self-Healing",
-        "summary": "the lead agent that coordinates the family and owns the widest skill set",
+        "role": "General Assistant & Runner (Deputy 1)",
+        "summary": "the General Assistant, TDD runner, and First Deputy of the family",
         "repo": "beer-sakthai/sakking-agent",
     },
     "sakthai": {
         "display": "SakThai",
         "handle": "@sakthai_agent_bot",
-        "role": "Master of Hugging Face",
-        "summary": "the Hugging Face specialist with shared memory and tool access",
+        "role": "Main Lead & HF Master",
+        "summary": "the Main Lead, orchestrator, and Hugging Face specialist with shared memory and tool access",
         "repo": "beer-sakthai/sakthai-agent",
     },
     "saksee": {
         "display": "SakSee",
         "handle": "@saksee_agent_bot",
-        "role": "Master of Web",
+        "role": "Web / Browser Specialist (Deputy 3)",
         "summary": "the browser, scraping, and live-web specialist",
         "repo": "beer-sakthai/saksee-agent",
     },
     "saksit": {
         "display": "SakSit",
         "handle": "@saksit_agent_bot",
-        "role": "Master of Social Media",
+        "role": "Social / Content Specialist",
         "summary": "the content and social media agent for images, video, and captions",
         "repo": "beer-sakthai/saksit-agent",
     },
     "saktan": {
         "display": "SakTan",
         "handle": "@SakTan_Agent_bot",
-        "role": "Daily Ops Helper",
-        "summary": "the young helper for daily operations and life admin",
+        "role": "Daily Ops & Rhythm (Deputy 2)",
+        "summary": "the daily operations, rhythm, and zero-cost local Ollama specialist",
         "repo": "beer-sakthai/saktan-agent",
     },
     "sakjules": {
         "display": "SakJules",
         "handle": "@SakJules_Agent_bot",
-        "role": "Master of Automation & CI/CD",
+        "role": "Master of GitHub, CI/CD & Automation",
         "summary": "the repository automation and CI/CD specialist",
         "repo": "beer-sakthai/sakjules-agent",
     },
@@ -89,16 +89,37 @@ COPY_DIRS = (
 # through the generic COPY_DIRS loop.
 CANONICAL_COPY_DIRS = (
     ("personas/sakthai/agent-self-evolution", "packages/agent-self-evolution"),
+    ("personas/sakthai/evolution", "packages/agent-self-evolution/evolution"),
 )
 
 PACKAGE_SUBDIRS = (
-    "agent", "agent_platform", "cli", "client", "cycle", "dashboard",
-    "extensions", "lead", "learn", "mcp", "memory", "scripts",
-    "team", "telegram", "web"
+    "agent",
+    "agent_platform",
+    "cli",
+    "client",
+    "cycle",
+    "dashboard",
+    "extensions",
+    "gateway",
+    "lead",
+    "learn",
+    "mcp",
+    "memory",
+    "scripts",
+    "team",
+    "telegram",
+    "web",
 )
 PACKAGE_FILES = (
-    "__init__.py", "__main__.py", "auth.py", "config.py", "giturl.py",
-    "hf.py", "sakking_skills.py", "sandbox.py", "skills.py"
+    "__init__.py",
+    "__main__.py",
+    "auth.py",
+    "config.py",
+    "giturl.py",
+    "hf.py",
+    "sakking_skills.py",
+    "sandbox.py",
+    "skills.py",
 )
 
 EXCLUDED_DIR_NAMES = {
@@ -236,9 +257,9 @@ def _render_agents_md(persona: str) -> str:
 
 ## Project Structure & Module Organization
 
-This repository is the standalone `{meta["display"]}` agent repo. Core source
+This repository is the standalone `{meta["display"]}` agent repo (`{meta["handle"]}` · {meta["role"]}). Core source
 code lives in `sakthai/`, shared skills live in `personas/shared/skills/`, and
-persona-owned files live in `personas/{persona}/`. Tests live in `tests/` and should
+persona-owned files (`SOUL.md`, `PLAN.md`, `CYCLE.md`, `MEMORY.md`, `HANDOFF.md`, `BACKPACK.md`, `AGENTS.md`, `config/`) live in `personas/{persona}/`. Tests live in `tests/` and should
 stay hermetic.
 
 ## Agent Operating Boundary
@@ -255,6 +276,8 @@ and durable skill or prompt improvements should be saved back to GitHub.
 - `ruff check sakthai tests`: lint the core package and tests.
 - `ruff format --check sakthai tests`: verify formatting.
 - `mypy sakthai`: run strict type checking on the core package.
+- `sakthai eval personas --persona {persona}`: verify persona readiness and working files.
+- `sakthai eval audit --persona {persona}`: run the 6-pillar evaluation audit.
 
 ## Coding Style & Naming Conventions
 
