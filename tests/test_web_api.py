@@ -248,6 +248,12 @@ class TestMetricsPayload:
     def test_limit_takes_the_most_recent(self, seeded: Path) -> None:
         assert api.metrics_payload(limit=1, home=seeded)["total_runs"] == 1
 
+    def test_non_positive_limit_is_clamped_not_an_unbounded_window(self, seeded: Path) -> None:
+        # ``[-limit:]`` with limit<=0 would return the whole window (0) or drop
+        # the oldest N (negative); clamp both to the last single run instead.
+        assert api.metrics_payload(limit=0, home=seeded)["total_runs"] == 1
+        assert api.metrics_payload(limit=-5, home=seeded)["total_runs"] == 1
+
     def test_trends_group_by_utc_day(self, home: Path) -> None:
         day_two = NOW + 86400 * 2
         (home / "eval.jsonl").write_text(
