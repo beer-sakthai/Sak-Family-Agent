@@ -18,8 +18,9 @@ import json
 import logging
 import os
 import re
+import shlex
 import stat
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -223,13 +224,18 @@ class MCPServerValidator:
         return True, "OK"
 
     @staticmethod
-    def get_sandbox_wrapper(command: str, timeout_sec: int = 30) -> list[str]:
+    def get_sandbox_wrapper(
+        command: str,
+        args: Sequence[str] = (),
+        timeout_sec: int = 30,
+    ) -> list[str]:
         """Generate a sandbox wrapper command for MCP server.
 
         Runs the server with resource limits (CPU, memory, timeout).
 
         Args:
             command: Original command
+            args: Optional command arguments
             timeout_sec: Execution timeout in seconds
 
         Returns:
@@ -237,13 +243,14 @@ class MCPServerValidator:
         """
         # Use timeout + ulimit pattern for basic sandboxing
         # More robust would use seccomp/AppArmor profiles
+        full_command = f"{command} {shlex.join(list(args))}".strip() if args else command
         wrapper = [
             "timeout",
             str(timeout_sec),
             "sh",
             "-c",
             # Limit memory (512MB), CPU (1 core), file descriptors
-            "ulimit -m 524288 -t 60 -n 256; " + command,
+            "ulimit -m 524288 -t 60 -n 256; " + full_command,
         ]
         return wrapper
 

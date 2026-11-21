@@ -311,3 +311,42 @@ def test_parse_headers_with_env_expansion(monkeypatch: pytest.MonkeyPatch) -> No
     assert spec.transport == "sse"
     assert spec.headers["Authorization"] == "Bearer step_mock_token_12345"
     assert spec.headers["X-Custom-Header"] == "constant-value"
+
+
+def test_parse_sandbox_flag() -> None:
+    data = {
+        "mcpServers": {
+            "sandboxed_srv": {
+                "command": "python",
+                "args": ["-m", "isolated_server"],
+                "sandbox": True,
+            }
+        }
+    }
+    specs = parse_mcp_servers(data)
+    assert len(specs) == 1
+    assert specs[0].sandbox is True
+
+
+def test_parse_mcp_servers_additional_branches() -> None:
+    # 1. Custom transport
+    specs = parse_mcp_servers({"mcpServers": {"ws": {"command": "node", "type": "websocket"}}})
+    assert len(specs) == 1
+    assert specs[0].transport == "websocket"
+
+    # 2. servers list with non-dict and missing name
+    specs_list = parse_mcp_servers(
+        {"servers": ["junk", {"no_name": True}, {"name": "valid", "command": "python"}]}
+    )
+    assert len(specs_list) == 1
+    assert specs_list[0].name == "valid"
+
+    # 3. servers dict with non-dict entry
+    specs_dict = parse_mcp_servers({"servers": {"bad": "not_dict", "good": {"command": "python"}}})
+    assert len(specs_dict) == 1
+    assert specs_dict[0].name == "good"
+
+    # 4. _parse_server_entry directly with non-dict
+    from sakthai.mcp.servers import _parse_server_entry
+
+    assert _parse_server_entry("bad", "not_dict") is None

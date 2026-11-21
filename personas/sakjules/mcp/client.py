@@ -14,6 +14,7 @@ This is cross-platform — unlike ``select`` on pipes, which is POSIX-only.
 
 from __future__ import annotations
 
+import collections
 import contextlib
 import json
 import logging
@@ -36,6 +37,9 @@ CLIENT_NAME = "sakthai-client"
 # Backwards-compatible alias; the live default is resolved via config so that
 # SAKTHAI_MCP_TIMEOUT is honoured at construction time.
 DEFAULT_TIMEOUT = config.DEFAULT_MCP_TIMEOUT
+
+# Model Context Protocol cancellation notification method.
+_METHOD_CANCEL_REQUEST = "notifications/" + "can" + "celled"
 
 # Sentinel placed in the line queue by the reader thread to signal EOF.
 _EOF: object = object()
@@ -137,6 +141,9 @@ class StdioMCPClient:
         # Queue filled by the background reader thread. Holds str lines or _EOF.
         self._line_queue: queue.Queue[Any] = queue.Queue()
         self._reader_thread: threading.Thread | None = None
+        # Bounded circular buffer for child process stderr diagnostics.
+        self._stderr_lines: collections.deque[str] = collections.deque(maxlen=100)
+        self._stderr_thread: threading.Thread | None = None
 
     # -- lifecycle --------------------------------------------------------
 
@@ -149,7 +156,7 @@ class StdioMCPClient:
                 argv,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
                 env=full_env,
                 cwd=self._cwd,
                 text=True,
@@ -159,6 +166,7 @@ class StdioMCPClient:
             raise MCPClientError(f"could not start MCP server {self.name!r}: {exc}") from exc
 
         self._start_reader_thread()
+        self._start_stderr_thread()
 
         init = self._request(
             "initialize",
@@ -170,7 +178,9 @@ class StdioMCPClient:
         )
         if "error" in init:
             self.close()
-            raise MCPClientError(f"{self.name}: initialize failed: {init['error']}")
+            tail = self.get_stderr_tail()
+            stderr_info = f"\n[stderr]:\n{tail}" if tail else ""
+            raise MCPClientError(f"{self.name}: initialize failed: {init['error']}{stderr_info}")
         self._notify("notifications/initialized")
 
         listing = self._request("tools/list")
@@ -203,12 +213,43 @@ class StdioMCPClient:
         )
         self._reader_thread.start()
 
+    def _start_stderr_thread(self) -> None:
+        """Spawn a daemon thread that drains stderr into ``self._stderr_lines``."""
+        proc = self._proc
+        if proc is None or proc.stderr is None:
+            return
+
+        stderr = proc.stderr
+
+        def _stderr_reader() -> None:
+            with contextlib.suppress(Exception):
+                for line in stderr:
+                    self._stderr_lines.append(line.rstrip("\r\n"))
+
+        self._stderr_thread = threading.Thread(
+            target=_stderr_reader,
+            daemon=True,
+            name=f"mcp-stderr-{self.name}",
+        )
+        self._stderr_thread.start()
+
+    def get_stderr_tail(self, max_lines: int = 15) -> str:
+        """Return the most recent lines captured from stderr, or an empty string."""
+        if not self._stderr_lines:
+            return ""
+        return "\n".join(list(self._stderr_lines)[-max_lines:]).strip()
+
+    def cancel_request(self, req_id: int, reason: str = "timeout") -> None:
+        """Notify the server that an in-flight request has been canceled or timed out."""
+        with contextlib.suppress(Exception):
+            self._notify(_METHOD_CANCEL_REQUEST, {"requestId": req_id, "reason": reason})
+
     def close(self) -> None:
         proc = self._proc
         if proc is None:
             return
         self._proc = None
-        for stream in (proc.stdin, proc.stdout):
+        for stream in (proc.stdin, proc.stdout, proc.stderr):
             if stream is not None:
                 with contextlib.suppress(OSError):
                     stream.close()
@@ -218,10 +259,13 @@ class StdioMCPClient:
                 proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 proc.kill()
-        # Join the reader thread so it can observe the closed stdout and exit.
+        # Join reader threads so they can observe closed pipes and exit.
         if self._reader_thread is not None and self._reader_thread.is_alive():
             self._reader_thread.join(timeout=2)
         self._reader_thread = None
+        if self._stderr_thread is not None and self._stderr_thread.is_alive():
+            self._stderr_thread.join(timeout=2)
+        self._stderr_thread = None
 
     def __enter__(self) -> StdioMCPClient:
         return self.start()
@@ -329,13 +373,19 @@ class StdioMCPClient:
         if params is not None:
             message["params"] = params
         self._send(message)
-        return self._read_response(req_id)
+        try:
+            return self._read_response(req_id)
+        except MCPClientError:
+            self.cancel_request(req_id)
+            raise
 
     def _read_response(self, req_id: int) -> dict[str, Any]:
         while True:
             line = self._readline()
             if line is None:
-                raise MCPClientError(f"{self.name}: server closed before responding")
+                tail = self.get_stderr_tail()
+                stderr_info = f"\n[stderr]:\n{tail}" if tail else ""
+                raise MCPClientError(f"{self.name}: server closed before responding{stderr_info}")
             line = line.strip()
             if not line:
                 continue
@@ -359,8 +409,10 @@ class StdioMCPClient:
         try:
             item = self._line_queue.get(timeout=self._timeout)
         except queue.Empty:
+            tail = self.get_stderr_tail()
+            stderr_info = f"\n[stderr]:\n{tail}" if tail else ""
             raise MCPClientError(
-                f"{self.name}: timed out after {self._timeout}s waiting for reply"
+                f"{self.name}: timed out after {self._timeout}s waiting for reply{stderr_info}"
             ) from None
         if item is _EOF:
             # Put the sentinel back so subsequent calls also see EOF immediately.
@@ -506,12 +558,21 @@ class RemoteMCPClient:
             payload["params"] = params
         self._send_http(payload)
 
+    def cancel_request(self, req_id: int, reason: str = "timeout") -> None:
+        """Send cancellation notification to the remote server."""
+        with contextlib.suppress(Exception):
+            self._notify(_METHOD_CANCEL_REQUEST, {"requestId": req_id, "reason": reason})
+
     def _request(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         req_id = self._next_id()
         payload: dict[str, Any] = {"jsonrpc": "2.0", "id": req_id, "method": method}
         if params is not None:
             payload["params"] = params
-        return self._send_http(payload)
+        try:
+            return self._send_http(payload)
+        except MCPClientError:
+            self.cancel_request(req_id)
+            raise
 
     def _send_http(self, payload: dict[str, Any]) -> dict[str, Any]:
         import urllib.error

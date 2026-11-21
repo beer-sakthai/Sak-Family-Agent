@@ -243,3 +243,42 @@ class TestConnectServersMocked:
             headers={"Authorization": "Bearer test-token"},
             timeout=None,
         )
+
+    def test_sandboxed_server_wraps_command_on_posix(self) -> None:
+        spec = MCPServerSpec(name="isolated", command="node", args=["server.js"], sandbox=True)
+        mock_client = MagicMock()
+        mock_client.as_tools.return_value = []
+        with (
+            patch("os.name", "posix"),
+            patch("sakthai.mcp.manager.StdioMCPClient", return_value=mock_client) as MockStdio,
+            connect_servers([spec]) as tools,
+        ):
+            assert tools == []
+        MockStdio.assert_called_once()
+        call_args = MockStdio.call_args[0]
+        assert call_args[0] == "timeout"
+        assert any("ulimit" in str(arg) for arg in call_args[1])
+        assert any("node" in str(arg) for arg in call_args[1])
+
+    def test_manager_skips_remote_missing_url(self) -> None:
+        spec = MCPServerSpec(name="empty_url", transport="sse", command="node", url=None)
+        with connect_servers([spec]) as tools:
+            assert tools == []
+
+    def test_manager_skips_stdio_missing_command(self) -> None:
+        spec = MCPServerSpec(
+            name="empty_cmd", transport="stdio", url="https://example.com", command=None
+        )
+        with connect_servers([spec]) as tools:
+            assert tools == []
+
+    def test_manager_closes_clients_on_exit(self) -> None:
+        spec = MCPServerSpec(name="c1", command="python", args=["-c", "pass"])
+        mock_client = MagicMock()
+        mock_client.as_tools.return_value = []
+        with (
+            patch("sakthai.mcp.manager.StdioMCPClient", return_value=mock_client),
+            connect_servers([spec]),
+        ):
+            pass
+        mock_client.close.assert_called_once()
