@@ -39,6 +39,15 @@ SKILL_RUBRIC_CRITERIA: tuple[str, ...] = (
     "cleanliness_no_legacy",
 )
 
+TOOL_RUBRIC_CRITERIA: tuple[str, ...] = (
+    "schemas_valid",
+    "descriptions_actionable",
+    "handlers_callable",
+    "names_valid",
+    "argument_validation",
+    "registry_integrity",
+)
+
 
 PERSONA_WORKING_FILES: tuple[str, ...] = (
     "SOUL.md",
@@ -952,6 +961,187 @@ def evaluate_persona_safety_compliance(persona: str) -> dict[str, Any]:
     }
 
 
+def evaluate_persona_tools_health(persona: str | None = None) -> dict[str, Any]:
+    """Evaluate built-in and persona tool fleet: 6-factor rubric, schemas, validation, and integrity."""
+    from .registry import builtin_registry
+
+    if persona is not None and persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+
+    registry = builtin_registry()
+    tools = registry.tools
+    total_tools = len(tools)
+    valid_tools = 0
+
+    dimensions_breakdown: dict[str, int] = {k: 0 for k in TOOL_RUBRIC_CRITERIA}
+    diagnostics: list[str] = []
+
+    core_names = {"learn", "recall", "search", "read_file", "run_command", "delegate_to_persona"}
+    found_names: set[str] = set()
+
+    for tool in tools:
+        is_tool_valid = True
+        found_names.add(tool.name)
+
+        # 1. names_valid
+        if tool.name and re.match(r"^[a-z][a-z0-9_]*$", tool.name):
+            dimensions_breakdown["names_valid"] += 1
+        else:
+            is_tool_valid = False
+            diagnostics.append(f"Tool {tool.name!r}: invalid name format (must be snake_case)")
+
+        # 2. descriptions_actionable
+        desc = (tool.description or "").strip()
+        if len(desc) >= 20:
+            dimensions_breakdown["descriptions_actionable"] += 1
+        else:
+            is_tool_valid = False
+            diagnostics.append(f"Tool {tool.name}: description is too short or missing (<20 chars)")
+
+        # 3. schemas_valid
+        schema = tool.input_schema
+        if (
+            isinstance(schema, dict)
+            and schema.get("type") == "object"
+            and isinstance(schema.get("properties", {}), dict)
+            and isinstance(schema.get("required", []), (list, tuple))
+        ):
+            dimensions_breakdown["schemas_valid"] += 1
+        else:
+            is_tool_valid = False
+            diagnostics.append(
+                f"Tool {tool.name}: input_schema is invalid (must have type='object' and dict properties)"
+            )
+
+        # 4. handlers_callable
+        if callable(tool.handler):
+            dimensions_breakdown["handlers_callable"] += 1
+        else:
+            is_tool_valid = False
+            diagnostics.append(f"Tool {tool.name}: handler is not callable")
+
+        # 5. argument_validation
+        req_fields = schema.get("required", []) if isinstance(schema, dict) else []
+        if req_fields:
+            valid_empty, errs_empty = tool.validate_args({})
+            if not valid_empty and len(errs_empty) >= len(req_fields):
+                dimensions_breakdown["argument_validation"] += 1
+            else:
+                is_tool_valid = False
+                diagnostics.append(
+                    f"Tool {tool.name}: validate_args did not properly flag missing required fields"
+                )
+        else:
+            valid_empty, _ = tool.validate_args({})
+            if valid_empty:
+                dimensions_breakdown["argument_validation"] += 1
+            else:
+                is_tool_valid = False
+                diagnostics.append(
+                    f"Tool {tool.name}: validate_args failed unexpectedly on empty args"
+                )
+
+        # 6. registry_integrity
+        if tool.name in core_names or len(tools) >= len(core_names):
+            dimensions_breakdown["registry_integrity"] += 1
+
+        if is_tool_valid:
+            valid_tools += 1
+
+    missing_core = core_names - found_names
+    if missing_core:
+        diagnostics.append(f"Missing core built-in tools: {sorted(missing_core)}")
+
+    tools_score = round(valid_tools / total_tools, 2) if total_tools > 0 else 0.0
+
+    return {
+        "persona": persona or "all",
+        "tools_score": tools_score,
+        "healthy": tools_score >= 0.95 and not missing_core and not diagnostics,
+        "total_tools": total_tools,
+        "valid_tools": valid_tools,
+        "dimensions_breakdown": dimensions_breakdown,
+        "diagnostics": diagnostics,
+    }
+
+
+def evaluate_tools_trials(
+    persona: str | None = None,
+    trials: int = 1,
+) -> dict[str, Any]:
+    """Execute tools evaluation across one or all personas for multiple trials (e.g. 10 times).
+
+    Measures consistency, deterministic repeatability, execution latency, and jitter.
+    """
+    if persona is not None and persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+
+    trial_count = max(1, int(trials))
+    targets = (persona,) if persona else PERSONA_NAMES
+
+    trial_history: list[dict[str, Any]] = []
+    latencies_ms: list[float] = []
+    latest_report: dict[str, dict[str, Any]] = {}
+
+    for i in range(1, trial_count + 1):
+        t0 = time.perf_counter()
+        run_report = {p: evaluate_persona_tools_health(p) for p in targets}
+        elapsed_ms = round((time.perf_counter() - t0) * 1000.0, 2)
+        latencies_ms.append(elapsed_ms)
+        latest_report = run_report
+
+        all_healthy = all(r["healthy"] for r in run_report.values())
+        tot_tools = sum(r["total_tools"] for r in run_report.values())
+        val_tools = sum(r["valid_tools"] for r in run_report.values())
+        avg_score = (
+            round(sum(r["tools_score"] for r in run_report.values()) / len(targets), 2)
+            if targets
+            else 0.0
+        )
+
+        trial_history.append(
+            {
+                "trial": i,
+                "latency_ms": elapsed_ms,
+                "all_healthy": all_healthy,
+                "total_tools": tot_tools,
+                "valid_tools": val_tools,
+                "average_score": avg_score,
+                "scores": {p: run_report[p]["tools_score"] for p in targets},
+            }
+        )
+
+    first_scores = trial_history[0]["scores"]
+    identical_count = sum(1 for t in trial_history if t["scores"] == first_scores)
+    consistency = round(identical_count / trial_count, 2)
+
+    avg_latency = round(sum(latencies_ms) / len(latencies_ms), 2)
+    min_latency = round(min(latencies_ms), 2)
+    max_latency = round(max(latencies_ms), 2)
+    jitter = round(max_latency - min_latency, 2)
+
+    return {
+        "target": persona if persona else "ALL PERSONAS",
+        "trials": trial_count,
+        "consistency": consistency,
+        "deterministic": consistency == 1.0,
+        "latency_stats": {
+            "avg_ms": avg_latency,
+            "min_ms": min_latency,
+            "max_ms": max_latency,
+            "jitter_ms": jitter,
+        },
+        "all_healthy": all(t["all_healthy"] for t in trial_history),
+        "status": (
+            "HEALTHY"
+            if all(t["all_healthy"] for t in trial_history) and consistency == 1.0
+            else "UNSTABLE"
+        ),
+        "latest_scorecard": latest_report,
+        "trial_history": trial_history,
+    }
+
+
 def _score_to_grade(score: float) -> str:
     if score >= 0.95:
         return "A+"
@@ -973,19 +1163,21 @@ def evaluate_persona_audit(
     personas_dir: Path | None = None,
     home_dir: Path | None = None,
 ) -> dict[str, Any]:
-    """Execute a comprehensive 5-pillar audit across readiness, soul, skills, memory, and safety."""
+    """Execute a comprehensive 6-pillar audit across readiness, soul, skills, tools, memory, and safety."""
     readiness = evaluate_persona_readiness(persona, personas_dir=personas_dir)
     soul = evaluate_persona_soul_alignment(persona, personas_dir=personas_dir)
     skills = evaluate_persona_skills_health(persona, personas_dir=personas_dir)
+    tools = evaluate_persona_tools_health(persona)
     memory = evaluate_persona_memory_health(persona, home_dir=home_dir)
     safety = evaluate_persona_safety_compliance(persona)
 
     composite_score = round(
-        0.25 * readiness["readiness_score"]
+        0.20 * readiness["readiness_score"]
         + 0.20 * soul["soul_score"]
-        + 0.20 * skills["skills_score"]
+        + 0.15 * skills["skills_score"]
+        + 0.15 * tools["tools_score"]
         + 0.15 * memory["memory_score"]
-        + 0.20 * safety["safety_score"],
+        + 0.15 * safety["safety_score"],
         2,
     )
     grade = _score_to_grade(composite_score)
@@ -993,6 +1185,7 @@ def evaluate_persona_audit(
         readiness["diagnostics"]
         + soul["diagnostics"]
         + skills["diagnostics"]
+        + tools["diagnostics"]
         + memory["diagnostics"]
         + safety["diagnostics"]
     )
@@ -1016,6 +1209,12 @@ def evaluate_persona_audit(
                 "passed": skills["healthy"],
                 "total": skills["total_skills"],
                 "valid": skills["valid_skills"],
+            },
+            "tools": {
+                "score": tools["tools_score"],
+                "passed": tools["healthy"],
+                "total": tools["total_tools"],
+                "valid": tools["valid_tools"],
             },
             "memory": {
                 "score": memory["memory_score"],

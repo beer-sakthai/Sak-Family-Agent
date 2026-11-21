@@ -637,6 +637,7 @@ class TestAuditAndFleetSummary:
                 "skills",
                 "memory",
                 "safety",
+                "tools",
             }
 
     def test_summarize_fleet_audit(self) -> None:
