@@ -21,14 +21,14 @@ flowchart TD
 ### Phase 1: Foundation & Media MCP Preflight
 
 #### 🔹 Task 1.1: Config, Model & `hf-media` MCP Preflight
-- **Status**: [ ]
+- **Status**: [x] 2026-11-21
 - **Goal**: Confirm SakSit's provider (`huggingface`), model (`deepseek-ai/DeepSeek-V4-Flash`), 45 overlay skills, and pinned `@llmindset/mcp-hfspace@0.5.4` resolve cleanly.
 - **Estimated Time**: 2 minutes
 - **Command**: `SAKTHAI_HOME=$(mktemp -d) sakthai run "preflight" --persona saksit --no-mcp --dry-run`
 - **Acceptance Criteria**: Preflight resolves `huggingface` → `deepseek-ai/DeepSeek-V4-Flash`.
 
 #### 🔹 Task 1.2: Pre-Task Family Memory & Draft Queue Audit
-- **Status**: [ ]
+- **Status**: [x] 2026-11-21
 - **Goal**: Read charge, conservation mode, pending `hub-draft` items, and any `hub-approved` tags from Beer.
 - **Estimated Time**: 2 minutes
 - **Command**: `sakthai memory family "hub-draft" --tag hub-draft --tag awaiting-review --limit 5 && sakthai memory family --tag hub-approved --limit 5`
@@ -39,14 +39,14 @@ flowchart TD
 ### Phase 2: Zero-Scrape Data Acquisition via SakSee
 
 #### 🔹 Task 2.1: Dispatch `data-request` to SakSee
-- **Status**: [ ]
+- **Status**: [x] 2026-11-21
 - **Goal**: Request live metrics needed for any post or card through SakSee rather than scraping directly.
 - **Estimated Time**: 2 minutes
 - **Command**: `sakthai learn --persona saksit "DATA REQUEST: saksit | target: <url/metric> | needed-for: <post/card> | timestamp: <ISO>" --kind observation --tag data-request --tag saksit`
 - **Acceptance Criteria**: Every number used in a draft cites SakSee's `monitoring-result` and `retrieved_at` timestamp.
 
 #### 🔹 Task 2.2: Asynchronous Template Staging & 1-Tap Batch Digest
-- **Status**: [ ]
+- **Status**: [x] 2026-11-21
 - **Goal**: Prevent pipeline stalls while waiting on live upstream context (from SakSee or SakThai) by adopting **Asynchronous Template Staging**.
 - **Template Staging Protocol**:
   - Draft post and model card structures proactively with `{{VARIABLE}}` placeholders (e.g., `{{BENCHMARK_SCORE}}`, `{{DOWNLOAD_COUNT}}`, `{{HUB_COMMIT}}`).

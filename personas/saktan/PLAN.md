@@ -21,14 +21,14 @@ flowchart TD
 ### Phase 1: Foundation, Local Ollama & Memory Health Preflight
 
 #### 🔹 Task 1.1: Config & Local Ollama (`sakthai`) Preflight
-- **Status**: [ ]
+- **Status**: [x] 2026-11-21
 - **Goal**: Confirm SakTan's provider (`ollama`), local model (`sakthai`), and 26 overlay skills resolve with $0.00 API spend.
 - **Estimated Time**: 2 minutes
 - **Command**: `SAKTHAI_HOME=$(mktemp -d) sakthai run "preflight" --persona saktan --no-mcp --dry-run`
 - **Acceptance Criteria**: Preflight resolves `ollama` → `sakthai` (verify local server via `curl -s http://127.0.0.1:11434/api/tags`).
 
 #### 🔹 Task 1.2: Pre-Task Family Reads & Shard Healthcheck
-- **Status**: [ ]
+- **Status**: [x] 2026-11-21
 - **Goal**: Read charge, conservation mode, and `DEPUTY CHAIN`, then run `healthcheck` and `backup` on SakTan's memory shard.
 - **Estimated Time**: 2 minutes
 - **Command**: `sakthai memory family "DEPUTY CHAIN" --tag deputy-chain --limit 1 && sakthai memory --persona saktan healthcheck && sakthai memory --persona saktan backup`
@@ -39,14 +39,14 @@ flowchart TD
 ### Phase 2: Beer's Daily Rhythm (Briefing, Close-the-Day & Weekly Review)
 
 #### 🔹 Task 2.1: Daily Briefing (`SakTan-daily-briefing`)
-- **Status**: [ ]
+- **Status**: [x] 2026-11-21
 - **Goal**: Surface today's single clearest next action for Beer without overwhelming options.
 - **Estimated Time**: 3 minutes
 - **Command**: `sakthai run "Daily briefing for Beer" --persona saktan --with-skills SakTan-daily-briefing`
 - **Acceptance Criteria**: One actionable priority delivered with strict token economy.
 
 #### 🔹 Task 2.2: Close the Day & Weekly Review (`SakTan-close-the-day`, `SakTan-weekly-review`)
-- **Status**: [ ]
+- **Status**: [x] 2026-11-21
 - **Goal**: Record completed outcomes, set tomorrow's top task, and keep the weekly rhythm realistic.
 - **Estimated Time**: 5 minutes
 - **Command**: `sakthai run "Close the day" --persona saktan --with-skills SakTan-close-the-day`
