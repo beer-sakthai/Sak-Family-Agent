@@ -933,6 +933,7 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 | `SAKTHAI_SYSTEM_PROMPT` / `SAKTHAI_SYSTEM_PROMPT_FILE` | Inline or file-backed system-prompt prefix |
 | `SAKTHAI_READ_ALLOW` | `os.pathsep`-separated extra paths the `read_file` tool may read |
 | `SAKTHAI_SHELL_ALLOW` | Any non-empty value enables the `run_command` tool |
+| `SAKTHAI_MAIL_ALLOW` | Recipients `send_outlook_mail` may email — full addresses or `@domain`, comma/space separated. **Unset denies every recipient** (the recipient comes from the model, so a prompt injection must not choose it) |
 | `SAKTHAI_SANDBOX_NETWORK` | Docker `--network` value for `run --sandbox` (e.g. `none` to cut egress) |
 | `SAKTHAI_MCP_CONFIG` | Override the external MCP server config path |
 | `SAKTHAI_MCP_TIMEOUT` | Seconds to wait for an external MCP server reply (default: 30) |

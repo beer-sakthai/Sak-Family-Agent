@@ -90,6 +90,26 @@ def test_run_persona_task_success() -> None:
         mock_run.assert_called_once()
 
 
+def test_run_persona_task_bounds_unattended_runs_by_default() -> None:
+    """Regression: a delegated run had no wall-clock budget, so a stalled one
+    could hold its worker indefinitely."""
+    from sakthai.agent.loop import DEFAULT_UNATTENDED_MAX_SECONDS
+
+    mock_result = AgentResult(text="ok", iterations=1, stop_reason="end_turn", usage={})
+    with patch("sakthai.agent.coordinator.run_agent", return_value=mock_result) as mock_run:
+        run_persona_task("sakjules", "task", store=MemoryStore(":memory:"))
+    assert mock_run.call_args.kwargs["max_seconds"] == DEFAULT_UNATTENDED_MAX_SECONDS
+
+
+def test_run_persona_task_budget_can_be_overridden_or_lifted() -> None:
+    mock_result = AgentResult(text="ok", iterations=1, stop_reason="end_turn", usage={})
+    with patch("sakthai.agent.coordinator.run_agent", return_value=mock_result) as mock_run:
+        run_persona_task("sakjules", "task", store=MemoryStore(":memory:"), max_seconds=30.0)
+        assert mock_run.call_args.kwargs["max_seconds"] == 30.0
+        run_persona_task("sakjules", "task", store=MemoryStore(":memory:"), max_seconds=None)
+        assert mock_run.call_args.kwargs["max_seconds"] is None
+
+
 def test_run_parallel_persona_tasks_empty() -> None:
     from sakthai.agent.coordinator import run_parallel_persona_tasks
 

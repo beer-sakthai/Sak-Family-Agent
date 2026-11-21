@@ -17,7 +17,7 @@ from ..config import (
     persona_model_defaults,
 )
 from ..memory.store import MemoryStore
-from .loop import AgentError, AgentResult, run_agent
+from .loop import DEFAULT_UNATTENDED_MAX_SECONDS, AgentError, AgentResult, run_agent
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +111,7 @@ def run_persona_task(
     with_skills: Sequence[str] = (),
     max_iterations: int | None = None,
     max_tokens: int | None = None,
+    max_seconds: float | None = DEFAULT_UNATTENDED_MAX_SECONDS,
     max_depth: int = DEFAULT_MAX_DELEGATION_DEPTH,
     store: MemoryStore | None = None,
     model: str | None = None,
@@ -122,6 +123,8 @@ def run_persona_task(
     """Execute a task in-process under the scoped target persona.
 
     Guards against recursion cycles and nesting beyond ``max_depth``.
+    ``max_seconds`` defaults to ``DEFAULT_UNATTENDED_MAX_SECONDS``: a delegated
+    run has no one watching it; pass ``None`` to lift the budget.
     ``no_mcp`` and ``verbose`` are accepted for caller compatibility but have
     no effect: a delegated run uses the built-in tools only.
     """
@@ -152,6 +155,8 @@ def run_persona_task(
         provider=provider,
         client=client,
     )
+
+    kwargs["max_seconds"] = max_seconds
 
     new_chain = (*current_chain, persona)
     token = _DELEGATION_CHAIN.set(new_chain)
