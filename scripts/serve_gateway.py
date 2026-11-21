@@ -49,7 +49,10 @@ def main() -> None:
     server = RuntimeGatewayServer(config=config)
     print(f"🚀 SakThai Runtime Gateway starting on http://{config.host}:{config.port}")
     print(f"  Default Persona: {config.default_persona}")
-    print(f"  Auth Mode:       {'Bearer Token' if config.bearer_token else 'Open Access'}")
+    print(
+        f"  Auth Mode:       "
+        f"{'Bearer Token' if config.bearer_token else 'NO TOKEN — all requests but /health refused'}"
+    )
     print("Press Ctrl+C to stop.\n")
 
     try:

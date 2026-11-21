@@ -210,6 +210,7 @@ def test_read_file_blocks_outside_roots(tmp_path: Path, store) -> None:
         "memory.db",
         ".sqlite_history",
         ".psql_history",
+        "graph_token.json",
     ],
 )
 def test_read_file_blocks_sensitive_names_even_in_cwd(
@@ -222,6 +223,18 @@ def test_read_file_blocks_sensitive_names_even_in_cwd(
     secret.write_text("TOKEN=abc", encoding="utf-8")
     with pytest.raises(PermissionError):
         tool_by_name("read_file").handler({"path": name}, store)
+
+
+def test_read_file_blocks_graph_token_cache_in_sakthai_home(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store
+) -> None:
+    """Regression: ~/.sakthai is an allowed root, and the Graph refresh-token cache
+    lives there, so read_file returned it whenever the guardrail was skipped."""
+    monkeypatch.setenv("SAKTHAI_HOME", str(tmp_path))
+    cache = tmp_path / "graph_token.json"
+    cache.write_text('{"refresh_token": "M.R3_SECRET"}', encoding="utf-8")
+    with pytest.raises(PermissionError):
+        tool_by_name("read_file").handler({"path": str(cache)}, store)
 
 
 def test_read_file_blocks_dot_ssh_directory(
