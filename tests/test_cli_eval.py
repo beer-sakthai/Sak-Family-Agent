@@ -239,10 +239,85 @@ def test_eval_skills_all_and_single(runner: CliRunner) -> None:
     assert res_single.exit_code == 0
     assert "saksee" in res_single.output
 
+    res_detailed = runner.invoke(main, ["eval", "skills", "--persona", "saksee", "--detailed"])
+    assert res_detailed.exit_code == 0
+    assert "10-factor rubric" in res_detailed.output
+
     res_json = runner.invoke(main, ["eval", "skills", "--json"])
     assert res_json.exit_code == 0
     data = json.loads(res_json.output)
     assert len(data) == 6
+    assert data["saksee"]["criteria_count"] == 10
+    assert data["saksee"]["skills_passed_all_criteria"] == data["saksee"]["total_skills"]
+
+
+def test_eval_skills_times_10_and_json(runner: CliRunner) -> None:
+    # Text output
+    res = runner.invoke(main, ["eval", "skills", "--times", "10"])
+    assert res.exit_code == 0
+    assert "10 Trials Benchmark" in res.output
+    assert "Consistency:  100% deterministic" in res.output
+    assert "Trial #10" in res.output
+
+    # Detailed multi-trial output
+    res_det = runner.invoke(
+        main, ["eval", "skills", "-t", "2", "--persona", "sakjules", "--detailed"]
+    )
+    assert res_det.exit_code == 0
+    assert "rubric:" in res_det.output
+
+    # JSON output
+    res_json = runner.invoke(main, ["eval", "skills", "--times", "10", "--json"])
+    assert res_json.exit_code == 0
+    data = json.loads(res_json.output)
+    assert data["trials"] == 10
+    assert data["consistent"] is True
+    assert data["all_trials_healthy"] is True
+    assert len(data["trial_history"]) == 10
+    assert len(data["latencies_ms"]) == 10
+
+
+def test_eval_skills_multi_trial_failure(runner: CliRunner) -> None:
+    mock_fail = {
+        "trials": 3,
+        "all_trials_healthy": False,
+        "consistent": False,
+        "avg_latency_ms": 12.0,
+        "min_latency_ms": 10.0,
+        "max_latency_ms": 15.0,
+        "jitter_ms": 5.0,
+        "trial_history": [
+            {
+                "trial": 1,
+                "latency_ms": 10.0,
+                "all_healthy": False,
+                "total_skills": 10,
+                "valid_skills": 5,
+                "skills_passed_all_criteria": 0,
+                "average_score": 0.5,
+                "scores": {"sakking": 0.5},
+            }
+        ],
+        "latest_report": {
+            "sakking": {
+                "healthy": False,
+                "skills_score": 0.5,
+                "valid_skills": 5,
+                "total_skills": 10,
+                "skills_passed_all_criteria": 0,
+                "primary_skills": [],
+                "dimensions_breakdown": {"fences_valid": 5},
+                "diagnostics": ["Mock degraded skill fleet"],
+            }
+        },
+    }
+    with patch("sakthai.cli.eval.evaluate_skills_trials", return_value=mock_fail):
+        res = runner.invoke(main, ["eval", "skills", "--times", "3"])
+        assert res.exit_code == 1
+        assert "Mock degraded skill fleet" in res.output
+
+        res_json = runner.invoke(main, ["eval", "skills", "--times", "3", "--json"])
+        assert res_json.exit_code == 1
 
 
 def test_eval_safety_all_and_single(runner: CliRunner) -> None:

@@ -13,6 +13,7 @@ import logging
 import os
 import re
 import sqlite3
+import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,20 @@ from ..config import PERSONA_NAMES, PERSONAS_DIR, eval_log_path, redact_secrets,
 logger = logging.getLogger(__name__)
 
 _TASK_PREVIEW_LIMIT = 80
+
+SKILL_RUBRIC_CRITERIA: tuple[str, ...] = (
+    "fences_valid",
+    "yaml_syntax",
+    "canonical_name",
+    "actionable_description",
+    "version_declared",
+    "category_taxonomy",
+    "tags_metadata",
+    "instruction_body_depth",
+    "naming_convention",
+    "cleanliness_no_legacy",
+)
+
 
 PERSONA_WORKING_FILES: tuple[str, ...] = (
     "SOUL.md",
@@ -495,7 +510,7 @@ def evaluate_persona_soul_alignment(
 def evaluate_persona_skills_health(
     persona: str, personas_dir: Path | None = None
 ) -> dict[str, Any]:
-    """Evaluate persona skill fleet: schema validity, frontmatter metadata, and primary skills."""
+    """Evaluate persona skill fleet: 10-dimension rubric, schema validity, metadata, and primary skills."""
     if persona not in PERSONA_NAMES:
         raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
 
@@ -509,6 +524,8 @@ def evaluate_persona_skills_health(
     total_skills = 0
     valid_skills = 0
     skills_with_metadata = 0
+    skills_passed_all_criteria = 0
+    dimensions_breakdown: dict[str, int] = {k: 0 for k in SKILL_RUBRIC_CRITERIA}
     diagnostics: list[str] = []
 
     if skills_dir.is_dir():
@@ -527,6 +544,8 @@ def evaluate_persona_skills_health(
             if len(parts) < 3:
                 diagnostics.append(f"Skill {skill_dir.name}: unclosed YAML frontmatter")
                 continue
+            dimensions_breakdown["fences_valid"] += 1
+
             try:
                 meta = yaml.safe_load(parts[1])
             except Exception as exc:
@@ -535,17 +554,76 @@ def evaluate_persona_skills_health(
             if not isinstance(meta, dict):
                 diagnostics.append(f"Skill {skill_dir.name}: frontmatter is not a dictionary")
                 continue
-            has_name = bool(meta.get("name"))
-            has_desc = bool(meta.get("description"))
-            has_body = len(parts[2].strip()) > 20
-            if has_name and has_desc and has_body:
+            dimensions_breakdown["yaml_syntax"] += 1
+
+            has_name = bool(meta.get("name")) and isinstance(meta.get("name"), str)
+            if has_name:
+                dimensions_breakdown["canonical_name"] += 1
+
+            desc_raw = meta.get("description")
+            has_desc = bool(desc_raw) and len(str(desc_raw).strip()) >= 10
+            if has_desc:
+                dimensions_breakdown["actionable_description"] += 1
+
+            has_ver = bool(meta.get("version"))
+            if has_ver:
+                dimensions_breakdown["version_declared"] += 1
+
+            has_cat = bool(meta.get("category"))
+            if has_cat:
+                dimensions_breakdown["category_taxonomy"] += 1
+
+            meta_block = meta.get("metadata")
+            has_tags = bool(
+                meta.get("tags")
+                or (
+                    isinstance(meta_block, dict)
+                    and ("sakthai" in meta_block or "tags" in meta_block)
+                )
+            )
+            if has_tags:
+                dimensions_breakdown["tags_metadata"] += 1
+
+            body_stripped = parts[2].strip()
+            has_basic_body = len(body_stripped) > 20
+            has_substantive_body = len(body_stripped) >= 30
+            if has_substantive_body:
+                dimensions_breakdown["instruction_body_depth"] += 1
+
+            prefix_ok = skill_dir.name.lower().startswith(
+                (f"{persona.lower()}-", f"sak{persona[3:].lower()}-", "sak-")
+            ) or skill_dir.name.startswith("Sak-")
+            if prefix_ok:
+                dimensions_breakdown["naming_convention"] += 1
+
+            clean_ok = (
+                not (isinstance(meta_block, dict) and "hermes" in meta_block)
+                and f"-{persona.lower()}-" not in skill_dir.name.lower()
+            )
+            if clean_ok:
+                dimensions_breakdown["cleanliness_no_legacy"] += 1
+
+            if has_name and bool(meta.get("description")) and has_basic_body:
                 valid_skills += 1
             else:
                 diagnostics.append(
                     f"Skill {skill_dir.name}: incomplete name, description, or instructions"
                 )
-            if meta.get("category") or meta.get("tags"):
+
+            if meta.get("category") or has_tags:
                 skills_with_metadata += 1
+
+            if (
+                has_name
+                and has_desc
+                and has_ver
+                and has_cat
+                and has_tags
+                and has_substantive_body
+                and prefix_ok
+                and clean_ok
+            ):
+                skills_passed_all_criteria += 1
 
     if not primary_skills:
         diagnostics.append("No primary skills configured in workspace.yaml")
@@ -555,20 +633,105 @@ def evaluate_persona_skills_health(
     validity_ratio = (
         (valid_skills / total_skills) if total_skills > 0 else (1.0 if not primary_skills else 0.0)
     )
+    total_criteria_checks = total_skills * len(SKILL_RUBRIC_CRITERIA)
+    passed_criteria_checks = sum(dimensions_breakdown.values())
+    rubric_ratio = (
+        (passed_criteria_checks / total_criteria_checks)
+        if total_criteria_checks > 0
+        else (1.0 if not primary_skills else 0.0)
+    )
     primary_ok = bool(primary_skills) and not missing_primary
     primary_ratio = 1.0 if primary_ok else 0.0
-    skills_score = round(0.70 * validity_ratio + 0.30 * primary_ratio, 2)
+
+    skills_score = round(0.50 * validity_ratio + 0.30 * rubric_ratio + 0.20 * primary_ratio, 2)
 
     return {
         "persona": persona,
         "total_skills": total_skills,
         "valid_skills": valid_skills,
         "skills_with_metadata": skills_with_metadata,
+        "skills_passed_all_criteria": skills_passed_all_criteria,
+        "criteria_count": len(SKILL_RUBRIC_CRITERIA),
+        "dimensions_breakdown": dimensions_breakdown,
         "primary_skills": primary_skills,
         "missing_primary_skills": missing_primary,
         "skills_score": skills_score,
         "diagnostics": diagnostics,
         "healthy": skills_score >= 0.90 and not missing_primary,
+    }
+
+
+def evaluate_skills_trials(
+    persona: str | None = None,
+    trials: int = 1,
+    personas_dir: Path | None = None,
+) -> dict[str, Any]:
+    """Execute skills evaluation across one or all personas for multiple trials (e.g. 10 times).
+
+    Measures consistency, deterministic repeatability, execution latency, and jitter.
+    """
+    if persona is not None and persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+
+    trial_count = max(1, int(trials))
+    targets = (persona,) if persona else PERSONA_NAMES
+
+    trial_history: list[dict[str, Any]] = []
+    latencies_ms: list[float] = []
+    latest_report: dict[str, dict[str, Any]] = {}
+
+    for i in range(1, trial_count + 1):
+        t0 = time.perf_counter()
+        run_report = {
+            p: evaluate_persona_skills_health(p, personas_dir=personas_dir) for p in targets
+        }
+        elapsed_ms = round((time.perf_counter() - t0) * 1000.0, 2)
+        latencies_ms.append(elapsed_ms)
+        latest_report = run_report
+
+        all_healthy = all(r["healthy"] for r in run_report.values())
+        tot_skills = sum(r["total_skills"] for r in run_report.values())
+        val_skills = sum(r["valid_skills"] for r in run_report.values())
+        passed_all = sum(r.get("skills_passed_all_criteria", 0) for r in run_report.values())
+        avg_score = (
+            round(sum(r["skills_score"] for r in run_report.values()) / len(targets), 2)
+            if targets
+            else 0.0
+        )
+
+        trial_history.append(
+            {
+                "trial": i,
+                "latency_ms": elapsed_ms,
+                "all_healthy": all_healthy,
+                "total_skills": tot_skills,
+                "valid_skills": val_skills,
+                "skills_passed_all_criteria": passed_all,
+                "average_score": avg_score,
+                "scores": {p: run_report[p]["skills_score"] for p in targets},
+            }
+        )
+
+    first_scores = trial_history[0]["scores"]
+    consistent = all(t["scores"] == first_scores for t in trial_history)
+    all_trials_healthy = all(t["all_healthy"] for t in trial_history)
+    avg_latency = round(sum(latencies_ms) / len(latencies_ms), 2)
+    min_latency = round(min(latencies_ms), 2)
+    max_latency = round(max(latencies_ms), 2)
+    jitter = round(max_latency - min_latency, 2)
+
+    return {
+        "persona": persona,
+        "trials": trial_count,
+        "all_trials_healthy": all_trials_healthy,
+        "consistent": consistent,
+        "latencies_ms": latencies_ms,
+        "avg_latency_ms": avg_latency,
+        "min_latency_ms": min_latency,
+        "max_latency_ms": max_latency,
+        "jitter_ms": jitter,
+        "trial_history": trial_history,
+        "latest_report": latest_report,
     }
 
 
