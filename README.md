@@ -46,6 +46,7 @@
 | **Test Quality** | 3,142 Unit & Seam Tests across Py 3.11/3.12 | `🟢 PASS (≥96%)` | Enforced strict coverage floor (`--cov-fail-under=96`) |
 | **Security Gates** | Concentric Guardrails, DLP, Secret Scan, CodeQL & Bandit | `🛡️ ENFORCED` | Safe execution, credential isolation & automated scanning |
 | **Model Training & Serving** | Fine-tuning recipes, synthetic datasets, Ollama export (`training/`) | `🟢 OPERATIONAL` | Offline-first fine-tuning & Ollama local deployment |
+| **Runtime Gateway** | OpenAI-compatible & REST API (`sakthai.gateway`) | `🟢 RUNTIME READY` | SSE streaming, 6-persona routing & DataLossGuardrail |
 | **Evaluation Framework** | 5-Pillar Persona Readiness & Fleet Audit (`sakthai eval`) | `🟢 5-PILLAR PARITY` | Soul, Skills, Memory, Safety & Audit composite scoring |
 | **CI/CD Automation** | StepSecurity, AutoHeal-CI, Renovate & PR Automations | `⚙️ HARDENED` | Egress audit, dependency monitoring & manual user merge |
 
@@ -58,6 +59,7 @@
 ## What is included
 
 - **SakThai core agent** — Python 3.11+ package with a provider-agnostic tool loop, retries, streaming, usage tracking, and dry-run preflight.
+- **Runtime Gateway (OpenAI-Compatible & REST API)** — Built-in multi-threaded HTTP gateway (`sakthai.gateway`, `sakthai gateway`, `scripts/serve_gateway.py`) exposing `/v1/chat/completions` (streaming SSE and non-streaming), `/v1/models`, `/v1/personas`, and `/v1/tools/execute` with DataLossGuardrail security, constant-time bearer authentication, and seamless compatibility with Cursor, Claude Code, Aider, and standard OpenAI SDKs.
 - **Persistent memory** — SQLite-backed facts and observations stored under `~/.sakthai`, with semantic search, tagging, consolidation, versioned JSON snapshots ([format](data/README.md)), and sync helpers.
 - **Multiple providers** — Anthropic, Google Gemini, OpenAI-compatible endpoints, Ollama, gateways, and Hugging Face inference providers.
 - **MCP** — dependency-light stdio server, remote HTTP/SSE client support, resource and prompt exposing, plus discovery, tool allowlisting, and namespaced connections to external MCP servers.
@@ -142,8 +144,9 @@ flowchart TD
     end
 
     subgraph Entrypoints ["Entry Points & APIs"]
+        GATEWAY["Runtime Gateway<br/>gateway/server.py (OpenAI /v1)"]
         WEB["Web API<br/>web/server.py (Bearer token)"]
-        CLI["CLI Commands<br/>sakthai run · chat · memory · mcp · repo · train · eval · platform"]
+        CLI["CLI Commands<br/>sakthai run · chat · memory · mcp · gateway · repo · train · eval · platform"]
     end
 
     subgraph Execution ["Execution & Orchestration"]
@@ -178,6 +181,8 @@ flowchart TD
 
     DASH -- HTTP --> WEB
     DASH -. direct reads .-> HOME
+    GATEWAY --> LOOP
+    GATEWAY --> GUARD
     WEB --> STORE
     CLI --> LOOP
     CLI --> TEAM
@@ -201,6 +206,75 @@ flowchart TD
 </p>
 
 ---
+
+## 🚪 Runtime Gateway (OpenAI-Compatible & REST API)
+
+House of Sak features a unified, multi-threaded **Runtime Gateway** (`sakthai.gateway`) that exposes an OpenAI-compatible API and comprehensive REST endpoints across all six family personas (`sakthai`, `sakking`, `saksee`, `sakjules`, `saksit`, `saktan`), model tiers, and built-in agent tools.
+
+### Architecture & How It Works
+
+- **Concurrency Without Overhead**: Built directly upon Python's standard library `socketserver.ThreadingHTTPServer` (`RuntimeGatewayServer`). It requires zero external web framework dependencies (no FastAPI or Uvicorn overhead) and delivers immediate, multi-threaded request processing.
+- **Dynamic Persona & Model Routing**: The `/v1/chat/completions` endpoint dynamically routes requests to the requested persona's specialized toolset, memory shard, and model preset (e.g. `model: "sakjules"`, `model: "sakthai"`, or tier presets like `model: "gemini-2.5-flash"`).
+- **Streaming Server-Sent Events (SSE)**: Full support for real-time SSE streaming (`stream: true`) returning chunked `chat.completion.chunk` events and concluding with `data: [DONE]`.
+- **Tool Execution Interception**: Exposes all registered `BUILTIN_TOOLS` (`learn`, `recall`, `search`, `read_file`, `run_command`, etc.) over `/v1/tools` with structured schemas, allowing external AI systems to invoke local runtime tools safely.
+
+### Security Architecture
+
+The Runtime Gateway enforces rigorous multi-layered defense-in-depth:
+
+1. **Constant-Time Bearer Authentication**: Configured via `--token`, `SAKTHAI_GATEWAY_BEARER_TOKEN`, or persistent memory (`web_auth/bearer_token`). All authentication checks utilize `secrets.compare_digest` to prevent timing attacks. Unauthenticated paths are strictly limited to `/health` and `/v1/health`.
+2. **DataLossGuardrail Protection**: Every tool execution via `/v1/tools/execute` passes through `DataLossGuardrail.verify_or_halt()`. Destructive commands (e.g., `rm -rf /`, `DROP TABLE`, `git reset --hard`) are immediately halted with `status: "blocked"` and require an HMAC-signed approval token (`approval_token_required`).
+3. **Filesystem Sandboxing**: File operations (`read_file`) are restricted to allowable roots (`Path.cwd()`, `~/.sakthai`, and `SAKTHAI_READ_ALLOW`). Sensitive system credentials (such as `/etc/shadow` or sensitive keys) are categorically barred.
+4. **Shell Execution Opt-In Gate**: Command execution via `run_command` is disabled by default, requiring explicit operator enablement via `SAKTHAI_SHELL_ALLOW=1`.
+5. **CORS Enforcement**: Cross-Origin Resource Sharing is controlled via `--cors` / `SAKTHAI_GATEWAY_CORS_ORIGIN` with automatic preflight `OPTIONS` handling.
+
+### Endpoints Reference
+
+| Method | Endpoint | Auth | Purpose |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/health` · `/v1/health` | Open | Health check, active personas, uptime, and tool counts |
+| `GET` | `/v1/models` | Bearer | OpenAI-compatible list of available personas and model tiers |
+| `POST` | `/v1/chat/completions` | Bearer | OpenAI chat completions (supports streaming SSE & non-streaming) |
+| `GET` | `/v1/personas` | Bearer | Full persona catalog (handles, roles, default models, skills) |
+| `GET` | `/v1/personas/<name>` | Bearer | Granular metadata for a specific persona |
+| `GET` | `/v1/tools` | Bearer | Registered tools in OpenAI function calling schema format |
+| `POST` | `/v1/tools/execute` | Bearer | Execute runtime tools guarded by `DataLossGuardrail` |
+| `GET` | `/api/status` | Bearer | System status and memory health diagnostic |
+| `GET` | `/api/saksee/status` | Bearer | SakSee web and dashboard compatibility status |
+
+### Connecting External Clients
+
+Target the gateway from any OpenAI-compatible client, IDE, or tool:
+
+```bash
+# Export standard OpenAI environment variables
+export OPENAI_BASE_URL="http://localhost:8080/v1"
+export OPENAI_API_KEY="$TOKEN"
+
+# Query served models/personas via curl
+curl http://localhost:8080/v1/models -H "Authorization: Bearer $OPENAI_API_KEY"
+
+# Stream chat completions from SakJules
+curl http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -d '{
+    "model": "sakjules",
+    "messages": [{"role": "user", "content": "Verify CI status"}],
+    "stream": true
+  }'
+```
+
+Compatible with **Cursor**, **Claude Code**, **Aider**, **OpenCode**, and official **OpenAI SDKs** (Python, TypeScript, Go).
+
+### Gateway CLI Commands
+
+```bash
+sakthai gateway serve --port 8080 --token "$TOKEN"          # start the HTTP gateway server
+sakthai gateway status --url http://127.0.0.1:8080          # verify health, uptime & personas
+sakthai gateway models --url http://127.0.0.1:8080          # list available models and roles
+sakthai gateway chat "Audit PR" --model sakjules --stream  # interactive completion via Gateway
+```
 
 ## Quick Start
 
@@ -250,9 +324,10 @@ sakthai mcp                                                # launch stdio MCP se
 sakthai mcp list                                           # list configured external MCP servers
 sakthai mcp ping [name]                                    # ping configured MCP servers
 sakthai mcp tools                                          # list tools exposed by external MCP servers
-sakthai platform skills                                    # progressive disclosure of available skills
-sakthai platform antigravity "Inspect repo" --tier pro     # run Antigravity agent with model tier
-sakthai platform export-harness --name "ReviewBot" --task "Review PR" # export Harness v1 pipeline agent spec
+sakthai gateway serve --port 8080                          # start OpenAI-compatible Runtime Gateway
+sakthai gateway status                                     # check Gateway liveness and active personas
+sakthai gateway models                                     # list 6 personas & model presets served by Gateway
+sakthai gateway chat "Hello" --model sakjules --stream     # stream chat completion via Gateway
 agent-workflow list                                        # list registered durable agent workflows
 ```
 

@@ -13,7 +13,7 @@ Official technical documentation and architectural reference for **House of Sak*
 - [**capabilities.md**](./capabilities.md) — Complete tool inventory, memory operations, providers, dashboard CLI, and unified platform capabilities.
 - [**plugins.md**](./plugins.md) — MCP server + skills extensibility model and configuration schemas.
 - [**integrations.md**](./integrations.md) — Multi-agent connections, external services over MCP, and no-cost local recipes.
-- [**runtimes.md**](./runtimes.md) — CLI, Textual TUI chat, agent loop, stdio MCP server, and local models (Ollama / OpenAI-compatible).
+- [**runtimes.md**](./runtimes.md) — CLI, Textual TUI chat, agent loop, OpenAI-compatible Runtime Gateway, stdio MCP server, and local models (Ollama / OpenAI-compatible).
 - [**inter-agent-communication-protocol.md**](./inter-agent-communication-protocol.md) — JSON schema contracts and inter-agent handoffs.
 - [**replication.md**](./replication.md) — Multi-agent memory shard synchronization and backup strategies.
 - [**workspace.md**](./workspace.md) — Developer environment setup and toolchain resolution.
