@@ -4,20 +4,12 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
   AlertTriangle,
-  Bot,
   CheckCircle2,
-  Code2,
-  Copy,
-  Cpu,
-  Layers,
-  Play,
   Radio,
   RefreshCw,
   Send,
   Shield,
   ShieldAlert,
-  Terminal,
-  Zap,
 } from "lucide-react";
 import PersonaAvatar from "./PersonaAvatar";
 
@@ -101,6 +93,40 @@ const MODEL_TIERS = [
   { id: "local", label: "Local (Gemma 2 9B)", model: "gemma-2-9b-it" },
 ];
 
+async function readStreamDeltas(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  onUpdate: (accumulated: string) => void
+): Promise<string> {
+  const decoder = new TextDecoder();
+  let text = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const chunk = decoder.decode(value, { stream: true });
+    const lines = chunk.split("\n");
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || !trimmed.startsWith("data:")) continue;
+      const dataStr = trimmed.replace(/^data:\s*/, "");
+      if (dataStr === "[DONE]") {
+        break;
+      }
+      try {
+        const parsed = JSON.parse(dataStr);
+        const delta = parsed.choices?.[0]?.delta?.content || "";
+        text += delta;
+        onUpdate(text);
+      } catch {
+        // Ignore non-json chunks
+      }
+    }
+  }
+  return text;
+}
+
 export function GatewayPlayground() {
   const [health, setHealth] = useState<GatewayHealth | null>(null);
   const [checkingHealth, setCheckingHealth] = useState(false);
@@ -119,11 +145,12 @@ export function GatewayPlayground() {
       model: "sakjules",
       content:
         "**SakJules · Master of Automation & CI/CD.**\n\nRuntime Gateway online! Select any persona and stream chat completions or test concentric guardrails below.",
-      timestamp: new Date().toLocaleTimeString(),
+      timestamp: "Just now",
     },
   ]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageCounterRef = useRef(0);
 
   const fetchHealth = useCallback(async () => {
     setCheckingHealth(true);
@@ -144,10 +171,31 @@ export function GatewayPlayground() {
   }, []);
 
   useEffect(() => {
-    fetchHealth();
-    const interval = setInterval(fetchHealth, 15000);
-    return () => clearInterval(interval);
-  }, [fetchHealth]);
+    let active = true;
+    const poll = async () => {
+      try {
+        const res = await fetch("/api/gateway/health");
+        const data = await res.json();
+        if (active) setHealth(data);
+      } catch {
+        if (active) {
+          setHealth({
+            ok: false,
+            status: "offline",
+            gateway_url: "http://127.0.0.1:8080",
+            message: "Network error reaching gateway probe.",
+          });
+        }
+      }
+    };
+
+    void poll();
+    const interval = setInterval(poll, 15000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView?.({ behavior: "smooth" });
@@ -158,130 +206,112 @@ export function GatewayPlayground() {
       ? selectedPersona
       : MODEL_TIERS.find((t) => t.id === selectedTier)?.model || selectedPersona;
 
-  const handleSendMessage = async (promptToSend?: string) => {
-    const prompt = (promptToSend || inputPrompt).trim();
-    if (!prompt || isSending) return;
+  const handleSendMessage = useCallback(
+    async (promptToSend?: string) => {
+      const prompt = (promptToSend || inputPrompt).trim();
+      if (!prompt || isSending) return;
 
-    const userMessage: Message = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      content: prompt,
-      timestamp: new Date().toLocaleTimeString(),
-    };
+      messageCounterRef.current += 1;
+      const userMessageId = `user-${messageCounterRef.current}`;
+      const assistantId = `assistant-${messageCounterRef.current}`;
 
-    const assistantId = `assistant-${Date.now()}`;
-    const initialAssistant: Message = {
-      id: assistantId,
-      role: "assistant",
-      persona: selectedPersona,
-      model: effectiveModel,
-      content: "",
-      streaming: streamMode,
-      timestamp: new Date().toLocaleTimeString(),
-    };
-
-    setMessages((prev) => [...prev, userMessage, initialAssistant]);
-    if (!promptToSend) setInputPrompt("");
-    setIsSending(true);
-
-    try {
-      const payload = {
-        model: effectiveModel,
-        stream: streamMode,
-        messages: [
-          { role: "system", content: `You are ${selectedPersona}. Respond accurately.` },
-          { role: "user", content: prompt },
-        ],
+      const userMessage: Message = {
+        id: userMessageId,
+        role: "user",
+        content: prompt,
+        timestamp: "Now",
       };
 
-      const res = await fetch("/api/gateway/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const initialAssistant: Message = {
+        id: assistantId,
+        role: "assistant",
+        persona: selectedPersona,
+        model: effectiveModel,
+        content: "",
+        streaming: streamMode,
+        timestamp: "Now",
+      };
 
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId
-              ? {
-                  ...m,
-                  content: `❌ Error: ${errJson.error || "Gateway connection error"} (${errJson.detail || res.statusText})`,
-                  streaming: false,
-                }
-              : m
-          )
-        );
-        return;
-      }
+      setMessages((prev) => [...prev, userMessage, initialAssistant]);
+      if (!promptToSend) setInputPrompt("");
+      setIsSending(true);
 
-      if (streamMode && res.body) {
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let accumulated = "";
+      try {
+        const payload = {
+          model: effectiveModel,
+          stream: streamMode,
+          messages: [
+            { role: "system", content: `You are ${selectedPersona}. Respond accurately.` },
+            { role: "user", content: prompt },
+          ],
+        };
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+        const res = await fetch("/api/gateway/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed || !trimmed.startsWith("data:")) continue;
-            const dataStr = trimmed.replace(/^data:\s*/, "");
-            if (dataStr === "[DONE]") {
-              break;
-            }
-            try {
-              const parsed = JSON.parse(dataStr);
-              const delta = parsed.choices?.[0]?.delta?.content || "";
-              accumulated += delta;
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantId
-                    ? { ...m, content: accumulated, streaming: true }
-                    : m
-                )
-              );
-            } catch {
-              // Ignore non-json chunks
-            }
-          }
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => ({}));
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? {
+                    ...m,
+                    content: `❌ Error: ${errJson.error || "Gateway connection error"} (${errJson.detail || res.statusText})`,
+                    streaming: false,
+                  }
+                : m
+            )
+          );
+          return;
         }
 
+        if (streamMode && res.body) {
+          const reader = res.body.getReader();
+          const finalContent = await readStreamDeltas(reader, (currentText) => {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? { ...m, content: currentText, streaming: true }
+                  : m
+              )
+            );
+          });
+
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? { ...m, content: finalContent || "[Completed]", streaming: false }
+                : m
+            )
+          );
+        } else {
+          const json = await res.json();
+          const content =
+            json.choices?.[0]?.message?.content || JSON.stringify(json, null, 2);
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, content, streaming: false } : m
+            )
+          );
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
-              ? { ...m, content: accumulated || "[Completed]", streaming: false }
+              ? { ...m, content: `❌ Network error: ${msg}`, streaming: false }
               : m
           )
         );
-      } else {
-        const json = await res.json();
-        const content =
-          json.choices?.[0]?.message?.content || JSON.stringify(json, null, 2);
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId ? { ...m, content, streaming: false } : m
-          )
-        );
+      } finally {
+        setIsSending(false);
       }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantId
-            ? { ...m, content: `❌ Network error: ${msg}`, streaming: false }
-            : m
-        )
-      );
-    } finally {
-      setIsSending(false);
-    }
-  };
+    },
+    [effectiveModel, inputPrompt, isSending, selectedPersona, streamMode]
+  );
 
   const handleTestGuardrail = async (cmd: string) => {
     setGuardrailTesting(true);
