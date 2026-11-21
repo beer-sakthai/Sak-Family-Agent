@@ -17,6 +17,7 @@ from ..agent.eval import (
     evaluate_persona_safety_compliance,
     evaluate_persona_skills_health,
     evaluate_persona_soul_alignment,
+    evaluate_skills_trials,
     summarize_evals,
     summarize_fleet_audit,
 )
@@ -246,9 +247,84 @@ def eval_soul(persona: str | None, as_json: bool) -> None:
     default=None,
     help="Evaluate skills health for a single persona.",
 )
+@click.option(
+    "--times",
+    "-t",
+    "times",
+    default=1,
+    type=click.IntRange(min=1),
+    help="Number of evaluation trials to run (e.g. 10 for consistency benchmark).",
+)
+@click.option(
+    "--detailed",
+    is_flag=True,
+    help="Display 10-dimension rubric breakdown for each persona.",
+)
 @click.option("--json", "as_json", is_flag=True, help="Emit the skills report as JSON.")
-def eval_skills(persona: str | None, as_json: bool) -> None:
-    """Evaluate persona skill fleet frontmatter schemas, descriptions, and primary skills."""
+def eval_skills(persona: str | None, times: int, detailed: bool, as_json: bool) -> None:
+    """Evaluate persona skill fleet: 10-dimension rubric, schemas, and multi-run reliability."""
+    if times > 1:
+        trial_results = evaluate_skills_trials(persona=persona, trials=times)
+        if as_json:
+            click.echo(json.dumps(trial_results, indent=2, ensure_ascii=False))
+            if not trial_results["all_trials_healthy"] or not trial_results["consistent"]:
+                sys.exit(1)
+            return
+
+        click.echo(f"# Sak Family Skills Evaluation — {times} Trials Benchmark")
+        target_str = persona if persona else "ALL PERSONAS (6 agents)"
+        click.echo(f"  Target:       {target_str}")
+        click.echo(f"  Trials:       {times} runs")
+        consist_str = (
+            "100% deterministic (0.0% variance)"
+            if trial_results["consistent"]
+            else "DRIFT DETECTED"
+        )
+        click.echo(f"  Consistency:  {consist_str}")
+        click.echo(
+            f"  Latency:      avg={trial_results['avg_latency_ms']:.2f}ms "
+            f"(min={trial_results['min_latency_ms']:.2f}ms, "
+            f"max={trial_results['max_latency_ms']:.2f}ms, "
+            f"jitter={trial_results['jitter_ms']:.2f}ms)"
+        )
+        health_str = "HEALTHY" if trial_results["all_trials_healthy"] else "DEGRADED"
+        click.echo(f"  Fleet Status: [{health_str}]")
+
+        click.echo("\n  Trial Run Breakdown:")
+        for t in trial_results["trial_history"]:
+            status = "OK" if t["all_healthy"] else "FAIL"
+            click.echo(
+                f"    Trial #{t['trial']:<2} [{status}] "
+                f"score={t['average_score']:.0%} "
+                f"valid={t['valid_skills']}/{t['total_skills']} "
+                f"10/10_pass={t['skills_passed_all_criteria']}/{t['total_skills']} "
+                f"latency={t['latency_ms']:.2f}ms"
+            )
+
+        click.echo("\n# Final Scorecard")
+        all_ok = True
+        for p_name, res in trial_results["latest_report"].items():
+            status = "HEALTHY" if res["healthy"] else "DEGRADED"
+            if not res["healthy"]:
+                all_ok = False
+            pass10 = res.get("skills_passed_all_criteria", res["valid_skills"])
+            click.echo(
+                f"  [{status}] {p_name:<10} score={res['skills_score']:.0%} "
+                f"valid={res['valid_skills']}/{res['total_skills']} "
+                f"10/10_rubric={pass10}/{res['total_skills']} "
+                f"primary={len(res['primary_skills'])}"
+            )
+            if detailed and res.get("dimensions_breakdown"):
+                dims = res["dimensions_breakdown"]
+                dim_str = " ".join(f"{k[:4]}={v}" for k, v in dims.items())
+                click.echo(f"    - rubric: {dim_str}")
+            if res["diagnostics"]:
+                for d in res["diagnostics"]:
+                    click.echo(f"    - warning: {d}")
+        if not all_ok or not trial_results["consistent"]:
+            sys.exit(1)
+        return
+
     targets = [persona] if persona else sorted(PERSONA_NAMES)
     results = {p: evaluate_persona_skills_health(p) for p in targets}
     if as_json:
@@ -268,6 +344,10 @@ def eval_skills(persona: str | None, as_json: bool) -> None:
             f"valid={res['valid_skills']}/{res['total_skills']} "
             f"primary={len(res['primary_skills'])}"
         )
+        if detailed and res.get("dimensions_breakdown"):
+            dims = res["dimensions_breakdown"]
+            dim_str = " ".join(f"{k}={v}" for k, v in dims.items())
+            click.echo(f"    - 10-factor rubric: {dim_str}")
         if res["diagnostics"]:
             for d in res["diagnostics"]:
                 click.echo(f"    - warning: {d}")
