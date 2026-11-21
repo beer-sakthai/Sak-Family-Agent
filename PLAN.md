@@ -130,6 +130,7 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-21 **Next.js Dashboard Gateway Console & Streaming Chat Playground (`apps/sak_agent_dashboard/`)** — Integrate Runtime Gateway into Next.js dashboard with 'gateway' tab in nav.ts, GatewayPlayground component featuring persona switching across all 6 agents, live SSE streaming chat completions, DataLossGuardrail destructive command alerts, and Next.js /api/gateway/ routes.
 - [x] 2026-11-21 **Complete Remaining Per-Persona Open Operational Tasks (Phase 6 Backlog)** — Execute preflights, audits, Deputy 1 readiness, browser MCP checks, model card copy reviews, and Ollama daily rhythm across SakThai, SakKing, SakSee, SakSit, and SakTan; update all 5 persona working files and root PLAN.md.
 - [x] 2026-11-21 **Implement Native Gateway Client SDK & Agent Loop Provider Adapter (`sakthai.client.gateway`, `agent/providers/`)** — Build GatewayClient with streaming SSE chunk parsing and auto-credential discovery, add 'gateway' provider backend adapter for the agent loop, enforce 6-persona parity, and add unit tests maintaining ≥96% coverage.
+- [x] 2026-11-21 **Correct CLAUDE.md drift found by repo health check** — package layout (no `personas/sakthai/sakthai/` or `personas/shared/sakthai/`; every persona carries a full package copy), live `security_hardening` import in `mcp/manager.py`, and stale test/workflow/coverage counts.
 
 
 
