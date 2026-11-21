@@ -38,8 +38,8 @@ package. Only `personas/sakthai/` is a build target; everything else is
 personas, deployment config, training assets, or docs.
 
 ```
-personas/          the six agents + the shared package (see below)
-tests/             the one pytest suite (imports `sakthai`, 106 test files)
+personas/          the six agents, each a full copy of the package (see below)
+tests/             the one pytest suite (imports `sakthai`, 178 test files)
 library/           31 curated skills across 11 categories (a live skill root)
 docs/              architecture, security, plans/specs under docs/superpowers/
 scripts/           dev + maintenance scripts (compose_persona, export_agent_repo, …)
@@ -64,15 +64,15 @@ before quoting a number back to someone:
 ```bash
 # persona skill count
 find personas/<persona>/skills -maxdepth 1 -mindepth 1 -type d | wc -l
-# package divergence between the canonical and shared copies
-diff -rq personas/shared/sakthai personas/sakthai/sakthai
+# code divergence between the canonical package and a persona's copy
+diff -rq personas/sakthai personas/<persona> -x skills -x config -x '*.md' -x evolution -x __pycache__
 # test files, then test count + real coverage
 ls tests/test_*.py | wc -l
-uv run pytest tests/ -q --cov=sakthai --cov-branch   # 3,086+ pass, 8 skip
+uv run pytest tests/ -q --cov=sakthai --cov-branch   # 3,264 pass, 9 skip
 ```
 
-Everything quoted below was measured on 2026-08-28 at `8e6d785`, except the
-coverage figures, re-measured after the `team/engine.py` tests landed.
+The package layout, test, workflow and coverage figures below were re-measured on
+2026-11-21 at `6b89bc6`; other counts date from 2026-08-28 at `8e6d785`.
 
 ### The persona package copies (read this before editing `sakthai/`)
 
@@ -81,40 +81,24 @@ installs (`[tool.setuptools.package-dir] sakthai = "personas/sakthai"`), what
 `import sakthai` resolves to, and what mypy/ruff/bandit/pytest run against.
 Treat it as the source of truth for anything you are actually running.
 
-`personas/shared/sakthai/` is the canonical *shared* copy that the other
-personas point at. The wiring is **not uniform**, and the difference matters:
+There is no nested `personas/sakthai/sakthai/` directory, no
+`personas/shared/sakthai/` copy and no symlinked package any more. Each of the
+other five personas (`personas/<persona>/`) is a **full real copy** of the
+package tree — `agent/`, `cli/`, `memory/`, `mcp/`, `web/` and the rest — next
+to its own `SOUL.md`, `skills/`, `config/` and `evolution/`. As of 2026-11-21
+the code in all five copies is identical to `personas/sakthai/` (check with the
+`diff -rq` command above). Only `personas/sakthai/` is installed and run; the
+copies are not.
 
-| Persona | How it gets `sakthai/` |
-|---|---|
-| `sakthai` | real directory — **the installed package** |
-| `sakjules`, `saktan` | `sakthai -> ../shared/sakthai` symlink |
-| `sakking`, `saksee`, `saksit` | a **partial real directory** that shadows the shared copy, plus a `sakthai~origin_main -> ../shared/sakthai` symlink alongside it |
+What enforces that, and what does not:
 
-Those three partial directories contain only a handful of files —
-`agent/guardrails.py` and `web/server.py` for all three, plus
-`cli/__init__.py` and `cli/system.py` for SakSee and SakSit. They exist because
-security syncs committed files *into* what used to be a symlink path. The
-guardrails copies are kept byte-identical to the canonical one (enforced by
-`tests/test_persona_guardrails_parity.py`); the SakSee/SakSit `cli/` files are
-**stale snapshots** that still register a `dashboard` command the real CLI no
-longer has. Don't treat them as live code, and don't "fix" them by deleting the
-shadowing files without checking the parity test first.
-
-`personas/sakthai/sakthai/` has also genuinely diverged from
-`personas/shared/sakthai/`. As of 2026-08-28 the two trees differ in exactly 19
-places: the files `config.py`, `auth.py`, `skills.py`, `agent/chat.py`,
-`agent/eval.py`, `agent/loop.py`, `agent/tools.py`,
-`agent/providers/__init__.py`, `cli/agent.py`, `cli/chat.py`,
-`cli/sessions.py`, `cli/system.py`, `memory/merged.py`, and `web/server.py`
-differ in content, and `agent/security_hardening.py`,
-`agent/guardrails_hardened.py`, `memory/session_search.py`, `web/api.py`, and
-`web/contracts.py` exist only in the SakThai copy. The `client/`, `team/`, and
-`scripts/` subpackages are now present and byte-identical in both trees — they
-used to be SakThai-only, so don't rely on older notes saying otherwise.
-Regenerate this list with
-`diff -rq personas/shared/sakthai personas/sakthai/sakthai` rather than trusting
-it — it goes stale on every change to the canonical package. Reconciling the two
-is a known, tracked gap — not yet done.
+- `tests/test_persona_guardrails_parity.py` and
+  `tests/test_persona_web_server_parity.py` fail CI if `agent/guardrails.py` or
+  `web/server.py` drifts in any copy.
+- `tests/test_persona_structure_parity.py` checks that every persona has the
+  same top-level items.
+- No test compares the **rest** of the code. A change to the canonical package
+  must be copied to the five personas by hand, or the copies drift silently.
 
 ### Personas
 
@@ -132,8 +116,9 @@ sakjules, saktan); **SakThai is lead**. Each persona directory has:
   file reads rather than the skill index.
 - `config/` — `config.yaml` (default model/provider), `mcp.json`,
   `gateway_voice_mode.json`, and for some personas `workspace.yaml`.
-- `agent-self-evolution` — symlink to `../shared/agent-self-evolution` for every
-  persona except SakThai, whose copy is real and is the one CI builds.
+- `evolution/` (plus `evolve_agent.sh`) — the self-evolution subproject, a real
+  directory in every persona; only SakThai's is built by
+  `agent-self-evolution.yml`.
 - `PLAN.md`, `CYCLE.md`, `MEMORY.md`, `HANDOFF.md`, `BACKPACK.md` — working
   notes beside the SOUL: task roadmap, cycle record, how its memory is read and
   written, the hand-offs it receives and sends, and its equipment. SakJules' and
@@ -151,9 +136,8 @@ router needs the full `org/model` repo ID, and only models published on the Hub
 can be served (no Gemini). The VM deployment overrides all of these with Azure
 OpenAI models in `infra/vm-agents/sakthai-agent-run.sh`.
 
-**Shared resources:** `personas/shared/` holds `sakthai/` (the shared package
-copy), `agent-self-evolution/` (template), `skills/` (3 `Sak-*` skills, identical
-across all personas), and `model_roster`.
+**Shared resources:** `personas/shared/` holds `skills/` (19 `Sak-*` skills,
+shared by all personas), `config/`, and `model_roster`.
 
 **Skill naming:** `Sak-` prefix for shared skills, `Sak<Name>-` for per-persona
 skills — enforced by `sakthai skills validate --naming`.
@@ -214,7 +198,8 @@ deploy; deliberately not a CI gate, since skills land constantly),
 
 ### CI
 
-Twenty-seven workflows live in `.github/workflows/`. The ones that gate a change:
+About 180 workflows live in `.github/workflows/` (`ls .github/workflows/*.yml | wc -l`).
+The ones that gate a change:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
@@ -226,7 +211,7 @@ Twenty-seven workflows live in `.github/workflows/`. The ones that gate a change
 | `dependency-audit.yml` | PRs touching `pyproject.toml`/`uv.lock`/the training locks/`training/**/*.py`, weekly | pip-audit over `uv.lock`, the three `infra/sakthai-training-space/*.lock` files, and every PEP 723 script under `training/` (Dependabot reads neither of the last two). Local version tags (`+cpu`, `+cuNNN`) are stripped first: pip-audit skips `torch==…+cpu` as "not found on PyPI" and still reports clean |
 | `ossar.yml` | push/PR to `main`, weekly | open-source static analysis |
 | `sonarcloud.yml` | push to `main` | SonarCloud analysis |
-| `agent-self-evolution.yml` | push/PR touching `personas/sakthai/agent-self-evolution/**` | that subproject's own suite |
+| `agent-self-evolution.yml` | push/PR touching `personas/sakthai/evolution/**`, `personas/sakthai/tests/**` or `evolve_agent.sh` | that subproject's own suite |
 | `apps.yml` | push/PR touching `apps/**`, `web/contracts.py`, `scripts/gen_dashboard_types.py` | builds and tests the two projects under `apps/`, which `ci.yml` does not cover; fails on generated-TypeScript drift |
 | `subprojects.yml` | push/PR touching `sakthai-chat-cli/**`, `services/teams-copilot-mcp/**` | runs each tree's own pytest suite from its own `uv.lock` (`uv sync --frozen`); tests only, no lint/coverage |
 | `labeler.yml` | `pull_request_target` | PR labelling |
@@ -334,9 +319,10 @@ advanced run fails while default setup is on. See the header of `codeql.yml`.
 available tooling, not an enforced gate.
 
 Coverage floor is **96%** (branch coverage on) over the `sakthai` package,
-with `telegram/bot.py` omitted from measurement. The suite sits at **96.21%**
-(191 uncovered statements and 156 partial branches out of 7,710 measured
-statements / 2,610 branches) — above the floor, with 0.21pp of headroom.
+with `telegram/bot.py` omitted from measurement. The suite sits at **96.68%**
+(247 uncovered statements and 215 partial branches out of 11,317 measured
+statements / 3,748 branches, measured 2026-11-21) — above the floor, with
+0.68pp of headroom.
 
 **The gate is `--cov-fail-under=96` on `ci.yml`'s pytest step, not
 `pyproject.toml`.** `[tool.coverage.report] fail_under` alone printed
@@ -375,9 +361,8 @@ coverage. Three things to know before touching it:
   does `monkeypatch.delenv("SAKTHAI_HOME")` because it exercises the
   `Path.home()` fallback that `SAKTHAI_HOME` would otherwise shadow.
 
-The headroom is still ~0.34pp, or about 35 statements-or-branches — less than
-what the `client/` subsystem alone landed uncovered, so treat it as the working
-budget and raise coverage rather than lowering the floor.
+The headroom is ~0.68pp, or about 100 statements-or-branches. Treat it as the
+working budget and raise coverage rather than lowering the floor.
 
 Run the lint→pytest sequence locally before pushing — a drop below the floor now
 turns CI red rather than passing quietly.
@@ -632,21 +617,20 @@ attacked surface — several rounds of Sentinel audits landed here.
 - **`agent/guardrails_hardened.py`** — wires those primitives on top of the base
   policy.
 
-**Both hardened modules are currently dead code.** Grep every importer of
-`security_hardening.py` and `guardrails_hardened.py` and you get test files and
-nothing else — not `agent/loop.py`, not `cli/`, not `mcp/`. `DEFAULT_POLICY`
-from the base `guardrails.py` is what actually runs; the 371 statements of
-"defense in depth" ship without ever executing, and inflate the coverage
-denominator by ~4.8%. Several of their tests also assert nothing (they call a
-function and discard the result), so they cannot fail. Wiring the layer in or
-deleting it is an open decision — don't assume a change to these files affects
-runtime behavior. See findings 5 and 6 of
+**`security_hardening.py` is partly live; `guardrails_hardened.py` is still
+unused.** `mcp/manager.py` imports `MCPServerValidator` and `SecurityLevel` from
+`security_hardening.py`: it validates each external MCP server spec and applies
+`get_sandbox_wrapper()`, so changes to those parts affect runtime. Nothing outside
+tests imports `guardrails_hardened.py`, and the agent loop still runs
+`DEFAULT_POLICY` from the base `guardrails.py`, not the hardened policy. Several
+of the hardened modules' tests assert nothing (they call a function and discard
+the result), so they cannot fail. See findings 5 and 6 of
 [`docs/test-coverage-audit-2026-08-28.md`](docs/test-coverage-audit-2026-08-28.md).
 
 **When you change guardrails, you must sync the file.** `guardrails.py` is
 copied per persona and `tests/test_persona_guardrails_parity.py` fails CI the
 moment any copy drifts from `personas/sakthai/agent/guardrails.py`
-(it checks sakthai, sakjules, sakking, saksee, saksit). Roughly 15 test files
+(it checks all six personas). Roughly 15 test files
 (`test_guardrails_*.py`, `test_sentinel_*.py`, `test_security_*.py`) cover this
 area; add a regression test for every new bypass you close.
 
@@ -656,13 +640,8 @@ autofixes (#1214, #1219) for cookie construction from user-supplied input —
 exactly the class of fix that must not land in one copy only. The copies had
 drifted 147 lines behind (no CORS, no dashboard routes) before they were synced;
 `tests/test_persona_web_server_parity.py` now fails CI the moment any of
-sakjules, saktan (both via the shared symlink), sakking, saksee or saksit
-differs from the canonical file. Copy it to all four real copies (`shared`,
-`sakking`, `saksee`, `saksit`) whenever you change it. In those trees the
-dashboard routes import `web/api.py` lazily and only the canonical tree has
-that module — harmless, since none of them is installed or run.
-`memory/merged.py` has already drifted between the canonical and shared copies
-for want of the same check.
+sakjules, saktan, sakking, saksee or saksit differs from the canonical file.
+Copy it to all five persona copies whenever you change it.
 
 ### MCP subsystem (`mcp/`)
 
@@ -730,7 +709,7 @@ resolving to the *module* rather than the command object:
   `SKILL.md` files. `default_skill_roots(persona=None)` returns, in order:
   the persona's own overlay (`persona_skills_dir(persona)`, else `SKILLS_DIR` =
   `personas/sakthai/skills/`), `personas/shared/skills/`
-  (3 skills identical across personas — `config.py` defines both
+  (19 skills shared by all personas — `config.py` defines both
   `SHARED_SKILLS_DIR` and `LIBRARY_DIR` as that same path and
   `default_skill_roots()` lists both, so this root appears twice in the returned
   tuple; harmless, but don't read it as two directories), root
@@ -810,8 +789,8 @@ resolving to the *module* rather than the command object:
 
 ## Tests
 
-Tests live in `tests/` (106 `test_*.py` files, ~2,305 tests, ~26,900 lines
-against 17,128 lines of package). This is the only suite for the `sakthai`
+Tests live in `tests/` (178 `test_*.py` files, 3,264 passing tests as of
+2026-11-21). This is the only suite for the `sakthai`
 package — there is no per-persona test tree. Two files in `tests/` are not test
 modules: `conftest.py` and `security_audit.py` (a helper, not collected).
 
@@ -819,7 +798,7 @@ It is not, however, the repo's only test tree. Four others exist:
 
 | Tree | Files | Run by |
 |---|---:|---|
-| `tests/` | 106 | `ci.yml` |
+| `tests/` | 178 | `ci.yml` |
 | `apps/agent_workflow_framework/tests/` | 9 | `apps.yml` (no coverage measured) |
 | `apps/sak_agent_dashboard` (TypeScript) | 14 | `apps.yml` |
 | `sakthai-chat-cli/` | 86 | `subprojects.yml` (tests only; not linted in CI) |
