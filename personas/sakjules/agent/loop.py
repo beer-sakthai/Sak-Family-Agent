@@ -222,14 +222,9 @@ def _resolve_model_name(model: str, provider: str) -> str:
 def _execute_tool(tool: Tool, args: dict[str, Any], store: MemoryStore) -> tuple[str, bool]:
     """Run a tool, returning (output, is_error). Errors are reported, not raised.
 
-    All tool output is passed through ``redact_secrets`` as a global fail-safe.
+    All tool output is validated against input_schema and passed through ``redact_secrets``.
     """
-    try:
-        output = tool.handler(args, store)
-        return redact_secrets(output), False
-    except Exception as exc:  # noqa: BLE001 — surfaced back to the model
-        logger.debug("Tool %r raised %s: %s", tool.name, type(exc).__name__, exc)
-        return redact_secrets(f"{type(exc).__name__}: {exc}"), True
+    return tool.safe_call(args, store)
 
 
 def _execute_tool_with_guardrails(

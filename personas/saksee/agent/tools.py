@@ -17,7 +17,7 @@ import subprocess
 import sys
 import urllib.parse
 import urllib.request
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -59,6 +59,71 @@ class Tool:
             "description": self.description,
             "input_schema": self.input_schema,
         }
+
+    def validate_args(self, args: Mapping[str, Any] | None) -> tuple[bool, list[str]]:
+        """Validate input arguments against ``self.input_schema``.
+
+        Returns:
+            A tuple of ``(is_valid, error_reasons)``. When valid, ``error_reasons`` is empty.
+        """
+        errors: list[str] = []
+        if args is None or not isinstance(args, Mapping):
+            return False, ["Tool arguments must be a JSON object mapping."]
+
+        required = self.input_schema.get("required", [])
+        for field in required:
+            if field not in args:
+                errors.append(f"Missing required parameter '{field}'.")
+            elif args[field] is None:
+                errors.append(f"Required parameter '{field}' cannot be null.")
+            elif isinstance(args[field], str) and not args[field].strip():
+                errors.append(f"Required parameter '{field}' cannot be blank.")
+
+        properties = self.input_schema.get("properties", {})
+        for param, val in args.items():
+            if param not in properties or val is None:
+                continue
+            prop = properties[param]
+            expected_type = prop.get("type")
+            if expected_type == "string" and not isinstance(val, str):
+                errors.append(f"Parameter '{param}' expected string, got {type(val).__name__}.")
+            elif expected_type == "integer" and (not isinstance(val, int) or isinstance(val, bool)):
+                errors.append(f"Parameter '{param}' expected integer, got {type(val).__name__}.")
+            elif expected_type == "number" and (
+                not isinstance(val, (int, float)) or isinstance(val, bool)
+            ):
+                errors.append(f"Parameter '{param}' expected number, got {type(val).__name__}.")
+            elif expected_type == "boolean" and not isinstance(val, bool):
+                errors.append(f"Parameter '{param}' expected boolean, got {type(val).__name__}.")
+            elif expected_type == "array" and not isinstance(val, (list, tuple)):
+                errors.append(f"Parameter '{param}' expected array, got {type(val).__name__}.")
+            elif expected_type == "object" and not isinstance(val, Mapping):
+                errors.append(f"Parameter '{param}' expected object, got {type(val).__name__}.")
+
+            if "enum" in prop and val not in prop["enum"]:
+                errors.append(f"Parameter '{param}' must be one of {prop['enum']!r}, got {val!r}.")
+
+        return (len(errors) == 0, errors)
+
+    def safe_call(self, args: Mapping[str, Any] | None, store: MemoryStore) -> tuple[str, bool]:
+        """Validate input arguments, execute the handler, and redact secrets.
+
+        Returns:
+            ``(output_text, is_error)``
+        """
+        from ..config import redact_secrets
+
+        valid, errors = self.validate_args(args)
+        if not valid:
+            err_msg = f"Invalid arguments for tool '{self.name}': " + "; ".join(errors)
+            return redact_secrets(err_msg), True
+
+        try:
+            output = self.handler(dict(args or {}), store)
+            return redact_secrets(output), False
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Tool %r handler raised %s: %s", self.name, type(exc).__name__, exc)
+            return redact_secrets(f"{type(exc).__name__}: {exc}"), True
 
 
 def _coerce_limit(raw: Any, default: int) -> int:
