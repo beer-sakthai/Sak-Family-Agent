@@ -80,9 +80,7 @@ def test_main_no_args_interactive_launches_chat(
     assert invoked is True
 
 
-def test_main_direct_task_routes_to_run(
-    monkeypatch: pytest.MonkeyPatch, runner: CliRunner
-) -> None:
+def test_main_direct_task_routes_to_run(monkeypatch: pytest.MonkeyPatch, runner: CliRunner) -> None:
     """Passing a task prompt directly to sakthai should execute run."""
     captured: dict[str, Any] = {}
 
@@ -206,7 +204,9 @@ def test_slash_result_persona_listing_and_switching(tmp_path: Path) -> None:
     store = MemoryStore(tmp_path / "memory.db")
     try:
         # Listing
-        handled, _, renderables = slash_result("/persona", persona="sakthai", goal=None, store=store)
+        handled, _, renderables = slash_result(
+            "/persona", persona="sakthai", goal=None, store=store
+        )
         assert handled is True
         assert len(renderables) == 1
 
@@ -232,7 +232,9 @@ def test_slash_result_model_and_provider_switching(tmp_path: Path) -> None:
     store = MemoryStore(tmp_path / "memory.db")
     try:
         # Model
-        h1, _, r1 = slash_result("/model", persona="sakthai", goal=None, store=store, model="sakthai")
+        h1, _, r1 = slash_result(
+            "/model", persona="sakthai", goal=None, store=store, model="sakthai"
+        )
         assert h1 is True
         assert "Current model: sakthai" in str(r1[0])
 
@@ -241,7 +243,9 @@ def test_slash_result_model_and_provider_switching(tmp_path: Path) -> None:
         assert "gpt-4o" in str(r2[0])
 
         # Provider
-        h3, _, r3 = slash_result("/provider", persona="sakthai", goal=None, store=store, provider="ollama")
+        h3, _, r3 = slash_result(
+            "/provider", persona="sakthai", goal=None, store=store, provider="ollama"
+        )
         assert h3 is True
         assert "Current provider: ollama" in str(r3[0])
 
@@ -318,9 +322,7 @@ def test_personas_panel_and_status_panel_render() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_run_chat_slash_commands_and_shell(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_run_chat_slash_commands_and_shell(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """run_chat should handle in-session slash commands, shell execution, and persona switching."""
     inputs = [
         "/help",

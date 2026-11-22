@@ -242,7 +242,9 @@ def run_chat(
 
                 if verb in ("/reset", "/new"):
                     prior_messages.clear()
-                    console.print("[dim]Conversation history reset. Persistent memory retained.[/dim]")
+                    console.print(
+                        "[dim]Conversation history reset. Persistent memory retained.[/dim]"
+                    )
                     continue
 
                 if verb == "/persona" and rest:
@@ -278,13 +280,17 @@ def run_chat(
 
                 if verb == "/provider" and rest:
                     active_provider = rest
-                    console.print(f"[green]Provider changed to:[/green] [bold]{active_provider}[/bold]")
+                    console.print(
+                        f"[green]Provider changed to:[/green] [bold]{active_provider}[/bold]"
+                    )
                     continue
 
                 if verb == "/learn":
                     if rest and active_store:
                         active_store.add_fact(rest, source_session="cli")
-                        console.print(f"[green]✓ Fact stored in {active_persona} memory:[/green] {rest}")
+                        console.print(
+                            f"[green]✓ Fact stored in {active_persona} memory:[/green] {rest}"
+                        )
                     else:
                         console.print("[dim]Usage: /learn <fact to store>[/dim]")
                     continue
@@ -462,7 +468,15 @@ def slash_result(
     if verb == "/clear":
         return True, None, []
     if verb in ("/reset", "/new"):
-        return True, goal, [Text.from_markup("[dim]Conversation history reset. Persistent memory retained.[/dim]")]
+        return (
+            True,
+            goal,
+            [
+                Text.from_markup(
+                    "[dim]Conversation history reset. Persistent memory retained.[/dim]"
+                )
+            ],
+        )
     if verb == "/goal":
         if not rest:
             msg = "goal cleared" if goal else "usage: /goal <what you want to accomplish>"
@@ -471,39 +485,61 @@ def slash_result(
     if verb == "/status":
         facts_count = store.stats()["facts"]["total"] if store else 0
         obs_count = store.stats().get("observations", {}).get("total", 0) if store else 0
-        return True, goal, [
-            status_panel(
-                persona=persona,
-                model=model,
-                provider=provider,
-                tool_count=len(tools),
-                facts=facts_count,
-                observations=obs_count,
-                goal=goal,
-                turns=turns,
-                cwd=os.getcwd(),
-            )
-        ]
+        return (
+            True,
+            goal,
+            [
+                status_panel(
+                    persona=persona,
+                    model=model,
+                    provider=provider,
+                    tool_count=len(tools),
+                    facts=facts_count,
+                    observations=obs_count,
+                    goal=goal,
+                    turns=turns,
+                    cwd=os.getcwd(),
+                )
+            ],
+        )
     if verb == "/persona":
         if not rest:
             return True, goal, [personas_panel()]
         if rest in config.PERSONA_NAMES:
             label = PERSONA_LABELS.get(rest, rest)
             return True, goal, [Text.from_markup(f"[green]Persona set to {label}[/green]")]
-        return True, goal, [Text.from_markup(f"[red]Unknown persona {rest!r}. Valid: {', '.join(config.PERSONA_NAMES)}[/red]")]
+        return (
+            True,
+            goal,
+            [
+                Text.from_markup(
+                    f"[red]Unknown persona {rest!r}. Valid: {', '.join(config.PERSONA_NAMES)}[/red]"
+                )
+            ],
+        )
     if verb == "/model":
         if not rest:
             return True, goal, [Text.from_markup(f"Current model: [bold]{model}[/bold]")]
         return True, goal, [Text.from_markup(f"[green]Model set to:[/green] [bold]{rest}[/bold]")]
     if verb == "/provider":
         if not rest:
-            return True, goal, [Text.from_markup(f"Current provider: [bold]{provider or 'default'}[/bold]")]
-        return True, goal, [Text.from_markup(f"[green]Provider set to:[/green] [bold]{rest}[/bold]")]
+            return (
+                True,
+                goal,
+                [Text.from_markup(f"Current provider: [bold]{provider or 'default'}[/bold]")],
+            )
+        return (
+            True,
+            goal,
+            [Text.from_markup(f"[green]Provider set to:[/green] [bold]{rest}[/bold]")],
+        )
     if verb == "/doctor":
         report = config.check_env()
         paths = report.get("paths", {})
         auth = report.get("auth", {})
-        ready_tag = "[green]READY[/green]" if report.get("ready") else "[yellow]ATTENTION NEEDED[/yellow]"
+        ready_tag = (
+            "[green]READY[/green]" if report.get("ready") else "[yellow]ATTENTION NEEDED[/yellow]"
+        )
         text = Text.from_markup(
             f"Environment Status: {ready_tag}\n"
             f"SakThai Home: [dim]{paths.get('sakthai_home')}[/dim]\n"
@@ -514,6 +550,10 @@ def slash_result(
     if verb == "/learn":
         if rest and store:
             store.add_fact(rest, source_session="cli")
-            return True, goal, [Text.from_markup(f"[green]✓ Fact stored in {persona} memory:[/green] {rest}")]
+            return (
+                True,
+                goal,
+                [Text.from_markup(f"[green]✓ Fact stored in {persona} memory:[/green] {rest}")],
+            )
         return True, goal, [Text.from_markup("[dim]Usage: /learn <fact to store>[/dim]")]
     return False, goal, []
