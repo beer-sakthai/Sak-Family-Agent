@@ -37,6 +37,7 @@ from .system import doctor, setup, status, tools, web
 from .team import team_cmd
 from .telegram import telegram_cmd
 from .train import train_cmd
+from .write import write_cmd
 
 # Group commands are imported under ``*_cmd`` aliases on purpose: binding the
 # group object under its own name here would shadow the same-named submodule as
@@ -116,5 +117,6 @@ main.add_command(dashboard_cmd)
 main.add_command(gateway_cmd)
 main.add_command(telegram_cmd)
 main.add_command(train_cmd)
+main.add_command(write_cmd)
 
 __all__ = ["main"]
