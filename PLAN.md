@@ -171,6 +171,7 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 ### 3. Product & Monetization ([`product/PLAN.md`](./product/PLAN.md))
 - [x] 2026-11-18 **ServiceQuoteBot Customer Outreach** — Deployed ServiceQuoteBot production configuration (`config.yaml`), local service quoting skill (`SKILL.md`), and standard price book (`references/price-book.md`).
 - [x] 2026-11-18 **Revenue & Lead Tracking** — Implemented `LeadRevenueMetrics`, `update_lead_status`, MRR tracking, and `sakthai lead` CLI (`stats`, `list`, `capture`, `update`).
+- [x] 2026-11-22 **Purpose page** — Wrote `docs/purpose.md`: what Sak Family Agent is for, reconciling `docs/USER.md` / shared SOUL (Beer first) with `product/decision.md` (business-first platform). Still open: Beer confirms the priority order before `product/decision.md` is amended, and an agreed human-reach path is decided.
 
 ### 4. Agent Self-Evolution Pipeline ([`personas/shared/agent-self-evolution/PLAN.md`](./personas/shared/agent-self-evolution/PLAN.md))
 *(Phases 1 & 2 — Skill Evolution and Tool Description Optimization — are `[x]` complete)*
