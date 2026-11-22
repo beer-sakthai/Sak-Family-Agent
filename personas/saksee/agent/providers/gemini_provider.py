@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable
 from typing import Any
 
@@ -80,6 +81,39 @@ LEGACY_GEMINI_MODELS: dict[str, str] = {
     "gemini-3.8-flash": "gemini-4-hydrogen",
 }
 
+#: Set of models requiring an active Cloud Billing account (0 free-tier quota).
+PAID_ONLY_GEMINI_MODELS: frozenset[str] = frozenset(
+    {
+        "gemini-4-carbon",
+        "gemini-4-neon",
+        "gemini-4-argon",
+        "gemini-3.1-pro-preview",
+    }
+)
+
+#: Models accessible on Google AI Studio Free Tier (GEMINI_API_KEY without billing).
+FREE_TIER_GEMINI_MODELS: frozenset[str] = frozenset(
+    {
+        "gemini-4-hydrogen",
+        "gemini-3.8-flash",
+        "gemini-3.6-flash",
+        "gemini-3.5-flash-lite",
+        "gemini-3.1-flash-lite",
+        "gemini-decision-1",
+        "gemma-4-31b-it",
+        "gemma-4-26b-a4b-it",
+        "gemini-embedding-001",
+        "gemini-2.5-flash",
+        "gemini-2.5-pro",
+    }
+)
+
+
+def is_free_tier_model(model: str) -> bool:
+    """Check whether a Gemini model is eligible for Google AI Studio Free Tier."""
+    base_name = model.rsplit("/", 1)[-1]
+    return base_name in FREE_TIER_GEMINI_MODELS
+
 
 def _stop_reason(has_tool_call: bool, finish_reason: Any) -> str:
     """Map Gemini's tool-call/finish signals to a normalised stop reason."""
@@ -115,6 +149,20 @@ def call_gemini(
             substitute,
         )
         model = substitute
+        base_name = model.rsplit("/", 1)[-1]
+
+    if base_name in PAID_ONLY_GEMINI_MODELS and os.environ.get("GEMINI_FREE_ONLY", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    ):
+        logger.warning(
+            "Gemini model '%s' is paid-only (0 free-tier quota) and GEMINI_FREE_ONLY is set; "
+            "auto-falling back to 'gemini-4-hydrogen'",
+            model,
+        )
+        model = "gemini-4-hydrogen"
+        base_name = "gemini-4-hydrogen"
 
     from google.genai import types
 
@@ -259,6 +307,19 @@ def call_gemini_interaction(
             substitute,
         )
         model = substitute
+        base_name = model.rsplit("/", 1)[-1]
+
+    if base_name in PAID_ONLY_GEMINI_MODELS and os.environ.get("GEMINI_FREE_ONLY", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    ):
+        logger.warning(
+            "Gemini model '%s' is paid-only (0 free-tier quota) and GEMINI_FREE_ONLY is set; "
+            "auto-falling back to 'gemini-4-hydrogen'",
+            model,
+        )
+        model = "gemini-4-hydrogen"
 
     kwargs: dict[str, Any] = {
         "model": model,

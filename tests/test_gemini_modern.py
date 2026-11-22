@@ -10,10 +10,13 @@ import pytest
 from sakthai.agent.loop import _resolve_model_name
 from sakthai.agent.providers.base import AgentError
 from sakthai.agent.providers.gemini_provider import (
+    FREE_TIER_GEMINI_MODELS,
     LEGACY_GEMINI_MODELS,
+    PAID_ONLY_GEMINI_MODELS,
     call_gemini,
     call_gemini_decision,
     call_gemini_interaction,
+    is_free_tier_model,
 )
 
 
@@ -24,6 +27,52 @@ def test_legacy_gemini_models_mapping() -> None:
     assert LEGACY_GEMINI_MODELS["gemini-1.5-flash"] == "gemini-4-hydrogen"
     assert LEGACY_GEMINI_MODELS["gemini-1.5-pro"] == "gemini-4-carbon"
     assert LEGACY_GEMINI_MODELS["gemini-3.1-pro-preview"] == "gemini-4-carbon"
+
+
+def test_paid_only_gemini_models_set() -> None:
+    """Verify paid-only models requiring billing accounts are identified."""
+    assert "gemini-4-carbon" in PAID_ONLY_GEMINI_MODELS
+    assert "gemini-4-neon" in PAID_ONLY_GEMINI_MODELS
+    assert "gemini-4-hydrogen" not in PAID_ONLY_GEMINI_MODELS
+    assert "gemini-3.5-flash-lite" not in PAID_ONLY_GEMINI_MODELS
+
+
+def test_free_tier_gemini_models_and_helper() -> None:
+    """Verify Free-Tier eligible models and is_free_tier_model helper."""
+    assert "gemini-4-hydrogen" in FREE_TIER_GEMINI_MODELS
+    assert "gemini-3.8-flash" in FREE_TIER_GEMINI_MODELS
+    assert "gemini-3.5-flash-lite" in FREE_TIER_GEMINI_MODELS
+    assert "gemini-decision-1" in FREE_TIER_GEMINI_MODELS
+    assert "gemma-4-31b-it" in FREE_TIER_GEMINI_MODELS
+    assert is_free_tier_model("gemini-4-hydrogen") is True
+    assert is_free_tier_model("models/gemini-3.5-flash-lite") is True
+    assert is_free_tier_model("gemini-4-carbon") is False
+
+
+def test_gemini_free_only_fallback(
+    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify GEMINI_FREE_ONLY safely redirects paid-only models to gemini-4-hydrogen."""
+    monkeypatch.setenv("GEMINI_FREE_ONLY", "true")
+    client = MagicMock()
+    candidate = MagicMock()
+    candidate.content.parts = [MagicMock(text="response text", function_calls=[])]
+    candidate.finish_reason = "STOP"
+    response = MagicMock()
+    response.candidates = [candidate]
+    response.usage_metadata = None
+    client.models.generate_content.return_value = response
+
+    with (
+        patch("sakthai.agent.providers.gemini_provider.to_gemini_contents", return_value=[]),
+        caplog.at_level(logging.WARNING),
+    ):
+        res = call_gemini(client, "gemini-4-carbon", "system", (), [], 0)
+
+    assert res.content[0].text == "response text"
+    assert "is paid-only (0 free-tier quota) and GEMINI_FREE_ONLY is set" in caplog.text
+    call_args = client.models.generate_content.call_args
+    assert call_args.kwargs["model"] == "gemini-4-hydrogen"
 
 
 def test_resolve_model_name_substitutes_legacy_models(caplog: pytest.LogCaptureFixture) -> None:
