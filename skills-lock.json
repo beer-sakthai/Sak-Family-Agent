@@ -7,6 +7,13 @@
       "sourceType": "github",
       "skillPath": "skills/gemini-api-dev/SKILL.md",
       "computedHash": "b3823bd7210e46d4528ca85ebc03326842a6df47ced9a856a1729639f9756c12"
+    },
+    "launchdarkly-release-autopilot-onboarding": {
+      "source": "launchdarkly/ai-tooling",
+      "commit": "ab259a1f646e2b21666d34db4eff9d63806333d6",
+      "sourceType": "github",
+      "skillPath": "skills/release-autopilot/launchdarkly-release-autopilot-onboarding/SKILL.md",
+      "computedHash": "9543ebcacb1297435a35ddc49c92d5f113115604cfc9848a762457791b05417e"
     }
   }
 }
