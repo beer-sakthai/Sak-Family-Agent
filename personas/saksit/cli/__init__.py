@@ -29,6 +29,7 @@ from .lead import lead_cmd
 from .memory import learn, recall
 from .memory import memory as memory_cmd
 from .platform import platform_cmd
+from .quota import quota_cmd
 from .repo import repo_cmd
 from .sessions import sessions as sessions_cmd
 from .skills import skills as skills_cmd
@@ -108,6 +109,7 @@ main.add_command(eval_cmd, name="eval")
 main.add_command(team_cmd)
 main.add_command(client_cmd)
 main.add_command(platform_cmd, name="platform")
+main.add_command(quota_cmd)
 main.add_command(lead_cmd, name="lead")
 main.add_command(repo_cmd)
 main.add_command(dashboard_cmd)
