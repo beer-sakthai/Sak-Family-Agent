@@ -143,6 +143,13 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "SAKKING_HOME": "Override the SakKing data directory (default: ~/.sakking) for skill sync",
     "SAKTHAI_EVAL_LOG": "Override the local model eval/MLOps log path (default: SAKTHAI_HOME/eval.jsonl)",
     "SAKTHAI_OPENENV_ROOT": "Override the openenv-rl-training repository root path (default: ../openenv-rl-training)",
+    "LAUNCHDARKLY_SDK_KEY": "LaunchDarkly SDK key for AgentControl writing assistant",  # nosec B105
+    "LD_SDK_KEY": "LaunchDarkly SDK key alias",  # nosec B105
+    "LAUNCHDARKLY_AI_CONFIG_KEY": "LaunchDarkly AI config key (default: gensandees-writing-assistant)",
+    "LAUNCHDARKLY_PROJECT_KEY": "LaunchDarkly project key (default: default)",
+    "LAUNCHDARKLY_ENVIRONMENT_KEY": "LaunchDarkly environment key (default: production)",
+    "LD_SERVICE_NAME": "Service name for OpenTelemetry tracking (default: sakthai-writing-assistant)",
+    "LD_ENVIRONMENT": "Deployment environment for LaunchDarkly traces (default: production)",
 }
 
 # Seconds to wait for an external MCP server's reply, before SAKTHAI_MCP_TIMEOUT.
