@@ -15,6 +15,12 @@ export default defineConfig({
     fileParallelism: false,
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      "@launchdarkly/vercel-server-sdk": fileURLToPath(
+        new URL(
+          "./node_modules/@launchdarkly/vercel-server-sdk/dist/cjs/src/index.js",
+          import.meta.url,
+        ),
+      ),
     },
   },
 });
