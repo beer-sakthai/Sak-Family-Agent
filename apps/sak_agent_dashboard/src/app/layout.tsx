@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono, Outfit } from "next/font/google";
+import { Inter, JetBrains_Mono, Outfit, Space_Mono, Orbitron, IBM_Plex_Mono } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import { BotIdClient } from "botid/client";
 import MyStatsig from "./my-statsig";
 import "./globals.css";
+import "./cyberpunk.css";
 
 import { THEME_BOOTSTRAP } from "@/lib/theme";
 
@@ -28,6 +29,30 @@ const outfit = Outfit({
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-jetbrains",
+  display: "swap",
+});
+
+/**
+ * Cyberpunk redesign fonts: bold, geometric, futuristic
+ */
+const spaceMono = Space_Mono({
+  subsets: ["latin"],
+  weight: "700",
+  variable: "--font-space-mono",
+  display: "swap",
+});
+
+const orbitron = Orbitron({
+  subsets: ["latin"],
+  weight: "900",
+  variable: "--font-orbitron",
+  display: "swap",
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-ibm-plex-mono",
   display: "swap",
 });
 
@@ -102,7 +127,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${outfit.variable} ${jetbrainsMono.variable}`}
+      className={`${inter.variable} ${outfit.variable} ${jetbrainsMono.variable} ${spaceMono.variable} ${orbitron.variable} ${ibmPlexMono.variable}`}
       // The bootstrap script writes both attributes before React hydrates, so
       // the server's markup and the client's first read necessarily differ.
       // That is the point of the script; suppress the warning for this node.

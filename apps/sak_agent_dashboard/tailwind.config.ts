@@ -85,11 +85,23 @@ const config: Config = {
           "blue-tint": token("h-blue-tint"),
           "blue-line": token("h-blue-line"),
         },
+
+        // Neon cyberpunk colors for direct use
+        neon: {
+          cyan: "rgb(0 245 255 / <alpha-value>)",
+          magenta: "rgb(255 0 110 / <alpha-value>)",
+          purple: "rgb(181 55 242 / <alpha-value>)",
+          green: "rgb(57 255 20 / <alpha-value>)",
+          orange: "rgb(255 107 53 / <alpha-value>)",
+        },
       },
       fontFamily: {
         sans: ["var(--font-inter)", "sans-serif"],
         display: ["var(--font-outfit)", "sans-serif"],
         mono: ["var(--font-jetbrains)", "ui-monospace", "monospace"],
+        "space-mono": ["var(--font-space-mono)", "monospace"],
+        orbitron: ["var(--font-orbitron)", "monospace"],
+        "ibm-plex-mono": ["var(--font-ibm-plex-mono)", "monospace"],
       },
       boxShadow: {
         glass: "var(--shadow-panel)",

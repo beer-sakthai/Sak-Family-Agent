@@ -1,0 +1,384 @@
+/**
+ * Cyberpunk/Dark Tech Theme
+ *
+ * Neon-fueled aesthetic with high contrast, glowing accents, and technical effects.
+ * All color values use RGB channels for Tailwind alpha support.
+ */
+
+/* =========================================================================
+   Cyberpunk Theme Variables
+   ========================================================================= */
+
+:root[data-theme="cyberpunk"],
+:root[data-theme="cyberpunk-dark"] {
+  color-scheme: dark;
+
+  /* Base surfaces: deep black background */
+  --canvas: 10 14 26; /* #0a0e1a - page background */
+  --sunken: 5 7 15; /* deep inset wells */
+  --panel: 15 20 40; /* card surfaces */
+  --raised: 25 32 60; /* controls on panels */
+  --raised-2: 40 50 85; /* hover state */
+
+  /* Hairlines and borders */
+  --line: 25 32 60;
+  --line-strong: 51 65 85;
+  --line-soft: 15 20 40;
+
+  /* Text layers */
+  --fg: 224 232 255; /* bright white (#e0e8ff) */
+  --fg-2: 180 192 220;
+  --fg-3: 140 160 200;
+  --fg-4: 100 120 160;
+  --fg-5: 60 80 120;
+
+  /* Neon primary accent: cyan */
+  --accent: 0 245 255; /* #00f5ff - bright cyan */
+  --accent-strong: 0 200 220;
+  --accent-contrast: 10 14 26;
+
+  /* Depth and glow */
+  --panel-alpha: 0.75;
+  --shadow-panel: 0 0 20px 0 rgb(0 245 255 / 0.1), 0 8px 32px 0 rgb(0 0 0 / 0.6);
+  --grid-line: 0 245 255;
+  --grid-alpha: 0.03;
+  --wash-alpha: 0.08;
+
+  /* Neon hue spectrum */
+  --h-cyan: 0 245 255; /* #00f5ff */
+  --h-cyan-tint: 0 50 80;
+  --h-cyan-line: 0 150 180;
+
+  --h-magenta: 255 0 110; /* #ff006e */
+  --h-magenta-tint: 80 0 40;
+  --h-magenta-line: 180 50 150;
+
+  --h-purple: 181 55 242; /* #b537f2 */
+  --h-purple-tint: 60 20 100;
+  --h-purple-line: 140 80 200;
+
+  --h-green: 57 255 20; /* #39ff14 */
+  --h-green-tint: 30 80 20;
+  --h-green-line: 100 200 100;
+
+  --h-orange: 255 107 53; /* #ff6b35 */
+  --h-orange-tint: 80 40 20;
+  --h-orange-line: 200 140 80;
+
+  /* Reuse existing hues for compatibility */
+  --h-emerald: 57 255 20;
+  --h-emerald-tint: 30 80 20;
+  --h-emerald-line: 100 200 100;
+
+  --h-rose: 255 0 110;
+  --h-rose-tint: 80 0 40;
+  --h-rose-line: 180 50 150;
+
+  --h-amber: 255 107 53;
+  --h-amber-tint: 80 40 20;
+  --h-amber-line: 200 140 80;
+
+  --h-violet: 181 55 242;
+  --h-violet-tint: 60 20 100;
+  --h-violet-line: 140 80 200;
+
+  --h-sky: 0 245 255;
+  --h-sky-tint: 0 50 80;
+  --h-sky-line: 0 150 180;
+
+  --h-teal: 0 245 255;
+  --h-teal-tint: 0 50 80;
+  --h-teal-line: 0 150 180;
+
+  --h-fuchsia: 255 0 110;
+  --h-fuchsia-tint: 80 0 40;
+  --h-fuchsia-line: 180 50 150;
+
+  --h-blue: 0 245 255;
+  --h-blue-tint: 0 50 80;
+  --h-blue-line: 0 150 180;
+
+  /* Font stack for cyberpunk */
+  --font-heading: var(--font-space-mono);
+  --font-section: var(--font-orbitron);
+  --font-body: var(--font-ibm-plex-mono);
+}
+
+/* =========================================================================
+   Cyberpunk Animations
+   ========================================================================= */
+
+@layer utilities {
+  @keyframes neon-glow {
+    0%, 100% {
+      text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+      box-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+    }
+    50% {
+      text-shadow: 0 0 20px currentColor, 0 0 40px currentColor, 0 0 60px currentColor;
+      box-shadow: 0 0 20px currentColor, 0 0 40px currentColor, 0 0 60px currentColor;
+    }
+  }
+
+  @keyframes scan-lines {
+    0% {
+      background-position: 0 0;
+    }
+    100% {
+      background-position: 0 2px;
+    }
+  }
+
+  @keyframes glitch {
+    0% {
+      text-shadow: -2px 0 #ff006e, 2px 0 #00f5ff;
+      transform: translate(0);
+    }
+    20% {
+      text-shadow: -2px 0 #ff006e, 2px 0 #00f5ff;
+      transform: translate(-2px, 2px);
+    }
+    40% {
+      text-shadow: -2px 0 #ff006e, 2px 0 #00f5ff;
+      transform: translate(-2px, -2px);
+    }
+    60% {
+      text-shadow: -2px 0 #ff006e, 2px 0 #00f5ff;
+      transform: translate(2px, 2px);
+    }
+    80% {
+      text-shadow: -2px 0 #ff006e, 2px 0 #00f5ff;
+      transform: translate(2px, -2px);
+    }
+    100% {
+      text-shadow: -2px 0 #ff006e, 2px 0 #00f5ff;
+      transform: translate(0);
+    }
+  }
+
+  @keyframes pulse-neon {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  @keyframes tech-grid {
+    0% {
+      background-position: 0 0;
+    }
+    100% {
+      background-position: 40px 40px;
+    }
+  }
+
+  @keyframes neon-border-pulse {
+    0%, 100% {
+      border-color: rgb(0 245 255 / 1);
+      box-shadow: inset 0 0 10px rgb(0 245 255 / 0.3);
+    }
+    50% {
+      border-color: rgb(0 245 255 / 0.6);
+      box-shadow: inset 0 0 5px rgb(0 245 255 / 0.1);
+    }
+  }
+
+  /* Neon glow utility */
+  .neon-glow {
+    animation: neon-glow 3s ease-in-out infinite;
+  }
+
+  /* Neon glow on interactive elements (focus) */
+  .neon-glow-focus:focus-within,
+  .neon-glow-focus:focus {
+    animation: neon-glow 2s ease-in-out infinite;
+  }
+
+  /* Scan line effect */
+  .scan-line {
+    animation: scan-lines 0.08s linear infinite;
+    background-image: repeating-linear-gradient(
+      0deg,
+      rgb(0 0 0 / 0.15),
+      rgb(0 0 0 / 0.15) 1px,
+      transparent 1px,
+      transparent 2px
+    );
+  }
+
+  /* Glitch effect */
+  .glitch {
+    animation: glitch 0.1s ease-in-out infinite;
+  }
+
+  /* Pulsing status indicator */
+  .pulse-neon {
+    animation: pulse-neon 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Tech grid background overlay */
+  .tech-grid {
+    background-image:
+      linear-gradient(0deg, rgb(0 245 255 / 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(0 245 255 / 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    animation: tech-grid 20s linear infinite;
+  }
+
+  /* Neon border with pulsing glow */
+  .neon-border {
+    border-color: rgb(0 245 255 / 0.8);
+    border-width: 1px;
+    box-shadow: inset 0 0 15px rgb(0 245 255 / 0.2), 0 0 20px rgb(0 245 255 / 0.3);
+  }
+
+  .neon-border-pulse {
+    animation: neon-border-pulse 2s ease-in-out infinite;
+  }
+
+  /* Neon card styling */
+  .neon-card {
+    position: relative;
+    border: 1px solid rgb(0 245 255 / 0.6);
+    box-shadow: inset 0 0 15px rgb(0 245 255 / 0.1), 0 0 20px rgb(0 245 255 / 0.2);
+  }
+
+  .neon-card-magenta {
+    border-color: rgb(255 0 110 / 0.6);
+    box-shadow: inset 0 0 15px rgb(255 0 110 / 0.1), 0 0 20px rgb(255 0 110 / 0.2);
+  }
+
+  .neon-card-purple {
+    border-color: rgb(181 55 242 / 0.6);
+    box-shadow: inset 0 0 15px rgb(181 55 242 / 0.1), 0 0 20px rgb(181 55 242 / 0.2);
+  }
+
+  .neon-card-green {
+    border-color: rgb(57 255 20 / 0.6);
+    box-shadow: inset 0 0 15px rgb(57 255 20 / 0.1), 0 0 20px rgb(57 255 20 / 0.2);
+  }
+
+  .neon-card-orange {
+    border-color: rgb(255 107 53 / 0.6);
+    box-shadow: inset 0 0 15px rgb(255 107 53 / 0.1), 0 0 20px rgb(255 107 53 / 0.2);
+  }
+
+  /* Neon accent text */
+  .text-neon-cyan {
+    color: rgb(0 245 255);
+    text-shadow: 0 0 10px rgb(0 245 255 / 0.5);
+  }
+
+  .text-neon-magenta {
+    color: rgb(255 0 110);
+    text-shadow: 0 0 10px rgb(255 0 110 / 0.5);
+  }
+
+  .text-neon-purple {
+    color: rgb(181 55 242);
+    text-shadow: 0 0 10px rgb(181 55 242 / 0.5);
+  }
+
+  .text-neon-green {
+    color: rgb(57 255 20);
+    text-shadow: 0 0 10px rgb(57 255 20 / 0.5);
+  }
+
+  .text-neon-orange {
+    color: rgb(255 107 53);
+    text-shadow: 0 0 10px rgb(255 107 53 / 0.5);
+  }
+
+  /* Chromatic aberration effect (subtle) */
+  .chromatic-aberration {
+    position: relative;
+  }
+
+  .chromatic-aberration::before {
+    content: attr(data-text);
+    position: absolute;
+    left: 2px;
+    top: 0;
+    z-index: -1;
+    color: rgb(0 245 255 / 0.3);
+  }
+
+  .chromatic-aberration::after {
+    content: attr(data-text);
+    position: absolute;
+    left: -2px;
+    top: 0;
+    z-index: -1;
+    color: rgb(255 0 110 / 0.3);
+  }
+}
+
+/* =========================================================================
+   Typography Overrides for Cyberpunk Theme
+   ========================================================================= */
+
+:root[data-theme="cyberpunk"],
+:root[data-theme="cyberpunk-dark"] {
+  /* Apply cyberpunk fonts when active */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-space-mono, monospace);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  .section-header,
+  [role="tab"],
+  label,
+  .tab {
+    font-family: var(--font-orbitron, monospace);
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  body,
+  p,
+  .body-text {
+    font-family: var(--font-ibm-plex-mono, monospace);
+    font-weight: 400;
+  }
+}
+
+/* =========================================================================
+   Reduced Motion Support
+   ========================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .neon-glow,
+  .neon-glow-focus:focus-within,
+  .neon-glow-focus:focus,
+  .scan-line,
+  .glitch,
+  .pulse-neon,
+  .tech-grid,
+  .neon-border-pulse {
+    animation: none !important;
+  }
+
+  /* Disable glows but keep the styling */
+  .neon-glow,
+  .text-neon-cyan,
+  .text-neon-magenta,
+  .text-neon-purple,
+  .text-neon-green,
+  .text-neon-orange {
+    text-shadow: none !important;
+  }
+}
+
+/* =========================================================================
+   Dark Theme Compatibility (for future light cyberpunk variant)
+   ========================================================================= */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    /* Fallback to cyberpunk if no theme specified */
+  }
+}

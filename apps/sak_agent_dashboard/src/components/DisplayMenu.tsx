@@ -18,12 +18,14 @@ const THEME_ICONS: Record<Theme, typeof Sun> = {
   system: Monitor,
   light: Sun,
   dark: Moon,
+  cyberpunk: Moon,
 };
 
 const THEME_LABELS: Record<Theme, string> = {
   system: "Match system",
   light: "Light",
   dark: "Dark",
+  cyberpunk: "Cyberpunk",
 };
 
 /**
