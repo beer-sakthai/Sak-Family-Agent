@@ -1,8 +1,10 @@
-"""Tests for LaunchDarkly Server SDK OpenTelemetry integration."""
+"""Tests for LaunchDarkly Server SDK, OpenTelemetry, and AI SDK integration."""
 
 import tomllib
 from pathlib import Path
 
+import ldai
+import ldclient
 import ldotel
 from ldclient.config import Config
 from ldotel.tracing import Hook, HookOptions
@@ -25,8 +27,25 @@ def test_launchdarkly_otel_hook_instantiation() -> None:
     assert config.hooks[0] is hook
 
 
-def test_launchdarkly_otel_pyproject_dependency() -> None:
-    """Verifies that launchdarkly-server-sdk-otel is declared in pyproject.toml."""
+def test_launchdarkly_server_sdk_metadata() -> None:
+    """Verifies that ldclient is imported with valid version metadata."""
+    assert hasattr(ldclient, "__version__")
+    assert isinstance(ldclient.__version__, str)
+
+
+def test_launchdarkly_ai_sdk_metadata() -> None:
+    """Verifies that ldai exports AI Agent, Model, and Judge configuration symbols."""
+    assert hasattr(ldai, "__version__")
+    assert isinstance(ldai.__version__, str)
+    assert hasattr(ldai, "LDAIClient")
+    assert hasattr(ldai, "AIAgentConfig")
+    assert hasattr(ldai, "AICompletionConfig")
+    assert hasattr(ldai, "ToolRegistry")
+    assert hasattr(ldai, "Judge")
+
+
+def test_launchdarkly_pyproject_dependencies() -> None:
+    """Verifies that all three LaunchDarkly Python SDK packages are declared in pyproject.toml."""
     pyproject_path = Path(__file__).resolve().parent.parent / "pyproject.toml"
     assert pyproject_path.exists()
 
@@ -35,3 +54,5 @@ def test_launchdarkly_otel_pyproject_dependency() -> None:
 
     deps = data.get("project", {}).get("dependencies", [])
     assert any("launchdarkly-server-sdk-otel" in dep for dep in deps)
+    assert any("launchdarkly-server-sdk>=" in dep for dep in deps)
+    assert any("launchdarkly-server-sdk-ai" in dep for dep in deps)
