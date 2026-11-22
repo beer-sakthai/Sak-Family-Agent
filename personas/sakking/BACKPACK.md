@@ -51,6 +51,8 @@
   - `https://microsoft365.mcp.claude.com/mcp` (remote endpoint in `config/mcp.json`; read-only allowlist: mail/calendar/SharePoint/Teams search, no send or delete)
 - **📚 Microsoft Learn MCP (`microsoft-learn`)**:
   - `https://learn.microsoft.com/api/mcp` (public remote endpoint in `config/mcp.json`; docs search, code-sample search and page fetch; no token)
+- **✨ Gemini API Docs MCP (`gemini-api-docs`)**:
+  - `https://gemini-api-docs-mcp.dev` (public remote endpoint in `config/mcp.json`; `gemini_search_docs` and `gemini_get_doc`; no token)
 - **⚡ Isolated Command & TDD Runner (`sakthai platform wrap-cmd` & `run_command`)**:
   - Opt-in via `SAKTHAI_SHELL_ALLOW`, 120s timeout, guarded by `DataLossGuardrail` (`check_data_loss_guardrail`)
   - Automatic virtualenv command wrapping via `wrap_with_isolated_runner` (`uv run ...`)

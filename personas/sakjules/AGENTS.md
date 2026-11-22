@@ -21,7 +21,7 @@
 | **Skill Inventory** | **56 Overlay Skills + 19 Shared Skills** (75 total skills) |
 | **Primary Workspace Skills** | `SakJules-github-ci-fix`, `SakJules-triage-issues`, `SakJules-workflow` ([`config/workspace.yaml`](./config/workspace.yaml)) |
 | **Allowed Workspace Tools** | `run_command`, `view_file`, `replace_file_content`, `write_to_file` |
-| **MCP Servers (`config/mcp.json`)** | `stepsecurity` (Remote SSE `https://agent.api.stepsecurity.io/v1/mcp?customer=beer-sakthai`, requires `STEP_SECURITY_API_KEY`), `microsoft365` (Remote HTTP `https://microsoft365.mcp.claude.com/mcp`, read-only tool allowlist, requires `MS365_MCP_TOKEN`), `microsoft-learn` (Remote HTTP `https://learn.microsoft.com/api/mcp`, docs search/fetch only, no auth) |
+| **MCP Servers (`config/mcp.json`)** | `stepsecurity` (Remote SSE `https://agent.api.stepsecurity.io/v1/mcp?customer=beer-sakthai`, requires `STEP_SECURITY_API_KEY`), `microsoft365` (Remote HTTP `https://microsoft365.mcp.claude.com/mcp`, read-only tool allowlist, requires `MS365_MCP_TOKEN`), `microsoft-learn` (Remote HTTP `https://learn.microsoft.com/api/mcp`, docs search/fetch only, no auth), `gemini-api-docs` (Remote HTTP `https://gemini-api-docs-mcp.dev`, docs search/fetch only, no auth) |
 | **Gateway Voice Mode** | `telegram:8618306046: "all"` ([`config/gateway_voice_mode.json`](./config/gateway_voice_mode.json)) |
 | **Evaluation Rubric** | `CYCLE EVAL: sakjules` (v9 100-pt self-eval in [`SOUL.md`](./SOUL.md) & [`CYCLE.md`](./CYCLE.md)) |
 | **Standalone Export Target** | `build/agent-repos/sakjules` (`beer-sakthai/sakjules-agent`) |

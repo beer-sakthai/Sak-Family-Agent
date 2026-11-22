@@ -35,6 +35,13 @@
         "microsoft_code_sample_search",
         "microsoft_docs_fetch"
       ]
+    },
+    "gemini-api-docs": {
+      "url": "https://gemini-api-docs-mcp.dev",
+      "tools": [
+        "gemini_search_docs",
+        "gemini_get_doc"
+      ]
     }
   }
 }
