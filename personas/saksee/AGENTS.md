@@ -21,7 +21,7 @@
 | **Skill Inventory** | **106 Overlay Skills + 19 Shared Skills** (125 total skills) |
 | **Primary Workspace Skills** | `SakSee-chrome-devtools-cli`, `SakSee-playwright-visual-snapshot-regression`, `Sak-ocr-and-documents` ([`config/workspace.yaml`](./config/workspace.yaml)) |
 | **Allowed Workspace Tools** | `run_command`, `view_file`, `read_url_content`, `search_web` |
-| **MCP Servers (`config/mcp.json`)** | `playwright` (`@playwright/mcp@0.0.83`), `chrome-devtools` (`chrome-devtools-mcp@1.10.1`), `microsoft365` (Remote HTTP `https://microsoft365.mcp.claude.com/mcp`, read-only tool allowlist, requires `MS365_MCP_TOKEN`) |
+| **MCP Servers (`config/mcp.json`)** | `playwright` (`@playwright/mcp@0.0.83`), `chrome-devtools` (`chrome-devtools-mcp@1.10.1`), `microsoft365` (Remote HTTP `https://microsoft365.mcp.claude.com/mcp`, read-only tool allowlist, requires `MS365_MCP_TOKEN`), `microsoft-learn` (Remote HTTP `https://learn.microsoft.com/api/mcp`, docs search/fetch only, no auth) |
 | **Gateway Voice Mode** | `telegram:8618306046: "all"` ([`config/gateway_voice_mode.json`](./config/gateway_voice_mode.json)) |
 | **Evaluation Rubric** | `CYCLE EVAL: saksee` (v9 100-pt self-eval in [`SOUL.md`](./SOUL.md) & [`CYCLE.md`](./CYCLE.md)) |
 | **Standalone Export Target** | `build/agent-repos/saksee` (`beer-sakthai/saksee-agent`) |

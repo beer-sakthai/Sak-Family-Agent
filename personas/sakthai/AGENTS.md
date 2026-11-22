@@ -21,7 +21,7 @@
 | **Skill Inventory** | **170 Overlay Skills + 19 Shared Skills** (189 total skills) |
 | **Primary Workspace Skills** | `SakThai-speckit-bridge`, `SakThai-spec-kit`, `SakThai-huggingface-cli`, `SakThai-learning-loop` ([`config/workspace.yaml`](./config/workspace.yaml)) |
 | **Allowed Workspace Tools** | `run_command`, `view_file`, `replace_file_content`, `write_to_file` |
-| **MCP Servers (`config/mcp.json`)** | `microsoft365` (Remote HTTP `https://microsoft365.mcp.claude.com/mcp`, read-only tool allowlist, requires `MS365_MCP_TOKEN`); Hugging Face Hub & inference stay native via `sakthai hf` / `huggingface_inference` |
+| **MCP Servers (`config/mcp.json`)** | `microsoft365` (Remote HTTP `https://microsoft365.mcp.claude.com/mcp`, read-only tool allowlist, requires `MS365_MCP_TOKEN`), `microsoft-learn` (Remote HTTP `https://learn.microsoft.com/api/mcp`, docs search/fetch only, no auth); Hugging Face Hub & inference stay native via `sakthai hf` / `huggingface_inference` |
 | **Gateway Voice Mode** | `telegram:8618306046: "all"` ([`config/gateway_voice_mode.json`](./config/gateway_voice_mode.json)) |
 | **Evaluation Rubric** | `CYCLE EVAL: sakthai` (v9 100-pt self-eval in [`SOUL.md`](./SOUL.md) & [`CYCLE.md`](./CYCLE.md)) |
 | **Standalone Export Target** | `build/agent-repos/sakthai` (`beer-sakthai/sakthai-agent`) |

@@ -30,6 +30,14 @@
         "teams_list_channel_messages",
         "teams_list_chats"
       ]
+    },
+    "microsoft-learn": {
+      "url": "https://learn.microsoft.com/api/mcp",
+      "tools": [
+        "microsoft_docs_search",
+        "microsoft_code_sample_search",
+        "microsoft_docs_fetch"
+      ]
     }
   }
 }

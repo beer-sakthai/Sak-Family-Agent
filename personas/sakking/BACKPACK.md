@@ -49,6 +49,8 @@
   - `https://agent.api.stepsecurity.io/v1/mcp?customer=beer-sakthai` (remote SSE endpoint configured in `config/mcp.json`)
 - **📧 Microsoft 365 MCP (`microsoft365`)**:
   - `https://microsoft365.mcp.claude.com/mcp` (remote endpoint in `config/mcp.json`; read-only allowlist: mail/calendar/SharePoint/Teams search, no send or delete)
+- **📚 Microsoft Learn MCP (`microsoft-learn`)**:
+  - `https://learn.microsoft.com/api/mcp` (public remote endpoint in `config/mcp.json`; docs search, code-sample search and page fetch; no token)
 - **⚡ Isolated Command & TDD Runner (`sakthai platform wrap-cmd` & `run_command`)**:
   - Opt-in via `SAKTHAI_SHELL_ALLOW`, 120s timeout, guarded by `DataLossGuardrail` (`check_data_loss_guardrail`)
   - Automatic virtualenv command wrapping via `wrap_with_isolated_runner` (`uv run ...`)
