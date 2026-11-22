@@ -43,5 +43,5 @@ def test_eval_bench_exit_code_propagation(
     monkeypatch: pytest.MonkeyPatch, runner: CliRunner
 ) -> None:
     monkeypatch.setattr(eval_cli, "run_repo_argv", lambda argv, **kw: 13)
-    result = runner.invoke(main, ["eval", "bench"])
+    result = runner.invoke(main, ["eval", "bench", "--legacy"])
     assert result.exit_code == 13

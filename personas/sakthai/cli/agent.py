@@ -221,6 +221,16 @@ def _run_in_sandbox(
         "unscoped memory.db (unchanged pre-existing behavior)."
     ),
 )
+@click.option(
+    "--optimize",
+    is_flag=True,
+    help="Run the iterative Evaluator-Optimizer loop to refine the solution.",
+)
+@click.option(
+    "--criteria",
+    default="",
+    help="Optional evaluation criteria for the Evaluator-Optimizer loop.",
+)
 def run(
     task: str | tuple[str, ...],
     model: str,
@@ -238,6 +248,8 @@ def run(
     caveman: str | None,
     sandbox: bool,
     persona: str | None,
+    optimize: bool = False,
+    criteria: str = "",
 ) -> None:
     """Run TASK through the standalone SakThai agent.
 
@@ -304,6 +316,39 @@ def run(
                 f"warning: skill(s) not found and will be skipped: {', '.join(missing)}",
                 err=True,
             )
+    if optimize:
+        from ..agent.optimizer import optimize_solution
+
+        opt_iterations = max_iterations if max_iterations != DEFAULT_MAX_ITERATIONS else 3
+        try:
+            opt_result = optimize_solution(
+                task=task_str,
+                criteria=criteria,
+                max_iterations=opt_iterations,
+                model=model,
+                provider=provider,
+            )
+        except KeyboardInterrupt:
+            click.echo("\nInterrupted.", err=True)
+            sys.exit(130)
+        except Exception as exc:
+            raise click.ClickException(str(exc)) from exc
+
+        for it in opt_result.history:
+            click.echo(f"\n--- Iteration {it.iteration} [{it.status}] ({it.latency_s:.2f}s) ---")
+            if it.thoughts:
+                click.echo(f"Thoughts:\n{it.thoughts}")
+            click.echo(f"Candidate Solution:\n{it.response}")
+            if it.feedback:
+                click.echo(f"Feedback:\n{it.feedback}")
+
+        click.echo(
+            f"\n=== Final Solution [{opt_result.status}] "
+            f"({opt_result.total_duration_s:.2f}s, {opt_result.iterations} iterations) ==="
+        )
+        click.echo(opt_result.final_response)
+        return
+
     streamed = False
 
     def _on_token(text: str) -> None:

@@ -14,7 +14,7 @@ import os
 import re
 import sqlite3
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -1161,6 +1161,380 @@ def evaluate_tools_trials(
         ),
         "latest_scorecard": latest_report,
         "trial_history": trial_history,
+    }
+
+
+def _extract_xml_tag(text: str | None, tag: str) -> str:
+    """Extract content enclosed in XML-style tags, e.g. <tag>...</tag>."""
+    if not text:
+        return ""
+    pattern = rf"<{tag}>(.*?)</{tag}>"
+    match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+    return match.group(1).strip() if match else ""
+
+
+@dataclass
+class ToolBenchmarkMetrics:
+    """Per-tool telemetry and performance metrics."""
+
+    tool_name: str
+    call_count: int = 0
+    total_duration_s: float = 0.0
+    success_count: int = 0
+    failure_count: int = 0
+    errors: list[str] = field(default_factory=list)
+
+    @property
+    def avg_duration_s(self) -> float:
+        return round(self.total_duration_s / self.call_count, 4) if self.call_count > 0 else 0.0
+
+    @property
+    def success_rate(self) -> float:
+        return round(self.success_count / self.call_count, 4) if self.call_count > 0 else 0.0
+
+    def record(self, duration_s: float, success: bool, error: str | None = None) -> None:
+        self.call_count += 1
+        self.total_duration_s += duration_s
+        if success:
+            self.success_count += 1
+        else:
+            self.failure_count += 1
+            if error:
+                self.errors.append(error)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "tool_name": self.tool_name,
+            "call_count": self.call_count,
+            "success_count": self.success_count,
+            "failure_count": self.failure_count,
+            "total_duration_s": round(self.total_duration_s, 4),
+            "avg_duration_s": self.avg_duration_s,
+            "success_rate": self.success_rate,
+            "errors": list(self.errors),
+        }
+
+
+@dataclass
+class ToolBenchmarkResult:
+    """Evaluation result for an individual benchmark task and its tool invocations."""
+
+    task_id: str = ""
+    tool_name: str = ""
+    success: bool = True
+    duration_s: float = 0.0
+    tool_calls: int = 0
+    summary: str = ""
+    feedback: str = ""
+    response: str = ""
+    errors: list[str] = field(default_factory=list)
+    per_tool_counts: dict[str, int] = field(default_factory=dict)
+    per_tool_durations: dict[str, float] = field(default_factory=dict)
+    tool_metrics: dict[str, ToolBenchmarkMetrics] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "task_id": self.task_id,
+            "tool_name": self.tool_name,
+            "success": self.success,
+            "duration_s": round(self.duration_s, 4),
+            "tool_calls": self.tool_calls,
+            "summary": self.summary,
+            "feedback": self.feedback,
+            "response": self.response,
+            "errors": list(self.errors),
+            "per_tool_counts": dict(self.per_tool_counts),
+            "per_tool_durations": {k: round(v, 4) for k, v in self.per_tool_durations.items()},
+            "tool_metrics": {k: v.to_dict() for k, v in self.tool_metrics.items()},
+        }
+
+
+def _format_benchmark_report(
+    persona: str,
+    summary_stats: dict[str, Any],
+    per_tool_metrics: dict[str, ToolBenchmarkMetrics],
+    results: list[ToolBenchmarkResult],
+) -> str:
+    lines = [
+        f"# Tool Evaluation Benchmark Report — {persona.upper()}",
+        "",
+        "## Summary Statistics",
+        f"- **Total Tasks**: {summary_stats['total_tasks']}",
+        f"- **Accuracy**: {summary_stats['accuracy']:.1%}",
+        f"- **Successful Tasks**: {summary_stats['successful_tasks']}",
+        f"- **Failed Tasks**: {summary_stats['failed_tasks']}",
+        f"- **Total Tool Calls**: {summary_stats['total_tool_calls']}",
+        f"- **Average Duration**: {summary_stats['average_duration_s']:.4f}s",
+        f"- **Average Tool Calls/Task**: {summary_stats['average_tool_calls']:.2f}",
+        "",
+        "## Per-Tool Metrics",
+        "| Tool | Calls | Success | Failure | Success Rate | Total Duration | Avg Latency |",
+        "|------|-------|---------|---------|--------------|----------------|-------------|",
+    ]
+    for tool_name, m in sorted(per_tool_metrics.items()):
+        lines.append(
+            f"| `{tool_name}` | {m.call_count} | {m.success_count} | {m.failure_count} | "
+            f"{m.success_rate:.1%} | {m.total_duration_s:.4f}s | {m.avg_duration_s:.4f}s |"
+        )
+    lines.extend(["", "## Task Results"])
+    for r in results:
+        status_str = "PASS" if r.success else "FAIL"
+        lines.append(
+            f"### [{status_str}] `{r.task_id}` ({r.duration_s:.4f}s, {r.tool_calls} calls)"
+        )
+        if r.summary:
+            lines.append(f"- **Summary**: {r.summary}")
+        if r.feedback:
+            lines.append(f"- **Feedback**: {r.feedback}")
+        if r.errors:
+            lines.append(f"- **Errors**: {'; '.join(r.errors)}")
+        lines.append("")
+    return "\n".join(lines).strip()
+
+
+def evaluate_tools_benchmark(
+    persona: str = "sakthai",
+    sample_tasks: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Execute dynamic tool evaluation benchmark suite adapting Anthropic Cookbook patterns.
+
+    Executes safe tool invocations in a sandboxed in-memory environment, measures per-tool
+    timing and success telemetry, parses structured feedback (<summary>, <feedback>, <response>),
+    and produces summary statistics and formatted reporting.
+    """
+    from ..memory.store import MemoryStore
+    from .registry import builtin_registry
+
+    if persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+
+    registry = builtin_registry()
+    store = MemoryStore(Path(":memory:"))
+
+    if sample_tasks is None:
+        doc_path = "AGENTS.md"
+        if (
+            not (Path.cwd() / "AGENTS.md").is_file()
+            and not (Path.cwd() / "pyproject.toml").is_file()
+        ):
+            safe_bench_file = sakthai_home() / "benchmark_doc.txt"
+            safe_bench_file.parent.mkdir(parents=True, exist_ok=True)
+            if not safe_bench_file.exists():
+                safe_bench_file.write_text("Sak Family dynamic benchmark sample", encoding="utf-8")
+            doc_path = str(safe_bench_file)
+        elif not (Path.cwd() / "AGENTS.md").is_file():
+            doc_path = "pyproject.toml"
+
+        sample_tasks = [
+            {
+                "task_id": "task_learn_fact",
+                "tool": "learn",
+                "args": {
+                    "value": "House of Sak dynamic tool benchmark telemetry initialized",
+                    "kind": "note",
+                    "key": "benchmark_init",
+                },
+                "response": (
+                    "<summary>Learned benchmark fact</summary>"
+                    "<feedback>Memory store write safe and confirmed</feedback>"
+                    "<response>Stored fact key=benchmark_init</response>"
+                ),
+            },
+            {
+                "task_id": "task_recall_memory",
+                "tool": "recall",
+                "args": {"limit": 5},
+                "response": (
+                    "<summary>Recalled memory state</summary>"
+                    "<feedback>Retrieved active memory items with low latency</feedback>"
+                    "<response>Memory recall completed</response>"
+                ),
+            },
+            {
+                "task_id": "task_search_memory",
+                "tool": "search",
+                "args": {"query": "benchmark"},
+                "response": (
+                    "<summary>Searched memory store</summary>"
+                    "<feedback>Query match successful</feedback>"
+                    "<response>Found matching benchmark entries</response>"
+                ),
+            },
+            {
+                "task_id": "task_read_workspace_doc",
+                "tool": "read_file",
+                "args": {"path": doc_path},
+                "response": (
+                    "<summary>Read workspace document</summary>"
+                    "<feedback>File content loaded without violation</feedback>"
+                    "<response>Document loaded successfully</response>"
+                ),
+            },
+        ]
+
+    results: list[ToolBenchmarkResult] = []
+    per_tool_metrics: dict[str, ToolBenchmarkMetrics] = {}
+
+    try:
+        for idx, task in enumerate(sample_tasks, start=1):
+            task_id = str(task.get("task_id") or task.get("id") or f"task_{idx}")
+            calls_to_run: list[dict[str, Any]] = []
+
+            if "tool_calls" in task and isinstance(task["tool_calls"], list):
+                calls_to_run.extend(task["tool_calls"])
+            elif "tool" in task or "tool_name" in task or "name" in task:
+                calls_to_run.append(
+                    {
+                        "tool": task.get("tool") or task.get("tool_name") or task.get("name"),
+                        "args": task.get("args")
+                        or task.get("parameters")
+                        or task.get("input")
+                        or {},
+                    }
+                )
+
+            task_duration = 0.0
+            task_success = True
+            task_errors: list[str] = []
+            task_tool_counts: dict[str, int] = {}
+            task_tool_durations: dict[str, float] = {}
+            last_output = ""
+
+            for call in calls_to_run:
+                t_name = str(
+                    call.get("tool") or call.get("tool_name") or call.get("name") or ""
+                ).strip()
+                t_args = call.get("args") or call.get("parameters") or call.get("input") or {}
+
+                if t_name not in per_tool_metrics:
+                    per_tool_metrics[t_name] = ToolBenchmarkMetrics(tool_name=t_name)
+
+                tool_obj = registry.get(t_name)
+                t0 = time.perf_counter()
+
+                if tool_obj is None:
+                    duration = time.perf_counter() - t0
+                    is_err = True
+                    output_text = f"Tool {t_name!r} not found in registry"
+                else:
+                    try:
+                        output_text, is_err = tool_obj.safe_call(t_args, store)
+                    except Exception as exc:  # noqa: BLE001
+                        output_text = f"Exception executing {t_name}: {exc}"
+                        is_err = True
+                    duration = time.perf_counter() - t0
+
+                task_duration += duration
+                last_output = output_text
+                call_ok = not is_err
+
+                per_tool_metrics[t_name].record(
+                    duration_s=duration,
+                    success=call_ok,
+                    error=output_text if is_err else None,
+                )
+                task_tool_counts[t_name] = task_tool_counts.get(t_name, 0) + 1
+                task_tool_durations[t_name] = task_tool_durations.get(t_name, 0.0) + duration
+
+                if not call_ok:
+                    task_success = False
+                    task_errors.append(f"[{t_name}] {output_text}")
+
+            feedback_raw = (
+                task.get("response")
+                or task.get("mock_response")
+                or task.get("feedback_text")
+                or task.get("evaluation")
+                or last_output
+            )
+            feedback_str = str(feedback_raw) if feedback_raw is not None else ""
+
+            summary_val = _extract_xml_tag(feedback_str, "summary")
+            feedback_val = _extract_xml_tag(feedback_str, "feedback")
+            response_val = _extract_xml_tag(feedback_str, "response")
+
+            if not summary_val:
+                tools_used = ", ".join(task_tool_counts.keys()) or "none"
+                summary_val = f"Task {task_id} completed with tools: {tools_used}"
+            if not feedback_val:
+                if task_success:
+                    feedback_val = "All tools executed successfully without error."
+                else:
+                    feedback_val = f"Task failed: {'; '.join(task_errors)}"
+            if not response_val:
+                response_val = feedback_str or ("OK" if task_success else "ERROR")
+
+            primary_tool = (
+                list(task_tool_counts.keys())[0] if len(task_tool_counts) == 1 else "multiple"
+            )
+            if not task_tool_counts:
+                primary_tool = "none"
+
+            result_entry = ToolBenchmarkResult(
+                task_id=task_id,
+                tool_name=primary_tool,
+                success=task_success,
+                duration_s=round(task_duration, 4),
+                tool_calls=len(calls_to_run),
+                summary=summary_val,
+                feedback=feedback_val,
+                response=response_val,
+                errors=task_errors,
+                per_tool_counts=task_tool_counts,
+                per_tool_durations={k: round(v, 4) for k, v in task_tool_durations.items()},
+                tool_metrics={
+                    k: per_tool_metrics[k] for k in task_tool_counts if k in per_tool_metrics
+                },
+            )
+            results.append(result_entry)
+    finally:
+        store.close()
+
+    total_tasks = len(results)
+    successful_tasks = sum(1 for r in results if r.success)
+    failed_tasks = total_tasks - successful_tasks
+    accuracy = round(successful_tasks / total_tasks, 4) if total_tasks > 0 else 0.0
+    total_tool_calls = sum(r.tool_calls for r in results)
+    avg_duration_s = (
+        round(sum(r.duration_s for r in results) / total_tasks, 4) if total_tasks > 0 else 0.0
+    )
+    avg_tool_calls = round(total_tool_calls / total_tasks, 2) if total_tasks > 0 else 0.0
+
+    summary_stats = {
+        "accuracy": accuracy,
+        "average_duration_s": avg_duration_s,
+        "avg_duration_s": avg_duration_s,
+        "average_tool_calls": avg_tool_calls,
+        "avg_tool_calls": avg_tool_calls,
+        "total_tool_calls": total_tool_calls,
+        "total_tasks": total_tasks,
+        "successful_tasks": successful_tasks,
+        "failed_tasks": failed_tasks,
+    }
+
+    report = _format_benchmark_report(
+        persona=persona,
+        summary_stats=summary_stats,
+        per_tool_metrics=per_tool_metrics,
+        results=results,
+    )
+
+    return {
+        "persona": persona,
+        "healthy": accuracy >= 0.8 and failed_tasks == 0,
+        "summary": summary_stats,
+        "accuracy": accuracy,
+        "average_duration_s": avg_duration_s,
+        "avg_duration_s": avg_duration_s,
+        "average_tool_calls": avg_tool_calls,
+        "avg_tool_calls": avg_tool_calls,
+        "total_tool_calls": total_tool_calls,
+        "total_tasks": total_tasks,
+        "successful_tasks": successful_tasks,
+        "failed_tasks": failed_tasks,
+        "per_tool_metrics": {k: v.to_dict() for k, v in per_tool_metrics.items()},
+        "results": [r.to_dict() for r in results],
+        "report": report,
     }
 
 

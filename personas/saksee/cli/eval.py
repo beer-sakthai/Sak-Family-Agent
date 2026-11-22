@@ -24,6 +24,7 @@ from ..agent.eval import (
     evaluate_persona_tools_health,
     evaluate_skills_trials,
     evaluate_soul_trials,
+    evaluate_tools_benchmark,
     evaluate_tools_trials,
     summarize_evals,
     summarize_fleet_audit,
@@ -455,8 +456,35 @@ def eval_safety(persona: str | None, as_json: bool) -> None:
     type=click.IntRange(min=1, max=100),
     help="Number of evaluation trials to run (e.g. -t 10 for consistency benchmark).",
 )
-def eval_tools(persona: str | None, detailed: bool, as_json: bool, trials: int) -> None:
+@click.option(
+    "--bench",
+    "-b",
+    "bench",
+    is_flag=True,
+    help="Run dynamic tool evaluation benchmark suite and telemetry report.",
+)
+def eval_tools(
+    persona: str | None,
+    detailed: bool,
+    as_json: bool,
+    trials: int,
+    bench: bool,
+) -> None:
     """Evaluate built-in and persona tools: 6-factor rubric, schemas, validation, and repeatability."""
+    if bench:
+        bench_persona = persona or "sakthai"
+        res = evaluate_tools_benchmark(persona=bench_persona)
+        if as_json:
+            click.echo(json.dumps(res, indent=2, ensure_ascii=False))
+            if not res["healthy"]:
+                sys.exit(1)
+            return
+
+        click.echo(res["report"])
+        if not res["healthy"]:
+            sys.exit(1)
+        return
+
     if trials > 1:
         trial_res = evaluate_tools_trials(persona=persona, trials=trials)
         if as_json:
@@ -735,11 +763,46 @@ def eval_tasks(as_json: bool) -> None:
 
 
 @eval_cmd.command("bench", context_settings={"ignore_unknown_options": True})
+@click.option("--suite", default=None, help="Benchmark suite name or path.")
+@click.option(
+    "--persona",
+    type=click.Choice(PERSONA_NAMES),
+    default=None,
+    help="Persona to evaluate (injects persona intro/soul context into generator).",
+)
+@click.option("--json", "as_json", is_flag=True, help="Emit benchmark results as JSON.")
 @click.option("--dry-run", is_flag=True, help="Print benchmark command without executing.")
+@click.option("--legacy", is_flag=True, help="Run legacy benchmark via scripts/eval/run_bench.py.")
 @click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
-def eval_bench(dry_run: bool, extra_args: tuple[str, ...]) -> None:
-    """Run model evaluation benchmark via scripts/eval/run_bench.py."""
-    argv = ["uv", "run", "python", "scripts/eval/run_bench.py"] + list(extra_args)
-    code = run_repo_argv(argv, dry_run=dry_run)
-    if code != 0:
-        sys.exit(code)
+def eval_bench(
+    suite: str | None,
+    persona: str | None,
+    as_json: bool,
+    dry_run: bool,
+    legacy: bool,
+    extra_args: tuple[str, ...],
+) -> None:
+    """Run benchmark evaluation suite or legacy model benchmark."""
+    if legacy or dry_run or extra_args:
+        argv = ["uv", "run", "python", "scripts/eval/run_bench.py"] + list(extra_args)
+        code = run_repo_argv(argv, dry_run=dry_run)
+        if code != 0:
+            sys.exit(code)
+        return
+
+    if str(config.REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(config.REPO_ROOT))
+
+    from evaluation_tasks.graders import BenchmarkSuite, load_benchmark_tasks
+
+    tasks = load_benchmark_tasks(suite)
+    benchmark = BenchmarkSuite(tasks=tasks, persona=persona)
+    result = benchmark.run()
+
+    if as_json:
+        click.echo(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
+    else:
+        click.echo(result.format_markdown())
+
+    if result.total_tasks > 0 and result.passed_tasks == 0:
+        sys.exit(1)
