@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Outfit } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
+import { BotIdClient } from "botid/client";
 import "./globals.css";
 
 import { THEME_BOOTSTRAP } from "@/lib/theme";
@@ -109,6 +110,12 @@ export default function RootLayout({
       <head>
         {/* Before first paint, not after hydration: see THEME_BOOTSTRAP. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+        <BotIdClient
+          protect={[
+            { path: "/api/gateway/*", method: "POST" },
+            { path: "/api/workflows", method: "POST" },
+          ]}
+        />
       </head>
       <body className="min-h-screen bg-canvas text-fg antialiased">
         {/* The first tab stop on the page. Sighted keyboard users get past the
