@@ -51,6 +51,9 @@ Each of the six personas hosts its own self-evolution module and evaluates acros
    - `evolution/`: Prompt, skill, and tool mutation modules (`CompositeFitness` + `ConstraintValidator`).
    - `evolve_agent.sh`: CLI runner defaulting to the hosting persona.
    - `tests/`: Self-evolution constraint and fitness unit tests.
+8. **Free-Tier Quota Sentinel (`sakthai.agent.quota`, `sakthai quota status`)**: Hybrid in-memory sliding window rate limiter backed by SQLite persistence (`~/.sakthai/quota_sentinel.db`) with Pacific Time midnight resets, automatic 3-tier model cascading (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1`), and zero-cost protection.
+9. **Interactive TUI & Risk Permission Gates (`sak chat --tui`)**: Full-screen Textual interface with two-phase tool execution transparency (`tool_call_start` and `tool_call` with elapsed duration), live widget updates, and `ConfirmModalScreen` risk permission gates (`[y]es / [n]o / [a]lways`) for high-risk operations.
+10. **Memory Shard Studio & Gateway SSE Streaming**: Persona SQLite memory shards (`~/.sakthai/<persona>/memory.db`) inspected via `/v1/memory/shards`, filtered via `/v1/memory/facts`, and tested via prompt injection simulator (`/v1/memory/preview`) with DataLossGuardrail security. Verified across 4,155+ automated tests (3,547 pytest + 608 vitest).
 
 ## Composition rule
 

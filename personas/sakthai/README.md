@@ -8,8 +8,10 @@ SakThai coordinates the six-agent family, manages Hugging Face Hub deployments, 
 
 ## ⚡ Core Responsibilities
 
-- **Lead Coordination**: Orchestrates family workflows and delegates to deputies (SakKing, SakTan, SakSee).
+- **Lead Coordination**: Orchestrates family workflows and delegates to deputies (SakKing, SakTan, SakSee) via distributed Gateway pipelines (`/v1/team/pipelines/stream`).
 - **Hugging Face Hub Master**: Secure model/dataset upload, sync, and inference with break-glass safety protocol (`assert_hf_write_allowed`).
+- **Free-Tier Quota Sentinel**: Guarded API rate limiting with Pacific Time resets (`~/.sakthai/quota_sentinel.db`) and adaptive model fallback (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1`).
+- **Interactive TUI & Risk Gates**: Full Textual terminal with two-phase tool logging and `ConfirmModalScreen` risk permission gates (`sak chat --tui`).
 - **Progressive Skill Hydration**: Manifest-driven lazy loading of specialized functional clusters (`get_skill_domain_manifests`).
 - **Self-Evolution Engine**: Reflective evolutionary optimization using DSPy + GEPA (Genetic-Pareto Prompt Evolution).
 - **Evaluator-Optimizer Engine**: Iterative candidate generation and multi-dimensional rubric scoring (`sakthai run --optimize`).
@@ -29,8 +31,12 @@ uv run sakthai run --persona sakthai "Analyze trending Hugging Face spaces and d
 # Run with bounded Evaluator-Optimizer refinement loop
 uv run sakthai run --persona sakthai --optimize "Synthesize latest ML findings"
 
-# Run with interactive chat mode
+# Run with interactive chat mode (terminal or full-screen TUI)
 uv run sakthai chat --persona sakthai
+uv run sak chat --tui --persona sakthai
+
+# Check Free-Tier Quota Sentinel status and token limits
+uv run sakthai quota status
 
 # Run dynamic tool evaluation & telemetry benchmarks
 uv run sakthai eval tools --bench --persona sakthai
