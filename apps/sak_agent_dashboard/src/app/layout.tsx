@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono, Outfit } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import { BotIdClient } from "botid/client";
+import MyStatsig from "./my-statsig";
 import "./globals.css";
 
 import { THEME_BOOTSTRAP } from "@/lib/theme";
@@ -137,7 +138,7 @@ export default function RootLayout({
           <div className="absolute bottom-0 left-1/3 h-[24rem] w-[24rem] rounded-full bg-hue-emerald opacity-[calc(var(--wash-alpha)*0.6)] blur-[120px]" />
           <div className="absolute inset-0 bg-grid" />
         </div>
-        {children}
+        <MyStatsig>{children}</MyStatsig>
         <SpeedInsights />
         <Analytics />
       </body>

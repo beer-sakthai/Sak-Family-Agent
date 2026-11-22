@@ -13,6 +13,9 @@
     "test:all": "vitest run && python3 workflow_engine/verify.py"
   },
   "dependencies": {
+    "@statsig/react-bindings": "^3.33.8",
+    "@statsig/session-replay": "^3.33.8",
+    "@statsig/web-analytics": "^3.33.8",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.1.0",
     "better-sqlite3": "13.2.0",
