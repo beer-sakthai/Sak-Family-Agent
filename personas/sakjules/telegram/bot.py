@@ -35,8 +35,8 @@ logger = logging.getLogger(__name__)
 SUPPORTED_PERSONAS = ("sakthai", "sakking", "saktan", "saksee", "saksit", "sakjules")
 RECOMMENDED_MODELS = (
     "huggingface/Kimi-K2-Instruct",
-    "gemini-2.5-pro",
-    "gemini-2.5-flash",
+    "gemini-4-carbon",
+    "gemini-4-hydrogen",
     "ollama/qwen2.5-coder",
     "ollama/sakthai",
     "gpt-4o",
@@ -163,7 +163,7 @@ async def set_model(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
     if not context.args:
         await update.message.reply_text(
-            "Please specify a model name. Example: /model gemini-2.5-pro or /model qwen2.5-coder\n"
+            "Please specify a model name. Example: /model gemini-4-hydrogen or /model qwen2.5-coder\n"
             "Use /models to see recommendations."
         )
         return

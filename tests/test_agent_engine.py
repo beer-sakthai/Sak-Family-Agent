@@ -118,7 +118,7 @@ def test_unified_agent_config_defaults():
     config = UnifiedAgentConfig(name="default_agent")
     assert config.name == "default_agent"
     assert config.engine == AgentEngineMode.ANTIGRAVITY
-    assert config.model == "gemini-2.5-flash"
+    assert config.model == "gemini-4-hydrogen"
     assert config.max_turns == 150
     assert config.instruction == "You are an autonomous AI pair programming agent."
 

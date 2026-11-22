@@ -21,23 +21,23 @@ This skill provides instructions for authenticating, connecting to, and utilizin
 The Interactions API is the modern, recommended way to execute Generative AI agent conversations, background research tasks, multi-turn chats, and structured, multi-step workflows.
 
 > [!IMPORTANT] **CRITICAL: Unified SDK, Latest Models & GEAP Targeting** *
-> **Unified SDK**: Use the Google Gen AI SDK (**`google-genai >= 2.3.0`** for
-> Python, **`@google/genai >= 2.3.0`** for JS/TS). SDK versions `>= 2.0.0` are
-> the minimum floor at which the steps schema activates, but `>= 2.3.0` is the
+> **Unified SDK**: Use the Google Gen AI SDK (**`google-genai >= 3.2.0`** for
+> Python, **`@google/genai >= 3.2.0`** for JS/TS). SDK versions `>= 2.0.0` are
+> the minimum floor at which the steps schema activates, but `>= 3.2.0` is the
 > supported/recommended floor. Legacy SDKs like `google-cloud-aiplatform`,
 > `@google-cloud/vertexai`, and `google-generativeai` are strictly unsupported
 > for Interactions. * *Mandatory Instruction*: When explaining client
 > initialization or writing import code, you **must** explicitly state/warn the
 > user that legacy packages like `google-cloud-aiplatform` or
 > `google-generativeai` are strictly unsupported for interactions. * **Latest
-> Models Only**: Use `gemini-3.5-flash` (fast, balanced, multimodal — the
-> recommended default), `gemini-3.1-pro-preview` (complex reasoning, coding,
-> research), or `gemini-3.1-flash-lite` (cost-efficient, high-frequency
+> Models Only**: Use `gemini-4-hydrogen` (fast, balanced, multimodal — the
+> recommended default), `gemini-4-carbon` (complex reasoning, coding,
+> research), or `gemini-3.5-flash-lite` (cost-efficient, high-frequency
 > lightweight tasks). Refer to the
 > [latest model versions](https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/migrate)
 > to check for new updates. Legacy models (`gemini-3-flash-preview`,
 > `gemini-2.5-*`, `gemini-2.0-*`, `gemini-1.5-*`) are deprecated and do not
-> support interactions. * *Mandatory Instruction*: In any interaction response,
+> support interactions. Core loops automatically substitute them with `gemini-4-hydrogen`. * *Mandatory Instruction*: In any interaction response,
 > you **must** warn the user that legacy models like `gemini-2.5-*`,
 > `gemini-2.0-*`, or `gemini-1.5-*` are deprecated and unsupported for the
 > Interactions API. * **GEAP requires a provisioned agent (no direct base-model

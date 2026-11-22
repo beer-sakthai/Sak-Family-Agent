@@ -63,6 +63,24 @@ def to_gemini_contents(messages: list[dict[str, Any]]) -> list[Any]:
     return contents
 
 
+#: Mapping of legacy/deprecated Gemini model names to modern replacements.
+LEGACY_GEMINI_MODELS: dict[str, str] = {
+    "gemini-2.5-flash": "gemini-4-hydrogen",
+    "gemini-2.5-flash-lite": "gemini-3.5-flash-lite",
+    "gemini-2.5-pro": "gemini-4-carbon",
+    "gemini-2.0-flash": "gemini-4-hydrogen",
+    "gemini-2.0-flash-lite": "gemini-3.5-flash-lite",
+    "gemini-1.5-flash": "gemini-4-hydrogen",
+    "gemini-1.5-pro": "gemini-4-carbon",
+    "gemini-3.1-flash-lite": "gemini-3.5-flash-lite",
+    "gemini-3.1-pro-preview": "gemini-4-carbon",
+    "gemini-3-pro-preview": "gemini-4-carbon",
+    "gemini-3.5-flash": "gemini-4-hydrogen",
+    "gemini-3.7-flash": "gemini-4-hydrogen",
+    "gemini-3.8-flash": "gemini-4-hydrogen",
+}
+
+
 def _stop_reason(has_tool_call: bool, finish_reason: Any) -> str:
     """Map Gemini's tool-call/finish signals to a normalised stop reason."""
     if has_tool_call:
@@ -88,6 +106,16 @@ def call_gemini(
     the callback; the assembled result is identical in shape to the non-streaming
     ``generate_content`` response (a single text block plus any tool_use blocks).
     """
+    base_name = model.rsplit("/", 1)[-1]
+    if base_name in LEGACY_GEMINI_MODELS:
+        substitute = LEGACY_GEMINI_MODELS[base_name]
+        logger.warning(
+            "Gemini model '%s' is deprecated; auto-substituting '%s' per gemini-api-dev standard",
+            model,
+            substitute,
+        )
+        model = substitute
+
     from google.genai import types
 
     def _clean_schema(schema: Any) -> Any:
@@ -190,3 +218,62 @@ def call_gemini(
     except Exception as exc:  # noqa: BLE001
         logger.error("Gemini API call failed: %s", exc)
         raise AgentError(f"Gemini API call failed: {exc}") from exc
+
+
+def call_gemini_decision(
+    client: Any,
+    text_input: str,
+    questions: dict[str, dict[str, Any]],
+    model: str = "gemini-decision-1",
+) -> Any:
+    """Evaluate calibrated questions with zero output tokens via Decisions API."""
+
+    def _execute() -> Any:
+        return client.decisions.create(
+            model=model,
+            input=text_input,
+            questions=questions,
+        )
+
+    try:
+        return with_retry(_execute)
+    except Exception as exc:
+        logger.error("Gemini Decisions API call failed: %s", exc)
+        raise AgentError(f"Gemini Decisions API call failed: {exc}") from exc
+
+
+def call_gemini_interaction(
+    client: Any,
+    text_input: str,
+    model: str = "gemini-4-hydrogen",
+    previous_interaction_id: str | None = None,
+    stream: bool = False,
+) -> Any:
+    """Make a call using the modern Interactions API."""
+    base_name = model.rsplit("/", 1)[-1]
+    if base_name in LEGACY_GEMINI_MODELS:
+        substitute = LEGACY_GEMINI_MODELS[base_name]
+        logger.warning(
+            "Gemini model '%s' is deprecated; auto-substituting '%s' per gemini-api-dev standard",
+            model,
+            substitute,
+        )
+        model = substitute
+
+    kwargs: dict[str, Any] = {
+        "model": model,
+        "input": text_input,
+    }
+    if previous_interaction_id:
+        kwargs["previous_interaction_id"] = previous_interaction_id
+    if stream:
+        kwargs["stream"] = True
+
+    def _execute() -> Any:
+        return client.interactions.create(**kwargs)
+
+    try:
+        return with_retry(_execute)
+    except Exception as exc:
+        logger.error("Gemini Interactions API call failed: %s", exc)
+        raise AgentError(f"Gemini Interactions API call failed: {exc}") from exc

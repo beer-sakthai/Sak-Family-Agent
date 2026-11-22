@@ -13,6 +13,7 @@ from typing import Any
 import yaml
 
 from .config import (
+    AGENTS_SKILLS_DIR,
     CURATED_LIBRARY_DIR,
     LIBRARY_DIR,
     PERSONA_NAMES,
@@ -250,6 +251,8 @@ def default_skill_roots(persona: str | None = None) -> tuple[Path, ...]:
         LIBRARY_DIR,
         curated_root,
     ]
+    if AGENTS_SKILLS_DIR.is_dir():
+        roots.append(AGENTS_SKILLS_DIR)
     if persona and persona in PERSONA_NAMES:
         p_ext = persona_extensions_dir(persona)
         if p_ext.is_dir():
