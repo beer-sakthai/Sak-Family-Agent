@@ -104,6 +104,37 @@ def _make_read_input(prompt: str = "> ") -> Callable[[], str | None]:
     return _read
 
 
+def _make_confirm_tool(
+    persona: str, session_allowed: set[str] | None = None
+) -> Callable[[str, dict[str, Any]], bool]:
+    from ..agent import theme
+
+    allowed = session_allowed if session_allowed is not None else set()
+    accent = theme.PERSONA_ACCENTS.get(persona, "cyan")
+
+    def _confirm(name: str, args: dict[str, Any]) -> bool:
+        if name in allowed:
+            return True
+        console = Console()
+        console.print(
+            f"[bold {accent}]⚠ {name}[/bold {accent}] wants to run with: [dim]{args}[/dim]"
+        )
+        try:
+            answer = (
+                console.input("[bold]Allow this? [y=yes, n=no, a=always for session] [/bold]")
+                .strip()
+                .lower()
+            )
+        except (EOFError, KeyboardInterrupt):
+            return False
+        if answer in ("a", "always"):
+            allowed.add(name)
+            return True
+        return answer in ("y", "yes")
+
+    return _confirm
+
+
 @click.command()
 @click.option(
     "--persona",
@@ -195,6 +226,8 @@ def chat(
                 ).run()
                 return
             active_p = [persona]
+            session_allowed: set[str] = set()
+            confirm_tool = _make_confirm_tool(persona, session_allowed)
             run_chat(
                 persona=persona,
                 soul_text=soul_text,
@@ -207,6 +240,7 @@ def chat(
                 console=Console(),
                 read_input=_make_read_input(),
                 on_persona_change=lambda new_p: active_p.__setitem__(0, new_p),
+                confirm_tool=confirm_tool,
             )
     finally:
         store.close()

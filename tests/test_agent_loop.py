@@ -2436,3 +2436,201 @@ def test_persona_recorded_on_the_non_terminal_stop_path(
         next((sakthai_home / "sessions").glob("*.json")).read_text(encoding="utf-8")
     )
     assert payload["persona"] == "sakking"
+
+
+def test_tool_call_start_event_and_elapsed_time(store: MemoryStore) -> None:
+    """Agent loop must emit tool_call_start before running a tool and tool_call with elapsed time."""
+    from sakthai.agent.tools import Tool
+
+    called = False
+
+    def _handler(args: dict[str, Any], store: MemoryStore) -> str:
+        nonlocal called
+        called = True
+        return "tool done"
+
+    test_tool = Tool(
+        name="test_timed_tool",
+        description="A timed test tool",
+        input_schema={"type": "object", "properties": {"msg": {"type": "string"}}},
+        handler=_handler,
+    )
+
+    events: list[tuple[str, dict[str, Any]]] = []
+    client = FakeClient(
+        [
+            _Resp(
+                "tool_use",
+                [_Block(type="tool_use", id="t1", name="test_timed_tool", input={"msg": "hi"})],
+            ),
+            _Resp("end_turn", [_Block(type="text", text="completed")]),
+        ]
+    )
+
+    res = run_agent(
+        "run tool",
+        client=client,
+        store=store,
+        tools=(test_tool,),
+        provider="anthropic",
+        on_event=lambda kind, payload: events.append((kind, payload)),
+    )
+    assert called is True
+    assert res.text == "completed"
+
+    event_kinds = [k for k, _ in events]
+    assert "tool_call_start" in event_kinds
+    assert "tool_call" in event_kinds
+
+    start_idx = event_kinds.index("tool_call_start")
+    end_idx = event_kinds.index("tool_call")
+    assert start_idx < end_idx
+
+    start_payload = events[start_idx][1]
+    assert start_payload["name"] == "test_timed_tool"
+    assert start_payload["input"] == {"msg": "hi"}
+
+    end_payload = events[end_idx][1]
+    assert end_payload["name"] == "test_timed_tool"
+    assert "elapsed" in end_payload
+    assert isinstance(end_payload["elapsed"], float)
+    assert end_payload["elapsed"] >= 0.0
+
+
+def test_tool_confirmation_denied(store: MemoryStore) -> None:
+    """When on_confirm returns False, the tool handler must NOT execute and error is returned."""
+    from sakthai.agent.tools import Tool
+
+    handler_called = False
+
+    def _risky_handler(args: dict[str, Any], store: MemoryStore) -> str:
+        nonlocal handler_called
+        handler_called = True
+        return "should not run"
+
+    risky_tool = Tool(
+        name="risky_operation",
+        description="A risky operation needing approval",
+        input_schema={"type": "object", "properties": {"cmd": {"type": "string"}}},
+        handler=_risky_handler,
+        requires_confirmation=True,
+    )
+
+    confirm_prompts: list[tuple[str, dict[str, Any]]] = []
+
+    def _deny_confirm(name: str, args: dict[str, Any]) -> bool:
+        confirm_prompts.append((name, args))
+        return False
+
+    client = FakeClient(
+        [
+            _Resp(
+                "tool_use",
+                [_Block(type="tool_use", id="r1", name="risky_operation", input={"cmd": "rm -rf"})],
+            ),
+            _Resp("end_turn", [_Block(type="text", text="stopped")]),
+        ]
+    )
+
+    res = run_agent(
+        "run risky tool",
+        client=client,
+        store=store,
+        tools=(risky_tool,),
+        provider="anthropic",
+        on_confirm=_deny_confirm,
+    )
+
+    assert handler_called is False
+    assert len(confirm_prompts) == 1
+    assert confirm_prompts[0] == ("risky_operation", {"cmd": "rm -rf"})
+    assert res.tool_calls[0]["is_error"] is True
+
+    # Check user message response content
+    tool_result = res.messages[-2]["content"][0]
+    assert tool_result["type"] == "tool_result"
+    assert "denied by the user" in tool_result["content"]
+
+
+def test_tool_confirmation_approved(store: MemoryStore) -> None:
+    """When on_confirm returns True, the tool handler executes normally."""
+    from sakthai.agent.tools import Tool
+
+    handler_called = False
+
+    def _risky_handler(args: dict[str, Any], store: MemoryStore) -> str:
+        nonlocal handler_called
+        handler_called = True
+        return "executed successfully"
+
+    risky_tool = Tool(
+        name="risky_operation",
+        description="A risky operation",
+        input_schema={"type": "object", "properties": {}},
+        handler=_risky_handler,
+        requires_confirmation=True,
+    )
+
+    client = FakeClient(
+        [
+            _Resp(
+                "tool_use",
+                [_Block(type="tool_use", id="r2", name="risky_operation", input={})],
+            ),
+            _Resp("end_turn", [_Block(type="text", text="done")]),
+        ]
+    )
+
+    res = run_agent(
+        "run risky tool approved",
+        client=client,
+        store=store,
+        tools=(risky_tool,),
+        provider="anthropic",
+        on_confirm=lambda name, args: True,
+    )
+
+    assert handler_called is True
+    assert res.tool_calls[0]["is_error"] is False
+
+
+def test_tool_confirmation_unattended_when_none(store: MemoryStore) -> None:
+    """When on_confirm is None, tool execution runs without gate interruption."""
+    from sakthai.agent.tools import Tool
+
+    handler_called = False
+
+    def _risky_handler(args: dict[str, Any], store: MemoryStore) -> str:
+        nonlocal handler_called
+        handler_called = True
+        return "unattended run"
+
+    risky_tool = Tool(
+        name="risky_operation",
+        description="A risky operation",
+        input_schema={"type": "object", "properties": {}},
+        handler=_risky_handler,
+        requires_confirmation=True,
+    )
+
+    client = FakeClient(
+        [
+            _Resp(
+                "tool_use",
+                [_Block(type="tool_use", id="r3", name="risky_operation", input={})],
+            ),
+            _Resp("end_turn", [_Block(type="text", text="done")]),
+        ]
+    )
+
+    res = run_agent(
+        "run unattended",
+        client=client,
+        store=store,
+        tools=(risky_tool,),
+        provider="anthropic",
+        on_confirm=None,
+    )
+
+    assert handler_called is True
+    assert res.tool_calls[0]["is_error"] is False

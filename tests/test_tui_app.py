@@ -405,3 +405,94 @@ async def test_agent_call_non_tool_call_event(monkeypatch: pytest.MonkeyPatch) -
         app._submit("test turn")
         await _wait_for_completion(pilot, done)
     app.store.close()
+
+
+@pytest.mark.asyncio
+async def test_tool_call_widget_lifecycle() -> None:
+    app = _app()
+    async with app.run_test() as pilot:
+        widget = tui_mod.ToolCallWidget("read_file", {"path": "test.txt"}, "sakthai")
+        pilot.app.query_one("#conversation").mount(widget)
+        await pilot.pause()
+        assert widget._timer is not None
+
+        widget.finish(
+            {"name": "read_file", "input": {"path": "test.txt"}, "is_error": False, "elapsed": 0.42}
+        )
+        await pilot.pause()
+        assert widget._timer is None
+    app.store.close()
+
+
+@pytest.mark.asyncio
+async def test_confirm_modal_screen_bindings() -> None:
+    app = _app()
+    async with app.run_test() as pilot:
+        modal = tui_mod.ConfirmModalScreen("run_command", {"command": "ls"}, "sakthai")
+        dismissed_value = None
+
+        def _on_dismiss(val: str | None) -> None:
+            nonlocal dismissed_value
+            dismissed_value = val
+
+        app.push_screen(modal, _on_dismiss)
+        await pilot.pause()
+
+        # Press 'y' to allow
+        await pilot.press("y")
+        await pilot.pause()
+        assert dismissed_value == "y"
+    app.store.close()
+
+
+@pytest.mark.asyncio
+async def test_confirm_modal_screen_always_and_deny() -> None:
+    app = _app()
+    async with app.run_test() as pilot:
+        dismissed_values: list[str | None] = []
+        modal_always = tui_mod.ConfirmModalScreen("forget", {"fact_id": 1}, "sakthai")
+        app.push_screen(modal_always, dismissed_values.append)
+        await pilot.pause()
+        modal_always.action_always()
+        await pilot.pause()
+        assert modal_always.is_active is False
+        assert dismissed_values == ["a"]
+
+        # Test 'n' for deny
+        modal_deny = tui_mod.ConfirmModalScreen("forget", {"fact_id": 2}, "sakthai")
+        app.push_screen(modal_deny, dismissed_values.append)
+        await pilot.pause()
+        modal_deny.action_deny()
+        await pilot.pause()
+        assert modal_deny.is_active is False
+        assert dismissed_values == ["a", "n"]
+    app.store.close()
+
+
+@pytest.mark.asyncio
+async def test_tui_tool_call_start_and_finish_events(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _fake(task: str, **kwargs: Any) -> AgentResult:
+        on_event = kwargs.get("on_event")
+        if on_event:
+            on_event("tool_call_start", {"name": "run_command", "input": {"command": "echo hi"}})
+            on_event(
+                "tool_call",
+                {
+                    "name": "run_command",
+                    "input": {"command": "echo hi"},
+                    "is_error": False,
+                    "elapsed": 0.15,
+                },
+            )
+        return AgentResult(text="all tools finished", iterations=1, stop_reason="end")
+
+    monkeypatch.setattr(tui_mod, "run_agent", _fake)
+    app = _app()
+    async with app.run_test() as pilot:
+        done = _patch_completion_probe(app)
+        app._submit("run tool test")
+        await _wait_for_completion(pilot, done)
+        children = pilot.app.query_one("#conversation").children
+        tool_widgets = [c for c in children if isinstance(c, tui_mod.ToolCallWidget)]
+        assert len(tool_widgets) == 1
+    app.store.close()

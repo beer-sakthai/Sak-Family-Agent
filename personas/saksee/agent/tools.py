@@ -54,6 +54,7 @@ class Tool:
     # MCP behaviour hints (readOnlyHint, destructiveHint, idempotentHint,
     # openWorldHint) advertised in ``tools/list`` so clients can gate approvals.
     annotations: Mapping[str, bool] | None = None
+    requires_confirmation: bool = False
 
     def schema(self) -> dict[str, Any]:
         """The model-facing tool definition."""
@@ -1131,6 +1132,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
         },
         handler=_forget,
         annotations=_annotations(destructive=True, idempotent=True),
+        requires_confirmation=True,
     ),
     Tool(
         name="read_file",
@@ -1175,6 +1177,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
         },
         handler=_run_command,
         annotations=_annotations(destructive=True, open_world=True),
+        requires_confirmation=True,
     ),
     Tool(
         name="send_telegram_message",
@@ -1191,6 +1194,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
         },
         handler=_send_telegram_message,
         annotations=_annotations(open_world=True),
+        requires_confirmation=True,
     ),
     Tool(
         name="send_outlook_mail",
@@ -1313,6 +1317,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
         },
         handler=_run_agent_loop,
         annotations=_annotations(destructive=True, open_world=True),
+        requires_confirmation=True,
     ),
     Tool(
         name="family_recall",
