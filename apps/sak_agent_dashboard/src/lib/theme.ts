@@ -8,7 +8,7 @@
  * hydration disagreement to reconcile afterwards.
  */
 
-export const THEMES = ["system", "light", "dark"] as const;
+export const THEMES = ["system", "light", "dark", "cyberpunk"] as const;
 export type Theme = (typeof THEMES)[number];
 
 export const DENSITIES = ["comfortable", "compact"] as const;
@@ -70,8 +70,8 @@ export function applyPresentation(presenting: boolean, root: HTMLElement): void 
  * Used for the toggle's icon and for `<meta name="theme-color">`, both of which
  * need a concrete answer where the setting itself may be "system".
  */
-export function resolveTheme(theme: Theme, prefersLight: boolean): "light" | "dark" {
-  if (theme === "light" || theme === "dark") return theme;
+export function resolveTheme(theme: Theme, prefersLight: boolean): "light" | "dark" | "cyberpunk" {
+  if (theme === "light" || theme === "dark" || theme === "cyberpunk") return theme;
   return prefersLight ? "light" : "dark";
 }
 
@@ -87,7 +87,7 @@ export function resolveTheme(theme: Theme, prefersLight: boolean): "light" | "da
 export const THEME_BOOTSTRAP = `(function(){try{
 var d=document.documentElement;
 var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});
-if(t==="light"||t==="dark"){d.setAttribute("data-theme",t)}
+if(t==="light"||t==="dark"||t==="cyberpunk"){d.setAttribute("data-theme",t)}
 var n=localStorage.getItem(${JSON.stringify(DENSITY_STORAGE_KEY)});
 d.setAttribute("data-density",n==="compact"?"compact":"comfortable");
 if(localStorage.getItem(${JSON.stringify(PRESENTATION_STORAGE_KEY)})==="on"){d.setAttribute("data-presentation","on")}
