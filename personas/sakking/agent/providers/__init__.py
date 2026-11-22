@@ -35,11 +35,13 @@ from .base import (
 )
 from .gateway_provider import call_gateway
 from .gemini_provider import (
+    FREE_TIER_GEMINI_MODELS,
     LEGACY_GEMINI_MODELS,
     PAID_ONLY_GEMINI_MODELS,
     call_gemini,
     call_gemini_decision,
     call_gemini_interaction,
+    is_free_tier_model,
     to_gemini_contents,
 )
 from .openai_provider import call_openai_compat, to_openai_messages
@@ -47,6 +49,7 @@ from .openai_provider import call_openai_compat, to_openai_messages
 __all__ = [
     "AgentError",
     "Block",
+    "FREE_TIER_GEMINI_MODELS",
     "LEGACY_GEMINI_MODELS",
     "PAID_ONLY_GEMINI_MODELS",
     "Response",
@@ -60,6 +63,7 @@ __all__ = [
     "call_openai_compat",
     "detect_provider",
     "find_tool_name_by_id",
+    "is_free_tier_model",
     "is_retryable",
     "to_gemini_contents",
     "to_openai_messages",

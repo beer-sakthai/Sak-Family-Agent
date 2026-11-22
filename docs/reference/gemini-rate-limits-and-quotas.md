@@ -62,11 +62,29 @@ Internal reasoning tokens count toward both your output token cap and the input/
 * **Failed Requests Consume Quota**: HTTP 400 (Bad Request), 500 (Internal Error), and rapid 429 retry loops still burn against your project's RPM and RPD allocations.
 * **Daily Reset Time**: RPD quotas reset daily at **midnight Pacific Time (08:00 UTC)**.
 
+## 5. Quick Reference: Free-Tier Models & Token Limits (November 2026)
+
+Format: `Model ID | Model Name | Category | Max Tokens (In / Out) | Free Limits (RPM / TPM / RPD)`
+
+* `gemini-4-hydrogen` | Gemini 4 Hydrogen | Frontier Reasoning (Gemini 4) | 1,048,576 unified (65,536 sync out; up to 1M long decode) | Project-specific (view in AI Studio)
+* `gemini-3.8-flash` | Gemini 3.8 Flash | Balanced Multimodal (Gemini 3) | 1,048,576 in / 65,536 out | Project-specific (~10 RPM / ~250K TPM / ~1,500 RPD indicative)
+* `gemini-3.6-flash` | Gemini 3.6 Flash | Balanced Multimodal (Gemini 3) | 1,048,576 in / 65,536 out | Project-specific (view in AI Studio)
+* `gemini-3.5-flash-lite` | Gemini 3.5 Flash-Lite | High-Volume / Low-Latency | 1,048,576 in / 65,536 out | Project-specific (view in AI Studio)
+* `gemini-3.1-flash-lite` | Gemini 3.1 Flash-Lite | High-Volume / Low-Latency | 1,048,576 in / 65,536 out | Project-specific (view in AI Studio)
+* `gemini-decision-1` | Gemini Decision 1 | Classification / Scoring | 262,144 in / 0 out (scores only) | 200 RPM / 50,000 TPM / 10,000 RPD (published)
+* `gemma-4-31b-it` | Gemma 4 31B | Open-Weight (Dense) | 262,144 context / 32,768 out | Project-specific (free tier only)
+* `gemma-4-26b-a4b-it` | Gemma 4 26B A4B | Open-Weight (MoE) | 262,144 context / 32,768 out | Project-specific (free tier only)
+* `gemini-embedding-001` | Gemini Embedding | Text Embeddings | 2,048 in / 128-3,072 dims | Project-specific (view in AI Studio)
+* `gemini-2.5-flash` | Gemini 2.5 Flash | Legacy (Prior-Usage Only) | 1,048,576 in / 65,536 out | Project-specific (restricted on new projects)
+* `gemini-2.5-pro` | Gemini 2.5 Pro | Legacy (Prior-Usage Only) | 1,048,576 in / 65,536 out | Project-specific (restricted on new projects)
+
 ---
 
-## 5. Sak Family Agent Routing Recommendations
+## 6. GEMINI_API_KEY Operational Mode: Free Tier Guardrails
 
-1. **Daily Operational Loop**: Use `gemini-4-hydrogen` as default. On free-tier projects without billing, respect the ~20 RPD cap.
-2. **High-Frequency Background Tasks**: Route to `gemini-3.5-flash-lite` for 25x higher free quota (~500 RPD).
-3. **Calibrated Evaluator / Routing / Grader Steps**: Use `gemini-decision-1` via `call_gemini_decision()` to leverage 10,000 RPD with zero output tokens.
-4. **Complex Architecture / Deep Reasoning (`gemini-4-carbon`)**: Verify that an active billing account (Tier 1) is configured before dispatching to prevent 0-quota rejection.
+When operating with a standard Google AI Studio `GEMINI_API_KEY` without an attached Cloud Billing account:
+
+1. **Free-Only Constraint**: All paid-only models (`gemini-4-carbon`, `gemini-4-neon`, `gemini-4-argon`, `gemini-3.1-pro-preview`, image/video/audio generation) have **0 quota** and will fail immediately with HTTP 429 (`RESOURCE_EXHAUSTED`).
+2. **Automated Free-Only Guard (`GEMINI_FREE_ONLY=true`)**: Setting `export GEMINI_FREE_ONLY=true` in the environment activates automatic fallback in `call_gemini()` and `call_gemini_interaction()`, safely redirecting any paid-only model calls to `gemini-4-hydrogen` (Frontier Reasoning on Free Tier) with a logged warning.
+3. **High-Throughput Strategy**: For high-frequency agent tool loops or large dataset workflows, configure the model to `gemini-3.5-flash-lite` or use `gemini-decision-1` for evaluations to avoid hitting the ~20 RPD cap on `gemini-4-hydrogen`.
+
