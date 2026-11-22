@@ -495,36 +495,42 @@ def test_remote_mcp_client_edge_cases() -> None:
     assert c6.ping() is False
 
 
-def test_remote_mcp_client_send_http_urllib() -> None:
-    import io
+class _FakeHTTPResponse:
+    """A urllib-style response: a context manager with ``read()`` and ``headers``."""
 
+    def __init__(self, body: bytes, headers: dict[str, str] | None = None) -> None:
+        self._body = body
+        self.headers = headers or {}
+
+    def __enter__(self) -> _FakeHTTPResponse:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return self._body
+
+
+def test_remote_mcp_client_send_http_urllib() -> None:
     from sakthai.mcp.client import RemoteMCPClient
 
     # Real send_http with mocked urllib.request.urlopen
     client = RemoteMCPClient("https://example.com/mcp", headers={"X-Test": "1"})
 
     # Success case with content
-    mock_resp = io.BytesIO(b'{"jsonrpc": "2.0", "id": 1, "result": {"ok": true}}')
-    mock_resp.__enter__ = lambda self: self  # type: ignore[attr-defined]
-    mock_resp.__exit__ = lambda self, *args: None  # type: ignore[attr-defined]
-
+    mock_resp = _FakeHTTPResponse(b'{"jsonrpc": "2.0", "id": 1, "result": {"ok": true}}')
     with patch("urllib.request.urlopen", return_value=mock_resp):
         res = client._send_http({"jsonrpc": "2.0", "id": 1, "method": "ping"})
         assert res == {"jsonrpc": "2.0", "id": 1, "result": {"ok": True}}
 
     # Empty response bytes
-    empty_resp = io.BytesIO(b"")
-    empty_resp.__enter__ = lambda self: self  # type: ignore[attr-defined]
-    empty_resp.__exit__ = lambda self, *args: None  # type: ignore[attr-defined]
-    with patch("urllib.request.urlopen", return_value=empty_resp):
+    with patch("urllib.request.urlopen", return_value=_FakeHTTPResponse(b"")):
         res_empty = client._send_http({"jsonrpc": "2.0", "id": 2, "method": "ping"})
         assert res_empty == {}
 
     # Non-dict JSON response
-    list_resp = io.BytesIO(b"[1, 2, 3]")
-    list_resp.__enter__ = lambda self: self  # type: ignore[attr-defined]
-    list_resp.__exit__ = lambda self, *args: None  # type: ignore[attr-defined]
-    with patch("urllib.request.urlopen", return_value=list_resp):
+    with patch("urllib.request.urlopen", return_value=_FakeHTTPResponse(b"[1, 2, 3]")):
         res_list = client._send_http({"jsonrpc": "2.0", "id": 3, "method": "ping"})
         assert res_list == {}
 
@@ -536,6 +542,110 @@ def test_remote_mcp_client_send_http_urllib() -> None:
         pytest.raises(MCPClientError, match="HTTP error communicating"),
     ):
         client._send_http({"jsonrpc": "2.0", "id": 4, "method": "ping"})
+
+
+_SSE_HEADERS = {"Content-Type": "text/event-stream"}
+
+
+def test_remote_client_accepts_streamable_http() -> None:
+    """Streamable HTTP servers 406 unless the client accepts text/event-stream."""
+    from sakthai.mcp.client import RemoteMCPClient
+
+    client = RemoteMCPClient("https://example.com/mcp")
+    with patch(
+        "urllib.request.urlopen", return_value=_FakeHTTPResponse(b'{"result": {}}')
+    ) as urlopen:
+        client._send_http({"jsonrpc": "2.0", "id": 1, "method": "ping"})
+    sent = urlopen.call_args.args[0]
+    assert sent.get_header("Accept") == "application/json, text/event-stream"
+
+
+def test_remote_client_reads_sse_framed_reply() -> None:
+    from sakthai.mcp.client import RemoteMCPClient
+
+    body = b'event: message\ndata: {"jsonrpc": "2.0", "id": 7, "result": {"ok": true}}\n\n'
+    client = RemoteMCPClient("https://example.com/mcp")
+    with patch("urllib.request.urlopen", return_value=_FakeHTTPResponse(body, _SSE_HEADERS)):
+        res = client._send_http({"jsonrpc": "2.0", "id": 7, "method": "tools/list"})
+    assert res == {"jsonrpc": "2.0", "id": 7, "result": {"ok": True}}
+
+
+def test_remote_client_content_type_parameters_do_not_hide_sse() -> None:
+    from sakthai.mcp.client import RemoteMCPClient
+
+    headers = {"Content-Type": "Text/Event-Stream; charset=utf-8"}
+    body = b'data: {"id": 1, "result": {"n": 1}}\n\n'
+    client = RemoteMCPClient("https://example.com/mcp")
+    with patch("urllib.request.urlopen", return_value=_FakeHTTPResponse(body, headers)):
+        assert client._send_http({"id": 1, "method": "ping"}) == {"id": 1, "result": {"n": 1}}
+
+
+def test_parse_sse_response_picks_the_matching_response() -> None:
+    from sakthai.mcp.client import _parse_sse_response
+
+    stream = (
+        ": keep-alive comment\r\n\r\n"
+        'data: {"jsonrpc": "2.0", "method": "notifications/progress"}\r\n\r\n'
+        'data: {"jsonrpc": "2.0", "id": 99, "result": {"other": true}}\r\n\r\n'
+        "data: not json\r\n\r\n"
+        "data: [1, 2]\r\n\r\n"
+        'data: {"jsonrpc": "2.0", "id": 5, "result": {"mine": true}}\r\n\r\n'
+        'data: {"jsonrpc": "2.0", "id": 100, "result": {"later": true}}\r\n\r\n'
+    )
+    assert _parse_sse_response(stream, 5)["result"] == {"mine": True}
+
+
+def test_parse_sse_response_falls_back_to_the_last_response() -> None:
+    from sakthai.mcp.client import _parse_sse_response
+
+    stream = 'data: {"id": 1, "result": {"a": 1}}\n\ndata: {"id": 2, "result": {"b": 2}}\n\n'
+    assert _parse_sse_response(stream, 42) == {"id": 2, "result": {"b": 2}}
+
+
+def test_parse_sse_response_joins_multiline_data_and_surfaces_errors() -> None:
+    from sakthai.mcp.client import _parse_sse_response
+
+    stream = 'data: {"id": 3,\ndata: "error": {"message": "boom"}}\n\n'
+    assert _parse_sse_response(stream, 3)["error"] == {"message": "boom"}
+
+
+def test_parse_sse_response_without_a_response_is_empty() -> None:
+    from sakthai.mcp.client import _parse_sse_response
+
+    assert _parse_sse_response("", 1) == {}
+    assert _parse_sse_response('data: {"method": "ping"}\n\n', 1) == {}
+
+
+def test_remote_client_echoes_the_session_id() -> None:
+    """The Mcp-Session-Id from the first reply is sent on every later request."""
+    from sakthai.mcp.client import RemoteMCPClient
+
+    client = RemoteMCPClient("https://example.com/mcp")
+    first = _FakeHTTPResponse(b'{"result": {}}', {"Mcp-Session-Id": "sess-1"})
+    with patch("urllib.request.urlopen", return_value=first) as urlopen:
+        client._send_http({"id": 1, "method": "initialize"})
+    assert urlopen.call_args.args[0].get_header("Mcp-session-id") is None
+
+    with patch(
+        "urllib.request.urlopen", return_value=_FakeHTTPResponse(b'{"result": {}}')
+    ) as urlopen:
+        client._send_http({"id": 2, "method": "tools/list"})
+    assert urlopen.call_args.args[0].get_header("Mcp-session-id") == "sess-1"
+    assert client._session_id == "sess-1"
+
+    client.close()
+    assert client._session_id is None
+
+
+def test_remote_client_user_headers_override_defaults() -> None:
+    from sakthai.mcp.client import RemoteMCPClient
+
+    client = RemoteMCPClient("https://example.com/mcp", headers={"Accept": "application/json"})
+    with patch(
+        "urllib.request.urlopen", return_value=_FakeHTTPResponse(b'{"result": {}}')
+    ) as urlopen:
+        client._send_http({"id": 1, "method": "ping"})
+    assert urlopen.call_args.args[0].get_header("Accept") == "application/json"
 
 
 def test_stdio_mcp_client_ping_failure() -> None:
