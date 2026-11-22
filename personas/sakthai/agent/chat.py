@@ -280,7 +280,9 @@ def run_chat(
 
                 if verb == "/provider" and rest:
                     active_provider = rest
-                    console.print(f"[green]Provider changed to:[/green] [bold]{active_provider}[/bold]")
+                    console.print(
+                        f"[green]Provider changed to:[/green] [bold]{active_provider}[/bold]"
+                    )
                     continue
 
                 if verb == "/learn":
