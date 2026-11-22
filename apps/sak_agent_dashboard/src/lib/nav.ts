@@ -16,6 +16,7 @@ import {
   Radio,
   Shield,
   Sparkles,
+  Workflow,
   type LucideIcon,
 } from "lucide-react";
 
@@ -23,6 +24,7 @@ export type TabId =
   | "system"
   | "overview"
   | "gateway"
+  | "pipelines"
   | "analytics"
   | "sessions"
   | "memory"
@@ -61,6 +63,13 @@ export const NAV_ITEMS: readonly NavItem[] = [
     description: "Live OpenAI-compatible Runtime Gateway console, streaming chat, and tool execution",
     icon: Radio,
     accent: "text-hue-violet",
+  },
+  {
+    id: "pipelines",
+    label: "Pipelines",
+    description: "Live multi-agent team pipeline DAG visualizer, stage execution traces, and SSE dispatch",
+    icon: Workflow,
+    accent: "text-hue-cyan",
   },
   {
     id: "analytics",

@@ -65,7 +65,7 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
     def _send_cors_headers(self) -> None:
         origin = self.gateway_config.cors_origin or "*"
         self.send_header("Access-Control-Allow-Origin", origin)
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
         self.send_header(
             "Access-Control-Allow-Headers",
             "Content-Type, Authorization, X-Requested-With",
@@ -154,6 +154,36 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
             self._send_json(200, self.gateway_router.handle_voice_profiles())
         elif path in ("/v1/team/pipelines", "/team/pipelines"):
             self._send_json(200, self.gateway_router.handle_team_pipelines())
+        elif path in ("/v1/team/pipelines/stream", "/team/pipelines/stream"):
+            parsed = urlparse(self.path)
+            params = {k: v[0] for k, v in parse_qs(parsed.query).items()}
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "close")
+            self._send_cors_headers()
+            self.end_headers()
+            self.close_connection = True
+            for chunk in self.gateway_router.handle_team_stream(params):
+                self.wfile.write(chunk.encode("utf-8"))
+                self.wfile.flush()
+            return
+        elif path in ("/v1/memory/shards", "/memory/shards"):
+            self._send_json(200, self.gateway_router.handle_memory_shards())
+        elif path in ("/v1/memory/facts", "/memory/facts"):
+            parsed = urlparse(self.path)
+            qs = parse_qs(parsed.query)
+            persona = qs.get("persona", ["sakthai"])[0]
+            kind = qs.get("kind", [None])[0]
+            tag = qs.get("tag", [None])[0]
+            try:
+                limit = int(qs.get("limit", ["100"])[0])
+            except (ValueError, TypeError):
+                limit = 100
+            self._send_json(
+                200,
+                self.gateway_router.handle_memory_facts(persona, kind=kind, tag=tag, limit=limit),
+            )
         elif path == "/api/status":
             self._send_json(200, self.gateway_router.handle_status())
         elif path == "/api/saksee/status":
@@ -214,9 +244,38 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
             frames = self.gateway_router.handle_duplex_event(body)
             self._send_json(200, {"ok": True, "frames": frames})
 
+        elif path in ("/v1/team/pipelines/stream", "/team/pipelines/stream"):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "close")
+            self._send_cors_headers()
+            self.end_headers()
+            self.close_connection = True
+            for chunk in self.gateway_router.handle_team_stream(body):
+                self.wfile.write(chunk.encode("utf-8"))
+                self.wfile.flush()
+            return
+
         elif path in ("/v1/team/pipelines", "/v1/team/run", "/team/run"):
             res = self.gateway_router.handle_team_run(body)
             self._send_json(200 if res.get("ok") else 400, res)
+
+        elif path in ("/v1/memory/facts", "/memory/facts"):
+            res = self.gateway_router.handle_memory_add_fact(body)
+            status_code = 200 if res.get("ok") else 400
+            self._send_json(status_code, res)
+
+        elif path in ("/v1/memory/facts/delete", "/memory/facts/delete"):
+            res = self.gateway_router.handle_memory_delete_fact(body)
+            status_code = (
+                200 if res.get("ok") else (404 if res.get("status") == "not_found" else 400)
+            )
+            self._send_json(status_code, res)
+
+        elif path in ("/v1/memory/preview", "/memory/preview"):
+            res = self.gateway_router.handle_memory_preview(body)
+            self._send_json(200, res)
 
         elif path in ("/v1/bench", "/bench"):
             res = self.gateway_router.handle_benchmark(body)
@@ -226,6 +285,31 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
             res = self.gateway_router.handle_model_chat(body)
             self._send_json(200, res)
 
+        else:
+            self._send_error(404, f"Endpoint '{path}' not found")
+
+    def do_DELETE(self) -> None:
+        """Handle DELETE endpoints."""
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/")
+
+        if not self._check_auth():
+            self._send_error(401, "Unauthorized: Invalid or missing bearer token")
+            return
+
+        if path.startswith("/v1/memory/facts/") or path.startswith("/memory/facts/"):
+            fact_id_str = path.rsplit("/", 1)[-1]
+            qs = parse_qs(parsed.query)
+            persona = qs.get("persona", ["sakthai"])[0]
+            confirm_val = qs.get("confirmed", qs.get("confirm", ["false"]))[0]
+            confirmed = confirm_val.lower() in ("true", "1", "yes")
+            res = self.gateway_router.handle_memory_delete_fact(
+                {"id": fact_id_str, "persona": persona, "confirmed": confirmed}
+            )
+            status_code = (
+                200 if res.get("ok") else (404 if res.get("status") == "not_found" else 400)
+            )
+            self._send_json(status_code, res)
         else:
             self._send_error(404, f"Endpoint '{path}' not found")
 

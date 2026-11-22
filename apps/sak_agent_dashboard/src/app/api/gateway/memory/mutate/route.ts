@@ -1,0 +1,81 @@
+import { NextRequest, NextResponse } from "next/server";
+
+const DEFAULT_GATEWAY_URL = "http://127.0.0.1:8080";
+
+function getGatewayConfig() {
+  const baseUrl = (
+    process.env.SAKTHAI_GATEWAY_URL ||
+    process.env.NEXT_PUBLIC_GATEWAY_URL ||
+    DEFAULT_GATEWAY_URL
+  ).replace(/\/$/, "");
+  const token =
+    process.env.SAKTHAI_GATEWAY_TOKEN ||
+    process.env.SAKTHAI_API_TOKEN ||
+    process.env.SAKTHAI_GATEWAY_BEARER_TOKEN ||
+    "";
+  return { baseUrl, token };
+}
+
+export async function POST(request: NextRequest) {
+  const { baseUrl, token } = getGatewayConfig();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  try {
+    const body = await request.json();
+    const res = await fetch(`${baseUrl}/v1/memory/facts`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    return NextResponse.json(data, { status: res.status });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json(
+      { ok: false, status: "error", error: message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const { baseUrl, token } = getGatewayConfig();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const id = searchParams.get("id");
+    const persona = searchParams.get("persona") || "sakthai";
+    const confirmed = searchParams.get("confirmed") || "true";
+
+    let payload: Record<string, unknown> = { id, persona, confirmed: confirmed === "true" };
+    try {
+      const body = await request.json();
+      payload = { ...payload, ...body };
+    } catch {
+      // Body is optional if query params are present
+    }
+
+    const res = await fetch(`${baseUrl}/v1/memory/facts/delete`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    return NextResponse.json(data, { status: res.status });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json(
+      { ok: false, status: "error", error: message },
+      { status: 500 }
+    );
+  }
+}

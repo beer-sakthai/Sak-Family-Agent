@@ -499,6 +499,91 @@ class GatewayRouter:
             gateway_url=str(gateway_url) if gateway_url else None,
         )
 
+    def handle_team_stream(self, body_or_params: dict[str, Any]) -> Generator[str, None, None]:
+        """Stream a multi-agent team pipeline emitting SSE chunks."""
+        from ..team.gateway import GatewayTeamOrchestrator
+
+        pipeline_name = str(body_or_params.get("pipeline") or body_or_params.get("name") or "")
+        task = str(body_or_params.get("task") or body_or_params.get("prompt") or "")
+        gateway_url = body_or_params.get("gateway_url")
+
+        orchestrator = GatewayTeamOrchestrator(router=self)
+        events = orchestrator.stream_pipeline(
+            pipeline_name=pipeline_name,
+            task=task,
+            gateway_url=str(gateway_url) if gateway_url else None,
+        )
+        for evt in events:
+            event_name = evt.get("event", "message")
+            yield f"event: {event_name}\ndata: {json.dumps(evt, ensure_ascii=False)}\n\n"
+
+        yield "event: done\ndata: [DONE]\n\n"
+
+    def handle_memory_shards(self) -> dict[str, Any]:
+        """Return SQLite metadata across all 6 persona shards."""
+        return self.memory_manager.get_all_shards_metadata()
+
+    def handle_memory_facts(
+        self,
+        persona: str,
+        kind: str | None = None,
+        tag: str | None = None,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        """Return persistent facts for specified persona or merged across all personas."""
+        return self.memory_manager.list_persona_facts(
+            persona=persona, kind=kind, tag=tag, limit=limit
+        )
+
+    def handle_memory_add_fact(self, body: dict[str, Any]) -> dict[str, Any]:
+        """Safely add a fact to a persona's shard under guardrail protection."""
+        persona = str(body.get("persona") or self.config.default_persona)
+        value = str(body.get("value") or "")
+        kind = str(body.get("kind") or "note")
+        key = body.get("key")
+        tags = body.get("tags")
+        approval_token = body.get("approval_token")
+        return self.memory_manager.add_fact(
+            persona=persona,
+            value=value,
+            kind=kind,
+            key=str(key) if key else None,
+            tags=list(tags) if isinstance(tags, list) else None,
+            approval_token=str(approval_token) if approval_token else None,
+        )
+
+    def handle_memory_delete_fact(self, body_or_params: dict[str, Any]) -> dict[str, Any]:
+        """Delete a fact from a persona's shard with confirmation check."""
+        persona = str(body_or_params.get("persona") or self.config.default_persona)
+        fact_id_raw = body_or_params.get("id") or body_or_params.get("fact_id")
+        try:
+            fact_id = int(fact_id_raw)  # type: ignore[arg-type]
+        except (ValueError, TypeError):
+            return {"ok": False, "status": "error", "error": "Invalid or missing 'id'"}
+
+        confirmed_val = body_or_params.get("confirmed") or body_or_params.get("confirm")
+        confirmed = confirmed_val is True or str(confirmed_val).lower() in ("true", "1", "yes")
+
+        return self.memory_manager.delete_fact(
+            persona=persona,
+            fact_id=fact_id,
+            confirmed=confirmed,
+        )
+
+    def handle_memory_preview(self, body: dict[str, Any]) -> dict[str, Any]:
+        """Simulate dynamic prompt injection for a test query."""
+        persona = str(body.get("persona") or self.config.default_persona)
+        query = str(body.get("query") or body.get("prompt") or "")
+        try:
+            limit = int(body.get("limit", 5))
+        except (ValueError, TypeError):
+            limit = 5
+        return self.memory_manager.preview_memory_context(
+            persona=persona,
+            query=query,
+            limit=limit,
+        )
+
     def handle_benchmark(self, body: dict[str, Any]) -> dict[str, Any]:
         """Execute a high-concurrency gateway benchmark."""
         from .bench import run_gateway_benchmark
