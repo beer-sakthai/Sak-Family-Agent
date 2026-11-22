@@ -238,6 +238,33 @@
     animation: neon-border-pulse 2s ease-in-out infinite;
   }
 
+  /* Neon card styling */
+  .neon-card {
+    position: relative;
+    border: 1px solid rgb(0 245 255 / 0.6);
+    box-shadow: inset 0 0 15px rgb(0 245 255 / 0.1), 0 0 20px rgb(0 245 255 / 0.2);
+  }
+
+  .neon-card-magenta {
+    border-color: rgb(255 0 110 / 0.6);
+    box-shadow: inset 0 0 15px rgb(255 0 110 / 0.1), 0 0 20px rgb(255 0 110 / 0.2);
+  }
+
+  .neon-card-purple {
+    border-color: rgb(181 55 242 / 0.6);
+    box-shadow: inset 0 0 15px rgb(181 55 242 / 0.1), 0 0 20px rgb(181 55 242 / 0.2);
+  }
+
+  .neon-card-green {
+    border-color: rgb(57 255 20 / 0.6);
+    box-shadow: inset 0 0 15px rgb(57 255 20 / 0.1), 0 0 20px rgb(57 255 20 / 0.2);
+  }
+
+  .neon-card-orange {
+    border-color: rgb(255 107 53 / 0.6);
+    box-shadow: inset 0 0 15px rgb(255 107 53 / 0.1), 0 0 20px rgb(255 107 53 / 0.2);
+  }
+
   /* Neon accent text */
   .text-neon-cyan {
     color: rgb(0 245 255);

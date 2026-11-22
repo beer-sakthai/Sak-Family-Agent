@@ -88,11 +88,11 @@ const config: Config = {
 
         // Neon cyberpunk colors for direct use
         neon: {
-          cyan: "rgb(0 245 255)",
-          magenta: "rgb(255 0 110)",
-          purple: "rgb(181 55 242)",
-          green: "rgb(57 255 20)",
-          orange: "rgb(255 107 53)",
+          cyan: "rgb(0 245 255 / <alpha-value>)",
+          magenta: "rgb(255 0 110 / <alpha-value>)",
+          purple: "rgb(181 55 242 / <alpha-value>)",
+          green: "rgb(57 255 20 / <alpha-value>)",
+          orange: "rgb(255 107 53 / <alpha-value>)",
         },
       },
       fontFamily: {
