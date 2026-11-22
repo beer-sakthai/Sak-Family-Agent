@@ -46,3 +46,10 @@ python -m unittest discover -s tests
 ```
 
 See [TEST_INFRA.md](TEST_INFRA.md) for the test matrix and [framework-improvement-plan](docs/superpowers/plans/2026-09-22-framework-improvement-plan.md) for the improvement backlog.
+
+## Gateway Team Pipeline Integration
+
+Workflows authored for multi-agent delegation can also be executed as distributed team pipelines via the Runtime Gateway (`sakthai.team.gateway`):
+- Streaming execution endpoint: `POST /v1/team/pipelines/stream`
+- Live SVG DAG visualizer: Hosted directly in the Next.js dashboard at `/pipelines` (`TeamPipelineVisualizer.tsx`) with real-time SSE token terminal.
+

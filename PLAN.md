@@ -171,6 +171,7 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 
 
 
+- [x] 2026-11-22 **Comprehensive Repository README Audit, Modernization (v2.52.0) & Branch Cleanup** — Audit and synchronize all 63 README.md files across repository to reflect v2.52.0 (4,155+ tests, 481 skills, live SSE team pipeline visualizer, Memory Shard Studio, interactive TUI with permission gate, Free-Tier Quota Sentinel, unified monorepo packaging), prune merged local and remote branches leaving only main (and gh-pages), verify all quality gates, and open pull request for manual review.
 
 ### 2. Hugging Face Ecosystem ([`docs/hf-cards-improvement-plan.md`](./docs/hf-cards-improvement-plan.md))
 - [x] 2026-11-18 **Private `Nanthasit/sakthai-embedding` repo decision** — Retained as permanently private; superseded by `sakthai-embedding-multilingual` with 100% healthy portfolio telemetry.
