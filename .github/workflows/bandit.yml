@@ -88,7 +88,6 @@ jobs:
       # `--exclude` names the trees that are on disk but are not this
       # repository's code to fix:
       #   personas/*/skills   vendored skill scripts, one directory per skill
-      #   sakthai-chat-cli    a folded-in copy of a separate repo, own lineage
       #   library             curated third-party skill content
       #   tests               already in exclude_dirs; named again so the scope
       #                       is readable from the workflow alone
@@ -101,7 +100,7 @@ jobs:
       - name: Run Bandit
         run: |
           bandit -c pyproject.toml -r . \
-            --exclude './.git,./.venv,./build,./dist,./node_modules,./tests,./library,./sakthai-chat-cli,./personas/sakthai/skills,./personas/sakking/skills,./personas/saksee/skills,./personas/saksit/skills,./personas/sakjules/skills,./personas/saktan/skills,./personas/shared/skills' \
+            --exclude './.git,./.venv,./build,./dist,./node_modules,./tests,./library,./personas/sakthai/skills,./personas/sakking/skills,./personas/saksee/skills,./personas/saksit/skills,./personas/sakjules/skills,./personas/saktan/skills,./personas/shared/skills' \
             --format sarif \
             --output bandit-results.sarif \
             --exit-zero

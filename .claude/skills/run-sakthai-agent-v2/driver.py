@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smoke-drive the sakthai-agent-v2 CLI and its MCP stdio server.
+"""Smoke-drive the sakthai-agent-v2 CLI, stub server, and its MCP stdio server.
 
 This is the agent-facing harness for the skill. It exercises every surface a
 PR is likely to touch — the memory CLI, doctor/cycle/sessions/skills, a
@@ -12,24 +12,127 @@ No API key or network is required: the agent loop is exercised only via
 `run --dry-run` (preflight), never a real model call.
 
 Usage:
-    python .claude/skills/run-sakthai-agent-v2/driver.py
+    python .claude/skills/run-sakthai-agent-v2/driver.py [smoke]
+    python .claude/skills/run-sakthai-agent-v2/driver.py stub [--port N]
+    python .claude/skills/run-sakthai-agent-v2/driver.py chat [--port N]
     SAKTHAI_BIN=/path/to/sakthai python .../driver.py   # override the binary
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import urllib.request
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
 BIN = os.environ.get("SAKTHAI_BIN", "sakthai")
+TMUX_SESSION = "sakchat"
+DEFAULT_PORT = 8765
 failures: list[str] = []
+
+
+class _StubHandler(BaseHTTPRequestHandler):
+    """Minimal /v1/chat/completions: echoes the last user message back."""
+
+    def do_POST(self) -> None:  # noqa: N802 (http.server API)
+        if not self.path.endswith("/chat/completions"):
+            self.send_error(404)
+            return
+        body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
+        last_user = next(
+            (
+                m.get("content") or ""
+                for m in reversed(body.get("messages", []))
+                if m.get("role") == "user" and isinstance(m.get("content"), str)
+            ),
+            "",
+        )
+        reply = f"STUB-REPLY: you said {last_user!r}"
+        if body.get("stream"):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.end_headers()
+            for chunk in (
+                {"choices": [{"index": 0, "delta": {"role": "assistant", "content": reply}}]},
+                {
+                    "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+                    "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+                },
+            ):
+                self.wfile.write(f"data: {json.dumps(chunk)}\n\n".encode())
+            self.wfile.write(b"data: [DONE]\n\n")
+        else:
+            payload = json.dumps(
+                {
+                    "choices": [
+                        {
+                            "index": 0,
+                            "message": {"role": "assistant", "content": reply},
+                            "finish_reason": "stop",
+                        }
+                    ],
+                    "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+                }
+            ).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+    def log_message(self, fmt: str, *args: object) -> None:  # silence per-request noise
+        pass
+
+
+def start_stub(port: int) -> ThreadingHTTPServer:
+    server = ThreadingHTTPServer(("127.0.0.1", port), _StubHandler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
+
+
+def _tmux(*args: str) -> str:
+    return subprocess.run(["tmux", *args], capture_output=True, text=True, timeout=30).stdout
+
+
+def interactive_chat(port: int) -> int:
+    home = Path(tempfile.mkdtemp(prefix="sakthai-chat-"))
+    start_stub(port)
+    _tmux("kill-session", "-t", TMUX_SESSION)
+    subprocess.run(
+        [
+            "tmux",
+            "new-session",
+            "-d",
+            "-s",
+            TMUX_SESSION,
+            "-x",
+            "160",
+            "-y",
+            "40",
+            f"cd {REPO_ROOT} && SAKTHAI_HOME={home} OLLAMA_HOST=http://127.0.0.1:{port} "
+            "uv run sakthai chat 2>&1",
+        ],
+        check=True,
+        timeout=30,
+    )
+    print(f"stub on 127.0.0.1:{port}; tmux session {TMUX_SESSION!r} running `sakthai chat`.")
+    print(f"  poke it :  tmux send-keys -t {TMUX_SESSION} 'hi there' Enter")
+    print(f"  read it :  tmux capture-pane -t {TMUX_SESSION} -p")
+    print("Ctrl-C here stops the stub server (tmux session survives).")
+    try:
+        while True:
+            time.sleep(3600)
+    except KeyboardInterrupt:
+        return 0
 
 
 def check(label: str, ok: bool, detail: str = "") -> None:
@@ -98,7 +201,7 @@ def drive_mcp(env: dict[str, str]) -> dict[int, dict]:
     return out
 
 
-def main() -> int:
+def smoke() -> int:
     home = Path(tempfile.mkdtemp(prefix="sakthai-smoke."))
     env = {**os.environ, "SAKTHAI_HOME": str(home)}
     print(f"sakthai-agent-v2 smoke · SAKTHAI_HOME={home}\n")
@@ -236,6 +339,26 @@ def main() -> int:
         return 1
     print("OK: all checks passed")
     return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("command", nargs="?", default="smoke", choices=["smoke", "stub", "chat"])
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    args = parser.parse_args()
+
+    if args.command == "chat":
+        return interactive_chat(args.port)
+    if args.command == "stub":
+        start_stub(args.port)
+        print(f"stub OpenAI-compatible server on http://127.0.0.1:{args.port}/v1 (Ctrl-C to stop)")
+        try:
+            while True:
+                time.sleep(3600)
+        except KeyboardInterrupt:
+            return 0
+
+    return smoke()
 
 
 if __name__ == "__main__":

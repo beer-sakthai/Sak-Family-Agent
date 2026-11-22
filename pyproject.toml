@@ -195,6 +195,7 @@ packages = [
     "sakthai.cycle",
     "sakthai.dashboard",
     "sakthai.extensions",
+    "sakthai.gateway",
     "sakthai.lead",
     "sakthai.learn",
     "sakthai.mcp",

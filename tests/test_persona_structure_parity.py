@@ -226,7 +226,7 @@ class TestPersonaStructureParity(unittest.TestCase):
         import re
 
         pip_install_re = re.compile(r"(?<!uv\s)(?<!uv\s-q\s)\b(pip|pip3)\s+install\b")
-        for rel_path in ["scripts/bootstrap.sh", "sakthai-chat-cli/scripts/bootstrap.sh"]:
+        for rel_path in ["scripts/bootstrap.sh"]:
             with self.subTest(script=rel_path):
                 script_path = REPO_ROOT / rel_path
                 script_text = script_path.read_text(encoding="utf-8")

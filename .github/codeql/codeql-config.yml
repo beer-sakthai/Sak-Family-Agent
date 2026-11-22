@@ -50,13 +50,6 @@ paths-ignore:
   # pre-dating the Sak- naming convention. Already excluded from ruff.
   - library
 
-  # A self-contained folded-in copy of the standalone sakthai-chat-cli repo
-  # (migrated 2026-08-01). It has its own lineage and its own CLAUDE.md, and it
-  # is deliberately not merged with the canonical package — so every alert here
-  # is a second copy of one already reported against `personas/sakthai`
-  # or `tests/`. ~236 alerts.
-  - sakthai-chat-cli
-
   # The test suite. Its "path injection" is `tmp_path` fixtures and its
   # "command line injection" is the subprocess calls the tests exist to drive;
   # a finding here is not a vulnerability in anything that ships. ~74 alerts.
