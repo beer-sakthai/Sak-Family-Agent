@@ -1003,8 +1003,11 @@ A skill directory may also carry `commands/<name>.md` files, which become
 
 ## Adding a new built-in tool
 
-1. Add a `Tool(name=..., description=..., input_schema=..., handler=...)` to
-   `BUILTIN_TOOLS` in `personas/sakthai/agent/tools.py`.
+1. Add a `Tool(name=..., description=..., input_schema=..., handler=..., annotations=...)` to
+   `BUILTIN_TOOLS` in `personas/sakthai/agent/tools.py`. `annotations` is built with
+   `_annotations(...)` and is advertised to MCP clients in `tools/list`;
+   `tests/test_mcp_server.py` fails if a built-in omits it. Copy `tools.py` to the five persona
+   copies by hand.
 2. The tool automatically appears in both `sakthai run` (agent loop) and
    `sakthai mcp` (MCP server) — no other wiring needed.
 3. Write a test in `tests/test_tools.py` using an injected `MemoryStore(":memory:")`.

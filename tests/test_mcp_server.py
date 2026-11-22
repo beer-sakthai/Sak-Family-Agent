@@ -287,6 +287,99 @@ def test_mcp_tools_list_schemas_have_required_fields(store: MemoryStore) -> None
         assert tool["inputSchema"]["type"] == "object"
 
 
+def _listed_tools(store: MemoryStore) -> dict[str, dict]:
+    resp = handle_request({"jsonrpc": "2.0", "id": 101, "method": "tools/list"}, store)
+    return {t["name"]: t for t in resp["result"]["tools"]}
+
+
+def test_every_builtin_tool_advertises_annotations(store: MemoryStore) -> None:
+    """Clients gate approvals on these hints, so no built-in may omit them."""
+    for name, tool in _listed_tools(store).items():
+        annotations = tool.get("annotations")
+        assert annotations is not None, f"{name} has no annotations"
+        assert isinstance(annotations["readOnlyHint"], bool), name
+        assert isinstance(annotations["openWorldHint"], bool), name
+        if annotations["readOnlyHint"]:
+            # destructive/idempotent hints are meaningless for read-only tools.
+            assert "destructiveHint" not in annotations, name
+            assert "idempotentHint" not in annotations, name
+        else:
+            assert isinstance(annotations["destructiveHint"], bool), name
+            assert isinstance(annotations["idempotentHint"], bool), name
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("recall", {"readOnlyHint": True, "openWorldHint": False}),
+        ("read_file", {"readOnlyHint": True, "openWorldHint": False}),
+        ("list_calendar_events", {"readOnlyHint": True, "openWorldHint": True}),
+        (
+            "forget",
+            {
+                "readOnlyHint": False,
+                "destructiveHint": True,
+                "idempotentHint": True,
+                "openWorldHint": False,
+            },
+        ),
+        (
+            "run_command",
+            {
+                "readOnlyHint": False,
+                "destructiveHint": True,
+                "idempotentHint": False,
+                "openWorldHint": True,
+            },
+        ),
+        (
+            "send_outlook_mail",
+            {
+                "readOnlyHint": False,
+                "destructiveHint": False,
+                "idempotentHint": False,
+                "openWorldHint": True,
+            },
+        ),
+    ],
+)
+def test_tool_annotations_describe_real_behaviour(
+    store: MemoryStore, name: str, expected: dict[str, bool]
+) -> None:
+    assert _listed_tools(store)[name]["annotations"] == expected
+
+
+def test_tool_without_annotations_lists_without_the_key(store: MemoryStore) -> None:
+    """Plugin tools predate annotations: they must list cleanly, not with a null."""
+    bare = Tool(
+        name="bare",
+        description="no hints",
+        input_schema={"type": "object", "properties": {}},
+        handler=lambda _a, _s: "ok",
+    )
+    resp = handle_request(
+        {"jsonrpc": "2.0", "id": 102, "method": "tools/list"}, store, tools=(bare,)
+    )
+    assert "annotations" not in resp["result"]["tools"][0]
+
+
+def test_memory_status_resource_counts_past_one_thousand_facts(store: MemoryStore) -> None:
+    """fact_count used to come from list_facts(limit=1000) and silently capped there."""
+    for i in range(1001):
+        store.add_fact(f"fact {i}")
+    resp = handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 103,
+            "method": "resources/read",
+            "params": {"uri": "sakthai://memory/status"},
+        },
+        store,
+    )
+    stats = json.loads(resp["result"]["contents"][0]["text"])
+    assert stats["fact_count"] == 1001
+
+
 # ---------------------------------------------------------------------------
 # Guardrail integration: pre- and post-execution DENY through the MCP surface
 # ---------------------------------------------------------------------------
