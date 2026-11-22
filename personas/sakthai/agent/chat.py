@@ -242,7 +242,9 @@ def run_chat(
 
                 if verb in ("/reset", "/new"):
                     prior_messages.clear()
-                    console.print("[dim]Conversation history reset. Persistent memory retained.[/dim]")
+                    console.print(
+                        "[dim]Conversation history reset. Persistent memory retained.[/dim]"
+                    )
                     continue
 
                 if verb == "/persona" and rest:
