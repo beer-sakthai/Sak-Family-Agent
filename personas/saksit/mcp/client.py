@@ -422,11 +422,44 @@ class StdioMCPClient:
         return item
 
 
-class RemoteMCPClient:
-    """Minimal HTTP/SSE MCP client for remote servers (e.g. Feather, HF Spaces).
+_SESSION_HEADER = "Mcp-Session-Id"
 
-    Uses standard library urllib.request to communicate with remote MCP endpoints
-    without external dependencies.
+
+def _parse_sse_response(text: str, req_id: object) -> dict[str, Any]:
+    """Pick the JSON-RPC response for ``req_id`` out of a ``text/event-stream`` body.
+
+    Streamable HTTP servers may answer a POST with an SSE stream whose events carry
+    JSON-RPC messages. Only a message with a ``result`` or ``error`` is a response
+    (the rest are notifications or server requests); prefer the one whose ``id``
+    matches the request, else the last response seen. Returns ``{}`` when the stream
+    holds none.
+    """
+    last: dict[str, Any] = {}
+    for event in re.split(r"\r?\n\r?\n", text):
+        data = "\n".join(
+            line[5:].removeprefix(" ") for line in event.splitlines() if line.startswith("data:")
+        )
+        if not data:
+            continue
+        try:
+            message = json.loads(data)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(message, dict) or not ("result" in message or "error" in message):
+            continue
+        if message.get("id") == req_id:
+            return message
+        last = message
+    return last
+
+
+class RemoteMCPClient:
+    """Minimal remote MCP client over HTTP POST (plain JSON or Streamable HTTP).
+
+    Speaks both reply styles of the MCP Streamable HTTP transport: a plain
+    ``application/json`` body and a ``text/event-stream`` body carrying the JSON-RPC
+    response. A server-issued ``Mcp-Session-Id`` is echoed on every later request.
+    Uses standard library urllib.request, without external dependencies.
     """
 
     def __init__(
@@ -444,6 +477,7 @@ class RemoteMCPClient:
         self._remote_tools: list[dict[str, Any]] = []
         self._id = 0
         self._initialized = False
+        self._session_id: str | None = None
 
     @property
     def tools(self) -> list[dict[str, Any]]:
@@ -547,6 +581,7 @@ class RemoteMCPClient:
     def close(self) -> None:
         """Teardown remote client connection."""
         self._initialized = False
+        self._session_id = None
 
     def _next_id(self) -> int:
         self._id += 1
@@ -582,23 +617,30 @@ class RemoteMCPClient:
             raise MCPClientError(f"{self.name}: URL must start with http:// or https://")
 
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        session = {_SESSION_HEADER: self._session_id} if self._session_id else {}
         req = urllib.request.Request(
             self.url,
             data=body,
             headers={
                 "Content-Type": "application/json",
-                "Accept": "application/json",
+                "Accept": "application/json, text/event-stream",
                 "User-Agent": f"{CLIENT_NAME}/{PROTOCOL_VERSION}",
+                **session,
                 **self._headers,
             },
             method="POST",
         )
         try:
             with urllib.request.urlopen(req, timeout=self._timeout) as resp:  # nosec B310
+                self._session_id = resp.headers.get(_SESSION_HEADER) or self._session_id
                 resp_bytes = resp.read()
                 if not resp_bytes:
                     return {}
-                parsed = json.loads(resp_bytes.decode("utf-8"))
+                text = resp_bytes.decode("utf-8")
+                content_type = resp.headers.get("Content-Type") or ""
+                if content_type.split(";")[0].strip().lower() == "text/event-stream":
+                    return _parse_sse_response(text, payload.get("id"))
+                parsed = json.loads(text)
                 return parsed if isinstance(parsed, dict) else {}
         except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
             raise MCPClientError(
