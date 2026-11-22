@@ -470,6 +470,41 @@ async def test_confirm_modal_screen_always_and_deny() -> None:
 
 
 @pytest.mark.asyncio
+async def test_confirm_modal_screen_with_diff_preview(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("SAKTHAI_WRITE_ALLOW", str(tmp_path))
+    file = tmp_path / "hello.py"
+    file.write_text("line1\nline2\n", encoding="utf-8")
+    app = _app()
+    async with app.run_test() as pilot:
+        dismissed_values: list[str | None] = []
+        modal = tui_mod.ConfirmModalScreen(
+            "edit_file",
+            {"path": str(file), "old_text": "line1", "new_text": "newline1"},
+            "sakthai",
+        )
+        app.push_screen(modal, dismissed_values.append)
+        await pilot.pause()
+        modal.action_allow()
+        await pilot.pause()
+        assert dismissed_values == ["y"]
+
+        # write_file with no diff text
+        modal_empty = tui_mod.ConfirmModalScreen(
+            "write_file",
+            {"path": ""},
+            "sakthai",
+        )
+        app.push_screen(modal_empty, dismissed_values.append)
+        await pilot.pause()
+        modal_empty.action_deny()
+        await pilot.pause()
+        assert dismissed_values == ["y", "n"]
+    app.store.close()
+
+
+@pytest.mark.asyncio
 async def test_tui_tool_call_start_and_finish_events(monkeypatch: pytest.MonkeyPatch) -> None:
     def _fake(task: str, **kwargs: Any) -> AgentResult:
         on_event = kwargs.get("on_event")
