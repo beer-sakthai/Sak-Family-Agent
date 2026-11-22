@@ -115,14 +115,30 @@ const PERSONA_COLORS: Record<string, { bg: string; text: string; border: string;
   },
 };
 
+function getInitialStepStates(pipeline: PipelineDefinitionMeta): Record<number, StepExecutionState> {
+  const initialStates: Record<number, StepExecutionState> = {};
+  pipeline.steps.forEach((step, idx) => {
+    initialStates[idx] = {
+      index: idx,
+      name: step.name,
+      persona: step.persona,
+      status: "idle",
+      output: "",
+      tokens: [],
+    };
+  });
+  return initialStates;
+}
+
 export function TeamPipelineVisualizer() {
   const [selectedPipelineName, setSelectedPipelineName] = useState<string>("code-review");
   const [taskPrompt, setTaskPrompt] = useState<string>(
     "Audit Gateway SSE streaming and implement live team pipeline DAG visualizer"
   );
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
-  const [stepStates, setStepStates] = useState<Record<number, StepExecutionState>>({});
-  const [activeStepIndex, setActiveStepIndex] = useState<number | null>(null);
+  const [stepStates, setStepStates] = useState<Record<number, StepExecutionState>>(() =>
+    getInitialStepStates(DEFAULT_PIPELINES[0])
+  );
   const [finalOutput, setFinalOutput] = useState<string>("");
   const [totalDurationMs, setTotalDurationMs] = useState<number | null>(null);
   const [runId, setRunId] = useState<string | null>(null);
@@ -135,26 +151,16 @@ export function TeamPipelineVisualizer() {
   const currentPipeline =
     DEFAULT_PIPELINES.find((p) => p.name === selectedPipelineName) || DEFAULT_PIPELINES[0];
 
-  // Initialize step states when pipeline selection changes
-  useEffect(() => {
-    const initialStates: Record<number, StepExecutionState> = {};
-    currentPipeline.steps.forEach((step, idx) => {
-      initialStates[idx] = {
-        index: idx,
-        name: step.name,
-        persona: step.persona,
-        status: "idle",
-        output: "",
-        tokens: [],
-      };
-    });
-    setStepStates(initialStates);
-    setActiveStepIndex(null);
+  const handleSelectPipeline = (pipelineName: string) => {
+    if (isExecuting) return;
+    setSelectedPipelineName(pipelineName);
+    const pipe = DEFAULT_PIPELINES.find((p) => p.name === pipelineName) || DEFAULT_PIPELINES[0];
+    setStepStates(getInitialStepStates(pipe));
     setFinalOutput("");
     setTotalDurationMs(null);
     setRunId(null);
     setLogs([]);
-  }, [selectedPipelineName, currentPipeline]);
+  };
 
   // Auto-scroll terminal when new logs or tokens arrive
   useEffect(() => {
@@ -245,7 +251,6 @@ export function TeamPipelineVisualizer() {
               ]);
             } else if (eventName === "step_start") {
               const stepIdx = parsed.step_index;
-              setActiveStepIndex(stepIdx);
               setStepStates((prev) => ({
                 ...prev,
                 [stepIdx]: {
@@ -304,7 +309,6 @@ export function TeamPipelineVisualizer() {
             } else if (eventName === "pipeline_complete") {
               setFinalOutput(parsed.final_output || "");
               setTotalDurationMs(parsed.total_duration_ms || 0);
-              setActiveStepIndex(null);
               setLogs((prev) => [
                 ...prev,
                 `[Pipeline Result] Status: ${parsed.status} | Total Duration: ${parsed.total_duration_ms}ms`,
@@ -379,7 +383,7 @@ export function TeamPipelineVisualizer() {
               key={p.name}
               type="button"
               disabled={isExecuting}
-              onClick={() => setSelectedPipelineName(p.name)}
+              onClick={() => handleSelectPipeline(p.name)}
               className={`px-4 py-2 rounded-xl text-xs font-mono border transition-all flex items-center gap-2 ${
                 isSelected
                   ? "bg-hue-cyan-tint/60 text-hue-cyan border-hue-cyan-line/60 shadow-xs"

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   BookOpen,
   Database,
@@ -15,7 +15,6 @@ import {
   X,
   RefreshCw,
   Eye,
-  Tag,
 } from "lucide-react";
 
 import type { MemoryPayload } from "@/lib/contracts.generated";
@@ -99,12 +98,7 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
   } | null>(null);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
 
-  // Fetch shards metadata on mount
-  useEffect(() => {
-    fetchShards();
-  }, []);
-
-  const fetchShards = async () => {
+  const fetchShards = useCallback(async () => {
     try {
       const res = await fetch("/api/gateway/memory/shards");
       if (res.ok) {
@@ -116,7 +110,27 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
     } catch {
       // Fallback gracefully
     }
-  };
+  }, []);
+
+  // Fetch shards metadata on mount
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/gateway/memory/shards");
+        const data = await res.json();
+        if (active && data.ok && Array.isArray(data.shards)) {
+          setShards(data.shards);
+        }
+      } catch {
+        // Fallback
+      }
+    };
+    void load();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Fetch persona facts when shard changes
   const fetchFactsForShard = async (shardId: string) => {

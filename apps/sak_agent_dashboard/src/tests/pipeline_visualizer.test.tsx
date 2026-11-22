@@ -1,6 +1,6 @@
 import React from "react";
-import { fireEvent, render, screen, act } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { GET as streamGET, POST as streamPOST } from "@/app/api/gateway/team/stream/route";
 import { TeamPipelineVisualizer } from "@/components/TeamPipelineVisualizer";
