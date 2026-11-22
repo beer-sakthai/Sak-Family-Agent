@@ -933,6 +933,82 @@ def test_extensions_remove_unknown(runner: CliRunner) -> None:
     assert "no extension named 'nope'" in result.output
 
 
+def test_extensions_cli_persona_scoping_and_inspection(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sakthai.extensions.install as ext_mod
+
+    def _fake_clone(cmd: list[str], *args: object, **kwargs: object) -> object:
+        dest = Path(cmd[-1])
+        dest.mkdir(parents=True, exist_ok=True)
+        skill = dest / "test-skill"
+        skill.mkdir(parents=True)
+        (skill / "SKILL.md").write_text(
+            "---\nname: test-skill\ndescription: demo skill\n---\nbody\n", encoding="utf-8"
+        )
+        (dest / "gemini-extension.json").write_text(
+            json.dumps({"mcpServers": {"srv1": {"command": "echo", "args": ["hello"]}}}),
+            encoding="utf-8",
+        )
+        return types.SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(ext_mod.subprocess, "run", _fake_clone)
+
+    # 1. Install with persona scoping
+    res = runner.invoke(
+        main, ["extensions", "install", "https://github.com/foo/persona-ext", "--persona", "saksee"]
+    )
+    assert res.exit_code == 0
+    assert "persona: saksee" in res.output
+
+    # 2. List with persona and json
+    res_list = runner.invoke(main, ["extensions", "list", "--persona", "saksee", "--json"])
+    assert res_list.exit_code == 0
+    data = json.loads(res_list.output)
+    assert len(data) == 1
+    assert data[0]["name"] == "persona-ext"
+    assert data[0]["persona"] == "saksee"
+
+    # 3. Info
+    res_info = runner.invoke(main, ["extensions", "info", "persona-ext", "--persona", "saksee"])
+    assert res_info.exit_code == 0
+    assert "persona-ext" in res_info.output
+    assert "scope: saksee" in res_info.output
+
+    # 4. Validate
+    res_val = runner.invoke(
+        main, ["extensions", "validate", "persona-ext", "--persona", "saksee", "--json"]
+    )
+    assert res_val.exit_code == 0
+    val_data = json.loads(res_val.output)
+    assert val_data["valid"] is True
+
+    # 5. Remove
+    res_rm = runner.invoke(main, ["extensions", "remove", "persona-ext", "--persona", "saksee"])
+    assert res_rm.exit_code == 0
+    assert "removed: persona-ext from persona 'saksee'" in res_rm.output
+
+
+def test_eval_extensions_cli(runner: CliRunner) -> None:
+    # 1. Single persona detailed
+    res = runner.invoke(main, ["eval", "extensions", "--persona", "sakjules", "--detailed"])
+    assert res.exit_code == 0
+    assert "HEALTHY" in res.output
+    assert "registry_valid" in res.output
+
+    # 2. Benchmark multi-trial
+    res_bench = runner.invoke(main, ["eval", "extensions", "-t", "2"])
+    assert res_bench.exit_code == 0
+    assert "Benchmark (2 trials)" in res_bench.output
+
+    # 3. JSON output
+    res_json = runner.invoke(main, ["eval", "extensions", "--json"])
+    assert res_json.exit_code == 0
+    data = json.loads(res_json.output)
+    assert "sakthai" in data
+    assert data["sakthai"]["healthy"] is True
+
+
 # -- agent run / mcp (loop monkeypatched) --------------------------------
 
 

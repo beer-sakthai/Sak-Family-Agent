@@ -13,8 +13,10 @@ from .. import config
 from ..agent.eval import (
     evaluate_agents_md_trials,
     evaluate_all_personas,
+    evaluate_extensions_trials,
     evaluate_persona_agents_md_alignment,
     evaluate_persona_audit,
+    evaluate_persona_extensions_health,
     evaluate_persona_readiness,
     evaluate_persona_safety_compliance,
     evaluate_persona_skills_health,
@@ -589,6 +591,90 @@ def eval_agents(persona: str | None, times: int, as_json: bool) -> None:
         if res["diagnostics"]:
             for d in res["diagnostics"]:
                 click.echo(f"    - warning: {d}")
+    if not all_ok:
+        sys.exit(1)
+
+
+@eval_cmd.command("extensions")
+@click.option(
+    "--persona",
+    type=click.Choice(PERSONA_NAMES),
+    default=None,
+    help="Evaluate extensions health for a single persona.",
+)
+@click.option(
+    "--times",
+    "-t",
+    "times",
+    default=1,
+    type=click.IntRange(min=1),
+    help="Number of evaluation trials to run (e.g. 10 for consistency benchmark).",
+)
+@click.option("--detailed", is_flag=True, help="Print detailed rubric breakdown for each persona.")
+@click.option("--json", "as_json", is_flag=True, help="Emit the extensions report as JSON.")
+def eval_extensions(
+    persona: str | None,
+    times: int,
+    detailed: bool,
+    as_json: bool,
+) -> None:
+    """Evaluate extensions health: 8-factor rubric across registry, containment, schema, and isolation."""
+    if times > 1:
+        bench = evaluate_extensions_trials(persona=persona, trials=times)
+        if as_json:
+            click.echo(json.dumps(bench, indent=2, ensure_ascii=False))
+            if not bench["all_trials_healthy"] or not bench["consistent"]:
+                sys.exit(1)
+            return
+
+        click.echo(f"# Sak Family Extensions Fleet Benchmark ({times} trials)")
+        click.echo(
+            f"  Consistency: {'100% Deterministic' if bench['consistent'] else 'Inconsistent'} | "
+            f"Avg Latency: {bench['avg_latency_ms']:.2f}ms | Jitter: {bench['jitter_ms']:.2f}ms"
+        )
+        all_ok = bench["all_trials_healthy"] and bench["consistent"]
+        for p_name, res in bench["latest_report"].items():
+            status = "HEALTHY" if res["healthy"] else "UNHEALTHY"
+            click.echo(
+                f"  [{status}] {p_name:<10} score={res['extensions_score']:.0%} "
+                f"checks={res['checks_passed']}/{res['checks_total']} "
+                f"extensions={res['extensions_count']} "
+                f"grade={res['grade']}"
+            )
+            if res["diagnostics"]:
+                for d in res["diagnostics"]:
+                    click.echo(f"    - warning: {d}")
+        if not all_ok:
+            sys.exit(1)
+        return
+
+    targets = [persona] if persona else sorted(PERSONA_NAMES)
+    results = {p: evaluate_persona_extensions_health(p) for p in targets}
+    if as_json:
+        click.echo(json.dumps(results, indent=2, ensure_ascii=False))
+        if not all(r["healthy"] for r in results.values()):
+            sys.exit(1)
+        return
+
+    click.echo("# Sak Family Extensions Fleet Health Audit")
+    all_ok = True
+    for p_name, res in results.items():
+        status = "HEALTHY" if res["healthy"] else "UNHEALTHY"
+        if not res["healthy"]:
+            all_ok = False
+        click.echo(
+            f"  [{status}] {p_name:<10} grade={res['grade']:<4} score={res['extensions_score']:.0%} "
+            f"checks={res['checks_passed']}/{res['checks_total']} "
+            f"extensions={res['extensions_count']}"
+        )
+        if detailed:
+            for criterion, passed in res["checks"].items():
+                st = "PASS" if passed else "FAIL"
+                click.echo(f"    - [{st}] {criterion}")
+        if res["diagnostics"]:
+            for d in res["diagnostics"]:
+                click.echo(f"    - warning: {d}")
+
     if not all_ok:
         sys.exit(1)
 

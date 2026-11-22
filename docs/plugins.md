@@ -53,7 +53,9 @@ A *skill* in House of Sak is a directory containing a `SKILL.md` file that defin
 SakThai scans the following directories for skills:
 1. `personas/<persona>/skills/` — Persona-specific skill overlays (SakThai 170, SakSee 106, SakKing 59, SakJules 56, SakSit 45, SakTan 26).
 2. `personas/shared/skills/` — Universal shared skills available to all six personas (19 skills).
-3. `~/.sakthai/extensions/` — Installed third-party git extensions and plugins.
+3. `~/.sakthai/<persona>/extensions/` — Persona-scoped installed git extensions.
+4. `~/.sakthai/extensions/` — Shared installed third-party git extensions and plugins.
+5. `~/.gemini/extensions/` — Gemini CLI extensions (when present).
 
 > *Note: There is no root-level `skills/` directory.*
 
@@ -99,3 +101,84 @@ sakthai skills sync-sakking --sakking-home /custom/.sakking/skills
 ```
 
 The importer reads `$SAKKING_HOME/skills` (default `~/.sakking/skills`), skips bundled and internal skills, rewrites each with canonical YAML frontmatter (recording `metadata.sakthai.source: sakking:<slug>`), and prefixes the name with `SakKing-`. The sync is **idempotent**: re-running rewrites only skills whose rendered content changed.
+
+---
+
+## 📦 Extensions (Git Bundles with Skills & MCP Servers)
+
+SakThai enables cloning, managing, and evaluating third-party git extensions that provide bundled skills and Model Context Protocol (MCP) servers.
+
+### Scoping: Shared vs. Persona-Scoped
+
+Extensions can be installed globally or scoped to a specific persona:
+* **Shared extensions**: Installed in `~/.sakthai/extensions/` (recorded in `~/.sakthai/extensions.json`). Available fleet-wide.
+* **Persona-scoped extensions**: Installed in `~/.sakthai/<persona>/extensions/` (recorded in `~/.sakthai/<persona>/extensions.json`). Scoped strictly to that agent.
+
+### Extension Manifest (`gemini-extension.json`)
+
+Extensions may define MCP servers using `gemini-extension.json` at the root of the cloned repository:
+
+```json
+{
+  "name": "example-extension",
+  "version": "1.0.0",
+  "description": "Example extension providing skills and MCP tools",
+  "mcpServers": {
+    "example-server": {
+      "command": "uvx",
+      "args": ["example-mcp-server"],
+      "env": {
+        "DEBUG": "0"
+      }
+    }
+  }
+}
+```
+
+### Extension Management CLI (`sakthai extensions`)
+
+```bash
+# List installed extensions
+sakthai extensions list
+sakthai extensions list --persona saksee
+sakthai extensions list --all-personas --json
+
+# Install an extension
+sakthai extensions install https://github.com/foo/bar
+sakthai extensions install https://github.com/foo/bar --persona sakjules
+
+# Inspect extension details
+sakthai extensions info bar [--persona sakjules] [--json]
+
+# Validate extension containment, manifest schema, and skills
+sakthai extensions validate [name] [--persona sakjules] [--json]
+
+# Update extensions via git pull
+sakthai extensions update [name] [--persona sakjules] [--all]
+
+# Remove an extension
+sakthai extensions remove bar [--persona sakjules]
+```
+
+### Extension Health Evaluation (`sakthai eval extensions`)
+
+The fleet includes an 8-factor automated rubric (`EXTENSIONS_RUBRIC_CRITERIA`):
+1. **`registry_valid`**: Extension registry is valid, non-corrupt JSON.
+2. **`paths_contained`**: All extensions reside within authorized directories (zero path escape).
+3. **`names_valid`**: Extension names conform to regex convention (`^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$`).
+4. **`manifests_valid`**: `gemini-extension.json` passes schema and command checks.
+5. **`skills_valid`**: All bundled `SKILL.md` files comply with YAML frontmatter rules.
+6. **`isolation_safe`**: MCP server commands contain no dangerous shell injection patterns.
+7. **`discovery_health`**: Discovery routines handle missing or corrupt files safely without crashing.
+8. **`persona_scoping_ready`**: Extension infrastructure supports per-persona scoping across the fleet.
+
+```bash
+# Audit extension health across all personas
+sakthai eval extensions
+
+# Detailed rubric check for a single persona
+sakthai eval extensions --persona sakjules --detailed
+
+# Multi-trial consistency benchmark
+sakthai eval extensions --times 10 --json
+```

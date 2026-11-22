@@ -230,6 +230,22 @@ def persona_memory_db_path(persona: str) -> Path:
     return base / persona / "memory.db"
 
 
+def persona_extensions_dir(persona: str) -> Path:
+    """Directory for PERSONA's own extensions, by convention: ``~/.sakthai/<persona>/extensions``."""
+    if persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+    base = Path(os.environ.get("SAKTHAI_HOME", Path.home() / ".sakthai"))
+    return base / persona / "extensions"
+
+
+def persona_extensions_registry_path(persona: str) -> Path:
+    """Path to PERSONA's own extensions registry: ``~/.sakthai/<persona>/extensions.json``."""
+    if persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+    base = Path(os.environ.get("SAKTHAI_HOME", Path.home() / ".sakthai"))
+    return base / persona / "extensions.json"
+
+
 def sessions_dir() -> Path:
     """Directory where agent session logs are written."""
     return sakthai_home() / "sessions"

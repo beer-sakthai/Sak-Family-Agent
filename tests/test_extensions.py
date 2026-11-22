@@ -29,10 +29,13 @@ def _fake_clone(*, with_skill: bool = True, with_mcp: bool = True) -> Callable[.
         if with_skill:
             skill = dest / "myskill"
             skill.mkdir()
-            (skill / "SKILL.md").write_text("---\nname: myskill\n---\nbody\n", encoding="utf-8")
+            (skill / "SKILL.md").write_text(
+                "---\nname: myskill\ndescription: demo skill\n---\nbody\n", encoding="utf-8"
+            )
         if with_mcp:
             (dest / "gemini-extension.json").write_text(
-                json.dumps({"mcpServers": {"srv": {}}}), encoding="utf-8"
+                json.dumps({"mcpServers": {"srv": {"command": "echo", "args": ["hello"]}}}),
+                encoding="utf-8",
             )
         return types.SimpleNamespace(returncode=0, stdout="", stderr="")
 
@@ -257,3 +260,140 @@ def test_remove_refuses_extensions_dir_itself(sakthai_home: Path) -> None:
     with pytest.raises(ext.ExtensionError, match="outside"):
         ext.remove("evil")
     assert base.exists()
+
+
+# -- manifest validation -------------------------------------------------
+
+
+def test_validate_manifest_valid(tmp_path: Path) -> None:
+    manifest = tmp_path / "gemini-extension.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "name": "my-ext",
+                "version": "1.0.0",
+                "mcpServers": {
+                    "srv1": {
+                        "command": "python",
+                        "args": ["-m", "srv"],
+                        "env": {"FOO": "BAR"},
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    is_valid, diags = ext.validate_extension_manifest(manifest)
+    assert is_valid is True
+    assert diags == []
+
+
+def test_validate_manifest_missing_returns_true(tmp_path: Path) -> None:
+    is_valid, diags = ext.validate_extension_manifest(tmp_path / "nonexistent.json")
+    assert is_valid is True
+    assert len(diags) == 1
+    assert "skills-only" in diags[0]
+
+
+def test_validate_manifest_invalid_json(tmp_path: Path) -> None:
+    manifest = tmp_path / "gemini-extension.json"
+    manifest.write_text("{bad-json", encoding="utf-8")
+    is_valid, diags = ext.validate_extension_manifest(manifest)
+    assert is_valid is False
+    assert any("not valid JSON" in d for d in diags)
+
+
+def test_validate_manifest_dangerous_command_rejected(tmp_path: Path) -> None:
+    manifest = tmp_path / "gemini-extension.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "mcpServers": {
+                    "evil": {
+                        "command": "cat /etc/passwd; rm -rf /",
+                        "args": ["$(whoami)"],
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    is_valid, diags = ext.validate_extension_manifest(manifest)
+    assert is_valid is False
+    assert any("dangerous shell metacharacters" in d for d in diags)
+
+
+def test_validate_manifest_non_dict_rejected(tmp_path: Path) -> None:
+    manifest = tmp_path / "gemini-extension.json"
+    manifest.write_text(json.dumps(["not-an-object"]), encoding="utf-8")
+    is_valid, diags = ext.validate_extension_manifest(manifest)
+    assert is_valid is False
+    assert any("must be a JSON object" in d for d in diags)
+
+
+# -- persona-scoped extension management ---------------------------------
+
+
+def test_persona_scoped_install_list_remove(
+    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(ext.subprocess, "run", _fake_clone())
+    res = ext.install_extension("https://github.com/foo/web-ext", persona="saksee")
+    assert res.extension.name == "web-ext"
+    assert res.extension.persona == "saksee"
+    assert "saksee" in str(res.extension.path)
+
+    # Scoped list vs shared list
+    shared_list = ext.list_extensions(persona=None)
+    assert shared_list == []
+    saksee_list = ext.list_extensions(persona="saksee")
+    assert len(saksee_list) == 1
+    assert saksee_list[0].name == "web-ext"
+
+    # all_personas list
+    all_list = ext.list_extensions(all_personas=True)
+    assert len(all_list) == 1
+    assert all_list[0].persona == "saksee"
+
+    # info
+    info = ext.get_extension_info("web-ext", persona="saksee")
+    assert info is not None
+    assert info.name == "web-ext"
+    assert info.persona == "saksee"
+
+    # validate
+    val = ext.validate_extension("web-ext", persona="saksee")
+    assert val.valid is True
+    assert val.containment_valid is True
+
+    # remove
+    assert ext.remove("web-ext", persona="saksee") is True
+    assert ext.list_extensions(persona="saksee") == []
+
+
+def test_install_invalid_persona_raises(sakthai_home: Path) -> None:
+    with pytest.raises(ext.ExtensionError, match="unknown persona"):
+        ext.install_extension("https://github.com/foo/bar", persona="invalid-persona")
+
+
+def test_update_extension_flow(
+    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(ext.subprocess, "run", _fake_clone())
+    res = ext.install_extension("https://github.com/foo/tool-ext")
+    # Simulate .git directory
+    git_dir = res.extension.path / ".git"
+    git_dir.mkdir(parents=True, exist_ok=True)
+
+    def _fake_pull(cmd: list[str], *args: object, **kwargs: object) -> object:
+        if "pull" in cmd:
+            return types.SimpleNamespace(returncode=0, stdout="Already up to date.", stderr="")
+        if "rev-parse" in cmd:
+            return types.SimpleNamespace(returncode=0, stdout="abc1234567\n", stderr="")
+        return types.SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(ext.subprocess, "run", _fake_pull)
+    up_res = ext.update_extension("tool-ext")
+    assert up_res.success is True
+    assert up_res.updated is False
+    assert "Already up to date" in up_res.message
