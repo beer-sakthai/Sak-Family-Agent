@@ -144,7 +144,7 @@ def _run_in_sandbox(
 
 
 @click.command()
-@click.argument("task")
+@click.argument("task", nargs=-1, required=True)
 @click.option("--model", default=DEFAULT_MODEL, show_default=True, help="Model identifier.")
 @click.option(
     "--max-tokens", default=DEFAULT_MAX_TOKENS, show_default=True, type=click.IntRange(min=1)
@@ -222,7 +222,7 @@ def _run_in_sandbox(
     ),
 )
 def run(
-    task: str,
+    task: str | tuple[str, ...],
     model: str,
     max_tokens: int,
     max_iterations: int,
@@ -247,6 +247,7 @@ def run(
     configured correctly (provider, credentials, model, tools) without spending
     any tokens.
     """
+    task_str = " ".join(task) if isinstance(task, (tuple, list)) else str(task)
     if persona and sandbox:
         raise click.UsageError(
             "--persona is not supported with --sandbox yet "
@@ -263,7 +264,7 @@ def run(
             model = default_model
     if sandbox:
         _run_in_sandbox(
-            task=task,
+            task=task_str,
             model=model,
             max_tokens=max_tokens,
             max_iterations=max_iterations,
@@ -318,7 +319,7 @@ def run(
     try:
         with _tool_context(no_mcp=no_mcp, verbose=verbose, persona=persona) as tools:
             result = run_agent(
-                task,
+                task_str,
                 model=model,
                 max_tokens=max_tokens,
                 max_iterations=max_iterations,

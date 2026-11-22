@@ -8,6 +8,7 @@ terminal and the inline REPL otherwise, so pipes and CI keep working.
 
 from __future__ import annotations
 
+import contextlib
 import sys
 from collections.abc import Callable
 from typing import Any
@@ -52,16 +53,53 @@ def _make_tui_app(**kwargs: Any) -> Any:
     return SakThaiApp(**kwargs)
 
 
-def _make_read_input() -> Callable[[], str | None]:
+def _make_read_input(prompt: str = "> ") -> Callable[[], str | None]:
     from prompt_toolkit import PromptSession
+    from prompt_toolkit.completion import WordCompleter
+    from prompt_toolkit.history import FileHistory
 
-    session: PromptSession[str] = PromptSession()
+    history_file = config.sakthai_home() / "cli_history"
+    with contextlib.suppress(OSError):
+        history_file.parent.mkdir(parents=True, exist_ok=True)
+
+    completer = WordCompleter(
+        [
+            "/help",
+            "/status",
+            "/persona",
+            "/model",
+            "/provider",
+            "/tools",
+            "/skills",
+            "/memory",
+            "/learn",
+            "/doctor",
+            "/goal",
+            "/clear",
+            "/reset",
+            "/exit",
+            "/quit",
+        ],
+        ignore_case=True,
+    )
+
+    try:
+        session: PromptSession[str] = PromptSession(
+            history=FileHistory(str(history_file)),
+            completer=completer,
+        )
+    except TypeError:
+        session = PromptSession()
+    except Exception:
+        session = PromptSession()
 
     def _read() -> str | None:
         try:
-            return str(session.prompt("> "))
+            return str(session.prompt(prompt))
         except EOFError:
             return None
+        except KeyboardInterrupt:
+            return ""
 
     return _read
 
@@ -156,6 +194,7 @@ def chat(
                     store=store,
                 ).run()
                 return
+            active_p = [persona]
             run_chat(
                 persona=persona,
                 soul_text=soul_text,
@@ -167,6 +206,7 @@ def chat(
                 store=store,
                 console=Console(),
                 read_input=_make_read_input(),
+                on_persona_change=lambda new_p: active_p.__setitem__(0, new_p),
             )
     finally:
         store.close()
