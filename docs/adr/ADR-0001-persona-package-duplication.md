@@ -194,8 +194,38 @@ targets Windows.
    source. This confirms the overlay/compose model carries over cleanly from the
    skills tree to the package code; the remaining risk is in the migration
    mechanics (items 4–5), not the concept.
-4. [ ] Audit `export_agent_repo.py` / `diagnose_personas.py` / CI for assumptions
-   that the copies exist as committed source.
+4. [x] 2026-11-22 Audit `export_agent_repo.py` / `diagnose_personas.py` / CI for
+   assumptions that the copies exist as committed source. — **Done; the tooling and
+   CI do not depend on the copies, only the parity tests do.** Findings:
+   - **`export_agent_repo.py`** builds the runnable package (`out/sakthai/`) from
+     **canonical** `personas/sakthai/` (its `PACKAGE_SUBDIRS`/`PACKAGE_FILES`
+     loop), and copies `personas/<persona>/` only to supply the overlay. The
+     persona copy's redundant package code is copied into `out/personas/<persona>/`
+     but is unused there; under Option C it would simply be absent — an
+     improvement, not a break. (Unrelated pre-existing quirk, out of scope: it
+     copies `pyproject.toml` verbatim while flattening the package to `out/sakthai/`,
+     so the exported `package-dir` still points at `personas/sakthai`.)
+   - **`diagnose_personas.py`** reads only each persona's `config/` and `skills/`
+     overlay plus the installed canonical `sakthai` package; it never reads a
+     persona's package-code copy.
+   - **`compose_persona.py`** is skills-only — a package-code composer is new work
+     (item 5), already prototyped by the item-3 spike.
+   - **CI**: no workflow depends on the persona package copies. `ci.yml` runs
+     mypy/bandit against `personas/sakthai` only; `bandit.yml` scans `-r .` so it
+     reads the copies today but would just scan fewer files once they go; every
+     other `personas/<persona>` reference in `.github/` is to `skills/` (bandit
+     excludes, continuous-security) or prose. `pyproject.toml` installs only
+     `sakthai`, and no runtime code imports a persona-named package.
+   - **The one real coupling — the parity tests.** `test_persona_{guardrails,web_server,eval}_parity.py`,
+     `test_persona_structure_parity.py` (its `EXPECTED_PERSONA_ITEMS` /
+     `EXPECTED_PACKAGE_ITEMS` and the 15-subpackage byte check) and the new
+     `test_persona_package_parity.py` all assert the committed copies are
+     byte-identical to canonical. These exist *because* the copies exist; when
+     item 5 removes them from committed source these tests lose their meaning and
+     must be deleted or repointed at the generated trees, and the `EXPECTED_*`
+     structure sets must drop the package dirs. Item 5 should therefore: generate
+     the trees (item-3 composer), `.gitignore` them, delete/rewrite the parity
+     tests, and update `CLAUDE.md`'s "persona package copies" section.
 5. [ ] If the spike holds, migrate copies → overlays, `.gitignore` the generated
    trees, and wire `make compose-personas` into the export path. Land behind its
    own PR with the parity check from step 1 still guarding the transition.
