@@ -34,18 +34,27 @@ from .base import (
     with_retry,
 )
 from .gateway_provider import call_gateway
-from .gemini_provider import call_gemini, to_gemini_contents
+from .gemini_provider import (
+    LEGACY_GEMINI_MODELS,
+    call_gemini,
+    call_gemini_decision,
+    call_gemini_interaction,
+    to_gemini_contents,
+)
 from .openai_provider import call_openai_compat, to_openai_messages
 
 __all__ = [
     "AgentError",
     "Block",
+    "LEGACY_GEMINI_MODELS",
     "Response",
     "block_field",
     "build_client",
     "call_anthropic",
     "call_gateway",
     "call_gemini",
+    "call_gemini_decision",
+    "call_gemini_interaction",
     "call_openai_compat",
     "detect_provider",
     "find_tool_name_by_id",

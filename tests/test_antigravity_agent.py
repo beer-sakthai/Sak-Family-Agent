@@ -16,6 +16,11 @@ from sakthai.agent_platform.antigravity_agent import (
 from sakthai.cli import main
 
 
+def test_runner_config_default_model() -> None:
+    config = AntigravityRunnerConfig()
+    assert config.model == "gemini-4-hydrogen"
+
+
 def test_runner_config_hosted(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GEMINI_API_KEY", "test-env-key")
     runner = AntigravityAgentRunner(

@@ -63,6 +63,7 @@ _build_client = providers.build_client
 _call_anthropic = providers.call_anthropic
 _call_gemini = providers.call_gemini
 _call_gateway = providers.call_gateway
+LEGACY_GEMINI_MODELS = providers.LEGACY_GEMINI_MODELS
 _call_openai_compat = providers.call_openai_compat
 
 SYSTEM_BASE = (
@@ -208,7 +209,17 @@ def _build_system(
 
 
 def _resolve_model_name(model: str, provider: str) -> str:
-    """Resolve the final model name, applying provider-specific defaults."""
+    """Resolve the final model name, applying provider-specific defaults and deprecations."""
+    base_name = model.rsplit("/", 1)[-1]
+    if base_name in LEGACY_GEMINI_MODELS and (provider == "google" or "gemini" in model.lower()):
+        substitute = LEGACY_GEMINI_MODELS[base_name]
+        logger.warning(
+            "Gemini model '%s' is deprecated; auto-substituting '%s' per gemini-api-dev standard",
+            model,
+            substitute,
+        )
+        return substitute
+
     if model != DEFAULT_MODEL:
         return model
 
@@ -217,7 +228,7 @@ def _resolve_model_name(model: str, provider: str) -> str:
     if provider == "openai":
         return "qwen2.5-coder:7b" if os.environ.get("OLLAMA_HOST") else "gpt-4o"
     if provider == "google":
-        return "gemini-2.5-flash"
+        return "gemini-4-hydrogen"
     if provider == "huggingface":
         return DEFAULT_HUGGINGFACE_MODEL
     return model

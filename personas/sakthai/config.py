@@ -46,6 +46,7 @@ PERSONAS_DIR = REPO_ROOT / "personas"
 SKILLS_DIR = PERSONAS_DIR / "sakthai" / "skills"
 LIBRARY_DIR = PERSONAS_DIR / "shared" / "skills"
 SHARED_SKILLS_DIR = PERSONAS_DIR / "shared" / "skills"
+AGENTS_SKILLS_DIR = REPO_ROOT / ".agents" / "skills"
 
 # Curated skill catalog at the persona root (pre-dates the SakThai-/Sak- naming
 # convention — its skills keep their original lowercase `sakthai-` names).

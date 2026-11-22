@@ -126,6 +126,30 @@ class GatewayRouter:
                 }
             )
 
+        # Register legacy model aliases for backward compatibility
+        legacy_aliases = [
+            ("gemini-2.5-flash", "Legacy Google Gemini Flash (auto-routes to gemini-4-hydrogen)"),
+            (
+                "gemini-3.7-flash",
+                "Legacy Google Gemini Flash Reasoning (auto-routes to gemini-4-carbon)",
+            ),
+        ]
+        registered_ids = {item["id"] for item in data}
+        for alias_id, alias_desc in legacy_aliases:
+            if alias_id not in registered_ids:
+                data.append(
+                    {
+                        "id": alias_id,
+                        "object": "model",
+                        "created": created,
+                        "owned_by": "google",
+                        "root": alias_id,
+                        "description": alias_desc,
+                        "permission": [],
+                        "parent": None,
+                    }
+                )
+
         return {"object": "list", "data": data}
 
     def handle_personas(self) -> dict[str, Any]:

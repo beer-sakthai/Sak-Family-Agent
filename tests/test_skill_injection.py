@@ -120,3 +120,13 @@ def test_resolve_skill_names_persona_scoped_finds_persona_only_skill(
     )
     assert resolved_with_persona == ["SakSee-only-skill"]
     assert missing_with_persona == []
+
+
+def test_default_skill_roots_includes_agents_skills(sakthai_home: Path) -> None:
+    from sakthai.config import AGENTS_SKILLS_DIR
+    from sakthai.skills import find_skill
+
+    roots = default_skill_roots()
+    if AGENTS_SKILLS_DIR.is_dir():
+        assert AGENTS_SKILLS_DIR in roots
+        assert find_skill("gemini-api-dev", *roots) is not None
