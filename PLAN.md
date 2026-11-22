@@ -166,6 +166,7 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-22 **Statsig SDK Integration (`apps/sak_agent_dashboard`, `@statsig/react-bindings`, `@statsig/session-replay`, `@statsig/web-analytics`)** — Detect package manager (npm) and App Router, install Statsig packages, configure client key in `.env.local`, create `MyStatsig` provider in `src/app/my-statsig.tsx`, wrap App Router `layout.tsx` preserving existing layout structure, and verify Vitest unit tests and Next.js build.
 - [x] 2026-11-22 **Install LaunchDarkly Release Autopilot Onboarding Skill (`.agents/skills/launchdarkly-release-autopilot-onboarding`, `skills-lock.json`)** — Install `launchdarkly-release-autopilot-onboarding` from `launchdarkly/ai-tooling` via `npx skills add`, update `skills-lock.json`, and verify test suite and repo hygiene.
 - [x] 2026-11-22 **Install LaunchDarkly Vercel Server SDK (`apps/sak_agent_dashboard`, `@launchdarkly/vercel-server-sdk`)** — Install and audit `@launchdarkly/vercel-server-sdk` in Next.js dashboard, configure environment sample keys and helper module, and verify Vitest tests and Next.js production build.
+- [x] 2026-11-22 **Install LaunchDarkly Server SDK OpenTelemetry Integration (`pyproject.toml`, `launchdarkly-server-sdk-otel`)** — Install and pin `launchdarkly-server-sdk-otel>=1.3.0` in `pyproject.toml` and `uv.lock`, verify package synchronization, and run quality gates (ruff, mypy, bandit, pytest).
 
 
 

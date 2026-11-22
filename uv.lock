@@ -1382,6 +1382,47 @@ wheels = [
 ]
 
 [[package]]
+name = "launchdarkly-eventsource"
+version = "1.7.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ac/6c/60862f8143c8185e953410b30125ff37ce4720fac2042771ca00f115f840/launchdarkly_eventsource-1.7.4.tar.gz", hash = "sha256:0a608da152a53bd05f5b4a2486828f21d48cd25a56986e36a8e47a8e9975e309", size = 46060, upload-time = "2026-10-19T15:27:17.989Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8c/e3/6dae165ff56bba3ad4fc76b2aa8c4606c577d2e33a9053dc147b03b045b6/launchdarkly_eventsource-1.7.4-py3-none-any.whl", hash = "sha256:42bbaee1741675199be193d99229ecb710a94089e74fc68b8c4edb90cddbdc5e", size = 29560, upload-time = "2026-10-19T15:27:16.988Z" },
+]
+
+[[package]]
+name = "launchdarkly-server-sdk"
+version = "9.21.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "certifi" },
+    { name = "launchdarkly-eventsource" },
+    { name = "pyrfc3339" },
+    { name = "semver" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d6/63/d71b230ed98354523c3bba9950b1498a74c1824c39f425400a0cd27b8841/launchdarkly_server_sdk-9.21.0.tar.gz", hash = "sha256:c1db1ebcc5045b3785bd169e780f521a625f5201382dca7cbe85fd871a4103c8", size = 518639, upload-time = "2026-11-12T21:45:44.315Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/57/df/9c22e54b59b1c64bd5b4a5880d4f00aa92448fc0da16493e86090470739e/launchdarkly_server_sdk-9.21.0-py3-none-any.whl", hash = "sha256:ce87d00caa655c5ebb9a2656e65432c64c47529f5df588513043fe9d4fd46afe", size = 324888, upload-time = "2026-11-12T21:45:43.152Z" },
+]
+
+[[package]]
+name = "launchdarkly-server-sdk-otel"
+version = "1.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "launchdarkly-server-sdk" },
+    { name = "opentelemetry-sdk" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/64/32/a45370eb00f5b05bf2cc4206c12838763dbf43cf7b65c3cf2a9b285e3bea/launchdarkly_server_sdk_otel-1.3.0.tar.gz", hash = "sha256:5b678d6e009c4e13f94a01196a71d1e135ade4cab80c497c612ca699efa12bf3", size = 9241, upload-time = "2026-10-20T22:04:38.347Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e5/30/1076607ed429b178774da16c1df893da055cd7d224d293357a4a6147fbf4/launchdarkly_server_sdk_otel-1.3.0-py3-none-any.whl", hash = "sha256:66c188605595151fa4daff4b86955d937a5b7ebdef9c4394a2f089a63b3fdf7b", size = 8629, upload-time = "2026-10-20T22:04:37.376Z" },
+]
+
+[[package]]
 name = "libcst"
 version = "1.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2334,6 +2375,33 @@ wheels = [
 ]
 
 [[package]]
+name = "opentelemetry-sdk"
+version = "1.45.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-semantic-conventions" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7b/1a/74a21d4d6969fb8b432ac397e66112a8167a6deb267ea4559dbaf2fe91ef/opentelemetry_sdk-1.45.2.tar.gz", hash = "sha256:7eec4de13dd21ff3a1670dcb0e02079e692736f94d733dfdce5af461d884248d", size = 221705, upload-time = "2026-10-29T17:29:54.685Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9f/a5/9a3b793ef48245f2336a16beb2324c2397dbb3f987cd68942f77cca06156/opentelemetry_sdk-1.45.2-py3-none-any.whl", hash = "sha256:ff974ea70ee4f1d51e2ec152db37c2b626c7bf82bb3f7d86114fd8704e7199c6", size = 141756, upload-time = "2026-10-29T17:29:33.722Z" },
+]
+
+[[package]]
+name = "opentelemetry-semantic-conventions"
+version = "0.66b2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "opentelemetry-api" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/37/3f/50f95972b50e8e353f5b9342034c9cd17730f1956f009ce6a3fbbd89f9ce/opentelemetry_semantic_conventions-0.66b2.tar.gz", hash = "sha256:7da5f1a5dc4383eb66711d4d3d3e71824d9403ac1559fea021cc103c1a4c4976", size = 150246, upload-time = "2026-10-29T17:29:55.682Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/67/bd/6bf33ed31521c565931c037e9e81bac47c1acb000e850c6e24220e2a0c00/opentelemetry_semantic_conventions-0.66b2-py3-none-any.whl", hash = "sha256:4cbe61e5f9275d57ab31708446e7938ef4291ebbe6a7fca6f7a629c5acae87d8", size = 206280, upload-time = "2026-10-29T17:29:35.062Z" },
+]
+
+[[package]]
 name = "packaging"
 version = "26.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2845,6 +2913,15 @@ wheels = [
 [package.optional-dependencies]
 crypto = [
     { name = "cryptography" },
+]
+
+[[package]]
+name = "pyrfc3339"
+version = "2.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/80/7a/0e5227aa1c831fdaf579073a0ebb5ca11fc352a43fce8d2639e3ff87ff74/pyrfc3339-2.1.1.tar.gz", hash = "sha256:b144d63819bd4c1ebf9cb57e12f4cba567fcf23d6e8f2f829ba9c7810ea4b951", size = 12921, upload-time = "2026-10-11T01:50:12.384Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fb/79/2746c2066389dd88ede14491bea64cd9d7dd12e4bda63c5960017913af0d/pyrfc3339-2.1.1-py3-none-any.whl", hash = "sha256:4973172cb8b29c14caca7f76e6a52890d9e59ec2722dd5eb29b7fdd9fda2232f", size = 6511, upload-time = "2026-10-11T01:50:10.962Z" },
 ]
 
 [[package]]
@@ -3409,6 +3486,7 @@ dependencies = [
     { name = "click" },
     { name = "google-genai" },
     { name = "httpx" },
+    { name = "launchdarkly-server-sdk-otel" },
     { name = "prompt-toolkit" },
     { name = "python-telegram-bot" },
     { name = "pyyaml" },
@@ -3465,6 +3543,7 @@ requires-dist = [
     { name = "google-genai", specifier = ">=3.2.0" },
     { name = "httpx", specifier = ">=0.20.0" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.165.10" },
+    { name = "launchdarkly-server-sdk-otel", specifier = ">=1.3.0" },
     { name = "mutmut", marker = "extra == 'mutation'", specifier = ">=3.7.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=2.3.0" },
     { name = "prompt-toolkit", specifier = ">=3.0.53,<4.0" },
@@ -3683,6 +3762,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/f7/86/5185061a1fcc41d18c5dc2463969b3a3964b31d9ac67b2fb05d4c7ff7670/scipy-1.18.0-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:9aac6192fac56bf2ca534389d24623f07b39ff83317d58287285e7fbd622ff76", size = 37472480, upload-time = "2026-06-19T15:01:35.136Z" },
     { url = "https://files.pythonhosted.org/packages/31/8e/f04c68e39919a010d34f2ee1367fd705b0a25a02f609d755f0bfbc0a15fc/scipy-1.18.0-cp314-cp314t-win_amd64.whl", hash = "sha256:e40baea28ae7f5475c779741e2d90b1247c78531207b49c7030e698ff81cee3f", size = 37365390, upload-time = "2026-06-19T15:01:38.091Z" },
     { url = "https://files.pythonhosted.org/packages/d5/19/969dc072906c84dd0a3b05dcf57ea750936087d7873549e408b35cfc3f97/scipy-1.18.0-cp314-cp314t-win_arm64.whl", hash = "sha256:368e0a705903c466aa5f08eefb39e6b1b6b2d659e7352a31fd9e2438365be0f8", size = 25279661, upload-time = "2026-06-19T15:01:40.817Z" },
+]
+
+[[package]]
+name = "semver"
+version = "3.1.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ec/a0/3d3f51a1304c0e8c93e06a23308f566f2d52d62f92dac903b85ef79dea6f/semver-3.1.2.tar.gz", hash = "sha256:bea193552413194252d33ff26ce0962b76669bd1c6fb17e8e203ac37f072feaf", size = 293659, upload-time = "2026-11-15T17:01:42.931Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ab/60/27e29790ff15ea0a485b8dc200d514328294f956e4abc3d43d88c0b5338d/semver-3.1.2-py3-none-any.whl", hash = "sha256:45d107c3fa880910441dfab9d555046cba2829a25feeadfe4a1566439635c510", size = 19100, upload-time = "2026-11-15T17:01:41.321Z" },
 ]
 
 [[package]]
