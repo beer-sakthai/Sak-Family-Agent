@@ -80,6 +80,16 @@ LEGACY_GEMINI_MODELS: dict[str, str] = {
     "gemini-3.8-flash": "gemini-4-hydrogen",
 }
 
+#: Set of models requiring an active Cloud Billing account (0 free-tier quota).
+PAID_ONLY_GEMINI_MODELS: frozenset[str] = frozenset(
+    {
+        "gemini-4-carbon",
+        "gemini-4-neon",
+        "gemini-4-argon",
+        "gemini-3.1-pro-preview",
+    }
+)
+
 
 def _stop_reason(has_tool_call: bool, finish_reason: Any) -> str:
     """Map Gemini's tool-call/finish signals to a normalised stop reason."""

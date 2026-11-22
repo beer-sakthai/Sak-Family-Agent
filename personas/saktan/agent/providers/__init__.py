@@ -36,6 +36,7 @@ from .base import (
 from .gateway_provider import call_gateway
 from .gemini_provider import (
     LEGACY_GEMINI_MODELS,
+    PAID_ONLY_GEMINI_MODELS,
     call_gemini,
     call_gemini_decision,
     call_gemini_interaction,
@@ -47,6 +48,7 @@ __all__ = [
     "AgentError",
     "Block",
     "LEGACY_GEMINI_MODELS",
+    "PAID_ONLY_GEMINI_MODELS",
     "Response",
     "block_field",
     "build_client",

@@ -11,6 +11,7 @@ from sakthai.agent.loop import _resolve_model_name
 from sakthai.agent.providers.base import AgentError
 from sakthai.agent.providers.gemini_provider import (
     LEGACY_GEMINI_MODELS,
+    PAID_ONLY_GEMINI_MODELS,
     call_gemini,
     call_gemini_decision,
     call_gemini_interaction,
@@ -24,6 +25,14 @@ def test_legacy_gemini_models_mapping() -> None:
     assert LEGACY_GEMINI_MODELS["gemini-1.5-flash"] == "gemini-4-hydrogen"
     assert LEGACY_GEMINI_MODELS["gemini-1.5-pro"] == "gemini-4-carbon"
     assert LEGACY_GEMINI_MODELS["gemini-3.1-pro-preview"] == "gemini-4-carbon"
+
+
+def test_paid_only_gemini_models_set() -> None:
+    """Verify paid-only models requiring billing accounts are identified."""
+    assert "gemini-4-carbon" in PAID_ONLY_GEMINI_MODELS
+    assert "gemini-4-neon" in PAID_ONLY_GEMINI_MODELS
+    assert "gemini-4-hydrogen" not in PAID_ONLY_GEMINI_MODELS
+    assert "gemini-3.5-flash-lite" not in PAID_ONLY_GEMINI_MODELS
 
 
 def test_resolve_model_name_substitutes_legacy_models(caplog: pytest.LogCaptureFixture) -> None:
