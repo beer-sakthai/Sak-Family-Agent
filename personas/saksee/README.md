@@ -15,6 +15,8 @@ SakSee specializes in headless browser automation, complex DOM inspection, multi
 - **Creative & Visual Generation**: Manim programmatic mathematical animations, Remotion video authoring, ComfyUI workflows, and ASCII visual art.
 - **Frontend & UI Prototyping**: Modern React, Vite, Shadcn-UI, and Tailwind design implementation.
 - **Third Deputy Lead**: Coordinates web research and visual assets across family workflows.
+- **Evaluator-Optimizer Engine**: Bounded visual and technical refinement loop (`sakthai run --optimize`).
+- **Remote MCP Documentation**: Microsoft Learn and Gemini API Docs integration via Streamable HTTP.
 
 ---
 
@@ -27,8 +29,14 @@ uv sync --all-extras
 # Run SakSee on default model (DeepSeek-V4.1-Flash)
 uv run sakthai run --persona saksee "Inspect documentation and extract API schemas"
 
+# Run with bounded Evaluator-Optimizer refinement loop
+uv run sakthai run --persona saksee --optimize "Design an accessible frontend component"
+
 # Run with interactive chat mode
 uv run sakthai chat --persona saksee
+
+# Run dynamic tool evaluation & telemetry benchmarks
+uv run sakthai eval tools --bench --persona saksee
 
 # Run self-evolution on a skill
 ./evolve_agent.sh --skill SakSee-web-scraping --iterations 5

@@ -12,6 +12,8 @@ SakSit drives developer communications, technical marketing, B2B SaaS thought le
 - **B2B SaaS Thought Leadership**: In-depth analysis on modern software patterns, agent architectures, and AI ecosystem shifts.
 - **Multi-Platform Publishing**: Structured delivery for GitHub Releases, community forums, technical blogs, and developer hubs.
 - **Brand Consistency**: Ensures voice, tone, and visual clarity across all family publications.
+- **Evaluator-Optimizer Engine**: Multi-pass editorial refinement against tone and publication rubrics (`sakthai run --optimize`).
+- **Remote MCP Knowledge Access**: Integrated Microsoft Learn and Gemini API Docs tools.
 
 ---
 
@@ -24,8 +26,14 @@ uv sync --all-extras
 # Run SakSit on default model (DeepSeek-V4-Flash)
 uv run sakthai run --persona saksit "Draft a release announcement for 6-agent resilience architecture"
 
+# Run with bounded Evaluator-Optimizer refinement loop
+uv run sakthai run --persona saksit --optimize "Refine release post for technical accuracy and tone"
+
 # Run with interactive chat mode
 uv run sakthai chat --persona saksit
+
+# Run dynamic tool evaluation & telemetry benchmarks
+uv run sakthai eval tools --bench --persona saksit
 
 # Run self-evolution on a skill
 ./evolve_agent.sh --skill SakSit-linkedin-b2b-saas-thought-leadership-2026 --iterations 5

@@ -12,6 +12,8 @@ SakJules manages GitHub operations, PR attestation, repository security pipeline
 - **Supply-Chain & Workflow Security**: SHA-256 action pinning, step-security hardening, zizmor audit enforcement, and secret leak scanning.
 - **Branch & Cache Maintenance**: Automated PR cache cleanup on pull request closure (`cache-cleanup.yml`) and stale ref sweeping.
 - **Autonomous Evolution**: Drives repository health maintenance, daily syncs, and prompt/tool evolution.
+- **Evaluator-Optimizer & Graders**: CI auto-heal loop, supply-chain verification, and CodeGrader/ModelGrader assertions (`sakthai run --optimize`).
+- **Remote MCP Security Stack**: StepSecurity remote SSE integration, Microsoft Learn, and Gemini API Docs.
 
 ---
 
@@ -24,11 +26,17 @@ uv sync --all-extras
 # Run SakJules on default model (DeepSeek-V4.1-Flash)
 uv run sakthai run --persona sakjules "Run automated CI health diagnostics and audit supply-chain pins"
 
+# Run with bounded Evaluator-Optimizer refinement loop
+uv run sakthai run --persona sakjules --optimize "Verify and harden workflow action pins"
+
 # Run with interactive chat mode
 uv run sakthai chat --persona sakjules
 
 # Run CI auto-healing utility locally
 uv run python scripts/ci_auto_heal.py --run-tests
+
+# Run dynamic tool evaluation & telemetry benchmarks
+uv run sakthai eval tools --bench --persona sakjules
 
 # Run self-evolution on a skill
 ./evolve_agent.sh --skill SakJules-github-actions-dev --iterations 5

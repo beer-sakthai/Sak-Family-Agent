@@ -12,6 +12,8 @@ SakKing handles rapid task execution, strict test-driven development (TDD), code
 - **TDD & Implementation Master**: Specializes in clean, modular code following red-green-refactor disciplines.
 - **3-Second Intent Preflight**: High-speed regex/keyword intent classification that stages response templates asynchronously in background loops.
 - **Break-Glass Hub Access**: Secondary governance checks for protected remote hub writes (`assert_hf_write_allowed`).
+- **Evaluator-Optimizer & Graders**: Rigorous iterative evaluation against CodeGrader & ModelGrader rubrics (`sakthai run --optimize`).
+- **Remote MCP Toolbelt**: StepSecurity remote SSE, Microsoft Learn, Microsoft 365, and Gemini API Docs.
 
 ---
 
@@ -24,8 +26,14 @@ uv sync --all-extras
 # Run SakKing on default model (Qwen/Qwen3-Coder-30B-A3B-Instruct)
 uv run sakthai run --persona sakking "Implement a red-green test suite for a new cache utility"
 
+# Run with bounded Evaluator-Optimizer refinement loop
+uv run sakthai run --persona sakking --optimize "Refactor cache utility for zero latency"
+
 # Run with interactive chat mode
 uv run sakthai chat --persona sakking
+
+# Run batch evaluation benchmark tasks with graders
+uv run sakthai eval bench
 
 # Run self-evolution on a skill
 ./evolve_agent.sh --skill SakKing-tdd-discipline --iterations 5

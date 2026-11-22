@@ -50,6 +50,7 @@ flowchart TD
 | [`run2-dataset-v10/`](./run2-dataset-v10/) | Dataset specification and model card metadata for `sakthai-combined-v10`. | `README.md` |
 | [`run2-model-7b-128k/`](./run2-model-7b-128k/) | 7B 128k context model card, benchmark telemetry, and evaluation metrics. | `README.md` |
 | [`run2-model-coder-browser/`](./run2-model-coder-browser/) | Coder browser agent diagnostics and merge verification logs. | `README.md` |
+| [`../evaluation_tasks/`](../evaluation_tasks/) | Unified Grader Suite (`CodeGrader`, `ModelGrader`) and benchmark batch runners. | `graders.py`, `tasks.json` |
 
 ---
 
