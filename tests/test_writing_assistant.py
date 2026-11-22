@@ -3,7 +3,42 @@
 from __future__ import annotations
 
 import json
+import sys
+import types
 from unittest.mock import AsyncMock, MagicMock, patch
+
+# Stand-in modules for Python 3.11 environment where launchdarkly-ai-server (requires >= 3.12) is omitted
+if "launchdarkly_ai_server" not in sys.modules:
+    try:
+        import launchdarkly_ai_server  # noqa: F401
+    except ImportError:
+        fake_ai = types.ModuleType("launchdarkly_ai_server")
+        fake_ai.init_client = AsyncMock()
+        fake_ai.inspect_config = AsyncMock()
+        fake_ai.get_registered_handlers = MagicMock(
+            return_value=[("Anthropic", "messages"), ("Anthropic", "agent")]
+        )
+        fake_ai.create_handler = MagicMock(
+            side_effect=lambda key, fn, stream_fn=None: MagicMock(
+                provides_for=key, _fn=fn, _stream_fn=stream_fn
+            )
+        )
+        fake_ai.config = MagicMock()
+        fake_ai.invoke = AsyncMock()
+        sys.modules["launchdarkly_ai_server"] = fake_ai
+
+if "launchdarkly_ai_claude_messages" not in sys.modules:
+    try:
+        import launchdarkly_ai_claude_messages  # noqa: F401
+    except ImportError:
+        fake_claude = types.ModuleType("launchdarkly_ai_claude_messages")
+        dummy_h = MagicMock(
+            provides_for=("Anthropic", "messages"),
+            _fn=MagicMock(),
+            _stream_fn=MagicMock(),
+        )
+        fake_claude.create_claude_messages_handler = MagicMock(return_value=dummy_h)
+        sys.modules["launchdarkly_ai_claude_messages"] = fake_claude
 
 import pytest
 from click.testing import CliRunner
@@ -520,3 +555,29 @@ async def test_generate_writing_with_agentcontrol_usage_object() -> None:
         res = await generate_writing_with_agentcontrol("Test prompt", config=cfg)
         assert res.source == "launchdarkly-agentcontrol"
         assert res.usage.get("input_tokens") == 5
+
+
+@pytest.mark.asyncio
+async def test_generate_writing_with_agentcontrol_missing_module() -> None:
+    cfg = WritingAssistantConfig(sdk_key="sdk-mock-key")
+    with patch.dict(sys.modules, {"launchdarkly_ai_server": None}):
+        res = await generate_writing_with_agentcontrol("Test prompt", config=cfg)
+        assert res.source == "house-of-sak-fallback"
+        assert "ModuleNotFoundError" in (res.error or "")
+
+
+@pytest.mark.asyncio
+async def test_init_writing_assistant_client_missing_module() -> None:
+    cfg = WritingAssistantConfig(sdk_key="sdk-mock-key")
+    with patch.dict(sys.modules, {"launchdarkly_ai_server": None}):
+        client = await init_writing_assistant_client(cfg)
+        assert client is None
+
+
+@pytest.mark.asyncio
+async def test_inspect_writing_config_missing_module() -> None:
+    cfg = WritingAssistantConfig(sdk_key="sdk-mock-key")
+    with patch.dict(sys.modules, {"launchdarkly_ai_server": None}):
+        data = await inspect_writing_config(config=cfg)
+        assert data["enabled"] is True
+        assert data["meta"]["variationKey"] == "fallback"
