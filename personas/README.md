@@ -38,13 +38,16 @@ personas/
 └── saksee/             # Contains the 106 skills mapped to SakSee + self-evolution
 ```
 
-## Agent Self-Evolution & 4-Layer Evaluation
+## Agent Self-Evolution & 5-Pillar Evaluation Framework
 
-Each of the six personas hosts its own self-evolution module and evaluates across four layers:
-1. **Working Files & v9 Self-Evaluation Rubric (`sakthai eval personas`)**: Verifies all 6 working files (`SOUL.md`, `PLAN.md`, `CYCLE.md`, `MEMORY.md`, `HANDOFF.md`, `BACKPACK.md`), the 100-point `CYCLE EVAL: <persona>` v9 rubric in `SOUL.md` and `CYCLE.md`, mandatory reply intro line, model/provider configuration, and primary skills.
-2. **Identity & Soul-Following Benchmark (`evaluation_tasks/soul_following.yaml`)**: Evaluates each persona's `SOUL.md` intro-line adherence across all six Sak Family personas via `evaluation_tasks/utils.py` and `evaluation_tasks/soul_following_dataset.jsonl`.
-3. **Runtime MLOps & Per-Persona Telemetry (`sakthai eval summary`)**: Tracks latency, token usage, and error rates per persona across `~/.sakthai/eval.jsonl` and sharded `~/.sakthai/<persona>/eval.jsonl` logs (`sakthai eval summary --persona <name>` or `--all-personas`).
-4. **DSPy + GEPA Skill & Tool Self-Evolution (`personas/<name>/evolution/`)**:
+Each of the six personas hosts its own self-evolution module and evaluates across 5 core dimensions:
+1. **5-Pillar Composite Fleet Audit (`sakthai eval audit`)**: Evaluates all six personas across Soul Alignment, Skill Ecosystem Health, Memory Store Integrity, Concentric Safety Compliance, and Composite scoring with letter grades (S/A/B/C/F).
+2. **Working Files & v9 Self-Evaluation Rubric (`sakthai eval personas`)**: Verifies all 6 working files (`SOUL.md`, `PLAN.md`, `CYCLE.md`, `MEMORY.md`, `HANDOFF.md`, `BACKPACK.md`), the 100-point `CYCLE EVAL: <persona>` v9 rubric in `SOUL.md` and `CYCLE.md`, mandatory reply intro line, model/provider configuration, and primary skills.
+3. **Dynamic Tool Evaluation & Benchmark Telemetry (`sakthai eval tools --bench`)**: Sandboxed execution, per-tool latency/jitter profiling, error trace capture, and qualitative model feedback.
+4. **Unified Graders & Evaluation Benchmarks (`sakthai eval bench`)**: Formal tri-modal grading architecture (`CodeGrader`, `ModelGrader`) executing task batches with structured rubrics.
+5. **Identity & Soul-Following Benchmark (`evaluation_tasks/soul_following.yaml`)**: Evaluates each persona's `SOUL.md` intro-line adherence across all six Sak Family personas via `evaluation_tasks/utils.py` and `evaluation_tasks/soul_following_dataset.jsonl`.
+6. **Runtime MLOps & Per-Persona Telemetry (`sakthai eval summary`)**: Tracks latency, token usage, and error rates per persona across `~/.sakthai/eval.jsonl` and sharded `~/.sakthai/<persona>/eval.jsonl` logs (`sakthai eval summary --persona <name>` or `--all-personas`).
+7. **DSPy + GEPA Skill & Tool Self-Evolution (`personas/<name>/evolution/`)**:
    - `evolution/`: Prompt, skill, and tool mutation modules (`CompositeFitness` + `ConstraintValidator`).
    - `evolve_agent.sh`: CLI runner defaulting to the hosting persona.
    - `tests/`: Self-evolution constraint and fitness unit tests.

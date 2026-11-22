@@ -6,9 +6,10 @@ Next.js 15+ telemetry dashboard and embedded durable workflow engine for **House
 
 ## 🌟 Overview
 
-The dashboard provides visual telemetry, system health status, memory inspection, and workflow orchestration for the six Sak Family personas. It sits above the core Python package (`personas/sakthai/`) and operates in two primary modes:
+The dashboard provides visual telemetry, system health status, memory inspection, and workflow orchestration for the six Sak Family personas. It sits above the core Python package (`personas/sakthai/`) and operates in three primary modes:
 1. **Live API Mode**: Connects over HTTP to `web/server.py` using a bearer token (configured via `sakthai web setup`).
-2. **Local Filesystem Mode**: Reads persistent SQLite memory shards and configuration manifests directly from `~/.sakthai/` (or `$SAKTHAI_HOME`).
+2. **Runtime Gateway Console**: Live SSE streaming chat playground connected to the OpenAI-compatible Runtime Gateway (`sakthai.gateway`), supporting persona switching across all 6 agents, duplex WebSocket audio streaming (`/v1/chat/ws`), and memory drawer inspection.
+3. **Local Filesystem Mode**: Reads persistent SQLite memory shards and configuration manifests directly from `~/.sakthai/` (or `$SAKTHAI_HOME`).
 
 Embedded directly within the dashboard application is the **Unified Workflow Engine** (`workflow_engine/`), providing durable DAG execution, step retries, state persistence, and verification tooling.
 
@@ -19,6 +20,7 @@ Embedded directly within the dashboard application is the **Unified Workflow Eng
 - **Framework**: Next.js 15+ (App Router, React 19, TypeScript)
 - **Styling**: Tailwind CSS v4, Lucide React icons
 - **Visualizations**: Recharts data visualizations
+- **Real-Time Streaming**: Server-Sent Events (SSE) and duplex WebSockets
 - **Local Persistence**: `better-sqlite3`
 - **Embedded Workflow Engine**: Python 3.11+ durable workflow execution engine (`workflow_engine/`)
 - **Testing**: Vitest, React Testing Library, Fast-Check property testing, and workflow verification (`verify.py`)

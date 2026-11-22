@@ -4,7 +4,7 @@ Attempt to train Qwen2.5-7B-Instruct with the tool-calling dataset v5.
 
 ## Artifacts & Configuration
 
-- `train.py` — training script (HF Jobs entrypoint)
+- `train.py` — PEP 723 training script with pinned dependencies (HF Jobs entrypoint)
 - `submit_job.py` — submits the job to HF Jobs via `run_uv_job`
 
 **Status:** ⚠️ Work in progress — 5 attempts so far, latest fix: TRL version detection for `tokenizer` vs `processing_class`

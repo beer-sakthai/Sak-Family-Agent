@@ -36,6 +36,8 @@ Official technical documentation and architectural reference for **House of Sak*
 - [**manage-your-dependency-security.md**](./manage-your-dependency-security.md) — GitHub supply chain security, Dependabot, and Dependency Review Action architecture.
 - [**marketplace-actions-catalog.md**](./marketplace-actions-catalog.md) — Verified catalog of immutable SHA-pinned GitHub Actions.
 - [**stepsecurity-integration.md**](./stepsecurity-integration.md) — Harden-Runner runtime protection and outbound network telemetry.
+- [**scorecard-accepted-risks.md**](./scorecard-accepted-risks.md) — OpenSSF Scorecard assessment and accepted risk documentation.
+- [**sak-family-agent-github-actions-guide.md**](./sak-family-agent-github-actions-guide.md) — Architectural guide for all GitHub Actions workflows across the repository.
 - [**manual-workflow-approval.md**](./manual-workflow-approval.md) — Human-in-the-loop manual approval gates.
 - [**pr-preview-guide.md**](./pr-preview-guide.md) — Dynamic PR preview deployments for docs and dashboard.
 

@@ -33,7 +33,7 @@
   <img alt="Python 3.11 | 3.12" src="https://img.shields.io/badge/python-3.11%20%7C%203.12-3776AB?logo=python&amp;logoColor=white">
   <a href="#the-six-personas"><img alt="6 personas" src="https://img.shields.io/badge/personas-6%20online-7C3AED"></a>
   <a href="#the-six-personas"><img alt="481 skills" src="https://img.shields.io/badge/skills-481%20standardized-10B981"></a>
-  <a href="#development--verification"><img alt="3,142 tests" src="https://img.shields.io/badge/tests-3%2C142%20passing-brightgreen"></a>
+  <a href="#development--verification"><img alt="3,521 tests" src="https://img.shields.io/badge/tests-3%2C521%20passing-brightgreen"></a>
   <a href="LICENSE"><img alt="License: custom IP license" src="https://img.shields.io/badge/license-custom%20IP%20license-4B5563"></a>
 </p>
 
@@ -43,12 +43,13 @@
 | **Personas** | 6 Family Agents (`personas/<name>/`) | `🟢 6/6 ONLINE` | `SakThai` · `SakSee` · `SakJules` · `SakKing` · `SakSit` · `SakTan` |
 | **Skills Catalog** | 481 On-Disk Skills (462 overlay + 19 shared) | `🟢 STANDARDIZED`| Structured `Sak<Agent>-<domain>-<topic>` taxonomy |
 | **Memory Store** | SQLite per Persona (`~/.sakthai/`) | `🟢 PERSISTENT` | Sharded persistence & multi-agent `sakthai memory family` |
-| **Test Quality** | 3,142 Unit & Seam Tests across Py 3.11/3.12 | `🟢 PASS (≥96%)` | Enforced strict coverage floor (`--cov-fail-under=96`) |
+| **Test Quality** | 3,521 Unit & Seam Tests across Py 3.11/3.12 | `🟢 PASS (≥96%)` | Enforced strict coverage floor (`--cov-fail-under=96`) |
 | **Security Gates** | Concentric Guardrails, DLP, Secret Scan, CodeQL & Bandit | `🛡️ ENFORCED` | Safe execution, credential isolation & automated scanning |
 | **Model Training & Serving** | LoRA SFT recipes, OpenEnv GRPO RL & Ollama export (`training/`, `sakthai train`) | `🟢 OPERATIONAL` | Offline-first fine-tuning, OpenEnv RL & Ollama local deployment |
 | **OpenEnv RL Ecosystem** | 5-Workspace GRPO RL, 8 Catalog Envs, A2A Server & 149 Contract Tests (`sakthai train openenv`) | `🟢 RL INTEGRATED` | Process-isolated `uv run` bridge to `beer-sakthai/openenv-rl-training` |
 | **Runtime Gateway** | OpenAI-compatible & REST API (`sakthai.gateway`) | `🟢 RUNTIME READY` | SSE streaming, 6-persona routing & DataLossGuardrail |
 | **Evaluation Framework** | 5-Pillar Persona Readiness & Fleet Audit (`sakthai eval`) | `🟢 5-PILLAR PARITY` | Soul, Skills, Memory, Safety & Audit composite scoring |
+| **Optimizer & Graders** | Evaluator-Optimizer Engine & Unified Graders (`sakthai run --optimize`, `eval bench`) | `🟢 INTEGRATED` | Iterative refinement rubrics, CodeGrader & ModelGrader |
 | **CI/CD Automation** | StepSecurity, AutoHeal-CI, Renovate & PR Automations | `⚙️ HARDENED` | Egress audit, dependency monitoring & manual user merge |
 
 > **Six personas, one shared runtime.**
@@ -59,11 +60,11 @@
 
 ## What is included
 
-- **SakThai core agent** — Python 3.11+ package with a provider-agnostic tool loop, retries, streaming, usage tracking, and dry-run preflight.
+- **SakThai core agent** — Python 3.11+ package with a provider-agnostic tool loop, retries, streaming, usage tracking, dry-run preflight, modern CLI ergonomics (`sak` / `sakthai` entrypoints, slash commands), and iterative Evaluator-Optimizer engine (`sakthai run --optimize`).
 - **Runtime Gateway (OpenAI-Compatible & REST API)** — Built-in multi-threaded HTTP gateway (`sakthai.gateway`, `sakthai gateway`, `scripts/serve_gateway.py`) exposing `/v1/chat/completions` (streaming SSE and non-streaming), `/v1/models`, `/v1/personas`, and `/v1/tools/execute` with DataLossGuardrail security, constant-time bearer authentication, and seamless compatibility with Cursor, Claude Code, Aider, and standard OpenAI SDKs.
 - **Persistent memory** — SQLite-backed facts and observations stored under `~/.sakthai`, with semantic search, tagging, consolidation, versioned JSON snapshots ([format](data/README.md)), and sync helpers.
 - **Multiple providers** — Anthropic, Google Gemini, OpenAI-compatible endpoints, Ollama, gateways, and Hugging Face inference providers.
-- **MCP** — dependency-light stdio server, remote HTTP/SSE client support, resource and prompt exposing, plus discovery, tool allowlisting, and namespaced connections to external MCP servers.
+- **MCP & Remote Servers** — dependency-light stdio server, remote HTTP/SSE client support with Streamable HTTP (`RemoteMCPClient`), resource and prompt exposing, plus discovery, tool allowlisting, and namespaced connections to external MCP servers (including Microsoft 365, Microsoft Learn, and Gemini API Docs).
 - **Six personas & resilience architecture** — SakThai, SakSee, SakJules, SakKing, SakSit, and SakTan, each with its own identity, curated skills (481 on-disk skills under the searchable `Sak<Agent>-<domain>-<topic>` taxonomy), default model, memory shard, and multi-tier resilience:
   - *Governance & Routing*: Break-glass Hugging Face Hub protocol (`assert_hf_write_allowed`) and 3-second intent preflight classification.
   - *Performance & Scalability*: 3-tier web scraping escalation (HTTP $\rightarrow$ Headless $\rightarrow$ Stealth) and progressive domain manifest hydration.
@@ -403,7 +404,10 @@ sakthai eval audit                                         # 5-pillar composite 
 sakthai eval soul                                          # verify identity & soul adherence across fleet
 sakthai eval skills                                        # audit skill frontmatter schema & tags
 sakthai eval safety                                        # check concentric guardrails & path jailing
+sakthai eval tools --bench                                 # dynamic tool evaluation & telemetry benchmarks
+sakthai eval bench                                         # run batch evaluation tasks with Code/ModelGraders
 sakthai eval summary --all-personas                        # aggregate runtime evals across all shards
+sakthai run "implement feature" --optimize                 # run bounded Evaluator-Optimizer refinement loop
 sakthai lead stats                                         # display service quoting & MRR metrics
 sakthai memory family --tag deputy-chain                   # search family-wide memory notes
 sakthai mcp                                                # launch stdio MCP server (default serve)
@@ -442,7 +446,7 @@ services/servicequotebot/      Production quote generation, price book, and lead
 infra/                         Infrastructure definitions, Docker sandboxes, and cloud configs
 library/                       Curated library of 31 reusable agent skills
 .specify/                      Spec-Kit constitution, architectural memory, and multi-agent presets
-tests/                         Pytest test suite (3,142 tests across Python 3.11 & 3.12 with >=96% coverage)
+tests/                         Pytest test suite (3,521 tests across Python 3.11 & 3.12 with >=96% coverage)
 docs/                          Architecture, capabilities, operations, marketplace catalog, wiki, and guides
 scripts/                       Repository maintenance, portfolio health, wiki sync, and diagnosis tooling
 .github/workflows/             120+ hardened GitHub Actions, agentic workflows, and security gates

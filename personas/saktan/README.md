@@ -12,6 +12,8 @@ SakTan operates as the relentless heartbeat of the House of Sak, overseeing cont
 - **Guarded Algorithmic Fallback**: Automated fallback configured in `config/config.yaml` to revert to deterministic provisioning plans when LLM providers encounter quota or latency barriers.
 - **Zero-Cost Local Execution**: Runs entirely on local Ollama (`127.0.0.1:11434`), ensuring complete offline independence and privacy.
 - **Workspace & System Hygiene**: Monitors directory structures, stale locks, transient files, and system health status.
+- **Evaluator-Optimizer Engine**: Deterministic verification and self-healing refinement loop (`sakthai run --optimize`).
+- **Remote MCP Infrastructure Access**: Integration with Microsoft Learn and Gemini API Docs.
 
 ---
 
@@ -24,8 +26,14 @@ uv sync --all-extras
 # Run SakTan on local Ollama model (zero external cost)
 uv run sakthai run --persona saktan "Perform daily system and workspace status check"
 
+# Run with bounded Evaluator-Optimizer refinement loop
+uv run sakthai run --persona saktan --optimize "Audit cron jobs and disk hygiene"
+
 # Run with interactive chat mode
 uv run sakthai chat --persona saktan
+
+# Run dynamic tool evaluation & telemetry benchmarks
+uv run sakthai eval tools --bench --persona saktan
 
 # Run self-evolution on a skill
 ./evolve_agent.sh --skill SakTan-daily-workspace-status --iterations 5
