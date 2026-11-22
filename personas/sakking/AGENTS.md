@@ -21,7 +21,7 @@
 | **Skill Inventory** | **59 Overlay Skills + 19 Shared Skills** (78 total skills) |
 | **Primary Workspace Skills** | `SakKing-subagent-driven-development`, `SakKing-coding-tdd`, `SakKing-executing-plans`, `SakKing-systematic-debugging` ([`config/workspace.yaml`](./config/workspace.yaml)) |
 | **Allowed Workspace Tools** | `run_command`, `view_file`, `replace_file_content`, `write_to_file`, `invoke_subagent` |
-| **MCP Servers (`config/mcp.json`)** | `playwright` (`@playwright/mcp@0.0.83`), `chrome-devtools` (`chrome-devtools-mcp@1.10.1`), `hf-media` (`@llmindset/mcp-hfspace@0.5.4`), `stepsecurity` (Remote SSE) |
+| **MCP Servers (`config/mcp.json`)** | `playwright` (`@playwright/mcp@0.0.83`), `chrome-devtools` (`chrome-devtools-mcp@1.10.1`), `hf-media` (`@llmindset/mcp-hfspace@0.5.4`), `stepsecurity` (Remote SSE), `microsoft365` (Remote HTTP `https://microsoft365.mcp.claude.com/mcp`, read-only tool allowlist, requires `MS365_MCP_TOKEN`) |
 | **Gateway Voice Mode** | `telegram:8618306046: "all"` ([`config/gateway_voice_mode.json`](./config/gateway_voice_mode.json)) |
 | **Evaluation Rubric** | `CYCLE EVAL: sakking` (v9 100-pt self-eval in [`SOUL.md`](./SOUL.md) & [`CYCLE.md`](./CYCLE.md)) |
 | **Standalone Export Target** | `build/agent-repos/sakking` (`beer-sakthai/sakking-agent`) |
