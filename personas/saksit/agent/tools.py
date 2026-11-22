@@ -51,6 +51,9 @@ class Tool:
     description: str
     input_schema: dict[str, Any]
     handler: Callable[[dict[str, Any], MemoryStore], str]
+    # MCP behaviour hints (readOnlyHint, destructiveHint, idempotentHint,
+    # openWorldHint) advertised in ``tools/list`` so clients can gate approvals.
+    annotations: Mapping[str, bool] | None = None
 
     def schema(self) -> dict[str, Any]:
         """The model-facing tool definition."""
@@ -937,6 +940,26 @@ def _huggingface_inference(args: dict[str, Any], store: MemoryStore) -> str:
 
 # -- registry ------------------------------------------------------------
 
+
+def _annotations(
+    *,
+    read_only: bool = False,
+    destructive: bool = False,
+    idempotent: bool = False,
+    open_world: bool = False,
+) -> dict[str, bool]:
+    """MCP tool annotations. Per the spec, destructive/idempotent hints only mean
+    something for tools that are not read-only, so read-only tools omit them."""
+    if read_only:
+        return {"readOnlyHint": True, "openWorldHint": open_world}
+    return {
+        "readOnlyHint": False,
+        "destructiveHint": destructive,
+        "idempotentHint": idempotent,
+        "openWorldHint": open_world,
+    }
+
+
 BUILTIN_TOOLS: tuple[Tool, ...] = (
     Tool(
         name="learn",
@@ -959,6 +982,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["value"],
         },
         handler=_learn,
+        annotations=_annotations(),
     ),
     Tool(
         name="huggingface_inference",
@@ -984,6 +1008,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["prompt"],
         },
         handler=_huggingface_inference,
+        annotations=_annotations(read_only=True, open_world=True),
     ),
     Tool(
         name="ingest_document",
@@ -1003,6 +1028,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["path"],
         },
         handler=_ingest_document,
+        annotations=_annotations(),
     ),
     Tool(
         name="capture_lead",
@@ -1025,6 +1051,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["query"],
         },
         handler=_capture_lead,
+        annotations=_annotations(),
     ),
     Tool(
         name="recall",
@@ -1044,6 +1071,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             },
         },
         handler=_recall,
+        annotations=_annotations(read_only=True),
     ),
     Tool(
         name="search",
@@ -1064,6 +1092,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["query"],
         },
         handler=_search,
+        annotations=_annotations(read_only=True),
     ),
     Tool(
         name="search_sessions",
@@ -1088,6 +1117,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["query"],
         },
         handler=_search_sessions,
+        annotations=_annotations(read_only=True),
     ),
     Tool(
         name="forget",
@@ -1100,6 +1130,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["fact_id"],
         },
         handler=_forget,
+        annotations=_annotations(destructive=True, idempotent=True),
     ),
     Tool(
         name="read_file",
@@ -1118,6 +1149,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["path"],
         },
         handler=_read_file,
+        annotations=_annotations(read_only=True),
     ),
     Tool(
         name="run_command",
@@ -1142,6 +1174,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["command"],
         },
         handler=_run_command,
+        annotations=_annotations(destructive=True, open_world=True),
     ),
     Tool(
         name="send_telegram_message",
@@ -1157,6 +1190,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["message"],
         },
         handler=_send_telegram_message,
+        annotations=_annotations(open_world=True),
     ),
     Tool(
         name="send_outlook_mail",
@@ -1174,6 +1208,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["to", "subject", "body"],
         },
         handler=_send_outlook_mail,
+        annotations=_annotations(open_world=True),
     ),
     Tool(
         name="read_outlook_mail",
@@ -1192,6 +1227,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             },
         },
         handler=_read_outlook_mail,
+        annotations=_annotations(read_only=True, open_world=True),
     ),
     Tool(
         name="list_calendar_events",
@@ -1210,6 +1246,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             },
         },
         handler=_list_calendar_events,
+        annotations=_annotations(read_only=True, open_world=True),
     ),
     Tool(
         name="create_calendar_event",
@@ -1239,6 +1276,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["subject", "start", "end"],
         },
         handler=_create_calendar_event,
+        annotations=_annotations(open_world=True),
     ),
     Tool(
         name="run_agent_loop",
@@ -1274,6 +1312,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["task"],
         },
         handler=_run_agent_loop,
+        annotations=_annotations(destructive=True, open_world=True),
     ),
     Tool(
         name="family_recall",
@@ -1297,6 +1336,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             },
         },
         handler=_family_recall,
+        annotations=_annotations(read_only=True),
     ),
     Tool(
         name="family_search",
@@ -1325,6 +1365,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["query"],
         },
         handler=_family_search,
+        annotations=_annotations(read_only=True),
     ),
     Tool(
         name="delegate_to_persona",
@@ -1360,6 +1401,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["persona", "task"],
         },
         handler=_delegate_to_persona,
+        annotations=_annotations(destructive=True, open_world=True),
     ),
 )
 

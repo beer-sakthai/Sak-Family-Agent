@@ -45,17 +45,19 @@ def _error(req_id: Any, code: int, message: str) -> dict[str, Any]:
     return {"jsonrpc": "2.0", "id": req_id, "error": {"code": code, "message": message}}
 
 
-def _tool_list(tools: tuple[Tool, ...]) -> dict[str, Any]:
-    return {
-        "tools": [
-            {
-                "name": t.name,
-                "description": t.description,
-                "inputSchema": t.input_schema,
-            }
-            for t in tools
-        ]
+def _tool_descriptor(tool: Tool) -> dict[str, Any]:
+    descriptor: dict[str, Any] = {
+        "name": tool.name,
+        "description": tool.description,
+        "inputSchema": tool.input_schema,
     }
+    if tool.annotations is not None:
+        descriptor["annotations"] = dict(tool.annotations)
+    return descriptor
+
+
+def _tool_list(tools: tuple[Tool, ...]) -> dict[str, Any]:
+    return {"tools": [_tool_descriptor(t) for t in tools]}
 
 
 def _text_content(text: str, *, is_error: bool) -> dict[str, Any]:
@@ -182,9 +184,8 @@ def handle_request(
     if method == "resources/read":
         uri = params.get("uri")
         if uri == "sakthai://memory/status":
-            facts = store.list_facts(limit=1000)
             stats = {
-                "fact_count": len(facts),
+                "fact_count": store.stats()["facts"]["total"],
                 "health": store.healthcheck(),
             }
             return (
