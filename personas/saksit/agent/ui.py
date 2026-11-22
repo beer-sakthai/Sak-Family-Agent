@@ -16,6 +16,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from .. import config
 from .theme import (
     GLYPH_GOAL,
     GLYPH_REPLY,
@@ -44,13 +45,30 @@ _FALLBACK_GRADIENT = ("#d0d0d0", "#808080")
 #: while the help panel shows ``command args`` so required arguments are visible.
 SLASH_COMMANDS: tuple[tuple[str, str, str], ...] = (
     ("/help", "", "show the command list"),
-    ("/tools", "", "list the tools the agent can call"),
+    ("/status", "", "show persona status, model, memory, tools"),
+    ("/persona", "<name>", "view or switch active persona"),
+    ("/model", "<name>", "view or switch LLM model"),
+    ("/provider", "<name>", "view or switch backend provider"),
+    ("/tools", "", "list available tools"),
     ("/skills", "", "list available skills"),
-    ("/memory", "", "show recent facts in memory"),
+    ("/memory", "", "show recent memory facts"),
+    ("/learn", "<fact>", "store a new fact in memory"),
+    ("/doctor", "", "run health diagnostics"),
     ("/goal", "<text>", "pin a goal that steers replies; /goal alone clears it"),
-    ("/clear", "", "clear the screen and history"),
+    ("/clear", "", "clear the screen"),
+    ("/reset", "", "reset conversation history"),
+    ("!<cmd>", "", "execute shell command directly"),
     ("/exit", "", "end the session"),
 )
+
+PERSONA_ROLES: dict[str, str] = {
+    "sakthai": "Lead / HF Master",
+    "saksee": "Web & Browser Specialist",
+    "sakjules": "CI/CD & GitHub Automation",
+    "sakking": "General Assistant & Coding TDD",
+    "saksit": "Social & Content Specialist",
+    "saktan": "Daily Ops & Ollama Specialist",
+}
 
 
 def _hex_to_rgb(value: str) -> tuple[int, int, int]:
@@ -354,4 +372,58 @@ def skills_panel(skills: object, *, persona: str) -> Panel:
         rows.append((str(getattr(skill, "name", "?")), desc))
     return _listing_panel(
         f"skills · {len(rows)}", rows, persona=persona, empty="no skills discovered"
+    )
+
+
+def personas_panel() -> Panel:
+    """List all 6 Sak Family personas with their roles and bot handles."""
+    rows = [
+        (
+            f"{persona_avatar(p)} {PERSONA_LABELS.get(p, p)}",
+            f"@{p}_agent_bot · {PERSONA_ROLES.get(p, '')}",
+        )
+        for p in config.PERSONA_NAMES
+    ]
+    return _listing_panel("Sak Family Personas", rows, persona="sakthai")
+
+
+def status_panel(
+    *,
+    persona: str,
+    model: str,
+    provider: str | None,
+    tool_count: int,
+    facts: int,
+    observations: int = 0,
+    goal: str | None = None,
+    turns: int = 0,
+    cwd: str = "",
+) -> Panel:
+    """Detailed status panel for the active session (like Claude Code / AGY)."""
+    accent = PERSONA_ACCENTS.get(persona, _FALLBACK_COLOR)
+    color = PERSONA_COLORS.get(persona, _FALLBACK_COLOR)
+    label = PERSONA_LABELS.get(persona, persona)
+    avatar = persona_avatar(persona)
+
+    grid = Table.grid(padding=(0, 2))
+    grid.add_column(style=f"bold {accent}", no_wrap=True)
+    grid.add_column(style="dim", no_wrap=False)
+
+    grid.add_row(Text("Persona"), Text(f"{avatar} {label} (@{persona}_agent_bot)"))
+    grid.add_row(Text("Model / Provider"), Text(f"{model} ({provider or 'default'})"))
+    grid.add_row(Text("Tools Loaded"), Text(f"{tool_count} tools available"))
+    grid.add_row(Text("Memory Shard"), Text(f"{facts} facts · {observations} observations"))
+    if goal:
+        grid.add_row(Text("Active Goal"), Text(f"🎯 {goal}", style="italic yellow"))
+    if cwd:
+        grid.add_row(Text("Directory"), Text(cwd))
+    grid.add_row(Text("Session Turns"), Text(f"{turns} messages"))
+
+    return Panel(
+        grid,
+        box=box.ROUNDED,
+        border_style=color,
+        title=rainbow_text(f"status · {label}"),
+        title_align="left",
+        padding=(0, 2),
     )

@@ -340,11 +340,41 @@ sakthai repo run openenv-baselines                         # run baseline policy
 cp .env.example .env
 # Edit .env with your credentials (ANTHROPIC_API_KEY, HF_TOKEN, etc.)
 uv sync --all-extras --dev
+
+# Install editable CLI into environment (providing both `sakthai` and `sak` commands):
+pip install -e personas/sakthai
 ```
+
+### Modern Agent CLI Experience (AGY, Claude Code & Gemini CLI Parity)
+
+The repository provides both `sakthai` and the fast alias `sak` as modern agent CLI entrypoints:
+
+- **Interactive Multi-Turn REPL**: Launch the interactive terminal session by simply typing `sak` or `sakthai`:
+  ```bash
+  sak
+  # Displays rich welcome panel, persistent history (~/.sakthai/cli_history), and tab completion
+  ```
+- **Direct Prompt / Zero-Prefix Execution**: Run tasks immediately without needing the `run` subcommand:
+  ```bash
+  sak explain the repo architecture
+  sak "review latest memory notes" --persona sakking
+  sak check ci status --persona sakjules
+  ```
+- **In-Session Slash Commands & Shell Escapes**:
+  - `/persona <name>`: Switch active persona on the fly (`sakthai`, `sakjules`, `sakking`, `saksee`, `saksit`, `saktan`)
+  - `/status`: Live model, provider, charge, and memory diagnostics panel
+  - `/model <name>` & `/provider <name>`: Switch LLM backend dynamically during conversation
+  - `/learn <fact>`: Record persistent memory fact directly into SQLite store
+  - `/doctor`: Run instant environment and auth health checks
+  - `/tools` & `/skills`: View registered tools and persona skills
+  - `/clear` & `/reset`: Clear screen or reset conversation history
+  - `!<cmd>`: Execute local shell commands directly from REPL (e.g. `!git status`, `!ls -la`)
 
 ### Essential Commands
 
 ```bash
+sak                                                        # launch modern interactive agent REPL
+sak explain docs/architecture.md                           # run instruction directly (zero-prefix)
 sakthai status                                             # check environment and runtime health
 sakthai doctor --json                                      # comprehensive system diagnostics
 sakthai run "summarize docs/architecture.md"               # run default agent instruction

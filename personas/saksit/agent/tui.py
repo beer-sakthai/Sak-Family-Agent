@@ -225,6 +225,9 @@ class SakThaiApp(App[None]):
                 goal=self.goal,
                 store=self.store,
                 tools=self.tools,
+                model=self.model,
+                provider=self.provider,
+                turns=len(self.prior_messages),
             )
             if handled:
                 if text.split()[0] == "/clear":
