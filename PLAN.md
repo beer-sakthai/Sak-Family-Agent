@@ -159,6 +159,7 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 
 - [x] 2026-11-22 **Gemini Modernization & Ecosystem Improvement** — Modernize Gemini models across the repository (Gemini 4 Hydrogen default, deprecation auto-substitutions), upgrade google-genai dependency, wire universal .agents/skills into default_skill_roots(), support Interactions API and Decisions API helpers, synchronize 6-persona parity, and add regression tests.
 - [x] 2026-11-22 **Consolidate & Refactor `sakthai-chat-cli` into Monorepo & Complete Packaging** — Migrate unique foundational assets (`STORY.md`, superpower plans/specs, local model & security check scripts, persona & portfolio EDA tests, offline stub-chat driver), add `"sakthai.gateway"` to packaging in `pyproject.toml`, retire legacy `sakthai-chat-cli/` tree, update CI workflows, and verify 100% test pass and package installation.
+- [x] 2026-11-22 **Free-Tier Quota Sentinel & Adaptive Rate Limiter (`sakthai.agent.quota`, `sakthai.cli.quota`, `gemini_provider`)** — Implement hybrid state datastore (in-process sliding window for RPM/TPM + SQLite persistence in `~/.sakthai/quota_sentinel.db` with Pacific Time midnight reset), adaptive model cascading (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1`), `sakthai quota status` CLI command, full 6-persona parity sync, and comprehensive unit/CLI test coverage maintaining >= 96% coverage floor.
 
 
 

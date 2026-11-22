@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 from collections.abc import Callable
 from typing import Any
 
@@ -164,6 +165,19 @@ def call_gemini(
         model = "gemini-4-hydrogen"
         base_name = "gemini-4-hydrogen"
 
+    from ..quota import get_quota_sentinel
+
+    sentinel = get_quota_sentinel()
+    effective_model, wait_sec = sentinel.preflight(model)
+    if wait_sec > 0:
+        logger.info(
+            "Quota sentinel rate limit approaching; sleeping %.2fs before call to %s",
+            wait_sec,
+            effective_model,
+        )
+        time.sleep(wait_sec)
+    model = effective_model
+
     from google.genai import types
 
     def _clean_schema(schema: Any) -> Any:
@@ -260,7 +274,16 @@ def call_gemini(
         )
 
     try:
-        return with_retry(_stream if on_token is not None else _generate)  # type: ignore[no-any-return]
+        response: Response = with_retry(_stream if on_token is not None else _generate)
+        if response.usage:
+            sentinel.postflight(
+                model,
+                input_tokens=response.usage.get("input_tokens", 0),
+                output_tokens=response.usage.get("output_tokens", 0),
+            )
+        else:
+            sentinel.postflight(model)
+        return response
     except AgentError:
         raise
     except Exception as exc:  # noqa: BLE001
@@ -275,6 +298,13 @@ def call_gemini_decision(
     model: str = "gemini-decision-1",
 ) -> Any:
     """Evaluate calibrated questions with zero output tokens via Decisions API."""
+    from ..quota import get_quota_sentinel
+
+    sentinel = get_quota_sentinel()
+    effective_model, wait_sec = sentinel.preflight(model)
+    if wait_sec > 0:
+        time.sleep(wait_sec)
+    model = effective_model
 
     def _execute() -> Any:
         return client.decisions.create(
@@ -284,7 +314,9 @@ def call_gemini_decision(
         )
 
     try:
-        return with_retry(_execute)
+        result = with_retry(_execute)
+        sentinel.postflight(model)
+        return result
     except Exception as exc:
         logger.error("Gemini Decisions API call failed: %s", exc)
         raise AgentError(f"Gemini Decisions API call failed: {exc}") from exc
@@ -321,6 +353,14 @@ def call_gemini_interaction(
         )
         model = "gemini-4-hydrogen"
 
+    from ..quota import get_quota_sentinel
+
+    sentinel = get_quota_sentinel()
+    effective_model, wait_sec = sentinel.preflight(model)
+    if wait_sec > 0:
+        time.sleep(wait_sec)
+    model = effective_model
+
     kwargs: dict[str, Any] = {
         "model": model,
         "input": text_input,
@@ -334,7 +374,9 @@ def call_gemini_interaction(
         return client.interactions.create(**kwargs)
 
     try:
-        return with_retry(_execute)
+        result = with_retry(_execute)
+        sentinel.postflight(model)
+        return result
     except Exception as exc:
         logger.error("Gemini Interactions API call failed: %s", exc)
         raise AgentError(f"Gemini Interactions API call failed: {exc}") from exc
