@@ -45,7 +45,8 @@
 | **Memory Store** | SQLite per Persona (`~/.sakthai/`) | `🟢 PERSISTENT` | Sharded persistence & multi-agent `sakthai memory family` |
 | **Test Quality** | 3,142 Unit & Seam Tests across Py 3.11/3.12 | `🟢 PASS (≥96%)` | Enforced strict coverage floor (`--cov-fail-under=96`) |
 | **Security Gates** | Concentric Guardrails, DLP, Secret Scan, CodeQL & Bandit | `🛡️ ENFORCED` | Safe execution, credential isolation & automated scanning |
-| **Model Training & Serving** | Fine-tuning recipes, synthetic datasets, Ollama export (`training/`) | `🟢 OPERATIONAL` | Offline-first fine-tuning & Ollama local deployment |
+| **Model Training & Serving** | LoRA SFT recipes, OpenEnv GRPO RL & Ollama export (`training/`, `sakthai train`) | `🟢 OPERATIONAL` | Offline-first fine-tuning, OpenEnv RL & Ollama local deployment |
+| **OpenEnv RL Ecosystem** | 5-Workspace GRPO RL, 8 Catalog Envs, A2A Server & 149 Contract Tests (`sakthai train openenv`) | `🟢 RL INTEGRATED` | Process-isolated `uv run` bridge to `beer-sakthai/openenv-rl-training` |
 | **Runtime Gateway** | OpenAI-compatible & REST API (`sakthai.gateway`) | `🟢 RUNTIME READY` | SSE streaming, 6-persona routing & DataLossGuardrail |
 | **Evaluation Framework** | 5-Pillar Persona Readiness & Fleet Audit (`sakthai eval`) | `🟢 5-PILLAR PARITY` | Soul, Skills, Memory, Safety & Audit composite scoring |
 | **CI/CD Automation** | StepSecurity, AutoHeal-CI, Renovate & PR Automations | `⚙️ HARDENED` | Egress audit, dependency monitoring & manual user merge |
@@ -70,6 +71,7 @@
 - **Team and client workflows** — declarative multi-persona pipelines and ServiceQuoteBot client workspace provisioning.
 - **Unified Agent Platform** — core integration subsystems (`sakthai.agent_platform`) for accidental data loss prevention (`DataLossGuardrail`), reactive python dependency manager detection & isolated execution runners (`wrap_with_isolated_runner`), progressive disclosure skills rendering (`render_skills_progressive_summary`), Jules remote task delegation, dual Antigravity/ADK execution engine with model selection presets (`ModelTier`), and Harness AI agent pipeline spec generation.
 - **Model Training & Offline Serving (`training/`, `sakthai train`)** — fine-tuning recipes (LoRA/QLoRA for SakThai 7B and coder models), synthetic tool-calling dataset generators (`build_toolcalling_dataset.py`), adapter fidelity evaluation probes (`eval_toolcalling.py`), and Ollama GGUF export generating production `Modelfile`s for 100% offline execution.
+- **OpenEnv RL Training & Agentic Alignment (`sakthai train openenv`, `scripts/train/openenv_ecosystem.py`)** — first-class ecosystem bridge to [`beer-sakthai/openenv-rl-training`](https://github.com/beer-sakthai/openenv-rl-training) (auto-discovered via `SAKTHAI_OPENENV_ROOT` or `../openenv-rl-training`), orchestrating 5 independent workspaces for QLoRA SFT, Group Relative Policy Optimization (GRPO) with TRL `environment_factory` and Hugging Face OpenEnv (SimpleGuess, MCP Order/VAT verification, Sandboxed Terminal, BrowserGym MiniWoB++, and 8-environment catalog), A2A protocol server, CPU heuristic policy competitions (`frac_reward_zero_std` reward variance checks), deterministic evaluation manager rubrics, and 149 contract/unit tests.
 - **5-Pillar Persona Evaluation Framework (`sakthai eval`)** — comprehensive evaluation across Soul Alignment, Skill Ecosystem Health, Memory Store Integrity, Concentric Safety Compliance, and Composite Fleet Audit (`audit`, `soul`, `skills`, `safety`, `tasks`, `bench`) enforcing parity across all six personas.
 - **Repository Task Registry (`sakthai repo`)** — unified declarative task map (`sakthai repo map`) and CLI execution runner (`sakthai repo run <task>`) indexing all 9 repository areas (scripts, apps, training, evaluation_tasks, services, infra, evolution, library, and personas).
 - **Dashboard** — Next.js frontend backed by the SakThai HTTP API for personas, metrics, sessions, memory, audit data, and workflows.
@@ -164,6 +166,7 @@ flowchart TD
         TOOLS["Shared Tool Registry<br/>agent/tools.py"]
         SKILLS["Skills Architecture (481)<br/>personas/*/skills/ · personas/shared/skills/"]
         TRAIN["Model Training & Serving<br/>training/ (LoRA · Ollama GGUF · Datasets)"]
+        OPENENV["OpenEnv RL Training<br/>openenv-rl-training (GRPO · 8 Catalog Envs · A2A)"]
         EVAL["5-Pillar Evaluation<br/>evaluation_tasks/ · personas/*/eval.py"]
         EXT["External MCP Servers<br/>remote tools & resources"]
     end
@@ -189,11 +192,13 @@ flowchart TD
     CLI --> MCP
     CLI --> TRAIN
     CLI --> EVAL
+    TRAIN --> OPENENV
     LOOP <--> PROV
     LOOP --> GUARD --> SAFE --> TOOLS
     TEAM --> LOOP
     MCP --> TOOLS
     TRAIN <--> PROV
+    OPENENV <--> PROV
     TOOLS <--> EXT
     TOOLS <--> SKILLS
     TOOLS --> STORE
@@ -276,6 +281,51 @@ sakthai gateway models --url http://127.0.0.1:8080          # list available mod
 sakthai gateway chat "Audit PR" --model sakjules --stream  # interactive completion via Gateway
 ```
 
+---
+
+## 🧪 OpenEnv RL Training & Agentic Alignment (`openenv-rl-training`)
+
+`Sak-Family-Agent` natively integrates with its companion training repository, [`beer-sakthai/openenv-rl-training`](https://github.com/beer-sakthai/openenv-rl-training), through the `sakthai train openenv` CLI subgroup and `sakthai repo` task registry.
+
+Because the 5 training workspaces carry distinct pinsets (SFT pins `trl==0.19.1` / `transformers==5.14.1`, whereas RL requires `transformers>=5.2.0` + current `trl` + `openenv==0.4.1`), `Sak-Family-Agent` discovers `openenv-rl-training` automatically via `SAKTHAI_OPENENV_ROOT` (or sibling checkout `../openenv-rl-training`) and executes all workloads in process-isolated `uv run` environments without polluting the core runtime lockfile.
+
+### End-to-End Model Pipeline
+
+```text
+[ Data Augmentation (10 Cycles) ] ──> [ SFT (QLoRA 0.5B/1.5B/7B) ] ──> [ Nanthasit/sakthai-context-7b-tools ]
+                                                                                   │
+                                                                                   ▼
+[ Sak-Family-Agent Runtime (Ollama / TGI / HF Router) ] <── [ GRPO + OpenEnv RL (sakthai-context-7b-tools-grpo) ]
+```
+
+### What `openenv-rl-training` Can Do Inside `Sak-Family-Agent`
+
+| Workspace | Capabilities & Environments | `Sak-Family-Agent` CLI Entrypoint |
+| :--- | :--- | :--- |
+| **`sakthai-sft-training/`** | QLoRA SFT trainers (`0.5B`, `1.5B`, `7B`), multilingual embedding trainer (`MultipleNegativesRankingLoss`), 10-cycle augmentation loop, dataset contamination audits, and GPU billing downgrade guardrails. | `sakthai train openenv test --workspace sft` |
+| **`openenv-custom-training/`** | TRL `GRPOTrainer(environment_factory=...)` environments: **Tier A** (`SimpleGuessEnv`), **MCP Task Env** (`SakThaiMCPEnvironment` + `MCPTaskEnv` for order lookup & 7% Thai VAT verification), **Tier B Sandboxed Terminal** (`agent_tools/server/sandbox_env.py`), **BrowserGym MiniWoB++** web navigation, and CPU heuristic policy baseline competitions (`evaluate_baselines.py`). | `sakthai train openenv grpo --env mcp`<br/>`sakthai train openenv baselines` |
+| **`openenv-multi-catalog-training/`** | Multi-environment GRPO runner across **8 OpenEnv catalog environments** (`echo`, `sudoku`, `coding`, `chat`, `atari`, `openspiel`, `repl`, `sumo`) plus an **A2A Protocol Agent Server** (`/.well-known/agent.json`) exposing all 8 environments as A2A skills. | `sakthai train openenv grpo --env catalog`<br/>`sakthai train openenv a2a --port 9000` |
+| **`sakthai-agentic-eval-train/`** | Empirical agentic evaluation harness (`eval_hermes_env.py`, `eval_bench_peft.py` on `sakthai-bench-v3`), Colab/Kaggle T4 notebooks, deterministic **Evaluation Manager Agent** rubric benchmark, and the durable `FINDINGS.md` empirical ledger. | `sakthai train openenv benchmark --json`<br/>`sakthai train openenv test --workspace agentic` |
+| **Root Contracts & CI (`149` Tests)** | CPU-only `environment_factory` structural verification (`verify_grpo_contract.py`), BrowserGym contract verification (`test_browsergym_contract.py`), and lightweight CPU stubs (`conftest.py`) allowing all 149 tests across all 5 workspaces to run in `<1s` without GPUs or Docker. | `sakthai train openenv verify`<br/>`sakthai train openenv test` |
+
+### OpenEnv RL CLI Commands
+
+```bash
+sakthai train openenv status                               # inspect 5 workspaces & 7 entrypoints (text or --json)
+sakthai train openenv verify                               # run CPU environment_factory contract verification
+sakthai train openenv test                                 # run all 149 tests across 5 workspaces in one invocation
+sakthai train openenv test --workspace custom              # run a single workspace suite (contract|agentic|custom|catalog|sft)
+sakthai train openenv baselines                            # run CPU heuristic policy competition & GRPO reward-variance check
+sakthai train openenv benchmark --json                     # run deterministic Evaluation Manager Agent rubric benchmark
+sakthai train openenv grpo --env mcp --dry-run             # launch or dry-run GRPO training (simple|mcp|agent_tools|browsergym|multi|catalog)
+sakthai train openenv a2a --port 9000 --dry-run            # launch or dry-run the 8-catalog OpenEnv A2A protocol server
+sakthai repo run openenv-verify                            # run contract verification via declarative repo task registry
+sakthai repo run openenv-test                              # run 149-test OpenEnv suite via repo task registry
+sakthai repo run openenv-baselines                         # run baseline policy competition via repo task registry
+```
+
+---
+
 ## Quick Start
 
 ### Prerequisites
@@ -311,6 +361,12 @@ sakthai train sft --recipe toolcalling                     # launch LoRA SFT tra
 sakthai train eval                                         # evaluate adapter tool-calling fidelity
 sakthai train export                                       # merge LoRA weights & generate Ollama Modelfile
 sakthai train deploy                                       # dry-run or deploy Hugging Face endpoint
+sakthai train openenv status                               # check openenv-rl-training 5-workspace readiness
+sakthai train openenv verify                               # verify OpenEnv RL environment_factory contracts on CPU
+sakthai train openenv test                                 # run all 149 openenv-rl-training tests on CPU
+sakthai train openenv baselines                            # run heuristic policy competition & GRPO variance check
+sakthai train openenv benchmark --json                     # run deterministic Evaluation Manager Agent rubric benchmark
+sakthai train openenv grpo --env mcp --dry-run             # launch or dry-run OpenEnv GRPO RL training
 sakthai eval tasks                                         # inspect lm-eval task datasets and rows
 sakthai eval personas                                      # verify all 6 personas contracts & rubrics
 sakthai eval audit                                         # 5-pillar composite fleet audit (grades S/A/B/C/F)
