@@ -319,7 +319,7 @@ def test_auto_update_workflow_exists_and_valid() -> None:
     assert job_perms.get("pull-requests") == "write"
 
     # Pinned actions
-    assert "step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a" in content
+    assert "step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c" in content
     assert (
         "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1" in content
         or "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683" in content
