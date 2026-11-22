@@ -2,6 +2,7 @@ import type { EdgeConfigClient } from "@vercel/edge-config";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  createLaunchDarklyInstance,
   getLaunchDarklyClient,
   resetLaunchDarklyClient,
 } from "@/lib/launchdarkly";
@@ -20,6 +21,7 @@ describe("LaunchDarkly Vercel Server SDK helper", () => {
     resetLaunchDarklyClient();
     delete process.env.NEXT_PUBLIC_LAUNCHDARKLY_CLIENT_SIDE_ID;
     delete process.env.LAUNCHDARKLY_CLIENT_SIDE_ID;
+    delete process.env.EDGE_CONFIG;
     vi.restoreAllMocks();
   });
 
@@ -32,6 +34,17 @@ describe("LaunchDarkly Vercel Server SDK helper", () => {
     process.env.NEXT_PUBLIC_LAUNCHDARKLY_CLIENT_SIDE_ID = "test-client-id";
     const client = getLaunchDarklyClient();
     expect(client).toBeNull();
+  });
+
+  it("creates a client instance using createLaunchDarklyInstance", () => {
+    const mockEdgeConfig = createMockEdgeConfig();
+    const instance = createLaunchDarklyInstance(
+      "example-client-side-id",
+      mockEdgeConfig,
+    );
+
+    expect(instance).not.toBeNull();
+    expect(typeof instance.variation).toBe("function");
   });
 
   it("initializes client when config with clientSideId and edgeConfigClient is provided", () => {
