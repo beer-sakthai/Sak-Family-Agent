@@ -36,7 +36,7 @@ Provide these key capabilities:
 
 ## SDKs
 
-- **Python**: Install `google-genai` with `pip install google-genai`
+- **Python**: Install `google-genai` with `pip install "google-genai>=3.2.0"`
 - **JavaScript/TypeScript**: Install `@google/genai` with `npm install @google/genai`
 - **Go**: Install `google.golang.org/genai` with `go get google.golang.org/genai`
 - **C#/.NET**: Install `Google.GenAI` with `dotnet add package Google.GenAI`
@@ -109,8 +109,8 @@ client = genai.Client(
 
 ## Models
 
-- Use `gemini-3.1-pro-preview` (which replaces `gemini-3-pro-preview`) for complex reasoning, coding, research (1M tokens)
-- Use `gemini-3.6-flash` for fast, balanced performance, multimodal (1M tokens)
+- Use `gemini-4-carbon` (formerly `gemini-3.1-pro-preview`) for complex reasoning, coding, research (1M tokens)
+- Use `gemini-4-hydrogen` (formerly `gemini-3.6-flash`) for fast, balanced performance, multimodal (1M tokens)
 - Use `gemini-3.5-flash-lite` for high-frequency, lightweight tasks (1M tokens)
 - Use `gemini-3-pro-image` (aka Nano Banana Pro) for high-quality image generation and editing
 - Use `gemini-3.1-flash-image` (aka Nano Banana 2) for medium-quality image generation and editing
@@ -119,6 +119,7 @@ client = genai.Client(
 
 Use the following models only if explicitly requested:
 
+- `gemini-3.6-flash`
 - `gemini-3.5-flash`
 - `gemini-3.1-flash-lite`
 - `gemini-2.5-flash-image`
@@ -127,8 +128,8 @@ Use the following models only if explicitly requested:
 - `gemini-2.5-pro`
 
 > [!IMPORTANT]
-> Models like `gemini-2.0-*`, `gemini-1.5-*`, `gemini-1.0-*`, `gemini-pro` are legacy and deprecated. Use the new models above. Your knowledge is outdated.
-> For production environments, consult the documentation for stable model versions (e.g. `gemini-3.6-flash`).
+> Models like `gemini-2.5-*`, `gemini-2.0-*`, `gemini-1.5-*`, `gemini-1.0-*`, `gemini-pro` are legacy and deprecated. Core loops automatically substitute them with `gemini-4-hydrogen`. Use modern Gemini 4 models (`gemini-4-hydrogen` or `gemini-4-carbon`).
+> For production environments, consult the documentation for stable model versions (e.g. `gemini-4-hydrogen`).
 
 ## Quick Start
 
@@ -139,7 +140,7 @@ from google import genai
 
 client = genai.Client()
 response = client.models.generate_content(
-    model="gemini-3.6-flash",
+    model="gemini-4-hydrogen",
     contents="Explain quantum computing",
 )
 print(response.text)

@@ -171,11 +171,11 @@ class TestProTip3ModelSelectionPresets:
     def test_resolve_all_tiers_by_string_case_insensitive(self) -> None:
         fast_preset = resolve_model_preset("FAST")
         assert fast_preset.tier == ModelTier.FAST
-        assert fast_preset.model_name == "gemini-2.5-flash"
+        assert fast_preset.model_name == "gemini-4-hydrogen"
 
         reasoning_preset = resolve_model_preset("  Reasoning ")
         assert reasoning_preset.tier == ModelTier.REASONING
-        assert reasoning_preset.model_name == "gemini-3.7-flash"
+        assert reasoning_preset.model_name == "gemini-4-carbon"
 
         local_preset = resolve_model_preset("local")
         assert local_preset.tier == ModelTier.LOCAL
@@ -198,10 +198,10 @@ class TestProTip3ModelSelectionPresets:
 
     def test_unified_agent_config_initializes_with_tier(self) -> None:
         cfg = UnifiedAgentConfig(name="test-agent", tier=ModelTier.REASONING)
-        assert cfg.model == "gemini-3.7-flash"
+        assert cfg.model == "gemini-4-carbon"
 
         cfg_str = UnifiedAgentConfig(name="test-agent", tier="fast")
-        assert cfg_str.model == "gemini-2.5-flash"
+        assert cfg_str.model == "gemini-4-hydrogen"
 
 
 class TestProTip4EnvironmentIntrospection:
@@ -280,5 +280,5 @@ class TestPlatformCLIPorTips:
                 platform_cmd, ["antigravity", "--tier", "reasoning", "Plan a refactor"]
             )
             assert res.exit_code == 0
-            assert "gemini-3.7-flash" in res.output
+            assert "gemini-4-carbon" in res.output
             assert "Hello from tier" in res.output
