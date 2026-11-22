@@ -45,10 +45,40 @@ from .train import train_cmd
 # ``chat_cmd`` for the ``chat`` command in ``chat.py``).
 
 
-@click.group()
+def _is_interactive() -> bool:
+    return bool(sys.stdin.isatty() and sys.stdout.isatty())
+
+
+class SakThaiGroup(click.Group):
+    """Smart CLI group for SakThai and Sak Family agents.
+
+    Supports running like Claude Code / Gemini CLI / AGY:
+    - When invoked without subcommands in an interactive terminal, launches the
+      interactive agent chat directly.
+    - When invoked with a task prompt or options that do not match a known subcommand,
+      automatically dispatches them to `run`.
+    - `sakthai --help` or `sakthai --version` display standard CLI info.
+    - All existing subcommands (`status`, `doctor`, `mcp`, `gateway`, etc.) dispatch normally.
+    """
+
+    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+        has_help = any(a in ("--help", "-h") for a in args)
+        has_version = any(a in ("--version", "-V") for a in args)
+        if not has_help and not has_version and args and args[0] not in self.commands:
+            args = ["run", *args]
+        return super().parse_args(ctx, args)
+
+
+@click.group(cls=SakThaiGroup, invoke_without_command=True)
 @click.version_option(__version__, prog_name="sakthai")
-def main() -> None:
+@click.pass_context
+def main(ctx: click.Context) -> None:
     """SakThai — a personal learning agent with persistent memory."""
+    if ctx.invoked_subcommand is None:
+        if _is_interactive():
+            ctx.invoke(chat_cmd)
+        else:
+            click.echo(ctx.get_help())
 
 
 # Memory
