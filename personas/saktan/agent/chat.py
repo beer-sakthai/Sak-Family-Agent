@@ -35,6 +35,7 @@ from .theme import (
     GLYPH_CANCEL,
     GLYPH_ERROR,
     GLYPH_RESULT,
+    GLYPH_SUCCESS,
     GLYPH_TOOL,
     PERSONA_ACCENTS,
     USER_AVATAR,
@@ -98,10 +99,19 @@ def make_tool_renderer(console: Console) -> Callable[[str, dict[str, Any]], None
     """Build an ``on_event`` callback for ``run_agent`` that renders tool calls."""
 
     def _on_event(kind: str, payload: dict[str, Any]) -> None:
+        if kind == "tool_call_start":
+            console.print(f"[dim]⚙ running {payload['name']}({payload.get('input', {})}) …[/dim]")
+            return
         if kind != "tool_call":
             return
-        tag = "tool!" if payload.get("is_error") else "tool"
-        console.print(f"[dim]⚙ {tag} {payload['name']}({payload['input']})[/dim]")
+        is_err = payload.get("is_error", False)
+        status = "[red]✗[/red]" if is_err else "[green]✓[/green]"
+        tag = "tool!" if is_err else "tool"
+        elapsed = payload.get("elapsed")
+        elapsed_str = f" [dim]⏱ {elapsed:.2f}s[/dim]" if elapsed is not None else ""
+        console.print(
+            f"[dim]⚙ {tag} {payload['name']}({payload.get('input', {})}) {status}{elapsed_str}[/dim]"
+        )
         preview = payload.get("output_preview")
         if preview:
             console.print(f"[dim]  → {preview}[/dim]")
@@ -157,6 +167,7 @@ def run_chat(
     console: Console,
     read_input: Callable[[], str | None],
     on_persona_change: Callable[[str], None] | None = None,
+    confirm_tool: Callable[[str, dict[str, Any]], bool] | None = None,
 ) -> None:
     """Run an interactive multi-turn chat session (inline REPL).
 
@@ -327,6 +338,7 @@ def run_chat(
                     store=active_store,
                     on_event=tool_renderer,
                     on_token=token_renderer,
+                    on_confirm=confirm_tool,
                     persona=active_persona,
                 )
             except AgentError as exc:
@@ -371,13 +383,28 @@ def tool_trace(payload: dict[str, Any], *, persona: str | None = None) -> Text:
     accent = PERSONA_ACCENTS.get(persona or "", "cyan")
     line = Text()
     line.append(f"{GLYPH_TOOL} {payload['name']}", style=f"bold {accent}")
-    line.append(_truncate(f"({payload['input']})"), style="dim")
+    line.append(_truncate(f"({payload.get('input', {})})"), style="dim")
     if payload.get("is_error"):
         line.append(f" {GLYPH_ERROR}", style="bold red")
+    else:
+        line.append(f" {GLYPH_SUCCESS}", style="bold green")
+    elapsed = payload.get("elapsed")
+    if elapsed is not None:
+        line.append(f" ⏱ {elapsed:.2f}s", style="dim")
     preview = payload.get("output_preview")
     if preview:
         line.append(f"\n  {GLYPH_RESULT} ", style=accent)
         line.append(str(preview), style="dim italic")
+    return line
+
+
+def tool_running_trace(payload: dict[str, Any], *, persona: str | None = None) -> Text:
+    """Trace renderable for tool_call_start: running indicator with name + args."""
+    accent = PERSONA_ACCENTS.get(persona or "", "cyan")
+    line = Text()
+    line.append(f"{GLYPH_TOOL} {payload['name']}", style=f"bold {accent}")
+    line.append(_truncate(f"({payload.get('input', {})})"), style="dim")
+    line.append(" … running", style="dim italic")
     return line
 
 

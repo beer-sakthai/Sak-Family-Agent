@@ -517,3 +517,51 @@ def test_make_read_input_eof_returns_none(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setattr(prompt_toolkit, "PromptSession", _EOFSession)
     read = chat_cli._make_read_input()
     assert read() is None
+
+
+def test_tool_running_trace_and_elapsed_trace() -> None:
+    running = chat_agent.tool_running_trace(
+        {"name": "run_command", "input": {"command": "ls"}}, persona="sakthai"
+    )
+    assert "run_command" in running.plain
+    assert "running" in running.plain
+
+    finished = chat_agent.tool_trace(
+        {
+            "name": "run_command",
+            "input": {"command": "ls"},
+            "is_error": False,
+            "elapsed": 0.35,
+            "output_preview": "file1.txt",
+        },
+        persona="sakthai",
+    )
+    assert "run_command" in finished.plain
+    assert "0.35s" in finished.plain
+    assert "✓" in finished.plain
+    assert "file1.txt" in finished.plain
+
+
+def test_make_confirm_tool_options(monkeypatch: pytest.MonkeyPatch) -> None:
+    # 1. Test "y" allows once
+    monkeypatch.setattr("rich.console.Console.input", lambda self, prompt: "y")
+    session_allowed: set[str] = set()
+    confirm = chat_cli._make_confirm_tool("sakthai", session_allowed)
+    assert confirm("run_command", {"command": "ls"}) is True
+    assert "run_command" not in session_allowed
+
+    # 2. Test "n" denies
+    monkeypatch.setattr("rich.console.Console.input", lambda self, prompt: "n")
+    assert confirm("run_command", {"command": "ls"}) is False
+
+    # 3. Test "a" allows and adds to session_allowed
+    monkeypatch.setattr("rich.console.Console.input", lambda self, prompt: "a")
+    assert confirm("run_command", {"command": "ls"}) is True
+    assert "run_command" in session_allowed
+
+    # 4. Subsequent call for cached tool returns True immediately without calling input
+    def _fail_input(self, prompt: str) -> str:
+        raise AssertionError("Input should not be called for cached tool")
+
+    monkeypatch.setattr("rich.console.Console.input", _fail_input)
+    assert confirm("run_command", {"command": "another command"}) is True

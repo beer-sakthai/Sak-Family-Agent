@@ -243,12 +243,18 @@ def _execute_tool(tool: Tool, args: dict[str, Any], store: MemoryStore) -> tuple
 
 
 def _execute_tool_with_guardrails(
-    tool: Tool, args: dict[str, Any], store: MemoryStore, policy: GuardrailPolicy
+    tool: Tool,
+    args: dict[str, Any],
+    store: MemoryStore,
+    policy: GuardrailPolicy,
+    on_confirm: Callable[[str, dict[str, Any]], bool] | None = None,
 ) -> tuple[str, bool]:
     """Check guardrails, then run a tool.
 
     If the pre-execution guardrail check fails, the tool is not run, and the
-    denial reason is returned as an error output.
+    denial reason is returned as an error output. If the tool requires confirmation
+    and an ``on_confirm`` callback is provided, confirmation is requested before
+    invoking the handler.
     """
     pre_check_result = policy.check_pre_execution(tool, args, store)
     if pre_check_result.action == GuardrailAction.DENY:
@@ -260,6 +266,13 @@ def _execute_tool_with_guardrails(
 
     # Use the arguments as potentially modified by the guardrail policy.
     final_args = pre_check_result.modified_args or args
+
+    if (
+        getattr(tool, "requires_confirmation", False)
+        and on_confirm is not None
+        and not on_confirm(tool.name, final_args)
+    ):
+        return f"Tool '{tool.name}' was denied by the user.", True
 
     output, is_error = _execute_tool(tool, final_args, store)
 
@@ -314,6 +327,7 @@ def _process_tool_uses(
     notify: Callable[[str, dict[str, Any]], None],
     tool_calls: list[dict[str, Any]],
     policy: GuardrailPolicy,
+    on_confirm: Callable[[str, dict[str, Any]], bool] | None = None,
 ) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for use in tool_uses:
@@ -330,8 +344,15 @@ def _process_tool_uses(
             notify("tool_error", {"name": use.name, "reason": "unknown"})
             continue
         args = dict(use.input or {})
-        output, is_error = _execute_tool_with_guardrails(tool, args, store, policy)
-        tool_calls.append({"name": use.name, "input": args, "is_error": is_error})
+        notify("tool_call_start", {"name": use.name, "input": args})
+        start_time = time.perf_counter()
+        output, is_error = _execute_tool_with_guardrails(
+            tool, args, store, policy, on_confirm=on_confirm
+        )
+        elapsed = max(0.0, time.perf_counter() - start_time)
+        tool_calls.append(
+            {"name": use.name, "input": args, "is_error": is_error, "elapsed": elapsed}
+        )
         notify(
             "tool_call",
             {
@@ -339,6 +360,7 @@ def _process_tool_uses(
                 "input": args,
                 "is_error": is_error,
                 "output_preview": _preview(output),
+                "elapsed": elapsed,
             },
         )
         # Wrap untrusted output to prevent prompt injection
@@ -362,6 +384,7 @@ def _dispatch_tool_calls(
     notify: Callable[[str, dict[str, Any]], None],
     tool_calls: list[dict[str, Any]],
     policy: GuardrailPolicy,
+    on_confirm: Callable[[str, dict[str, Any]], bool] | None = None,
 ) -> None:
     """Process tool_use blocks, execute tools, and append results to messages."""
     tool_uses = [b for b in response.content if getattr(b, "type", "") == "tool_use"]
@@ -373,7 +396,9 @@ def _dispatch_tool_calls(
         return
 
     messages.append({"role": "assistant", "content": response.content})
-    results = _process_tool_uses(tool_uses, registry, store, notify, tool_calls, policy)
+    results = _process_tool_uses(
+        tool_uses, registry, store, notify, tool_calls, policy, on_confirm=on_confirm
+    )
     messages.append({"role": "user", "content": results})
 
 
@@ -429,6 +454,7 @@ def run_agent(
     client: Any | None = None,
     on_event: Callable[[str, dict[str, Any]], None] | None = None,
     on_token: Callable[[str], None] | None = None,
+    on_confirm: Callable[[str, dict[str, Any]], bool] | None = None,
     provider: str | None = None,
     skills: Sequence[str] = (),
     fast: bool = False,
@@ -589,7 +615,16 @@ def run_agent(
                 _record_run_eval(iteration, stop_reason, had_error=False)
                 return result
 
-            _dispatch_tool_calls(response, messages, registry, store, notify, tool_calls, policy)
+            _dispatch_tool_calls(
+                response,
+                messages,
+                registry,
+                store,
+                notify,
+                tool_calls,
+                policy,
+                on_confirm=on_confirm,
+            )
 
         _record_run_eval(max_iterations, "max_iterations", had_error=True)
         raise AgentError(

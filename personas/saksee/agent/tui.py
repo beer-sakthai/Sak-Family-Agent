@@ -8,6 +8,7 @@ worker thread; token/tool callbacks marshal to the UI via ``call_from_thread``.
 
 from __future__ import annotations
 
+import threading
 import time
 from typing import Any
 
@@ -15,9 +16,10 @@ from rich.console import RenderableType
 from rich.spinner import Spinner
 from rich.text import Text
 from textual.app import App, ComposeResult
-from textual.containers import VerticalScroll
+from textual.containers import Grid, Vertical, VerticalScroll
+from textual.screen import ModalScreen
 from textual.suggester import Suggester
-from textual.widgets import Input, Static
+from textual.widgets import Button, Input, Label, Static
 
 from .. import __version__, config
 from ..memory.store import MemoryStore
@@ -96,6 +98,117 @@ class ReplyView(Static):
         self.update(chat_agent.cancelled_text())
 
 
+class ConfirmModalScreen(ModalScreen[str]):
+    """Modal screen requesting user confirmation for risky tool execution."""
+
+    DEFAULT_CSS = """
+    ConfirmModalScreen {
+        align: center middle;
+    }
+    #confirm_dialog {
+        padding: 1 2;
+        width: 65;
+        height: auto;
+        border: thick $accent;
+        background: $surface;
+    }
+    #confirm_title {
+        margin-bottom: 1;
+        text-style: bold;
+    }
+    #confirm_details {
+        margin-bottom: 1;
+        color: $text-muted;
+    }
+    #confirm_buttons {
+        layout: horizontal;
+        align: center middle;
+        height: auto;
+    }
+    Button {
+        margin: 0 1;
+    }
+    """
+
+    BINDINGS = [
+        ("y", "allow", "Allow once"),
+        ("a", "always", "Always allow for session"),
+        ("n", "deny", "Deny"),
+        ("escape", "deny", "Deny"),
+    ]
+
+    def __init__(self, tool_name: str, args: dict[str, Any], persona: str) -> None:
+        super().__init__()
+        self.tool_name = tool_name
+        self.tool_args = args
+        self.persona = persona
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="confirm_dialog"):
+            yield Label(f"⚠ Confirm Tool Execution: {self.tool_name}", id="confirm_title")
+            yield Static(f"Arguments:\n{self.tool_args}", id="confirm_details")
+            with Grid(id="confirm_buttons"):
+                yield Button("Allow (y)", variant="success", id="btn_allow")
+                yield Button("Always (a)", variant="primary", id="btn_always")
+                yield Button("Deny (n)", variant="error", id="btn_deny")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn_allow":
+            self.dismiss("y")
+        elif event.button.id == "btn_always":
+            self.dismiss("a")
+        else:
+            self.dismiss("n")
+
+    def action_allow(self) -> None:
+        self.dismiss("y")
+
+    def action_always(self) -> None:
+        self.dismiss("a")
+
+    def action_deny(self) -> None:
+        self.dismiss("n")
+
+
+class ToolCallWidget(Static):
+    """Widget displaying a tool call's running state, then its final status and timing."""
+
+    def __init__(self, name: str, input_args: dict[str, Any], persona: str) -> None:
+        super().__init__()
+        self._name = name
+        self._input_args = input_args
+        self._persona = persona
+        self._timer: Any = None
+        self._start_time = time.perf_counter()
+
+    def on_mount(self) -> None:
+        self.start_running()
+
+    def start_running(self) -> None:
+        color = PERSONA_COLORS.get(self._persona, "cyan")
+        self._render_running(color)
+        self._timer = self.set_interval(1 / 10, lambda: self._render_running(color))
+
+    def _render_running(self, color: str) -> None:
+        spinner = Spinner(
+            "dots",
+            text=chat_agent.tool_running_trace(
+                {"name": self._name, "input": self._input_args}, persona=self._persona
+            ),
+            style=color,
+        )
+        self.update(spinner)
+
+    def _stop_timer(self) -> None:
+        if self._timer is not None:
+            self._timer.stop()
+            self._timer = None
+
+    def finish(self, payload: dict[str, Any]) -> None:
+        self._stop_timer()
+        self.update(chat_agent.tool_trace(payload, persona=self._persona))
+
+
 class SakThaiApp(App[None]):
     """The interactive chat application."""
 
@@ -134,6 +247,9 @@ class SakThaiApp(App[None]):
         self._turn_started = 0.0
         self._history_path = config.sakthai_home() / "chat_history"
         self._history: list[str] = self._load_history()
+        self._session_allowed_tools: set[str] = set()
+        self._pending_confirm_event: threading.Event | None = None
+        self._current_tool_widget: ToolCallWidget | None = None
 
     def _load_history(self) -> list[str]:
         try:
@@ -201,6 +317,12 @@ class SakThaiApp(App[None]):
         reply = self._active_reply
         if reply is None:
             return
+        if self._pending_confirm_event is not None:
+            self._pending_confirm_event.set()
+            self._pending_confirm_event = None
+        if self._current_tool_widget is not None:
+            self._current_tool_widget._stop_timer()
+            self._current_tool_widget = None
         self.workers.cancel_group(self, "turn")
         reply.set_cancelled()
         self._active_reply = None
@@ -272,14 +394,30 @@ class SakThaiApp(App[None]):
             return
         reply.append(delta)
 
+    def _apply_tool_start(self, reply: ReplyView, payload: dict[str, Any]) -> None:
+        if reply is not self._active_reply:
+            return
+        pane = self.query_one("#conversation", VerticalScroll)
+        widget = ToolCallWidget(payload["name"], payload.get("input", {}), self.persona)
+        pane.mount(widget)
+        pane.scroll_end(animate=False)
+        self._current_tool_widget = widget
+
     def _apply_tool_event(self, reply: ReplyView, payload: dict[str, Any]) -> None:
         if reply is not self._active_reply:
             return
-        self.mount_renderable(chat_agent.tool_trace(payload, persona=self.persona))
+        if self._current_tool_widget is not None:
+            self._current_tool_widget.finish(payload)
+            self._current_tool_widget = None
+        else:
+            self.mount_renderable(chat_agent.tool_trace(payload, persona=self.persona))
 
     def _apply_turn_success(self, reply: ReplyView, result: AgentResult) -> None:
         if reply is not self._active_reply:
             return
+        if self._current_tool_widget is not None:
+            self._current_tool_widget._stop_timer()
+            self._current_tool_widget = None
         self.prior_messages = result.messages
         reply.finalize()
         self.refresh_status(time.perf_counter() - self._turn_started)
@@ -289,6 +427,9 @@ class SakThaiApp(App[None]):
     def _apply_turn_error(self, reply: ReplyView, exc: Exception) -> None:
         if reply is not self._active_reply:
             return
+        if self._current_tool_widget is not None:
+            self._current_tool_widget._stop_timer()
+            self._current_tool_widget = None
         reply.set_error(exc)
         self._active_reply = None
         self.query_one("#compose", Input).disabled = False
@@ -298,8 +439,33 @@ class SakThaiApp(App[None]):
             self.call_from_thread(self._apply_token, reply, delta)
 
         def on_event(kind: str, payload: dict[str, Any]) -> None:
-            if kind == "tool_call":
+            if kind == "tool_call_start":
+                self.call_from_thread(self._apply_tool_start, reply, payload)
+            elif kind == "tool_call":
                 self.call_from_thread(self._apply_tool_event, reply, payload)
+
+        def on_confirm(tool_name: str, args: dict[str, Any]) -> bool:
+            if tool_name in self._session_allowed_tools:
+                return True
+            event = threading.Event()
+            self._pending_confirm_event = event
+            choice: list[str] = ["n"]
+
+            def _show_modal() -> None:
+                def _on_dismiss(result: str | None) -> None:
+                    choice[0] = result or "n"
+                    event.set()
+
+                self.push_screen(ConfirmModalScreen(tool_name, args, self.persona), _on_dismiss)
+
+            self.call_from_thread(_show_modal)
+            event.wait()
+            self._pending_confirm_event = None
+
+            if choice[0] == "a":
+                self._session_allowed_tools.add(tool_name)
+                return True
+            return choice[0] == "y"
 
         try:
             result = run_agent(
@@ -314,6 +480,7 @@ class SakThaiApp(App[None]):
                 store=self.store,
                 on_event=on_event,
                 on_token=on_token,
+                on_confirm=on_confirm,
                 persona=self.persona,
             )
         except Exception as exc:  # noqa: BLE001 - any failure must reach the
