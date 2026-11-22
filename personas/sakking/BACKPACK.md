@@ -47,6 +47,12 @@
   - `npx -y @llmindset/mcp-hfspace@0.5.4 black-forest-labs/FLUX.1-schnell Lightricks/LTX-Video` (pinned in `config/mcp.json`)
 - **🔒 StepSecurity Agent MCP (`stepsecurity`)**:
   - `https://agent.api.stepsecurity.io/v1/mcp?customer=beer-sakthai` (remote SSE endpoint configured in `config/mcp.json`)
+- **📧 Microsoft 365 MCP (`microsoft365`)**:
+  - `https://microsoft365.mcp.claude.com/mcp` (remote endpoint in `config/mcp.json`; read-only allowlist: mail/calendar/SharePoint/Teams search, no send or delete)
+- **📚 Microsoft Learn MCP (`microsoft-learn`)**:
+  - `https://learn.microsoft.com/api/mcp` (public remote endpoint in `config/mcp.json`; docs search, code-sample search and page fetch; no token)
+- **✨ Gemini API Docs MCP (`gemini-api-docs`)**:
+  - `https://gemini-api-docs-mcp.dev` (public remote endpoint in `config/mcp.json`; `gemini_search_docs` and `gemini_get_doc`; no token)
 - **⚡ Isolated Command & TDD Runner (`sakthai platform wrap-cmd` & `run_command`)**:
   - Opt-in via `SAKTHAI_SHELL_ALLOW`, 120s timeout, guarded by `DataLossGuardrail` (`check_data_loss_guardrail`)
   - Automatic virtualenv command wrapping via `wrap_with_isolated_runner` (`uv run ...`)
@@ -77,6 +83,7 @@
 - **`HF_TOKEN`**: Authenticated for `Qwen/Qwen3-Coder-30B-A3B-Instruct` on Hugging Face Inference Providers and `hf-media` Spaces
 - **`SAKTHAI_SHELL_ALLOW`**: Explicit opt-in gate required before `run_command` executes shell tasks
 - **`STEP_SECURITY_API_KEY`**: Authenticated bearer token for remote StepSecurity MCP endpoint
+- **`MS365_MCP_TOKEN`**: Bearer token for the remote Microsoft 365 MCP endpoint
 - **VM Env Template (`infra/vm-agents/env-templates/sakking.env.example`)**: `SAKTHAI_FAST`, `SAKTHAI_HOME`, `SAKTHAI_PERSONA`, `SAKTHAI_MODEL`, `SAKTHAI_SYSTEM_PROMPT_FILE`, `SAKTHAI_WITH_SKILLS`, `TELEGRAM_ALLOWED_USER_IDS`, `TELEGRAM_BOT_TOKEN`
 - **Security & Approval Posture (`config/config.yaml`)**:
   - `command_allowlist: []` · `tirith_enabled: true` · `tirith_fail_open: false` · `allow_lazy_installs: false` · `redact_secrets: true` · `allow_private_urls: false` · `approvals.mode: manual` · `approvals.cron_mode: deny`
