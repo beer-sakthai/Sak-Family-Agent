@@ -27,7 +27,7 @@ PINNED_ACTIONS = {
     "jamesgeorge007/github-activity-readme": "4aefbfa1c222d70537dc6a02f0519266aab2b1ea",
     "renovatebot/github-action": "acdd6bda8b035c99ce59d5675816af2aa65a1774",
     "wearerequired/lint-action": "124229c6e2974984ba137c67a499ba28bfc33e33",
-    "actions/create-github-app-token": "64ab729a6294000f5aa4a4bc0b73d1f32bc45510",
+    "actions/create-github-app-token": "f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc",
     "fastify/github-action-merge-dependabot": "73ec4cbb5e56df5591eae286972d5b2201ffe90f",
     "seferov/pr-lint-action": "cbef81c153f36262fbcd92fe97d6c6b8736d891d",
     "Optimal-AI/PR-Label-Checker": "48d46fe6336aedcbb836ca580e86f195f9d14b01",

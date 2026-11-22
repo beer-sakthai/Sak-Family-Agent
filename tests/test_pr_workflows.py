@@ -46,7 +46,7 @@ PR_SETUP_WORKFLOW_FILES = [
     "autolabeler-codeowners.yml",
 ]
 
-HARDEN_RUNNER_ACTION = "step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a"
+HARDEN_RUNNER_ACTION = "step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c"
 
 
 def test_pr_workflows_exist_and_valid_yaml() -> None:
