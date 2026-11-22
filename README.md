@@ -55,6 +55,7 @@
 > **Six personas, one shared runtime.**
 > House of Sak is a local-first, provider-agnostic AI agent workspace combining a durable SQLite memory store, an extensible tool loop, Model Context Protocol (MCP) support, persona-specific skills, multi-agent coordination, and an interactive Next.js dashboard.
 > The ecosystem revolves around the six-stage growth cycle: **Dream → Hope → Care → Joy → Trust → Growth**.
+> Read [Beer's Story (`STORY.md`)](./STORY.md) to discover the foundational personal journey, values, and healing behind the House of Sak.
 
 ---
 

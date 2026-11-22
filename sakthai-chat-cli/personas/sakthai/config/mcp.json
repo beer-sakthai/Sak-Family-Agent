@@ -1,9 +1,0 @@
-{
-  "_comment": "SakThai — Master of Hugging Face. Load with SAKTHAI_MCP_CONFIG=personas/sakthai/config/mcp.json. HF_TOKEN is inherited from the process env.",
-  "mcpServers": {
-    "huggingface": {
-      "command": "npx",
-      "args": ["-y", "@huggingface/mcp-server"]
-    }
-  }
-}

@@ -1,11 +1,9 @@
-# Runs the test suites of the two self-contained Python sub-projects that
-# ci.yml does not cover: sakthai-chat-cli/ and services/teams-copilot-mcp/.
+# Runs the test suite of the self-contained Python sub-project that
+# ci.yml does not cover: services/teams-copilot-mcp/.
 #
-# Each has its own pyproject.toml and uv.lock, and until this workflow no job
-# ran either suite, so failures accumulated unnoticed (7 guardrail-assertion
-# failures and a collection error in chat-cli, fixed in #1458). Each job
-# installs strictly from its own lockfile (`uv sync --locked`), so the pins are
-# exactly what the lock says and a pyproject/lock mismatch fails the job.
+# It has its own pyproject.toml and uv.lock, and until this workflow no job
+# ran its suite. It installs strictly from its own lockfile (`uv sync --locked`),
+# so the pins are exactly what the lock says and a pyproject/lock mismatch fails the job.
 #
 # Path-filtered so this stays off every change that touches neither tree.
 name: Sub-project tests
@@ -14,12 +12,10 @@ on:
   push:
     branches: [main]
     paths:
-      - "sakthai-chat-cli/**"
       - "services/teams-copilot-mcp/**"
       - ".github/workflows/subprojects.yml"
   pull_request:
     paths:
-      - "sakthai-chat-cli/**"
       - "services/teams-copilot-mcp/**"
       - ".github/workflows/subprojects.yml"
 
@@ -31,36 +27,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  chat-cli:
-    name: sakthai-chat-cli
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: sakthai-chat-cli
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Set up Python
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: "3.11"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
-        with:
-          enable-cache: true
-          cache-dependency-glob: "sakthai-chat-cli/uv.lock"
-
-      - name: Install dependencies
-        run: uv sync --locked --all-extras --dev
-
-      - name: Run tests
-        run: uv run --locked pytest
-
   teams-copilot-mcp:
     name: teams-copilot-mcp
     runs-on: ubuntu-latest

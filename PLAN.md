@@ -158,6 +158,7 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-22 **Audit, Modernize & Synchronize All README Files Across Repository** — Synchronize root README.md (3,521 tests, 481 skills, Evaluator-Optimizer, Graders, Gateway, Remote MCPs), personas/README.md, the 6 persona READMEs, apps/sak_agent_dashboard/README.md, apps/sak_agent_dashboard/workflow_engine/README.md, training/README.md, training sub-READMEs, docs/README.md, services, infra, and automation READMEs while strictly honoring all parity and test invariants.
 
 - [x] 2026-11-22 **Gemini Modernization & Ecosystem Improvement** — Modernize Gemini models across the repository (Gemini 4 Hydrogen default, deprecation auto-substitutions), upgrade google-genai dependency, wire universal .agents/skills into default_skill_roots(), support Interactions API and Decisions API helpers, synchronize 6-persona parity, and add regression tests.
+- [x] 2026-11-22 **Consolidate & Refactor `sakthai-chat-cli` into Monorepo & Complete Packaging** — Migrate unique foundational assets (`STORY.md`, superpower plans/specs, local model & security check scripts, persona & portfolio EDA tests, offline stub-chat driver), add `"sakthai.gateway"` to packaging in `pyproject.toml`, retire legacy `sakthai-chat-cli/` tree, update CI workflows, and verify 100% test pass and package installation.
 
 
 
