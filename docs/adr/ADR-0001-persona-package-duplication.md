@@ -170,11 +170,17 @@ targets Windows.
 
 ## Action Items
 
-1. [ ] **(Option B, now)** Generalise the parity suite to a full-tree byte-identity
-   check over every `.py` in each persona copy; add a `make sync-personas`
-   helper that copies canonical → the five and verify CI goes green.
-2. [ ] Confirm the three existing parity tests become a subset of the new check
-   (keep them, or fold them in with clear names).
+1. [x] 2026-11-22 **(Option B, now)** Generalise the parity suite to a full-tree
+   byte-identity check over every `.py` in each persona copy; add a
+   `make sync-personas` helper that copies canonical → the five and verify CI
+   goes green. — `tests/test_persona_package_parity.py` walks the whole canonical
+   package tree (excluding the per-persona `skills/`/`config/`/`evolution/` and
+   the non-runtime `tests/` copy), and `scripts/sync_personas.py`
+   (`make sync-personas`) mirrors the canonical code.
+2. [x] 2026-11-22 Confirm the three existing parity tests become a subset of the
+   new check. — The new walk subsumes `test_persona_structure_parity.py`'s
+   hard-coded 15-subpackage byte check and adds the top-level modules and
+   `scripts/` it missed; the existing tests are kept as-is (they still pass).
 3. [ ] **(Option C, scoped follow-up)** Spike `compose_persona.py`-style code
    composition for one persona into a throwaway dir; `diff -rq` it against the
    committed copy to prove byte-for-byte equivalence.
