@@ -68,8 +68,9 @@ _call_openai_compat = providers.call_openai_compat
 
 SYSTEM_BASE = (
     "You are SakThai, a personal agent that lives in the user's terminal. You have "
-    "persistent memory (`learn`, `recall`, `search`, `forget`), read access to the "
-    "local filesystem (`read_file`), and opt-in shell execution (`run_command`). "
+    "persistent memory (`learn`, `recall`, `search`, `forget`), local filesystem "
+    "access (`read_file`, `edit_file`, `write_file`, `grep_search`, `glob_files`), "
+    "and opt-in shell execution (`run_command`). "
     "Read existing facts before answering anything that may depend on them, and honor "
     "stated preferences silently. Save new facts only when the user shares something "
     "worth recalling later. Prefer running CLI tasks yourself with `run_command` over "
@@ -267,12 +268,15 @@ def _execute_tool_with_guardrails(
     # Use the arguments as potentially modified by the guardrail policy.
     final_args = pre_check_result.modified_args or args
 
-    if (
-        getattr(tool, "requires_confirmation", False)
-        and on_confirm is not None
-        and not on_confirm(tool.name, final_args)
-    ):
-        return f"Tool '{tool.name}' was denied by the user.", True
+    if getattr(tool, "requires_confirmation", False):
+        if on_confirm is not None:
+            if not on_confirm(tool.name, final_args):
+                return f"Tool '{tool.name}' was denied by the user.", True
+        elif tool.name in ("edit_file", "write_file") and not os.environ.get("SAKTHAI_WRITE_ALLOW"):
+            return (
+                f"Tool '{tool.name}' requires interactive confirmation or SAKTHAI_WRITE_ALLOW in unattended mode.",
+                True,
+            )
 
     output, is_error = _execute_tool(tool, final_args, store)
 
@@ -300,7 +304,15 @@ def _preview(text: str, limit: int = 80) -> str:
 # mail, calendar, memory, sessions, files, shell output, model replies and
 # delegated persona results can all carry text an attacker wrote.
 _TRUSTED_TOOL_OUTPUTS = frozenset(
-    {"learn", "forget", "capture_lead", "send_telegram_message", "send_outlook_mail"}
+    {
+        "learn",
+        "forget",
+        "capture_lead",
+        "send_telegram_message",
+        "send_outlook_mail",
+        "edit_file",
+        "write_file",
+    }
 )
 
 

@@ -107,8 +107,8 @@ class ConfirmModalScreen(ModalScreen[str]):
     }
     #confirm_dialog {
         padding: 1 2;
-        width: 65;
-        height: auto;
+        width: 82;
+        max-height: 85%;
         border: thick $accent;
         background: $surface;
     }
@@ -116,8 +116,11 @@ class ConfirmModalScreen(ModalScreen[str]):
         margin-bottom: 1;
         text-style: bold;
     }
-    #confirm_details {
+    #confirm_details_scroll {
+        max-height: 16;
         margin-bottom: 1;
+    }
+    #confirm_details {
         color: $text-muted;
     }
     #confirm_buttons {
@@ -144,9 +147,27 @@ class ConfirmModalScreen(ModalScreen[str]):
         self.persona = persona
 
     def compose(self) -> ComposeResult:
+        from .tools import build_file_diff_preview
+
         with Vertical(id="confirm_dialog"):
             yield Label(f"⚠ Confirm Tool Execution: {self.tool_name}", id="confirm_title")
-            yield Static(f"Arguments:\n{self.tool_args}", id="confirm_details")
+            with VerticalScroll(id="confirm_details_scroll"):
+                if self.tool_name in ("edit_file", "write_file"):
+                    diff_text, added, removed = build_file_diff_preview(
+                        self.tool_name, self.tool_args
+                    )
+                    if diff_text:
+                        diff_renderable = chat_agent.format_diff_renderable(
+                            diff_text,
+                            added,
+                            removed,
+                            path=str(self.tool_args.get("path", "")),
+                        )
+                        yield Static(diff_renderable, id="confirm_details")
+                    else:
+                        yield Static(f"Arguments:\n{self.tool_args}", id="confirm_details")
+                else:
+                    yield Static(f"Arguments:\n{self.tool_args}", id="confirm_details")
             with Grid(id="confirm_buttons"):
                 yield Button("Allow (y)", variant="success", id="btn_allow")
                 yield Button("Always (a)", variant="primary", id="btn_always")

@@ -378,12 +378,71 @@ def user_panel(text: str) -> Panel:
     )
 
 
+def tool_args_summary(name: str, args: dict[str, Any]) -> str:
+    """Return a concise, readable summary of tool arguments for CLI/TUI traces."""
+    if name in ("edit_file", "write_file", "read_file"):
+        path = args.get("path", "")
+        if name == "edit_file":
+            old = str(args.get("old_text", ""))
+            return (
+                f"path={path!r}, old_text={old[:30]!r}…"
+                if len(old) > 30
+                else f"path={path!r}, old_text={old!r}"
+            )
+        if name == "write_file":
+            content_len = len(str(args.get("content", "")))
+            return f"path={path!r}, {content_len} chars"
+        return f"path={path!r}"
+    if name == "grep_search":
+        pattern = args.get("pattern", "")
+        glob = args.get("glob")
+        return f"pattern={pattern!r}" + (f", glob={glob!r}" if glob else "")
+    if name == "glob_files":
+        return f"pattern={args.get('pattern', '')!r}"
+    if name == "run_command":
+        return f"{args.get('command', '')!r}"
+    return f"{args}"
+
+
+def format_diff_renderable(
+    diff_text: str, added: int = 0, removed: int = 0, path: str = ""
+) -> Panel:
+    """Format a unified diff with green additions, red deletions, and cyan hunk headers."""
+    text = Text()
+    for line in diff_text.splitlines():
+        if line.startswith("+++") or line.startswith("---"):
+            text.append(line + "\n", style="bold")
+        elif line.startswith("@@"):
+            text.append(line + "\n", style="cyan")
+        elif line.startswith("+"):
+            text.append(line + "\n", style="green")
+        elif line.startswith("-"):
+            text.append(line + "\n", style="red")
+        else:
+            text.append(line + "\n", style="dim")
+
+    title = f"Diff Preview: [bold]{path}[/bold]" if path else "Diff Preview"
+    subtitle = (
+        f"[green]+{added}[/green] / [red]-{removed}[/red] lines" if (added or removed) else None
+    )
+    return Panel(
+        text,
+        title=title,
+        subtitle=subtitle,
+        border_style="yellow",
+        box=box.ROUNDED,
+    )
+
+
 def tool_trace(payload: dict[str, Any], *, persona: str | None = None) -> Text:
     """One trace renderable for a tool_call event: name + args, plus preview line."""
     accent = PERSONA_ACCENTS.get(persona or "", "cyan")
     line = Text()
-    line.append(f"{GLYPH_TOOL} {payload['name']}", style=f"bold {accent}")
-    line.append(_truncate(f"({payload.get('input', {})})"), style="dim")
+    name = payload.get("name", "")
+    args = payload.get("input", {})
+    summary = tool_args_summary(name, args)
+    line.append(f"{GLYPH_TOOL} {name}", style=f"bold {accent}")
+    line.append(f"({_truncate(summary, 70)})", style="dim")
     if payload.get("is_error"):
         line.append(f" {GLYPH_ERROR}", style="bold red")
     else:
@@ -402,8 +461,11 @@ def tool_running_trace(payload: dict[str, Any], *, persona: str | None = None) -
     """Trace renderable for tool_call_start: running indicator with name + args."""
     accent = PERSONA_ACCENTS.get(persona or "", "cyan")
     line = Text()
-    line.append(f"{GLYPH_TOOL} {payload['name']}", style=f"bold {accent}")
-    line.append(_truncate(f"({payload.get('input', {})})"), style="dim")
+    name = payload.get("name", "")
+    args = payload.get("input", {})
+    summary = tool_args_summary(name, args)
+    line.append(f"{GLYPH_TOOL} {name}", style=f"bold {accent}")
+    line.append(f"({_truncate(summary, 70)})", style="dim")
     line.append(" … running", style="dim italic")
     return line
 
