@@ -108,6 +108,8 @@ def _make_confirm_tool(
     persona: str, session_allowed: set[str] | None = None
 ) -> Callable[[str, dict[str, Any]], bool]:
     from ..agent import theme
+    from ..agent.chat import format_diff_renderable
+    from ..agent.tools import build_file_diff_preview
 
     allowed = session_allowed if session_allowed is not None else set()
     accent = theme.PERSONA_ACCENTS.get(persona, "cyan")
@@ -116,9 +118,22 @@ def _make_confirm_tool(
         if name in allowed:
             return True
         console = Console()
-        console.print(
-            f"[bold {accent}]⚠ {name}[/bold {accent}] wants to run with: [dim]{args}[/dim]"
-        )
+        if name in ("edit_file", "write_file"):
+            diff_text, added, removed = build_file_diff_preview(name, args)
+            if diff_text:
+                console.print(
+                    format_diff_renderable(
+                        diff_text, added, removed, path=str(args.get("path", ""))
+                    )
+                )
+            else:
+                console.print(
+                    f"[bold {accent}]⚠ {name}[/bold {accent}] wants to run with: [dim]{args}[/dim]"
+                )
+        else:
+            console.print(
+                f"[bold {accent}]⚠ {name}[/bold {accent}] wants to run with: [dim]{args}[/dim]"
+            )
         try:
             answer = (
                 console.input("[bold]Allow this? [y=yes, n=no, a=always for session] [/bold]")

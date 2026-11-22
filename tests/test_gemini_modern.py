@@ -20,6 +20,12 @@ from sakthai.agent.providers.gemini_provider import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _isolate_quota_sentinel(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Isolate quota sentinel to prevent daily request limit cascades in tests."""
+    monkeypatch.setenv("SAKTHAI_QUOTA_SENTINEL", "0")
+
+
 def test_legacy_gemini_models_mapping() -> None:
     """Verify legacy model substitution mapping contains expected migrations."""
     assert LEGACY_GEMINI_MODELS["gemini-2.5-flash"] == "gemini-4-hydrogen"

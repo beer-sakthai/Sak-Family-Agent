@@ -8,6 +8,8 @@ in one place.
 
 from __future__ import annotations
 
+import difflib
+import fnmatch
 import json
 import logging
 import os
@@ -388,6 +390,406 @@ def _read_file(args: dict[str, Any], store: MemoryStore) -> str:
     if len(text) > MAX_FILE_READ_CHARS:
         text = text[:MAX_FILE_READ_CHARS] + "\n... [truncated]"
     return text
+
+
+_SENSITIVE_WRITE_DIRS: frozenset[str] = frozenset(
+    {
+        ".git",
+        ".ssh",
+        ".aws",
+        ".gnupg",
+        ".docker",
+        ".kube",
+        ".gcloud",
+        ".azure",
+        ".jules",
+    }
+)
+
+_SEARCH_IGNORE_DIRS: frozenset[str] = frozenset(
+    {
+        ".git",
+        ".venv",
+        "venv",
+        "node_modules",
+        "__pycache__",
+        ".next",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+        "dist",
+        "build",
+    }
+)
+
+
+def _allowed_write_roots() -> list[Path]:
+    """Roots ``edit_file`` and ``write_file`` may modify: cwd plus SAKTHAI_WRITE_ALLOW."""
+    roots: list[Path] = []
+    with_cwd = (Path.cwd(),)
+    for base in with_cwd:
+        try:
+            roots.append(base.resolve())
+        except OSError:
+            continue
+    for token in os.environ.get("SAKTHAI_WRITE_ALLOW", "").split(os.pathsep):
+        token = token.strip()
+        if not token or token.lower() in _SHELL_ALLOW_ANY:
+            continue
+        try:
+            roots.append(Path(token).expanduser().resolve())
+        except OSError:
+            continue
+    return roots
+
+
+def _is_sensitive_write_target(resolved: Path) -> bool:
+    """Return True if ``resolved`` targets a sensitive credential file or protected directory."""
+    if _is_sensitive_read_target(resolved):
+        return True
+    name_lower = resolved.name.lower()
+    if name_lower.startswith((".env-", ".env_", "memory.db-")):
+        return True
+    return any(part.lower() in _SENSITIVE_WRITE_DIRS for part in resolved.parts)
+
+
+def _resolve_and_validate_write_path(path_str: str, *, must_exist: bool = False) -> Path:
+    """Resolve a path for writing/editing and validate it against sensitive targets and write roots."""
+    candidate = Path(path_str).expanduser()
+    try:
+        resolved = candidate.resolve(strict=must_exist)
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(f"{candidate} does not exist.") from exc
+    except OSError as exc:
+        raise FileNotFoundError(f"{candidate} could not be resolved: {exc}") from exc
+
+    if must_exist and not resolved.is_file():
+        raise FileNotFoundError(f"{resolved} is not a regular file.")
+    if resolved.exists() and resolved.is_dir():
+        raise IsADirectoryError(f"{resolved} is a directory, not a file.")
+
+    # Check both unresolved components (for symlink safety) and resolved path
+    for check_path in (candidate.absolute(), resolved):
+        if _is_sensitive_write_target(check_path):
+            raise PermissionError(
+                f"{resolved} is a sensitive or protected path and cannot be modified by this tool."
+            )
+
+    if not _path_under_any_root(resolved, _allowed_write_roots()):
+        raise PermissionError(
+            f"{resolved} is outside the allowed write roots. Add it to SAKTHAI_WRITE_ALLOW "
+            "(os.pathsep-separated) to permit writing."
+        )
+    return resolved
+
+
+def _compute_unified_diff(
+    old_content: str, new_content: str, display_path: str
+) -> tuple[str, int, int]:
+    """Compute a unified diff and count added and removed lines."""
+    old_lines = old_content.splitlines(keepends=True)
+    new_lines = new_content.splitlines(keepends=True)
+    diff_lines = list(
+        difflib.unified_diff(
+            old_lines,
+            new_lines,
+            fromfile=f"a/{display_path}",
+            tofile=f"b/{display_path}",
+            n=3,
+        )
+    )
+    added = 0
+    removed = 0
+    for line in diff_lines:
+        if line.startswith("+") and not line.startswith("+++"):
+            added += 1
+        elif line.startswith("-") and not line.startswith("---"):
+            removed += 1
+    diff_text = "".join(diff_lines)
+    if not diff_text and old_content != new_content:
+        diff_text = f"--- a/{display_path}\n+++ b/{display_path}\n@@ -1 +1 @@\n-{old_content}\n+{new_content}\n"
+        added = max(1, len(new_lines))
+        removed = max(1, len(old_lines))
+    return diff_text, added, removed
+
+
+def build_file_diff_preview(tool_name: str, args: Mapping[str, Any]) -> tuple[str, int, int]:
+    """Generate a pre-execution unified diff preview for ``edit_file`` or ``write_file``.
+
+    Returns:
+        ``(diff_text, added_lines, removed_lines)``. Never raises; returns an explanatory
+        preview string if the target file cannot be read or matched.
+    """
+    raw_path = args.get("path")
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        return ("", 0, 0)
+    display_path = raw_path.strip()
+    try:
+        candidate = Path(display_path).expanduser()
+        old_content = (
+            candidate.read_text(encoding="utf-8", errors="replace") if candidate.is_file() else ""
+        )
+    except OSError:
+        old_content = ""
+
+    if tool_name == "write_file":
+        new_content = args.get("content")
+        if not isinstance(new_content, str):
+            return ("", 0, 0)
+        return _compute_unified_diff(old_content, new_content, display_path)
+
+    if tool_name == "edit_file":
+        old_text = args.get("old_text")
+        new_text = args.get("new_text")
+        replace_all = bool(args.get("replace_all", False))
+        if not isinstance(old_text, str) or not isinstance(new_text, str) or not old_text:
+            return ("", 0, 0)
+        if old_text not in old_content:
+            return (f"(old_text not found in {display_path})", 0, 0)
+        new_content = (
+            old_content.replace(old_text, new_text)
+            if replace_all
+            else old_content.replace(old_text, new_text, 1)
+        )
+        return _compute_unified_diff(old_content, new_content, display_path)
+
+    return ("", 0, 0)
+
+
+def _find_occurrence_lines(content: str, needle: str) -> list[int]:
+    """Return 1-indexed line numbers where ``needle`` starts in ``content``."""
+    lines: list[int] = []
+    start = 0
+    while True:
+        idx = content.find(needle, start)
+        if idx == -1:
+            break
+        line_no = content.count("\n", 0, idx) + 1
+        lines.append(line_no)
+        start = idx + max(1, len(needle))
+    return lines
+
+
+def _edit_file(args: dict[str, Any], store: MemoryStore) -> str:
+    raw_path = args.get("path")
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        raise ValueError("`path` is required and must be a non-empty string.")
+    old_text = args.get("old_text")
+    if not isinstance(old_text, str) or not old_text:
+        raise ValueError("`old_text` is required and must be a non-empty string.")
+    new_text = args.get("new_text")
+    if not isinstance(new_text, str):
+        raise ValueError("`new_text` is required and must be a string.")
+    replace_all = bool(args.get("replace_all", False))
+
+    resolved = _resolve_and_validate_write_path(raw_path.strip(), must_exist=True)
+    content = resolved.read_text(encoding="utf-8")
+
+    occurrences = _find_occurrence_lines(content, old_text)
+    count = len(occurrences)
+    if count == 0:
+        raise ValueError(
+            f"`old_text` was not found in {raw_path.strip()}. Read the file first to verify exact contents and whitespace."
+        )
+    if count > 1 and not replace_all:
+        line_list = ", ".join(str(n) for n in occurrences[:10])
+        raise ValueError(
+            f"`old_text` matched {count} locations in {raw_path.strip()} (lines {line_list}). "
+            "Include more surrounding lines in `old_text` to make it unique, or set `replace_all=true`."
+        )
+
+    updated = (
+        content.replace(old_text, new_text)
+        if replace_all
+        else content.replace(old_text, new_text, 1)
+    )
+    _diff_text, added, removed = _compute_unified_diff(content, updated, raw_path.strip())
+    resolved.write_text(updated, encoding="utf-8")
+    replacements = count if replace_all else 1
+    return (
+        f"Edited {raw_path.strip()} ({replacements} replacement{'s' if replacements != 1 else ''}, "
+        f"+{added} / -{removed} lines)."
+    )
+
+
+def _write_file(args: dict[str, Any], store: MemoryStore) -> str:
+    raw_path = args.get("path")
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        raise ValueError("`path` is required and must be a non-empty string.")
+    content = args.get("content")
+    if not isinstance(content, str):
+        raise ValueError("`content` is required and must be a string.")
+    create_dirs = bool(args.get("create_dirs", True))
+
+    resolved = _resolve_and_validate_write_path(raw_path.strip(), must_exist=False)
+    old_content = ""
+    existed = resolved.is_file()
+    if existed:
+        old_content = resolved.read_text(encoding="utf-8", errors="replace")
+    elif not resolved.parent.exists():
+        if create_dirs:
+            resolved.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            raise FileNotFoundError(
+                f"Parent directory {resolved.parent} does not exist and create_dirs=False."
+            )
+
+    _diff_text, added, removed = _compute_unified_diff(old_content, content, raw_path.strip())
+    resolved.write_text(content, encoding="utf-8")
+    action = "Updated" if existed else "Created"
+    return f"{action} {raw_path.strip()} (+{added} / -{removed} lines, {len(content)} chars)."
+
+
+def _resolve_search_root(raw_path: str | None) -> Path:
+    """Resolve and validate a directory or file path for grep_search / glob_files."""
+    target = Path(raw_path).expanduser() if raw_path and raw_path.strip() else Path.cwd()
+    try:
+        resolved = target.resolve(strict=True)
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(f"{target} does not exist.") from exc
+    except OSError as exc:
+        raise FileNotFoundError(f"{target} could not be accessed: {exc}") from exc
+
+    if _is_sensitive_read_target(resolved) or any(
+        part.lower() in _SENSITIVE_WRITE_DIRS for part in resolved.parts
+    ):
+        raise PermissionError(f"{resolved} is a sensitive path and cannot be searched.")
+
+    if not _path_under_any_root(resolved, _allowed_read_roots()):
+        raise PermissionError(
+            f"{resolved} is outside the allowed roots. Add it to SAKTHAI_READ_ALLOW to permit searching."
+        )
+    return resolved
+
+
+def _iter_workspace_files(root: Path, file_glob: str | None = None) -> list[Path]:
+    """Walk ``root`` yielding non-ignored, non-sensitive regular files in deterministic order."""
+    if root.is_file():
+        return [root]
+
+    collected: list[Path] = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = sorted(
+            d
+            for d in dirnames
+            if d not in _SEARCH_IGNORE_DIRS and d.lower() not in _SENSITIVE_WRITE_DIRS
+        )
+        for fname in sorted(filenames):
+            if file_glob and not fnmatch.fnmatch(fname, file_glob):
+                continue
+            fpath = Path(dirpath) / fname
+            if fpath.is_symlink():
+                continue
+            try:
+                resolved = fpath.resolve()
+            except OSError:
+                continue
+            if _is_sensitive_read_target(resolved):
+                continue
+            collected.append(resolved)
+    return collected
+
+
+def _grep_search(args: dict[str, Any], store: MemoryStore) -> str:
+    pattern = args.get("pattern")
+    if not isinstance(pattern, str) or not pattern:
+        raise ValueError("`pattern` is required and must be a non-empty string.")
+    raw_path = args.get("path")
+    file_glob = args.get("glob")
+    if file_glob is not None and not isinstance(file_glob, str):
+        raise ValueError("`glob` must be a string if provided.")
+    case_sensitive = bool(args.get("case_sensitive", True))
+    max_results = _coerce_limit(args.get("max_results"), 50)
+
+    flags = 0 if case_sensitive else re.IGNORECASE
+    try:
+        regex = re.compile(pattern, flags)
+    except re.error as exc:
+        raise ValueError(f"Invalid regular expression {pattern!r}: {exc}") from exc
+
+    root = _resolve_search_root(raw_path if isinstance(raw_path, str) else None)
+    base_dir = Path.cwd().resolve()
+    files = _iter_workspace_files(root, file_glob=file_glob.strip() if file_glob else None)
+
+    matches: list[str] = []
+    for fpath in files:
+        try:
+            raw_bytes = fpath.read_bytes()
+        except OSError:
+            continue
+        if b"\x00" in raw_bytes[:4096]:
+            continue  # Skip binary files
+        text = raw_bytes.decode("utf-8", errors="replace")
+        try:
+            rel_display = str(fpath.relative_to(base_dir))
+        except ValueError:
+            rel_display = str(fpath)
+        for line_no, line in enumerate(text.splitlines(), start=1):
+            if regex.search(line):
+                snippet = line.strip()
+                if len(snippet) > 200:
+                    snippet = snippet[:199] + "…"
+                matches.append(f"{rel_display}:{line_no}: {snippet}")
+                if len(matches) >= max_results:
+                    break
+        if len(matches) >= max_results:
+            break
+
+    if not matches:
+        return f"No matches found for pattern {pattern!r}."
+    header = f"Matches ({len(matches)}{'+' if len(matches) >= max_results else ''}):"
+    out = "\n".join([header, *matches])
+    if len(out) > MAX_FILE_READ_CHARS:
+        out = out[:MAX_FILE_READ_CHARS] + "\n... [truncated]"
+    return out
+
+
+def _glob_files(args: dict[str, Any], store: MemoryStore) -> str:
+    pattern = args.get("pattern")
+    if not isinstance(pattern, str) or not pattern.strip():
+        raise ValueError("`pattern` is required and must be a non-empty string.")
+    raw_path = args.get("path")
+    max_results = _coerce_limit(args.get("max_results"), 100)
+
+    root = _resolve_search_root(raw_path if isinstance(raw_path, str) else None)
+    if not root.is_dir():
+        raise ValueError(f"{root} is not a directory.")
+    base_dir = Path.cwd().resolve()
+
+    clean_pattern = pattern.strip()
+    all_files = _iter_workspace_files(root)
+    matched_paths: list[str] = []
+
+    for fpath in all_files:
+        try:
+            rel_to_root = fpath.relative_to(root).as_posix()
+        except ValueError:
+            continue
+        if (
+            fnmatch.fnmatch(rel_to_root, clean_pattern)
+            or fnmatch.fnmatch(fpath.name, clean_pattern)
+            or (
+                clean_pattern.startswith("**/")
+                and (
+                    fnmatch.fnmatch(rel_to_root, clean_pattern[3:])
+                    or fnmatch.fnmatch(fpath.name, clean_pattern[3:])
+                )
+            )
+        ):
+            try:
+                display = fpath.relative_to(base_dir).as_posix()
+            except ValueError:
+                display = str(fpath)
+            matched_paths.append(display)
+            if len(matched_paths) >= max_results:
+                break
+
+    if not matched_paths:
+        return f"No files matched pattern {clean_pattern!r}."
+    header = (
+        f"Matched files ({len(matched_paths)}{'+' if len(matched_paths) >= max_results else ''}):"
+    )
+    return "\n".join([header, *matched_paths])
 
 
 # Values of SAKTHAI_SHELL_ALLOW that keep the legacy "gate only" behavior: once
@@ -1151,6 +1553,135 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["path"],
         },
         handler=_read_file,
+        annotations=_annotations(read_only=True),
+    ),
+    Tool(
+        name="edit_file",
+        description=(
+            "Perform a surgical search-and-replace edit on an existing local text file. "
+            "`old_text` must match uniquely by default (or set `replace_all=true` to replace "
+            "every occurrence). Always read the file first to ensure exact text and indentation."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Absolute or working-directory-relative file path to edit.",
+                },
+                "old_text": {
+                    "type": "string",
+                    "description": "Exact existing text block to replace (including whitespace).",
+                },
+                "new_text": {
+                    "type": "string",
+                    "description": "Replacement text block.",
+                },
+                "replace_all": {
+                    "type": "boolean",
+                    "description": "If true, replace all occurrences of old_text; otherwise require a unique match.",
+                    "default": False,
+                },
+            },
+            "required": ["path", "old_text", "new_text"],
+        },
+        handler=_edit_file,
+        annotations=_annotations(destructive=True),
+        requires_confirmation=True,
+    ),
+    Tool(
+        name="write_file",
+        description=(
+            "Create a new text file or overwrite an existing file on disk. Automatically "
+            "creates missing parent directories unless `create_dirs=false`."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Absolute or working-directory-relative file path to write.",
+                },
+                "content": {
+                    "type": "string",
+                    "description": "Complete text content to write to the file.",
+                },
+                "create_dirs": {
+                    "type": "boolean",
+                    "description": "Create parent directories if they do not exist (default: true).",
+                    "default": True,
+                },
+            },
+            "required": ["path", "content"],
+        },
+        handler=_write_file,
+        annotations=_annotations(destructive=True, idempotent=True),
+        requires_confirmation=True,
+    ),
+    Tool(
+        name="grep_search",
+        description=(
+            "Search workspace files for lines matching a regular expression or substring "
+            "pattern. Skips binary files, sensitive credential files, and build/VCS "
+            "directories (.git, .venv, node_modules, __pycache__). Returns file:line: snippet."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "pattern": {
+                    "type": "string",
+                    "description": "Regular expression or literal string to search for.",
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Optional directory or file path to scope the search (default: current working directory).",
+                },
+                "glob": {
+                    "type": "string",
+                    "description": "Optional filename glob filter (e.g. '*.py' or '*.ts').",
+                },
+                "case_sensitive": {
+                    "type": "boolean",
+                    "description": "Whether the search is case-sensitive (default: true).",
+                    "default": True,
+                },
+                "max_results": {
+                    "type": "integer",
+                    "description": "Maximum number of matching lines to return (default: 50, max: 200).",
+                    "default": 50,
+                },
+            },
+            "required": ["pattern"],
+        },
+        handler=_grep_search,
+        annotations=_annotations(read_only=True),
+    ),
+    Tool(
+        name="glob_files",
+        description=(
+            "Find files in the workspace matching a glob pattern (e.g. '*.py', 'tests/test_*.py', "
+            "'**/*.md'). Skips .git, .venv, node_modules, __pycache__, and sensitive files."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "pattern": {
+                    "type": "string",
+                    "description": "Glob pattern to match against workspace file paths or filenames.",
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Optional root directory to search under (default: current working directory).",
+                },
+                "max_results": {
+                    "type": "integer",
+                    "description": "Maximum number of file paths to return (default: 100, max: 200).",
+                    "default": 100,
+                },
+            },
+            "required": ["pattern"],
+        },
+        handler=_glob_files,
         annotations=_annotations(read_only=True),
     ),
     Tool(
