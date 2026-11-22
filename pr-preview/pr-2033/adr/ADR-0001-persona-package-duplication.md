@@ -181,9 +181,19 @@ targets Windows.
    new check. — The new walk subsumes `test_persona_structure_parity.py`'s
    hard-coded 15-subpackage byte check and adds the top-level modules and
    `scripts/` it missed; the existing tests are kept as-is (they still pass).
-3. [ ] **(Option C, scoped follow-up)** Spike `compose_persona.py`-style code
-   composition for one persona into a throwaway dir; `diff -rq` it against the
-   committed copy to prove byte-for-byte equivalence.
+3. [x] 2026-11-22 **(Option C, scoped follow-up)** Spike `compose_persona.py`-style
+   code composition for one persona into a throwaway dir; `diff -rq` it against the
+   committed copy to prove byte-for-byte equivalence. — **Feasible, proven for all
+   five copies.** A throwaway composer laying down canonical shared code and then a
+   persona's own overlay reproduced each committed tree with **zero diffs**. The
+   per-persona overlay is a bounded 12-item set — `SOUL.md`, `PLAN.md`, `CYCLE.md`,
+   `MEMORY.md`, `HANDOFF.md`, `BACKPACK.md`, `README.md`, `AGENTS.md`, `config/`,
+   `evolution/`, `reports/`, `skills/` — and everything else (all package `.py`,
+   `evolve_agent.sh`, `pyproject.toml`, `tests/`, the library overlay dirs) is
+   byte-identical duplication of canonical that Option C can generate from one
+   source. This confirms the overlay/compose model carries over cleanly from the
+   skills tree to the package code; the remaining risk is in the migration
+   mechanics (items 4–5), not the concept.
 4. [ ] Audit `export_agent_repo.py` / `diagnose_personas.py` / CI for assumptions
    that the copies exist as committed source.
 5. [ ] If the spike holds, migrate copies → overlays, `.gitignore` the generated
