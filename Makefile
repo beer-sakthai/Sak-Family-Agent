@@ -1,4 +1,4 @@
-.PHONY: help compose-personas export-agent-repos export-agent-repo test lint mutation \
+.PHONY: help compose-personas sync-personas export-agent-repos export-agent-repo test lint mutation \
 	dashboard-dev dashboard-test contract-types system-snapshot
 
 help:
@@ -6,6 +6,7 @@ help:
 	@echo "======================================"
 	@echo "Available commands:"
 	@echo "  make compose-personas - Rebuild full skill trees for all personas (shared + overlays)"
+	@echo "  make sync-personas   - Mirror canonical package code (personas/sakthai) into the five copies"
 	@echo "  make export-agent-repos - Materialize standalone repo snapshots for all six personas"
 	@echo "  make export-agent-repo PERSONA=sakjules - Export one standalone persona repo"
 	@echo "  make test            - Run all pytest test suites"
@@ -26,6 +27,14 @@ compose-personas:
 	@python3 scripts/compose_persona.py saksit --out build/personas/saksit
 	@python3 scripts/compose_persona.py saktan --out build/personas/saktan
 	@python3 scripts/compose_persona.py sakjules --out build/personas/sakjules
+
+# Mirror the canonical package code (personas/sakthai) into the five persona
+# copies. tests/test_persona_package_parity.py fails CI when they drift; this is
+# the one-command fix. See docs/adr/ADR-0001-persona-package-duplication.md.
+#   make sync-personas            # copy canonical -> the five
+#   python scripts/sync_personas.py --check   # report drift, change nothing
+sync-personas:
+	@python3 scripts/sync_personas.py
 
 export-agent-repo:
 	@if [ -z "$$PERSONA" ]; then echo "Usage: make export-agent-repo PERSONA=<sakking|sakthai|saksee|saksit|saktan|sakjules>"; exit 1; fi

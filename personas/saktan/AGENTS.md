@@ -21,7 +21,7 @@
 | **Skill Inventory** | **26 Overlay Skills + 19 Shared Skills** (45 total skills) |
 | **Primary Workspace Skills** | `SakTan-daily-briefing`, `SakTan-close-the-day`, `SakTan-weekly-review` ([`config/workspace.yaml`](./config/workspace.yaml)) |
 | **Allowed Workspace Tools** | `run_command`, `view_file`, `schedule` |
-| **MCP Servers (`config/mcp.json`)** | `{}` (100% local zero-cost execution using built-in memory, calendar, and mail tools) |
+| **MCP Servers (`config/mcp.json`)** | `microsoft365` (Remote HTTP `https://microsoft365.mcp.claude.com/mcp`, read-only tool allowlist, requires `MS365_MCP_TOKEN`), `microsoft-learn` (Remote HTTP `https://learn.microsoft.com/api/mcp`, docs search/fetch only, no auth), `gemini-api-docs` (Remote HTTP `https://gemini-api-docs-mcp.dev`, docs search/fetch only, no auth) alongside the built-in memory, calendar, and mail tools |
 | **Gateway Voice Mode** | `{}` (Strict text-only local operations, [`config/gateway_voice_mode.json`](./config/gateway_voice_mode.json)) |
 | **Evaluation Rubric** | `CYCLE EVAL: saktan` (v9 100-pt self-eval in [`SOUL.md`](./SOUL.md) & [`CYCLE.md`](./CYCLE.md)) |
 | **Standalone Export Target** | `build/agent-repos/saktan` (`beer-sakthai/saktan-agent`) |
