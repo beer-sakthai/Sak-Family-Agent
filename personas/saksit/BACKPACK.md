@@ -14,6 +14,7 @@
 | Component | Executable Path / Command | Version / Mode | Status |
 |:---|:---|:---|:---:|
 | **Google Antigravity IDE** | AGY Canvas & IDE Extension | Antigravity 2.0 | ✅ Active |
+| **Extensions Runtime** | `~/.sakthai/saksit/extensions` · `sakthai extensions` | 8-Factor Rubric (`sakthai eval extensions`) | ✅ Active |
 | **AGY CLI & Runner** | `agy` · `sakthai platform antigravity` | v2.0 Stdio, MCP & `AntigravityAgentRunner` | ✅ Active |
 | **Google ADK CLI** | `agents-cli` | v1.2.1 (Google Agent Dev Kit) | ✅ Active |
 | **SakThai Unified Platform** | `sakthai run/chat --persona saksit` · `sakthai platform` | v2.0 Core + `DataLossGuardrail` + Presets | ✅ Active |

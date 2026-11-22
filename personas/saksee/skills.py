@@ -15,9 +15,11 @@ import yaml
 from .config import (
     CURATED_LIBRARY_DIR,
     LIBRARY_DIR,
+    PERSONA_NAMES,
     SHARED_SKILLS_DIR,
     SKILLS_DIR,
     gemini_extensions_dir,
+    persona_extensions_dir,
     persona_skills_dir,
     sakthai_home,
 )
@@ -247,8 +249,12 @@ def default_skill_roots(persona: str | None = None) -> tuple[Path, ...]:
         SHARED_SKILLS_DIR,
         LIBRARY_DIR,
         curated_root,
-        sakthai_home() / "extensions",
     ]
+    if persona and persona in PERSONA_NAMES:
+        p_ext = persona_extensions_dir(persona)
+        if p_ext.is_dir():
+            roots.append(p_ext)
+    roots.append(sakthai_home() / "extensions")
     if gemini_ext.is_dir():
         roots.append(gemini_ext)
     return tuple(roots)

@@ -16,7 +16,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ..config import gemini_extensions_dir, mcp_config_override, sakthai_home
+from ..config import (
+    PERSONA_NAMES,
+    gemini_extensions_dir,
+    mcp_config_override,
+    persona_extensions_dir,
+    sakthai_home,
+)
 from ..extensions.install import extensions_dir
 
 logger = logging.getLogger(__name__)
@@ -148,11 +154,11 @@ def _load_manifest(path: Path) -> list[MCPServerSpec]:
     return parse_mcp_servers(data)
 
 
-def load_server_specs() -> list[MCPServerSpec]:
+def load_server_specs(persona: str | None = None) -> list[MCPServerSpec]:
     """All configured MCP servers, lowest precedence first.
 
     Sources, each overriding the previous by server name: gemini extensions →
-    sakthai extensions → ``~/.sakthai/mcp.json`` → the per-persona override from
+    sakthai extensions → persona extensions → ``~/.sakthai/mcp.json`` → the per-persona override from
     ``SAKTHAI_MCP_CONFIG`` (highest). So a persona's ``mcp.json`` wins over the
     shared config, which wins over an extension of the same name.
     """
@@ -165,12 +171,21 @@ def load_server_specs() -> list[MCPServerSpec]:
             for spec in _load_manifest(manifest):
                 by_name[spec.name] = spec
 
-    # 2. Load from sakthai extensions
+    # 2. Load from shared sakthai extensions
     base = extensions_dir()
     if base.is_dir():
         for manifest in sorted(base.glob("*/gemini-extension.json")):
             for spec in _load_manifest(manifest):
                 by_name[spec.name] = spec
+
+    # 2b. Load from persona extensions (if persona provided or detected)
+    active_persona = persona or os.environ.get("SAKTHAI_PERSONA")
+    if active_persona and active_persona in PERSONA_NAMES:
+        p_base = persona_extensions_dir(active_persona)
+        if p_base.is_dir():
+            for manifest in sorted(p_base.glob("*/gemini-extension.json")):
+                for spec in _load_manifest(manifest):
+                    by_name[spec.name] = spec
 
     # 3. Shared primary config
     config = mcp_config_path()

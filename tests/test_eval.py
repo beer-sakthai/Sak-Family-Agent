@@ -10,13 +10,16 @@ import pytest
 
 from sakthai.agent.eval import (
     AGENTS_MD_RUBRIC_CRITERIA,
+    EXTENSIONS_RUBRIC_CRITERIA,
     SKILL_RUBRIC_CRITERIA,
     EvalRecord,
     _score_to_grade,
     evaluate_agents_md_trials,
     evaluate_all_personas,
+    evaluate_extensions_trials,
     evaluate_persona_agents_md_alignment,
     evaluate_persona_audit,
+    evaluate_persona_extensions_health,
     evaluate_persona_readiness,
     evaluate_persona_safety_compliance,
     evaluate_persona_skills_health,
@@ -688,3 +691,33 @@ class TestAgentsMdAlignment:
         assert single["persona"] == "sakjules"
         assert single["trials"] == 3
         assert single["all_trials_aligned"] is True
+
+
+class TestExtensionsHealth:
+    def test_all_real_personas_extensions_healthy(self) -> None:
+        assert len(EXTENSIONS_RUBRIC_CRITERIA) == 8
+        for p in PERSONA_NAMES:
+            res = evaluate_persona_extensions_health(p)
+            assert res["healthy"] is True, f"{p} extensions diagnostics: {res['diagnostics']}"
+            assert res["extensions_score"] == 1.0
+            assert res["checks_passed"] == res["checks_total"] == 8
+            assert res["diagnostics"] == []
+
+    def test_unknown_persona_raises(self) -> None:
+        with pytest.raises(ValueError, match="Unknown persona"):
+            evaluate_persona_extensions_health("unknown_bot")
+        with pytest.raises(ValueError, match="Unknown persona"):
+            evaluate_extensions_trials(persona="unknown_bot")
+
+    def test_evaluate_extensions_trials_10x(self) -> None:
+        bench = evaluate_extensions_trials(trials=10)
+        assert bench["trials"] == 10
+        assert bench["consistent"] is True
+        assert bench["all_trials_healthy"] is True
+        assert len(bench["trial_history"]) == 10
+        assert len(bench["latest_report"]) == 6
+
+        single = evaluate_extensions_trials(persona="saksee", trials=3)
+        assert single["persona"] == "saksee"
+        assert single["trials"] == 3
+        assert single["all_trials_healthy"] is True

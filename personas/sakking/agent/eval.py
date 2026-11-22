@@ -59,6 +59,17 @@ AGENTS_MD_RUBRIC_CRITERIA: tuple[str, ...] = (
     "evolution_workflow_matched",
 )
 
+EXTENSIONS_RUBRIC_CRITERIA: tuple[str, ...] = (
+    "registry_valid",
+    "paths_contained",
+    "names_valid",
+    "manifests_valid",
+    "skills_valid",
+    "isolation_safe",
+    "discovery_health",
+    "persona_scoping_ready",
+)
+
 
 PERSONA_WORKING_FILES: tuple[str, ...] = (
     "SOUL.md",
@@ -1362,6 +1373,209 @@ def _score_to_grade(score: float) -> str:
     return "F"
 
 
+def evaluate_persona_extensions_health(
+    persona: str | None = None,
+    home_dir: Path | None = None,
+) -> dict[str, Any]:
+    """Evaluate extensions health against 8-factor rubric across registry, containment, schema, and isolation."""
+    from ..config import persona_extensions_dir, persona_extensions_registry_path
+    from ..extensions.install import (
+        DANGEROUS_SHELL_PATTERNS,
+        EXTENSION_NAME_RE,
+        _discover_mcp_servers,
+        _discover_skills_with_validation,
+        _load_registry,
+        _registry_path,
+        extensions_dir,
+        validate_extension_manifest,
+    )
+
+    if persona is not None and persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+
+    diagnostics: list[str] = []
+    checks: dict[str, bool] = {k: True for k in EXTENSIONS_RUBRIC_CRITERIA}
+
+    # 1. registry_valid: test registry file readability and structure
+    base_reg_path = _registry_path(persona)
+    if base_reg_path.exists():
+        try:
+            raw_text = base_reg_path.read_text(encoding="utf-8")
+            parsed = json.loads(raw_text)
+            if not isinstance(parsed, dict) or not isinstance(parsed.get("extensions"), dict):
+                checks["registry_valid"] = False
+                diagnostics.append(
+                    f"Registry {base_reg_path} is malformed (missing extensions dict)"
+                )
+        except (json.JSONDecodeError, OSError) as exc:
+            checks["registry_valid"] = False
+            diagnostics.append(f"Registry {base_reg_path} failed to parse: {exc}")
+
+    # Gather registered extensions
+    reg_data = _load_registry(persona)
+    extensions_map = reg_data.get("extensions", {})
+    ext_base = extensions_dir(persona).resolve()
+
+    # 2. paths_contained & 3. names_valid & 4. manifests_valid & 5. skills_valid & 6. isolation_safe
+    for name, item in extensions_map.items():
+        if not EXTENSION_NAME_RE.match(name):
+            checks["names_valid"] = False
+            diagnostics.append(f"Extension {name!r}: invalid name format")
+
+        if not isinstance(item, dict):
+            checks["registry_valid"] = False
+            diagnostics.append(f"Extension {name!r}: entry in registry is not a dict")
+            continue
+
+        raw_path = item.get("path")
+        if not raw_path:
+            checks["paths_contained"] = False
+            diagnostics.append(f"Extension {name!r}: missing path in registry")
+            continue
+
+        path = Path(raw_path).resolve()
+        if path == ext_base or not path.is_relative_to(ext_base):
+            checks["paths_contained"] = False
+            diagnostics.append(
+                f"Extension {name!r}: path {path} escapes authorized directory {ext_base}"
+            )
+
+        if path.exists():
+            manifest_path = path / "gemini-extension.json"
+            if manifest_path.exists():
+                m_valid, m_diags = validate_extension_manifest(manifest_path)
+                if not m_valid:
+                    checks["manifests_valid"] = False
+                    diagnostics.extend([f"Extension {name!r}: {d}" for d in m_diags])
+                try:
+                    m_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+                    srvs = m_data.get("mcpServers", {}) if isinstance(m_data, dict) else {}
+                    if isinstance(srvs, dict):
+                        for srv_name, srv_conf in srvs.items():
+                            if isinstance(srv_conf, dict):
+                                cmd = srv_conf.get("command", "")
+                                if isinstance(cmd, str) and DANGEROUS_SHELL_PATTERNS.search(cmd):
+                                    checks["isolation_safe"] = False
+                                    diagnostics.append(
+                                        f"Extension {name!r} server {srv_name!r}: dangerous shell metacharacters in command"
+                                    )
+                except (json.JSONDecodeError, OSError):
+                    pass
+
+            skills, skill_diags = _discover_skills_with_validation(path)
+            if skill_diags:
+                checks["skills_valid"] = False
+                diagnostics.extend([f"Extension {name!r}: {d}" for d in skill_diags])
+
+    # 7. discovery_health: verify discovery helper routines operate safely
+    try:
+        dummy_skills = _discover_skills_with_validation(ext_base)
+        dummy_mcp = _discover_mcp_servers(ext_base)
+        assert isinstance(dummy_skills, tuple)
+        assert isinstance(dummy_mcp, list)
+    except Exception as exc:
+        checks["discovery_health"] = False
+        diagnostics.append(f"Discovery helper crashed on directory {ext_base}: {exc}")
+
+    # 8. persona_scoping_ready: check persona directories and registry paths resolve cleanly
+    try:
+        for p in PERSONA_NAMES:
+            p_dir = persona_extensions_dir(p)
+            p_reg = persona_extensions_registry_path(p)
+            assert p_dir.name == "extensions"
+            assert p_reg.name == "extensions.json"
+            assert p in str(p_dir)
+            assert p in str(p_reg)
+    except Exception as exc:
+        checks["persona_scoping_ready"] = False
+        diagnostics.append(f"Persona extensions directory scoping failed: {exc}")
+
+    passed_count = sum(1 for v in checks.values() if v)
+    total_count = len(checks)
+    score = round(passed_count / total_count, 2)
+    grade = _score_to_grade(score)
+
+    return {
+        "persona": persona,
+        "grade": grade,
+        "extensions_score": score,
+        "checks": checks,
+        "checks_passed": passed_count,
+        "checks_total": total_count,
+        "diagnostics": diagnostics,
+        "healthy": score >= 0.80 and checks["registry_valid"] and checks["paths_contained"],
+        "extensions_count": len(extensions_map),
+        "extensions_found": sorted(extensions_map.keys()),
+    }
+
+
+def evaluate_extensions_trials(
+    persona: str | None = None,
+    trials: int = 1,
+    home_dir: Path | None = None,
+) -> dict[str, Any]:
+    """Execute extensions health evaluation across one or all personas for multiple trials."""
+    if persona is not None and persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+
+    trial_count = max(1, int(trials))
+    targets = (persona,) if persona else PERSONA_NAMES
+
+    trial_history: list[dict[str, Any]] = []
+    latencies_ms: list[float] = []
+    latest_report: dict[str, dict[str, Any]] = {}
+
+    for i in range(1, trial_count + 1):
+        t0 = time.perf_counter()
+        run_report = {p: evaluate_persona_extensions_health(p, home_dir=home_dir) for p in targets}
+        elapsed_ms = round((time.perf_counter() - t0) * 1000.0, 2)
+        latencies_ms.append(elapsed_ms)
+        latest_report = run_report
+
+        all_healthy = all(r["healthy"] for r in run_report.values())
+        tot_checks = sum(r["checks_total"] for r in run_report.values())
+        passed_checks = sum(r["checks_passed"] for r in run_report.values())
+        avg_score = (
+            round(sum(r["extensions_score"] for r in run_report.values()) / len(targets), 2)
+            if targets
+            else 0.0
+        )
+
+        trial_history.append(
+            {
+                "trial": i,
+                "latency_ms": elapsed_ms,
+                "all_healthy": all_healthy,
+                "total_checks": tot_checks,
+                "passed_checks": passed_checks,
+                "average_score": avg_score,
+                "scores": {p: run_report[p]["extensions_score"] for p in targets},
+            }
+        )
+
+    first_scores = trial_history[0]["scores"]
+    consistent = all(t["scores"] == first_scores for t in trial_history)
+    all_trials_healthy = all(t["all_healthy"] for t in trial_history)
+    avg_latency = round(sum(latencies_ms) / len(latencies_ms), 2)
+    min_latency = round(min(latencies_ms), 2)
+    max_latency = round(max(latencies_ms), 2)
+    jitter = round(max_latency - min_latency, 2)
+
+    return {
+        "persona": persona,
+        "trials": trial_count,
+        "all_trials_healthy": all_trials_healthy,
+        "consistent": consistent,
+        "latencies_ms": latencies_ms,
+        "avg_latency_ms": avg_latency,
+        "min_latency_ms": min_latency,
+        "max_latency_ms": max_latency,
+        "jitter_ms": jitter,
+        "trial_history": trial_history,
+        "latest_report": latest_report,
+    }
+
+
 def evaluate_persona_audit(
     persona: str,
     personas_dir: Path | None = None,
@@ -1374,6 +1588,7 @@ def evaluate_persona_audit(
     tools = evaluate_persona_tools_health(persona)
     memory = evaluate_persona_memory_health(persona, home_dir=home_dir)
     safety = evaluate_persona_safety_compliance(persona)
+    extensions = evaluate_persona_extensions_health(persona, home_dir=home_dir)
 
     composite_score = round(
         0.20 * readiness["readiness_score"]
@@ -1392,6 +1607,7 @@ def evaluate_persona_audit(
         + tools["diagnostics"]
         + memory["diagnostics"]
         + safety["diagnostics"]
+        + extensions["diagnostics"]
     )
 
     return {

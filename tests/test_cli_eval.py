@@ -501,3 +501,76 @@ def test_eval_agents_cli_all_single_and_trials(runner: CliRunner) -> None:
         assert tfail.exit_code == 1
         tfail_json = runner.invoke(main, ["eval", "agents", "-t", "2", "--json"])
         assert tfail_json.exit_code == 1
+
+
+def test_eval_extensions_cli_all_and_single(runner: CliRunner) -> None:
+    # All personas text
+    res = runner.invoke(main, ["eval", "extensions"])
+    assert res.exit_code == 0
+    assert "Sak Family Extensions Fleet Health Audit" in res.output
+    assert "[HEALTHY] sakthai" in res.output
+
+    # Single persona detailed
+    res_single = runner.invoke(main, ["eval", "extensions", "--persona", "sakking", "--detailed"])
+    assert res_single.exit_code == 0
+    assert "sakking" in res_single.output
+    assert "registry_valid" in res_single.output
+    assert "persona_scoping_ready" in res_single.output
+
+    # All personas JSON
+    res_json = runner.invoke(main, ["eval", "extensions", "--json"])
+    assert res_json.exit_code == 0
+    data = json.loads(res_json.output)
+    assert len(data) == 6
+    assert data["sakthai"]["healthy"] is True
+    assert data["sakthai"]["checks_total"] == 8
+
+
+def test_eval_extensions_cli_trials_and_failures(runner: CliRunner) -> None:
+    # Trials text
+    res_trials = runner.invoke(main, ["eval", "extensions", "-t", "3"])
+    assert res_trials.exit_code == 0
+    assert "Extensions Fleet Benchmark (3 trials)" in res_trials.output
+
+    # Trials JSON
+    res_trials_json = runner.invoke(main, ["eval", "extensions", "-t", "3", "--json"])
+    assert res_trials_json.exit_code == 0
+    tdata = json.loads(res_trials_json.output)
+    assert tdata["trials"] == 3
+    assert tdata["all_trials_healthy"] is True
+
+    # Mock failure single
+    mock_fail = {
+        "persona": "saktan",
+        "healthy": False,
+        "grade": "F",
+        "extensions_score": 0.5,
+        "checks": {"registry_valid": False},
+        "checks_passed": 4,
+        "checks_total": 8,
+        "extensions_count": 0,
+        "diagnostics": ["Registry corrupt"],
+    }
+    with patch("sakthai.cli.eval.evaluate_persona_extensions_health", return_value=mock_fail):
+        fail_res = runner.invoke(main, ["eval", "extensions", "--persona", "saktan"])
+        assert fail_res.exit_code == 1
+        assert "[UNHEALTHY]" in fail_res.output
+        assert "Registry corrupt" in fail_res.output
+
+        fail_json = runner.invoke(main, ["eval", "extensions", "--persona", "saktan", "--json"])
+        assert fail_json.exit_code == 1
+
+    # Mock trial failure
+    mock_trial_fail = {
+        "trials": 2,
+        "all_trials_healthy": False,
+        "consistent": False,
+        "avg_latency_ms": 3.0,
+        "jitter_ms": 1.0,
+        "latest_report": {"saktan": mock_fail},
+    }
+    with patch("sakthai.cli.eval.evaluate_extensions_trials", return_value=mock_trial_fail):
+        tfail = runner.invoke(main, ["eval", "extensions", "-t", "2"])
+        assert tfail.exit_code == 1
+        tfail_json = runner.invoke(main, ["eval", "extensions", "-t", "2", "--json"])
+        assert tfail_json.exit_code == 1
