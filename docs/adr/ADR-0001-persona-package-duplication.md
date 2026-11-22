@@ -52,7 +52,7 @@ installed and run; the five copies are never imported.
   `SOUL.md`, `skills/`, `config/` (model/provider defaults, `mcp.json`), and
   `evolution/`. Those are genuinely per-persona and are *not* duplication.
 - **Runtime is unaffected either way** — only `personas/sakthai/` is ever
-  installed. This decision is about source-tree maintainability, not behaviour.
+  installed. This decision is about source-tree maintainability, not behavior.
 
 ## Decision
 
@@ -156,7 +156,7 @@ targets Windows.
 
 ## Consequences
 
-- **Easier:** security/behaviour fixes apply once and can't silently miss a
+- **Easier:** security/behavior fixes apply once and can't silently miss a
   copy; tree-wide diffs shrink; new shared modules stop multiplying the risk.
 - **Harder (short term, Option B):** a canonical change turns CI red until synced
   — mitigated by a `make sync-personas` target that copies canonical → the five.
