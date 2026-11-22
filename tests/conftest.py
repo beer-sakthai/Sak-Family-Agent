@@ -81,7 +81,14 @@ def _isolate_home(monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
         monkeypatch.setenv("HOME", str(home))
         monkeypatch.setenv("USERPROFILE", str(home))  # Path.home() reads this on Windows
         monkeypatch.setenv("SAKTHAI_HOME", str(home / ".sakthai"))
-        yield home
+
+        from sakthai.agent.quota import reset_quota_sentinel
+
+        reset_quota_sentinel()
+        try:
+            yield home
+        finally:
+            reset_quota_sentinel()
 
 
 @pytest.fixture

@@ -11,8 +11,10 @@ from pathlib import Path
 
 from .models import get_pacific_date_str
 
-_DEFAULT_DB_DIR = Path(os.environ.get("SAKTHAI_HOME", "~/.sakthai")).expanduser()
-_DEFAULT_DB_PATH = _DEFAULT_DB_DIR / "quota_sentinel.db"
+
+def _get_default_db_path() -> Path:
+    base_dir = Path(os.environ.get("SAKTHAI_HOME", "~/.sakthai")).expanduser()
+    return base_dir / "quota_sentinel.db"
 
 
 class QuotaSentinelStore:
@@ -24,7 +26,7 @@ class QuotaSentinelStore:
         elif "SAKTHAI_QUOTA_DB" in os.environ:
             self.db_path = Path(os.environ["SAKTHAI_QUOTA_DB"])
         else:
-            self.db_path = _DEFAULT_DB_PATH
+            self.db_path = _get_default_db_path()
 
         self._lock = threading.Lock()
         self._rpm_windows: dict[str, collections.deque[float]] = {}
