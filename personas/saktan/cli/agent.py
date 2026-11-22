@@ -322,7 +322,7 @@ def run(
         opt_iterations = max_iterations if max_iterations != DEFAULT_MAX_ITERATIONS else 3
         try:
             opt_result = optimize_solution(
-                task=task,
+                task=task_str,
                 criteria=criteria,
                 max_iterations=opt_iterations,
                 model=model,

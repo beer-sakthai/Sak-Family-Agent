@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import re
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
@@ -254,11 +254,12 @@ class EvaluatorOptimizer:
 
     def optimize(
         self,
-        task: str,
+        task: str | Sequence[str],
         criteria: str = "",
         initial_context: str = "",
     ) -> OptimizationResult:
         """Execute the bounded feedback loop until PASS, FAIL, or max_iterations reached."""
+        task_text = " ".join(task) if not isinstance(task, str) else task
         history: list[OptimizationIteration] = []
         context = initial_context
         total_start = time.perf_counter()
@@ -276,9 +277,9 @@ class EvaluatorOptimizer:
 
         for i in range(1, self.max_iterations + 1):
             iter_start = time.perf_counter()
-            response, thoughts = self.generate(task, context=context)
+            response, thoughts = self.generate(task_text, context=context)
             final_response = response
-            status, feedback = self.evaluate(task, response, criteria=criteria)
+            status, feedback = self.evaluate(task_text, response, criteria=criteria)
             latency = time.perf_counter() - iter_start
 
             iteration_record = OptimizationIteration(
@@ -325,7 +326,7 @@ class EvaluatorOptimizer:
 
 
 def optimize_solution(
-    task: str,
+    task: str | Sequence[str],
     criteria: str = "",
     max_iterations: int = DEFAULT_MAX_OPTIMIZER_ITERATIONS,
     call_fn: Callable[[str], str] | None = None,
