@@ -397,3 +397,314 @@ def test_update_extension_flow(
     assert up_res.success is True
     assert up_res.updated is False
     assert "Already up to date" in up_res.message
+
+
+def test_registry_corrupted_or_non_dict_fallback(sakthai_home: Path) -> None:
+    reg_file = ext._registry_path()
+    reg_file.parent.mkdir(parents=True, exist_ok=True)
+    reg_file.write_text("invalid json", encoding="utf-8")
+    assert ext._load_registry() == {"extensions": {}}
+
+    reg_file.write_text(json.dumps(["not", "a", "dict"]), encoding="utf-8")
+    assert ext._load_registry() == {"extensions": {}}
+
+    reg_file.write_text(json.dumps({"extensions": "not-a-dict"}), encoding="utf-8")
+    assert ext._load_registry() == {"extensions": {}}
+
+
+def test_get_git_commit_errors(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # No .git
+    assert ext._get_git_commit(tmp_path) == ""
+
+    # .git exists but git rev-parse fails
+    (tmp_path / ".git").mkdir()
+
+    def _fail_run(*args: object, **kwargs: object) -> object:
+        raise subprocess.CalledProcessError(1, ["git", "rev-parse"])
+
+    monkeypatch.setattr(ext.subprocess, "run", _fail_run)
+    assert ext._get_git_commit(tmp_path) == ""
+
+    def _timeout_run(*args: object, **kwargs: object) -> object:
+        raise subprocess.TimeoutExpired(["git", "rev-parse"], timeout=5)
+
+    monkeypatch.setattr(ext.subprocess, "run", _timeout_run)
+    assert ext._get_git_commit(tmp_path) == ""
+
+
+def test_validate_extension_manifest_schema_variants(tmp_path: Path) -> None:
+    manifest = tmp_path / "gemini-extension.json"
+
+    # mcpServers not a dict
+    manifest.write_text(json.dumps({"mcpServers": "not-a-dict"}), encoding="utf-8")
+    valid, diags = ext.validate_extension_manifest(manifest)
+    assert valid is False
+    assert any("must be a dictionary" in d for d in diags)
+
+    # Server conf not a dict
+    manifest.write_text(json.dumps({"mcpServers": {"srv": 123}}), encoding="utf-8")
+    valid, diags = ext.validate_extension_manifest(manifest)
+    assert valid is False
+    assert any("configuration must be an object" in d for d in diags)
+
+    # Missing command and url
+    manifest.write_text(json.dumps({"mcpServers": {"srv": {}}}), encoding="utf-8")
+    valid, diags = ext.validate_extension_manifest(manifest)
+    assert valid is False
+    assert any("must specify 'command' or 'url'" in d for d in diags)
+
+    # Empty command string
+    manifest.write_text(json.dumps({"mcpServers": {"srv": {"command": "   "}}}), encoding="utf-8")
+    valid, diags = ext.validate_extension_manifest(manifest)
+    assert valid is False
+    assert any("'command' must be a non-empty string" in d for d in diags)
+
+    # Command is not string
+    manifest.write_text(json.dumps({"mcpServers": {"srv": {"command": 123}}}), encoding="utf-8")
+    valid, diags = ext.validate_extension_manifest(manifest)
+    assert valid is False
+    assert any("'command' must be a non-empty string" in d for d in diags)
+
+    # args not list
+    manifest.write_text(
+        json.dumps({"mcpServers": {"srv": {"command": "python", "args": "not-list"}}}),
+        encoding="utf-8",
+    )
+    valid, diags = ext.validate_extension_manifest(manifest)
+    assert valid is False
+    assert any("'args' must be a list of strings" in d for d in diags)
+
+    # args not all strings
+    manifest.write_text(
+        json.dumps({"mcpServers": {"srv": {"command": "python", "args": [1, 2]}}}),
+        encoding="utf-8",
+    )
+    valid, diags = ext.validate_extension_manifest(manifest)
+    assert valid is False
+    assert any("'args' must be a list of strings" in d for d in diags)
+
+    # env not a dict or not strings
+    manifest.write_text(
+        json.dumps({"mcpServers": {"srv": {"command": "python", "env": "not-dict"}}}),
+        encoding="utf-8",
+    )
+    valid, diags = ext.validate_extension_manifest(manifest)
+    assert valid is False
+    assert any("'env' must be a dictionary" in d for d in diags)
+
+    manifest.write_text(
+        json.dumps({"mcpServers": {"srv": {"command": "python", "env": {"K": 123}}}}),
+        encoding="utf-8",
+    )
+    valid, diags = ext.validate_extension_manifest(manifest)
+    assert valid is False
+    assert any("'env' must be a dictionary" in d for d in diags)
+
+    # URL only server (valid)
+    manifest.write_text(
+        json.dumps({"mcpServers": {"remote": {"url": "http://localhost:8000/sse"}}}),
+        encoding="utf-8",
+    )
+    valid, diags = ext.validate_extension_manifest(manifest)
+    assert valid is True
+
+
+def test_discover_skills_with_validation_variants(tmp_path: Path) -> None:
+    # 1. missing YAML frontmatter header
+    s1 = tmp_path / "skill1"
+    s1.mkdir()
+    (s1 / "SKILL.md").write_text("no header here", encoding="utf-8")
+
+    # 2. unclosed YAML frontmatter
+    s2 = tmp_path / "skill2"
+    s2.mkdir()
+    (s2 / "SKILL.md").write_text("---\nname: s2\nno closing", encoding="utf-8")
+
+    # 3. missing name
+    s3 = tmp_path / "skill3"
+    s3.mkdir()
+    (s3 / "SKILL.md").write_text("---\ndescription: desc only\n---", encoding="utf-8")
+
+    # 4. missing description
+    s4 = tmp_path / "skill4"
+    s4.mkdir()
+    (s4 / "SKILL.md").write_text("---\nname: s4\n---", encoding="utf-8")
+
+    skills, diags = ext._discover_skills_with_validation(tmp_path)
+    assert set(skills) == {"skill1", "skill2", "skill3", "skill4"}
+    assert any("missing YAML frontmatter header" in d for d in diags)
+    assert any("unclosed YAML frontmatter" in d for d in diags)
+    assert any("missing 'name'" in d for d in diags)
+    assert any("missing 'description'" in d for d in diags)
+
+
+def test_manifest_metadata_and_mcp_servers(tmp_path: Path) -> None:
+    # Non existent
+    desc, ver = ext._read_manifest_metadata(tmp_path)
+    assert desc == "" and ver == ""
+    assert ext._discover_mcp_servers(tmp_path) == []
+
+    # Corrupt
+    manifest = tmp_path / "gemini-extension.json"
+    manifest.write_text("corrupt", encoding="utf-8")
+    desc, ver = ext._read_manifest_metadata(tmp_path)
+    assert desc == "" and ver == ""
+    assert ext._discover_mcp_servers(tmp_path) == []
+
+    # Valid
+    manifest.write_text(
+        json.dumps(
+            {
+                "description": "Test Desc",
+                "version": "2.1.0",
+                "mcpServers": {"srv": {"command": "echo"}},
+            }
+        ),
+        encoding="utf-8",
+    )
+    desc, ver = ext._read_manifest_metadata(tmp_path)
+    assert desc == "Test Desc"
+    assert ver == "2.1.0"
+    assert ext._discover_mcp_servers(tmp_path) == ["srv"]
+
+
+def test_install_extension_already_installed_and_missing_git(
+    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(ext.subprocess, "run", _fake_clone())
+    res1 = ext.install_extension("https://github.com/foo/bar")
+    assert res1.already_installed is False
+
+    # Second install of same repo
+    res2 = ext.install_extension("https://github.com/foo/bar")
+    assert res2.already_installed is True
+    assert res2.extension.name == "bar"
+
+    # Git not found
+    def _no_git(*args: object, **kwargs: object) -> object:
+        raise FileNotFoundError("git not found")
+
+    monkeypatch.setattr(ext.subprocess, "run", _no_git)
+    with pytest.raises(ext.ExtensionError, match="git is not available"):
+        ext.install_extension("https://github.com/foo/new-repo")
+
+
+def test_remove_edge_cases(sakthai_home: Path) -> None:
+    # Invalid persona
+    with pytest.raises(ext.ExtensionError, match="unknown persona"):
+        ext.remove("any", persona="invalid-persona")
+
+    # Extension in registry but path missing on disk
+    reg = {
+        "extensions": {
+            "ghost": {"url": "https://foo/ghost.git", "path": str(sakthai_home / "ghost")}
+        }
+    }
+    ext._save_registry(reg)
+    assert ext.remove("ghost") is True
+    assert ext._load_registry() == {"extensions": {}}
+
+
+def test_validate_extension_edge_cases(sakthai_home: Path, tmp_path: Path) -> None:
+    with pytest.raises(ext.ExtensionError, match="unknown persona"):
+        ext.validate_extension("any", persona="invalid-persona")
+
+    with pytest.raises(ext.ExtensionError, match="not installed"):
+        ext.validate_extension("nonexistent")
+
+    # Path missing on disk
+    missing_path = sakthai_home / "missing"
+    ext._save_registry(
+        {"extensions": {"ghost": {"url": "https://foo/ghost.git", "path": str(missing_path)}}}
+    )
+    res = ext.validate_extension("ghost")
+    assert res.valid is False
+    assert res.manifest_valid is False
+    assert any("does not exist on disk" in d for d in res.diagnostics)
+
+    # Path escaping containment
+    outside_path = tmp_path / "outside"
+    outside_path.mkdir()
+    ext._save_registry(
+        {"extensions": {"escaped": {"url": "https://foo/esc.git", "path": str(outside_path)}}}
+    )
+    res_esc = ext.validate_extension("escaped")
+    assert res_esc.containment_valid is False
+    assert res_esc.valid is False
+
+
+def test_update_extension_edge_cases(
+    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    with pytest.raises(ext.ExtensionError, match="unknown persona"):
+        ext.update_extension("any", persona="invalid-persona")
+
+    with pytest.raises(ext.ExtensionError, match="not installed"):
+        ext.update_extension("ghost")
+
+    # Path missing on disk
+    ext._save_registry(
+        {
+            "extensions": {
+                "ghost": {"url": "https://foo/ghost.git", "path": str(sakthai_home / "missing")}
+            }
+        }
+    )
+    with pytest.raises(ext.ExtensionError, match="does not exist on disk"):
+        ext.update_extension("ghost")
+
+    # Not a git repo
+    ext_dir = ext.extensions_dir() / "no-git"
+    ext_dir.mkdir(parents=True, exist_ok=True)
+    ext._save_registry(
+        {"extensions": {"no-git": {"url": "https://foo/no-git.git", "path": str(ext_dir)}}}
+    )
+    res = ext.update_extension("no-git")
+    assert res.success is False
+    assert "not a git repository" in res.message
+
+    # Git pull CalledProcessError
+    (ext_dir / ".git").mkdir()
+
+    def _pull_fail(*args: object, **kwargs: object) -> object:
+        raise subprocess.CalledProcessError(1, ["git", "pull"], stderr="merge conflict")
+
+    monkeypatch.setattr(ext.subprocess, "run", _pull_fail)
+    res_fail = ext.update_extension("no-git")
+    assert res_fail.success is False
+    assert "merge conflict" in res_fail.message
+
+    # Git pull TimeoutExpired
+    def _pull_timeout(*args: object, **kwargs: object) -> object:
+        raise subprocess.TimeoutExpired(["git", "pull"], timeout=30)
+
+    monkeypatch.setattr(ext.subprocess, "run", _pull_timeout)
+    res_to = ext.update_extension("no-git")
+    assert res_to.success is False
+    assert "Update failed" in res_to.message
+
+    # Git pull successful with updates
+    commits = ["1111111111", "2222222222"]
+
+    def _pull_success(cmd: list[str], *args: object, **kwargs: object) -> object:
+        if "rev-parse" in cmd:
+            sha = commits.pop(0) if commits else "2222222222"
+            return types.SimpleNamespace(returncode=0, stdout=f"{sha}\n", stderr="")
+        return types.SimpleNamespace(
+            returncode=0, stdout="Updating 1111..2222\nFast-forward\n", stderr=""
+        )
+
+    manifest = ext_dir / "gemini-extension.json"
+    manifest.write_text(
+        json.dumps({"description": "New Desc", "version": "3.0.0"}), encoding="utf-8"
+    )
+
+    monkeypatch.setattr(ext.subprocess, "run", _pull_success)
+    res_up = ext.update_extension("no-git")
+    assert res_up.success is True
+    assert res_up.updated is True
+    assert res_up.commit_sha == "2222222222"
+
+
+def test_get_extension_info_not_found(sakthai_home: Path) -> None:
+    assert ext.get_extension_info("unknown") is None
