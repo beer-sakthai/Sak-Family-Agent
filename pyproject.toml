@@ -20,6 +20,9 @@ dependencies = [
     "rich>=15.0.0,<16.0",
     "prompt-toolkit>=3.0.53,<4.0",
     "textual>=8.2.8,<9.0",
+    "launchdarkly-server-sdk>=9.21.0",
+    "launchdarkly-ai-server[otel]>=1.1.0; python_version >= '3.12'",
+    "launchdarkly-ai-claude-messages>=1.1.0; python_version >= '3.12'",
 ]
 
 [project.optional-dependencies]
