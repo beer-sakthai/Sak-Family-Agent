@@ -19,6 +19,7 @@ import ShortcutsOverlay from "@/components/ShortcutsOverlay";
 import { CardGridSkeleton, KpiSkeleton, PanelSkeleton } from "@/components/Skeletons";
 import StitchStudio from "@/components/StitchStudio";
 import SystemView from "@/components/SystemView";
+import { TeamPipelineVisualizer } from "@/components/TeamPipelineVisualizer";
 import { ToastStack, useToasts } from "@/components/Toasts";
 import WorkflowRuns from "@/components/WorkflowRuns";
 import {
@@ -884,6 +885,8 @@ export default function Home() {
               ))}
 
             {activeTab === "gateway" && <GatewayPlayground />}
+
+            {activeTab === "pipelines" && <TeamPipelineVisualizer />}
 
             {activeTab === "analytics" &&
               (metrics ? (
