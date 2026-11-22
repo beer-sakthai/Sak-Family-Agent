@@ -1447,11 +1447,11 @@ describe("DisplayMenu", () => {
     expect(menu).toHaveClass("top-full");
 
     const menuItems = screen.getAllByRole("menuitemradio");
-    expect(menuItems).toHaveLength(5); // 3 themes + 2 densities
+    expect(menuItems).toHaveLength(6); // 4 themes + 2 densities
     expect(menuItems[0]).toHaveFocus();
 
     expect(menuItems[0]).toHaveAttribute("title", "Switch theme to Match system");
-    expect(menuItems[3]).toHaveAttribute("title", "Switch display density to Comfortable");
+    expect(menuItems[4]).toHaveAttribute("title", "Switch display density to Comfortable");
 
     fireEvent.keyDown(menuItems[0], { key: "ArrowDown" });
     expect(menuItems[1]).toHaveFocus();
@@ -1460,9 +1460,9 @@ describe("DisplayMenu", () => {
     expect(menuItems[0]).toHaveFocus();
 
     fireEvent.keyDown(menuItems[0], { key: "End" });
-    expect(menuItems[4]).toHaveFocus();
+    expect(menuItems[5]).toHaveFocus();
 
-    fireEvent.keyDown(menuItems[4], { key: "Home" });
+    fireEvent.keyDown(menuItems[5], { key: "Home" });
     expect(menuItems[0]).toHaveFocus();
   });
 
