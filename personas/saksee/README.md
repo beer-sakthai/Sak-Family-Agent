@@ -12,6 +12,9 @@ SakSee specializes in headless browser automation, complex DOM inspection, multi
   - *Tier 1*: Fast HTTP client (httpx/requests) with zero overhead.
   - *Tier 2*: Headless browser (Playwright) handling client-rendered SPAs, sessions, and cookies.
   - *Tier 3*: Stealth browser with human-in-the-loop review for protected endpoints.
+- **Live Pipeline Visualizer & Memory Studio**: Next.js SVG DAG canvas implementation, token streaming terminal, and Memory Shard Studio interfaces (`apps/sak_agent_dashboard`).
+- **Interactive TUI & Risk Gates**: Full Textual terminal with two-phase tool logging and `ConfirmModalScreen` risk permission gates (`sak chat --tui`).
+- **Free-Tier Quota Sentinel**: Guarded API rate limiting with Pacific Time resets (`~/.sakthai/quota_sentinel.db`) and adaptive model fallback (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1`).
 - **Creative & Visual Generation**: Manim programmatic mathematical animations, Remotion video authoring, ComfyUI workflows, and ASCII visual art.
 - **Frontend & UI Prototyping**: Modern React, Vite, Shadcn-UI, and Tailwind design implementation.
 - **Third Deputy Lead**: Coordinates web research and visual assets across family workflows.
@@ -32,8 +35,12 @@ uv run sakthai run --persona saksee "Inspect documentation and extract API schem
 # Run with bounded Evaluator-Optimizer refinement loop
 uv run sakthai run --persona saksee --optimize "Design an accessible frontend component"
 
-# Run with interactive chat mode
+# Run with interactive chat mode (terminal or full-screen TUI)
 uv run sakthai chat --persona saksee
+uv run sak chat --tui --persona saksee
+
+# Check Free-Tier Quota Sentinel status and token limits
+uv run sakthai quota status
 
 # Run dynamic tool evaluation & telemetry benchmarks
 uv run sakthai eval tools --bench --persona saksee

@@ -9,8 +9,10 @@ SakTan operates as the relentless heartbeat of the House of Sak, overseeing cont
 ## ⚡ Core Responsibilities
 
 - **Second Deputy Lead**: Steps in immediately when SakThai and SakKing coordinate off-cycle maintenance.
+- **Zero-Cost Local Execution**: Runs entirely on local Ollama (`127.0.0.1:11434`), ensuring complete offline independence and privacy ($0.00 USD spend).
+- **Free-Tier Quota Sentinel Rhythm**: Monitors API consumption limits, Pacific Time midnight database resets (`~/.sakthai/quota_sentinel.db`), and daily system equilibrium.
+- **Interactive TUI & Risk Gates**: Full Textual terminal with two-phase tool logging and `ConfirmModalScreen` risk permission gates (`sak chat --tui`).
 - **Guarded Algorithmic Fallback**: Automated fallback configured in `config/config.yaml` to revert to deterministic provisioning plans when LLM providers encounter quota or latency barriers.
-- **Zero-Cost Local Execution**: Runs entirely on local Ollama (`127.0.0.1:11434`), ensuring complete offline independence and privacy.
 - **Workspace & System Hygiene**: Monitors directory structures, stale locks, transient files, and system health status.
 - **Evaluator-Optimizer Engine**: Deterministic verification and self-healing refinement loop (`sakthai run --optimize`).
 - **Remote MCP Infrastructure Access**: Integration with Microsoft Learn and Gemini API Docs.
@@ -29,8 +31,12 @@ uv run sakthai run --persona saktan "Perform daily system and workspace status c
 # Run with bounded Evaluator-Optimizer refinement loop
 uv run sakthai run --persona saktan --optimize "Audit cron jobs and disk hygiene"
 
-# Run with interactive chat mode
+# Run with interactive chat mode (terminal or full-screen TUI)
 uv run sakthai chat --persona saktan
+uv run sak chat --tui --persona saktan
+
+# Check Free-Tier Quota Sentinel status and token limits
+uv run sakthai quota status
 
 # Run dynamic tool evaluation & telemetry benchmarks
 uv run sakthai eval tools --bench --persona saktan

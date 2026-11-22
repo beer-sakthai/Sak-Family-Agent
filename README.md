@@ -29,11 +29,11 @@
   <a href="https://securityscorecards.dev/viewer/?uri=github.com/beer-sakthai/Sak-Family-Agent"><img alt="OpenSSF Scorecard" src="https://api.securityscorecards.dev/projects/github.com/beer-sakthai/Sak-Family-Agent/badge"></a>
   <a href="https://app.stepsecurity.io"><img alt="StepSecurity" src="https://img.shields.io/badge/StepSecurity-Harden--Runner-blue?logo=security"></a>
   <br>
-  <a href="https://github.com/beer-sakthai/Sak-Family-Agent/releases"><img alt="Release v2.34.6" src="https://img.shields.io/badge/release-v2.34.6-2563EB"></a>
+  <a href="https://github.com/beer-sakthai/Sak-Family-Agent/releases"><img alt="Release v2.52.0" src="https://img.shields.io/badge/release-v2.52.0-2563EB"></a>
   <img alt="Python 3.11 | 3.12" src="https://img.shields.io/badge/python-3.11%20%7C%203.12-3776AB?logo=python&amp;logoColor=white">
   <a href="#the-six-personas"><img alt="6 personas" src="https://img.shields.io/badge/personas-6%20online-7C3AED"></a>
   <a href="#the-six-personas"><img alt="481 skills" src="https://img.shields.io/badge/skills-481%20standardized-10B981"></a>
-  <a href="#development--verification"><img alt="3,521 tests" src="https://img.shields.io/badge/tests-3%2C521%20passing-brightgreen"></a>
+  <a href="#development--verification"><img alt="4,155+ tests" src="https://img.shields.io/badge/tests-4%2C155%2B%20passing-brightgreen"></a>
   <a href="LICENSE"><img alt="License: custom IP license" src="https://img.shields.io/badge/license-custom%20IP%20license-4B5563"></a>
 </p>
 
@@ -42,12 +42,14 @@
 | **Core Loop** | Local-first tool loop (`agent/loop.py`) | `🟢 ACTIVE` | Provider-agnostic retries, preflight & streaming |
 | **Personas** | 6 Family Agents (`personas/<name>/`) | `🟢 6/6 ONLINE` | `SakThai` · `SakSee` · `SakJules` · `SakKing` · `SakSit` · `SakTan` |
 | **Skills Catalog** | 481 On-Disk Skills (462 overlay + 19 shared) | `🟢 STANDARDIZED`| Structured `Sak<Agent>-<domain>-<topic>` taxonomy |
-| **Memory Store** | SQLite per Persona (`~/.sakthai/`) | `🟢 PERSISTENT` | Sharded persistence & multi-agent `sakthai memory family` |
-| **Test Quality** | 3,521 Unit & Seam Tests across Py 3.11/3.12 | `🟢 PASS (≥96%)` | Enforced strict coverage floor (`--cov-fail-under=96`) |
+| **Memory Store** | SQLite per Persona (`~/.sakthai/`) | `🟢 PERSISTENT` | Sharded persistence, Memory Studio & `sakthai memory family` |
+| **Interactive TUI** | Live Textual terminal (`sak chat --tui`) | `🟢 LIVE TUI` | Two-phase tool timers & `ConfirmModalScreen` risk gate |
+| **Quota Sentinel** | Free-tier rate limiter (`sakthai.agent.quota`) | `🟢 QUOTA SENTINEL` | Sliding window + SQLite PT reset & 3-tier cascade |
+| **Test Quality** | 3,547 Pytest + 608 Vitest = 4,155+ Tests | `🟢 PASS (≥96%)` | Enforced strict coverage floor (`--cov-fail-under=96`) |
 | **Security Gates** | Concentric Guardrails, DLP, Secret Scan, CodeQL & Bandit | `🛡️ ENFORCED` | Safe execution, credential isolation & automated scanning |
 | **Model Training & Serving** | LoRA SFT recipes, OpenEnv GRPO RL & Ollama export (`training/`, `sakthai train`) | `🟢 OPERATIONAL` | Offline-first fine-tuning, OpenEnv RL & Ollama local deployment |
 | **OpenEnv RL Ecosystem** | 5-Workspace GRPO RL, 8 Catalog Envs, A2A Server & 149 Contract Tests (`sakthai train openenv`) | `🟢 RL INTEGRATED` | Process-isolated `uv run` bridge to `beer-sakthai/openenv-rl-training` |
-| **Runtime Gateway** | OpenAI-compatible & REST API (`sakthai.gateway`) | `🟢 RUNTIME READY` | SSE streaming, 6-persona routing & DataLossGuardrail |
+| **Runtime Gateway** | OpenAI-compatible & REST API (`sakthai.gateway`) | `🟢 RUNTIME READY` | SSE streaming, Team Visualizer, Memory Studio & DLP |
 | **Evaluation Framework** | 5-Pillar Persona Readiness & Fleet Audit (`sakthai eval`) | `🟢 5-PILLAR PARITY` | Soul, Skills, Memory, Safety & Audit composite scoring |
 | **Optimizer & Graders** | Evaluator-Optimizer Engine & Unified Graders (`sakthai run --optimize`, `eval bench`) | `🟢 INTEGRATED` | Iterative refinement rubrics, CodeGrader & ModelGrader |
 | **CI/CD Automation** | StepSecurity, AutoHeal-CI, Renovate & PR Automations | `⚙️ HARDENED` | Egress audit, dependency monitoring & manual user merge |
@@ -62,22 +64,24 @@
 ## What is included
 
 - **SakThai core agent** — Python 3.11+ package with a provider-agnostic tool loop, retries, streaming, usage tracking, dry-run preflight, modern CLI ergonomics (`sak` / `sakthai` entrypoints, slash commands), and iterative Evaluator-Optimizer engine (`sakthai run --optimize`).
-- **Runtime Gateway (OpenAI-Compatible & REST API)** — Built-in multi-threaded HTTP gateway (`sakthai.gateway`, `sakthai gateway`, `scripts/serve_gateway.py`) exposing `/v1/chat/completions` (streaming SSE and non-streaming), `/v1/models`, `/v1/personas`, and `/v1/tools/execute` with DataLossGuardrail security, constant-time bearer authentication, and seamless compatibility with Cursor, Claude Code, Aider, and standard OpenAI SDKs.
-- **Persistent memory** — SQLite-backed facts and observations stored under `~/.sakthai`, with semantic search, tagging, consolidation, versioned JSON snapshots ([format](data/README.md)), and sync helpers.
-- **Multiple providers** — Anthropic, Google Gemini, OpenAI-compatible endpoints, Ollama, gateways, and Hugging Face inference providers.
+- **Runtime Gateway (OpenAI-Compatible & REST API)** — Built-in multi-threaded HTTP gateway (`sakthai.gateway`, `sakthai gateway`, `scripts/serve_gateway.py`) exposing `/v1/chat/completions` (streaming SSE and non-streaming), `/v1/models`, `/v1/personas`, `/v1/tools/execute`, distributed multi-agent pipeline streaming (`/v1/team/pipelines/stream`), and Memory Shard Studio endpoints (`/v1/memory/shards`, `/v1/memory/facts`, `/v1/memory/preview`) with DataLossGuardrail security, constant-time bearer authentication, and seamless compatibility with Cursor, Claude Code, Aider, and standard OpenAI SDKs.
+- **Persistent memory & Memory Shard Studio** — SQLite-backed facts and observations stored under `~/.sakthai`, with semantic search, tagging, consolidation, versioned JSON snapshots ([format](data/README.md)), sharded per-persona databases, and Next.js Memory Shard Studio with prompt injection simulator.
+- **Free-Tier Quota Sentinel & Adaptive Rate Limiter** — Sliding window in-memory rate limiter + Pacific Time midnight SQLite persistence (`~/.sakthai/quota_sentinel.db`), adaptive model cascading (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1`), and `sakthai quota status` CLI.
+- **Interactive TUI & Live Tool Execution Terminal (`sak chat --tui`)** — Full-screen Textual interface featuring two-phase tool logging (`tool_call_start` and `tool_call` with elapsed duration), live running timers, and `ConfirmModalScreen` risk permission gates (`[y]es / [n]o / [a]lways` session caching) for safe operations.
+- **Multiple providers** — Anthropic, Google Gemini (Gemini 4 Hydrogen default), OpenAI-compatible endpoints, Ollama, gateways, and Hugging Face inference providers.
 - **MCP & Remote Servers** — dependency-light stdio server, remote HTTP/SSE client support with Streamable HTTP (`RemoteMCPClient`), resource and prompt exposing, plus discovery, tool allowlisting, and namespaced connections to external MCP servers (including Microsoft 365, Microsoft Learn, and Gemini API Docs).
 - **Six personas & resilience architecture** — SakThai, SakSee, SakJules, SakKing, SakSit, and SakTan, each with its own identity, curated skills (481 on-disk skills under the searchable `Sak<Agent>-<domain>-<topic>` taxonomy), default model, memory shard, and multi-tier resilience:
   - *Governance & Routing*: Break-glass Hugging Face Hub protocol (`assert_hf_write_allowed`) and 3-second intent preflight classification.
   - *Performance & Scalability*: 3-tier web scraping escalation (HTTP $\rightarrow$ Headless $\rightarrow$ Stealth) and progressive domain manifest hydration.
   - *Automation & Reliability*: Autonomous CI auto-heal utility (`scripts/ci_auto_heal.py`), guarded algorithmic cloud fallback, and event-driven PR cache lifecycle management (`cache-cleanup.yml`).
-- **Team and client workflows** — declarative multi-persona pipelines and ServiceQuoteBot client workspace provisioning.
+- **Team and client workflows** — declarative multi-persona pipelines, Live Multi-Agent Pipeline Visualizer with SVG DAG canvas and SSE token streaming terminal, and ServiceQuoteBot client workspace provisioning.
 - **Unified Agent Platform** — core integration subsystems (`sakthai.agent_platform`) for accidental data loss prevention (`DataLossGuardrail`), reactive python dependency manager detection & isolated execution runners (`wrap_with_isolated_runner`), progressive disclosure skills rendering (`render_skills_progressive_summary`), Jules remote task delegation, dual Antigravity/ADK execution engine with model selection presets (`ModelTier`), and Harness AI agent pipeline spec generation.
 - **Model Training & Offline Serving (`training/`, `sakthai train`)** — fine-tuning recipes (LoRA/QLoRA for SakThai 7B and coder models), synthetic tool-calling dataset generators (`build_toolcalling_dataset.py`), adapter fidelity evaluation probes (`eval_toolcalling.py`), and Ollama GGUF export generating production `Modelfile`s for 100% offline execution.
 - **OpenEnv RL Training & Agentic Alignment (`sakthai train openenv`, `scripts/train/openenv_ecosystem.py`)** — first-class ecosystem bridge to [`beer-sakthai/openenv-rl-training`](https://github.com/beer-sakthai/openenv-rl-training) (auto-discovered via `SAKTHAI_OPENENV_ROOT` or `../openenv-rl-training`), orchestrating 5 independent workspaces for QLoRA SFT, Group Relative Policy Optimization (GRPO) with TRL `environment_factory` and Hugging Face OpenEnv (SimpleGuess, MCP Order/VAT verification, Sandboxed Terminal, BrowserGym MiniWoB++, and 8-environment catalog), A2A protocol server, CPU heuristic policy competitions (`frac_reward_zero_std` reward variance checks), deterministic evaluation manager rubrics, and 149 contract/unit tests.
 - **5-Pillar Persona Evaluation Framework (`sakthai eval`)** — comprehensive evaluation across Soul Alignment, Skill Ecosystem Health, Memory Store Integrity, Concentric Safety Compliance, and Composite Fleet Audit (`audit`, `soul`, `skills`, `safety`, `tasks`, `bench`) enforcing parity across all six personas.
 - **Repository Task Registry (`sakthai repo`)** — unified declarative task map (`sakthai repo map`) and CLI execution runner (`sakthai repo run <task>`) indexing all 9 repository areas (scripts, apps, training, evaluation_tasks, services, infra, evolution, library, and personas).
-- **Dashboard** — Next.js frontend backed by the SakThai HTTP API for personas, metrics, sessions, memory, audit data, and workflows.
-- **Security and quality gates** — concentric guardrails for tools and file access, strict typing, linting, secret scanning, CodeQL, Bandit, Zizmor, and automated tests.
+- **Dashboard** — Next.js 15+ frontend backed by the SakThai HTTP and Gateway APIs featuring live KPI telemetry, Pipelines tab (SVG DAG visualizer with SSE token terminal), Memory Shard Studio (6-persona SQLite inspector and injection simulator), and Gateway chat playground.
+- **Security and quality gates** — concentric guardrails for tools and file access, strict typing, linting, secret scanning, CodeQL, Bandit, Zizmor, and automated tests (4,155+ tests passing).
 
 ---
 
@@ -246,6 +250,10 @@ The Runtime Gateway enforces rigorous multi-layered defense-in-depth:
 | `GET` | `/v1/personas/<name>` | Bearer | Granular metadata for a specific persona |
 | `GET` | `/v1/tools` | Bearer | Registered tools in OpenAI function calling schema format |
 | `POST` | `/v1/tools/execute` | Bearer | Execute runtime tools guarded by `DataLossGuardrail` |
+| `POST` | `/v1/team/pipelines/stream` | Bearer | SSE streaming pipeline execution with live stage tokens |
+| `GET` | `/v1/memory/shards` | Bearer | 6-persona SQLite shard metadata (fact/obs counts, size) |
+| `GET` | `/v1/memory/facts` | Bearer | Query persistent facts filtered by persona, kind, or tag |
+| `POST` | `/v1/memory/preview` | Bearer | Dry-run prompt injection simulator with system context |
 | `GET` | `/api/status` | Bearer | System status and memory health diagnostic |
 | `GET` | `/api/saksee/status` | Bearer | SakSee web and dashboard compatibility status |
 
@@ -381,7 +389,10 @@ sakthai status                                             # check environment a
 sakthai doctor --json                                      # comprehensive system diagnostics
 sakthai run "summarize docs/architecture.md"               # run default agent instruction
 sakthai run "review latest memory" --persona sakking       # run instruction as SakKing
-sakthai chat --persona sakthai                             # start interactive chat session (full-screen Textual TUI)
+sakthai chat --persona sakthai                             # start interactive chat session (terminal or TUI)
+sak chat --tui --persona sakthai                           # start full-screen Textual TUI with live tool timers & risk modal
+sakthai quota status                                       # inspect Free-Tier Quota Sentinel limits & Pacific Time resets
+sakthai quota status --json                                # dump quota telemetry and remaining model tokens in JSON
 sakthai repo map                                           # repository coverage map across all 9 areas
 sakthai repo list --area eval                              # list registered tasks for scripts/training/eval
 sakthai repo run diagnose-personas --dry-run               # run safe registered script or task
@@ -447,7 +458,7 @@ services/servicequotebot/      Production quote generation, price book, and lead
 infra/                         Infrastructure definitions, Docker sandboxes, and cloud configs
 library/                       Curated library of 31 reusable agent skills
 .specify/                      Spec-Kit constitution, architectural memory, and multi-agent presets
-tests/                         Pytest test suite (3,521 tests across Python 3.11 & 3.12 with >=96% coverage)
+tests/                         Pytest test suite (3,547 tests across Python 3.11 & 3.12 with >=96% coverage; 4,155+ total tests)
 docs/                          Architecture, capabilities, operations, marketplace catalog, wiki, and guides
 scripts/                       Repository maintenance, portfolio health, wiki sync, and diagnosis tooling
 .github/workflows/             120+ hardened GitHub Actions, agentic workflows, and security gates
@@ -461,7 +472,8 @@ Install dependencies and run validation checks:
 
 ```bash
 uv sync --all-extras --dev
-make test                                      # run full pytest suite (enforces >=96% coverage)
+make test                                      # run full pytest suite (enforces >=96% coverage, 3,547 tests)
+cd apps/sak_agent_dashboard && npm test        # run dashboard Vitest test suite (608 tests across 23 suites)
 make lint                                      # run Ruff linter & formatter checks
 uv run mypy personas/sakthai                   # run strict type checker
 uv run bandit -c pyproject.toml -r personas/sakthai  # run security vulnerability scanner

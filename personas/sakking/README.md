@@ -10,6 +10,8 @@ SakKing handles rapid task execution, strict test-driven development (TDD), code
 
 - **First Deputy Lead**: Automatically steps in when SakThai needs charge regeneration or offline processing.
 - **TDD & Implementation Master**: Specializes in clean, modular code following red-green-refactor disciplines.
+- **Interactive TUI & Risk Permission Gate**: Real-time tool execution transparency and `ConfirmModalScreen` risk permission gates (`[y]es / [n]o / [a]lways`) for shell commands and sensitive modifications (`sak chat --tui`).
+- **Free-Tier Quota Sentinel**: Guarded API rate limiting with Pacific Time resets (`~/.sakthai/quota_sentinel.db`) and adaptive model fallback (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1`).
 - **3-Second Intent Preflight**: High-speed regex/keyword intent classification that stages response templates asynchronously in background loops.
 - **Break-Glass Hub Access**: Secondary governance checks for protected remote hub writes (`assert_hf_write_allowed`).
 - **Evaluator-Optimizer & Graders**: Rigorous iterative evaluation against CodeGrader & ModelGrader rubrics (`sakthai run --optimize`).
@@ -29,8 +31,12 @@ uv run sakthai run --persona sakking "Implement a red-green test suite for a new
 # Run with bounded Evaluator-Optimizer refinement loop
 uv run sakthai run --persona sakking --optimize "Refactor cache utility for zero latency"
 
-# Run with interactive chat mode
+# Run with interactive chat mode (terminal or full-screen TUI)
 uv run sakthai chat --persona sakking
+uv run sak chat --tui --persona sakking
+
+# Check Free-Tier Quota Sentinel status and token limits
+uv run sakthai quota status
 
 # Run batch evaluation benchmark tasks with graders
 uv run sakthai eval bench

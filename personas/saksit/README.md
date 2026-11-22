@@ -8,8 +8,10 @@ SakSit drives developer communications, technical marketing, B2B SaaS thought le
 
 ## ⚡ Core Responsibilities
 
-- **Technical Storytelling**: Translates deep technical changes and monorepo architectures into clear, compelling engineering updates.
+- **Technical Storytelling & Release Narrative**: Translates deep technical features (v2.52.0, Live Multi-Agent Pipeline Visualizer, Memory Shard Studio) into clear, compelling engineering updates.
 - **B2B SaaS Thought Leadership**: In-depth analysis on modern software patterns, agent architectures, and AI ecosystem shifts.
+- **Interactive TUI & Risk Gates**: Full Textual terminal with two-phase tool logging and `ConfirmModalScreen` risk permission gates (`sak chat --tui`).
+- **Free-Tier Quota Sentinel**: Guarded API rate limiting with Pacific Time resets (`~/.sakthai/quota_sentinel.db`) and adaptive model fallback (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1`).
 - **Multi-Platform Publishing**: Structured delivery for GitHub Releases, community forums, technical blogs, and developer hubs.
 - **Brand Consistency**: Ensures voice, tone, and visual clarity across all family publications.
 - **Evaluator-Optimizer Engine**: Multi-pass editorial refinement against tone and publication rubrics (`sakthai run --optimize`).
@@ -29,8 +31,12 @@ uv run sakthai run --persona saksit "Draft a release announcement for 6-agent re
 # Run with bounded Evaluator-Optimizer refinement loop
 uv run sakthai run --persona saksit --optimize "Refine release post for technical accuracy and tone"
 
-# Run with interactive chat mode
+# Run with interactive chat mode (terminal or full-screen TUI)
 uv run sakthai chat --persona saksit
+uv run sak chat --tui --persona saksit
+
+# Check Free-Tier Quota Sentinel status and token limits
+uv run sakthai quota status
 
 # Run dynamic tool evaluation & telemetry benchmarks
 uv run sakthai eval tools --bench --persona saksit
