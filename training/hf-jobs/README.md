@@ -9,6 +9,7 @@ driven from a machine without a local GPU.
 |---|---|
 | `train_persona_lora.py` | PEP 723 uv script. QLoRA SFT of `Qwen/Qwen2.5-0.5B-Instruct` on the persona/doc data (`Nanthasit/hermes-dataset`). Teaches **voice/style only** — not tool-calling. Pushes the adapter to the Hub. |
 | `train_toolcalling_lora.py` | PEP 723 uv script. QLoRA SFT of `Qwen/Qwen2.5-1.5B-Instruct` (configurable) on `Nanthasit/sakthai-toolcalling-v1`. Renders each row with the model's own chat template (`apply_chat_template(..., tools=...)`) so it learns **when and how to emit a tool call**. Pushes the adapter to the Hub. |
+| `train_eval_coder_lora.py` | PEP 723 uv script. QLoRA SFT of `Qwen/Qwen2.5-Coder-1.5B-Instruct` for coder and evaluator-optimizer fine-tuning. Pushes the adapter to the Hub. |
 | `build_toolcalling_dataset.py` | Generates synthetic tool-calling examples for SakThai's 8 `BUILTIN_TOOLS` (+ "no-tool" negatives) in Qwen `messages`+`tools` format. Pure stdlib. |
 | `fetch_public_toolcalling.py` | Pulls + reformats a slice of `glaiveai/glaive-function-calling-v2` (via the datasets-server rows API) into the same schema, for general function-calling competence. |
 

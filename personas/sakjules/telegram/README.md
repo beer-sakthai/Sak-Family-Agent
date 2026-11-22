@@ -22,6 +22,8 @@ Optional launch controls:
 From the repository root:
 
 ```bash
+uv run sakthai telegram serve
+# Or directly via module:
 uv run python -m sakthai.telegram.bot
 ```
 

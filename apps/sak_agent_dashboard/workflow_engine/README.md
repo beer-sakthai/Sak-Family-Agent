@@ -18,8 +18,8 @@ CI uses the hash-locked repository dependency set at `.github/apps-requirements.
 
 ```bash
 # Using uv run (from monorepo root)
-uv run python -m agent_workflow.cli validate apps/agent_workflow_framework/tests/test_workflows/linear_workflow.yaml
-uv run python -m agent_workflow.cli run apps/agent_workflow_framework/tests/test_workflows/linear_workflow.yaml
+uv run python -m agent_workflow.cli validate apps/sak_agent_dashboard/workflow_engine/tests/test_workflows/linear_workflow.yaml
+uv run python -m agent_workflow.cli run apps/sak_agent_dashboard/workflow_engine/tests/test_workflows/linear_workflow.yaml
 uv run python -m agent_workflow.cli list
 
 # Or from this directory
@@ -40,9 +40,9 @@ python verify.py
 The focused unit suite can be run independently with:
 
 ```bash
-uv run python -m unittest discover -s apps/agent_workflow_framework/tests
+uv run python -m unittest discover -s apps/sak_agent_dashboard/workflow_engine/tests
 # Or from this directory:
 python -m unittest discover -s tests
 ```
 
-See [TEST_INFRA.md](TEST_INFRA.md) for the test matrix and [framework-improvement-plan](../../docs/superpowers/plans/2026-09-22-framework-improvement-plan.md) for the improvement backlog.
+See [TEST_INFRA.md](TEST_INFRA.md) for the test matrix and [framework-improvement-plan](docs/superpowers/plans/2026-09-22-framework-improvement-plan.md) for the improvement backlog.

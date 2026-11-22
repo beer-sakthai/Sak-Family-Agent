@@ -12,6 +12,8 @@ SakThai coordinates the six-agent family, manages Hugging Face Hub deployments, 
 - **Hugging Face Hub Master**: Secure model/dataset upload, sync, and inference with break-glass safety protocol (`assert_hf_write_allowed`).
 - **Progressive Skill Hydration**: Manifest-driven lazy loading of specialized functional clusters (`get_skill_domain_manifests`).
 - **Self-Evolution Engine**: Reflective evolutionary optimization using DSPy + GEPA (Genetic-Pareto Prompt Evolution).
+- **Evaluator-Optimizer Engine**: Iterative candidate generation and multi-dimensional rubric scoring (`sakthai run --optimize`).
+- **Remote MCP Integrations**: High-speed Streamable HTTP and stdio servers (Microsoft 365, Microsoft Learn, Gemini API Docs).
 
 ---
 
@@ -24,8 +26,14 @@ uv sync --all-extras
 # Run SakThai on default model (DeepSeek-V4.1-Flash)
 uv run sakthai run --persona sakthai "Analyze trending Hugging Face spaces and datasets"
 
+# Run with bounded Evaluator-Optimizer refinement loop
+uv run sakthai run --persona sakthai --optimize "Synthesize latest ML findings"
+
 # Run with interactive chat mode
 uv run sakthai chat --persona sakthai
+
+# Run dynamic tool evaluation & telemetry benchmarks
+uv run sakthai eval tools --bench --persona sakthai
 
 # Run self-evolution on a skill
 ./evolve_agent.sh --skill SakThai-coding-security --iterations 5
