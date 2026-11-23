@@ -21,8 +21,9 @@ from typing import Any, TextIO
 from .. import __version__
 from ..agent.guardrails import DEFAULT_POLICY, GuardrailAction, GuardrailPolicy
 from ..agent.tools import BUILTIN_TOOLS, Tool
-from ..config import redact_secrets
+from ..config import redact_secrets, sakthai_experimental
 from ..memory.store import MemoryStore
+from . import resources as resources_mod
 from .protocol import (
     LATEST_PROTOCOL_VERSION,
     negotiate_protocol_version,
@@ -64,7 +65,33 @@ def _tool_descriptor(tool: Tool) -> dict[str, Any]:
     }
     if tool.annotations is not None:
         descriptor["annotations"] = dict(tool.annotations)
+    # The MCP Apps link, when the extension is enabled and this tool has a
+    # view. Resolved per request rather than baked into BUILTIN_TOOLS, because
+    # the gate is an environment variable read at request time while the tool
+    # table is built at import.
+    meta = resources_mod.tool_view_meta(tool.name)
+    if meta:
+        descriptor["_meta"] = meta
     return descriptor
+
+
+def _server_capabilities() -> dict[str, Any]:
+    """What this server tells a client it can do.
+
+    ``extensions`` is the 2026-07-28 mechanism for declaring support for a
+    named extension, and is accepted earlier as an unknown key. Keys are
+    reverse-DNS with a mandatory prefix; anything whose second label is
+    ``modelcontextprotocol`` or ``mcp`` is reserved for the specification, so
+    ``io.modelcontextprotocol/ui`` is theirs, not ours to invent.
+    """
+    capabilities: dict[str, Any] = {
+        "tools": {"listChanged": False},
+        "resources": {"subscribe": False, "listChanged": False},
+        "prompts": {"listChanged": False},
+    }
+    if sakthai_experimental():
+        capabilities["extensions"] = {resources_mod.UI_EXTENSION: {}}
+    return capabilities
 
 
 def _tool_list(tools: tuple[Tool, ...]) -> dict[str, Any]:
@@ -152,11 +179,7 @@ def handle_request(
             req_id,
             {
                 "protocolVersion": negotiate_protocol_version(params.get("protocolVersion")),
-                "capabilities": {
-                    "tools": {"listChanged": False},
-                    "resources": {"subscribe": False, "listChanged": False},
-                    "prompts": {"listChanged": False},
-                },
+                "capabilities": _server_capabilities(),
                 "serverInfo": {"name": SERVER_NAME, "version": __version__},
             },
         )
@@ -186,49 +209,35 @@ def handle_request(
             if is_notification
             else _result(
                 req_id,
-                {
-                    "resources": [
-                        {
-                            "uri": "sakthai://memory/status",
-                            "name": "Memory Store Status",
-                            "description": "Summary of active items and tags in SakThai memory",
-                            "mimeType": "application/json",
-                        }
-                    ]
-                },
+                {"resources": [r.descriptor() for r in resources_mod.available()]},
             )
         )
 
     if method == "resources/read":
         uri = params.get("uri")
-        if uri == "sakthai://memory/status":
-            stats = {
-                "fact_count": store.stats()["facts"]["total"],
-                "health": store.healthcheck(),
-            }
+        resource = resources_mod.by_uri(uri)
+        if resource is None:
             return (
                 None
                 if is_notification
-                else _result(
-                    req_id,
-                    {
-                        "contents": [
-                            {
-                                "uri": uri,
-                                "mimeType": "application/json",
-                                # Same fail-safe tool output gets: resource
-                                # bodies leave the process over the same
-                                # transport and deserve the same filter.
-                                "text": redact_secrets(json.dumps(stats)),
-                            }
-                        ]
-                    },
-                )
+                else _error(req_id, RESOURCE_NOT_FOUND, f"Resource not found: {uri}")
             )
-        return (
-            None
-            if is_notification
-            else _error(req_id, RESOURCE_NOT_FOUND, f"Resource not found: {uri}")
+        if is_notification:
+            return None
+        return _result(
+            req_id,
+            {
+                "contents": [
+                    {
+                        "uri": resource.uri,
+                        "mimeType": resource.mime_type,
+                        # Same fail-safe tool output gets: resource bodies leave
+                        # the process over the same transport and deserve the
+                        # same filter.
+                        "text": redact_secrets(resource.reader(store)),
+                    }
+                ]
+            },
         )
 
     if method == "prompts/list":

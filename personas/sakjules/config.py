@@ -138,6 +138,7 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "SAKTHAI_MCP_CONFIG": "Path to a per-persona mcp.json whose servers override the defaults",
     "SAKTHAI_PERSONA": "Which Sak Family persona a Telegram/systemd launch is running as",
     "SAKTHAI_MCP_TIMEOUT": "Seconds to wait for an external MCP server reply (default: 30)",
+    "SAKTHAI_EXPERIMENTAL": "Offer draft-track MCP extensions (currently MCP Apps / ui:// resources)",
     "SAKTHAI_MCP_SECURITY_LEVEL": "How strictly external MCP servers are validated: strict, balanced (default) or permissive",
     "SAKTHAI_APPROVED_MCP": "External MCP server names allowed under the strict security level, comma/space separated",
     "TELEGRAM_ALLOWED_USER_IDS": "Comma- or space-separated Telegram user IDs allowed to use the bot",
@@ -202,6 +203,22 @@ def sakking_home() -> Path:
     """Return the SakKing data directory, honouring the SAKKING_HOME override."""
     override = os.environ.get("SAKKING_HOME")
     return Path(override) if override else Path.home() / ".sakking"
+
+
+def sakthai_experimental() -> bool:
+    """Whether draft-track MCP extensions are offered.
+
+    Off by default. Gates anything whose upstream specification is still Draft,
+    currently the MCP Apps extension (``io.modelcontextprotocol/ui``,
+    SEP-1865) — its ``ui://`` resources and the ``_meta.ui`` link on a tool.
+    Advertising a draft extension unconditionally would have this server
+    promise a shape that is still changing; a host reading it would be entitled
+    to hold us to it.
+
+    Truthy set matches the rest of the package: ``{1, true, yes, on}`` after
+    ``.strip().lower()``.
+    """
+    return os.environ.get("SAKTHAI_EXPERIMENTAL", "").strip().lower() in ("1", "true", "yes", "on")
 
 
 def mcp_security_level() -> str:
