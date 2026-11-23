@@ -154,7 +154,7 @@ Action on one of their repositories (OIDC). A domain-based namespace
 
 So publishing is a deliberate act, requiring credentials this repository does
 not hold. The manifest is committed so that act is a single command rather than
-an archaeology project.
+a reconstruction job.
 
 ## Running a private subregistry
 
