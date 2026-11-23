@@ -1459,9 +1459,10 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
     Tool(
         name="recall",
         description=(
-            "List facts and observations currently stored in SakThai memory. Use to "
-            "check what is already known before asking the user or answering a question "
-            "that depends on prior context."
+            "List facts and observations currently stored in this persona's SakThai "
+            "memory (this agent's own shard, not the whole family—use family_recall "
+            "to span every persona). Use to check what is already known before asking "
+            "the user or answering a question that depends on prior context."
         ),
         input_schema={
             "type": "object",
@@ -1479,8 +1480,10 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
     Tool(
         name="search",
         description=(
-            "Search SakThai facts and observations for matching substrings. Use when you "
-            "need specific entries about a topic rather than a broad recall of everything."
+            "Search this persona's SakThai facts and observations for matching substrings "
+            "(this agent's own shard, not the whole family—use family_search to span "
+            "every persona). Use when you need specific entries about a topic rather than "
+            "a broad recall of everything."
         ),
         input_schema={
             "type": "object",
