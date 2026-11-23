@@ -3,8 +3,9 @@
 Reads the standard ``mcpServers`` manifest shape (``command`` / ``args`` /
 ``env``) used by Claude Desktop and gemini-extension.json. Specs come from
 ``~/.sakthai/mcp.json`` (the primary config) and from each installed extension's
-``gemini-extension.json``. Only stdio ``command`` servers are supported; on a
-name clash ``mcp.json`` wins over an extension.
+``gemini-extension.json``. Both locally spawned stdio servers (``command``) and
+remote Streamable HTTP servers (``url``) are supported; on a name clash
+``mcp.json`` wins over an extension.
 """
 
 from __future__ import annotations

@@ -118,7 +118,7 @@ FEATURE_STATES: tuple[Feature, ...] = (
             "because there is no finer-grained alternative yet; a spec `env` "
             "block is the targeted replacement and already works per-server."
         ),
-        replacement="an explicit `env` block on the server's spec in mcp.json",
+        replacement="a per-server env block in mcp.json",
     ),
     Feature(
         id='_meta["ui/resourceUri"]',

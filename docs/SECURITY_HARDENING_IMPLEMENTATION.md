@@ -510,27 +510,45 @@ CMD ["sakthai", "run", "--with-skills", "...", "..."]
 
 ### Environment Variables
 
+> **Read this section as two lists.** Much of what follows was written as a
+> design and never built. Verified against the tree on 2026-11-23.
+
+**Implemented:**
+
 ```bash
-# Security level (STRICT/BALANCED/PERMISSIVE)
-export SAKTHAI_SECURITY_LEVEL=balanced
+# How strictly external MCP servers are validated: strict | balanced | permissive.
+# Default balanced. Read by mcp/manager.py via config.mcp_security_level().
+export SAKTHAI_MCP_SECURITY_LEVEL=strict
 
-# Approved MCP servers (JSON array)
-export SAKTHAI_APPROVED_MCP='["server1", "server2"]'
+# Server names allowed under `strict`, comma- or space-separated (NOT a JSON
+# array). Unset under `strict` denies every server, which is the fail-closed
+# direction. Read by config.approved_mcp_servers().
+export SAKTHAI_APPROVED_MCP='playwright stepsecurity'
 
-# Audit log location
-export SAKTHAI_AUDIT_LOG=~/.sakthai/audit.log
+# Shell allowlist (any non-empty value enables the run_command tool)
+export SAKTHAI_SHELL_ALLOW=1
 
-# Audit log retention (days, 0=unlimited)
-export SAKTHAI_AUDIT_RETENTION=90
-
-# Shell allowlist (existing, still respected)
-export SAKTHAI_SHELL_ALLOW=git,ls,cat
-
-# Read path allowlist (existing, still respected)
+# Read path allowlist
 export SAKTHAI_READ_ALLOW=/opt/data:/var/lib/data
 ```
 
-### Config File: `~/.sakthai/security.json`
+**Not implemented — documented here historically, absent from the code:**
+
+| Name | Status |
+|---|---|
+| `SAKTHAI_SECURITY_LEVEL` | Never existed. The real name is `SAKTHAI_MCP_SECURITY_LEVEL`, and it scopes to MCP server validation only. |
+| `SAKTHAI_AUDIT_LOG` | Never existed. `AuditLogger` in `security_hardening.py` is not wired into any non-test code path — though `web/api.py:audit_payload` reads the file it would have written. |
+| `SAKTHAI_AUDIT_RETENTION` | Never existed. |
+| `~/.sakthai/security.json` | Never existed. No code reads a security config file. |
+
+`SAKTHAI_APPROVED_MCP` and the security level were in this document as if they
+existed for some time before they did; they were implemented in the 2026-11-23
+MCP overhaul, with the names and formats shown above rather than the ones
+originally written here. The rest of the table remains a design.
+
+### Config File: `~/.sakthai/security.json` — *not implemented*
+
+Shown as originally designed. No code reads this file.
 
 ```json
 {

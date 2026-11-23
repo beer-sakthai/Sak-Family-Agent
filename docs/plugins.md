@@ -41,6 +41,35 @@ To register external MCP servers, configure `~/.sakthai/mcp.json` (or persona co
    * For example, the `query` tool in `sqlite-explorer` becomes `sqlite-explorer__query`.
 3. **Graceful Failures**: If an MCP server fails to start, its errors are logged, and the agent loop continues with remaining tools.
 4. **Disabling MCP**: Pass `--no-mcp` to `sakthai run` to run the loop with only built-in tools.
+5. **Validation**: Every spec is checked by `MCPServerValidator` before the server is started — the whole argv is scanned, not just `command`. A rejected server is skipped with a warning, like one that fails to start.
+6. **Pagination**: `tools/list` is followed to the end, so a server that pages its tools is read whole.
+7. **Namespaced tools are still guardrailed**: `<server>__run_command` is subject to the same `SAKTHAI_SHELL_ALLOW` gate and command scanning as the built-in. See [`mcp-threat-model.md`](mcp-threat-model.md) §1.
+
+### Transports
+
+| `transport` / `type` | Meaning |
+|---|---|
+| `stdio` (or `local`) | Spawn `command` as a child process and speak newline-delimited JSON-RPC over its pipes. |
+| `streamable-http` (or `http`) | POST JSON-RPC to `url`. Accepts a JSON or an SSE-framed reply; echoes `Mcp-Session-Id`; sends `MCP-Protocol-Version`. |
+| `sse` | **Deprecated** alias for `streamable-http` — it never named an SSE transport. Warns once; see [`mcp-deprecations.md`](mcp-deprecations.md). |
+
+Omitting the key infers `streamable-http` when the entry has a `url`, `stdio`
+when it has a `command`.
+
+### Discovering servers
+
+`sakthai mcp registry sync` caches the MCP Registry's catalogue, and
+`sakthai mcp registry search <query>` searches it. `sakthai mcp registry check`
+reports configured servers the registry has since marked `deprecated` or
+`deleted` — the supply-chain question a version pin cannot answer. See
+[`mcp-registry.md`](mcp-registry.md).
+
+### Serving MCP over HTTP
+
+Besides the stdio server (`sakthai mcp`), the gateway serves the same tools over
+Streamable HTTP at `POST /v1/mcp`. Tools marked `requires_confirmation` are
+hidden there unless `SAKTHAI_MCP_HTTP_WRITE_ALLOW` is set, because over a socket
+there is no host to confirm with. See [`mcp-support-matrix.md`](mcp-support-matrix.md).
 
 ---
 

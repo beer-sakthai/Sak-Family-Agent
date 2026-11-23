@@ -97,8 +97,15 @@ What enforces that, and what does not:
   `web/server.py` drifts in any copy.
 - `tests/test_persona_structure_parity.py` checks that every persona has the
   same top-level items.
-- No test compares the **rest** of the code. A change to the canonical package
-  must be copied to the five personas by hand, or the copies drift silently.
+- `tests/test_persona_package_parity.py` walks the **whole** canonical package
+  tree and byte-compares every `.py` on the parity surface — everything except
+  `skills/`, `config/`, `evolution/` and each persona's non-runtime `tests/`.
+  It also fails when a copy carries a module the canonical tree no longer has,
+  so a new or deleted module is covered without anyone extending a list.
+  ADR-0001 (`docs/adr/ADR-0001-persona-package-duplication.md`) records why.
+- **Sync with `make sync-personas`** (`scripts/sync_personas.py`), not by hand.
+  `python3 scripts/sync_personas.py --check` reports drift without changing
+  anything.
 
 ### Personas
 
@@ -397,7 +404,10 @@ get the same per-persona shard without setting `SAKTHAI_HOME` yourself — see
      `memory.db` is bind-mounted; not combinable with `--persona`),
      `--persona <name>`, `-v/--verbose`.
    - Chat: `chat` — interactive multi-turn REPL over the same loop and memory.
-   - Server: `mcp` (start the MCP stdio server `serve`, plus `list`, `ping`, `tools`).
+   - Server: `mcp` (start the MCP stdio server `serve`, plus `list`, `ping`,
+     `tools`, and the `registry` group — `sync|search|check` against the MCP
+     Registry; `check` exits non-zero when a configured server has been
+     withdrawn upstream).
    - Web: `web setup` (print/create the API bearer token), `web regen-token`,
      `web serve [--host 127.0.0.1] [--port 3001]` (serve the read-only API).
    - Cycle: `cycle status|next|set|list`
@@ -537,9 +547,10 @@ not an error.
 
 ### Agent subsystem (`agent/`)
 
-- **`agent/tools.py`** — defines `BUILTIN_TOOLS` (19 tools, one schema + handler
+- **`agent/tools.py`** — defines `BUILTIN_TOOLS` (23 tools, one schema + handler
   each): `learn`, `huggingface_inference`, `ingest_document`, `capture_lead`, `recall`, `search`,
-  `search_sessions`, `forget`, `read_file`, `run_command`,
+  `search_sessions`, `forget`, `read_file`, `edit_file`, `write_file`,
+  `grep_search`, `glob_files`, `run_command`,
   `send_telegram_message`, `send_outlook_mail`, `read_outlook_mail`,
   `list_calendar_events`, `create_calendar_event`, `run_agent_loop`,
   `family_recall`, `family_search`, `delegate_to_persona`. Add a tool here and it appears in both the agent loop and
@@ -641,16 +652,35 @@ exactly the class of fix that must not land in one copy only. The copies had
 drifted 147 lines behind (no CORS, no dashboard routes) before they were synced;
 `tests/test_persona_web_server_parity.py` now fails CI the moment any of
 sakjules, saktan, sakking, saksee or saksit differs from the canonical file.
-Copy it to all five persona copies whenever you change it.
+Run `make sync-personas` whenever you change it.
 
 ### MCP subsystem (`mcp/`)
 
 - **`mcp/server.py`** — **inbound** JSON-RPC 2.0 stdio server. `handle_request`
   is a **pure function**, testable without a process. Reuses `BUILTIN_TOOLS` so
-  behavior matches the agent loop exactly. Advertises protocol version
-  `"2024-11-05"`. Handles tools (`tools/list`, `tools/call`), resources
-  (`resources/list`, `resources/read` for `sakthai://memory/status`), and
-  prompts (`prompts/list`, `prompts/get`).
+  behavior matches the agent loop exactly. **Negotiates** a protocol version
+  across `2024-11-05` → `2025-11-25` (the table lives in `mcp/protocol.py`,
+  which is the single source for both the server and the client) and answers
+  with `2025-11-25` for anything it cannot speak — it never echoes the client's
+  value back. Handles tools (`tools/list`, `tools/call`), resources
+  (`resources/list`, `resources/read`, served from the registry in
+  `mcp/resources.py`), and prompts (`prompts/list`, `prompts/get`).
+- **`mcp/protocol.py`** — the supported-revision table and
+  `negotiate_protocol_version()`. `2026-07-28` is deliberately excluded: it
+  removes `initialize`, `ping`, sessions, roots and sampling, so adopting it is
+  a rewrite rather than a bump. See `docs/mcp-roadmap.md`.
+- **`mcp/http.py`** — the inbound Streamable HTTP transport, served at
+  `POST /v1/mcp` by `gateway/server.py`. Sessions, `MCP-Protocol-Version`
+  validation, an `Origin` check against DNS rebinding, and a filter that hides
+  `requires_confirmation` tools unless `SAKTHAI_MCP_HTTP_WRITE_ALLOW` is set.
+- **`mcp/resources.py`** — the resource registry, including the `ui://` MCP App
+  view (`io.modelcontextprotocol/ui`, Draft) behind `SAKTHAI_EXPERIMENTAL`.
+- **`mcp/registry.py`** — client for the MCP Registry. `sakthai mcp registry
+  sync|search|check`; `check` and `sakthai doctor` report configured servers the
+  registry marks `deprecated` or `deleted`. See `docs/mcp-registry.md`.
+- **`mcp/lifecycle.py`** — the feature lifecycle registry (Active / Deprecated /
+  Removed, twelve-month notice), published to `docs/mcp-deprecations.md` by
+  `scripts/gen_mcp_deprecations.py` with a drift test.
 - **`mcp/client.py`** — **outbound** client supporting both stdio (`StdioMCPClient`)
   and remote HTTP/SSE endpoints (`RemoteMCPClient`), with `ping()` responsiveness checks,
   URL scheme enforcement, and tool filtering (`allowed_tools`). Wraps server tools as
@@ -938,6 +968,12 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 | `SAKTHAI_MCP_CONFIG` | Override the external MCP server config path |
 | `SAKTHAI_MCP_TIMEOUT` | Seconds to wait for an external MCP server reply (default: 30) |
 | `SAKTHAI_MCP_ENV_PASSTHROUGH` | Env vars forwarded to spawned MCP servers |
+| `SAKTHAI_MCP_SECURITY_LEVEL` | How strictly external MCP servers are validated: `strict`, `balanced` (default), `permissive`. `strict` consults the approved list below |
+| `SAKTHAI_APPROVED_MCP` | Server names allowed under `strict`, comma/space separated. Unset under `strict` denies every server — the fail-closed direction |
+| `SAKTHAI_MCP_HTTP_WRITE_ALLOW` | Expose `requires_confirmation` tools over the HTTP MCP endpoint. Unset hides them: there is no host to confirm with over a socket |
+| `SAKTHAI_MCP_HTTP_ORIGIN` | Extra `Origin` hosts the HTTP MCP endpoint accepts beyond loopback (DNS-rebinding defence) |
+| `SAKTHAI_MCP_REGISTRY_URL` | Base URL of the MCP registry to sync from; point it at a private subregistry to curate discovery |
+| `SAKTHAI_EXPERIMENTAL` | Offer draft-track MCP extensions — currently MCP Apps (`io.modelcontextprotocol/ui`) and its `ui://` views |
 | `SAKTHAI_EVAL_LOG` | Override the eval/MLOps JSONL log path (default `SAKTHAI_HOME/eval.jsonl`) |
 | `SAKTHAI_WEB_ALLOW_PUBLIC` | Opt-in to non-loopback binds for the web server (default: refused — loopback-only) |
 | `SAKTHAI_WEB_CORS_ORIGIN` | The single origin the web API echoes in CORS headers; unset = CORS off (used by `make dashboard-dev`) |
@@ -1006,8 +1042,9 @@ A skill directory may also carry `commands/<name>.md` files, which become
 1. Add a `Tool(name=..., description=..., input_schema=..., handler=..., annotations=...)` to
    `BUILTIN_TOOLS` in `personas/sakthai/agent/tools.py`. `annotations` is built with
    `_annotations(...)` and is advertised to MCP clients in `tools/list`;
-   `tests/test_mcp_server.py` fails if a built-in omits it. Copy `tools.py` to the five persona
-   copies by hand.
+   `tests/test_mcp_server.py` fails if a built-in omits it. Then run
+   `make sync-personas` to mirror it into the five persona copies —
+   `tests/test_persona_package_parity.py` fails CI otherwise.
 2. The tool automatically appears in both `sakthai run` (agent loop) and
    `sakthai mcp` (MCP server) — no other wiring needed.
 3. Write a test in `tests/test_tools.py` using an injected `MemoryStore(":memory:")`.
@@ -1030,6 +1067,11 @@ A skill directory may also carry `commands/<name>.md` files, which become
 | `docs/og_parity_audit.md` | Comparison with original SakThai |
 | `docs/integrations.md` | Composio and cross-agent communication recipes |
 | `docs/skill-naming.md` | The `Sak-` / `Sak<Name>-` naming convention |
+| `docs/mcp-support-matrix.md` | Which MCP features each of the four surfaces implements, and which absences are decisions |
+| `docs/mcp-threat-model.md` | MCP architecture and attack flows, each with the control that closes it |
+| `docs/mcp-registry.md` | Registry aggregators and subregistries; the `deleted`-status supply-chain check |
+| `docs/mcp-roadmap.md` | What is next, and why `2026-07-28` is deferred |
+| `docs/mcp-deprecations.md` | **Generated** from `mcp/lifecycle.py` — do not edit by hand |
 | `docs/agent-diagnosis.md` | Standalone run checklist and runtime notes |
 | `docs/SOUL.md` · `docs/USER.md` · `docs/OPERATING_CONTRACT.md` | Team identity · Beer's profile · agent operating rules |
 | `docs/SECURITY.md` · `docs/security-hardening.md` · `docs/SECURITY_HARDENING_IMPLEMENTATION.md` | Security policy/architecture · audit findings and the prevention pattern + regression test for each · implementation notes |
