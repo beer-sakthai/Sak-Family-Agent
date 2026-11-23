@@ -208,6 +208,14 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-18 **SakJules** ([`personas/sakjules/PLAN.md`](./personas/sakjules/PLAN.md)) — Preflight verified; verified 0 open PRs; cross-persona guardrails/web server parity verified; full quality gate executed (ruff, mypy, bandit, pytest >= 96% coverage); Growth stage `CYCLE EVAL: sakjules` (100/100, Grade S).
 - [x] 2026-11-21 **SakTan** ([`personas/saktan/PLAN.md`](./personas/saktan/PLAN.md)) — Local Ollama (`sakthai` model) preflight; family pre-task memory read; `memory healthcheck` & `backup`; Beer's daily briefing, close-the-day, and weekly review; SakSee `rate-limit-ban` tally; SakSit >7d stalled Joy check; SakJules `schedule-confirmed` verification.
 
+### 7. MCP v2 Upgrade & Multi-Provider Ecosystem Integration
+- [x] 2026-11-22 **Phase 1: Dependency & Environment Setup** — Add `"mcp>=2.0.0,<3.0.0"` to core `dependencies` in `pyproject.toml` and sync with `uv sync --all-extras`.
+- [x] 2026-11-22 **Phase 2: Core MCP Server Definitions & Registry Enhancement** — Built-in server definitions for Genkit (`npx -y genkit mcp`), Google Developer Knowledge with domain scoping (`developer.chrome.com`, `web.dev`, `developers.google.com`, `antigravity.google`, `adk.dev`), Figma, and Hugging Face.
+- [x] 2026-11-22 **Phase 3: Client Transport Layer** — Support official `mcp>=2` client transports (Streamable HTTP / SSE) and dynamic token auth (`HF_TOKEN`, `FIGMA_ACCESS_TOKEN`, `GOOGLE_API_KEY`) with graceful degradation.
+- [x] 2026-11-22 **Phase 4: Persona Parity & Backpack Documentation** — Synchronize across all 6 personas, update `BACKPACK.md` files and `docs/capabilities.md`.
+- [x] 2026-11-22 **Phase 5: Verification & Quality Gates** — Add tests in `tests/test_mcp_ecosystem_v2.py`, maintain $\ge 96.0\%$ coverage, verify `make test`, `make lint`, `mypy`, `bandit`.
+- [x] 2026-11-22 **Phase 6: PR Creation & Delivery** — Open PR #2061 on branch `feat/mcp-v2-genkit-figma-hf-google-knowledge` for Beer's manual review.
+
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |

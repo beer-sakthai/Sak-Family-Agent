@@ -43,6 +43,10 @@
   - `npx -y @playwright/mcp@0.0.83` (pinned in `config/mcp.json`; requires Active charge >= 50%)
 - **🔍 Chrome DevTools MCP (`chrome-devtools`)**:
   - `npx -y chrome-devtools-mcp@1.10.1` (pinned in `config/mcp.json`, never `@latest` — Security Rule 5)
+- **🎨 Figma Remote MCP (`figma`)**:
+  - `https://mcp.figma.com/mcp` with `FIGMA_ACCESS_TOKEN` auth via `mcp>=2.0.0` Streamable HTTP / SSE transport
+- **📚 Google Developer Knowledge MCP (`google_dev_knowledge`)**:
+  - `https://developerknowledge.googleapis.com/mcp` with scoped searches for `developer.chrome.com` and `web.dev`
 - **🛡️ Prompt-Injection Boundary & Timestamp Auditor**:
   - Wraps every scraped page or DOM snippet in `<untrusted_web_content source="<url>">...</untrusted_web_content>`
   - Attaches mandatory `retrieved_at=<ISO 8601>` timestamp to every extracted observation

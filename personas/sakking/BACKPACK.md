@@ -39,6 +39,10 @@
 
 ## 🛠️ 3. MCP Server, Platform & Domain Tool Loadout
 
+- **⚡ Firebase Genkit MCP (`genkit`)**:
+  - `npx -y genkit mcp` (stdio transport with graceful fallback when unconfigured)
+- **📚 Google Developer Knowledge MCP (`google_dev_knowledge`)**:
+  - `https://developerknowledge.googleapis.com/mcp` with preset search scopes for `antigravity.google`, `adk.dev`, `developers.google.com`
 - **🌐 Playwright Browser MCP (`playwright`)**:
   - `npx -y @playwright/mcp@0.0.83` (pinned in `config/mcp.json`, never `@latest`)
 - **🔍 Chrome DevTools MCP (`chrome-devtools`)**:

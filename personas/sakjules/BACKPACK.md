@@ -41,6 +41,10 @@
 
 - **🔒 StepSecurity Agent MCP (`stepsecurity`)**:
   - `https://agent.api.stepsecurity.io/v1/mcp?customer=beer-sakthai` (remote SSE endpoint configured in `config/mcp.json`)
+- **⚡ Firebase Genkit MCP (`genkit`)**:
+  - `npx -y genkit mcp` (stdio transport with graceful fallback when unconfigured)
+- **📚 Google Developer Knowledge MCP (`google_dev_knowledge`)**:
+  - `https://developerknowledge.googleapis.com/mcp` with preset search scopes for `antigravity.google`, `adk.dev`, `developers.google.com`
 - **📡 Jules Remote Asynchronous Delegation (`sakthai.agent_platform.jules_worker`)**:
   - GitHub remote resolution, asynchronous patch planning, session formatting, and patch validation (`tests/test_jules_worker.py`)
 - **🏗️ Harness v1 AI Agent & Pipeline Exporter (`sakthai platform export-harness`)**:
