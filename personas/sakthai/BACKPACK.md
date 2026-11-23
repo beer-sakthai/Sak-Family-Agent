@@ -43,6 +43,9 @@
   - `sakthai hf info <repo_id>` — Live Hub model/dataset/Space inspection (Gate 1 for SakSit)
   - `sakthai hf download <repo_id>` — Safe artifact retrieval
   - `config/mcp.json` declares `{}` (zero external npx servers; all Hub calls run through native tools)
+- **⚡ MCP v2 Ecosystem Integration (`huggingface` remote MCP)**:
+  - `https://huggingface.co/mcp?login&gradio=none` with official `mcp>=2.0.0` Streamable HTTP / SSE transport
+  - Injects `Authorization: Bearer $HF_TOKEN` with graceful degradation when token is unconfigured
 - **🧬 Self-Evolution Engine (`personas/sakthai/evolution/`)**:
   - `evolution/skills/evolve_skill.py` (Phase 1 GEPA skill evolution)
   - `evolution/tools/evolve_tools.py` (Phase 2 tool description optimization)

@@ -41,6 +41,10 @@
 
 - **🎨 Hugging Face Media Spaces MCP (`hf-media`)**:
   - `npx -y @llmindset/mcp-hfspace@0.5.4 black-forest-labs/FLUX.1-schnell Lightricks/LTX-Video` (pinned in `config/mcp.json`, never `@latest` — Security Rule 5)
+- **⚡ Hugging Face Remote MCP (`huggingface`)**:
+  - `https://huggingface.co/mcp?login&gradio=none` with `HF_TOKEN` auth and `mcp>=2.0.0` Streamable HTTP transport
+- **🎨 Figma Remote MCP (`figma`)**:
+  - `https://mcp.figma.com/mcp` with `FIGMA_ACCESS_TOKEN` auth for content/design asset inspection
 - **📝 Two-Gate Content & Model Card Pipeline**:
   - **Gate 1 (Before Writing)**: Requires live card state from SakThai (`sakthai hf info <repo_id>`); pauses with `gate1-unavailable` if SakThai is Critical
   - **Gate 2 (Before Publishing)**: Saves drafts with `hub-draft` + `awaiting-review`; never publishes without Beer's `hub-approved` tag
