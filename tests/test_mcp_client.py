@@ -203,7 +203,7 @@ def test_extract_text_survives_unserialisable_structured_content() -> None:
     from sakthai.mcp.client import _extract_text
 
     out = _extract_text(None, {"bad": object()})
-    assert "not serialisable" in out
+    assert "not serializable" in out
 
 
 def test_extract_text_names_unknown_block_types() -> None:

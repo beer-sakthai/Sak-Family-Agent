@@ -50,7 +50,7 @@ Two independent directions, often confused:
 **Was open.** `mcp/manager.py` merges an external server's tools under
 `<server>__<tool>`. Every name-keyed rule in `agent/guardrails.py` matched
 `tool.name` with `==` against a bare built-in name, and nothing in the package
-split or normalised that prefix.
+split or normalized that prefix.
 
 An MCP server named `shell` offering a tool named `run_command` therefore
 arrived as `shell__run_command`, which:
@@ -70,7 +70,7 @@ This needed no attacker. A legitimate MCP shell server — and they are common �
 ran ungated.
 
 **Closed by** `effective_tool_name()` in `agent/guardrails.py`, routing all five
-sites through a normalised name. Regression tests in
+sites through a normalized name. Regression tests in
 `tests/test_guardrails_mcp_namespace.py`.
 
 **Still true:** name matching is a floor, not a boundary. A server offering the
@@ -127,7 +127,7 @@ and `approved_mcp_servers` as though both existed. Neither did.
 **Closed by** `SAKTHAI_MCP_SECURITY_LEVEL` and `SAKTHAI_APPROVED_MCP`. Strict
 still denies by default — that is the fail-closed direction — but it can now be
 entered and populated, and [`mcp-registry.md`](mcp-registry.md) describes
-filling it from a synced catalogue.
+filling it from a synced catalog.
 
 ## 5. Schema validation skipped on the MCP path — **closed**
 
@@ -151,7 +151,7 @@ prefixes each with `[external MCP tool <server>/<name> — description is
 untrusted]`. Tool *output* is separately wrapped in
 `⚠️ BEGIN UNTRUSTED DATA` delimiters by `agent/loop.py`, which is correctly
 namespace-aware (an exact-name allowlist, so external tools are untrusted by
-default — do not "fix" that by normalising it).
+default — do not "fix" that by normalizing it).
 
 **Not closed, and not closable here.** A label is a hint to a model, not a
 control. `inputSchema` content is passed through unexamined. The real control

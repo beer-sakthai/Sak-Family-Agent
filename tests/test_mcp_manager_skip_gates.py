@@ -123,7 +123,7 @@ def test_the_genkit_gate_is_keyed_on_the_name_only(_no_genkit_env: None) -> None
 
 
 def test_google_dev_knowledge_gains_scoped_search_tools() -> None:
-    """The five `site:`-scoped tools are synthesised alongside the server's own."""
+    """The five `site:`-scoped tools are synthesized alongside the server's own."""
     spec = MCPServerSpec(
         name="google_dev_knowledge",
         url="https://developerknowledge.googleapis.com/mcp",

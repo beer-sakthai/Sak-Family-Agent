@@ -36,7 +36,7 @@ def test_initialize_does_not_echo_an_unsupported_version(store: MemoryStore) -> 
     """The reply must name a revision this server actually implements.
 
     This used to assert the opposite — `"x"` in, `"x"` out — pinning the echo
-    as intended behaviour. `initialize` answered
+    as intended behavior. `initialize` answered
     `params.get("protocolVersion") or PROTOCOL_VERSION`, so a client was told
     that whatever it asked for was agreed, including a revision whose handshake
     this package does not implement. The client's recourse under the spec is to

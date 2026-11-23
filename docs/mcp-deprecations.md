@@ -27,7 +27,7 @@ This file is generated from it; edit the registry, then run
 
 The `"sse"` value for an MCP server's `type`/`transport` key in `mcp.json`.
 
-It never named an SSE transport. `RemoteMCPClient` POSTs JSON-RPC and accepts either a JSON or an SSE-framed reply — that is Streamable HTTP. There is no GET stream, which is what an SSE transport would be. Every remote entry in the six shipped persona manifests omits `type` entirely and so was labelled `"sse"` by default, making the misnomer universal and invisible. Keeping the name would leave operators configuring a transport that does not exist. The HTTP+SSE transport itself is separately deprecated upstream, in spec revision 2026-07-28 (SEP-2596).
+It never named an SSE transport. `RemoteMCPClient` POSTs JSON-RPC and accepts either a JSON or an SSE-framed reply — that is Streamable HTTP. There is no GET stream, which is what an SSE transport would be. Every remote entry in the six shipped persona manifests omits `type` entirely and so was labeled `"sse"` by default, making the misnomer universal and invisible. Keeping the name would leave operators configuring a transport that does not exist. The HTTP+SSE transport itself is separately deprecated upstream, in spec revision 2026-07-28 (SEP-2596).
 
 | | |
 |---|---|

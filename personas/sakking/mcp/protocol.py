@@ -21,7 +21,7 @@ implements.
 ``params.get("protocolVersion") or PROTOCOL_VERSION`` — it echoed the client's
 string back unexamined, so a client asking for ``2026-07-28`` (whose handshake
 this package does not implement) or for ``banana`` was told both were fine.
-A test asserted that echo as intended behaviour.
+A test asserted that echo as intended behavior.
 
 **Why the range stops at 2025-11-25.** That is the previous stable revision and
 the newest one whose shape this package implements: an ``initialize``/

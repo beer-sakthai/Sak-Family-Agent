@@ -221,7 +221,7 @@ The ones that gate a change:
 | `agent-self-evolution.yml` | push/PR touching `personas/sakthai/evolution/**`, `personas/sakthai/tests/**` or `evolve_agent.sh` | that subproject's own suite |
 | `apps.yml` | push/PR touching `apps/**`, `web/contracts.py`, `scripts/gen_dashboard_types.py` | builds and tests the two projects under `apps/`, which `ci.yml` does not cover; fails on generated-TypeScript drift |
 | `subprojects.yml` | push/PR touching `sakthai-chat-cli/**`, `services/teams-copilot-mcp/**` | runs each tree's own pytest suite from its own `uv.lock` (`uv sync --frozen`); tests only, no lint/coverage |
-| `labeler.yml` | `pull_request_target` | PR labelling |
+| `labeler.yml` | `pull_request_target` | PR labeling |
 | `bandit.yml` | push/PR to `main`, weekly | bandit SARIF to code scanning |
 | `codeql.yml` | push/PR to `main`, weekly | CodeQL (advanced setup) |
 
@@ -971,7 +971,7 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 | `SAKTHAI_MCP_SECURITY_LEVEL` | How strictly external MCP servers are validated: `strict`, `balanced` (default), `permissive`. `strict` consults the approved list below |
 | `SAKTHAI_APPROVED_MCP` | Server names allowed under `strict`, comma/space separated. Unset under `strict` denies every server — the fail-closed direction |
 | `SAKTHAI_MCP_HTTP_WRITE_ALLOW` | Expose `requires_confirmation` tools over the HTTP MCP endpoint. Unset hides them: there is no host to confirm with over a socket |
-| `SAKTHAI_MCP_HTTP_ORIGIN` | Extra `Origin` hosts the HTTP MCP endpoint accepts beyond loopback (DNS-rebinding defence) |
+| `SAKTHAI_MCP_HTTP_ORIGIN` | Extra `Origin` hosts the HTTP MCP endpoint accepts beyond loopback (DNS-rebinding defense) |
 | `SAKTHAI_MCP_REGISTRY_URL` | Base URL of the MCP registry to sync from; point it at a private subregistry to curate discovery |
 | `SAKTHAI_EXPERIMENTAL` | Offer draft-track MCP extensions — currently MCP Apps (`io.modelcontextprotocol/ui`) and its `ui://` views |
 | `SAKTHAI_EVAL_LOG` | Override the eval/MLOps JSONL log path (default `SAKTHAI_HOME/eval.jsonl`) |

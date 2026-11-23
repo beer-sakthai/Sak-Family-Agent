@@ -68,7 +68,7 @@ _STDIO_TRANSPORT_ALIASES = {"stdio", "local"}
 
 
 def _parse_transport(raw_type: object, name: str, url: str | None, command: str | None) -> str:
-    """The transport for one manifest entry, normalising legacy spellings.
+    """The transport for one manifest entry, normalizing legacy spellings.
 
     With no ``type``/``transport`` key the transport is inferred, as before,
     from whether the entry carries a ``url`` or a ``command`` — which is how
@@ -86,7 +86,7 @@ def _parse_transport(raw_type: object, name: str, url: str | None, command: str 
             warn_deprecated('transport: "sse"', context=f"MCP server {name!r}")
         return STREAMABLE_HTTP
     # Unknown values pass through lowercased, as before: the manager decides
-    # what to do with them, and rejecting here would be a behaviour change.
+    # what to do with them, and rejecting here would be a behavior change.
     return lowered
 
 

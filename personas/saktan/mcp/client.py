@@ -162,7 +162,7 @@ def _paginate_tools(
 PROTOCOL_VERSION = protocol.LATEST_PROTOCOL_VERSION
 CLIENT_NAME = "sakthai-client"
 # Backwards-compatible alias; the live default is resolved via config so that
-# SAKTHAI_MCP_TIMEOUT is honoured at construction time.
+# SAKTHAI_MCP_TIMEOUT is honored at construction time.
 DEFAULT_TIMEOUT = config.DEFAULT_MCP_TIMEOUT
 
 # Model Context Protocol cancellation notification method.
@@ -226,7 +226,7 @@ _REMOTE_TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
 _MAX_REMOTE_DESC_CHARS = 1024
 
 #: Appended to every google_dev_knowledge tool description. Kept next to the
-#: sanitiser because it must be added *after* it — see `as_tools`.
+#: sanitizer because it must be added *after* it — see `as_tools`.
 _GOOGLE_DEV_DOMAIN_NOTE = (
     "Approved documentation domains: developer.chrome.com, web.dev, "
     "developers.google.com, antigravity.google, adk.dev."
@@ -243,7 +243,7 @@ def _sanitize_remote_description(server: str, remote_name: str, description: Any
 
 
 #: Longest ``structuredContent`` rendering to inline. Past this it is
-#: summarised: a tool returning a large JSON document would otherwise flood the
+#: summarized: a tool returning a large JSON document would otherwise flood the
 #: model's context with one result.
 _MAX_STRUCTURED_CHARS = 4096
 
@@ -310,7 +310,7 @@ def _extract_text(content: Any, structured: Any = None) -> str:
         try:
             rendered = json.dumps(structured, ensure_ascii=False, sort_keys=True)
         except (TypeError, ValueError):
-            parts.append("[structuredContent returned, not serialisable]")
+            parts.append("[structuredContent returned, not serializable]")
         else:
             if len(rendered) > _MAX_STRUCTURED_CHARS:
                 rendered = rendered[:_MAX_STRUCTURED_CHARS] + " …[truncated]"
@@ -791,7 +791,7 @@ class RemoteMCPClient:
                 self.name, remote_name, desc.get("description")
             )
             if self.name == "google_dev_knowledge":
-                # Appended *after* sanitising, deliberately. Sanitising truncates
+                # Appended *after* sanitizing, deliberately. Sanitizing truncates
                 # at 1024 characters, so appending first meant a long upstream
                 # description silently ate the guardrail — the one line here that
                 # is ours rather than the remote server's.
@@ -932,7 +932,7 @@ def mcp_tool_to_sakthai_tool(
 
     return Tool(
         name=f"{prefix}{name}",
-        # Sanitised like every other remote description. The original built the
+        # Sanitized like every other remote description. The original built the
         # Tool from the raw upstream string — no truncation, no untrusted label
         # — which would have quietly undone that mitigation for any caller.
         description=_sanitize_remote_description(

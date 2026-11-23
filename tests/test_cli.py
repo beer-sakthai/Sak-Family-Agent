@@ -73,7 +73,7 @@ def test_help_lists_commands(runner: CliRunner) -> None:
 def test_learn_persists_fact(runner: CliRunner) -> None:
     result = runner.invoke(main, ["learn", "the sky is blue"])
     assert result.exit_code == 0
-    # Behaviour, not phrasing: the fact is actually in the store.
+    # Behavior, not phrasing: the fact is actually in the store.
     with MemoryStore() as store:
         assert any("sky is blue" in f.value for f in store.list_facts())
 

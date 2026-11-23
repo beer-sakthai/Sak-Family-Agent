@@ -32,7 +32,7 @@ from ..memory.store import MemoryStore
 
 #: MIME type for an MCP Apps view, verbatim from SEP-1865. The ``profile``
 #: parameter is what distinguishes it from ordinary HTML, so it must be sent
-#: exactly: a host matching on the full string will not recognise ``text/html``.
+#: exactly: a host matching on the full string will not recognize ``text/html``.
 APP_MIME_TYPE = "text/html;profile=mcp-app"
 
 #: The extension identifier, as negotiated in ``capabilities.extensions``.
@@ -140,7 +140,7 @@ _MEMORY_BROWSER_HTML = """<!doctype html>
       { jsonrpc: "2.0", method: method, params: params || {} }, "*");
   }
 
-  // The tool returns text, so the view parses the lines it recognises rather
+  // The tool returns text, so the view parses the lines it recognizes rather
   // than receiving structured rows. Anything unparseable is shown verbatim,
   // which is the useful failure mode: never hide what the tool actually said.
   function parse(text) {

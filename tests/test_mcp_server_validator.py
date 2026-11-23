@@ -114,7 +114,7 @@ def test_shell_metacharacters_are_rejected(command: str) -> None:
     assert not ok
 
 
-# --- unchanged behaviour -----------------------------------------------------
+# --- unchanged behavior -----------------------------------------------------
 
 
 def test_command_or_url_is_required() -> None:

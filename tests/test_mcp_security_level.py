@@ -7,7 +7,7 @@ allow-list was unreachable, and would have denied every server if reached.
 and `approved_mcp_servers` as if both existed; neither did.
 
 These tests cover the level selector, the allow-list reader, and that the
-manager honours both.
+manager honors both.
 """
 
 from __future__ import annotations
@@ -110,7 +110,7 @@ def test_strict_still_applies_the_command_scan(monkeypatch: pytest.MonkeyPatch) 
     assert "suspicious pattern" in reason
 
 
-# --- the manager honours the level ------------------------------------------
+# --- the manager honors the level ------------------------------------------
 
 
 def test_manager_runs_balanced_by_default(monkeypatch: pytest.MonkeyPatch) -> None:

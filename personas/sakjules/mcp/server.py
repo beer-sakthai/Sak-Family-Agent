@@ -3,7 +3,7 @@
 The MCP stdio transport is newline-delimited JSON-RPC 2.0: one request object
 per line on stdin, one response per line on stdout. We implement the methods a
 client needs to discover and call tools — ``initialize``, ``tools/list``,
-``tools/call``, ``ping`` — reusing :data:`BUILTIN_TOOLS` so behaviour matches
+``tools/call``, ``ping`` — reusing :data:`BUILTIN_TOOLS` so behavior matches
 ``sakthai run`` exactly.
 
 :func:`handle_request` is a pure function over a single request dict, so the

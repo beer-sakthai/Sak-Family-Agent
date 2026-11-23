@@ -550,7 +550,7 @@ def mcp_tools(persona: str | None, builtins: bool) -> None:
 def mcp_registry() -> None:
     """Sync and search the MCP registry.
 
-    The registry is the upstream catalogue of published MCP servers. Syncing it
+    The registry is the upstream catalog of published MCP servers. Syncing it
     gives two things a hand-edited ``mcp.json`` cannot: a way to find a server
     by name, and the status the registry carries for each one — so a server
     withdrawn upstream for malware shows up in ``sakthai doctor`` instead of

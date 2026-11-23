@@ -32,7 +32,7 @@ from .servers import STREAMABLE_HTTP, MCPServerSpec, load_server_specs
 logger = logging.getLogger(__name__)
 
 #: Transport values routed to :class:`RemoteMCPClient`. ``"sse"`` and ``"http"``
-#: are legacy spellings that ``_parse_transport`` normalises away; they are
+#: are legacy spellings that ``_parse_transport`` normalizes away; they are
 #: still accepted here for a spec constructed directly in code.
 _REMOTE_TRANSPORTS = frozenset({STREAMABLE_HTTP, "sse", "http"})
 

@@ -83,7 +83,7 @@ def origin_is_allowed(origin: str | None) -> bool:
     The spec requires this check against DNS rebinding: a page on an attacker's
     domain can make the victim's browser resolve that domain to 127.0.0.1 and
     POST to a locally bound server, which then sees an ordinary same-machine
-    request. The bearer token is the primary defence; this is the second one,
+    request. The bearer token is the primary defense; this is the second one,
     because a token in a query string is the kind of thing that leaks.
 
     A *missing* ``Origin`` is allowed: non-browser clients — which is every MCP

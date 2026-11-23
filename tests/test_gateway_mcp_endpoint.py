@@ -2,7 +2,7 @@
 
 `tests/test_mcp_http.py` covers the transport logic as a pure function. This
 covers the wiring — that the gateway routes `/v1/mcp`, carries the session and
-protocol headers both ways, enforces its bearer token, and honours DELETE.
+protocol headers both ways, enforces its bearer token, and honors DELETE.
 
 It is hosted on the gateway rather than `web/server.py` because the gateway is
 already a `ThreadingHTTPServer` with POST and DELETE, while the web API serves
@@ -145,7 +145,7 @@ def test_an_unsupported_protocol_header_is_400(mcp_url: str) -> None:
 
 
 def test_a_foreign_origin_is_403(mcp_url: str) -> None:
-    """DNS-rebinding defence: a page on another domain must not reach this."""
+    """DNS-rebinding defense: a page on another domain must not reach this."""
     status, _, _ = _post(
         mcp_url,
         {"jsonrpc": "2.0", "id": 1, "method": "initialize"},

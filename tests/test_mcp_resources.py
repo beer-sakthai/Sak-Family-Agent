@@ -58,7 +58,7 @@ def test_the_app_view_uses_the_ui_scheme() -> None:
 def test_the_app_view_declares_the_exact_mime_type() -> None:
     """The `profile` parameter is what distinguishes it from ordinary HTML.
 
-    A host matching on the full string will not recognise bare `text/html`.
+    A host matching on the full string will not recognize bare `text/html`.
     """
     assert APP_MIME_TYPE == "text/html;profile=mcp-app"
     view = next(r for r in BUILTIN_RESOURCES if r.uri == MEMORY_BROWSER_URI)

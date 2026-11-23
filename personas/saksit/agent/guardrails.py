@@ -1323,10 +1323,10 @@ def _block_dangerous_shell_commands(
 
     # A parser differential: shlex's POSIX mode consumes backslashes as escapes,
     # so a Windows-style path ('cat C:\Users\me\.aws\credentials') arrives here
-    # as 'C:Usersme.awscredentials' -- unrecognisable as a path -- while cmd.exe
+    # as 'C:Usersme.awscredentials' -- unrecognizable as a path -- while cmd.exe
     # and PowerShell would read the real file. Re-scan with the backslashes
     # preserved. Gated on the command containing one, so every backslash-free
-    # command keeps its existing behaviour exactly.
+    # command keeps its existing behavior exactly.
     try:
         raw_parts = shlex.split(command, posix=False)
     except ValueError:

@@ -691,7 +691,7 @@ class AuditLogger:
         time. That made the default unreachable by configuration: the test
         suite, which sets ``SAKTHAI_HOME``/``HOME`` per test, still had this
         logger appending to the invoking user's real ``~/.sakthai/audit.log``.
-        An explicitly passed ``log_file`` is honoured as given.
+        An explicitly passed ``log_file`` is honored as given.
         """
         return self._log_file or (sakthai_home() / "audit.log")
 

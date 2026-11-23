@@ -24,7 +24,7 @@ consumer learns about them. :func:`check_configured_servers` is the payoff:
 since been pulled upstream.
 
 **Aggregators and subregistries.** The registry documentation expects
-downstream consumers to copy the catalogue on a regular but infrequent basis
+downstream consumers to copy the catalog on a regular but infrequent basis
 (it suggests hourly) and add value — ratings, scanning, curation. One that also
 implements the registry's own OpenAPI surface is a *subregistry*, and a client
 can point at it unchanged. ``SAKTHAI_MCP_REGISTRY_URL`` is that pointer: aim it
@@ -90,7 +90,7 @@ class RegistryServer:
     status: str = STATUS_ACTIVE
     published_at: str = ""
     is_latest: bool = True
-    #: Installable artefacts: ``registryType`` is npm / pypi / oci / nuget /
+    #: Installable artifacts: ``registryType`` is npm / pypi / oci / nuget /
     #: cargo / mcpb, with the identifier and version alongside.
     packages: tuple[dict[str, Any], ...] = field(default_factory=tuple)
     #: Remote endpoints, each with a ``type`` of ``streamable-http`` or ``sse``.

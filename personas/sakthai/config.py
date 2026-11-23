@@ -206,7 +206,7 @@ def sakking_home() -> Path:
     return Path(override) if override else Path.home() / ".sakking"
 
 
-#: Base URL of the official MCP Registry — the upstream catalogue of publicly
+#: Base URL of the official MCP Registry — the upstream catalog of publicly
 #: published MCP servers, maintained by the registry working group.
 DEFAULT_MCP_REGISTRY_URL = "https://registry.modelcontextprotocol.io"
 
@@ -215,7 +215,7 @@ def mcp_registry_url() -> str:
     """Base URL of the MCP registry to sync from.
 
     ``SAKTHAI_MCP_REGISTRY_URL`` points this at a private subregistry — an
-    aggregator that implements the same OpenAPI surface — so an organisation
+    aggregator that implements the same OpenAPI surface — so an organization
     can curate what its agents may discover. Trailing slashes are stripped so
     callers can join paths without doubling them.
     """
@@ -247,7 +247,7 @@ def mcp_security_level() -> str:
     """The security level ``mcp/manager.py`` validates external servers at.
 
     One of ``strict``, ``balanced`` (the default) or ``permissive``, from
-    ``SAKTHAI_MCP_SECURITY_LEVEL``. An unrecognised value falls back to
+    ``SAKTHAI_MCP_SECURITY_LEVEL``. An unrecognized value falls back to
     ``balanced`` rather than failing a launch over a typo — but note that
     ``strict`` is the fail-closed setting, so a typo gives you *less*
     enforcement, not more. ``sakthai doctor`` reports the level in effect.
@@ -348,7 +348,7 @@ def workflow_runs_dir() -> Path:
 def clients_dir() -> Path:
     """Directory where ``sakthai client`` stores provisioned client workspaces.
 
-    Honours ``SAKTHAI_CLIENTS_DIR`` first, then falls back under
+    Honors ``SAKTHAI_CLIENTS_DIR`` first, then falls back under
     :func:`sakthai_home` so the per-persona ``SAKTHAI_HOME`` convention applies
     here as it does to every other path. With neither set this resolves to
     ``~/.sakthai/clients``, unchanged from before it was routed through here.

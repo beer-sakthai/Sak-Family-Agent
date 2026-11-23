@@ -15,9 +15,9 @@ left in release notes. ``docs/mcp-deprecations.md`` is generated from
 :data:`FEATURE_STATES` by ``scripts/gen_mcp_docs.py``, and a test fails if the
 two disagree.
 
-Deprecating something here does **not** change behaviour. It records the
+Deprecating something here does **not** change behavior. It records the
 intent, warns the operator once, and names the replacement and the earliest
-date the behaviour may be withdrawn.
+date the behavior may be withdrawn.
 """
 
 from __future__ import annotations
@@ -83,7 +83,7 @@ FEATURE_STATES: tuple[Feature, ...] = (
             "and accepts either a JSON or an SSE-framed reply — that is "
             "Streamable HTTP. There is no GET stream, which is what an SSE "
             "transport would be. Every remote entry in the six shipped persona "
-            'manifests omits `type` entirely and so was labelled `"sse"` by '
+            'manifests omits `type` entirely and so was labeled `"sse"` by '
             "default, making the misnomer universal and invisible. Keeping the "
             "name would leave operators configuring a transport that does not "
             "exist. The HTTP+SSE transport itself is separately deprecated "

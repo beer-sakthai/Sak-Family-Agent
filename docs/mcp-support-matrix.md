@@ -95,7 +95,7 @@ surface) · **host** (the host's job, not a server's).
 | HTTP GET stream (server→client) | **No** | Deliberate — see *Gaps*. |
 | SSE resumability (`Last-Event-ID`) | **No** | Requires the GET stream. A broken request is re-issued whole. |
 | HTTP+SSE (the pre-2025-03-26 transport) | n/a | Deprecated upstream in `2026-07-28`; never implemented here. |
-| Origin validation / DNS-rebinding defence | Yes | Inbound HTTP, loopback plus `SAKTHAI_MCP_HTTP_ORIGIN`. |
+| Origin validation / DNS-rebinding defense | Yes | Inbound HTTP, loopback plus `SAKTHAI_MCP_HTTP_ORIGIN`. |
 
 ## Client-initiated features
 

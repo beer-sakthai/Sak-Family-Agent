@@ -255,7 +255,7 @@ def test_parse_servers_list_format() -> None:
     assert by_name["sakking"].transport == "stdio"
 
     assert by_name["feather"].url == "https://mcp.feather.so"
-    # The legacy `"sse"` spelling in the manifest normalises to the name that
+    # The legacy `"sse"` spelling in the manifest normalizes to the name that
     # describes what the client actually does. See mcp/lifecycle.py.
     assert by_name["feather"].transport == STREAMABLE_HTTP
     assert by_name["feather"].tools == ["list_blogs", "create_post"]
@@ -406,6 +406,6 @@ def test_inferring_the_transport_does_not_warn() -> None:
 
 
 def test_an_unknown_transport_passes_through_lowercased() -> None:
-    """Rejecting it here would be a behaviour change; the manager decides."""
+    """Rejecting it here would be a behavior change; the manager decides."""
     specs = parse_mcp_servers({"mcpServers": {"x": {"command": "node", "transport": "WebSocket"}}})
     assert specs[0].transport == "websocket"

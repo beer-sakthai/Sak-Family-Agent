@@ -230,8 +230,8 @@ def test_mcp_tool_to_sakthai_tool() -> None:
     tool = mcp_tool_to_sakthai_tool(raw_desc, call_mock, prefix="mcp__")
     assert isinstance(tool, Tool)
     assert tool.name == "mcp__calc"
-    # The description is sanitised like every other remote one: truncated and
-    # labelled untrusted. It previously passed the raw upstream string through,
+    # The description is sanitized like every other remote one: truncated and
+    # labeled untrusted. It previously passed the raw upstream string through,
     # which would have quietly undone that mitigation for the first caller to
     # wire this up.
     assert "Perform calculation" in tool.description
