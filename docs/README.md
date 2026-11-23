@@ -12,6 +12,7 @@ Official technical documentation and architectural reference for **House of Sak*
 - [**architecture.md**](./architecture.md) — Layered architecture across `personas/sakthai/`, Next.js dashboard, SQLite memory, safety guardrails, and MCP subsystem.
 - [**capabilities.md**](./capabilities.md) — Complete tool inventory, memory operations, providers, dashboard CLI, and unified platform capabilities.
 - [**plugins.md**](./plugins.md) — MCP server + skills extensibility model and configuration schemas.
+- [**mcp-builtin-servers.md**](./mcp-builtin-servers.md) — The four code-defined built-in MCP servers (genkit, google_dev_knowledge, figma, huggingface): per-persona loadouts, credential gating, and why `sak run` loads more than `sak mcp list` shows.
 - [**integrations.md**](./integrations.md) — Multi-agent connections, external services over MCP, and no-cost local recipes.
 - [**runtimes.md**](./runtimes.md) — CLI, Textual TUI (`sak chat --tui`) with two-phase tool logging and risk permission modal, agent loop, OpenAI-compatible Runtime Gateway with SSE pipeline streaming, Memory Shard Studio, Free-Tier Quota Sentinel, stdio MCP server, and local models (Ollama / OpenAI-compatible).
 - [**inter-agent-communication-protocol.md**](./inter-agent-communication-protocol.md) — JSON schema contracts and inter-agent handoffs.

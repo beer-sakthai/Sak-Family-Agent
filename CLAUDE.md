@@ -1067,6 +1067,7 @@ A skill directory may also carry `commands/<name>.md` files, which become
 | `docs/og_parity_audit.md` | Comparison with original SakThai |
 | `docs/integrations.md` | Composio and cross-agent communication recipes |
 | `docs/skill-naming.md` | The `Sak-` / `Sak<Name>-` naming convention |
+| `docs/mcp-builtin-servers.md` | The four code-defined built-in MCP servers (genkit, google_dev_knowledge, figma, huggingface): per-persona loadouts, startup gates, and the `--builtins` inspection gap |
 | `docs/mcp-support-matrix.md` | Which MCP features each of the four surfaces implements, and which absences are decisions |
 | `docs/mcp-threat-model.md` | MCP architecture and attack flows, each with the control that closes it |
 | `docs/mcp-registry.md` | Registry aggregators and subregistries; the `deleted`-status supply-chain check |
