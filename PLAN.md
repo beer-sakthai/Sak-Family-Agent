@@ -214,7 +214,7 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-22 **Phase 3: Client Transport Layer** — Support official `mcp>=2` client transports (Streamable HTTP / SSE) and dynamic token auth (`HF_TOKEN`, `FIGMA_ACCESS_TOKEN`, `GOOGLE_API_KEY`) with graceful degradation.
 - [x] 2026-11-22 **Phase 4: Persona Parity & Backpack Documentation** — Synchronize across all 6 personas, update `BACKPACK.md` files and `docs/capabilities.md`.
 - [x] 2026-11-22 **Phase 5: Verification & Quality Gates** — Add tests in `tests/test_mcp_ecosystem_v2.py`, maintain $\ge 96.0\%$ coverage, verify `make test`, `make lint`, `mypy`, `bandit`.
-- [/] **Phase 6: PR Creation & Delivery** — Open PR on branch `feat/mcp-v2-genkit-figma-hf-google-knowledge` for Beer's manual review.
+- [x] 2026-11-22 **Phase 6: PR Creation & Delivery** — Open PR #2061 on branch `feat/mcp-v2-genkit-figma-hf-google-knowledge` for Beer's manual review.
 
 ## 📋 Sub-Plans
 
