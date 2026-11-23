@@ -537,3 +537,113 @@ def mcp_tools(persona: str | None) -> None:
         click.echo(f"Available external MCP tool(s) ({len(tools)}):")
         for t in tools:
             click.echo(f"  • {click.style(t.name, bold=True)}: {t.description}")
+
+
+@mcp.group(name="registry")
+def mcp_registry() -> None:
+    """Sync and search the MCP registry.
+
+    The registry is the upstream catalogue of published MCP servers. Syncing it
+    gives two things a hand-edited ``mcp.json`` cannot: a way to find a server
+    by name, and the status the registry carries for each one — so a server
+    withdrawn upstream for malware shows up in ``sakthai doctor`` instead of
+    going on running. Point ``SAKTHAI_MCP_REGISTRY_URL`` at a private
+    subregistry to curate what is discoverable.
+    """
+
+
+@mcp_registry.command(name="sync")
+@click.option("--since", default=None, help="RFC 3339 timestamp; fetch only what changed since.")
+@click.option("--url", default=None, help="Registry base URL (default: SAKTHAI_MCP_REGISTRY_URL).")
+def mcp_registry_sync(since: str | None, url: str | None) -> None:
+    """Fetch the registry listing into the local cache."""
+    from ..mcp.registry import RegistryError, sync
+
+    target = url or config.mcp_registry_url()
+    click.echo(f"Syncing {target} …")
+    try:
+        count = sync(base_url=url, updated_since=since)
+    except RegistryError as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(f"Cached {count} server(s) to {config.registry_cache_path()}")
+
+
+@mcp_registry.command(name="search")
+@click.argument("query", required=False, default="")
+@click.option("--limit", default=20, show_default=True, help="Maximum results.")
+@click.option("--all", "include_problems", is_flag=True, help="Include deprecated and deleted.")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
+def mcp_registry_search(query: str, limit: int, include_problems: bool, as_json: bool) -> None:
+    """Search the cached registry listing."""
+    from ..mcp.registry import read_cache, search
+
+    cached = read_cache()
+    if not cached:
+        raise click.ClickException("No registry cache. Run `sakthai mcp registry sync` first.")
+
+    hits = search(query, servers=cached, limit=limit, include_problems=include_problems)
+    if as_json:
+        click.echo(json.dumps([s.to_json() for s in hits], indent=2))
+        return
+    if not hits:
+        click.echo(f"No match for {query!r} in {len(cached)} cached server(s).")
+        return
+
+    click.echo(f"{len(hits)} of {len(cached)} cached server(s):")
+    for s in hits:
+        flag = "" if not s.is_problem else click.style(f" [{s.status}]", fg="red", bold=True)
+        version = f" {s.version}" if s.version else ""
+        click.echo(f"  • {click.style(s.name, bold=True)}{version}{flag}")
+        if s.description:
+            click.echo(f"      {s.description}")
+
+
+@mcp_registry.command(name="check")
+@click.option("--persona", default=None, help="Check the servers a specific persona configures.")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
+def mcp_registry_check(persona: str | None, as_json: bool) -> None:
+    """Report configured servers the registry marks deprecated or deleted.
+
+    This is what a version pin cannot do. A pin stops an unreviewed new release
+    from running; it says nothing about the release you already pinned being
+    withdrawn for malware. Exits non-zero when something is found, so it can
+    gate a deploy.
+    """
+    from ..mcp import load_server_specs
+    from ..mcp.registry import check_configured_servers, read_cache
+
+    cached = read_cache()
+    if not cached:
+        raise click.ClickException("No registry cache. Run `sakthai mcp registry sync` first.")
+
+    ctx_mgr = (
+        _temp_env("SAKTHAI_MCP_CONFIG", str(config.persona_mcp_config_path(persona)))
+        if (persona and config.persona_mcp_config_path(persona).is_file())
+        else contextlib.nullcontext()
+    )
+    with ctx_mgr:
+        specs = load_server_specs()
+
+    problems = check_configured_servers([s.name for s in specs], servers=cached)
+
+    if as_json:
+        click.echo(
+            json.dumps(
+                [
+                    {"configured_as": name, "registry_name": e.name, "status": e.status}
+                    for name, e in problems
+                ],
+                indent=2,
+            )
+        )
+    elif not problems:
+        click.echo(f"All {len(specs)} configured server(s) are active upstream.")
+    else:
+        click.echo(f"{len(problems)} configured server(s) withdrawn upstream:")
+        for name, entry in problems:
+            click.echo(
+                f"  • {click.style(name, bold=True)} matches "
+                f"{entry.name} — {click.style(entry.status, fg='red', bold=True)}"
+            )
+    if problems:
+        raise SystemExit(1)

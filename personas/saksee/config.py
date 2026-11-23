@@ -139,6 +139,7 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "SAKTHAI_PERSONA": "Which Sak Family persona a Telegram/systemd launch is running as",
     "SAKTHAI_MCP_TIMEOUT": "Seconds to wait for an external MCP server reply (default: 30)",
     "SAKTHAI_EXPERIMENTAL": "Offer draft-track MCP extensions (currently MCP Apps / ui:// resources)",
+    "SAKTHAI_MCP_REGISTRY_URL": "Base URL of the MCP registry to sync from (default: the official registry)",
     "SAKTHAI_MCP_SECURITY_LEVEL": "How strictly external MCP servers are validated: strict, balanced (default) or permissive",
     "SAKTHAI_APPROVED_MCP": "External MCP server names allowed under the strict security level, comma/space separated",
     "TELEGRAM_ALLOWED_USER_IDS": "Comma- or space-separated Telegram user IDs allowed to use the bot",
@@ -203,6 +204,27 @@ def sakking_home() -> Path:
     """Return the SakKing data directory, honouring the SAKKING_HOME override."""
     override = os.environ.get("SAKKING_HOME")
     return Path(override) if override else Path.home() / ".sakking"
+
+
+#: Base URL of the official MCP Registry — the upstream catalogue of publicly
+#: published MCP servers, maintained by the registry working group.
+DEFAULT_MCP_REGISTRY_URL = "https://registry.modelcontextprotocol.io"
+
+
+def mcp_registry_url() -> str:
+    """Base URL of the MCP registry to sync from.
+
+    ``SAKTHAI_MCP_REGISTRY_URL`` points this at a private subregistry — an
+    aggregator that implements the same OpenAPI surface — so an organisation
+    can curate what its agents may discover. Trailing slashes are stripped so
+    callers can join paths without doubling them.
+    """
+    return (os.environ.get("SAKTHAI_MCP_REGISTRY_URL") or DEFAULT_MCP_REGISTRY_URL).rstrip("/")
+
+
+def registry_cache_path() -> Path:
+    """Local cache of the registry listing, one JSON object per line."""
+    return sakthai_home() / "registry" / "servers.jsonl"
 
 
 def sakthai_experimental() -> bool:
