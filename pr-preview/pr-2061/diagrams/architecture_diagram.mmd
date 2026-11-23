@@ -1,0 +1,13 @@
+graph LR
+    User((User)) <--> CLI[SakThai CLI]
+    CLI <--> AgentLoop[Agent Loop]
+    AgentLoop <--> Memory[(SQLite Memory)]
+    AgentLoop <--> Skills[Skills Library]
+    CLI <--> MCPServer[MCP Server]
+    MCPServer <--> Memory
+    CLI <--> Dashboard[Dashboard]
+    Dashboard <--> Memory
+    
+    subgraph "External Integration"
+        MCPServer <--> OtherAgents[Other Agents/Editors]
+    end
