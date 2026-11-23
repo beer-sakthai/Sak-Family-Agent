@@ -21,9 +21,14 @@ from .. import config
 from ..agent.security_hardening import MCPServerValidator, SecurityLevel
 from ..agent.tools import Tool
 from .client import MCPClientError, RemoteMCPClient, StdioMCPClient
-from .servers import MCPServerSpec, load_server_specs
+from .servers import STREAMABLE_HTTP, MCPServerSpec, load_server_specs
 
 logger = logging.getLogger(__name__)
+
+#: Transport values routed to :class:`RemoteMCPClient`. ``"sse"`` and ``"http"``
+#: are legacy spellings that ``_parse_transport`` normalises away; they are
+#: still accepted here for a spec constructed directly in code.
+_REMOTE_TRANSPORTS = frozenset({STREAMABLE_HTTP, "sse", "http"})
 
 _SECURITY_LEVELS = {
     "strict": SecurityLevel.STRICT,
@@ -68,7 +73,7 @@ def connect_servers(
                 continue
 
             client: StdioMCPClient | RemoteMCPClient
-            if spec.transport in ("sse", "http") or spec.url:
+            if spec.transport in _REMOTE_TRANSPORTS or spec.url:
                 if not spec.url:
                     logger.warning("skipping remote MCP server %r: missing url", spec.name)
                     continue

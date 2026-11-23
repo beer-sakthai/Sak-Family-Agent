@@ -24,6 +24,7 @@ from ..config import (
     sakthai_home,
 )
 from ..extensions.install import extensions_dir
+from .lifecycle import warn_deprecated
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,44 @@ class MCPServerSpec:
 def mcp_config_path() -> Path:
     """The primary config file listing external MCP servers to auto-load."""
     return sakthai_home() / "mcp.json"
+
+
+#: The transport name for a remote server reached over HTTP POST.
+#:
+#: ``"sse"`` is the deprecated alias. It never described what the client does:
+#: ``RemoteMCPClient`` POSTs JSON-RPC and accepts either a JSON or an SSE-framed
+#: reply, which is Streamable HTTP; there is no GET stream, and a GET stream is
+#: what an SSE transport would be. See ``mcp/lifecycle.py``.
+STREAMABLE_HTTP = "streamable-http"
+
+#: Accepted spellings for the remote transport, mapped to :data:`STREAMABLE_HTTP`.
+_REMOTE_TRANSPORT_ALIASES = {"streamable-http", "streamable_http", "http", "sse"}
+
+#: Accepted spellings for a locally spawned stdio server.
+_STDIO_TRANSPORT_ALIASES = {"stdio", "local"}
+
+
+def _parse_transport(raw_type: object, name: str, url: str | None, command: str | None) -> str:
+    """The transport for one manifest entry, normalising legacy spellings.
+
+    With no ``type``/``transport`` key the transport is inferred, as before,
+    from whether the entry carries a ``url`` or a ``command`` — which is how
+    every remote server in the six shipped persona manifests is configured, so
+    this path is the common one and must not warn.
+    """
+    if not isinstance(raw_type, str):
+        return STREAMABLE_HTTP if url and not command else "stdio"
+
+    lowered = raw_type.strip().lower()
+    if lowered in _STDIO_TRANSPORT_ALIASES:
+        return "stdio"
+    if lowered in _REMOTE_TRANSPORT_ALIASES:
+        if lowered == "sse":
+            warn_deprecated('transport: "sse"', context=f"MCP server {name!r}")
+        return STREAMABLE_HTTP
+    # Unknown values pass through lowercased, as before: the manager decides
+    # what to do with them, and rejecting here would be a behaviour change.
+    return lowered
 
 
 def _parse_server_entry(name: str, entry: dict[str, Any]) -> MCPServerSpec | None:
@@ -83,17 +122,7 @@ def _parse_server_entry(name: str, entry: dict[str, Any]) -> MCPServerSpec | Non
     raw_sandbox = entry.get("sandbox")
     sandbox = bool(raw_sandbox) if raw_sandbox is not None else False
 
-    raw_type = entry.get("type") or entry.get("transport")
-    if isinstance(raw_type, str):
-        t_lower = raw_type.lower()
-        if t_lower in ("local", "stdio"):
-            transport = "stdio"
-        elif t_lower in ("sse", "http"):
-            transport = "sse"
-        else:
-            transport = t_lower
-    else:
-        transport = "sse" if url and not command else "stdio"
+    transport = _parse_transport(entry.get("type") or entry.get("transport"), name, url, command)
 
     return MCPServerSpec(
         name=name,

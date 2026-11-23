@@ -11,11 +11,22 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from ..mcp.http import (
+    SESSION_HEADER,
+    MCPSessionStore,
+    handle_http,
+    handle_http_delete,
+)
+from ..mcp.protocol import PROTOCOL_VERSION_HEADER
+from ..memory.store import MemoryStore
 from ..web.server import _is_loopback_host
 from .config import GatewayConfig
 from .router import GatewayRouter
 
 logger = logging.getLogger(__name__)
+
+#: Paths serving the inbound MCP Streamable HTTP transport.
+MCP_ENDPOINTS = ("/v1/mcp", "/mcp")
 
 
 def _token_matches(candidate: str, expected: str) -> bool:
@@ -191,6 +202,48 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
         else:
             self._send_error(404, f"Endpoint '{path}' not found")
 
+    def _send_mcp_result(self, result: Any) -> None:
+        """Write an :class:`~sakthai.mcp.http.HttpResult` to the wire."""
+        if result.payload is None:
+            self.send_response(result.status)
+            for key, value in result.headers.items():
+                self.send_header(key, value)
+            self.send_header("Content-Length", "0")
+            self._send_cors_headers()
+            self.end_headers()
+            return
+
+        payload = json.dumps(result.payload, ensure_ascii=False).encode("utf-8")
+        self.send_response(result.status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(payload)))
+        for key, value in result.headers.items():
+            self.send_header(key, value)
+        self._send_cors_headers()
+        self.end_headers()
+        self.wfile.write(payload)
+
+    def _handle_mcp_post(self, body: Any) -> None:
+        """Serve one JSON-RPC message on the MCP Streamable HTTP endpoint.
+
+        The store is opened per request, inside this handler thread, matching
+        ``GatewayRouter.handle_tools_execute``. A SQLite connection belongs to
+        the thread that opened it, and this is a ``ThreadingHTTPServer`` — a
+        single long-lived store shared across handler threads raises
+        ``ProgrammingError`` as soon as two requests land on different threads.
+        WAL makes the repeated opens cheap and concurrent readers safe.
+        """
+        with MemoryStore() as store:
+            result = handle_http(
+                body,
+                store,
+                sessions=self.gateway.mcp_sessions,
+                session_id=self.headers.get(SESSION_HEADER),
+                protocol_version=self.headers.get(PROTOCOL_VERSION_HEADER),
+                origin=self.headers.get("Origin"),
+            )
+        self._send_mcp_result(result)
+
     def do_POST(self) -> None:
         """Handle POST endpoints."""
         parsed = urlparse(self.path)
@@ -207,6 +260,10 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
             body = json.loads(raw_body.decode("utf-8")) if raw_body else {}
         except Exception as exc:
             self._send_error(400, f"Malformed JSON request: {exc}")
+            return
+
+        if path in MCP_ENDPOINTS:
+            self._handle_mcp_post(body)
             return
 
         if path in ("/v1/chat/completions", "/chat/completions"):
@@ -297,6 +354,14 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
             self._send_error(401, "Unauthorized: Invalid or missing bearer token")
             return
 
+        if path in MCP_ENDPOINTS:
+            self._send_mcp_result(
+                handle_http_delete(
+                    self.headers.get(SESSION_HEADER), sessions=self.gateway.mcp_sessions
+                )
+            )
+            return
+
         if path.startswith("/v1/memory/facts/") or path.startswith("/memory/facts/"):
             fact_id_str = path.rsplit("/", 1)[-1]
             qs = parse_qs(parsed.query)
@@ -329,6 +394,11 @@ class RuntimeGatewayServer:
         self.is_running = False
         self.port = self.config.port
         self.host = self.config.host
+        #: Live sessions on the MCP Streamable HTTP endpoint. One per server
+        #: instance, shared across handler threads — which is safe because
+        #: MCPSessionStore guards its own state with a lock. The *memory store*
+        #: deliberately is not shared; see ``_handle_mcp_post``.
+        self.mcp_sessions = MCPSessionStore()
 
     def start(self, background: bool = True) -> None:
         """Start the HTTP server."""

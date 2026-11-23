@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import warnings
 from pathlib import Path
 
 import pytest
 
+from sakthai.mcp.lifecycle import _reset_warned_for_tests
 from sakthai.mcp.servers import (
+    STREAMABLE_HTTP,
     load_server_specs,
     mcp_config_path,
     parse_mcp_servers,
@@ -252,7 +255,9 @@ def test_parse_servers_list_format() -> None:
     assert by_name["sakking"].transport == "stdio"
 
     assert by_name["feather"].url == "https://mcp.feather.so"
-    assert by_name["feather"].transport == "sse"
+    # The legacy `"sse"` spelling in the manifest normalises to the name that
+    # describes what the client actually does. See mcp/lifecycle.py.
+    assert by_name["feather"].transport == STREAMABLE_HTTP
     assert by_name["feather"].tools == ["list_blogs", "create_post"]
 
 
@@ -269,7 +274,7 @@ def test_parse_servers_dict_format() -> None:
     assert len(specs) == 1
     assert specs[0].name == "remote_srv"
     assert specs[0].url == "https://example.com/mcp"
-    assert specs[0].transport == "sse"
+    assert specs[0].transport == STREAMABLE_HTTP
     assert specs[0].tools == ["tool_a"]
 
 
@@ -308,7 +313,7 @@ def test_parse_headers_with_env_expansion(monkeypatch: pytest.MonkeyPatch) -> No
     spec = specs[0]
     assert spec.name == "stepsecurity"
     assert spec.url == "https://agent.api.stepsecurity.io/v1/mcp?customer=beer-sakthai"
-    assert spec.transport == "sse"
+    assert spec.transport == STREAMABLE_HTTP
     assert spec.headers["Authorization"] == "Bearer step_mock_token_12345"
     assert spec.headers["X-Custom-Header"] == "constant-value"
 
@@ -350,3 +355,57 @@ def test_parse_mcp_servers_additional_branches() -> None:
     from sakthai.mcp.servers import _parse_server_entry
 
     assert _parse_server_entry("bad", "not_dict") is None
+
+
+# ---------------------------------------------------------------------------
+# Transport naming: "streamable-http" and the deprecated "sse" alias
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("spelling", ["streamable-http", "streamable_http", "http", "HTTP"])
+def test_remote_transport_spellings_normalise(spelling: str) -> None:
+    specs = parse_mcp_servers(
+        {"mcpServers": {"r": {"url": "https://example.com/mcp", "transport": spelling}}}
+    )
+    assert specs[0].transport == STREAMABLE_HTTP
+
+
+@pytest.mark.parametrize("spelling", ["stdio", "local", "STDIO"])
+def test_stdio_transport_spellings_normalise(spelling: str) -> None:
+    specs = parse_mcp_servers({"mcpServers": {"s": {"command": "node", "transport": spelling}}})
+    assert specs[0].transport == "stdio"
+
+
+def test_the_sse_alias_warns_and_normalises() -> None:
+    """`"sse"` never named an SSE transport: there is no GET stream.
+
+    `RemoteMCPClient` POSTs JSON-RPC and accepts a JSON or SSE-framed reply,
+    which is Streamable HTTP. The alias keeps working for a release cycle; see
+    mcp/lifecycle.py for the dates.
+    """
+    _reset_warned_for_tests()
+    with pytest.warns(DeprecationWarning, match="streamable-http"):
+        specs = parse_mcp_servers(
+            {"mcpServers": {"legacy": {"url": "https://example.com/mcp", "transport": "sse"}}}
+        )
+    assert specs[0].transport == STREAMABLE_HTTP
+
+
+def test_inferring_the_transport_does_not_warn() -> None:
+    """Every remote server in the six shipped manifests omits `type` entirely.
+
+    That inference path is the common one, so it must stay quiet — warning
+    there would fire on every launch for configuration that is already correct.
+    """
+    _reset_warned_for_tests()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        specs = parse_mcp_servers({"mcpServers": {"r": {"url": "https://example.com/mcp"}}})
+    assert specs[0].transport == STREAMABLE_HTTP
+    assert [w for w in caught if issubclass(w.category, DeprecationWarning)] == []
+
+
+def test_an_unknown_transport_passes_through_lowercased() -> None:
+    """Rejecting it here would be a behaviour change; the manager decides."""
+    specs = parse_mcp_servers({"mcpServers": {"x": {"command": "node", "transport": "WebSocket"}}})
+    assert specs[0].transport == "websocket"
