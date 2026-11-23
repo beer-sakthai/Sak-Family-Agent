@@ -1,0 +1,44 @@
+[
+  {
+    "testCaseId": "dev-001",
+    "split": "dev",
+    "input": {
+      "prompt": "Check current weather in Cork and summarize in 1 sentence.",
+      "expectedTool": "getWeather",
+      "maxAllowedTurns": 3,
+      "simulatedToolOutput": "{\"city\":\"Cork\",\"tempC\":14,\"condition\":\"Light rain\"}",
+      "requireA2ui": false
+    },
+    "reference": {
+      "expectedFacts": ["Cork", "14"]
+    }
+  },
+  {
+    "testCaseId": "val-001",
+    "split": "validation",
+    "input": {
+      "prompt": "Render a visual weather card for Cork.",
+      "expectedTool": "getWeather",
+      "maxAllowedTurns": 4,
+      "simulatedToolOutput": "{\"city\":\"Cork\",\"tempC\":14,\"condition\":\"Light rain\"}",
+      "requireA2ui": true
+    },
+    "reference": {
+      "expectedFacts": ["Cork", "14"]
+    }
+  },
+  {
+    "testCaseId": "holdout-001",
+    "split": "holdout",
+    "input": {
+      "prompt": "Compare weather in Cork and Dublin using structured cards.",
+      "expectedTool": "getWeather",
+      "maxAllowedTurns": 5,
+      "simulatedToolOutput": "{\"city\":\"Cork\",\"tempC\":14}",
+      "requireA2ui": true
+    },
+    "reference": {
+      "expectedFacts": ["Cork", "Dublin"]
+    }
+  }
+]
