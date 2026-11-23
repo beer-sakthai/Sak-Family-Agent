@@ -91,6 +91,49 @@ def _isolate_home(monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
             reset_quota_sentinel()
 
 
+@pytest.fixture(autouse=True)
+def _isolate_mcp_config(_isolate_home: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Point `SAKTHAI_MCP_CONFIG` at an empty manifest for every test.
+
+    `_isolate_home` sandboxes the first three tiers of
+    `mcp/servers.load_server_specs()` — the two extension directories and
+    `~/.sakthai/mcp.json` — because all three hang off `SAKTHAI_HOME`. The
+    fourth and highest tier does not: `SAKTHAI_MCP_CONFIG` is an absolute path,
+    and `cli/agent.py:_tool_context` sets it to
+    `config.persona_mcp_config_path(persona)` whenever `--persona` is passed and
+    the variable is not already set. That resolves to the repository's own
+    `personas/<persona>/config/mcp.json`, so a test invoking `run --persona X`
+    without `--no-mcp` really starts that persona's servers.
+
+    That happened. Finding 1 of docs/test-coverage-audit-2026-09-01.md caught
+    five `node` processes fetching from `registry.npmjs.org` inside the
+    `test (3.11)` job, then reaching `huggingface.co` and a FLUX.1-schnell
+    Space — four MCP servers coming up, in CI, on every push, for a test whose
+    assertions never touched MCP. `connect_servers` fails soft, so the test
+    passed identically with the registry unreachable: the egress bought no
+    signal at all. The audit asked for exactly this fixture so that "real MCP
+    server" is an explicit choice rather than the default.
+
+    An empty `{"mcpServers": {}}` is deliberately not the same as unsetting the
+    variable. `load_server_specs` merges tiers into one dict by server name, so
+    an empty highest tier contributes nothing and *shadows nothing* — the many
+    tests that configure servers through the sandboxed `~/.sakthai/mcp.json`
+    keep working unchanged. All it removes is the persona-manifest escape hatch.
+
+    Opt out explicitly when a test needs that hatch, the same way
+    `test_memory_merged.py` opts out of `SAKTHAI_HOME`:
+
+        monkeypatch.delenv("SAKTHAI_MCP_CONFIG", raising=False)
+
+    `monkeypatch` is function-scoped and later calls win, so a test that sets
+    the variable to a manifest of its own needs no opt-out.
+    """
+    empty = _isolate_home / "empty-mcp.json"
+    empty.write_text('{"mcpServers": {}}', encoding="utf-8")
+    monkeypatch.setenv("SAKTHAI_MCP_CONFIG", str(empty))
+    return empty
+
+
 @pytest.fixture
 def store(tmp_path: Path) -> Iterator[MemoryStore]:
     s = MemoryStore(tmp_path / "memory.db")

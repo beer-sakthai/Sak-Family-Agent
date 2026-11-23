@@ -17,12 +17,19 @@ import logging
 import os
 from collections.abc import Iterator, Sequence
 
+from .. import config
 from ..agent.security_hardening import MCPServerValidator, SecurityLevel
 from ..agent.tools import Tool
 from .client import MCPClientError, RemoteMCPClient, StdioMCPClient
 from .servers import MCPServerSpec, load_server_specs
 
 logger = logging.getLogger(__name__)
+
+_SECURITY_LEVELS = {
+    "strict": SecurityLevel.STRICT,
+    "balanced": SecurityLevel.BALANCED,
+    "permissive": SecurityLevel.PERMISSIVE,
+}
 
 
 @contextlib.contextmanager
@@ -40,6 +47,9 @@ def connect_servers(
         specs = load_server_specs()
     clients: list[StdioMCPClient | RemoteMCPClient] = []
     tools: list[Tool] = []
+    # Was hardcoded BALANCED, which left STRICT — and with it the whole
+    # approved-server allow-list — unreachable. See config.mcp_security_level().
+    level = _SECURITY_LEVELS[config.mcp_security_level()]
     try:
         for spec in specs:
             is_valid, reason = MCPServerValidator.validate_server_config(
@@ -51,7 +61,7 @@ def connect_servers(
                     "cwd": spec.cwd,
                     "url": spec.url or "",
                 },
-                SecurityLevel.BALANCED,
+                level,
             )
             if not is_valid:
                 logger.warning("skipping unsafe MCP server %r: %s", spec.name, reason)
@@ -78,9 +88,12 @@ def connect_servers(
                     "SAKTHAI_MCP_SANDBOX", ""
                 ).strip().lower() in ("1", "true")
                 if is_sandboxed and os.name == "posix":
-                    wrapped = MCPServerValidator.get_sandbox_wrapper(
-                        cmd, args=args, timeout_sec=int(timeout or 30)
-                    )
+                    # No lifetime cap: `timeout` is the per-request read budget,
+                    # not how long the server may live. Passing it here wrapped
+                    # the server in `timeout 30` and killed it thirty seconds
+                    # after launch. Its lifetime is already bounded by
+                    # `client.close()` in the `finally` below.
+                    wrapped = MCPServerValidator.get_sandbox_wrapper(cmd, args=args)
                     cmd = wrapped[0]
                     args = wrapped[1:]
                 client = StdioMCPClient(

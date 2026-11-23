@@ -48,11 +48,61 @@ PreGuardrailRule = Callable[[Tool, dict[str, Any], MemoryStore], GuardrailResult
 PostGuardrailRule = Callable[[Tool, dict[str, Any], str, bool, MemoryStore], GuardrailResult]
 
 
+#: Separator the MCP manager inserts between an external server's name and that
+#: server's own tool name when merging its tools into the registry — see
+#: ``mcp/manager.py``: ``client.as_tools(prefix=f"{spec.name}__")``.
+_MCP_NAMESPACE_SEP = "__"
+
+
+def effective_tool_name(name: str) -> str:
+    """``name`` with any external-MCP server namespace stripped.
+
+    Every rule below that keys off a specific tool keys off a *bare* built-in
+    name: ``run_command``, ``send_outlook_mail``. But tools reaching the
+    registry from an external MCP server are namespaced ``<server>__<tool>``,
+    so a server named ``shell`` offering ``run_command`` arrives as
+    ``shell__run_command`` — and against the raw name every one of those rules
+    silently falls through to ALLOW.
+
+    That was not theoretical. It meant an external shell tool was exempt from
+    the ``SAKTHAI_SHELL_ALLOW`` opt-in *and* from the destructive-token and
+    sensitive-path scanning in this module, while a sibling rule
+    (``_block_sensitive_path_args``) exempts only the literal ``run_command``
+    and so applied its *blunt* path check to the external tool instead — a
+    strict inversion of the intent: the less precise rule fired and the more
+    precise one did not.
+
+    No built-in tool name contains a double underscore, so stripping one is
+    unambiguous. The first separator is the split point, because the server
+    name is the prefix; a tool name that itself contains ``__`` keeps it.
+
+    **What this does and does not buy.** It makes an external tool that
+    *presents itself as* a built-in get that built-in's treatment, which covers
+    the realistic case: a genuine MCP shell server offering ``run_command``,
+    previously ungated. It cannot secure external tools in general — a server
+    offering the same capability under a name nothing matches (``shell__exec``)
+    is still reached only by the generic rules. Name matching is a floor, not a
+    boundary; the boundary is the server allow-list and ``spec.tools``.
+    """
+    head, sep, tail = name.partition(_MCP_NAMESPACE_SEP)
+    return tail if sep and head and tail else name
+
+
+def _base_name(tool: Tool) -> str:
+    """The tool's name for rule-matching purposes. See `effective_tool_name`."""
+    return effective_tool_name(tool.name)
+
+
 def _block_run_command_if_not_allowed(
     tool: Tool, _args: dict[str, Any], _store: MemoryStore
 ) -> GuardrailResult:
-    """Deny the `run_command` tool if SAKTHAI_SHELL_ALLOW is not set."""
-    if tool.name == "run_command" and not os.environ.get("SAKTHAI_SHELL_ALLOW"):
+    """Deny the `run_command` tool if SAKTHAI_SHELL_ALLOW is not set.
+
+    Applies to an external MCP server's ``run_command`` too: the opt-in is the
+    operator's consent to shell execution, and which process supplies the shell
+    does not change what consent is being given.
+    """
+    if _base_name(tool) == "run_command" and not os.environ.get("SAKTHAI_SHELL_ALLOW"):
         return GuardrailResult(
             GuardrailAction.DENY,
             reason="Tool 'run_command' is disabled. Set SAKTHAI_SHELL_ALLOW to enable it.",
@@ -69,7 +119,7 @@ def _block_mail_to_unlisted_recipients(
     document or MCP result could otherwise mail private memory to anyone.
     Entries are full addresses or ``@domain``; unset denies every recipient.
     """
-    if tool.name != "send_outlook_mail":
+    if _base_name(tool) != "send_outlook_mail":
         return GuardrailResult(GuardrailAction.ALLOW)
     recipient = args.get("to")
     if not isinstance(recipient, str) or not recipient.strip():
@@ -1255,7 +1305,7 @@ def _block_dangerous_shell_commands(
     tool: Tool, args: dict[str, Any], _store: MemoryStore
 ) -> GuardrailResult:
     """Deny `run_command` if it contains a potentially destructive command."""
-    if tool.name != "run_command":
+    if _base_name(tool) != "run_command":
         return GuardrailResult(GuardrailAction.ALLOW)
 
     command = args.get("command", "")
@@ -1289,7 +1339,7 @@ def _enforce_verbose_listing(
     tool: Tool, args: dict[str, Any], _store: MemoryStore
 ) -> GuardrailResult:
     """If `run_command` is used for `ls`, enforce the `-l` flag."""
-    if tool.name == "run_command" and isinstance(args.get("command"), str):
+    if _base_name(tool) == "run_command" and isinstance(args.get("command"), str):
         command = args["command"]
         if command.strip() == "ls" or (command.startswith("ls ") and "-l" not in command):
             modified_args = args.copy()
@@ -1337,8 +1387,10 @@ def _block_sensitive_path_args(
     tool: Tool, args: dict[str, Any], _store: MemoryStore
 ) -> GuardrailResult:
     """Deny any tool call that targets a sensitive path via its arguments."""
-    # run_command has its own specialized (and recursive) guardrails.
-    if tool.name == "run_command":
+    # run_command has its own specialized (and recursive) guardrails. Normalized
+    # so an external `<server>__run_command` is routed to those rules rather
+    # than being handed this blunter one instead of them.
+    if _base_name(tool) == "run_command":
         return GuardrailResult(GuardrailAction.ALLOW)
 
     for key, value in args.items():

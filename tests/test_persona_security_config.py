@@ -14,6 +14,13 @@ agent runtime itself, so nothing but a test keeps them safe:
   stay manual (cron jobs denied).
 * remote MCP headers never carry a literal credential, only a ``${VAR}``
   reference or an empty value filled in at deploy time.
+* every remote MCP server points at HTTPS and at a host on
+  :data:`_ALLOWED_MCP_HOSTS`. A ``url`` was previously unconstrained, so any
+  reachable endpoint passed — including a plaintext ``http://`` one, and
+  including a host no reviewer had ever seen. A remote MCP server is handed a
+  bearer token and its tool descriptions are fed to the model, so the host it
+  resolves to is a trust decision and belongs in review, not in a diff nobody
+  gates.
 """
 
 from __future__ import annotations
@@ -22,6 +29,7 @@ import json
 import re
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import pytest
 import yaml
@@ -35,6 +43,19 @@ PERSONAS_DIR = REPO_ROOT / "personas"
 # ``@scope/pkg@1.2.3``. Ranges, dist-tags (``latest``) and bare names fail.
 _PINNED_NPM_SPEC = re.compile(r"^(@[a-z0-9][\w.-]*/)?[a-z0-9][\w.-]*@\d+\.\d+\.\d+$")
 _ENV_REFERENCE = re.compile(r"^(\w+ )?\$\{[A-Z][A-Z0-9_]*\}$")
+
+#: Hosts the family's remote MCP servers may point at. Exact hostnames, no
+#: wildcards: a wildcard would let a subdomain takeover through the gate, which
+#: is the main thing this list exists to stop. Adding a host here is the review
+#: step — do it in the same change that adds the server, and say why.
+_ALLOWED_MCP_HOSTS = frozenset(
+    {
+        "agent.api.stepsecurity.io",  # StepSecurity supply-chain agent
+        "microsoft365.mcp.claude.com",  # Microsoft 365 connector (read-only tool set)
+        "learn.microsoft.com",  # Microsoft Learn docs, unauthenticated
+        "gemini-api-docs-mcp.dev",  # Gemini API docs, unauthenticated
+    }
+)
 
 
 def _load_yaml(persona: str) -> dict[str, Any]:
@@ -109,6 +130,33 @@ def test_security_block_fails_closed(persona: str) -> None:
     assert security["allow_private_urls"] is False
     assert config["approvals"]["mode"] == "manual"
     assert config["approvals"]["cron_mode"] == "deny"
+
+
+@pytest.mark.parametrize("persona", PERSONA_NAMES)
+def test_remote_mcp_servers_use_https(persona: str) -> None:
+    for name, spec in _mcp_servers(persona):
+        url = str(spec.get("url") or "")
+        if not url:
+            continue
+        assert url.startswith("https://"), (
+            f"personas/{persona} {name}: url {url!r} is not HTTPS. The request "
+            "carries a bearer token, so plaintext would expose it on the wire"
+        )
+
+
+@pytest.mark.parametrize("persona", PERSONA_NAMES)
+def test_remote_mcp_servers_point_at_reviewed_hosts(persona: str) -> None:
+    for name, spec in _mcp_servers(persona):
+        url = str(spec.get("url") or "")
+        if not url:
+            continue
+        host = (urlparse(url).hostname or "").lower()
+        assert host in _ALLOWED_MCP_HOSTS, (
+            f"personas/{persona} {name}: url points at {host!r}, which is not in "
+            "_ALLOWED_MCP_HOSTS. A remote MCP server receives a bearer token and "
+            "its tool descriptions reach the model — add the host to that list in "
+            "this change, with a comment saying what it is"
+        )
 
 
 @pytest.mark.parametrize("persona", PERSONA_NAMES)

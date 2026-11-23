@@ -17,6 +17,7 @@ from .guardrails import (
     GuardrailAction,
     GuardrailResult,
     _block_run_command_if_not_allowed,
+    effective_tool_name,
 )
 from .security_hardening import (
     ConfigFileIntegrity,
@@ -308,8 +309,11 @@ def create_pre_execution_guardrail_hardened() -> Callable[
         if result.action == GuardrailAction.DENY:
             return result
 
-        # Enhanced path checks for read_file and ingest_document
-        if tool.name in ("read_file", "ingest_document"):
+        # Enhanced path checks for read_file and ingest_document. Namespaced so
+        # an external MCP server's `<server>__read_file` is checked too — see
+        # `guardrails.effective_tool_name`.
+        bare_name = effective_tool_name(tool.name)
+        if bare_name in ("read_file", "ingest_document"):
             path = args.get("path", "")
             if isinstance(path, str):
                 result = check_enhanced_path_safety(path)
@@ -321,7 +325,7 @@ def create_pre_execution_guardrail_hardened() -> Callable[
                     return result
 
         # Enhanced shell command checks
-        if tool.name == "run_command":
+        if bare_name == "run_command":
             command = args.get("command", "")
             if isinstance(command, str):
                 result = check_shell_command_hardened(command)

@@ -141,11 +141,76 @@ def test_extract_text_non_list_returns_empty() -> None:
     assert _extract_text(None) == ""
 
 
-def test_extract_text_skips_non_text_blocks() -> None:
+def test_extract_text_describes_non_text_blocks() -> None:
+    """Non-text blocks are named, not dropped.
+
+    This used to assert they were skipped, so a tool answering only with an
+    image looked to the model like a tool answering with nothing. The handler
+    contract is `-> str`, so the blocks cannot pass through as-is; a one-line
+    description is the honest alternative to silence.
+    """
     from sakthai.mcp.client import _extract_text
 
-    content = [{"type": "image", "url": "x"}, {"type": "text", "text": "hi"}]
-    assert _extract_text(content) == "hi"
+    content = [{"type": "image", "mimeType": "image/png"}, {"type": "text", "text": "hi"}]
+    out = _extract_text(content)
+    assert "hi" in out
+    assert "image" in out and "image/png" in out
+
+
+def test_extract_text_does_not_inline_binary_payloads() -> None:
+    """A base64 image is tens of thousands of useless tokens."""
+    from sakthai.mcp.client import _extract_text
+
+    blob = "A" * 5000
+    out = _extract_text([{"type": "image", "mimeType": "image/png", "data": blob}])
+    assert blob not in out
+    assert len(out) < 200
+
+
+def test_extract_text_reports_resource_links() -> None:
+    from sakthai.mcp.client import _extract_text
+
+    out = _extract_text([{"type": "resource_link", "uri": "file:///x.txt", "name": "x"}])
+    assert "file:///x.txt" in out
+    assert "x" in out
+
+
+def test_extract_text_inlines_embedded_text_resources() -> None:
+    from sakthai.mcp.client import _extract_text
+
+    out = _extract_text([{"type": "resource", "resource": {"uri": "ui://x", "text": "body here"}}])
+    assert "ui://x" in out
+    assert "body here" in out
+
+
+def test_extract_text_appends_structured_content() -> None:
+    from sakthai.mcp.client import _extract_text
+
+    out = _extract_text([{"type": "text", "text": "hi"}], {"total": 3})
+    assert "hi" in out
+    assert '"total": 3' in out
+
+
+def test_extract_text_truncates_huge_structured_content() -> None:
+    from sakthai.mcp.client import _extract_text
+
+    out = _extract_text(None, {"k": "v" * 20000})
+    assert "truncated" in out
+    assert len(out) < 5000
+
+
+def test_extract_text_survives_unserialisable_structured_content() -> None:
+    from sakthai.mcp.client import _extract_text
+
+    out = _extract_text(None, {"bad": object()})
+    assert "not serialisable" in out
+
+
+def test_extract_text_names_unknown_block_types() -> None:
+    from sakthai.mcp.client import _extract_text
+
+    out = _extract_text([{"type": "something-new"}])
+    assert "something-new" in out
 
 
 def test_call_tool_raises_on_is_error() -> None:
