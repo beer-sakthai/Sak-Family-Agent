@@ -250,6 +250,39 @@ malicious. See [`mcp-registry.md`](mcp-registry.md) — the registry's `deleted`
 status records exactly that, and `sakthai mcp registry check` and
 `sakthai doctor` surface it against your configured servers.
 
+## 12. A second source of servers, outside the review gate — **closed**
+
+**Was open, briefly, and only as a combination.** Two changes landed in
+parallel. One added four MCP servers defined as *Python factories*
+(`BUILTIN_SERVER_FACTORIES` in `mcp/servers.py`) rather than as `mcp.json`
+entries, selected per persona and loaded unconditionally by `sakthai run`. The
+other added four invariants to `tests/test_persona_security_config.py` — HTTPS,
+a reviewed host allowlist, exact `npx` pinning, and no literal credentials in
+headers.
+
+Every one of those invariants read `personas/*/config/mcp.json`. The new
+servers were not in any manifest. So the gate was not violated — it was
+**bypassed**, and the test suite stayed green while reporting an invariant that
+had become false. Neither change had the problem alone.
+
+What it let through, concretely: `npx -y genkit mcp`, a bare package name, run
+on every launch of three personas. That is the unpinned-`npx` supply-chain hole
+that security-hardening finding #18 recorded and `_PINNED_NPM_SPEC` exists to
+forbid, reintroduced in a file the check could not see.
+
+**Closed by** making the enumeration the choke point rather than the file:
+`_mcp_servers()` now folds in `get_builtin_mcp_servers(persona)`, so the same
+four rules apply to every server the repository ships whatever defined it. A
+fifth source added later is governed automatically, because it has to enter
+through `load_server_specs` to run at all. genkit is pinned; the three new
+hosts are on the allowlist with a reason each.
+
+**The lesson generalises.** A check scoped to a *file* rather than to the
+*resolved state* holds only until someone adds a second way to express the same
+thing — and they will not think of themselves as bypassing anything. Verified
+by injecting both faults and confirming the suite goes red, naming
+`builtin:genkit` and `builtin:figma`.
+
 ---
 
 ## What to re-test when this area changes
@@ -267,6 +300,7 @@ status records exactly that, and `sakthai mcp registry check` and
 | 9 HTTP endpoint | `tests/test_mcp_http.py`, `tests/test_gateway_mcp_endpoint.py` |
 | 10 `ui://` view | `tests/test_mcp_resources.py` |
 | 11 Supply chain | `tests/test_mcp_registry.py`, `tests/test_cli_mcp_registry.py` |
+| 12 Second server source | `tests/test_persona_security_config.py`, `tests/test_mcp_builtin_server_security.py` |
 
 Guardrail and `web/server.py` changes must reach all six persona copies —
 `make sync-personas`, enforced by `tests/test_persona_package_parity.py`.

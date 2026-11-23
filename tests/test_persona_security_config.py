@@ -54,6 +54,12 @@ _ALLOWED_MCP_HOSTS = frozenset(
         "microsoft365.mcp.claude.com",  # Microsoft 365 connector (read-only tool set)
         "learn.microsoft.com",  # Microsoft Learn docs, unauthenticated
         "gemini-api-docs-mcp.dev",  # Gemini API docs, unauthenticated
+        # Added with the built-in ecosystem servers (PR #2061). These are
+        # defined in Python rather than in a manifest, which is exactly why
+        # `_mcp_servers` below had to grow to see them.
+        "developerknowledge.googleapis.com",  # Google Developer Knowledge MCP
+        "mcp.figma.com",  # Figma remote MCP
+        "huggingface.co",  # Hugging Face remote MCP
     }
 )
 
@@ -65,11 +71,52 @@ def _load_yaml(persona: str) -> dict[str, Any]:
     return data
 
 
+def _builtin_servers(persona: str) -> list[tuple[str, dict[str, Any]]]:
+    """The MCP servers this persona gets from code rather than from a manifest.
+
+    `mcp/servers.py` defines four servers as Python factories and selects them
+    per persona (`PERSONA_DEFAULT_MCP_SERVERS`), and `cli/agent.py` passes
+    `include_builtins=True` unconditionally — so every `sakthai run` loads them.
+
+    They are enumerated here because they were invisible to every invariant in
+    this module until they were. The rules below are about where a server
+    points and what credentials it carries; nothing about that changes because
+    the definition lives in a `.py` instead of a `.json`, and a server the
+    reviewer never sees is the one worth worrying about.
+
+    Returned in the dict shape the manifest entries use, so the assertions do
+    not have to care which source a server came from.
+    """
+    from sakthai.mcp.servers import get_builtin_mcp_servers
+
+    out: list[tuple[str, dict[str, Any]]] = []
+    for spec in get_builtin_mcp_servers(persona):
+        out.append(
+            (
+                f"builtin:{spec.name}",
+                {
+                    "command": spec.command or "",
+                    "args": list(spec.args),
+                    "url": spec.url or "",
+                    "headers": dict(spec.headers),
+                },
+            )
+        )
+    return out
+
+
 def _mcp_servers(persona: str) -> list[tuple[str, dict[str, Any]]]:
-    """Every MCP server a persona declares, from both config files."""
+    """Every MCP server this repository ships for `persona`.
+
+    Three sources, all repository content: the built-in factories, the
+    persona's `config/mcp.json`, and `config.yaml`'s `mcp_servers` key.
+    Deliberately NOT `~/.sakthai/mcp.json` — that is the developer's own file,
+    not something this repository can make promises about.
+    """
     config_dir = PERSONAS_DIR / persona / "config"
     manifest = json.loads((config_dir / "mcp.json").read_text(encoding="utf-8"))
-    servers = [(f"mcp.json:{name}", spec) for name, spec in manifest["mcpServers"].items()]
+    servers = _builtin_servers(persona)
+    servers += [(f"mcp.json:{name}", spec) for name, spec in manifest["mcpServers"].items()]
     yaml_servers = _load_yaml(persona).get("mcp_servers") or {}
     servers += [(f"config.yaml:{name}", spec) for name, spec in yaml_servers.items()]
     return servers
