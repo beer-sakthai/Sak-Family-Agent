@@ -56,6 +56,13 @@ To register external MCP servers, configure `~/.sakthai/mcp.json` (or persona co
 Omitting the key infers `streamable-http` when the entry has a `url`, `stdio`
 when it has a `command`.
 
+### Built-in ecosystem servers
+
+Besides the servers you configure, four ship **in code** — `genkit`,
+`google_dev_knowledge`, `figma`, `huggingface` — loaded per persona and gated on
+their credentials. `sakthai run` loads them automatically; `sakthai mcp list`
+shows them only with `--builtins`. See [`mcp-builtin-servers.md`](mcp-builtin-servers.md).
+
 ### Discovering servers
 
 `sakthai mcp registry sync` caches the MCP Registry's catalog, and
