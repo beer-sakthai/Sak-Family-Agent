@@ -70,7 +70,7 @@ def _tool_context(
     with contextlib.ExitStack() as stack:
         if override is not None:
             stack.enter_context(_temp_env("SAKTHAI_MCP_CONFIG", str(override)))
-        mcp_tools = stack.enter_context(connect_servers())
+        mcp_tools = stack.enter_context(connect_servers(persona=persona, include_builtins=True))
         if mcp_tools and verbose:
             click.echo(f"[mcp] loaded {len(mcp_tools)} external tool(s)", err=True)
         yield (*BUILTIN_TOOLS, *mcp_tools)
@@ -422,8 +422,9 @@ def mcp_serve() -> None:
 
 @mcp.command(name="list")
 @click.option("--persona", default=None, help="Inspect MCP servers for a specific persona.")
+@click.option("--builtins/--no-builtins", default=False, help="Include built-in ecosystem servers.")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
-def mcp_list(persona: str | None, as_json: bool) -> None:
+def mcp_list(persona: str | None, builtins: bool, as_json: bool) -> None:
     """List configured external MCP servers."""
     from ..mcp import load_server_specs
 
@@ -434,7 +435,7 @@ def mcp_list(persona: str | None, as_json: bool) -> None:
     )
 
     with ctx_mgr:
-        specs = load_server_specs()
+        specs = load_server_specs(persona=persona, include_builtins=builtins)
 
     if as_json:
         data = [
@@ -465,7 +466,8 @@ def mcp_list(persona: str | None, as_json: bool) -> None:
 @mcp.command(name="ping")
 @click.argument("name", required=False)
 @click.option("--persona", default=None, help="Inspect MCP servers for a specific persona.")
-def mcp_ping(name: str | None, persona: str | None) -> None:
+@click.option("--builtins/--no-builtins", default=False, help="Include built-in ecosystem servers.")
+def mcp_ping(name: str | None, persona: str | None, builtins: bool) -> None:
     """Ping configured MCP servers to verify responsiveness."""
     from ..mcp import RemoteMCPClient, StdioMCPClient, load_server_specs
 
@@ -476,7 +478,7 @@ def mcp_ping(name: str | None, persona: str | None) -> None:
     )
 
     with ctx_mgr:
-        specs = load_server_specs()
+        specs = load_server_specs(persona=persona, include_builtins=builtins)
 
     if name:
         specs = [s for s in specs if s.name == name]
@@ -520,7 +522,8 @@ def mcp_ping(name: str | None, persona: str | None) -> None:
 
 @mcp.command(name="tools")
 @click.option("--persona", default=None, help="Inspect MCP servers for a specific persona.")
-def mcp_tools(persona: str | None) -> None:
+@click.option("--builtins/--no-builtins", default=False, help="Include built-in ecosystem servers.")
+def mcp_tools(persona: str | None, builtins: bool) -> None:
     """List tools exposed by configured external MCP servers."""
     from ..mcp.manager import connect_servers
 
@@ -530,7 +533,7 @@ def mcp_tools(persona: str | None) -> None:
         else contextlib.nullcontext()
     )
 
-    with ctx_mgr, connect_servers() as tools:
+    with ctx_mgr, connect_servers(persona=persona, include_builtins=builtins) as tools:
         if not tools:
             click.echo("No external MCP tools available.")
             return

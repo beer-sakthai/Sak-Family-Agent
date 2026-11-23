@@ -143,6 +143,25 @@ def _paginate_tools(
 #: Shared with the inbound server — see ``mcp/protocol.py``. This was a second,
 #: independent ``"2024-11-05"`` constant for the same protocol.
 PROTOCOL_VERSION = protocol.LATEST_PROTOCOL_VERSION
+try:
+    import mcp
+    import mcp.types as mcp_types
+    from mcp import ClientSession
+
+    MCP_V2_AVAILABLE = True
+except ImportError:
+    mcp = None  # type: ignore[assignment]
+    mcp_types = None  # type: ignore[assignment]
+    ClientSession = None  # type: ignore[misc,assignment]
+    MCP_V2_AVAILABLE = False
+
+
+def is_mcp_v2_available() -> bool:
+    """Check if the official Model Context Protocol SDK v2 is available."""
+    return MCP_V2_AVAILABLE
+
+
+PROTOCOL_VERSION = "2024-11-05"
 CLIENT_NAME = "sakthai-client"
 # Backwards-compatible alias; the live default is resolved via config so that
 # SAKTHAI_MCP_TIMEOUT is honoured at construction time.
@@ -729,6 +748,19 @@ class RemoteMCPClient:
             tools.extend(_paginate_tools(self._request, self.name, cursor))
         return tools
 
+    def is_configured(self) -> bool:
+        """Check if required credentials are configured for known remote providers."""
+        if self.name == "figma":
+            auth = self._headers.get("Authorization") or self._headers.get("X-Figma-Token") or ""
+            return bool(auth.replace("Bearer", "").strip())
+        if self.name == "huggingface":
+            auth = self._headers.get("Authorization") or ""
+            return bool(auth.replace("Bearer", "").strip())
+        if self.name == "google_dev_knowledge":
+            api_key = self._headers.get("x-goog-api-key") or ""
+            return bool(api_key.strip())
+        return True
+
     def as_tools(
         self,
         *,
@@ -750,12 +782,16 @@ class RemoteMCPClient:
                 )
                 continue
             schema = desc.get("inputSchema")
+            desc_text = desc.get("description")
+            if self.name == "google_dev_knowledge" and isinstance(desc_text, str):
+                desc_text = (
+                    f"{desc_text}\nApproved documentation domains: "
+                    f"developer.chrome.com, web.dev, developers.google.com, antigravity.google, adk.dev."
+                )
             wrapped.append(
                 Tool(
                     name=f"{prefix}{remote_name}",
-                    description=_sanitize_remote_description(
-                        self.name, remote_name, desc.get("description")
-                    ),
+                    description=_sanitize_remote_description(self.name, remote_name, desc_text),
                     input_schema=schema
                     if isinstance(schema, dict)
                     else {"type": "object", "properties": {}},
@@ -862,3 +898,92 @@ class RemoteMCPClient:
             raise MCPClientError(
                 f"{self.name}: HTTP error communicating with {self.url}: {exc}"
             ) from exc
+
+
+def mcp_tool_to_sakthai_tool(
+    tool: Any,
+    call_fn: Callable[[str, dict[str, Any]], str],
+    prefix: str = "",
+) -> Tool:
+    """Convert an official mcp.types.Tool or dictionary descriptor to a SakThai Tool."""
+    raw_name = getattr(tool, "name", None) or (tool.get("name") if isinstance(tool, dict) else "")
+    name = str(raw_name)
+    description = (
+        getattr(tool, "description", None)
+        or (tool.get("description") if isinstance(tool, dict) else "")
+        or ""
+    )
+    schema = getattr(tool, "inputSchema", None) or (
+        tool.get("inputSchema") if isinstance(tool, dict) else None
+    )
+    if not isinstance(schema, dict):
+        schema = {"type": "object", "properties": {}}
+
+    def handler(args: dict[str, Any], _store: MemoryStore) -> str:
+        return call_fn(name, args)
+
+    return Tool(
+        name=f"{prefix}{name}",
+        description=str(description),
+        input_schema=schema,
+        handler=handler,
+    )
+
+
+def create_scoped_google_dev_tools(
+    client: Any,
+    domains: Sequence[str] = (
+        "developer.chrome.com",
+        "web.dev",
+        "developers.google.com",
+        "antigravity.google",
+        "adk.dev",
+    ),
+    prefix: str = "google_dev__",
+) -> list[Tool]:
+    """Generate domain-scoped search tools for Google Developer Knowledge."""
+    tools: list[Tool] = []
+    domain_slugs = {
+        "developer.chrome.com": (
+            "chrome_dev",
+            "Search Chrome Developer documentation (developer.chrome.com)",
+        ),
+        "web.dev": ("web_dev", "Search web.dev platform guidance (web.dev)"),
+        "developers.google.com": (
+            "google_dev",
+            "Search Google Developers documentation (developers.google.com)",
+        ),
+        "antigravity.google": (
+            "antigravity",
+            "Search Google Antigravity agentic platform docs (antigravity.google)",
+        ),
+        "adk.dev": ("adk", "Search Agent Development Kit documentation (adk.dev)"),
+    }
+    for dom in domains:
+        slug, label = domain_slugs.get(dom, (dom.replace(".", "_"), f"Search {dom}"))
+
+        def make_handler(target_domain: str) -> Callable[[dict[str, Any], MemoryStore], str]:
+            def handler(args: dict[str, Any], _store: MemoryStore) -> str:
+                query = str(args.get("query", ""))
+                scoped_query = f"site:{target_domain} {query}".strip()
+                call_args = dict(args)
+                call_args["query"] = scoped_query
+                return str(client.call_tool("search", call_args))
+
+            return handler
+
+        tools.append(
+            Tool(
+                name=f"{prefix}{slug}_search",
+                description=f"{label}. Scoped with site:{dom}.",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "The search term or query"}
+                    },
+                    "required": ["query"],
+                },
+                handler=make_handler(dom),
+            )
+        )
+    return tools

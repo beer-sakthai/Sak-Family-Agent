@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -87,6 +88,109 @@ def _parse_transport(raw_type: object, name: str, url: str | None, command: str 
     # Unknown values pass through lowercased, as before: the manager decides
     # what to do with them, and rejecting here would be a behaviour change.
     return lowered
+GOOGLE_DEV_DOMAINS: tuple[str, ...] = (
+    "developer.chrome.com",
+    "web.dev",
+    "developers.google.com",
+    "antigravity.google",
+    "adk.dev",
+)
+
+PERSONA_DEFAULT_MCP_SERVERS: dict[str, tuple[str, ...]] = {
+    "sakthai": ("huggingface",),
+    "saksee": ("figma", "google_dev_knowledge"),
+    "sakjules": ("genkit", "google_dev_knowledge"),
+    "sakking": ("genkit", "google_dev_knowledge"),
+    "saksit": ("huggingface", "figma"),
+    "saktan": ("genkit",),
+}
+
+
+def builtin_genkit_server() -> MCPServerSpec:
+    """Built-in Firebase Genkit MCP server using stdio."""
+    return MCPServerSpec(
+        name="genkit",
+        command="npx",
+        args=["-y", "genkit", "mcp"],
+        transport="stdio",
+    )
+
+
+def builtin_google_dev_knowledge_server(api_key: str | None = None) -> MCPServerSpec:
+    """Built-in Google Developer Knowledge remote MCP server with domain scoping."""
+    key = api_key or os.getenv("GOOGLE_API_KEY", "") or os.getenv("GEMINI_API_KEY", "")
+    headers = {"x-goog-api-key": key} if key else {}
+    return MCPServerSpec(
+        name="google_dev_knowledge",
+        url="https://developerknowledge.googleapis.com/mcp",
+        transport="sse",
+        headers=headers,
+    )
+
+
+def builtin_figma_server(token: str | None = None) -> MCPServerSpec:
+    """Built-in Figma remote MCP server."""
+    tok = token or os.getenv("FIGMA_ACCESS_TOKEN", "") or os.getenv("FIGMA_TOKEN", "")
+    headers = (
+        {
+            "Authorization": f"Bearer {tok}",
+            "X-Figma-Token": tok,
+        }
+        if tok
+        else {}
+    )
+    return MCPServerSpec(
+        name="figma",
+        url="https://mcp.figma.com/mcp",
+        transport="sse",
+        headers=headers,
+    )
+
+
+def builtin_huggingface_server(token: str | None = None) -> MCPServerSpec:
+    """Built-in Hugging Face remote MCP server."""
+    tok = token or os.getenv("HF_TOKEN", "")
+    headers = {"Authorization": f"Bearer {tok}"} if tok else {}
+    return MCPServerSpec(
+        name="huggingface",
+        url="https://huggingface.co/mcp?login&gradio=none",
+        transport="sse",
+        headers=headers,
+    )
+
+
+BUILTIN_SERVER_FACTORIES: dict[str, Callable[[], MCPServerSpec]] = {
+    "genkit": builtin_genkit_server,
+    "google_dev_knowledge": builtin_google_dev_knowledge_server,
+    "figma": builtin_figma_server,
+    "huggingface": builtin_huggingface_server,
+}
+
+
+def get_builtin_mcp_servers(persona: str | None = None) -> list[MCPServerSpec]:
+    """Retrieve built-in MCP server specifications, optionally filtered by persona loadout."""
+    if persona and persona.lower() in PERSONA_DEFAULT_MCP_SERVERS:
+        selected_names = PERSONA_DEFAULT_MCP_SERVERS[persona.lower()]
+        return [
+            BUILTIN_SERVER_FACTORIES[name]()
+            for name in selected_names
+            if name in BUILTIN_SERVER_FACTORIES
+        ]
+    return [factory() for factory in BUILTIN_SERVER_FACTORIES.values()]
+
+
+def format_google_dev_query(query: str, domain: str | None = None) -> str:
+    """Format or scope a developer knowledge query to one of the approved domains."""
+    if not domain:
+        return query
+    clean_domain = domain.strip().lower()
+    if clean_domain not in GOOGLE_DEV_DOMAINS:
+        logger.warning(
+            "domain %r is not in approved GOOGLE_DEV_DOMAINS %s; formatting anyway",
+            domain,
+            GOOGLE_DEV_DOMAINS,
+        )
+    return f"site:{clean_domain} {query}".strip()
 
 
 def _parse_server_entry(name: str, entry: dict[str, Any]) -> MCPServerSpec | None:
@@ -184,15 +288,29 @@ def _load_manifest(path: Path) -> list[MCPServerSpec]:
     return parse_mcp_servers(data)
 
 
-def load_server_specs(persona: str | None = None) -> list[MCPServerSpec]:
+def load_server_specs(
+    persona: str | None = None,
+    *,
+    include_builtins: bool = False,
+) -> list[MCPServerSpec]:
     """All configured MCP servers, lowest precedence first.
 
-    Sources, each overriding the previous by server name: gemini extensions →
+    Sources, each overriding the previous by server name: built-in servers
+    (if requested or SAKTHAI_ENABLE_BUILTIN_MCP=1) → gemini extensions →
     sakthai extensions → persona extensions → ``~/.sakthai/mcp.json`` → the per-persona override from
     ``SAKTHAI_MCP_CONFIG`` (highest). So a persona's ``mcp.json`` wins over the
     shared config, which wins over an extension of the same name.
     """
     by_name: dict[str, MCPServerSpec] = {}
+
+    # 0. Built-in servers (lowest precedence, opt-in or env gated)
+    if include_builtins or os.environ.get("SAKTHAI_ENABLE_BUILTIN_MCP", "").strip().lower() in (
+        "1",
+        "true",
+    ):
+        active_persona = persona or os.environ.get("SAKTHAI_PERSONA")
+        for spec in get_builtin_mcp_servers(active_persona):
+            by_name[spec.name] = spec
 
     # 1. Load from gemini extensions
     gemini_base = gemini_extensions_dir()

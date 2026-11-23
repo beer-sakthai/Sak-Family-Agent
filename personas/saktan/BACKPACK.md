@@ -43,6 +43,8 @@
 - **🏠 100% Local Zero-Cost Execution (`config/mcp.json`: `{}`)**:
   - Runs on local Ollama (`sakthai` model) with zero external MCP servers and zero API token spend
   - Uses built-in memory, calendar, and mail tools (`list_calendar_events`, `create_calendar_event`, `read_outlook_mail`, `send_telegram_message`)
+- **⚡ Firebase Genkit MCP (`genkit`)**:
+  - Optional local orchestration stdio MCP (`npx -y genkit mcp`) with graceful degradation when unconfigured
 - **⏰ Household Rhythm & Cron Proposal Engine (`schedule-request`)**:
   - Drives Beer's daily rhythm (`SakTan-daily-briefing`, `SakTan-close-the-day`, `SakTan-weekly-review`) with strict token economy (one clear next action)
   - Proposes cron schedules via `schedule-request` for SakJules to implement (`schedule-confirmed`)
