@@ -41,7 +41,7 @@ publishes.
 ## What the client does
 
 ```bash
-sakthai mcp registry sync              # fetch and cache the catalogue
+sakthai mcp registry sync              # fetch and cache the catalog
 sakthai mcp registry sync --since 2026-11-01T00:00:00Z   # only what changed
 sakthai mcp registry search qdrant     # search the cache
 sakthai mcp registry check             # audit configured servers, exit 1 on a problem

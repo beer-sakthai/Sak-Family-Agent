@@ -80,7 +80,7 @@ available credentials (override with `--provider`):
 - **ollama** — local models via Ollama (`OLLAMA_HOST`, default
   `http://127.0.0.1:11434`); no API key, **no cost**.
 
-All are normalised to one response shape, so the loop logic is provider-agnostic.
+All are normalized to one response shape, so the loop logic is provider-agnostic.
 
 ## Sessions
 
@@ -134,7 +134,7 @@ The `sakthai.agent_platform` subsystem unifies advanced agent engineering and en
   - Fine-grained tool scoping with allowlists (`spec.tools`).
   - Tools are auto-namespaced as `<server>__<tool>` — and the guardrails match that form, so an external `run_command` is gated exactly like the built-in.
 - **Registry (`sakthai mcp registry`)**:
-  - `sync` caches the MCP Registry catalogue; `search` queries it; `check` reports configured servers the registry marks `deprecated` or `deleted` and exits non-zero.
+  - `sync` caches the MCP Registry catalog; `search` queries it; `check` reports configured servers the registry marks `deprecated` or `deleted` and exits non-zero.
 - **Developer & Diagnostic CLI Tools**:
   - `sakthai mcp list [--persona <name>] [--json]`: Inspect configured external servers and transports.
   - `sakthai mcp ping [<name>] [--persona <name>]`: Probe responsiveness and health of external servers.

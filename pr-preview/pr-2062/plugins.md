@@ -58,7 +58,7 @@ when it has a `command`.
 
 ### Discovering servers
 
-`sakthai mcp registry sync` caches the MCP Registry's catalogue, and
+`sakthai mcp registry sync` caches the MCP Registry's catalog, and
 `sakthai mcp registry search <query>` searches it. `sakthai mcp registry check`
 reports configured servers the registry has since marked `deprecated` or
 `deleted` — the supply-chain question a version pin cannot answer. See
