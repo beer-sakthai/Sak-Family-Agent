@@ -125,6 +125,8 @@ def doctor(json_output: bool) -> None:
         f"{'active' if gemini else 'not found (optional — `gemini auth login`)'}"
     )
 
+    _report_mcp_supply_chain()
+
     click.echo()
     if env["ready"] and not _has_provider_credentials(env["auth"]):
         click.echo(click.style("  ✓ Memory is ready.", fg="green", bold=True))
@@ -134,6 +136,39 @@ def doctor(json_output: bool) -> None:
     else:
         click.echo(click.style("  ✗ Core components missing — see above.", fg="red", bold=True))
     click.echo()
+
+
+def _report_mcp_supply_chain() -> None:
+    """Warn about configured MCP servers the registry has withdrawn.
+
+    An exact version pin stops an unreviewed *new* release from running. It
+    says nothing about the release already pinned being pulled upstream for
+    malware, which is what the registry's ``deleted`` status records. Silent
+    when no registry cache exists, because syncing is an explicit choice and a
+    nag for an unused feature is noise.
+    """
+    from ..mcp.registry import check_configured_servers, read_cache
+
+    try:
+        cached = read_cache()
+        if not cached:
+            return
+        from ..mcp import load_server_specs
+
+        specs = load_server_specs()
+        problems = check_configured_servers([s.name for s in specs], servers=cached)
+    except Exception as exc:  # noqa: BLE001 — diagnostics must never fail doctor
+        click.echo(click.style("\n  MCP supply chain", bold=True))
+        click.echo(f"  {_err()} could not check the registry cache: {exc}")
+        return
+
+    click.echo(click.style("\n  MCP supply chain", bold=True))
+    if not problems:
+        click.echo(f"  {_ok()} all {len(specs)} configured server(s) active upstream")
+        return
+    for name, entry in problems:
+        click.echo(f"  {_err()} {name} → {entry.name} is {entry.status} upstream")
+    click.echo(click.style("      → review it, then remove it from mcp.json", fg="yellow"))
 
 
 @click.command()

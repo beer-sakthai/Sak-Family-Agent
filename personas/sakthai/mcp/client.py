@@ -29,6 +29,7 @@ from typing import Any
 from .. import config
 from ..agent.tools import Tool
 from ..memory.store import MemoryStore
+from . import protocol
 
 logger = logging.getLogger(__name__)
 
@@ -50,10 +51,118 @@ def is_mcp_v2_available() -> bool:
     return MCP_V2_AVAILABLE
 
 
-PROTOCOL_VERSION = "2024-11-05"
+def _read_handshake(init_response: Mapping[str, Any], server: str) -> tuple[str, dict[str, Any]]:
+    """The protocol revision and capabilities a server declared in ``initialize``.
+
+    Both were previously thrown away: ``start()`` checked the reply for
+    ``"error"`` and looked no further. Two consequences. The agreed revision
+    never reached the wire, so the ``MCP-Protocol-Version`` header could not be
+    sent. And a server that advertised no ``tools`` capability was asked for
+    ``tools/list`` regardless, turning a clean "I have no tools" into an error
+    the manager then logged as a failed server.
+
+    A revision we do not implement is recorded but warned about rather than
+    rejected: the spec's own remedy is for the client to disconnect, and the
+    caller — ``manager.connect_servers`` — already fails soft per server. A
+    warning keeps one odd server from being silently trusted without taking the
+    rest of the run down.
+    """
+    result = init_response.get("result")
+    if not isinstance(result, dict):
+        return PROTOCOL_VERSION, {}
+
+    agreed = result.get("protocolVersion")
+    if isinstance(agreed, str) and agreed:
+        if not protocol.is_supported(agreed):
+            logger.warning(
+                "MCP server %r answered with protocol version %r, which this client "
+                "does not implement (supported: %s)",
+                server,
+                agreed,
+                ", ".join(protocol.SUPPORTED_PROTOCOL_VERSIONS),
+            )
+        version = agreed
+    else:
+        version = PROTOCOL_VERSION
+
+    capabilities = result.get("capabilities")
+    return version, capabilities if isinstance(capabilities, dict) else {}
+
+
+def supports_tools(capabilities: Mapping[str, Any]) -> bool:
+    """Whether a server's declared capabilities include tools.
+
+    An empty capabilities object is treated as "yes". Servers in the wild are
+    inconsistent about declaring it, and this client's whole purpose is tools —
+    refusing to ask on a missing declaration would break working setups. Only
+    an explicit, non-tools capabilities object suppresses the call.
+    """
+    if not capabilities:
+        return True
+    return "tools" in capabilities
+
+
+#: Pages to read before giving up on a paginating server. A server that keeps
+#: returning a cursor would otherwise loop forever; at the default page sizes
+#: servers use this is far more tools than any model can be offered.
+_MAX_TOOL_PAGES = 50
+
+
+def _paginate_tools(
+    request: Callable[..., dict[str, Any]],
+    server: str,
+    start_cursor: str | None = None,
+) -> list[dict[str, Any]]:
+    """Read ``tools/list`` pages from ``start_cursor`` on, and return them all.
+
+    ``request`` is the bound ``_request`` of either client, so the paging logic
+    is shared rather than written twice. With no ``start_cursor`` this fetches
+    from the first page; the remote client validates its own first page and
+    then passes the cursor in, so its stricter malformed-response check is kept.
+
+    Stops on a repeated cursor as well as on the page budget: a server echoing
+    its own cursor back is a bug that would otherwise spin forever.
+    """
+    collected: list[dict[str, Any]] = []
+    cursor: str | None = start_cursor
+    seen: set[str] = set()
+
+    for _ in range(_MAX_TOOL_PAGES):
+        params = {"cursor": cursor} if cursor else None
+        response = request("tools/list", params)
+        if "error" in response:
+            message = response["error"].get("message", "error")
+            raise MCPClientError(f"{server}: tools/list failed: {message}")
+        result = response.get("result")
+        if not isinstance(result, dict):
+            break
+        page = result.get("tools")
+        if isinstance(page, list):
+            collected.extend(t for t in page if isinstance(t, dict))
+
+        next_cursor = result.get("nextCursor")
+        if not isinstance(next_cursor, str) or not next_cursor:
+            return collected
+        if next_cursor in seen:
+            logger.warning("MCP server %r repeated tools/list cursor; stopping", server)
+            return collected
+        seen.add(next_cursor)
+        cursor = next_cursor
+    else:
+        logger.warning(
+            "MCP server %r paginated past %d pages of tools; truncating",
+            server,
+            _MAX_TOOL_PAGES,
+        )
+    return collected
+
+
+#: Shared with the inbound server — see ``mcp/protocol.py``. This was a second,
+#: independent ``"2024-11-05"`` constant for the same protocol.
+PROTOCOL_VERSION = protocol.LATEST_PROTOCOL_VERSION
 CLIENT_NAME = "sakthai-client"
 # Backwards-compatible alias; the live default is resolved via config so that
-# SAKTHAI_MCP_TIMEOUT is honoured at construction time.
+# SAKTHAI_MCP_TIMEOUT is honored at construction time.
 DEFAULT_TIMEOUT = config.DEFAULT_MCP_TIMEOUT
 
 # Model Context Protocol cancellation notification method.
@@ -116,6 +225,13 @@ class MCPToolError(RuntimeError):
 _REMOTE_TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
 _MAX_REMOTE_DESC_CHARS = 1024
 
+#: Appended to every google_dev_knowledge tool description. Kept next to the
+#: sanitizer because it must be added *after* it — see `as_tools`.
+_GOOGLE_DEV_DOMAIN_NOTE = (
+    "Approved documentation domains: developer.chrome.com, web.dev, "
+    "developers.google.com, antigravity.google, adk.dev."
+)
+
 
 def _sanitize_remote_description(server: str, remote_name: str, description: Any) -> str:
     """Truncate and label a remote tool description as untrusted for the prompt."""
@@ -126,12 +242,81 @@ def _sanitize_remote_description(server: str, remote_name: str, description: Any
     return f"{label} {text}".strip()
 
 
-def _extract_text(content: Any) -> str:
-    """Join the text blocks of an MCP ``tools/call`` content array."""
-    if not isinstance(content, list):
-        return ""
-    parts = [b.get("text", "") for b in content if isinstance(b, dict) and b.get("type") == "text"]
-    return "\n".join(p for p in parts if p)
+#: Longest ``structuredContent`` rendering to inline. Past this it is
+#: summarized: a tool returning a large JSON document would otherwise flood the
+#: model's context with one result.
+_MAX_STRUCTURED_CHARS = 4096
+
+
+def _describe_block(block: Mapping[str, Any]) -> str:
+    """One line standing in for a non-text content block.
+
+    Blocks other than ``text`` used to be dropped on the floor: an image, an
+    embedded resource, a ``resource_link`` — all silently absent, so a tool that
+    answered only with an image looked to the model like a tool that answered
+    with nothing. The tool-handler contract is ``-> str``, so these cannot be
+    passed through as-is; naming them is the honest alternative to discarding
+    them.
+
+    Binary payloads are deliberately *not* inlined. A base64 image is tens of
+    thousands of tokens of no use to the model, and the point here is to record
+    that something arrived, not to carry it.
+    """
+    kind = block.get("type")
+
+    if kind in ("image", "audio"):
+        mime = block.get("mimeType") or "unknown"
+        return f"[{kind} returned, {mime}, not inlined]"
+
+    if kind == "resource_link":
+        uri = block.get("uri") or "?"
+        name = block.get("name")
+        return f"[resource link: {uri}]" if not name else f"[resource link: {name} — {uri}]"
+
+    if kind == "resource":
+        resource = block.get("resource")
+        if isinstance(resource, Mapping):
+            uri = resource.get("uri") or "?"
+            inline = resource.get("text")
+            if isinstance(inline, str) and inline:
+                return f"[resource {uri}]\n{inline}"
+            return f"[resource {uri}, binary, not inlined]"
+        return "[resource returned, malformed]"
+
+    return f"[unsupported content block of type {kind!r}]"
+
+
+def _extract_text(content: Any, structured: Any = None) -> str:
+    """Render an MCP ``tools/call`` result as the text a tool handler must return.
+
+    Text blocks pass through. Every other block is replaced by a one-line
+    description rather than dropped — see :func:`_describe_block`.
+    ``structuredContent``, when present, is appended as JSON.
+    """
+    parts: list[str] = []
+
+    if isinstance(content, list):
+        for block in content:
+            if not isinstance(block, Mapping):
+                continue
+            if block.get("type") == "text":
+                text = block.get("text")
+                if isinstance(text, str) and text:
+                    parts.append(text)
+            else:
+                parts.append(_describe_block(block))
+
+    if structured is not None:
+        try:
+            rendered = json.dumps(structured, ensure_ascii=False, sort_keys=True)
+        except (TypeError, ValueError):
+            parts.append("[structuredContent returned, not serializable]")
+        else:
+            if len(rendered) > _MAX_STRUCTURED_CHARS:
+                rendered = rendered[:_MAX_STRUCTURED_CHARS] + " …[truncated]"
+            parts.append(f"[structuredContent]\n{rendered}")
+
+    return "\n".join(parts)
 
 
 class StdioMCPClient:
@@ -156,6 +341,8 @@ class StdioMCPClient:
         self._proc: subprocess.Popen[str] | None = None
         self._id = 0
         self._remote_tools: list[dict[str, Any]] = []
+        self._protocol_version = PROTOCOL_VERSION
+        self._server_capabilities: dict[str, Any] = {}
         # Queue filled by the background reader thread. Holds str lines or _EOF.
         self._line_queue: queue.Queue[Any] = queue.Queue()
         self._reader_thread: threading.Thread | None = None
@@ -199,16 +386,27 @@ class StdioMCPClient:
             tail = self.get_stderr_tail()
             stderr_info = f"\n[stderr]:\n{tail}" if tail else ""
             raise MCPClientError(f"{self.name}: initialize failed: {init['error']}{stderr_info}")
+        self._protocol_version, self._server_capabilities = _read_handshake(init, self.name)
         self._notify("notifications/initialized")
 
-        listing = self._request("tools/list")
-        result = listing.get("result") or {}
-        tools = result.get("tools")
-        self._remote_tools = (
-            [t for t in tools if isinstance(t, dict)] if isinstance(tools, list) else []
-        )
+        self._remote_tools = self._fetch_tools_if_supported()
         logger.info("MCP server %r ready with %d tool(s)", self.name, len(self._remote_tools))
         return self
+
+    def _fetch_tools_if_supported(self) -> list[dict[str, Any]]:
+        """Every tool the server offers, following pagination.
+
+        Skipped entirely when the server declared no ``tools`` capability.
+
+        ``tools/list`` was previously called once with no cursor and the reply's
+        ``nextCursor`` ignored, so only the **first page** of a paginating
+        server's tools was ever visible — silently, since a short list looks
+        exactly like a complete one.
+        """
+        if not supports_tools(self._server_capabilities):
+            logger.info("MCP server %r declares no tools capability; skipping", self.name)
+            return []
+        return _paginate_tools(self._request, self.name)
 
     def _start_reader_thread(self) -> None:
         """Spawn a daemon thread that drains stdout into ``self._line_queue``."""
@@ -358,7 +556,7 @@ class StdioMCPClient:
             message = response["error"].get("message", "error")
             raise MCPToolError(f"{self.name}/{name}: {message}")
         result = response.get("result") or {}
-        text = _extract_text(result.get("content"))
+        text = _extract_text(result.get("content"), result.get("structuredContent"))
         if result.get("isError"):
             raise MCPToolError(text or f"{self.name}/{name} returned an error")
         return text
@@ -491,11 +689,16 @@ class RemoteMCPClient:
         self.url = url.rstrip("/")
         self.name = name
         self._headers = dict(headers or {})
-        self._timeout = timeout if timeout is not None else DEFAULT_TIMEOUT
+        # Resolved through config, like StdioMCPClient — the module-level
+        # DEFAULT_TIMEOUT is bound at import, so reading it here meant this
+        # client alone ignored SAKTHAI_MCP_TIMEOUT.
+        self._timeout = config.mcp_timeout() if timeout is None else timeout
         self._remote_tools: list[dict[str, Any]] = []
         self._id = 0
         self._initialized = False
         self._session_id: str | None = None
+        self._protocol_version = PROTOCOL_VERSION
+        self._server_capabilities: dict[str, Any] = {}
 
     @property
     def tools(self) -> list[dict[str, Any]]:
@@ -516,25 +719,39 @@ class RemoteMCPClient:
             if "error" in init_res:
                 err_msg = init_res["error"].get("message", "unknown error")
                 raise MCPClientError(f"{self.name}: initialize failed: {err_msg}")
+            self._protocol_version, self._server_capabilities = _read_handshake(init_res, self.name)
             self._initialized = True
             with contextlib.suppress(Exception):
                 self._notify("notifications/initialized")
-            self._remote_tools = self.list_tools()
+            if supports_tools(self._server_capabilities):
+                self._remote_tools = self.list_tools()
+            else:
+                logger.info("MCP server %r declares no tools capability; skipping", self.name)
+                self._remote_tools = []
         except MCPClientError:
             raise
         except Exception as exc:
             raise MCPClientError(f"{self.name}: connection failed to {self.url}: {exc}") from exc
 
     def list_tools(self) -> list[dict[str, Any]]:
-        """Fetch remote tool descriptors via tools/list."""
-        response = self._request("tools/list")
-        if "error" in response:
-            message = response["error"].get("message", "error")
+        """Every tool descriptor the remote server offers, following pagination.
+
+        ``nextCursor`` was previously ignored, so only the first page of a
+        paginating server's tools was visible.
+        """
+        first = self._request("tools/list")
+        if "error" in first:
+            message = first["error"].get("message", "error")
             raise MCPClientError(f"{self.name}: tools/list failed: {message}")
-        result = response.get("result")
+        result = first.get("result")
         if not isinstance(result, dict) or not isinstance(result.get("tools"), list):
             raise MCPClientError(f"{self.name}: tools/list returned malformed response")
-        return [t for t in result["tools"] if isinstance(t, dict)]
+        tools = [t for t in result["tools"] if isinstance(t, dict)]
+
+        cursor = result.get("nextCursor")
+        if isinstance(cursor, str) and cursor:
+            tools.extend(_paginate_tools(self._request, self.name, cursor))
+        return tools
 
     def is_configured(self) -> bool:
         """Check if required credentials are configured for known remote providers."""
@@ -570,16 +787,19 @@ class RemoteMCPClient:
                 )
                 continue
             schema = desc.get("inputSchema")
-            desc_text = desc.get("description")
-            if self.name == "google_dev_knowledge" and isinstance(desc_text, str):
-                desc_text = (
-                    f"{desc_text}\nApproved documentation domains: "
-                    f"developer.chrome.com, web.dev, developers.google.com, antigravity.google, adk.dev."
-                )
+            description = _sanitize_remote_description(
+                self.name, remote_name, desc.get("description")
+            )
+            if self.name == "google_dev_knowledge":
+                # Appended *after* sanitizing, deliberately. Sanitizing truncates
+                # at 1024 characters, so appending first meant a long upstream
+                # description silently ate the guardrail — the one line here that
+                # is ours rather than the remote server's.
+                description = f"{description}\n{_GOOGLE_DEV_DOMAIN_NOTE}"
             wrapped.append(
                 Tool(
                     name=f"{prefix}{remote_name}",
-                    description=_sanitize_remote_description(self.name, remote_name, desc_text),
+                    description=description,
                     input_schema=schema
                     if isinstance(schema, dict)
                     else {"type": "object", "properties": {}},
@@ -600,7 +820,7 @@ class RemoteMCPClient:
             message = response["error"].get("message", "error")
             raise MCPToolError(f"{self.name}/{name}: {message}")
         result = response.get("result") or {}
-        text = _extract_text(result.get("content"))
+        text = _extract_text(result.get("content"), result.get("structuredContent"))
         if result.get("isError"):
             raise MCPToolError(text or f"{self.name}/{name} returned an error")
         return text
@@ -660,6 +880,11 @@ class RemoteMCPClient:
                 "Content-Type": "application/json",
                 "Accept": "application/json, text/event-stream",
                 "User-Agent": f"{CLIENT_NAME}/{PROTOCOL_VERSION}",
+                # Required on Streamable HTTP from 2025-06-18 onward. It was
+                # absent entirely: the only hint of our version on the wire was
+                # the User-Agent, which no server is expected to parse. Carries
+                # the negotiated revision once the handshake has settled one.
+                protocol.PROTOCOL_VERSION_HEADER: self._protocol_version,
                 **session,
                 **self._headers,
             },
@@ -707,7 +932,12 @@ def mcp_tool_to_sakthai_tool(
 
     return Tool(
         name=f"{prefix}{name}",
-        description=str(description),
+        # Sanitized like every other remote description. The original built the
+        # Tool from the raw upstream string — no truncation, no untrusted label
+        # — which would have quietly undone that mitigation for any caller.
+        description=_sanitize_remote_description(
+            prefix.rstrip("_") or "external", name, description
+        ),
         input_schema=schema,
         handler=handler,
     )

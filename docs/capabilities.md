@@ -80,7 +80,7 @@ available credentials (override with `--provider`):
 - **ollama** — local models via Ollama (`OLLAMA_HOST`, default
   `http://127.0.0.1:11434`); no API key, **no cost**.
 
-All are normalised to one response shape, so the loop logic is provider-agnostic.
+All are normalized to one response shape, so the loop logic is provider-agnostic.
 
 ## Sessions
 
@@ -119,19 +119,28 @@ The `sakthai.agent_platform` subsystem unifies advanced agent engineering and en
 `sakthai mcp` exposes the unified runtime over JSON-RPC 2.0 and connects to external MCP servers:
 
 - **Inbound MCP Server (`sakthai mcp` / `sakthai mcp serve`)**:
-  - Tools: All `BUILTIN_TOOLS` (`tools/list`, `tools/call`).
-  - Resources: Sharded memory status at `sakthai://memory/status` (`resources/list`, `resources/read`).
+  - Protocol: negotiates `2024-11-05` → `2025-11-25`, answering with a revision it implements rather than echoing the client's.
+  - Tools: All `BUILTIN_TOOLS` (`tools/list`, `tools/call`), validated through `Tool.safe_call` and the guardrail policy.
+  - Resources: a registry (`mcp/resources.py`) — memory status at `sakthai://memory/status`, plus a `ui://` MCP App view behind `SAKTHAI_EXPERIMENTAL`.
   - Prompts: Standard agent prompt templates (`prompts/list`, `prompts/get`).
+- **Inbound over HTTP (`POST /v1/mcp` on the gateway)**:
+  - The same tools over Streamable HTTP, with `Mcp-Session-Id`, `DELETE` to terminate, `MCP-Protocol-Version` validation and an `Origin` check against DNS rebinding.
+  - Tools marked `requires_confirmation` are hidden unless `SAKTHAI_MCP_HTTP_WRITE_ALLOW` is set: over a socket there is no host to confirm with.
 - **Outbound MCP Client (`StdioMCPClient` & `RemoteMCPClient`)**:
   - Connects to external MCP servers configured in `~/.sakthai/mcp.json` or persona configs.
-  - Supports stdio sub-processes and remote HTTP/SSE endpoints (`transport: "sse"` or `"http"`).
-  - Enforces URL scheme validation (`http://` / `https://`) and command sanitization.
+  - Supports stdio sub-processes and remote Streamable HTTP endpoints (`transport: "streamable-http"`; `"sse"` is a deprecated alias).
+  - Validates the whole argv before starting a server, not just `command`; enforces URL scheme validation.
+  - Follows `tools/list` pagination, and surfaces images, resource links and `structuredContent` rather than discarding them.
   - Fine-grained tool scoping with allowlists (`spec.tools`).
-  - Tools are auto-namespaced as `<server>__<tool>`.
+  - Tools are auto-namespaced as `<server>__<tool>` — and the guardrails match that form, so an external `run_command` is gated exactly like the built-in.
+- **Registry (`sakthai mcp registry`)**:
+  - `sync` caches the MCP Registry catalog; `search` queries it; `check` reports configured servers the registry marks `deprecated` or `deleted` and exits non-zero.
 - **Developer & Diagnostic CLI Tools**:
   - `sakthai mcp list [--persona <name>] [--json]`: Inspect configured external servers and transports.
   - `sakthai mcp ping [<name>] [--persona <name>]`: Probe responsiveness and health of external servers.
   - `sakthai mcp tools [--persona <name>]`: List discovered external tools and schemas.
+
+Full feature-by-surface detail: [`mcp-support-matrix.md`](mcp-support-matrix.md).
 
 ## Model Training & Serving (`sakthai train`)
 

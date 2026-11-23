@@ -3,7 +3,7 @@
 The MCP stdio transport is newline-delimited JSON-RPC 2.0: one request object
 per line on stdin, one response per line on stdout. We implement the methods a
 client needs to discover and call tools — ``initialize``, ``tools/list``,
-``tools/call``, ``ping`` — reusing :data:`BUILTIN_TOOLS` so behaviour matches
+``tools/call``, ``ping`` — reusing :data:`BUILTIN_TOOLS` so behavior matches
 ``sakthai run`` exactly.
 
 :func:`handle_request` is a pure function over a single request dict, so the
@@ -21,20 +21,32 @@ from typing import Any, TextIO
 from .. import __version__
 from ..agent.guardrails import DEFAULT_POLICY, GuardrailAction, GuardrailPolicy
 from ..agent.tools import BUILTIN_TOOLS, Tool
-from ..config import redact_secrets
+from ..config import redact_secrets, sakthai_experimental
 from ..memory.store import MemoryStore
+from . import resources as resources_mod
+from .protocol import (
+    LATEST_PROTOCOL_VERSION,
+    negotiate_protocol_version,
+)
 
 logger = logging.getLogger(__name__)
 
-# Advertised when the client does not pin a version; we echo the client's value
-# back when it sends one.
-PROTOCOL_VERSION = "2024-11-05"
+#: The revision advertised when a client states no preference. Negotiation for
+#: a client that does state one goes through ``negotiate_protocol_version``;
+#: see ``mcp/protocol.py`` for why echoing the client's value was wrong.
+PROTOCOL_VERSION = LATEST_PROTOCOL_VERSION
 SERVER_NAME = "sakthai"
 
 # JSON-RPC 2.0 error codes.
 PARSE_ERROR = -32700
 INVALID_REQUEST = -32600
 METHOD_NOT_FOUND = -32601
+INVALID_PARAMS = -32602
+#: Resource-not-found, per the targeted revisions. ``resources/read`` answered
+#: with ``-32602`` (invalid params); the spec reserves a distinct code so a
+#: client can tell "no such resource" from "malformed request". It only becomes
+#: ``-32602`` in ``2026-07-28``, which this package does not target.
+RESOURCE_NOT_FOUND = -32002
 
 
 def _result(req_id: Any, result: dict[str, Any]) -> dict[str, Any]:
@@ -53,7 +65,33 @@ def _tool_descriptor(tool: Tool) -> dict[str, Any]:
     }
     if tool.annotations is not None:
         descriptor["annotations"] = dict(tool.annotations)
+    # The MCP Apps link, when the extension is enabled and this tool has a
+    # view. Resolved per request rather than baked into BUILTIN_TOOLS, because
+    # the gate is an environment variable read at request time while the tool
+    # table is built at import.
+    meta = resources_mod.tool_view_meta(tool.name)
+    if meta:
+        descriptor["_meta"] = meta
     return descriptor
+
+
+def _server_capabilities() -> dict[str, Any]:
+    """What this server tells a client it can do.
+
+    ``extensions`` is the 2026-07-28 mechanism for declaring support for a
+    named extension, and is accepted earlier as an unknown key. Keys are
+    reverse-DNS with a mandatory prefix; anything whose second label is
+    ``modelcontextprotocol`` or ``mcp`` is reserved for the specification, so
+    ``io.modelcontextprotocol/ui`` is theirs, not ours to invent.
+    """
+    capabilities: dict[str, Any] = {
+        "tools": {"listChanged": False},
+        "resources": {"subscribe": False, "listChanged": False},
+        "prompts": {"listChanged": False},
+    }
+    if sakthai_experimental():
+        capabilities["extensions"] = {resources_mod.UI_EXTENSION: {}}
+    return capabilities
 
 
 def _tool_list(tools: tuple[Tool, ...]) -> dict[str, Any]:
@@ -86,17 +124,13 @@ def _tool_call(
 
     final_args = pre_check.modified_args if pre_check.modified_args is not None else dict(arguments)
 
-    # 2. Tool execution with global redaction fail-safe
-    try:
-        output = tool.handler(final_args, store)
-        is_error = False
-    except Exception as exc:  # noqa: BLE001 — reported to the client as isError
-        logger.debug("MCP tool %r raised %s: %s", name, type(exc).__name__, exc)
-        output = f"{type(exc).__name__}: {exc}"
-        is_error = True
-
-    # Apply redaction to raw output or exception message
-    redacted_output = redact_secrets(output)
+    # 2. Validated execution, with the same redaction fail-safe the agent loop
+    #    gets. Calling ``tool.handler`` directly skipped ``Tool.validate_args``,
+    #    which made MCP the one transport where a schema violation — a missing
+    #    required field, a string where an integer belongs — reached a handler
+    #    unexamined. ``safe_call`` validates, executes and redacts, and reports
+    #    a failure the same way for either cause.
+    redacted_output, is_error = tool.safe_call(final_args, store)
 
     # 3. Post-execution guardrails
     post_check = policy.check_post_execution(tool, final_args, redacted_output, is_error, store)
@@ -120,7 +154,12 @@ def handle_request(
     and for methods that need no reply.
     """
     if not isinstance(request, dict) or request.get("jsonrpc") != "2.0":
-        return _error(None, INVALID_REQUEST, "Invalid JSON-RPC 2.0 request.")
+        # Echo the id when the request carried one. Returning id=null for a
+        # request that supplied an id leaves the client unable to match the
+        # error to what it sent; JSON-RPC only allows null when the id could
+        # not be determined.
+        bad_id = request.get("id") if isinstance(request, dict) else None
+        return _error(bad_id, INVALID_REQUEST, "Invalid JSON-RPC 2.0 request.")
 
     method = request.get("method")
     req_id = request.get("id")
@@ -130,15 +169,17 @@ def handle_request(
         params = {}
 
     if method == "initialize":
+        # Guarded like every other method: `initialize` is a request, so an
+        # `initialize` with no id is malformed and must not draw a reply. It
+        # used to be handled above the notification check and answered with
+        # `"id": null`.
+        if is_notification:
+            return None
         return _result(
             req_id,
             {
-                "protocolVersion": params.get("protocolVersion") or PROTOCOL_VERSION,
-                "capabilities": {
-                    "tools": {"listChanged": False},
-                    "resources": {"subscribe": False, "listChanged": False},
-                    "prompts": {"listChanged": False},
-                },
+                "protocolVersion": negotiate_protocol_version(params.get("protocolVersion")),
+                "capabilities": _server_capabilities(),
                 "serverInfo": {"name": SERVER_NAME, "version": __version__},
             },
         )
@@ -168,43 +209,36 @@ def handle_request(
             if is_notification
             else _result(
                 req_id,
-                {
-                    "resources": [
-                        {
-                            "uri": "sakthai://memory/status",
-                            "name": "Memory Store Status",
-                            "description": "Summary of active items and tags in SakThai memory",
-                            "mimeType": "application/json",
-                        }
-                    ]
-                },
+                {"resources": [r.descriptor() for r in resources_mod.available()]},
             )
         )
 
     if method == "resources/read":
         uri = params.get("uri")
-        if uri == "sakthai://memory/status":
-            stats = {
-                "fact_count": store.stats()["facts"]["total"],
-                "health": store.healthcheck(),
-            }
+        resource = resources_mod.by_uri(uri)
+        if resource is None:
             return (
                 None
                 if is_notification
-                else _result(
-                    req_id,
-                    {
-                        "contents": [
-                            {
-                                "uri": uri,
-                                "mimeType": "application/json",
-                                "text": json.dumps(stats),
-                            }
-                        ]
-                    },
-                )
+                else _error(req_id, RESOURCE_NOT_FOUND, f"Resource not found: {uri}")
             )
-        return None if is_notification else _error(req_id, -32602, f"Resource not found: {uri}")
+        if is_notification:
+            return None
+        return _result(
+            req_id,
+            {
+                "contents": [
+                    {
+                        "uri": resource.uri,
+                        "mimeType": resource.mime_type,
+                        # Same fail-safe tool output gets: resource bodies leave
+                        # the process over the same transport and deserve the
+                        # same filter.
+                        "text": redact_secrets(resource.reader(store)),
+                    }
+                ]
+            },
+        )
 
     if method == "prompts/list":
         return (
@@ -255,7 +289,9 @@ def handle_request(
                     },
                 )
             )
-        return None if is_notification else _error(req_id, -32602, f"Prompt not found: {name}")
+        return (
+            None if is_notification else _error(req_id, INVALID_PARAMS, f"Prompt not found: {name}")
+        )
 
     if is_notification:
         return None

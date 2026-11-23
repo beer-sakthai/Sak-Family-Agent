@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from sakthai.agent.tools import Tool
+from sakthai.mcp.protocol import LATEST_PROTOCOL_VERSION, SUPPORTED_PROTOCOL_VERSIONS
 from sakthai.mcp.server import PROTOCOL_VERSION, handle_request, serve
 from sakthai.memory.store import MemoryStore
 
@@ -31,18 +32,73 @@ def _raising_tool(name: str, exc: Exception) -> Tool:
     )
 
 
-def test_initialize_echoes_protocol(store: MemoryStore) -> None:
+def test_initialize_does_not_echo_an_unsupported_version(store: MemoryStore) -> None:
+    """The reply must name a revision this server actually implements.
+
+    This used to assert the opposite — `"x"` in, `"x"` out — pinning the echo
+    as intended behavior. `initialize` answered
+    `params.get("protocolVersion") or PROTOCOL_VERSION`, so a client was told
+    that whatever it asked for was agreed, including a revision whose handshake
+    this package does not implement. The client's recourse under the spec is to
+    disconnect when it cannot speak the server's answer, which only works if
+    the answer is truthful.
+    """
     resp = handle_request(
         {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "x"}},
         store,
     )
-    assert resp["result"]["protocolVersion"] == "x"
+    assert resp["result"]["protocolVersion"] == LATEST_PROTOCOL_VERSION
     assert resp["result"]["serverInfo"]["name"] == "sakthai"
+
+
+@pytest.mark.parametrize("version", SUPPORTED_PROTOCOL_VERSIONS)
+def test_initialize_honours_every_supported_version(version: str, store: MemoryStore) -> None:
+    """A client asking for a revision we implement gets that revision back."""
+    resp = handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {"protocolVersion": version},
+        },
+        store,
+    )
+    assert resp["result"]["protocolVersion"] == version
+
+
+def test_initialize_offers_latest_for_a_newer_revision(store: MemoryStore) -> None:
+    """A client ahead of us is told what we can actually do, not what it asked."""
+    resp = handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {"protocolVersion": "2026-07-28"},
+        },
+        store,
+    )
+    assert resp["result"]["protocolVersion"] == LATEST_PROTOCOL_VERSION
 
 
 def test_initialize_default_protocol(store: MemoryStore) -> None:
     resp = handle_request({"jsonrpc": "2.0", "id": 1, "method": "initialize"}, store)
     assert resp["result"]["protocolVersion"] == PROTOCOL_VERSION
+    assert PROTOCOL_VERSION == LATEST_PROTOCOL_VERSION
+
+
+def test_initialize_without_an_id_draws_no_reply(store: MemoryStore) -> None:
+    """`initialize` is a request; one without an id is malformed.
+
+    It was handled above the notification guard and answered with `"id": null`.
+    """
+    assert handle_request({"jsonrpc": "2.0", "method": "initialize"}, store) is None
+
+
+def test_invalid_request_echoes_the_id_when_there_was_one(store: MemoryStore) -> None:
+    """JSON-RPC permits a null id only when the id could not be determined."""
+    resp = handle_request({"jsonrpc": "1.0", "id": 7, "method": "tools/list"}, store)
+    assert resp["error"]["code"] == -32600
+    assert resp["id"] == 7
 
 
 def test_tools_list(store: MemoryStore) -> None:
@@ -196,8 +252,14 @@ def test_tools_call_handler_exception_does_not_propagate(store: MemoryStore) -> 
 
 
 def test_tools_call_learn_invalid_value_returns_is_error(store: MemoryStore) -> None:
-    # The built-in `learn` tool raises ValueError for blank input; verify this
-    # surfaces as isError rather than a server crash.
+    """Blank input for a required parameter surfaces as isError, not a crash.
+
+    It is now caught by ``Tool.validate_args`` rather than by the handler
+    raising: ``tools/call`` goes through ``Tool.safe_call``, the same entry
+    point the agent loop uses. It previously called ``tool.handler`` directly,
+    which made MCP the one transport that skipped schema validation — so this
+    reached ``learn`` and came back as a ``ValueError``.
+    """
     resp = handle_request(
         {
             "jsonrpc": "2.0",
@@ -208,7 +270,39 @@ def test_tools_call_learn_invalid_value_returns_is_error(store: MemoryStore) -> 
         store,
     )
     assert resp["result"]["isError"] is True
-    assert "ValueError" in resp["result"]["content"][0]["text"]
+    text = resp["result"]["content"][0]["text"]
+    assert "Invalid arguments" in text
+    assert "'value' cannot be blank" in text
+
+
+def test_tools_call_validates_required_parameters(store: MemoryStore) -> None:
+    """A missing required parameter is refused before the handler runs."""
+    resp = handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 16,
+            "method": "tools/call",
+            "params": {"name": "learn", "arguments": {}},
+        },
+        store,
+    )
+    assert resp["result"]["isError"] is True
+    assert "Missing required parameter 'value'" in resp["result"]["content"][0]["text"]
+
+
+def test_tools_call_validates_parameter_types(store: MemoryStore) -> None:
+    """A wrong-typed parameter is refused before the handler runs."""
+    resp = handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 17,
+            "method": "tools/call",
+            "params": {"name": "search", "arguments": {"query": "x", "limit": "not-an-int"}},
+        },
+        store,
+    )
+    assert resp["result"]["isError"] is True
+    assert "expected integer" in resp["result"]["content"][0]["text"]
 
 
 def test_tools_call_notification_with_handler_exception_returns_none(store: MemoryStore) -> None:

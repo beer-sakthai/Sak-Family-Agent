@@ -76,6 +76,36 @@ The tools then appear as `external-tools__*`. Confirm discovery with a cost-free
 preflight: `sakthai run "list tools" --dry-run`. Full recipes (integrations,
 Composio, skill sync) are in [integrations.md](./integrations.md).
 
+A namespaced tool is **not** outside the guardrails: `external-tools__run_command`
+is gated by `SAKTHAI_SHELL_ALLOW` and scanned for destructive commands exactly as
+the built-in is. See [mcp-threat-model.md](./mcp-threat-model.md) §1.
+
+Find servers with `sakthai mcp registry search <query>`, and audit what you have
+configured with `sakthai mcp registry check` — it reports any server the registry
+has since marked `deprecated` or `deleted`, which is the one supply-chain
+question an exact version pin cannot answer. See
+[mcp-registry.md](./mcp-registry.md).
+
+---
+
+## 🌐 Serving MCP over HTTP
+
+Besides stdio, the gateway serves the same tools over Streamable HTTP:
+
+```bash
+sakthai gateway serve                 # then POST JSON-RPC to /v1/mcp
+```
+
+Sessions are issued on `initialize` via `Mcp-Session-Id` and ended with
+`DELETE`. The endpoint requires the gateway's bearer token, validates
+`MCP-Protocol-Version`, and checks `Origin` against loopback plus
+`SAKTHAI_MCP_HTTP_ORIGIN` to blunt DNS rebinding.
+
+Tools marked `requires_confirmation` — `run_command`, `write_file`, `edit_file`,
+`forget`, `send_telegram_message`, `run_agent_loop` — are **not exposed** over
+HTTP unless `SAKTHAI_MCP_HTTP_WRITE_ALLOW` is set. Over stdio the host that
+launched the server does the confirming; over a socket there is no such parent.
+
 ---
 
 ## 🧠 Exposing the Agent Loop as an MCP Tool

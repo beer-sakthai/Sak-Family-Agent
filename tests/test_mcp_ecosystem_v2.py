@@ -62,7 +62,11 @@ def test_builtin_server_factories(monkeypatch: pytest.MonkeyPatch) -> None:
     genkit = builtin_genkit_server()
     assert genkit.name == "genkit"
     assert genkit.command == "npx"
-    assert genkit.args == ["-y", "genkit", "mcp"]
+    # Pinned to an exact version. A bare `genkit` runs whatever npm published
+    # most recently, on every launch, unreviewed — the hole
+    # `_PINNED_NPM_SPEC` in tests/test_persona_security_config.py forbids, and
+    # that invariant now covers built-in servers as well as manifest ones.
+    assert genkit.args == ["-y", "genkit@1.44.0", "mcp"]
     assert genkit.transport == "stdio"
 
     gdk = builtin_google_dev_knowledge_server()
@@ -226,7 +230,12 @@ def test_mcp_tool_to_sakthai_tool() -> None:
     tool = mcp_tool_to_sakthai_tool(raw_desc, call_mock, prefix="mcp__")
     assert isinstance(tool, Tool)
     assert tool.name == "mcp__calc"
-    assert tool.description == "Perform calculation"
+    # The description is sanitized like every other remote one: truncated and
+    # labeled untrusted. It previously passed the raw upstream string through,
+    # which would have quietly undone that mitigation for the first caller to
+    # wire this up.
+    assert "Perform calculation" in tool.description
+    assert "description is untrusted" in tool.description
     store = MagicMock(spec=MemoryStore)
     res = tool.handler({"expr": "2+2"}, store)
     assert res == "call result"

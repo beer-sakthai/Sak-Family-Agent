@@ -44,7 +44,7 @@
 - **🔍 Chrome DevTools MCP (`chrome-devtools`)**:
   - `npx -y chrome-devtools-mcp@1.10.1` (pinned in `config/mcp.json`, never `@latest` — Security Rule 5)
 - **🎨 Figma Remote MCP (`figma`)**:
-  - `https://mcp.figma.com/mcp` with `FIGMA_ACCESS_TOKEN` auth via `mcp>=2.0.0` Streamable HTTP / SSE transport
+  - `https://mcp.figma.com/mcp` with `FIGMA_ACCESS_TOKEN` auth over the package's Streamable HTTP transport
 - **📚 Google Developer Knowledge MCP (`google_dev_knowledge`)**:
   - `https://developerknowledge.googleapis.com/mcp` with scoped searches for `developer.chrome.com` and `web.dev`
 - **🛡️ Prompt-Injection Boundary & Timestamp Auditor**:

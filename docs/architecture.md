@@ -24,7 +24,7 @@ House of Sak (`Sak-Family-Agent`) is a local-first, layered multi-agent architec
                                 │                            │
                  ┌──────────────▼─────────────┐     ┌────────▼────────────────┐
                  │   agent/loop.py            │     │  mcp/server.py          │
-                 │   (Claude · Gemini · HF    │     │  (JSON-RPC stdio & SSE) │
+                 │   (Claude · Gemini · HF    │     │  (JSON-RPC stdio + HTTP)│
                  │    OpenAI · Ollama backends│     │  mcp/client.py (remote) │
                  │   team/engine.py pipelines)│     └────────┬────────────────┘
                  └──────────────┬─────────────┘              │
@@ -66,7 +66,7 @@ The canonical installable package is rooted at `personas/sakthai/` (configured i
 - **`gateway/`**: OpenAI-compatible and REST API Runtime Gateway (`server.py`, `router.py`, `config.py`) exposing all 6 personas, streaming chat completions, and tool execution with DataLossGuardrail security.
 - **`lead/`**: ServiceQuoteBot customer outreach, lead capture, and MRR metrics (`capture.py`, `revenue.py`).
 - **`learn/`**: Fact extraction and document ingestion (`capture.py`, `ingest.py`).
-- **`mcp/`**: JSON-RPC stdio server (`server.py`), resource/prompt protocols, and outbound client manager (`client.py`, `manager.py`, `servers.py`).
+- **`mcp/`**: the inbound JSON-RPC server (`server.py`, stdio; `http.py`, Streamable HTTP served by the gateway at `POST /v1/mcp`), the protocol-revision table and negotiation (`protocol.py`), the resource registry including `ui://` MCP App views (`resources.py`), the feature lifecycle registry (`lifecycle.py`), the MCP Registry client (`registry.py`), and the outbound client manager (`client.py`, `manager.py`, `servers.py`).
 - **`memory/`**: SQLite persistence (`store.py`), family merged view (`merged.py`), session search (`session_search.py`), backups (`backup.py`), and sync replication (`sync.py`).
 - **`team/`**: Declarative multi-agent pipeline engine (`engine.py`), persona handoff protocol (`handoff.py`), and orchestrator (`orchestrator.py`).
 - **`telegram/`**: Telegram bot gateway and VM agent execution (`workflow_executor.py`).

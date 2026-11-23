@@ -138,6 +138,10 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "SAKTHAI_MCP_CONFIG": "Path to a per-persona mcp.json whose servers override the defaults",
     "SAKTHAI_PERSONA": "Which Sak Family persona a Telegram/systemd launch is running as",
     "SAKTHAI_MCP_TIMEOUT": "Seconds to wait for an external MCP server reply (default: 30)",
+    "SAKTHAI_EXPERIMENTAL": "Offer draft-track MCP extensions (currently MCP Apps / ui:// resources)",
+    "SAKTHAI_MCP_REGISTRY_URL": "Base URL of the MCP registry to sync from (default: the official registry)",
+    "SAKTHAI_MCP_SECURITY_LEVEL": "How strictly external MCP servers are validated: strict, balanced (default) or permissive",
+    "SAKTHAI_APPROVED_MCP": "External MCP server names allowed under the strict security level, comma/space separated",
     "TELEGRAM_ALLOWED_USER_IDS": "Comma- or space-separated Telegram user IDs allowed to use the bot",
     "TELEGRAM_BOT_TOKEN": "Telegram bot token used by the Telegram gateway",
     "SAKKING_HOME": "Override the SakKing data directory (default: ~/.sakking) for skill sync",
@@ -200,6 +204,76 @@ def sakking_home() -> Path:
     """Return the SakKing data directory, honouring the SAKKING_HOME override."""
     override = os.environ.get("SAKKING_HOME")
     return Path(override) if override else Path.home() / ".sakking"
+
+
+#: Base URL of the official MCP Registry — the upstream catalog of publicly
+#: published MCP servers, maintained by the registry working group.
+DEFAULT_MCP_REGISTRY_URL = "https://registry.modelcontextprotocol.io"
+
+
+def mcp_registry_url() -> str:
+    """Base URL of the MCP registry to sync from.
+
+    ``SAKTHAI_MCP_REGISTRY_URL`` points this at a private subregistry — an
+    aggregator that implements the same OpenAPI surface — so an organization
+    can curate what its agents may discover. Trailing slashes are stripped so
+    callers can join paths without doubling them.
+    """
+    return (os.environ.get("SAKTHAI_MCP_REGISTRY_URL") or DEFAULT_MCP_REGISTRY_URL).rstrip("/")
+
+
+def registry_cache_path() -> Path:
+    """Local cache of the registry listing, one JSON object per line."""
+    return sakthai_home() / "registry" / "servers.jsonl"
+
+
+def sakthai_experimental() -> bool:
+    """Whether draft-track MCP extensions are offered.
+
+    Off by default. Gates anything whose upstream specification is still Draft,
+    currently the MCP Apps extension (``io.modelcontextprotocol/ui``,
+    SEP-1865) — its ``ui://`` resources and the ``_meta.ui`` link on a tool.
+    Advertising a draft extension unconditionally would have this server
+    promise a shape that is still changing; a host reading it would be entitled
+    to hold us to it.
+
+    Truthy set matches the rest of the package: ``{1, true, yes, on}`` after
+    ``.strip().lower()``.
+    """
+    return os.environ.get("SAKTHAI_EXPERIMENTAL", "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def mcp_security_level() -> str:
+    """The security level ``mcp/manager.py`` validates external servers at.
+
+    One of ``strict``, ``balanced`` (the default) or ``permissive``, from
+    ``SAKTHAI_MCP_SECURITY_LEVEL``. An unrecognized value falls back to
+    ``balanced`` rather than failing a launch over a typo — but note that
+    ``strict`` is the fail-closed setting, so a typo gives you *less*
+    enforcement, not more. ``sakthai doctor`` reports the level in effect.
+
+    This exists because ``strict`` previously had no way to be requested:
+    ``MCPServerValidator.APPROVED_SERVERS`` was an empty dict consulted only in
+    strict mode, and the manager hardcoded ``balanced``, so the server
+    allow-list was unreachable code that would have denied everything if it had
+    ever been reached.
+    """
+    raw = os.environ.get("SAKTHAI_MCP_SECURITY_LEVEL", "").strip().lower()
+    return raw if raw in ("strict", "balanced", "permissive") else "balanced"
+
+
+def approved_mcp_servers() -> frozenset[str]:
+    """External MCP server names allowed under ``strict`` security level.
+
+    ``SAKTHAI_APPROVED_MCP`` takes comma- or space-separated server names,
+    matching the ``mcpServers`` keys in the manifest. Unset means the only
+    approved servers are those compiled into
+    ``MCPServerValidator.APPROVED_SERVERS`` — which is empty, so under
+    ``strict`` an unset value denies every external server. That is the
+    intended fail-closed direction.
+    """
+    raw = os.environ.get("SAKTHAI_APPROVED_MCP", "")
+    return frozenset(item.strip() for item in raw.replace(",", " ").split() if item.strip())
 
 
 def mcp_config_override() -> Path | None:
@@ -274,7 +348,7 @@ def workflow_runs_dir() -> Path:
 def clients_dir() -> Path:
     """Directory where ``sakthai client`` stores provisioned client workspaces.
 
-    Honours ``SAKTHAI_CLIENTS_DIR`` first, then falls back under
+    Honors ``SAKTHAI_CLIENTS_DIR`` first, then falls back under
     :func:`sakthai_home` so the per-persona ``SAKTHAI_HOME`` convention applies
     here as it does to every other path. With neither set this resolves to
     ``~/.sakthai/clients``, unchanged from before it was routed through here.

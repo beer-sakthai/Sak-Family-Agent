@@ -73,7 +73,7 @@ def test_help_lists_commands(runner: CliRunner) -> None:
 def test_learn_persists_fact(runner: CliRunner) -> None:
     result = runner.invoke(main, ["learn", "the sky is blue"])
     assert result.exit_code == 0
-    # Behaviour, not phrasing: the fact is actually in the store.
+    # Behavior, not phrasing: the fact is actually in the store.
     with MemoryStore() as store:
         assert any("sky is blue" in f.value for f in store.list_facts())
 
@@ -1802,6 +1802,11 @@ def test_run_persona_autoloads_own_mcp_config(
     """--persona auto-loads that persona's own config/mcp.json when
     SAKTHAI_MCP_CONFIG isn't already set — reusing the existing
     SAKTHAI_MCP_CONFIG/mcp_config_override() precedence chain."""
+    # This test exercises the persona-manifest path that conftest's autouse
+    # `_isolate_mcp_config` guard closes, so opt out of the guard. Safe here
+    # because PERSONAS_DIR is redirected at tmp_path below, so the manifest
+    # resolved is this test's own, not the repository's.
+    monkeypatch.delenv("SAKTHAI_MCP_CONFIG", raising=False)
     server_home = tmp_path / "srv"
     persona_cfg_dir = tmp_path / "personas" / "saksee" / "config"
     persona_cfg_dir.mkdir(parents=True)
