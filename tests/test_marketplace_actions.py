@@ -144,6 +144,12 @@ PINNED_ACTIONS = {
     "maxgfr/github-multi-deployments": "ed720d528c8e44c33cca444d1b5375a866ec724c",
     "oleg-koval/dependabot-lockfile-fixer": "c7002b60b8621ba70c11ec3ab793cc845c1b236d",
     "oven-sh/setup-bun": "0c5077e51419868618aeaa5fe8019c62421857d6",
+    "docker/login-action": "8aa5831fb8d48d8f76594c7ddde61ae58019f550",
+    "docker/setup-buildx-action": "f87e5991a6d7451dcb8d9637bfbc97413f497069",
+    "docker/setup-qemu-action": "99012661954931238ded8c8b007157a8430204e1",
+    "docker/build-push-action": "c3c9e263c25d99ce0380d002d59b67737d91b0dc",
+    "docker/metadata-action": "dc802804100637a589fabce1cb79ff13a1411302",
+    "cloudposse/github-action-sync-docker-repos": "a1a04d57b75e6d64c978f02f777307ad03f6f605",
 }
 
 
@@ -296,6 +302,8 @@ MARKETPLACE_WORKFLOW_FILES = [
     "dependencies-autoupdate.yml",
     "multi-lint-action.yml",
     "dependabot-lockfile-fixer.yml",
+    "build.yml",
+    "docker-sync-repos.yml",
 ]
 
 
@@ -394,3 +402,36 @@ def test_actions_attest_integration() -> None:
     assert ref_doc.is_file()
     ref_text = ref_doc.read_text(encoding="utf-8")
     assert target_sha in ref_text
+
+
+def test_docker_ecosystem_actions_integration() -> None:
+    """Ensure Docker toolchain actions (Wave 26) are properly integrated and pinned."""
+    build_path = WORKFLOWS_DIR / "build.yml"
+    assert build_path.is_file()
+    build_content = build_path.read_text(encoding="utf-8")
+    build_data = yaml.safe_load(build_content)
+
+    assert "concurrency" in build_data
+    assert isinstance(build_data["permissions"], dict)
+    assert build_data["permissions"]["contents"] == "read"
+
+    assert f"docker/login-action@{PINNED_ACTIONS['docker/login-action']}" in build_content
+    assert (
+        f"docker/setup-buildx-action@{PINNED_ACTIONS['docker/setup-buildx-action']}"
+        in build_content
+    )
+    assert f"docker/setup-qemu-action@{PINNED_ACTIONS['docker/setup-qemu-action']}" in build_content
+    assert f"docker/build-push-action@{PINNED_ACTIONS['docker/build-push-action']}" in build_content
+    assert f"docker/metadata-action@{PINNED_ACTIONS['docker/metadata-action']}" in build_content
+
+    sync_path = WORKFLOWS_DIR / "docker-sync-repos.yml"
+    assert sync_path.is_file()
+    sync_content = sync_path.read_text(encoding="utf-8")
+    sync_data = yaml.safe_load(sync_content)
+
+    assert "concurrency" in sync_data
+    assert isinstance(sync_data["permissions"], dict)
+    assert (
+        f"cloudposse/github-action-sync-docker-repos@{PINNED_ACTIONS['cloudposse/github-action-sync-docker-repos']}"
+        in sync_content
+    )
