@@ -224,6 +224,12 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-24 **Restore genuine ≥ 96% coverage** — The suite measured 95.59% (19785/20698 statements+branches) while CI stayed green: pytest-cov's exit check rounds the total to `[tool.coverage.report] precision` (default 0), so 95.59 rounds to 96 and `--cov-fail-under=96` passes even as it prints FAIL. Add hermetic tests for `agent/eval.py::evaluate_persona_extensions_health()` and `team/gateway.py` to bring the unrounded total back above 96.00% (measured 96.12%, 19895/20698, `--cov-precision=2`).
 - [x] 2026-11-24 **Whole-Repository Branch Consolidation & Remote Harmonization** — Audited all 7 remote branches, resolved `build.yml` missing concurrency defect on `main` via PR #2073, expanded SPDX permissive licenses in `.github/dependency-review-config.yml` via PR #2074, merged routine dependency lockfile bump via PR #2069, refreshed root documentation via PR #2071, updated dashboard dependencies via PR #2072, restored $\ge 96\%$ real coverage via PR #2075, pruned all 6 obsolete feature/release remote branches so only `main` and `gh-pages` remain, and verified 100% test and lint pass across the repo.
 
+### 10. Artifact-Guided Refactoring, Blast-Radius Analysis & GitHub CLI Subagents Integration
+- [x] 2026-11-24 **Phase 1: Interactive Blast-Radius Analysis & Phased Decommissioning Artifact** — Build an interactive UI artifact (`refactoring_blast_radius.html`) embedding the 3 verification gates, interactive dependency graph of Genkit MCP components across personas, and per-file inspection.
+- [x] 2026-11-24 **Phase 2: Decouple Genkit MCP from Active Personas & Retain Legacy Fallback** — Keep `builtin_genkit_server` behind `SAKTHAI_ENABLE_GENKIT=1`, decouple active bindings from `sakjules`, `sakking`, `saktan`, enforce 6-persona parity.
+- [x] 2026-11-24 **Phase 3: GitHub CLI Subagents & Dynamic Workflow Engine** — Implement `github-cli-auditor` and `github-cli-pr-runner` subagents, dynamic workflow scripts under `scripts/workflows/` and `personas/sakjules/workflows/`, and CLI command integration.
+- [x] 2026-11-24 **Phase 4: Verification, Linting, Parity & Quality Gates** — Run tests, ruff, mypy, bandit, verify >=96% test coverage.
+
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |
