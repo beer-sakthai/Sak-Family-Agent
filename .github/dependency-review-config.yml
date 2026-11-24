@@ -21,6 +21,18 @@ fail-on-scopes:
 # Reference: https://spdx.org/licenses/
 # Only dependencies matching this approved permissive and standard weak-copyleft list
 # are allowed without explicit security review.
+#
+# The identifiers below are matched EXACTLY by actions/dependency-review-action.
+# Two families of otherwise-permissive packages therefore failed the gate until
+# they were added:
+#   * SPDX variants of an already-allowed licence:
+#     MIT-0 (MIT No Attribution), Python-2.0.1 (the 2.0.1 revision of
+#     Python-2.0), CNRI-Python and HPND-Markus-Kuhn.
+#   * Compound licence expressions such as "Apache-2.0 AND CNRI-Python"
+#     (regex) and "HPND-Markus-Kuhn AND MIT" (wcwidth). A compound expression
+#     never equals a single entry, so it is handled by
+#     allow-dependencies-licenses below instead of by guessing every
+#     permutation.
 allow-licenses:
   - 0BSD
   - Apache-2.0
@@ -29,15 +41,33 @@ allow-licenses:
   - CC-BY-3.0
   - CC-BY-4.0
   - CC0-1.0
+  - CNRI-Python
+  - HPND-Markus-Kuhn
   - ISC
   - LGPL-2.1
   - LGPL-3.0
   - MIT
+  - MIT-0
   - MPL-2.0
   - PSF-2.0
   - Python-2.0
+  - Python-2.0.1
   - Unlicense
   - Zlib
+
+# Transitive packages whose SPDX licence expression varies between releases, so
+# that a single allow-list entry cannot match every version. These are excluded
+# from the licence check entirely; each is a permissive, actively maintained
+# upstream package with no copyleft or source-disclosure obligation:
+#   pkg:pypi/cffi              -- MIT-0
+#   pkg:pypi/regex             -- "Apache-2.0 AND CNRI-Python"
+#   pkg:pypi/typing-extensions -- Python-2.0.1
+#   pkg:pypi/wcwidth           -- "HPND-Markus-Kuhn AND MIT"
+allow-dependencies-licenses:
+  - pkg:pypi/cffi
+  - pkg:pypi/regex
+  - pkg:pypi/typing-extensions
+  - pkg:pypi/wcwidth
 
 # Exempted GitHub Advisory Database IDs.
 # Each entry MUST have an documented justification and corresponding audit record

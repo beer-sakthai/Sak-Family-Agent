@@ -29,11 +29,11 @@
   <a href="https://securityscorecards.dev/viewer/?uri=github.com/beer-sakthai/Sak-Family-Agent"><img alt="OpenSSF Scorecard" src="https://api.securityscorecards.dev/projects/github.com/beer-sakthai/Sak-Family-Agent/badge"></a>
   <a href="https://app.stepsecurity.io"><img alt="StepSecurity" src="https://img.shields.io/badge/StepSecurity-Harden--Runner-blue?logo=security"></a>
   <br>
-  <a href="https://github.com/beer-sakthai/Sak-Family-Agent/releases"><img alt="Release v2.52.0" src="https://img.shields.io/badge/release-v2.52.0-2563EB"></a>
+  <a href="pyproject.toml"><img alt="Package version 2.0.0 — no GitHub Release has been published yet" src="https://img.shields.io/badge/package_version-2.0.0-2563EB"></a>
   <img alt="Python 3.11 | 3.12" src="https://img.shields.io/badge/python-3.11%20%7C%203.12-3776AB?logo=python&amp;logoColor=white">
   <a href="#the-six-personas"><img alt="6 personas" src="https://img.shields.io/badge/personas-6%20online-7C3AED"></a>
   <a href="#the-six-personas"><img alt="481 skills" src="https://img.shields.io/badge/skills-481%20standardized-10B981"></a>
-  <a href="#development--verification"><img alt="4,155+ tests" src="https://img.shields.io/badge/tests-4%2C155%2B%20passing-brightgreen"></a>
+  <a href="#development--verification"><img alt="215 pytest test files + 24 dashboard suites" src="https://img.shields.io/badge/tests-215%20pytest%20files%20%2B%2024%20dashboard%20suites-brightgreen"></a>
   <a href="LICENSE"><img alt="License: custom IP license" src="https://img.shields.io/badge/license-custom%20IP%20license-4B5563"></a>
 </p>
 
@@ -45,7 +45,7 @@
 | **Memory Store** | SQLite per Persona (`~/.sakthai/`) | `🟢 PERSISTENT` | Sharded persistence, Memory Studio & `sakthai memory family` |
 | **Interactive TUI** | Live Textual terminal (`sak chat --tui`) | `🟢 LIVE TUI` | Two-phase tool timers & `ConfirmModalScreen` risk gate |
 | **Quota Sentinel** | Free-tier rate limiter (`sakthai.agent.quota`) | `🟢 QUOTA SENTINEL` | Sliding window + SQLite PT reset & 3-tier cascade |
-| **Test Quality** | 3,547 Pytest + 608 Vitest = 4,155+ Tests | `🟢 PASS (≥96%)` | Enforced strict coverage floor (`--cov-fail-under=96`) |
+| **Test Quality** | 215 pytest files (`tests/`) + 24 dashboard suites | `🟢 PASS (≥96%)` | Enforced strict coverage floor (`--cov-fail-under=96`) |
 | **Security Gates** | Concentric Guardrails, DLP, Secret Scan, CodeQL & Bandit | `🛡️ ENFORCED` | Safe execution, credential isolation & automated scanning |
 | **Model Training & Serving** | LoRA SFT recipes, OpenEnv GRPO RL & Ollama export (`training/`, `sakthai train`) | `🟢 OPERATIONAL` | Offline-first fine-tuning, OpenEnv RL & Ollama local deployment |
 | **OpenEnv RL Ecosystem** | 5-Workspace GRPO RL, 8 Catalog Envs, A2A Server & 149 Contract Tests (`sakthai train openenv`) | `🟢 RL INTEGRATED` | Process-isolated `uv run` bridge to `beer-sakthai/openenv-rl-training` |
@@ -57,7 +57,7 @@
 > **Six personas, one shared runtime.**
 > House of Sak is a local-first, provider-agnostic AI agent workspace combining a durable SQLite memory store, an extensible tool loop, Model Context Protocol (MCP) support, persona-specific skills, multi-agent coordination, and an interactive Next.js dashboard.
 > The ecosystem revolves around the six-stage growth cycle: **Dream → Hope → Care → Joy → Trust → Growth**.
-> Read [Beer's Story (`STORY.md`)](./STORY.md) to discover the foundational personal journey, values, and healing behind the House of Sak.
+> Read [Beer's Story (`STORY.md`)](./STORY.md) to discover the foundational personal journey, values, and healing behind the House of Sak, then dive into [`HOUSE_OF_SAK.md`](./HOUSE_OF_SAK.md), [`docs/capabilities.md`](docs/capabilities.md), or [`docs/architecture.md`](docs/architecture.md).
 
 ---
 
@@ -79,9 +79,9 @@
 - **Model Training & Offline Serving (`training/`, `sakthai train`)** — fine-tuning recipes (LoRA/QLoRA for SakThai 7B and coder models), synthetic tool-calling dataset generators (`build_toolcalling_dataset.py`), adapter fidelity evaluation probes (`eval_toolcalling.py`), and Ollama GGUF export generating production `Modelfile`s for 100% offline execution.
 - **OpenEnv RL Training & Agentic Alignment (`sakthai train openenv`, `scripts/train/openenv_ecosystem.py`)** — first-class ecosystem bridge to [`beer-sakthai/openenv-rl-training`](https://github.com/beer-sakthai/openenv-rl-training) (auto-discovered via `SAKTHAI_OPENENV_ROOT` or `../openenv-rl-training`), orchestrating 5 independent workspaces for QLoRA SFT, Group Relative Policy Optimization (GRPO) with TRL `environment_factory` and Hugging Face OpenEnv (SimpleGuess, MCP Order/VAT verification, Sandboxed Terminal, BrowserGym MiniWoB++, and 8-environment catalog), A2A protocol server, CPU heuristic policy competitions (`frac_reward_zero_std` reward variance checks), deterministic evaluation manager rubrics, and 149 contract/unit tests.
 - **5-Pillar Persona Evaluation Framework (`sakthai eval`)** — comprehensive evaluation across Soul Alignment, Skill Ecosystem Health, Memory Store Integrity, Concentric Safety Compliance, and Composite Fleet Audit (`audit`, `soul`, `skills`, `safety`, `tasks`, `bench`) enforcing parity across all six personas.
-- **Repository Task Registry (`sakthai repo`)** — unified declarative task map (`sakthai repo map`) and CLI execution runner (`sakthai repo run <task>`) indexing all 9 repository areas (scripts, apps, training, evaluation_tasks, services, infra, evolution, library, and personas).
-- **Dashboard** — Next.js 15+ frontend backed by the SakThai HTTP and Gateway APIs featuring live KPI telemetry, Pipelines tab (SVG DAG visualizer with SSE token terminal), Memory Shard Studio (6-persona SQLite inspector and injection simulator), and Gateway chat playground.
-- **Security and quality gates** — concentric guardrails for tools and file access, strict typing, linting, secret scanning, CodeQL, Bandit, Zizmor, and automated tests (4,155+ tests passing).
+- **Repository Task Registry (`sakthai repo`)** — unified declarative task map (`sakthai repo map`) and CLI execution runner (`sakthai repo run <task>`) indexing **10 repository areas** — `scripts`, `eval`, `training`, `dashboard`, `telegram`, `hf`, `infra`, `evolution`, `ci`, and `gateway` — across **52 registered tasks** (registry: `personas/sakthai/cli/repo_registry.py`).
+- **Dashboard** — Next.js 16 frontend backed by the SakThai HTTP and Gateway APIs featuring live KPI telemetry, Pipelines tab (SVG DAG visualizer with SSE token terminal), Memory Shard Studio (6-persona SQLite inspector and injection simulator), and Gateway chat playground.
+- **Security and quality gates** — concentric guardrails for tools and file access, strict typing, linting, secret scanning, CodeQL, Bandit, Zizmor, and automated tests (215 pytest files + 24 dashboard suites, coverage floor ≥ 96%).
 
 ---
 
@@ -146,7 +146,7 @@ Every entry point shares one unified tool registry, concentric guardrails, and p
 ```mermaid
 flowchart TD
     subgraph Presentation ["Presentation & UI"]
-        DASH["Dashboard<br/>apps/sak_agent_dashboard (Next.js 15+)"]
+        DASH["Dashboard<br/>apps/sak_agent_dashboard (Next.js 16)"]
         ENG["Embedded Workflow Engine<br/>workflow_engine/"]
         DASH --- ENG
     end
@@ -340,20 +340,23 @@ sakthai repo run openenv-baselines                         # run baseline policy
 
 ### Prerequisites
 
-- Python **3.11 or newer**
+- Python **3.11 or 3.12** (`requires-python = ">=3.11,<3.13"`)
 - [`uv`](https://docs.astral.sh/uv/)
-- Node.js **22 or newer** (for the Next.js dashboard)
+- Node.js **22 or newer** (for the Next.js 16 dashboard)
 
 ### Setup & Installation
 
 ```bash
 cp .env.example .env
 # Edit .env with your credentials (ANTHROPIC_API_KEY, HF_TOKEN, etc.)
-uv sync --all-extras --dev
 
-# Install editable CLI into environment (providing both `sakthai` and `sak` commands):
-pip install -e personas/sakthai
+# Sync the environment. The root pyproject.toml maps the installable package
+# directory to personas/sakthai/ ([tool.setuptools] package-dir), so this one
+# command provides both the `sakthai` and `sak` console scripts:
+uv sync --all-extras --dev
 ```
+
+> **Note:** `personas/sakthai/pyproject.toml` is a *different* project — `sak-agent-self-evolution`, the DSPy/GEPA self-evolution engine (`packages.find` includes only `evolution*`). Running `pip install -e personas/sakthai` therefore does **not** install the `sak` / `sakthai` CLI. Install from the repository root instead: `uv sync --all-extras --dev` (recommended) or `pip install -e .`.
 
 ### Modern Agent CLI Experience (AGY, Claude Code & Gemini CLI Parity)
 
@@ -450,19 +453,31 @@ cd apps/sak_agent_dashboard && npm ci && npm run dev
 ```text
 personas/sakthai/              Canonical installable Python package (agent, cli, cycle, memory, mcp, team, web)
 personas/<name>/               Persona overlays, skills (462 on-disk), evolution, and configurations
-personas/shared/skills/        Universal shared skills across all personas (19 skills)
-apps/sak_agent_dashboard/      Next.js dashboard with embedded workflow engine (workflow_engine/)
+personas/shared/               Shared skills (19), shared config, and the canonical model roster
+apps/sak_agent_dashboard/      Next.js 16 dashboard with embedded workflow engine (workflow_engine/)
 training/                      LoRA fine-tuning recipes, synthetic dataset generators, and Ollama serving
 evaluation_tasks/              Evaluation benchmarks, soul-following datasets, and scoring harnesses
 services/servicequotebot/      Production quote generation, price book, and lead tracking service
+services/teams-copilot-mcp/    Microsoft Teams Copilot MCP server
+services/inference-endpoint/   Standalone inference endpoint deployment assets
 infra/                         Infrastructure definitions, Docker sandboxes, and cloud configs
-library/                       Curated library of 31 reusable agent skills
-.specify/                      Spec-Kit constitution, architectural memory, and multi-agent presets
-tests/                         Pytest test suite (3,547 tests across Python 3.11 & 3.12 with >=96% coverage; 4,155+ total tests)
-docs/                          Architecture, capabilities, operations, marketplace catalog, wiki, and guides
+automation/n8n/                n8n workflow exports for event-driven automation
+dataset-cards/                 Hugging Face dataset cards (sakthai-combined-v7 and friends)
+data/                          Sample memory and coverage data ([format](data/README.md))
 scripts/                       Repository maintenance, portfolio health, wiki sync, and diagnosis tooling
-.github/workflows/             120+ hardened GitHub Actions, agentic workflows, and security gates
+product/                       Product plans, decisions, and session notes
+references/                    Reference contracts (A2UI security, anti-gaming safeguards, tool-RAG boundary)
+schemas/                       Machine-readable schemas (inter-agent handoff)
+security/                      Security hardening implementation plans
+assets/                        Dataset templates
+bin/                           Small operator binaries
+.specify/                      Spec-Kit constitution, architectural memory, and multi-agent presets
+tests/                         Pytest suite (215 files; coverage floor ≥ 96% across Python 3.11 & 3.12)
+docs/                          Architecture, capabilities, operations, marketplace catalog, wiki, ADR, plans, and guides
+.github/workflows/             188 GitHub Actions workflow definitions (8 are compiled gh-aw agentic workflows)
 ```
+
+> **The `library/` directory no longer exists.** It was superseded by `personas/shared/skills/` (the universal shared skill set) and is referenced only by a stale `exclude` entry in the root `pyproject.toml` ruff configuration. See [`docs/adr/ADR-0001-persona-package-duplication.md`](docs/adr/ADR-0001-persona-package-duplication.md) and the improvement plan under [`docs/superpowers/plans/`](docs/superpowers/plans/).
 
 ---
 
@@ -472,8 +487,8 @@ Install dependencies and run validation checks:
 
 ```bash
 uv sync --all-extras --dev
-make test                                      # run full pytest suite (enforces >=96% coverage, 3,547 tests)
-cd apps/sak_agent_dashboard && npm test        # run dashboard Vitest test suite (608 tests across 23 suites)
+make test                                      # run full pytest suite (enforces >=96% coverage)
+cd apps/sak_agent_dashboard && npm test        # run dashboard Vitest suite (24 suites, Vitest 5)
 make lint                                      # run Ruff linter & formatter checks
 uv run mypy personas/sakthai                   # run strict type checker
 uv run bandit -c pyproject.toml -r personas/sakthai  # run security vulnerability scanner
@@ -484,17 +499,63 @@ Additional repository tooling:
 
 ```bash
 make compose-personas                          # build composed skill trees
+make sync-personas                             # mirror the canonical package into the five persona copies
 make export-agent-repos                         # export standalone persona repository snapshots
 make contract-types                             # regenerate dashboard API TypeScript types
+make system-snapshot                            # regenerate the dashboard System view repo snapshot
 uv run python scripts/diagnose_personas.py     # offline validation of all six personas
 ```
 
 ---
 
-## Recent Activity
+## Contributing: The Canonical Package & Persona Duplication
+
+**Read this before editing Python under `personas/`.**
+
+Only `personas/sakthai/` is installed and executed. The root `pyproject.toml`
+maps it explicitly:
+
+```toml
+[tool.setuptools]
+package-dir = {"sakthai" = "personas/sakthai"}
+```
+
+The other five persona directories (`sakking`, `saksee`, `sakjules`, `saksit`,
+`saktan`) each carry a **full copy of the same package tree** — the same 131
+Python modules under `agent/`, `cli/`, `memory/`, `mcp/`, `gateway/`,
+`agent_platform/`, and so on. Only three files are content-pinned by CI
+(`agent/guardrails.py`, `web/server.py`, `agent/eval.py`), so a change to any
+other module in `personas/sakthai/` **will not fail CI** if it is not mirrored.
+
+| Task | Command |
+| :--- | :--- |
+| Check whether the five copies have drifted | `python scripts/sync_personas.py --check` |
+| Mirror canonical → the five copies | `make sync-personas` |
+| See the decision and options | [`docs/adr/ADR-0001-persona-package-duplication.md`](docs/adr/ADR-0001-persona-package-duplication.md) |
+
+Per-persona content — `SOUL.md`, `skills/`, `config/`, `evolution/` — is
+genuinely unique and is *not* duplication; do not sync it. The durable fix is
+to move the package code onto the same generate-don't-duplicate model already
+used for skills (`scripts/compose_persona.py` + `make compose-personas`); that
+migration is tracked in ADR-0001 and the improvement plan under
+[`docs/superpowers/plans/`](docs/superpowers/plans/).
+
+---
+
+## Recent Activity & Governance
 
 <!--START_SECTION:activity-->
+| Where to look | What it holds |
+| :--- | :--- |
+| [`CHANGELOG.md`](CHANGELOG.md) | Keep-a-Changelog history for the v2 rewrite. **Note:** it self-declares as lagging the repository — the six-persona layout, memory sharding, guardrail hardening, and the dashboard API are tracked in `PLAN.md` and the dated audits under `docs/` instead. |
+| [`docs/superpowers/plans/`](docs/superpowers/plans/) | 15 dated implementation plans (whole-repo refactor, README synchronisation, workflow and cache optimisation, agent resilience, unified agent integration). |
+| [`docs/superpowers/specs/`](docs/superpowers/specs/) | 16 design specifications that the plans above implement. |
+| [`docs/adr/`](docs/adr/) | Architecture decision records — currently ADR-0001 on the six-persona package duplication. |
+| [`PLAN.md`](PLAN.md) | The repository-wide status table and milestone tracker. |
+| [`docs/test-coverage-audit-2026-09-01.md`](docs/test-coverage-audit-2026-09-01.md) | The most recent measured coverage audit: **96.21%** branch coverage, 191 uncovered statements, 156 partial branches. |
 <!--END_SECTION:activity-->
+
+> **No GitHub Release has been published for this repository yet.** The package version is `2.0.0` (root `pyproject.toml`); release notes are tracked in [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 

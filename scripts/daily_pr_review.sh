@@ -15,6 +15,12 @@ git diff --quiet && git diff --cached --quiet || {
 gh auth status >/dev/null
 default_branch="$(gh api "repos/${REPO}" --jq '.default_branch')"
 
+# actions/checkout runs with persist-credentials: false, so the git remote
+# carries no token and every `git fetch`/`git push` over HTTPS fails with
+# "could not read Username for 'https://github.com'". Authenticate git through
+# the `gh` CLI instead of persisting a credential in .git/config.
+git config --local credential.helper '!gh auth git-credential'
+
 git fetch --prune origin >/dev/null
 
 echo "# Daily PR review: ${REPO}"
@@ -23,10 +29,18 @@ echo "Default branch: ${default_branch}"
 echo "Worktree: clean"
 echo
 echo "## Open pull requests"
-gh pr list --repo "$REPO" --state open --limit 100 \
+# This enumeration decides which branches are protected from cleanup. The `|| true`
+# that used to swallow a `gh pr list` failure made an empty list look like
+# "this repository has no open pull requests", which would have let the cleanup
+# pass below delete a branch that has an open pull request. Fail loudly instead.
+if ! gh pr list --repo "$REPO" --state open --limit 100 \
   --json number,title,headRefName,baseRefName,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,updatedAt,url \
   --jq '.[] | [(.number|tostring), .title, .headRefName, .baseRefName, (if .isDraft then "draft" else "ready" end), (.mergeStateStatus // "unknown"), (.reviewDecision // "pending"), .updatedAt, .url] | @tsv' \
-  | sed 's/^/PR\t/' || true
+  > "${PR_LIST_FILE:-${TMPDIR:-/tmp}/daily-pr-review-prs.tsv}"; then
+  echo "ERROR: could not list open pull requests; refusing to classify branches." >&2
+  exit 1
+fi
+sed 's/^/PR\t/' "${PR_LIST_FILE:-${TMPDIR:-/tmp}/daily-pr-review-prs.tsv}" || true
 
 echo
 echo "## Branch cleanup dry run"
