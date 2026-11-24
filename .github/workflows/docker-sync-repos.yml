@@ -1,0 +1,67 @@
+name: Docker Repository Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      src:
+        description: "Source container image/repository"
+        required: true
+        default: "busybox:latest"
+        type: string
+      dest:
+        description: "Destination repository to sync to"
+        required: true
+        default: "docker.io/sakthai001/busybox-mirror"
+        type: string
+      override_multi_arch:
+        description: "Copy all architecture variants in multi-arch list"
+        required: false
+        default: "true"
+        type: string
+  workflow_call:
+    inputs:
+      src:
+        description: "Source container image/repository"
+        required: true
+        type: string
+      dest:
+        description: "Destination repository to sync to"
+        required: true
+        type: string
+      override_multi_arch:
+        description: "Copy all architecture variants in multi-arch list"
+        required: false
+        default: "true"
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  sync-docker-repos:
+    name: Sync Docker Repositories
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Sync Docker Repositories
+        uses: cloudposse/github-action-sync-docker-repos@a1a04d57b75e6d64c978f02f777307ad03f6f605 # v0.0.1
+        with:
+          src: ${{ inputs.src || 'busybox:latest' }}
+          dest: ${{ inputs.dest || 'docker.io/sakthai001/busybox-mirror' }}
+          override-multi-arch: ${{ inputs.override_multi_arch || 'true' }}

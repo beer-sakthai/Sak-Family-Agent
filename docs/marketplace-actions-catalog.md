@@ -131,6 +131,12 @@ To prevent supply-chain attacks (such as tag mutation, compromised upstream acco
 | **Multi-Linter Engine** | [`ryanclark/lint-action`](https://github.com/ryanclark/lint-action) | `v1.15.0` | `316d8bd29e28a292657682f6c6e45ca1dab41496` | `contents: write`, `checks: write`, `pull-requests: write` | Multi-language linter runner and auto-fixer supporting Python, JavaScript, and more |
 | **GitHub Multi Deployments** | [`maxgfr/github-multi-deployments`](https://github.com/maxgfr/github-multi-deployments) | `v1.8.11` | `ed720d528c8e44c33cca444d1b5375a866ec724c` | `deployments: write`, `contents: read` | Manages deployment states across multiple environments and PR preview lifecycles |
 | **Dependabot Lockfile Fixer** | [`oleg-koval/dependabot-lockfile-fixer`](https://github.com/oleg-koval/dependabot-lockfile-fixer) | `v1.0.1` | `c7002b60b8621ba70c11ec3ab793cc845c1b236d` | `contents: write`, `pull-requests: write` | Resolves lockfile merge conflicts in Dependabot PRs by regenerating manager lockfiles |
+| **Docker Login** | [`docker/login-action`](https://github.com/docker/login-action) | `v4.8.0` | `8aa5831fb8d48d8f76594c7ddde61ae58019f550` | `contents: read` | Authenticates GitHub Actions runner against Docker Hub or OCI container registries |
+| **Docker Setup Buildx** | [`docker/setup-buildx-action`](https://github.com/docker/setup-buildx-action) | `v4.4.1` | `f87e5991a6d7451dcb8d9637bfbc97413f497069` | `contents: read` | Sets up Docker Buildx and connects to local BuildKit or Docker Build Cloud remote builders |
+| **Docker Setup QEMU** | [`docker/setup-qemu-action`](https://github.com/docker/setup-qemu-action) | `v4.4.0` | `99012661954931238ded8c8b007157a8430204e1` | `contents: read` | Configures QEMU emulation for multi-architecture container builds (linux/amd64, linux/arm64) |
+| **Docker Build & Push** | [`docker/build-push-action`](https://github.com/docker/build-push-action) | `v7.4.0` | `c3c9e263c25d99ce0380d002d59b67737d91b0dc` | `contents: read`, `packages: write` | Builds and pushes Docker images using Buildx and BuildKit |
+| **Docker Metadata** | [`docker/metadata-action`](https://github.com/docker/metadata-action) | `v6.2.0` | `dc802804100637a589fabce1cb79ff13a1411302` | `contents: read` | Extracts Docker tags and labels from Git reference and GitHub events |
+| **Docker Repo Sync** | [`cloudposse/github-action-sync-docker-repos`](https://github.com/cloudposse/github-action-sync-docker-repos) | `v0.0.1` | `a1a04d57b75e6d64c978f02f777307ad03f6f605` | `contents: read` | Synchronizes container images across Docker Hub and OCI container repositories |
 
 
 ---
@@ -1820,6 +1826,47 @@ Resolves lockfile merge conflicts on Dependabot PR branches by rebasing/merging 
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+### 3.132 Docker Build Cloud & Toolchain ([`.github/workflows/build.yml`](../.github/workflows/build.yml))
+Coordinates multi-platform container building, Docker Hub authentication, and offloads builds to Docker Build Cloud with remote BuildKit endpoints:
+
+```yaml
+- name: Set up QEMU
+  uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+
+- name: Log in to Docker Hub
+  if: ${{ env.DOCKER_PAT != '' }}
+  uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+  with:
+    username: ${{ vars.DOCKER_USER || 'sakthai001' }}
+    password: ${{ secrets.DOCKER_PAT }}
+
+- name: Set up Docker Buildx
+  uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+  with:
+    driver: cloud
+    endpoint: ${{ vars.DOCKER_BUILD_CLOUD_ENDPOINT || 'sakthai001/sak-family-agent' }}
+
+- name: Extract metadata
+  id: meta
+  uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+
+- name: Build and push
+  uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+```
+
+### 3.133 Docker Repository Sync ([`.github/workflows/docker-sync-repos.yml`](../.github/workflows/docker-sync-repos.yml))
+Synchronizes images and multi-architecture manifests across Docker Hub and container registries using Skopeo:
+
+```yaml
+- name: Sync Docker Repositories
+  uses: cloudposse/github-action-sync-docker-repos@a1a04d57b75e6d64c978f02f777307ad03f6f605 # v0.0.1
+  with:
+    src: ${{ inputs.src || 'busybox:latest' }}
+    dest: ${{ inputs.dest || 'docker.io/sakthai001/busybox-mirror' }}
+    override-multi-arch: ${{ inputs.override_multi_arch || 'true' }}
+```
+
 
 ---
 
