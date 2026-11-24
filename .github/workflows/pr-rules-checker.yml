@@ -1,8 +1,6 @@
 name: PR Rules Checker
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 permissions:
@@ -34,7 +32,6 @@ jobs:
 
       - name: Run PR Rules Checker
         uses: puntorigen/pr-rules@d76eb519333f3ff4983b52109cbef77030385c89 # v1.0.0
-        if: ${{ env.OPENAI_API_KEY != '' }}
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
