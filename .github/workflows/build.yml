@@ -1,31 +1,80 @@
-name: ci
+name: Docker Build Cloud & Toolchain
 
 on:
   push:
     branches:
       - "main"
+  pull_request:
+    branches:
+      - "main"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   docker:
+    name: Docker Build & Toolchain
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+      - name: Harden Runner
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
         with:
-          username: ${{ vars.DOCKER_USER }}
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+
+      - name: Log in to Docker Hub
+        if: ${{ env.DOCKER_PAT != '' }}
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          username: ${{ vars.DOCKER_USER || 'sakthai001' }}
           password: ${{ secrets.DOCKER_PAT }}
+        env:
+          DOCKER_PAT: ${{ secrets.DOCKER_PAT }}
+
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
         with:
           driver: cloud
-          endpoint: "sakthai001/sak-family-agent"
-      - name: Build and push
-        uses: docker/build-push-action@v6
+          endpoint: ${{ vars.DOCKER_BUILD_CLOUD_ENDPOINT || 'sakthai001/sak-family-agent' }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
-          tags: "${{ vars.DOCKER_USER }}/docker-build-cloud-demo:latest"
-          # For pull requests, export results to the build cache.
-          # Otherwise, push to a registry.
-          outputs: ${{ github.event_name == 'pull_request' && 'type=cacheonly' || 'type=registry' }}
-  
+          images: ${{ vars.DOCKER_USER || 'sakthai001' }}/docker-build-cloud-demo
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,format=short
+
+      - name: Build and push
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Dockerfile.sandbox
+          tags: ${{ steps.meta.outputs.tags || format('{0}/docker-build-cloud-demo:latest', vars.DOCKER_USER || 'sakthai001') }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: ${{ (github.event_name == 'pull_request' || env.DOCKER_PAT == '') && 'type=cacheonly' || 'type=registry' }}
+        env:
+          DOCKER_PAT: ${{ secrets.DOCKER_PAT }}
+
+      - name: Verify Docker Compose Configuration
+        run: |
+          docker compose -f infra/servicequotebot/docker/docker-compose.yml config
