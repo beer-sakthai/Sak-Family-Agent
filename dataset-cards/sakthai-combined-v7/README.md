@@ -141,13 +141,15 @@ print(f"Train: {len(train)} examples")
 test = load_dataset("Nanthasit/sakthai-combined-v7", name="test", split="train")
 print(f"Test: {len(test)} examples")
 
+
 # Format for TRL training
 def to_text(ex):
     from transformers import AutoTokenizer
+
     tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-1.5B-Instruct")
-    return {"text": tokenizer.apply_chat_template(
-        ex["messages"], tools=ex.get("tools"), tokenize=False
-    )}
+    return {
+        "text": tokenizer.apply_chat_template(ex["messages"], tools=ex.get("tools"), tokenize=False)
+    }
 ```
 
 ## Data Quality

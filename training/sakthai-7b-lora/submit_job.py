@@ -18,8 +18,12 @@ from huggingface_hub import get_token, run_uv_job
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Submit SakThai 7B training to HF Jobs.")
-    parser.add_argument("--dry-run", action="store_true", help="Print job submission plan without executing.")
-    parser.add_argument("--flavor", default="a10g-small", help="HF Jobs hardware flavor (default: a10g-small).")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print job submission plan without executing."
+    )
+    parser.add_argument(
+        "--flavor", default="a10g-small", help="HF Jobs hardware flavor (default: a10g-small)."
+    )
     parser.add_argument("--timeout", default="2h", help="Job timeout limit (default: 2h).")
     args = parser.parse_args()
 

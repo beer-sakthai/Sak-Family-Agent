@@ -121,7 +121,7 @@ exact same injection pattern its existing `read_input` parameter already
 uses:
 
 ```python
-confirm_tool: Callable[[str, dict[str, Any]], bool] | None = None,
+confirm_tool: Callable[[str, dict[str, Any]], bool] | None = (None,)
 ```
 
 passed straight through to `run_agent(..., on_confirm=confirm_tool)`

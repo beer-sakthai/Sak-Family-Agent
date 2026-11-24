@@ -153,7 +153,11 @@ def test_tool_call_event_includes_output_preview(store: MemoryStore) -> None:
         [
             _Resp(
                 "tool_use",
-                [_Block(type="tool_use", id="t1", name="learn", input={"value": "x", "kind": "note"})],
+                [
+                    _Block(
+                        type="tool_use", id="t1", name="learn", input={"value": "x", "kind": "note"}
+                    )
+                ],
             ),
             _Resp("end_turn", [_Block(type="text", text="done")]),
         ]
@@ -305,30 +309,28 @@ becomes:
 The second (the `stop_reason != "tool_use"` fallback branch):
 
 ```python
-                result = AgentResult(
-                    text=_extract_text(response.content)
-                    or f"(unexpected stop_reason={stop_reason!r})",
-                    iterations=iteration,
-                    stop_reason=stop_reason,
-                    tool_calls=tool_calls,
-                    usage=usage_tracker.to_dict(),
-                )
-                _save_session_log(task, model, messages, result)
+result = AgentResult(
+    text=_extract_text(response.content) or f"(unexpected stop_reason={stop_reason!r})",
+    iterations=iteration,
+    stop_reason=stop_reason,
+    tool_calls=tool_calls,
+    usage=usage_tracker.to_dict(),
+)
+_save_session_log(task, model, messages, result)
 ```
 
 becomes:
 
 ```python
-                result = AgentResult(
-                    text=_extract_text(response.content)
-                    or f"(unexpected stop_reason={stop_reason!r})",
-                    iterations=iteration,
-                    stop_reason=stop_reason,
-                    tool_calls=tool_calls,
-                    usage=usage_tracker.to_dict(),
-                    messages=[*messages, {"role": "assistant", "content": response.content}],
-                )
-                _save_session_log(task, model, messages, result)
+result = AgentResult(
+    text=_extract_text(response.content) or f"(unexpected stop_reason={stop_reason!r})",
+    iterations=iteration,
+    stop_reason=stop_reason,
+    tool_calls=tool_calls,
+    usage=usage_tracker.to_dict(),
+    messages=[*messages, {"role": "assistant", "content": response.content}],
+)
+_save_session_log(task, model, messages, result)
 ```
 
 Note `_save_session_log(task, model, messages, result)` is unchanged in both — it keeps logging the pre-append `messages`, matching today's session-log behavior exactly (`result.text` already carries the final text separately in that log).
@@ -514,9 +516,7 @@ def load_persona_soul(persona: str) -> str:
     try:
         return path.read_text(encoding="utf-8").strip()
     except OSError:
-        logger.warning(
-            "No SOUL.md found for persona %r at %s; using base identity.", persona, path
-        )
+        logger.warning("No SOUL.md found for persona %r at %s; using base identity.", persona, path)
         return ""
 ```
 
@@ -591,7 +591,15 @@ def test_render_user_turn_prints_the_text() -> None:
 def test_tool_renderer_prints_name_input_and_output_preview() -> None:
     console = _console()
     on_event = chat_agent.make_tool_renderer(console)
-    on_event("tool_call", {"name": "recall", "input": {"query": "*"}, "is_error": False, "output_preview": "3 facts found"})
+    on_event(
+        "tool_call",
+        {
+            "name": "recall",
+            "input": {"query": "*"},
+            "is_error": False,
+            "output_preview": "3 facts found",
+        },
+    )
     output = console.file.getvalue()  # type: ignore[union-attr]
     assert "recall" in output
     assert "3 facts found" in output
@@ -783,7 +791,9 @@ def test_run_chat_threads_history_across_turns(
 ) -> None:
     seen_history: list[list[dict[str, Any]]] = []
 
-    def fake_run_agent(task: str, *, history: list[dict[str, Any]] | None = None, **kwargs: Any) -> AgentResult:
+    def fake_run_agent(
+        task: str, *, history: list[dict[str, Any]] | None = None, **kwargs: Any
+    ) -> AgentResult:
         seen_history.append(list(history) if history else [])
         return AgentResult(
             text=f"reply to {task}",
@@ -908,7 +918,9 @@ def test_run_chat_survives_agent_error(monkeypatch: pytest.MonkeyPatch, store: M
     assert calls == ["bad", "good"]
 
 
-def test_run_chat_survives_keyboard_interrupt(monkeypatch: pytest.MonkeyPatch, store: MemoryStore) -> None:
+def test_run_chat_survives_keyboard_interrupt(
+    monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+) -> None:
     calls: list[str] = []
 
     def fake_run_agent(task: str, **kwargs: Any) -> AgentResult:
@@ -1115,7 +1127,7 @@ def test_chat_loads_persona_soul_and_invokes_run_chat(
         calls.append(kwargs)
 
     monkeypatch.setattr(chat_cli, "run_chat", fake_run_chat)
-    monkeypatch.setattr(chat_cli, "_make_read_input", lambda: (lambda: None))
+    monkeypatch.setattr(chat_cli, "_make_read_input", lambda: lambda: None)
 
     result = runner.invoke(main, ["chat", "--persona", "sakking", "--no-mcp"])
 
@@ -1136,7 +1148,7 @@ def test_chat_defaults_to_sakthai_persona(
 
     calls: list[dict[str, Any]] = []
     monkeypatch.setattr(chat_cli, "run_chat", lambda **kwargs: calls.append(kwargs))
-    monkeypatch.setattr(chat_cli, "_make_read_input", lambda: (lambda: None))
+    monkeypatch.setattr(chat_cli, "_make_read_input", lambda: lambda: None)
 
     result = runner.invoke(main, ["chat", "--no-mcp"])
 
@@ -1160,7 +1172,7 @@ def test_chat_forwards_model_provider_caveman_and_skills(
 
     calls: list[dict[str, Any]] = []
     monkeypatch.setattr(chat_cli, "run_chat", lambda **kwargs: calls.append(kwargs))
-    monkeypatch.setattr(chat_cli, "_make_read_input", lambda: (lambda: None))
+    monkeypatch.setattr(chat_cli, "_make_read_input", lambda: lambda: None)
 
     result = runner.invoke(
         main,

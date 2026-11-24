@@ -49,8 +49,7 @@ unchanged. `_GRAPH_SCOPES` in `agent/tools.py` gains two scopes:
 
 ```python
 _GRAPH_SCOPES = (
-    "Mail.Send Mail.Read Calendars.ReadWrite offline_access "
-    "Files.ReadWrite.AppFolder Contacts.Read"
+    "Mail.Send Mail.Read Calendars.ReadWrite offline_access Files.ReadWrite.AppFolder Contacts.Read"
 )
 ```
 

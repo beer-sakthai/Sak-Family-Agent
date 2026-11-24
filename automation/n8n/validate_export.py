@@ -9,7 +9,17 @@ assert data["settings"]["executionOrder"] == "v1"
 assert len(nodes) == 9
 names = {node["name"] for node in nodes}
 assert len(names) == len(nodes)
-assert {"GitHub Issue Webhook", "Validate GitHub Event", "Opened Issue?", "Classify Issue with AI", "Normalize Triage Result", "Apply GitHub Labels", "Post Triage Comment", "Acknowledge Triage", "Acknowledge Ignored Event"} == names
+assert {
+    "GitHub Issue Webhook",
+    "Validate GitHub Event",
+    "Opened Issue?",
+    "Classify Issue with AI",
+    "Normalize Triage Result",
+    "Apply GitHub Labels",
+    "Post Triage Comment",
+    "Acknowledge Triage",
+    "Acknowledge Ignored Event",
+} == names
 
 for source, branches in data["connections"].items():
     assert source in names, source

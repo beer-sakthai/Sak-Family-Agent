@@ -10,16 +10,18 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
+import random
 import re
 import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 
 from .utils import (
+    BaseEvalDataPoint,
     _parse_prediction_as_json,
     _parse_prediction_as_yaml,
 )
@@ -60,10 +62,34 @@ class BenchmarkTask:
     grader_type: str = "code"  # "code", "model", "human"
     rubric: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
+    split: str = "dev"  # "dev", "validation", "holdout"
 
     def to_dict(self) -> dict[str, Any]:
         """Convert task to dictionary representation."""
         return asdict(self)
+
+    @classmethod
+    def from_data_point(cls, point: Any) -> BenchmarkTask:
+        """Create a benchmark task from a BaseEvalDataPoint."""
+        meta = dict(getattr(point, "metadata", {}) or {})
+        if getattr(point, "expected_tool", None):
+            meta["expected_tool"] = point.expected_tool
+        if getattr(point, "simulated_tool_output", None):
+            meta["simulated_tool_output"] = point.simulated_tool_output
+        if getattr(point, "require_a2ui", False):
+            meta["require_a2ui"] = point.require_a2ui
+        if getattr(point, "expected_facts", None):
+            meta["expected_facts"] = point.expected_facts
+
+        return cls(
+            id=getattr(point, "test_case_id", "task_0"),
+            prompt=getattr(point, "prompt", ""),
+            golden_answer=getattr(point, "golden_answer", ""),
+            grader_type="code" if not getattr(point, "rubric", "") else "model",
+            rubric=getattr(point, "rubric", ""),
+            metadata=meta,
+            split=getattr(point, "split", "dev"),
+        )
 
 
 @dataclass
@@ -469,6 +495,166 @@ class ModelGrader:
         )
 
 
+@dataclass
+class PairedJudgeResult:
+    """Result of paired blind judging between baseline and candidate responses."""
+
+    winner: Literal["candidate", "baseline", "tie"]
+    candidate_score: float  # 1.0 = win, 0.5 = tie, 0.0 = loss
+    confidence: float
+    reasoning: str
+    swapped: bool
+    latency_s: float
+    raw_verdict: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert paired judge result to dictionary representation."""
+        return {
+            "winner": self.winner,
+            "candidate_score": self.candidate_score,
+            "confidence": self.confidence,
+            "reasoning": self.reasoning,
+            "swapped": self.swapped,
+            "latency_s": round(self.latency_s, 4),
+            "raw_verdict": self.raw_verdict,
+        }
+
+
+class PairedBlindJudge:
+    """Implements Paired Blind Judging to eliminate position and verbosity bias.
+
+    Baseline and Candidate traces are presented in randomized A/B order to the judge.
+    The judge verdict is then un-swapped to derive true candidate performance.
+    """
+
+    PROMPT_PATH = REPO_ROOT / "assets" / "eval-judge.prompt"
+
+    @classmethod
+    def build_judge_prompt(
+        cls,
+        task_prompt: str,
+        rubric: str,
+        response_a: str,
+        response_b: str,
+    ) -> str:
+        """Construct prompt for paired blind judging."""
+        return (
+            "You are an expert impartial judge evaluating two candidate responses (Response A and Response B) "
+            "to a task prompt. Your evaluation must strictly adhere to the rubric without position bias or "
+            "verbosity bias. Do not prefer a response simply because it is longer or more detailed.\n\n"
+            f"<task_prompt>\n{task_prompt}\n</task_prompt>\n\n"
+            f"<rubric>\n{rubric}\n</rubric>\n\n"
+            f"<response_a>\n{response_a}\n</response_a>\n\n"
+            f"<response_b>\n{response_b}\n</response_b>\n\n"
+            "Compare Response A and Response B directly against the rubric:\n"
+            "1. Assess correctness, relevance, and fidelity to instructions.\n"
+            "2. Penalize hallucinations, fluff, and schema violations.\n"
+            "3. Output valid JSON with keys: winner (one of 'A', 'B', 'TIE'), confidence (0.0-1.0), and reasoning."
+        )
+
+    @classmethod
+    def judge(
+        cls,
+        task_prompt: str,
+        rubric: str,
+        baseline_trace: str,
+        candidate_trace: str,
+        call_fn: Callable[[str], str] | None = None,
+        force_swap: bool | None = None,
+    ) -> PairedJudgeResult:
+        """Execute paired blind evaluation with randomized A/B presentation."""
+        start = time.perf_counter()
+        swapped = random.choice([True, False]) if force_swap is None else force_swap
+
+        resp_a = candidate_trace if swapped else baseline_trace
+        resp_b = baseline_trace if swapped else candidate_trace
+
+        prompt = cls.build_judge_prompt(
+            task_prompt=task_prompt,
+            rubric=rubric,
+            response_a=resp_a,
+            response_b=resp_b,
+        )
+
+        if call_fn is not None:
+            raw = call_fn(prompt)
+        else:
+            try:
+                from sakthai.agent.loop import run_agent
+
+                result = run_agent(prompt, fast=True, stateless=True, tools=())
+                raw = result.text
+            except Exception as exc:
+                logger.warning("Default paired blind judge dispatch failed: %s", exc)
+                return PairedJudgeResult(
+                    winner="tie",
+                    candidate_score=0.5,
+                    confidence=0.0,
+                    reasoning=f"Judge failed: {exc}",
+                    swapped=swapped,
+                    latency_s=time.perf_counter() - start,
+                    raw_verdict=str(exc),
+                )
+
+        winner = "TIE"
+        confidence = 0.5
+        reasoning = raw.strip()
+
+        json_match = re.search(r"\{.*?\}", raw, re.DOTALL)
+        if json_match:
+            try:
+                parsed = json.loads(json_match.group(0))
+                w = parsed.get("winner", "").strip().upper()
+                if w in ("A", "B", "TIE"):
+                    winner = w
+                if "confidence" in parsed:
+                    confidence = float(parsed["confidence"])
+                if "reasoning" in parsed:
+                    reasoning = str(parsed["reasoning"])
+            except Exception:
+                pass
+
+        if winner not in ("A", "B", "TIE"):
+            raw_upper = raw.upper()
+            if (
+                "WINNER: A" in raw_upper
+                or "WINNER: 'A'" in raw_upper
+                or '"WINNER": "A"' in raw_upper
+            ):
+                winner = "A"
+            elif (
+                "WINNER: B" in raw_upper
+                or "WINNER: 'B'" in raw_upper
+                or '"WINNER": "B"' in raw_upper
+            ):
+                winner = "B"
+            else:
+                winner = "TIE"
+
+        if winner == "A":
+            actual_winner: Literal["candidate", "baseline", "tie"] = (
+                "candidate" if swapped else "baseline"
+            )
+        elif winner == "B":
+            actual_winner = "baseline" if swapped else "candidate"
+        else:
+            actual_winner = "tie"
+
+        candidate_score = (
+            1.0 if actual_winner == "candidate" else (0.5 if actual_winner == "tie" else 0.0)
+        )
+
+        return PairedJudgeResult(
+            winner=actual_winner,
+            candidate_score=candidate_score,
+            confidence=confidence,
+            reasoning=reasoning,
+            swapped=swapped,
+            latency_s=time.perf_counter() - start,
+            raw_verdict=raw,
+        )
+
+
 DEFAULT_BENCHMARK_TASKS: list[BenchmarkTask] = [
     BenchmarkTask(
         id="exact_capital_thailand",
@@ -667,19 +853,28 @@ class BenchmarkSuite:
         )
 
 
-def load_benchmark_tasks(suite: str | None = None) -> list[BenchmarkTask]:
-    """Load benchmark tasks by suite name or file path."""
+def load_benchmark_tasks(
+    suite: str | None = None,
+    split: str | None = None,
+) -> list[BenchmarkTask]:
+    """Load benchmark tasks by suite name or file path, optionally filtered by dataset split."""
     if not suite or suite.strip().lower() == "default":
-        return list(DEFAULT_BENCHMARK_TASKS)
+        default_tasks = list(DEFAULT_BENCHMARK_TASKS)
+        if split is not None:
+            default_tasks = [t for t in default_tasks if t.split.lower() == split.strip().lower()]
+        return default_tasks
 
     p = Path(suite)
     if not p.is_file():
         eval_dir = REPO_ROOT / "evaluation_tasks"
+        assets_dir = REPO_ROOT / "assets"
         candidates = [
             eval_dir / f"{suite}.jsonl",
             eval_dir / f"{suite}_dataset.jsonl",
             eval_dir / f"{suite}.yaml",
             eval_dir / f"{suite}.json",
+            assets_dir / f"{suite}.json",
+            assets_dir / suite,
         ]
         for c in candidates:
             if c.is_file():
@@ -688,7 +883,10 @@ def load_benchmark_tasks(suite: str | None = None) -> list[BenchmarkTask]:
 
     if not p.is_file():
         logger.warning("Suite '%s' not found as a file; using default benchmark tasks", suite)
-        return list(DEFAULT_BENCHMARK_TASKS)
+        fallback_tasks = list(DEFAULT_BENCHMARK_TASKS)
+        if split is not None:
+            fallback_tasks = [t for t in fallback_tasks if t.split.lower() == split.strip().lower()]
+        return fallback_tasks
 
     tasks: list[BenchmarkTask] = []
     if p.suffix == ".jsonl":
@@ -697,6 +895,11 @@ def load_benchmark_tasks(suite: str | None = None) -> list[BenchmarkTask]:
                 continue
             try:
                 row = json.loads(line)
+                if "testCaseId" in row or "test_case_id" in row:
+                    dp = BaseEvalDataPoint.from_dict(row)
+                    tasks.append(BenchmarkTask.from_data_point(dp))
+                    continue
+
                 task_id = row.get("id") or f"{p.stem}_{idx}"
                 prompt = row.get("prompt") or row.get("input") or row.get("question") or ""
                 if "persona" in row and "question" in row:
@@ -705,6 +908,7 @@ def load_benchmark_tasks(suite: str | None = None) -> list[BenchmarkTask]:
                 grader_type = row.get("grader_type", "code")
                 rubric = row.get("rubric", "")
                 metadata = row.get("metadata", {})
+                task_split = row.get("split", "dev")
                 if not metadata and "answer_json" in row:
                     metadata = {"match_type": "json"}
                 tasks.append(
@@ -715,6 +919,7 @@ def load_benchmark_tasks(suite: str | None = None) -> list[BenchmarkTask]:
                         grader_type=grader_type,
                         rubric=rubric,
                         metadata=metadata,
+                        split=task_split,
                     )
                 )
             except Exception as exc:
@@ -724,6 +929,10 @@ def load_benchmark_tasks(suite: str | None = None) -> list[BenchmarkTask]:
         if isinstance(data, list):
             for idx, item in enumerate(data):
                 if isinstance(item, dict):
+                    if "testCaseId" in item or "test_case_id" in item:
+                        dp = BaseEvalDataPoint.from_dict(item)
+                        tasks.append(BenchmarkTask.from_data_point(dp))
+                        continue
                     tasks.append(
                         BenchmarkTask(
                             id=item.get("id", f"{p.stem}_{idx}"),
@@ -732,6 +941,7 @@ def load_benchmark_tasks(suite: str | None = None) -> list[BenchmarkTask]:
                             grader_type=item.get("grader_type", "code"),
                             rubric=item.get("rubric", ""),
                             metadata=item.get("metadata", {}),
+                            split=item.get("split", "dev"),
                         )
                     )
     elif p.suffix == ".json":
@@ -739,6 +949,10 @@ def load_benchmark_tasks(suite: str | None = None) -> list[BenchmarkTask]:
         if isinstance(data, list):
             for idx, item in enumerate(data):
                 if isinstance(item, dict):
+                    if "testCaseId" in item or "test_case_id" in item:
+                        dp = BaseEvalDataPoint.from_dict(item)
+                        tasks.append(BenchmarkTask.from_data_point(dp))
+                        continue
                     tasks.append(
                         BenchmarkTask(
                             id=item.get("id", f"{p.stem}_{idx}"),
@@ -747,7 +961,14 @@ def load_benchmark_tasks(suite: str | None = None) -> list[BenchmarkTask]:
                             grader_type=item.get("grader_type", "code"),
                             rubric=item.get("rubric", ""),
                             metadata=item.get("metadata", {}),
+                            split=item.get("split", "dev"),
                         )
                     )
 
-    return tasks if tasks else list(DEFAULT_BENCHMARK_TASKS)
+    if not tasks:
+        tasks = list(DEFAULT_BENCHMARK_TASKS)
+
+    if split is not None:
+        tasks = [t for t in tasks if t.split.lower() == split.strip().lower()]
+
+    return tasks

@@ -346,7 +346,11 @@ def run_organization(apply: bool = False) -> None:
             # Find candidate in personas
             found = None
             for p in PERSONAS:
-                for prefix in (f"Sak{p[3:].capitalize()}-", f"{p.capitalize()}-", f"Sak{p.capitalize()}-"):
+                for prefix in (
+                    f"Sak{p[3:].capitalize()}-",
+                    f"{p.capitalize()}-",
+                    f"Sak{p.capitalize()}-",
+                ):
                     cand = PERSONAS_DIR / p / "skills" / f"{prefix}{slug}"
                     if (cand / "SKILL.md").exists():
                         found = cand
@@ -355,7 +359,9 @@ def run_organization(apply: bool = False) -> None:
                     break
 
             if found:
-                print(f"[PROMOTE] {found.relative_to(REPO_ROOT)} -> {target_dir.relative_to(REPO_ROOT)}")
+                print(
+                    f"[PROMOTE] {found.relative_to(REPO_ROOT)} -> {target_dir.relative_to(REPO_ROOT)}"
+                )
                 if apply:
                     shutil.copytree(found, target_dir, dirs_exist_ok=True)
                     # Update name in SKILL.md
@@ -376,7 +382,9 @@ def run_organization(apply: bool = False) -> None:
                 canonical_slug = entry.name.replace(f"SakThai-sakthai-", "SakThai-")
                 canonical_slug = canonical_slug.replace(f"-{p}-", "-")
                 target_entry = sdir / canonical_slug
-                print(f"[CANONICALIZE] {entry.relative_to(REPO_ROOT)} -> {target_entry.relative_to(REPO_ROOT)}")
+                print(
+                    f"[CANONICALIZE] {entry.relative_to(REPO_ROOT)} -> {target_entry.relative_to(REPO_ROOT)}"
+                )
                 if apply:
                     if target_entry.exists():
                         shutil.rmtree(entry)
@@ -384,7 +392,9 @@ def run_organization(apply: bool = False) -> None:
                         entry.rename(target_entry)
                         md = target_entry / "SKILL.md"
                         if md.exists():
-                            content = yaml_replace_name(md.read_text(encoding="utf-8"), canonical_slug)
+                            content = yaml_replace_name(
+                                md.read_text(encoding="utf-8"), canonical_slug
+                            )
                             md.write_text(content, encoding="utf-8")
 
     # 3. Deduplicate universal shared skills from individual persona folders
@@ -401,7 +411,9 @@ def run_organization(apply: bool = False) -> None:
                     continue
                 clean = strip_known_prefix(entry.name)
                 if clean == slug or clean == f"{p}-{slug}":
-                    print(f"[DEDUP REMOVE] {entry.relative_to(REPO_ROOT)} (now provided by shared Sak-{slug})")
+                    print(
+                        f"[DEDUP REMOVE] {entry.relative_to(REPO_ROOT)} (now provided by shared Sak-{slug})"
+                    )
                     if apply:
                         shutil.rmtree(entry)
 

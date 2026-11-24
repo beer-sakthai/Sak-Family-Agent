@@ -34,15 +34,19 @@ All data models originate in `personas/sakthai/sakthai/web/contracts.py` and com
 ```python
 ChargeState = Literal["Optimal", "Active", "Low", "Critical"]
 
+
 class ChargeReport(TypedDict):
     """Hermes charge state for a persona recorded in memory."""
+
     persona: str
-    level: int                   # Integer 0 to 100
-    state: ChargeState           # Optimal (80-100), Active (50-79), Low (20-49), Critical (0-19)
-    updated_at: int | None       # Epoch timestamp in seconds
+    level: int  # Integer 0 to 100
+    state: ChargeState  # Optimal (80-100), Active (50-79), Low (20-49), Critical (0-19)
+    updated_at: int | None  # Epoch timestamp in seconds
+
 
 class ChargePayload(TypedDict):
     """All persona charge states and household summary."""
+
     reports: list[ChargeReport]
     household_average: float
 ```
@@ -52,14 +56,17 @@ class ChargePayload(TypedDict):
 ```python
 class CycleStageInfo(TypedDict):
     """Metadata for each stage in the 6-stage cycle."""
-    stage: str                   # 'dream', 'hope', 'care', 'joy', 'trust', 'growth'
-    number: int                  # 1 to 6
+
+    stage: str  # 'dream', 'hope', 'care', 'joy', 'trust', 'growth'
+    number: int  # 1 to 6
     goal: str
     guidance: str
     commands: list[str]
 
+
 class CycleStatusPayload(TypedDict):
     """Current cycle position and available stages."""
+
     current_stage: str
     stages: list[CycleStageInfo]
     next_stage: str
@@ -70,12 +77,15 @@ class CycleStatusPayload(TypedDict):
 ```python
 class WorkflowRunRequest(TypedDict):
     """Parameters for dispatching a workflow run."""
+
     workflow_name: str
     persona: str
     params: dict[str, str]
 
+
 class WorkflowRunResult(TypedDict):
     """Execution status and metadata for a workflow run."""
+
     run_id: str
     workflow_name: str
     persona: str
@@ -84,13 +94,17 @@ class WorkflowRunResult(TypedDict):
     completed_at: int | None
     error: str | None
 
+
 class AgentPingRequest(TypedDict):
     """Payload for checking agent connectivity."""
+
     persona: str
     message: str
 
+
 class AgentPingResponse(TypedDict):
     """Response from an agent health ping."""
+
     persona: str
     status: Literal["ok", "error"]
     latency_ms: float

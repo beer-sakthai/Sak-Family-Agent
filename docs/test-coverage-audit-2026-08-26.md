@@ -54,7 +54,7 @@ def _is_authorized(user_id: int | None) -> bool:
     allowed = telegram_allowed_user_ids()
     return user_id is not None and user_id in allowed
 
-# telegram/bot.py:96 — uncovered
+    # telegram/bot.py:96 — uncovered
     if not _is_authorized(user.id if user else None):
         await update.message.reply_text("Sorry, you are not authorized to use this bot.")
         return

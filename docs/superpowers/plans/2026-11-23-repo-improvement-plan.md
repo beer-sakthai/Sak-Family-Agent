@@ -117,9 +117,7 @@ _WORD_NUMBERS = {"five": 5, "six": 6, "seven": 7}
 
 def _on_disk_persona_count() -> int:
     return sum(
-        1
-        for slug in PERSONAS_DIR.iterdir()
-        if slug.is_dir() and (slug / "SOUL.md").is_file()
+        1 for slug in PERSONAS_DIR.iterdir() if slug.is_dir() and (slug / "SOUL.md").is_file()
     )
 
 
@@ -1036,7 +1034,8 @@ class TestPersonaPackageGeneration(unittest.TestCase):
     def test_copies_are_not_tracked_in_git(self) -> None:
         tracked = _tracked_files()
         offenders = sorted(
-            p for p in tracked
+            p
+            for p in tracked
             if p.startswith("personas/")
             and p.split("/")[1] in COPIES
             and p.endswith(".py")
@@ -1052,8 +1051,7 @@ class TestPersonaPackageGeneration(unittest.TestCase):
     def test_canonical_package_is_tracked(self) -> None:
         tracked = _tracked_files()
         canonical = [
-            p for p in tracked
-            if p.startswith(f"personas/{CANONICAL}/") and p.endswith(".py")
+            p for p in tracked if p.startswith(f"personas/{CANONICAL}/") and p.endswith(".py")
         ]
         self.assertGreater(len(canonical), 100, "canonical package must stay tracked")
 

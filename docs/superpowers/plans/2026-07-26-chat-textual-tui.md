@@ -132,9 +132,7 @@ def test_reply_panel_streaming_is_plain_text_body() -> None:
 
 
 def test_reply_panel_final_is_markdown_body() -> None:
-    panel = chat_agent.reply_panel(
-        ["# Title"], persona="sakthai", matched=None, streaming=False
-    )
+    panel = chat_agent.reply_panel(["# Title"], persona="sakthai", matched=None, streaming=False)
     assert isinstance(panel.renderable, Markdown)
 
 
@@ -594,37 +592,39 @@ Expected: FAIL — submitting does nothing (input keeps its value / no children 
 In `sakthai/agent/tui.py`, add the import `from .chat import slash_result, user_panel` (or use `chat_agent.` prefix) and these methods on `SakThaiApp`:
 
 ```python
-    def on_input_submitted(self, event: Input.Submitted) -> None:
-        text = event.value.strip()
-        self.query_one("#compose", Input).value = ""
-        if not text:
-            return
-        self._submit(text)
+def on_input_submitted(self, event: Input.Submitted) -> None:
+    text = event.value.strip()
+    self.query_one("#compose", Input).value = ""
+    if not text:
+        return
+    self._submit(text)
 
-    def _submit(self, text: str) -> None:
-        if text == "/exit":
-            self.exit()
-            return
-        if text.startswith("/"):
-            handled, self.goal, renderables = chat_agent.slash_result(
-                text,
-                persona=self.persona,
-                goal=self.goal,
-                store=self.store,
-                tools=self.tools,
-            )
-            if handled:
-                if text.split()[0] == "/clear":
-                    self.query_one("#conversation", VerticalScroll).remove_children()
-                for renderable in renderables:
-                    self.mount_renderable(renderable)
-                self.refresh_status()
-                return
-        self.mount_renderable(chat_agent.user_panel(text))
-        self._run_turn(text)  # implemented in Task 5
 
-    def _run_turn(self, text: str) -> None:  # replaced in Task 5
-        pass
+def _submit(self, text: str) -> None:
+    if text == "/exit":
+        self.exit()
+        return
+    if text.startswith("/"):
+        handled, self.goal, renderables = chat_agent.slash_result(
+            text,
+            persona=self.persona,
+            goal=self.goal,
+            store=self.store,
+            tools=self.tools,
+        )
+        if handled:
+            if text.split()[0] == "/clear":
+                self.query_one("#conversation", VerticalScroll).remove_children()
+            for renderable in renderables:
+                self.mount_renderable(renderable)
+            self.refresh_status()
+            return
+    self.mount_renderable(chat_agent.user_panel(text))
+    self._run_turn(text)  # implemented in Task 5
+
+
+def _run_turn(self, text: str) -> None:  # replaced in Task 5
+    pass
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -677,6 +677,7 @@ def _fake_run_agent_factory(reply: str, tool: bool = False):
             for ch in reply:
                 on_token(ch)
         return AgentResult(text=reply, iterations=1, stop_reason="end", messages=[{"role": "x"}])
+
     return _fake
 
 
@@ -799,58 +800,60 @@ class ReplyView(Static):
 Replace the stub `_run_turn`/`action_cancel_turn` on `SakThaiApp` with:
 
 ```python
-    def _run_turn(self, text: str) -> None:
-        matched = match_persona(text)
-        reply = ReplyView(self.persona, matched)
-        pane = self.query_one("#conversation", VerticalScroll)
-        pane.mount(reply)
-        pane.scroll_end(animate=False)
-        reply.start_thinking()
-        self._turn_started = time.perf_counter()
-        self._active_reply = reply
-        self.run_worker(
-            lambda: self._agent_call(text, reply),
-            thread=True,
-            exclusive=True,
-            group="turn",
-        )
+def _run_turn(self, text: str) -> None:
+    matched = match_persona(text)
+    reply = ReplyView(self.persona, matched)
+    pane = self.query_one("#conversation", VerticalScroll)
+    pane.mount(reply)
+    pane.scroll_end(animate=False)
+    reply.start_thinking()
+    self._turn_started = time.perf_counter()
+    self._active_reply = reply
+    self.run_worker(
+        lambda: self._agent_call(text, reply),
+        thread=True,
+        exclusive=True,
+        group="turn",
+    )
 
-    def _agent_call(self, text: str, reply: ReplyView) -> None:
-        def on_token(delta: str) -> None:
-            self.call_from_thread(reply.append, delta)
 
-        def on_event(kind: str, payload: dict[str, Any]) -> None:
-            if kind == "tool_call":
-                self.call_from_thread(
-                    self.mount_renderable, chat_agent.tool_trace(payload, persona=self.persona)
-                )
+def _agent_call(self, text: str, reply: ReplyView) -> None:
+    def on_token(delta: str) -> None:
+        self.call_from_thread(reply.append, delta)
 
-        try:
-            result = run_agent(
-                text,
-                history=self.prior_messages,
-                system_prompt_prefix=chat_agent._goal_prompt_prefix(self.soul_text, self.goal),
-                model=self.model,
-                provider=self.provider,
-                tools=self.tools,
-                caveman=self.caveman,
-                skills=list(self.with_skills),
-                store=self.store,
-                on_event=on_event,
-                on_token=on_token,
+    def on_event(kind: str, payload: dict[str, Any]) -> None:
+        if kind == "tool_call":
+            self.call_from_thread(
+                self.mount_renderable, chat_agent.tool_trace(payload, persona=self.persona)
             )
-        except AgentError as exc:
-            self.call_from_thread(reply.set_error, exc)
-            return
-        self.prior_messages = result.messages
-        self.call_from_thread(reply.finalize)
-        self.call_from_thread(self.refresh_status, time.perf_counter() - self._turn_started)
 
-    def action_cancel_turn(self) -> None:
-        self.workers.cancel_group(self, "turn")
-        reply = getattr(self, "_active_reply", None)
-        if reply is not None:
-            reply.set_cancelled()
+    try:
+        result = run_agent(
+            text,
+            history=self.prior_messages,
+            system_prompt_prefix=chat_agent._goal_prompt_prefix(self.soul_text, self.goal),
+            model=self.model,
+            provider=self.provider,
+            tools=self.tools,
+            caveman=self.caveman,
+            skills=list(self.with_skills),
+            store=self.store,
+            on_event=on_event,
+            on_token=on_token,
+        )
+    except AgentError as exc:
+        self.call_from_thread(reply.set_error, exc)
+        return
+    self.prior_messages = result.messages
+    self.call_from_thread(reply.finalize)
+    self.call_from_thread(self.refresh_status, time.perf_counter() - self._turn_started)
+
+
+def action_cancel_turn(self) -> None:
+    self.workers.cancel_group(self, "turn")
+    reply = getattr(self, "_active_reply", None)
+    if reply is not None:
+        reply.set_cancelled()
 ```
 
 Initialize `self._active_reply: ReplyView | None = None` and `self._turn_started = 0.0` in `__init__`.
@@ -965,20 +968,21 @@ Add a history helper and wire it. In `__init__`, load history:
 with:
 
 ```python
-    def _load_history(self) -> list[str]:
-        try:
-            return self._history_path.read_text(encoding="utf-8").splitlines()
-        except OSError:
-            return []
+def _load_history(self) -> list[str]:
+    try:
+        return self._history_path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
 
-    def _append_history(self, line: str) -> None:
-        self._history.append(line)
-        try:
-            self._history_path.parent.mkdir(parents=True, exist_ok=True)
-            with self._history_path.open("a", encoding="utf-8") as fh:
-                fh.write(line + "\n")
-        except OSError:
-            pass
+
+def _append_history(self, line: str) -> None:
+    self._history.append(line)
+    try:
+        self._history_path.parent.mkdir(parents=True, exist_ok=True)
+        with self._history_path.open("a", encoding="utf-8") as fh:
+            fh.write(line + "\n")
+    except OSError:
+        pass
 ```
 
 In `compose`, build the input with the suggester:
@@ -1111,13 +1115,13 @@ from ..agent.tui import SakThaiApp
 (Textual raises on a non-terminal; wrap `app.run()` to translate it into a friendly click error:)
 
 ```python
-            try:
-                app.run()
-            except Exception as exc:  # non-TTY / no terminal
-                raise click.ClickException(
-                    f"chat needs an interactive terminal ({exc}). "
-                    "For non-interactive use, try: sakthai run \"<task>\"."
-                ) from exc
+try:
+    app.run()
+except Exception as exc:  # non-TTY / no terminal
+    raise click.ClickException(
+        f"chat needs an interactive terminal ({exc}). "
+        'For non-interactive use, try: sakthai run "<task>".'
+    ) from exc
 ```
 
 - [ ] **Step 4: Remove superseded code and update `chat.py` / `theme.py`**

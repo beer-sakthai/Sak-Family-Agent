@@ -227,7 +227,11 @@ def test_ms365_copilot_credential_source_present_when_complete(
 def test_resolve_copilotstudio_credentials_raises_when_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    for var in ("MS365_COPILOT_TENANT_ID", "MS365_COPILOT_CLIENT_ID", "MS365_COPILOT_CLIENT_SECRET"):
+    for var in (
+        "MS365_COPILOT_TENANT_ID",
+        "MS365_COPILOT_CLIENT_ID",
+        "MS365_COPILOT_CLIENT_SECRET",
+    ):
         monkeypatch.delenv(var, raising=False)
 
     with pytest.raises(auth.AuthError, match="Microsoft 365 Copilot Studio"):
@@ -242,9 +246,7 @@ def test_resolve_copilotstudio_credentials_success(monkeypatch: pytest.MonkeyPat
 
     fake_app = MagicMock()
     fake_app.acquire_token_for_client.return_value = {"access_token": "tok-abc"}
-    monkeypatch.setattr(
-        "msal.ConfidentialClientApplication", MagicMock(return_value=fake_app)
-    )
+    monkeypatch.setattr("msal.ConfidentialClientApplication", MagicMock(return_value=fake_app))
 
     service_url, token = auth.resolve_copilotstudio_credentials()
 
@@ -265,9 +267,7 @@ def test_resolve_copilotstudio_credentials_token_failure(monkeypatch: pytest.Mon
         "error": "invalid_client",
         "error_description": "bad secret",
     }
-    monkeypatch.setattr(
-        "msal.ConfidentialClientApplication", MagicMock(return_value=fake_app)
-    )
+    monkeypatch.setattr("msal.ConfidentialClientApplication", MagicMock(return_value=fake_app))
 
     with pytest.raises(auth.AuthError, match="token acquisition failed"):
         auth.resolve_copilotstudio_credentials()
@@ -342,9 +342,7 @@ def resolve_copilotstudio_credentials() -> tuple[str, str]:
         authority=f"https://login.microsoftonline.com/{tenant_id}",
         client_credential=client_secret,
     )
-    result = app.acquire_token_for_client(
-        scopes=["https://api.botframework.com/.default"]
-    )
+    result = app.acquire_token_for_client(scopes=["https://api.botframework.com/.default"])
     access_token = result.get("access_token")
     if not access_token:
         detail = result.get("error_description", result.get("error", "unknown error"))
@@ -493,7 +491,9 @@ def test_poll_ignores_echoed_user_activity_then_finds_bot_reply() -> None:
                     200,
                     json={
                         "watermark": "0",
-                        "activities": [{"type": "message", "from": {"id": "user"}, "text": "hello"}],
+                        "activities": [
+                            {"type": "message", "from": {"id": "user"}, "text": "hello"}
+                        ],
                     },
                 )
             return httpx.Response(
@@ -790,8 +790,8 @@ wsl.exe -d Ubuntu -- bash -c "cd /home/beern/Sak-Family-Agent && git add persona
 Add a new case to the `test_detect_provider_scenarios` parametrize list in `tests/test_providers_detect.py`:
 
 ```python
-        (None, "claude-3", {}, {"ms365_copilot": True}, "copilotstudio"),
-        (None, "copilotstudio/my-agent", {}, {}, "copilotstudio"),
+((None, "claude-3", {}, {"ms365_copilot": True}, "copilotstudio"),)
+((None, "copilotstudio/my-agent", {}, {}, "copilotstudio"),)
 ```
 
 Find where the `creds` fixture dict is translated into monkeypatched credential-source functions further down in the same test (it patches things like `gateway_credential_source`/`huggingface_credential_source` based on the `creds` dict keys) and add an `"ms365_copilot"` entry following the exact same pattern used for `"huggingface"`.
@@ -799,7 +799,9 @@ Find where the `creds` fixture dict is translated into monkeypatched credential-
 Then add a standalone test to the same file:
 
 ```python
-def test_build_client_copilotstudio_uses_resolved_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_build_client_copilotstudio_uses_resolved_credentials(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from sakthai.agent.providers import __init__ as providers_pkg  # noqa: F401
     import sakthai.auth as auth_mod
 

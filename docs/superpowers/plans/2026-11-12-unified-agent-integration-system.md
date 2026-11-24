@@ -39,12 +39,14 @@
 import pytest
 from app.agent_platform.safety import DataLossGuardrail, SafetyCheckResult
 
+
 def test_guardrail_allows_safe_command():
     guard = DataLossGuardrail()
     result = guard.inspect("git status && ls -la")
     assert not result.is_destructive
     assert not result.blocked
     assert result.reason == "Command verified safe"
+
 
 def test_guardrail_blocks_destructive_shell_command():
     guard = DataLossGuardrail()
@@ -54,12 +56,14 @@ def test_guardrail_blocks_destructive_shell_command():
     assert "destructive file deletion" in result.reason.lower()
     assert "/tmp/my_data" in result.impact
 
+
 def test_guardrail_blocks_destructive_sql():
     guard = DataLossGuardrail()
     result = guard.inspect("DROP TABLE customers;")
     assert result.is_destructive
     assert result.blocked
     assert "destructive database operation" in result.reason.lower()
+
 
 def test_guardrail_allows_with_explicit_approval_token():
     guard = DataLossGuardrail()
@@ -86,6 +90,7 @@ from dataclasses import dataclass
 import hashlib
 import re
 
+
 @dataclass(frozen=True)
 class SafetyCheckResult:
     is_destructive: bool
@@ -93,17 +98,36 @@ class SafetyCheckResult:
     impact: str
     blocked: bool
 
+
 class DataLossGuardrail:
     DESTRUCTIVE_SHELL_PATTERNS = [
-        (re.compile(r"\brm\s+(-[a-zA-Z]*r[a-zA-Z]*f?|-[a-zA-Z]*f[a-zA-Z]*r?)\s+(.+)"), "Destructive file deletion"),
-        (re.compile(r"\bgsutil\s+rm\s+(-[a-zA-Z]*r[a-zA-Z]*\s+)?(.+)"), "Cloud Storage bucket/object deletion"),
-        (re.compile(r"\bbq\s+rm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+)?(.+)"), "BigQuery table/dataset deletion"),
+        (
+            re.compile(r"\brm\s+(-[a-zA-Z]*r[a-zA-Z]*f?|-[a-zA-Z]*f[a-zA-Z]*r?)\s+(.+)"),
+            "Destructive file deletion",
+        ),
+        (
+            re.compile(r"\bgsutil\s+rm\s+(-[a-zA-Z]*r[a-zA-Z]*\s+)?(.+)"),
+            "Cloud Storage bucket/object deletion",
+        ),
+        (
+            re.compile(r"\bbq\s+rm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+)?(.+)"),
+            "BigQuery table/dataset deletion",
+        ),
     ]
 
     DESTRUCTIVE_SQL_PATTERNS = [
-        (re.compile(r"\bDROP\s+(TABLE|DATABASE|SCHEMA)\b", re.IGNORECASE), "Destructive database operation (DROP)"),
-        (re.compile(r"\bTRUNCATE\s+TABLE\b", re.IGNORECASE), "Destructive database operation (TRUNCATE)"),
-        (re.compile(r"\bDELETE\s+FROM\s+\w+\s*(?:;|$)", re.IGNORECASE), "Unbounded DELETE operation without WHERE clause"),
+        (
+            re.compile(r"\bDROP\s+(TABLE|DATABASE|SCHEMA)\b", re.IGNORECASE),
+            "Destructive database operation (DROP)",
+        ),
+        (
+            re.compile(r"\bTRUNCATE\s+TABLE\b", re.IGNORECASE),
+            "Destructive database operation (TRUNCATE)",
+        ),
+        (
+            re.compile(r"\bDELETE\s+FROM\s+\w+\s*(?:;|$)", re.IGNORECASE),
+            "Unbounded DELETE operation without WHERE clause",
+        ),
     ]
 
     def generate_approval_token(self, command: str) -> str:
@@ -116,7 +140,9 @@ class DataLossGuardrail:
         for pattern, desc in self.DESTRUCTIVE_SHELL_PATTERNS:
             match = pattern.search(cleaned)
             if match:
-                impact_target = match.group(2) if len(match.groups()) >= 2 and match.group(2) else cleaned
+                impact_target = (
+                    match.group(2) if len(match.groups()) >= 2 and match.group(2) else cleaned
+                )
                 return SafetyCheckResult(
                     is_destructive=True,
                     reason=desc,
@@ -189,12 +215,14 @@ import pytest
 from pathlib import Path
 from app.agent_platform.dep_manager import detect_dependency_manager
 
+
 def test_detect_uv_from_uv_lock(tmp_path: Path):
     (tmp_path / "uv.lock").write_text("# uv lockfile")
     config = detect_dependency_manager(tmp_path, package="requests")
     assert config.manager == "uv"
     assert config.install_cmd == "uv add requests"
     assert config.sync_cmd == "uv sync"
+
 
 def test_detect_poetry_from_pyproject(tmp_path: Path):
     (tmp_path / "pyproject.toml").write_text("[tool.poetry]\nname = 'demo'")
@@ -203,17 +231,20 @@ def test_detect_poetry_from_pyproject(tmp_path: Path):
     assert config.install_cmd == "poetry add httpx"
     assert config.sync_cmd == "poetry install"
 
+
 def test_detect_pipenv_from_pipfile(tmp_path: Path):
     (tmp_path / "Pipfile").write_text("[packages]")
     config = detect_dependency_manager(tmp_path, package="flask")
     assert config.manager == "pipenv"
     assert config.install_cmd == "pipenv install flask"
 
+
 def test_detect_conda_from_environment_yml(tmp_path: Path):
     (tmp_path / "environment.yml").write_text("name: myenv")
     config = detect_dependency_manager(tmp_path, package="numpy")
     assert config.manager == "conda"
     assert config.install_cmd == "conda install numpy"
+
 
 def test_fallback_to_isolated_venv(tmp_path: Path):
     config = detect_dependency_manager(tmp_path, package="pydantic")
@@ -235,12 +266,14 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'app.agent_platform.de
 from dataclasses import dataclass
 from pathlib import Path
 
+
 @dataclass(frozen=True)
 class DependencyConfig:
     manager: str
     install_cmd: str
     sync_cmd: str
     isolated_exec: str
+
 
 def detect_dependency_manager(workspace: Path, package: str | None = None) -> DependencyConfig:
     pkg = package or "<package>"
@@ -327,6 +360,7 @@ import pytest
 from pathlib import Path
 from app.agent_platform.customizations import CustomizationRegistry, SkillSummary
 
+
 def test_skill_discovery_progressive_disclosure(tmp_path: Path):
     skills_dir = tmp_path / ".agents" / "skills" / "demo-skill"
     skills_dir.mkdir(parents=True)
@@ -342,12 +376,15 @@ def test_skill_discovery_progressive_disclosure(tmp_path: Path):
     assert summaries[0].name == "demo-skill"
     assert summaries[0].description == "Demonstrates progressive skill disclosure"
     # Verify full instructions are not loaded during summary phase
-    assert not hasattr(summaries[0], "full_body") or summaries[0].description != skill_file.read_text()
+    assert (
+        not hasattr(summaries[0], "full_body") or summaries[0].description != skill_file.read_text()
+    )
 
     # Explicit on-demand activation loads full body
     full_content = registry.load_skill("demo-skill")
     assert "Detailed Instructions" in full_content
     assert "Step 1: Execute demo" in full_content
+
 
 def test_hierarchical_rules_discovery(tmp_path: Path):
     root_rule = tmp_path / "AGENTS.md"
@@ -377,16 +414,19 @@ from dataclasses import dataclass
 from pathlib import Path
 import re
 
+
 @dataclass(frozen=True)
 class SkillSummary:
     name: str
     description: str
     path: str
 
+
 @dataclass(frozen=True)
 class RuleDocument:
     scope: str
     content: str
+
 
 class CustomizationRegistry:
     def __init__(self, workspace_root: Path):
@@ -414,7 +454,11 @@ class CustomizationRegistry:
             if desc_match:
                 description = desc_match.group(1).strip()
             else:
-                lines = [line.strip() for line in content.splitlines() if line.strip() and not line.startswith("#") and not line.startswith("---")]
+                lines = [
+                    line.strip()
+                    for line in content.splitlines()
+                    if line.strip() and not line.startswith("#") and not line.startswith("---")
+                ]
                 description = lines[0] if lines else "Custom agent skill"
 
             results.append(SkillSummary(name=name, description=description, path=str(path)))
@@ -488,17 +532,29 @@ from app.agent_platform.jules_worker import (
     build_apply_commands,
 )
 
+
 def test_parse_git_repo_url_https():
     repo = parse_git_repo_url("https://github.com/my-org/my-project.git")
     assert repo == "my-org/my-project"
+
 
 def test_parse_git_repo_url_ssh():
     repo = parse_git_repo_url("git@github.com:my-org/my-project.git")
     assert repo == "my-org/my-project"
 
+
 def test_build_jules_task_command():
     cmd = build_jules_task_command(repo="my-org/my-project", task="Implement OAuth2 login")
-    assert cmd == ["jules", "remote", "new", "--repo", "my-org/my-project", "--session", "Implement OAuth2 login"]
+    assert cmd == [
+        "jules",
+        "remote",
+        "new",
+        "--repo",
+        "my-org/my-project",
+        "--session",
+        "Implement OAuth2 login",
+    ]
+
 
 def test_validate_patch_targets_matching():
     patch = """diff --git a/app/main.py b/app/main.py
@@ -510,6 +566,7 @@ def test_validate_patch_targets_matching():
     is_valid = validate_patch_targets(patch, valid_files={"app/main.py", "app/auth.py"})
     assert is_valid
 
+
 def test_validate_patch_targets_mismatched():
     patch = """diff --git a/unrelated/foreign.go b/unrelated/foreign.go
 --- a/unrelated/foreign.go
@@ -517,6 +574,7 @@ def test_validate_patch_targets_mismatched():
 """
     is_valid = validate_patch_targets(patch, valid_files={"app/main.py"})
     assert not is_valid
+
 
 def test_build_apply_commands():
     cmds = build_apply_commands(branch="jules-oauth2-impl")
@@ -535,6 +593,7 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'app.agent_platform.ju
 # app/agent_platform/jules_worker.py
 import re
 
+
 def parse_git_repo_url(url: str) -> str:
     cleaned = url.strip()
     match = re.search(r"github\.com[:/]([a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+?)(?:\.git)?$", cleaned)
@@ -542,8 +601,10 @@ def parse_git_repo_url(url: str) -> str:
         raise ValueError(f"Unable to parse repository from URL: {url}")
     return match.group(1)
 
+
 def build_jules_task_command(repo: str, task: str) -> list[str]:
     return ["jules", "remote", "new", "--repo", repo, "--session", task]
+
 
 def validate_patch_targets(patch_content: str, valid_files: set[str]) -> bool:
     target_files = set()
@@ -554,6 +615,7 @@ def validate_patch_targets(patch_content: str, valid_files: set[str]) -> bool:
         return False
 
     return all(target in valid_files for target in target_files)
+
 
 def build_apply_commands(branch: str) -> list[str]:
     return [
@@ -601,13 +663,16 @@ from app.agent_platform.agent_engine import (
 )
 from app.agent_platform.safety import DataLossGuardrail
 
+
 def sample_add_tool(a: int, b: int) -> int:
     """Add two numbers together."""
     return a + b
 
+
 def sample_destructive_tool(table_name: str) -> str:
     """Execute drop table."""
     return f"DROP TABLE {table_name};"
+
 
 def test_runtime_registers_and_executes_safe_tool():
     config = UnifiedAgentConfig(
@@ -622,6 +687,7 @@ def test_runtime_registers_and_executes_safe_tool():
     assert result["status"] == "success"
     assert result["output"] == 42
 
+
 def test_runtime_intercepts_destructive_tool_execution():
     guard = DataLossGuardrail()
     config = UnifiedAgentConfig(
@@ -635,6 +701,7 @@ def test_runtime_intercepts_destructive_tool_execution():
     result = runtime.execute_tool("drop_table", {"table_name": "users"})
     assert result["status"] == "blocked"
     assert "Destructive database operation" in result["reason"]
+
 
 def test_runtime_tracks_execution_history():
     config = UnifiedAgentConfig(
@@ -665,9 +732,11 @@ from enum import Enum
 from typing import Any
 from app.agent_platform.safety import DataLossGuardrail
 
+
 class AgentEngineMode(str, Enum):
     ANTIGRAVITY = "antigravity"
     ADK = "adk"
+
 
 @dataclass
 class UnifiedAgentConfig:
@@ -676,6 +745,7 @@ class UnifiedAgentConfig:
     model: str = "gemini-2.5-flash"
     max_turns: int = 150
     instruction: str = "You are an autonomous AI pair programming agent."
+
 
 class UnifiedAgentRuntime:
     def __init__(self, config: UnifiedAgentConfig, guardrail: DataLossGuardrail | None = None):
@@ -687,7 +757,9 @@ class UnifiedAgentRuntime:
     def register_tool(self, name: str, func: Callable[..., Any]) -> None:
         self._tools[name] = func
 
-    def execute_tool(self, tool_name: str, arguments: dict[str, Any], approval_token: str | None = None) -> dict[str, Any]:
+    def execute_tool(
+        self, tool_name: str, arguments: dict[str, Any], approval_token: str | None = None
+    ) -> dict[str, Any]:
         if tool_name not in self._tools:
             return {"status": "error", "error": f"Tool '{tool_name}' not registered"}
 
@@ -763,9 +835,11 @@ from app.agent_platform.harness_exporter import (
     export_v1_pipeline_step,
 )
 
+
 def test_generate_harness_uid():
     assert generate_harness_uid("Code Review Agent") == "ca_code_review_agent"
     assert generate_harness_uid("PR-Security--Scanner") == "ca_pr_security_scanner"
+
 
 def test_export_harness_agent_spec_structure():
     spec_yaml = export_harness_agent_spec(
@@ -775,12 +849,17 @@ def test_export_harness_agent_spec_structure():
         mcp_connectors=["github_mcp"],
     )
     assert "version: 1" in spec_yaml
-    assert "pkg.harness.io/vrvdt5ius7uwygso8s0bia/harness-agents/harness-ai-agent:latest" in spec_yaml
+    assert (
+        "pkg.harness.io/vrvdt5ius7uwygso8s0bia/harness-agents/harness-ai-agent:latest" in spec_yaml
+    )
     assert "PLUGIN_HARNESS_CONNECTOR: ${{inputs.llmConnector.id}}" in spec_yaml
     assert "PLUGIN_ALLOWED_DOMAINS: ${{inputs.allowedDomains}}" in spec_yaml
-    assert "PLUGIN_MCP_SERVERS: <+connectorInputs.resolveList(<+inputs.mcpConnectors>)>" in spec_yaml
+    assert (
+        "PLUGIN_MCP_SERVERS: <+connectorInputs.resolveList(<+inputs.mcpConnectors>)>" in spec_yaml
+    )
     assert "harness_gemini_connector" in spec_yaml
     assert "github_mcp" in spec_yaml
+
 
 def test_export_v1_pipeline_step():
     step_yaml = export_v1_pipeline_step(
@@ -802,11 +881,13 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'app.agent_platform.ha
 # app/agent_platform/harness_exporter.py
 import re
 
+
 def generate_harness_uid(name: str) -> str:
     cleaned = name.lower()
     cleaned = re.sub(r"[^a-z0-9]+", "_", cleaned)
     cleaned = re.sub(r"_+", "_", cleaned).strip("_")
     return f"ca_{cleaned}"
+
 
 def export_harness_agent_spec(
     name: str,
@@ -894,10 +975,11 @@ agent:
 {layout_yaml}
 """
 
+
 def export_v1_pipeline_step(agent_name: str, custom_inputs: dict[str, str]) -> str:
     uid = generate_harness_uid(agent_name)
     with_block = "\n".join(f"      {k}: {v}" for k, v in custom_inputs.items())
-    return f"""- name: {agent_name.lower().replace(' ', '_')}
+    return f"""- name: {agent_name.lower().replace(" ", "_")}
   template:
     uses: {uid}@1.0.0
     with:
