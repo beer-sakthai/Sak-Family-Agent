@@ -220,6 +220,9 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-22 **Phase 5: Verification & Quality Gates** — Add tests in `tests/test_mcp_ecosystem_v2.py`, maintain $\ge 96.0\%$ coverage, verify `make test`, `make lint`, `mypy`, `bandit`.
 - [x] 2026-11-22 **Phase 6: PR Creation & Delivery** — Open PR #2061 on branch `feat/mcp-v2-genkit-figma-hf-google-knowledge` for Beer's manual review.
 
+### 8. CI Health & Real Coverage Floor
+- [x] 2026-11-24 **Restore genuine ≥ 96% coverage** — The suite measured 95.59% (19785/20698 statements+branches) while CI stayed green: pytest-cov's exit check rounds the total to `[tool.coverage.report] precision` (default 0), so 95.59 rounds to 96 and `--cov-fail-under=96` passes even as it prints FAIL. Add hermetic tests for `agent/eval.py::evaluate_persona_extensions_health()` and `team/gateway.py` to bring the unrounded total back above 96.00% (measured 96.12%, 19895/20698, `--cov-precision=2`).
+
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |
