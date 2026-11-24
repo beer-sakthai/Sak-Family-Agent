@@ -78,4 +78,5 @@ jobs:
 
       - name: Verify Docker Compose Configuration
         run: |
+          touch infra/servicequotebot/docker/.env
           docker compose -f infra/servicequotebot/docker/docker-compose.yml config
