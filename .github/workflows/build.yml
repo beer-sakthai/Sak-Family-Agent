@@ -50,8 +50,8 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
         with:
-          driver: cloud
-          endpoint: ${{ vars.DOCKER_BUILD_CLOUD_ENDPOINT || 'sakthai001/sak-family-agent' }}
+          driver: ${{ env.DOCKER_PAT != '' && vars.DOCKER_BUILD_CLOUD_ENDPOINT != '' && 'cloud' || 'docker-container' }}
+          endpoint: ${{ env.DOCKER_PAT != '' && vars.DOCKER_BUILD_CLOUD_ENDPOINT || '' }}
 
       - name: Extract metadata
         id: meta
@@ -71,7 +71,8 @@ jobs:
           file: Dockerfile.sandbox
           tags: ${{ steps.meta.outputs.tags || format('{0}/docker-build-cloud-demo:latest', vars.DOCKER_USER || 'sakthai001') }}
           labels: ${{ steps.meta.outputs.labels }}
-          outputs: ${{ (github.event_name == 'pull_request' || env.DOCKER_PAT == '') && 'type=cacheonly' || 'type=registry' }}
+          load: ${{ github.event_name == 'pull_request' || env.DOCKER_PAT == '' }}
+          push: ${{ github.event_name != 'pull_request' && env.DOCKER_PAT != '' }}
         env:
           DOCKER_PAT: ${{ secrets.DOCKER_PAT }}
 
