@@ -19,6 +19,13 @@ from .engine import (
     stream_pipeline_events,
 )
 from .gateway import GatewayTeamOrchestrator
+from .github_subagents import (
+    GitHubCLISubagentFramework,
+    GitHubSubagentConfig,
+    GitHubSubagentRole,
+    WorkflowExecutionReport,
+    run_github_audit_pipeline,
+)
 from .handoff import (
     AgentName,
     AgentRef,
@@ -49,8 +56,12 @@ __all__ = [
     "CODE_REVIEW",
     "DAILY_SYNC",
     "FEATURE_DELIVERY",
+    "GitHubCLISubagentFramework",
+    "GitHubSubagentConfig",
+    "GitHubSubagentRole",
     "PARALLEL_DEEP_DIVE",
     "ROUTING_MATRIX",
+    "WorkflowExecutionReport",
     "AgentName",
     "AgentRecord",
     "AgentRef",
@@ -77,6 +88,7 @@ __all__ = [
     "load_pipeline_from_dict",
     "load_pipeline_from_file",
     "run_pipeline",
+    "run_github_audit_pipeline",
     "stream_pipeline_events",
     "stable_handoff_fingerprint",
 ]

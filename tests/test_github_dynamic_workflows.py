@@ -4,7 +4,7 @@ import subprocess
 
 import pytest
 
-from sakthai.workflows.github_subagents import (
+from sakthai.team.github_subagents import (
     GitHubCLISubagentFramework,
     GitHubSubagentConfig,
     GitHubSubagentRole,
