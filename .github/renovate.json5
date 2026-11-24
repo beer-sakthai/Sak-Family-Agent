@@ -4,6 +4,12 @@
   "extends": [
     "config:recommended"
   ],
+  // The PR Lint workflow enforces Conventional Commits on every pull-request
+  // title: ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert|init)(scope)?: .+
+  // Renovate's default title ("Dependencies updated on <date>") does not match
+  // that pattern, so every Renovate pull request failed the PR Lint gate.
+  // This template keeps Renovate's titles compliant.
+  "prTitle": "chore(deps): update dependencies",
   "labels": ["dependencies", "renovate"],
   "packageRules": [
     {
