@@ -891,8 +891,10 @@ model.print_trainable_parameters()
 PEFT now supports `initialize_kv_prefix_from_text()` — initializes the prefix from an existing text's KV cache instead of random. Only works when `prefix_projection=False` (raw KV prefix).
 ```python
 from peft import initialize_kv_prefix_from_text
+
 initialize_kv_prefix_from_text(
-    model, tokenizer,
+    model,
+    tokenizer,
     text="...long context with at least num_virtual_tokens tokens...",
     use_chat_template=False,
 )
@@ -1145,6 +1147,7 @@ def get_current_temperature(location: str, unit: str):
     """
     return 22.0
 
+
 tools = [get_current_temperature, get_current_wind_speed]
 ```
 
@@ -1158,8 +1161,8 @@ current_time = {
     "function": {
         "name": "current_time",
         "description": "Get the current local time as a string.",
-        "parameters": {"type": "object", "properties": {}}
-    }
+        "parameters": {"type": "object", "properties": {}},
+    },
 }
 ```
 
@@ -1171,11 +1174,7 @@ The `tools` parameter accepts either Python callables or JSON schema dicts:
 
 ```python
 inputs = tokenizer.apply_chat_template(
-    messages,
-    tools=tools,
-    add_generation_prompt=True,
-    return_dict=True,
-    return_tensors="pt"
+    messages, tools=tools, add_generation_prompt=True, return_dict=True, return_tensors="pt"
 )
 ```
 
@@ -1192,16 +1191,13 @@ Models do NOT execute tools themselves — they only request a call.
 **Step 2 — Parse the tool call** using `parse_response()` (new in v5.14):
 
 ```python
-out_text = tokenizer.decode(outputs[0][len(inputs["input_ids"][0]):])
+out_text = tokenizer.decode(outputs[0][len(inputs["input_ids"][0]) :])
 tool_call = tokenizer.parse_response(out_text, prefix=inputs["input_ids"][0])
 ```
 
 **Step 3 — Append the tool call to the chat history:**
 ```python
-messages.append({
-    "role": "assistant",
-    "tool_calls": [{"type": "function", "function": tool_call}]
-})
+messages.append({"role": "assistant", "tool_calls": [{"type": "function", "function": tool_call}]})
 ```
 The `tool_calls` key uses dicts (not JSON strings! JSON strings can cause errors in Transformers unlike OpenAI API).
 
@@ -1212,7 +1208,9 @@ messages.append({"role": "tool", "content": "22"})  # content is always a string
 
 **Step 5 — Model reads response and generates final answer:**
 ```python
-inputs = tokenizer.apply_chat_template(messages, tools=tools, add_generation_prompt=True, return_dict=True, return_tensors="pt")
+inputs = tokenizer.apply_chat_template(
+    messages, tools=tools, add_generation_prompt=True, return_dict=True, return_tensors="pt"
+)
 out = model.generate(**inputs.to(model.device), max_new_tokens=128)
 ```
 
@@ -1451,10 +1449,12 @@ model.generate(**inputs, use_cache=True)
 
 # v5 explicit cache
 from transformers.cache_utils import QuantizedCache
+
 model.generate(**inputs, cache_implementation="quantized")
 
 # v5 watermarking
 from transformers import WatermarkingConfig
+
 model.generate(**inputs, watermarking_config=WatermarkingConfig(greenlist_ratio=0.25))
 
 # v5 MTP decoding
@@ -1502,11 +1502,10 @@ curl http://localhost:8080/v1/embeddings \
 **Python client (OpenAI SDK):**
 ```python
 from openai import OpenAI
+
 client = OpenAI(base_url="http://localhost:8080/v1", api_key="not-needed")
 response = client.embeddings.create(
-    input="Hello world",
-    model="text-embedding-3-large",
-    dimensions=256
+    input="Hello world", model="text-embedding-3-large", dimensions=256
 )
 ```
 
@@ -1526,6 +1525,7 @@ TEI supports linear dimension reduction for models trained with Matryoshka repre
 
 ```python
 from huggingface_hub import InferenceClient
+
 client = InferenceClient(base_url="http://localhost:8080")
 embedding = client.feature_extraction("Direct connection", normalize=True)
 ```
@@ -1662,24 +1662,18 @@ api = HfApi()
 trending = list(api.list_models(sort="trending_score", limit=20))
 
 # 2. Most downloaded text-generation models
-popular = list(api.list_models(
-    sort="downloads", pipeline_tag="text-generation", limit=10
-))
+popular = list(api.list_models(sort="downloads", pipeline_tag="text-generation", limit=10))
 
 # 3. Latest models by a specific author
-new_from_author = list(api.list_models(
-    sort="created_at", author="meta", limit=5
-))
+new_from_author = list(api.list_models(sort="created_at", author="meta", limit=5))
 
 # 4. Models with specific parameter range sorted by likes
-mid_size = list(api.list_models(
-    num_parameters="min:6B,max:128B", sort="likes", limit=10
-))
+mid_size = list(api.list_models(num_parameters="min:6B,max:128B", sort="likes", limit=10))
 
 # 5. Search models by name with full metadata
-results = list(api.list_models(
-    search="qwen", expand=["trendingScore", "inference", "gguf"], limit=5
-))
+results = list(
+    api.list_models(search="qwen", expand=["trendingScore", "inference", "gguf"], limit=5)
+)
 for m in results:
     print(f"{m.id}: {m.likes} likes, trendingScore={getattr(m, 'trendingScore', 'N/A')}")
 
@@ -1784,13 +1778,13 @@ Deep-dive into Hugging Face Accelerate v1.14.0's new composable parallelism syst
 from accelerate import ParallelismConfig
 
 config = ParallelismConfig(
-    dp_replicate_size=1,   # DDP replicas (pure data parallel)
-    dp_shard_size=8,       # FSDP sharded data parallel
-    tp_size=4,             # tensor parallelism
-    cp_size=1,             # context parallelism (future)
-    cp_backend="torch",    # only "torch" currently supported
-    sp_size=1,             # sequence parallelism (DeepSpeed Ulysses)
-    sp_backend="deepspeed",# only "deepspeed" currently supported
+    dp_replicate_size=1,  # DDP replicas (pure data parallel)
+    dp_shard_size=8,  # FSDP sharded data parallel
+    tp_size=4,  # tensor parallelism
+    cp_size=1,  # context parallelism (future)
+    cp_backend="torch",  # only "torch" currently supported
+    sp_size=1,  # sequence parallelism (DeepSpeed Ulysses)
+    sp_backend="deepspeed",  # only "deepspeed" currently supported
 )
 ```
 
@@ -1870,12 +1864,12 @@ acc = Accelerator(parallelism_config=config)
 ### Accessing Rank Information
 
 ```python
-acc.tensor_parallel_rank       # 0..tp_size-1
-acc.data_parallel_rank         # replicate dimension rank
-acc.data_parallel_shard_rank   # shard dimension rank
+acc.tensor_parallel_rank  # 0..tp_size-1
+acc.data_parallel_rank  # replicate dimension rank
+acc.data_parallel_shard_rank  # shard dimension rank
 acc.is_composable_parallelism_enabled  # True if FSDP2
-acc.parallelism_config         # The config object
-acc.torch_device_mesh          # The PyTorch DeviceMesh
+acc.parallelism_config  # The config object
+acc.torch_device_mesh  # The PyTorch DeviceMesh
 ```
 
 ### Key Insights
@@ -2215,19 +2209,19 @@ All model classes accept keyword arguments (temperature, max_tokens, top_p, etc.
 
 ```python
 CodeAgent(
-    tools=[...],                       # List[Tool] — the agent's toolbox
-    model=InferenceClientModel(),      # LLM engine
-    add_base_tools=False,              # Add DuckDuckGo search + Python executor + Transcriber
-    instructions="Always ...",         # Custom instructions appended to system prompt
+    tools=[...],  # List[Tool] — the agent's toolbox
+    model=InferenceClientModel(),  # LLM engine
+    add_base_tools=False,  # Add DuckDuckGo search + Python executor + Transcriber
+    instructions="Always ...",  # Custom instructions appended to system prompt
     additional_authorized_imports=[],  # CodeAgent only: allow extra Python imports
-    max_steps=20,                      # Max ReAct steps before forced stop
-    planning_interval=None,            # Run planning step every N steps
-    final_answer_checks=[],            # Validation funcs before accepting final answer
-    managed_agents=[],                  # Sub-agents this agent can delegate to
-    executor_type="local",             # "local" | "blaxel" | "e2b" | "modal" | "docker"
+    max_steps=20,  # Max ReAct steps before forced stop
+    planning_interval=None,  # Run planning step every N steps
+    final_answer_checks=[],  # Validation funcs before accepting final answer
+    managed_agents=[],  # Sub-agents this agent can delegate to
+    executor_type="local",  # "local" | "blaxel" | "e2b" | "modal" | "docker"
     code_block_tags=("```python", "```"),  # CodeAgent: code block delimiters
-    stream_outputs=False,              # Stream intermediate outputs
-    use_structured_outputs_internally=False, # Use structured generation per step
+    stream_outputs=False,  # Stream intermediate outputs
+    use_structured_outputs_internally=False,  # Use structured generation per step
 )
 ```
 
@@ -2240,6 +2234,8 @@ ToolCallingAgent additionally supports `max_tool_threads` for parallel tool call
 1. **Decorator approach** (`@tool`):
 ```python
 from smolagents import tool
+
+
 @tool
 def my_tool(param: str) -> str:
     """Description. Args: param: description."""
@@ -2249,11 +2245,14 @@ def my_tool(param: str) -> str:
 2. **Class-based** (Tool subclass):
 ```python
 from smolagents import Tool
+
+
 class MyTool(Tool):
     name = "my_tool"
     description = "..."
     inputs = {"param": {"type": "string", "description": "..."}}
     output_type = "string"
+
     def forward(self, param: str) -> str:
         return result
 ```
@@ -2355,6 +2354,7 @@ def must_be_integer(final_answer: str, agent_memory=None) -> bool:
         return True
     except ValueError:
         return False
+
 
 agent = CodeAgent(
     tools=[],
@@ -2506,8 +2506,12 @@ How do I bake a cake?<|im_end|>
 
 **1. Transformers Pipeline (standard):**
 ```python
-pipe = pipeline("text-generation", model="microsoft/phi-4",
-                model_kwargs={"torch_dtype": "auto"}, device_map="auto")
+pipe = pipeline(
+    "text-generation",
+    model="microsoft/phi-4",
+    model_kwargs={"torch_dtype": "auto"},
+    device_map="auto",
+)
 outputs = pipe(messages, max_new_tokens=512, temperature=0.7)
 ```
 
@@ -2515,11 +2519,15 @@ outputs = pipe(messages, max_new_tokens=512, temperature=0.7)
 ```python
 from transformers import BitsAndBytesConfig
 
-bnb_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
-                                bnb_4bit_compute_dtype=torch.bfloat16,
-                                bnb_4bit_use_double_quant=True)
-model = AutoModelForCausalLM.from_pretrained("microsoft/phi-4",
-    quantization_config=bnb_config, device_map="auto")
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.bfloat16,
+    bnb_4bit_use_double_quant=True,
+)
+model = AutoModelForCausalLM.from_pretrained(
+    "microsoft/phi-4", quantization_config=bnb_config, device_map="auto"
+)
 ```
 Reduces VRAM from ~28GB (bf16) to ~9GB (4-bit) — enabling inference on free-tier GPUs.
 
@@ -2551,8 +2559,9 @@ Released April 2025. A smaller variant of Phi-4 optimized for edge/mobile deploy
 
 **Loading:**
 ```python
-model = AutoModelForCausalLM.from_pretrained("microsoft/Phi-4-mini-instruct",
-    torch_dtype=torch.bfloat16, device_map="auto")
+model = AutoModelForCausalLM.from_pretrained(
+    "microsoft/Phi-4-mini-instruct", torch_dtype=torch.bfloat16, device_map="auto"
+)
 ```
 
 ### Phi-4-multimodal (5.6B)
@@ -2574,8 +2583,9 @@ Uses a simple projector to align SigLIP vision embeddings with the Phi-4-mini te
 **Loading:**
 ```python
 processor = AutoProcessor.from_pretrained("microsoft/Phi-4-multimodal-instruct")
-model = AutoModelForPreTraining.from_pretrained("microsoft/Phi-4-multimodal-instruct",
-    torch_dtype=torch.bfloat16, device_map="auto")
+model = AutoModelForPreTraining.from_pretrained(
+    "microsoft/Phi-4-multimodal-instruct", torch_dtype=torch.bfloat16, device_map="auto"
+)
 ```
 
 Note: `AutoModelForPreTraining` (not `AutoModelForCausalLM`) because the model has separate vision encoder weights that need special handling.
@@ -2590,8 +2600,7 @@ from peft import LoraConfig, get_peft_model
 lora_config = LoraConfig(
     r=16,
     lora_alpha=32,
-    target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
-                    "gate_proj", "up_proj", "down_proj"],
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
     lora_dropout=0.05,
     bias="none",
     task_type="CAUSAL_LM",
@@ -2608,8 +2617,9 @@ model.print_trainable_parameters()  # ~0.5% of total params
 
 **QLoRA:** Use with 4-bit base model for fine-tuning on free-tier GPUs (T4 16GB):
 ```python
-model = AutoModelForCausalLM.from_pretrained("microsoft/phi-4",
-    quantization_config=bnb_config, device_map="auto")
+model = AutoModelForCausalLM.from_pretrained(
+    "microsoft/phi-4", quantization_config=bnb_config, device_map="auto"
+)
 # Then apply LoRA on top
 ```
 
@@ -2845,8 +2855,10 @@ Deep-dive into the Hugging Face Datasets Server's Parquet conversion pipeline �
 
 ```python
 import requests
-resp = requests.get("https://datasets-server.huggingface.co/parquet",
-                    params={"dataset": "ibm/duorc"}).json()
+
+resp = requests.get(
+    "https://datasets-server.huggingface.co/parquet", params={"dataset": "ibm/duorc"}
+).json()
 for pf in resp["parquet_files"]:
     print(pf["url"])  # Raw Parquet URL on refs/convert/parquet branch
 ```
@@ -2858,8 +2870,11 @@ Response fields per file: `dataset`, `config`, `split`, `url`, `size`, `num_rows
 **DuckDB (pushdown queries — most efficient):**
 ```python
 import duckdb
+
 urls = [p["url"] for p in resp["parquet_files"]]
-duckdb.sql("SELECT COUNT(*), COUNT(DISTINCT title) FROM read_parquet(urls) WHERE LENGTH(text) > 1000").fetchall()
+duckdb.sql(
+    "SELECT COUNT(*), COUNT(DISTINCT title) FROM read_parquet(urls) WHERE LENGTH(text) > 1000"
+).fetchall()
 ```
 
 **Pandas:**
@@ -3503,7 +3518,7 @@ This ensures that if a remote-code model reuses a native Transformers config (e.
 ```python
 model_type_to_module_name("command-r")  # → "command_r"
 model_type_to_module_name("qwen2_moe")  # → "qwen2_moe"
-model_type_to_module_name("phi4")        # → "phi4"
+model_type_to_module_name("phi4")  # → "phi4"
 ```
 
 Simply replaces hyphens with underscores. Module names match the model type string (underscore-normalized).
@@ -3514,6 +3529,7 @@ Simply replaces hyphens with underscores. Module names match the model type stri
 @classmethod
 def register_for_auto_class(cls, auto_class="AutoModel"):
     import transformers.models.auto as auto_module
+
     if not hasattr(auto_module, auto_class):
         raise ValueError(f"{auto_class} is not a valid auto class.")
     cls._auto_class = auto_class
@@ -3770,6 +3786,7 @@ Supports both named presets: `@annually`, `@yearly`, `@monthly`, `@weekly`, `@da
 Volumes allow mounting HF buckets, models, datasets, or Spaces inside the job container:
 ```python
 from huggingface_hub import Volume
+
 Volume(type="bucket", source="username/my-bucket", mount_path="/data", read_only=False)
 Volume(type="model", source="username/my-model", mount_path="/model", revision="main")
 Volume(type="dataset", source="username/my-dataset", mount_path="/dataset", path="subfolder")
@@ -4079,10 +4096,10 @@ import pyarrow.parquet as pq
 pq.write_table(
     table,
     "output.parquet",
-    row_group_size=100_000,          # ~10-50 MB per group
-    write_page_index=True,           # enables page-level skipping
-    write_statistics=True,           # enables min/max statistics
-    compression="zstd",              # better compression ratio
+    row_group_size=100_000,  # ~10-50 MB per group
+    write_page_index=True,  # enables page-level skipping
+    write_statistics=True,  # enables min/max statistics
+    compression="zstd",  # better compression ratio
 )
 
 # BAD: single large row group, no index
@@ -4201,6 +4218,7 @@ Check the viewer state programmatically before building workflows:
 
 ```python
 import requests
+
 
 def check_dataset_viewer_state(dataset_name: str) -> dict:
     """Check if a dataset's viewer can handle the full dataset."""
@@ -4376,7 +4394,7 @@ The library uses two compiled regex patterns:
 **`_RATELIMIT_REGEX`** — Parses the `RateLimit` response header:
 ```python
 _RATELIMIT_REGEX = re.compile(
-    r'\"(?P<resource_type>\w+)\"\s*;\s*r\s*=\s*(?P<r>\d+)\s*;\s*t\s*=\s*(?P<t>\d+)'
+    r"\"(?P<resource_type>\w+)\"\s*;\s*r\s*=\s*(?P<r>\d+)\s*;\s*t\s*=\s*(?P<t>\d+)"
 )
 ```
 Matches patterns like: `"api";r=0;t=55`
@@ -4386,9 +4404,7 @@ Matches patterns like: `"api";r=0;t=55`
 
 **`_RATELIMIT_POLICY_REGEX`** — Parses the `RateLimit-Policy` response header:
 ```python
-_RATELIMIT_POLICY_REGEX = re.compile(
-    r'q\s*=\s*(?P<q>\d+).*?w\s*=\s*(?P<w>\d+)'
-)
+_RATELIMIT_POLICY_REGEX = re.compile(r"q\s*=\s*(?P<q>\d+).*?w\s*=\s*(?P<w>\d+)")
 ```
 Matches patterns like: `"fixed window";"api";q=500;w=300`
 - `q` → quota per window
@@ -4551,11 +4567,7 @@ if info and info.remaining < 10:
 from huggingface_hub.utils import http_backoff
 
 # Disable all retries — handle 429 yourself
-response = http_backoff(
-    "GET", url,
-    retry_on_exceptions=(),
-    retry_on_status_codes=()
-)
+response = http_backoff("GET", url, retry_on_exceptions=(), retry_on_status_codes=())
 ```
 
 #### 7.3 Custom Retry Configuration
@@ -4563,11 +4575,12 @@ response = http_backoff(
 ```python
 # Aggressive retry for critical operations
 response = http_backoff(
-    "POST", url,
+    "POST",
+    url,
     max_retries=10,
     base_wait_time=0.5,
     max_wait_time=30,
-    retry_on_status_codes=(429, 500, 502, 503, 504)
+    retry_on_status_codes=(429, 500, 502, 503, 504),
 )
 ```
 
@@ -4580,7 +4593,8 @@ For scenarios where you need to follow redirects AND handle rate limits:
 from huggingface_hub.utils._http import _httpx_follow_relative_redirects_with_backoff
 
 response = _httpx_follow_relative_redirects_with_backoff(
-    "GET", url,
+    "GET",
+    url,
     retry_on_errors=True,  # enables 429/5xx/timeout retry
 )
 ```
@@ -4959,6 +4973,7 @@ Comprehensive deep dive into all Hugging Face Spaces hardware options: CPU tiers
 
 ```python
 from huggingface_hub import HfApi
+
 api = HfApi()
 api.request_space_hardware(repo_id="user/space", flavor="t4-small", sleep_time=3600)
 ```
@@ -5007,11 +5022,11 @@ Deep dive into the new Hugging Face Hub URI system (`hf://`), Mount specificatio
 @dataclass
 class Volume:
     type: Literal["bucket", "model", "dataset", "space"]
-    source: str              # repo or bucket ID
-    mount_path: str          # absolute path in container
-    revision: str | None     # git revision (repos only)
-    read_only: bool | None   # True for repos, default False for buckets
-    path: str | None         # subfolder prefix inside resource
+    source: str  # repo or bucket ID
+    mount_path: str  # absolute path in container
+    revision: str | None  # git revision (repos only)
+    read_only: bool | None  # True for repos, default False for buckets
+    path: str | None  # subfolder prefix inside resource
 ```
 - `.to_dict()` — serializes to Hub API JSON payload (uses camelCase keys)
 - `.to_uri()` — renders as `hf://` mount URI via `HfMount`
@@ -5177,7 +5192,7 @@ The `SpaceRuntime` dataclass (in `_space_api.py`) exposes hot reload state:
 
 ### Dev Mode API
 ```python
-api.enable_space_dev_mode("user/my-space")   # POST /api/spaces/{id}/dev-mode {"enabled": True}
+api.enable_space_dev_mode("user/my-space")  # POST /api/spaces/{id}/dev-mode {"enabled": True}
 api.disable_space_dev_mode("user/my-space")  # POST /api/spaces/{id}/dev-mode {"enabled": False}
 ```
 
@@ -5558,18 +5573,18 @@ Sandbox._server (httpx.Client) → base_url/job-id--49983.hf.jobs
 
 **Key constants:**
 ```python
-SANDBOX_SERVER_PORT = 49983      # In-job server port (deliberately uncommon)
-SANDBOX_LABEL = "hf-sandbox"     # Label on every sandbox job
-MODE_LABEL = "hf-sandbox-mode"   # "dedicated" or "pool"
+SANDBOX_SERVER_PORT = 49983  # In-job server port (deliberately uncommon)
+SANDBOX_LABEL = "hf-sandbox"  # Label on every sandbox job
+MODE_LABEL = "hf-sandbox-mode"  # "dedicated" or "pool"
 MODE_DEDICATED = "dedicated"
 MODE_POOL = "pool"
-POOL_LABEL = "hf-sandbox-pool"   # Pool name label
-NONCE_LABEL = "hf-sandbox-nonce" # Public nonce for token derivation
+POOL_LABEL = "hf-sandbox-pool"  # Pool name label
+NONCE_LABEL = "hf-sandbox-nonce"  # Public nonce for token derivation
 DEFAULT_IMAGE = "python:3.12"
-DEFAULT_IDLE_TIMEOUT = 600       # 10 minutes
-SANDBOX_MAX_LIFETIME = "24h"     # Absolute max job lifetime
+DEFAULT_IDLE_TIMEOUT = 600  # 10 minutes
+SANDBOX_MAX_LIFETIME = "24h"  # Absolute max job lifetime
 DEFAULT_SANDBOXES_PER_HOST = 50  # Pool sandboxes per host VM
-SHARED_ID_SEP = "."              # Separator in shared sandbox ids: <host_job_id>.<local_id>
+SHARED_ID_SEP = "."  # Separator in shared sandbox ids: <host_job_id>.<local_id>
 ```
 
 ---
@@ -5585,11 +5600,7 @@ Sandbox auth is **entirely stateless** — no database, no stored tokens, no ses
 **Token derivation (never sends HF token to sandbox):**
 ```python
 def _derive_sandbox_token(hf_token: str, nonce: str) -> str:
-    return hmac.new(
-        hf_token.encode(),
-        f"hf-sandbox:{nonce}".encode(),
-        hashlib.sha256
-    ).hexdigest()
+    return hmac.new(hf_token.encode(), f"hf-sandbox:{nonce}".encode(), hashlib.sha256).hexdigest()
 ```
 
 **Flow during creation:**
@@ -5660,8 +5671,20 @@ class FileEntry:
 ```python
 class _SandboxServer:
     """HTTP transport to one sbx-server instance — a dedicated job or a shared host."""
-    def __init__(self, *, job_id, owner, image, base_url, nonce,
-                 sandbox_token, api, max_connections=10, capacity=0):
+
+    def __init__(
+        self,
+        *,
+        job_id,
+        owner,
+        image,
+        base_url,
+        nonce,
+        sandbox_token,
+        api,
+        max_connections=10,
+        capacity=0,
+    ):
         self.job_id = job_id
         self.owner = owner
         self._image = image
@@ -5670,16 +5693,19 @@ class _SandboxServer:
         self._api = api
         self._auth_token = _effective_token(api)
         self._sandbox_token = sandbox_token
-        self.capacity = capacity     # Max sandboxes this host can pack (pool mode)
-        self.live = 0                # Current sandbox count
-        self.verified = True         # False for hosts from cache (unverified)
+        self.capacity = capacity  # Max sandboxes this host can pack (pool mode)
+        self.live = 0  # Current sandbox count
+        self.verified = True  # False for hosts from cache (unverified)
 
         # Single httpx.Client for all operations (thread-safe!)
         self._client = httpx.Client(
-            headers={"Authorization": f"Bearer {self._auth_token}",
-                     "X-Sandbox-Token": sandbox_token},
-            limits=httpx.Limits(max_connections=max_connections,
-                                max_keepalive_connections=max_connections),
+            headers={
+                "Authorization": f"Bearer {self._auth_token}",
+                "X-Sandbox-Token": sandbox_token,
+            },
+            limits=httpx.Limits(
+                max_connections=max_connections, max_keepalive_connections=max_connections
+            ),
             follow_redirects=True,
         )
 ```
@@ -5690,11 +5716,12 @@ class _SandboxServer:
 class CachedHost:
     job_id: str
     owner: str
-    base_url: str           # Does not change while the job lives
-    nonce: str              # For re-deriving sandbox token
-    capacity: int           # Max sandboxes
-    live: int               # Last observed count (may be stale)
+    base_url: str  # Does not change while the job lives
+    nonce: str  # For re-deriving sandbox token
+    capacity: int  # Max sandboxes
+    live: int  # Last observed count (may be stale)
     updated_at: float = 0.0
+
 
 @dataclass
 class PoolCache:
@@ -5772,14 +5799,14 @@ Returns a Sandbox with `owns_sandbox=False` (exiting `with` block won't kill it)
 # Foreground (waits for completion, streams output live)
 result: SandboxCommandResult = sbx.run(
     cmd="python train.py --epochs 10",
-    shell=True,                          # infer from cmd type: True for str
-    env={"LR": "0.001"},                 # extra env vars for this command
-    cwd="/workspace",                    # working directory
-    timeout=300.0,                       # kill after this many seconds
-    stdin="y\n",                         # stdin data
+    shell=True,  # infer from cmd type: True for str
+    env={"LR": "0.001"},  # extra env vars for this command
+    cwd="/workspace",  # working directory
+    timeout=300.0,  # kill after this many seconds
+    stdin="y\n",  # stdin data
     on_stdout=lambda chunk: print(chunk, end=""),  # live stdout callback
     on_stderr=lambda chunk: print(chunk, end=""),  # live stderr callback
-    check=True,                          # raise SandboxCommandError on non-zero exit
+    check=True,  # raise SandboxCommandError on non-zero exit
 )
 
 # Background (returns immediately, process runs detached)
@@ -5823,15 +5850,15 @@ processes: List[SandboxProcess] = sbx.processes()
 
 # Stop a specific process
 proc = sbx.run("python long_task.py", background=True)
-proc.kill()   # DELETE /processes/{pid}
+proc.kill()  # DELETE /processes/{pid}
 
 # Process properties
-proc.pid           # int
-proc.cmd           # original command
-proc.running       # bool
-proc.exit_code     # None if still running, int if completed
-proc.tag           # optional user tag
-proc.started_at_ms # timestamp
+proc.pid  # int
+proc.cmd  # original command
+proc.running  # bool
+proc.exit_code  # None if still running, int if completed
+proc.tag  # optional user tag
+proc.started_at_ms  # timestamp
 ```
 
 Completed processes stay in the listing (with `running=False` and `exit_code`) until the sandbox is deleted.
@@ -5861,9 +5888,9 @@ Files >2MB are automatically transferred using parallel ranged requests for band
 
 ```python
 class SandboxFiles:
-    PARALLEL_THRESHOLD = 2 * 1024 * 1024   # 2MB — above this, use parallel
+    PARALLEL_THRESHOLD = 2 * 1024 * 1024  # 2MB — above this, use parallel
     PARALLEL_CHUNK_SIZE = 1 * 1024 * 1024  # 1MB per chunk
-    PARALLEL_MAX_WORKERS = 16              # up to 16 concurrent connections
+    PARALLEL_MAX_WORKERS = 16  # up to 16 concurrent connections
 ```
 
 The parallel transfer uses `ThreadPoolExecutor` with ranged GET/PUT requests:
@@ -5872,10 +5899,10 @@ def _read_ranges(self, path, size):
     def fetch(rng):
         offset, length = rng
         response = self._sandbox._request(
-            "GET", "/files/read",
-            params={"path": path, "offset": offset, "length": length}
+            "GET", "/files/read", params={"path": path, "offset": offset, "length": length}
         )
         return response.content
+
     return self._parallel(self._ranges(size), fetch)
 ```
 
@@ -5889,7 +5916,7 @@ Allows accessing a server running *inside* the sandbox from outside:
 url = sandbox.proxy_url_for(
     port=8000,
     path="/api/health",
-    scheme="https://"        # or "wss://" for WebSocket
+    scheme="https://",  # or "wss://" for WebSocket
 )
 # Returns: https://<job_id>--49983.hf.jobs/v1/proxy/8000/api/health
 
@@ -5903,6 +5930,7 @@ headers = sandbox.proxy_headers
   ```python
   # Inside sandbox:
   import uvicorn
+
   uvicorn.run(app, uds=f"{os.environ['SBX_PROXY_DIR']}/8000.sock")
   ```
 - **Dedicated sandbox**: Bind normal TCP port on `127.0.0.1:<port>` (can also expose directly via job proxy without port proxy)
@@ -5911,6 +5939,7 @@ headers = sandbox.proxy_headers
 ```python
 url = sandbox.proxy_url_for(8000, "/ws", scheme="wss://")
 import websockets
+
 async with websockets.connect(url, additional_headers=sandbox.proxy_headers) as ws:
     await ws.send("hello")
 ```
@@ -5930,10 +5959,10 @@ pool = SandboxPool(
     image="python:3.12",
     flavor="cpu-basic",
     sandboxes_per_host=50,
-    warm_up=1,                # Pre-provision 1 host in constructor
-    max_hosts=None,           # Optional cost ceiling
-    name=None,                # Random if omitted (e.g. "pool-ab12cd34ef56")
-    idle_timeout=600,         # Host idle timeout (no sandboxes → shutdown)
+    warm_up=1,  # Pre-provision 1 host in constructor
+    max_hosts=None,  # Optional cost ceiling
+    name=None,  # Random if omitted (e.g. "pool-ab12cd34ef56")
+    idle_timeout=600,  # Host idle timeout (no sandboxes → shutdown)
     namespace=None,
     start_timeout=120.0,
     token=None,
@@ -5946,8 +5975,7 @@ The constructor blocks until `warm_up` hosts are ready. Uses threading locks to 
 
 ```python
 with SandboxPool(image="python:3.12", warm_up=2) as pool:
-    boxes = [pool.create(env={"WORKER_ID": str(i)})
-             for i in range(100)]   # Packed across warm hosts
+    boxes = [pool.create(env={"WORKER_ID": str(i)}) for i in range(100)]  # Packed across warm hosts
     print(boxes[0].run("echo hi").stdout)
 ```
 
@@ -5989,16 +6017,16 @@ Creates hosts that carry the pool label and config in env vars. Cross-process di
 #### Pool Properties
 
 ```python
-pool.num_hosts      # int — host jobs provisioned
+pool.num_hosts  # int — host jobs provisioned
 pool.num_sandboxes  # int — sandboxes currently handed out
-pool.host_ids       # List[str] — host job ids
+pool.host_ids  # List[str] — host job ids
 ```
 
 #### Pool Cleanup
 
 ```python
 pool.close()  # For owned pools: cancels all host jobs + sandboxes, deletes cache
-              # For connect()'d handles: releases HTTP clients only, leaves hosts running
+# For connect()'d handles: releases HTTP clients only, leaves hosts running
 
 # Context manager:
 with SandboxPool(...) as pool:
@@ -6018,9 +6046,17 @@ The cache lives at `~/.cache/huggingface/sandbox/pools/<pool_id>.json` with a co
 cache = read_pool_cache(pool_id)  # → PoolCache | None
 
 # Write: upserts hosts by job_id, removes dead_host_ids, atomic write
-save_pool_cache(pool_id, image=..., flavor=..., sandboxes_per_host=...,
-                max_hosts=..., idle_timeout=..., namespace=...,
-                hosts=[CachedHost(...)], dead_host_ids={"job_id_1"})
+save_pool_cache(
+    pool_id,
+    image=...,
+    flavor=...,
+    sandboxes_per_host=...,
+    max_hosts=...,
+    idle_timeout=...,
+    namespace=...,
+    hosts=[CachedHost(...)],
+    dead_host_ids={"job_id_1"},
+)
 
 # Delete: removes cache file
 delete_pool_cache(pool_id)
@@ -6052,7 +6088,8 @@ Pools use **label-based discovery** via the Jobs API to find hosts across proces
 def _discover_hosts(self):
     known = {host.job_id for host in self._hosts}
     matches = [
-        job for job in self._api.list_jobs(
+        job
+        for job in self._api.list_jobs(
             status="RUNNING",
             labels={MODE_LABEL: MODE_POOL, POOL_LABEL: self.name},
             namespace=self._namespace,
@@ -6071,14 +6108,18 @@ def _discover_hosts(self):
 ```python
 def _adopt_pending_host(self):
     """Find a host already SCHEDULING for this pool → wait for it instead of booting."""
-    pending = next((
-        job for job in self._api.list_jobs(
-            status="SCHEDULING",
-            labels={MODE_LABEL: MODE_POOL, POOL_LABEL: self.name},
-            namespace=self._namespace,
-        )
-        if job.id not in known
-    ), None)
+    pending = next(
+        (
+            job
+            for job in self._api.list_jobs(
+                status="SCHEDULING",
+                labels={MODE_LABEL: MODE_POOL, POOL_LABEL: self.name},
+                namespace=self._namespace,
+            )
+            if job.id not in known
+        ),
+        None,
+    )
     # Wait for it to reach RUNNING + server ready
 ```
 
@@ -6408,6 +6449,7 @@ Comprehensive reference for the rebuilt `hf` CLI and new features shipped in hug
 ```python
 # Sandbox
 from huggingface_hub import Sandbox
+
 with Sandbox.create(image="python:3.12") as sbx:
     sbx.files.write("/app/main.py", "print(40 + 2)")
     proc = sbx.run("python /app/main.py", background=True)
@@ -6415,10 +6457,12 @@ with Sandbox.create(image="python:3.12") as sbx:
 
 # Space template
 from huggingface_hub import create_repo
+
 create_repo("my-jupyterlab", repo_type="space", space_template="jupyterlab")
 
 # Named job
 from huggingface_hub import run_job
+
 run_job("python:3.12", command=["python", "train.py"], name="training-v2")
 ```
 

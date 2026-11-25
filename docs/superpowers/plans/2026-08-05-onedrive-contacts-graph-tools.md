@@ -73,8 +73,6 @@ def test_create_calendar_event_success(
 Insert the following new content between `assert "https://outlook.office.com/event/1" in out` and the `# ---...` divider (keep the divider and everything after it unchanged):
 
 ```python
-
-
 # ---------------------------------------------------------------------------
 # list_onedrive_files
 # ---------------------------------------------------------------------------
@@ -162,8 +160,7 @@ Replace it with:
 
 ```python
 _GRAPH_SCOPES = (
-    "Mail.Send Mail.Read Calendars.ReadWrite offline_access "
-    "Files.ReadWrite.AppFolder Contacts.Read"
+    "Mail.Send Mail.Read Calendars.ReadWrite offline_access Files.ReadWrite.AppFolder Contacts.Read"
 )
 ```
 
@@ -206,8 +203,7 @@ def _list_onedrive_files(args: dict[str, Any], store: MemoryStore) -> str:
         for f in files:
             size = _human_size(int(f.get("size", 0)))
             lines.append(
-                f"  {f.get('name', '(unnamed)')}  {size}  "
-                f"{f.get('lastModifiedDateTime', '')}"
+                f"  {f.get('name', '(unnamed)')}  {size}  {f.get('lastModifiedDateTime', '')}"
             )
         return "\n".join(lines)
 
@@ -296,8 +292,6 @@ git commit -m "feat: add list_onedrive_files Graph tool"
 In `tests/test_tools.py`, append the following immediately after `test_list_onedrive_files_empty` (the last test added in Task 1):
 
 ```python
-
-
 # ---------------------------------------------------------------------------
 # read_onedrive_file
 # ---------------------------------------------------------------------------
@@ -397,8 +391,6 @@ def _graph_request(method: str, path: str, *, json_body: dict[str, Any] | None =
 Insert the following function immediately after it (before `def _graph_safe`):
 
 ```python
-
-
 def _graph_request_raw_get(path: str) -> bytes:
     """GET a Graph endpoint whose response body is not JSON (e.g. file content)."""
     token = _graph_access_token()
@@ -523,8 +515,6 @@ git commit -m "feat: add read_onedrive_file Graph tool"
 In `tests/test_tools.py`, append the following immediately after `test_read_onedrive_file_not_found` (the last test added in Task 2):
 
 ```python
-
-
 # ---------------------------------------------------------------------------
 # upload_onedrive_file
 # ---------------------------------------------------------------------------
@@ -744,8 +734,6 @@ git commit -m "feat: add upload_onedrive_file Graph tool"
 In `tests/test_tools.py`, append the following immediately after `test_upload_onedrive_file_over_limit_never_calls_urlopen` (the last test added in Task 3):
 
 ```python
-
-
 # ---------------------------------------------------------------------------
 # find_contact
 # ---------------------------------------------------------------------------
@@ -756,9 +744,7 @@ def test_find_contact_requires_query(store) -> None:
         tool_by_name("find_contact").handler({}, store)
 
 
-def test_find_contact_success(
-    monkeypatch: pytest.MonkeyPatch, sakthai_home: Path, store
-) -> None:
+def test_find_contact_success(monkeypatch: pytest.MonkeyPatch, sakthai_home: Path, store) -> None:
     monkeypatch.setenv("MS_GRAPH_CLIENT_ID", "client-id")
     monkeypatch.setenv("MS_GRAPH_REFRESH_TOKEN", "seed-refresh-token")
     api_body = json.dumps(
@@ -783,9 +769,7 @@ def test_find_contact_success(
     assert "+1-555-0100" in out
 
 
-def test_find_contact_empty(
-    monkeypatch: pytest.MonkeyPatch, sakthai_home: Path, store
-) -> None:
+def test_find_contact_empty(monkeypatch: pytest.MonkeyPatch, sakthai_home: Path, store) -> None:
     monkeypatch.setenv("MS_GRAPH_CLIENT_ID", "client-id")
     monkeypatch.setenv("MS_GRAPH_REFRESH_TOKEN", "seed-refresh-token")
     monkeypatch.setattr(

@@ -304,9 +304,7 @@ def smoke() -> int:
             check("web server serves /api/stages JSON", "kpis" in stages)
             eco: dict = {}
             try:
-                req = urllib.request.Request(
-                    "http://127.0.0.1:3001/api/ecosystem", headers=headers
-                )
+                req = urllib.request.Request("http://127.0.0.1:3001/api/ecosystem", headers=headers)
                 # nosec B310 — same literal loopback URL as above.
                 with urllib.request.urlopen(req, timeout=2) as r:  # nosec B310
                     eco = json.loads(r.read())

@@ -1867,18 +1867,60 @@ Synchronizes images and multi-architecture manifests across Docker Hub and conta
     override-multi-arch: ${{ inputs.override_multi_arch || 'true' }}
 ```
 
-### 3.134 Hugging Face Hub-Sync ([`.github/workflows/hf-hub-sync.yml`](../.github/workflows/hf-hub-sync.yml))
-Synchronizes Spaces, models, and datasets from GitHub to the Hugging Face Hub using the official `huggingface/hub-sync` action:
+### 3.134 PR Rules Checker ([`.github/workflows/pr-rules-checker.yml`](../.github/workflows/pr-rules-checker.yml))
+Validates incoming pull requests against repository checklist rules written in markdown (`.github/pr-rules.md`):
 
 ```yaml
-- name: Sync to Hugging Face Hub
-  uses: huggingface/hub-sync@fdffea8e04104d0bd4e3181c5feb3025f0433ff5 # v0.3.0
+- name: Run PR Rules Checker
+  uses: puntorigen/pr-rules@d76eb519333f3ff4983b52109cbef77030385c89 # v1.0.0
   with:
-    github_repo_id: ${{ github.repository }}
-    huggingface_repo_id: ${{ inputs.target_repo_id || 'beer-sakthai/Sak-Family-Agent' }}
-    hf_token: ${{ secrets.HF_TOKEN }}
-    repo_type: ${{ inputs.repo_type || 'space' }}
-    space_sdk: ${{ inputs.space_sdk || 'docker' }}
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+    file-path: '.github/pr-rules.md'
+```
+
+### 3.135 Awesome Lint
+Comprehensive multi-linter pipeline for repository quality assurance and formatting validation:
+
+```yaml
+- name: Run Awesome Lint
+  uses: pipeline-components/awesome-lint@3a981738d96b661e6d4211cd149b534e88a63014 # v0.25.0
+```
+
+### 3.136 Actions AI
+Enables AI model interaction and automated completions directly in GitHub Actions pipelines:
+
+```yaml
+- name: Run Actions AI
+  uses: Pedro-Accarini/ActionsAI@d1c04accde6afc4af96818b956bd9772a0b71195 # v1.0.0
+```
+
+### 3.137 AI Issue and Comment Moderator ([`.github/workflows/ai-moderator.yml`](../.github/workflows/ai-moderator.yml))
+Automatically inspects new issues and comments using GitHub Models, tagging spam and filtering noise:
+
+```yaml
+- name: Run AI Moderator
+  uses: github/ai-moderator@637328ae48b46dcf7d38de34c2f7d6b21bb75755 # v1.0.0
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3.138 Contrast AI SmartFix
+Generates automated remediation pull requests for identified security vulnerabilities:
+
+```yaml
+- name: Contrast AI SmartFix
+  uses: Contrast-Security-OSS/contrast-ai-smartfix-action@7af6404d730fbc2d06c9882710497ac9321d5822 # v1.0.0
+```
+
+### 3.139 Microsoft Security DevOps ([`.github/workflows/microsoft-security-devops.yml`](../.github/workflows/microsoft-security-devops.yml))
+Executes Microsoft Security DevOps static analysis tools and uploads findings to GitHub Advanced Security:
+
+```yaml
+- name: Run Microsoft Security DevOps
+  uses: microsoft/security-devops-action@cf28f87c67770dbaa208cce3665fafc849f77507 # v1.12.1
+  with:
+    config: ''
 ```
 
 ---

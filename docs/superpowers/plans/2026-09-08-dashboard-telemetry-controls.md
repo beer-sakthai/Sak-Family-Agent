@@ -121,6 +121,7 @@ git commit -m "feat(contracts): add telemetry and control types and regenerate T
 def test_build_cycle_payload_and_advance(tmp_path):
     from sakthai.memory.store import MemoryStore
     from sakthai.web.api import build_cycle_payload, advance_cycle_stage
+
     store = MemoryStore(str(tmp_path / "memory.db"))
     payload = build_cycle_payload(store)
     assert payload["current_stage"] == "dream"
@@ -135,6 +136,7 @@ def test_build_cycle_payload_and_advance(tmp_path):
 def test_build_and_record_charge(tmp_path):
     from sakthai.memory.store import MemoryStore
     from sakthai.web.api import build_charge_reports, record_charge_report
+
     store = MemoryStore(str(tmp_path / "memory.db"))
     record_charge_report(store, "sakjules", 85, "Optimal")
     charge_payload = build_charge_reports(store)
@@ -194,7 +196,9 @@ def test_post_endpoints_require_auth(client):
     assert res.status_code == 401
     assert res.json() == {"error": "Unauthorized"}
 
-    res = client.post("/api/charge/update", json={"persona": "sakjules", "level": 90, "state": "Optimal"})
+    res = client.post(
+        "/api/charge/update", json={"persona": "sakjules", "level": 90, "state": "Optimal"}
+    )
     assert res.status_code == 401
 
 

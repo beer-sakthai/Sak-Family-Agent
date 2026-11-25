@@ -26,7 +26,15 @@ export async function GET() {
       method: "GET",
       headers,
       cache: "no-store",
+      signal: AbortSignal.timeout(10000),
     });
+    if (!res.ok) {
+      const errText = await res.text();
+      return NextResponse.json(
+        { ok: false, error: `Gateway returned status ${res.status}: ${errText}`, count: 0, pipelines: [] },
+        { status: 200 }
+      );
+    }
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });
   } catch (err: unknown) {
@@ -52,7 +60,15 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers,
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30000),
     });
+    if (!res.ok) {
+      const errText = await res.text();
+      return NextResponse.json(
+        { ok: false, status: "error", error: `Gateway returned status ${res.status}: ${errText}` },
+        { status: res.status }
+      );
+    }
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });
   } catch (err: unknown) {

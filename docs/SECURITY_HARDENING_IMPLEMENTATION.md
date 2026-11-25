@@ -96,10 +96,12 @@ This document describes the comprehensive security hardening system implemented 
 ```python
 # At agent startup
 from sakthai.agent.security_hardening import pin_environment
+
 pin_environment()
 
 # Before/after tool execution
 from sakthai.agent.security_hardening import verify_environment
+
 events = verify_environment()
 if events:
     raise PermissionError("Environment tampered with")
@@ -132,17 +134,13 @@ is_valid, reason = MCPServerValidator.validate_server_config(
 
 # Sandbox (optional)
 if is_valid:
-    wrapped_cmd = MCPServerValidator.get_sandbox_wrapper(
-        spec["command"], timeout_sec=30
-    )
+    wrapped_cmd = MCPServerValidator.get_sandbox_wrapper(spec["command"], timeout_sec=30)
 ```
 
 **Configuration:**
 ```python
 # Add to MCPServerValidator.APPROVED_SERVERS
-MCPServerValidator.APPROVED_SERVERS = {
-    "trusted-server": {"command": "...", "max_timeout": 30}
-}
+MCPServerValidator.APPROVED_SERVERS = {"trusted-server": {"command": "...", "max_timeout": 30}}
 ```
 
 **Test Coverage:** `tests/test_security_hardening.py::TestMCPServerValidator`
@@ -255,10 +253,9 @@ if is_link:
 from sakthai.agent.security_hardening import ConfigFileIntegrity
 
 # At startup
-monitor = ConfigFileIntegrity([
-    Path.home() / ".sakthai" / "mcp.json",
-    Path.home() / ".sakthai" / ".env"
-])
+monitor = ConfigFileIntegrity(
+    [Path.home() / ".sakthai" / "mcp.json", Path.home() / ".sakthai" / ".env"]
+)
 
 # Periodically
 events = monitor.verify()
@@ -367,8 +364,10 @@ if is_suspicious:
 ```python
 from sakthai.agent.security_hardening import TOCTOUPrevention
 
+
 def safety_check(path: Path) -> bool:
     return path.exists() and not path.is_symlink()
+
 
 success, content = TOCTOUPrevention.atomic_check_and_read(
     Path(user_path), safety_check, max_retries=3
@@ -398,7 +397,7 @@ event = SecurityEvent(
     severity="high",
     message="SAKTHAI_SHELL_ALLOW was modified",
     timestamp=time.time(),
-    details={"variable": "SAKTHAI_SHELL_ALLOW"}
+    details={"variable": "SAKTHAI_SHELL_ALLOW"},
 )
 
 logger.log_event(event)
@@ -448,10 +447,7 @@ from sakthai.agent.guardrails_hardened import create_pre_execution_guardrail_har
 hardened_pre_check = create_pre_execution_guardrail_hardened()
 
 # Use in agent loop or custom policy
-policy = GuardrailPolicy(
-    pre_execution_rules=[hardened_pre_check],
-    post_execution_rules=[...]
-)
+policy = GuardrailPolicy(pre_execution_rules=[hardened_pre_check], post_execution_rules=[...])
 ```
 
 ### 3. CLI Usage

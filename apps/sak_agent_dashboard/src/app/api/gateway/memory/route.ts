@@ -27,7 +27,23 @@ export async function GET(request: NextRequest) {
       method: "GET",
       headers,
       cache: "no-store",
+      signal: AbortSignal.timeout(10000),
     });
+    if (!res.ok) {
+      const errText = await res.text();
+      return NextResponse.json(
+        {
+          ok: false,
+          persona,
+          error: `Gateway returned status ${res.status}: ${errText}`,
+          facts_count: 0,
+          observations_count: 0,
+          facts: [],
+          observations: [],
+        },
+        { status: 200 }
+      );
+    }
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });
   } catch (err: unknown) {

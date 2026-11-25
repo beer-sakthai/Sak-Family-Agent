@@ -4,10 +4,13 @@ Every candidate variant must pass ALL constraints before it can be
 considered valid. Failed constraints = immediate rejection.
 """
 
+from __future__ import annotations
+
 import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from evolution.core.config import EvolutionConfig
 
@@ -178,8 +181,12 @@ class ConstraintValidator:
             )
 
     def _check_tool_descriptions_structure(self, text: str) -> ConstraintResult:
-        """Verify structural parsing and size limits on all tool descriptions."""
+        """Verify structural parsing, size/token limits, and anti-gaming rules on all tool descriptions."""
+        import re
         from evolution.tools.tool_module import parse_evolved_descriptions
+
+        def estimate_tokens(s: str) -> int:
+            return len(re.findall(r"\w+|[^\w\s]", s))
 
         try:
             parsed = parse_evolved_descriptions(text)
@@ -190,7 +197,12 @@ class ConstraintValidator:
                     message="No tools parsed from evolved instructions text. Format should be: [TOOL name]",
                 )
 
-            # Check description and param sizes
+            # Check description and param sizes, tokens, and few-shot gaming
+            few_shot_pattern = re.compile(
+                r"\b(User\s*:|Assistant\s*:|Human\s*:|Example\s*\d*\s*:|Input\s*:.*Output\s*:)",
+                re.IGNORECASE,
+            )
+
             for tool_name, override in parsed.items():
                 desc = override.get("description", "")
                 if len(desc) > self.config.max_tool_desc_size:
@@ -199,6 +211,24 @@ class ConstraintValidator:
                         constraint_name="tool_descriptions_structure",
                         message=f"Tool '{tool_name}' description exceeds limit: {len(desc)}/{self.config.max_tool_desc_size} chars",
                     )
+
+                # Token ceiling check
+                desc_tokens = estimate_tokens(desc)
+                if desc_tokens > self.config.max_tool_desc_tokens:
+                    return ConstraintResult(
+                        passed=False,
+                        constraint_name="description_token_ceiling",
+                        message=f"Tool '{tool_name}' description exceeds token ceiling: {desc_tokens}/{self.config.max_tool_desc_tokens} tokens",
+                    )
+
+                # Few-shot example stuffing rejection (Anti-Gaming safeguard)
+                if self.config.forbid_few_shot_stuffing and few_shot_pattern.search(desc):
+                    return ConstraintResult(
+                        passed=False,
+                        constraint_name="description_token_ceiling",
+                        message=f"Tool '{tool_name}' description rejected by Anti-Gaming Safeguard: few-shot example stuffing detected",
+                    )
+
                 for param, param_desc in override.get("parameters", {}).items():
                     if len(param_desc) > self.config.max_param_desc_size:
                         return ConstraintResult(
@@ -206,10 +236,18 @@ class ConstraintValidator:
                             constraint_name="tool_descriptions_structure",
                             message=f"Tool '{tool_name}' param '{param}' description exceeds limit: {len(param_desc)}/{self.config.max_param_desc_size} chars",
                         )
+                    param_tokens = estimate_tokens(param_desc)
+                    if param_tokens > self.config.max_param_desc_tokens:
+                        return ConstraintResult(
+                            passed=False,
+                            constraint_name="description_token_ceiling",
+                            message=f"Tool '{tool_name}' param '{param}' exceeds token ceiling: {param_tokens}/{self.config.max_param_desc_tokens} tokens",
+                        )
+
             return ConstraintResult(
                 passed=True,
                 constraint_name="tool_descriptions_structure",
-                message=f"Successfully parsed {len(parsed)} tool descriptions. All sizes within limits.",
+                message=f"Successfully parsed {len(parsed)} tool descriptions. All sizes and token ceilings within limits.",
             )
         except Exception as e:
             return ConstraintResult(
@@ -217,3 +255,86 @@ class ConstraintValidator:
                 constraint_name="tool_descriptions_structure",
                 message=f"Error parsing tool descriptions: {e}",
             )
+
+
+class SchemaChangeValidator:
+    """Human Approval Gate validator for MCP tool changes, schema modifications, and permissions."""
+
+    @staticmethod
+    def detect_breaking_changes(
+        baseline_tools: dict[str, dict[str, Any]],
+        candidate_tools: dict[str, dict[str, Any]],
+        baseline_allowed_tools: list[str] | None = None,
+        candidate_allowed_tools: list[str] | None = None,
+    ) -> list[str]:
+        """Detect any breaking deletions, schema contractions, or permission broadenings."""
+        breaking: list[str] = []
+
+        # 1. Tool deletion
+        for tool_name in baseline_tools:
+            if tool_name not in candidate_tools:
+                breaking.append(f"Deleted tool: '{tool_name}'")
+
+        # 2. Schema changes
+        for tool_name, base_info in baseline_tools.items():
+            if tool_name not in candidate_tools:
+                continue
+            cand_info = candidate_tools[tool_name]
+            base_params = base_info.get("parameters", {})
+            cand_params = cand_info.get("parameters", {})
+
+            # Parameter deletion
+            for param in base_params:
+                if param not in cand_params:
+                    breaking.append(f"Deleted parameter '{param}' in tool '{tool_name}'")
+
+            # Newly required parameters
+            base_required = set(base_info.get("required", []))
+            cand_required = set(cand_info.get("required", []))
+            new_required = cand_required - base_required
+            if new_required:
+                breaking.append(
+                    f"Newly required parameter(s) {sorted(new_required)} in tool '{tool_name}'"
+                )
+
+        # 3. Broadening allowed-tools
+        if baseline_allowed_tools is not None and candidate_allowed_tools is not None:
+            base_set = set(baseline_allowed_tools)
+            cand_set = set(candidate_allowed_tools)
+            if "*" in cand_set and "*" not in base_set:
+                breaking.append("Broadened allowed-tools to wildcard ('*')")
+            expansion = cand_set - base_set
+            if expansion and "*" not in cand_set:
+                breaking.append(f"Expanded allowed-tools with: {sorted(expansion)}")
+
+        return breaking
+
+    @classmethod
+    def validate_approval(
+        cls,
+        breaking_changes: list[str],
+        approved: bool = False,
+    ) -> ConstraintResult:
+        """Enforce human approval gate when breaking changes are detected."""
+        if not breaking_changes:
+            return ConstraintResult(
+                passed=True,
+                constraint_name="human_approval_gate",
+                message="No breaking schema changes or tool deletions detected.",
+            )
+
+        if approved:
+            return ConstraintResult(
+                passed=True,
+                constraint_name="human_approval_gate",
+                message="Human approval granted for breaking changes.",
+                details="; ".join(breaking_changes),
+            )
+
+        return ConstraintResult(
+            passed=False,
+            constraint_name="human_approval_gate",
+            message=f"Human approval required for breaking changes: {'; '.join(breaking_changes)}",
+            details="; ".join(breaking_changes),
+        )
+

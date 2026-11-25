@@ -56,12 +56,12 @@ class SessionMatch:
     task: str
     matched_snippet: str
 
+
 def search_sessions(
     query: str,
     limit: int = 20,
     sessions_dir: Path | None = None,
-) -> list[SessionMatch]:
-    ...
+) -> list[SessionMatch]: ...
 ```
 
 - `sessions_dir` is injectable (defaults to `config.sessions_dir()`), matching

@@ -1,0 +1,38 @@
+name: Actions AI
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Prompt to send to AI model'
+        required: false
+        default: 'Analyze repository quality status'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ai-prompt:
+    name: Execute Actions AI
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: audit
+
+      - name: Run Actions AI
+        uses: Pedro-Accarini/ActionsAI@d1c04accde6afc4af96818b956bd9772a0b71195 # v1.0.0
+        if: ${{ env.OPENAI_API_KEY != '' }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        with:
+          prompt: ${{ inputs.prompt }}
+          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
