@@ -1867,6 +1867,19 @@ Synchronizes images and multi-architecture manifests across Docker Hub and conta
     override-multi-arch: ${{ inputs.override_multi_arch || 'true' }}
 ```
 
+### 3.134 Hugging Face Hub-Sync ([`.github/workflows/hf-hub-sync.yml`](../.github/workflows/hf-hub-sync.yml))
+Synchronizes Spaces, models, and datasets from GitHub to the Hugging Face Hub using the official `huggingface/hub-sync` action:
+
+```yaml
+- name: Sync to Hugging Face Hub
+  uses: huggingface/hub-sync@fdffea8e04104d0bd4e3181c5feb3025f0433ff5 # v0.3.0
+  with:
+    github_repo_id: ${{ github.repository }}
+    huggingface_repo_id: ${{ inputs.target_repo_id || 'beer-sakthai/Sak-Family-Agent' }}
+    hf_token: ${{ secrets.HF_TOKEN }}
+    repo_type: ${{ inputs.repo_type || 'space' }}
+    space_sdk: ${{ inputs.space_sdk || 'docker' }}
+```
 
 ---
 

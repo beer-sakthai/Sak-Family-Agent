@@ -599,3 +599,17 @@ class GatewayRouter:
             persona=persona,
             stream=stream,
         )
+
+    def handle_webhook_huggingface(
+        self, body: dict[str, Any], headers: dict[str, str]
+    ) -> tuple[int, dict[str, Any]]:
+        """Verify and dispatch Hugging Face Webhook requests."""
+        from .webhooks import process_webhook_request
+
+        bot_username = f"@{self.config.default_persona}_agent_bot"
+        return process_webhook_request(
+            headers=headers,
+            body=body,
+            expected_secret=self.config.hf_webhook_secret,
+            bot_username=bot_username,
+        )

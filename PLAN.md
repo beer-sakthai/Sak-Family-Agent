@@ -224,6 +224,13 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-24 **Restore genuine ≥ 96% coverage** — The suite measured 95.59% (19785/20698 statements+branches) while CI stayed green: pytest-cov's exit check rounds the total to `[tool.coverage.report] precision` (default 0), so 95.59 rounds to 96 and `--cov-fail-under=96` passes even as it prints FAIL. Add hermetic tests for `agent/eval.py::evaluate_persona_extensions_health()` and `team/gateway.py` to bring the unrounded total back above 96.00% (measured 96.12%, 19895/20698, `--cov-precision=2`).
 - [x] 2026-11-24 **Whole-Repository Branch Consolidation & Remote Harmonization** — Audited all 7 remote branches, resolved `build.yml` missing concurrency defect on `main` via PR #2073, expanded SPDX permissive licenses in `.github/dependency-review-config.yml` via PR #2074, merged routine dependency lockfile bump via PR #2069, refreshed root documentation via PR #2071, updated dashboard dependencies via PR #2072, restored $\ge 96\%$ real coverage via PR #2075, pruned all 6 obsolete feature/release remote branches so only `main` and `gh-pages` remain, and verified 100% test and lint pass across the repo.
 
+### 9. Hugging Face Webhooks Ecosystem & GitHub Actions Supply Chain
+- [x] 2026-11-24 **Phase 1: Architecture & Payload Schemas** — Define Pydantic models for HF Hub Webhook payloads (event, repo, discussion, comment) and test fixtures.
+- [x] 2026-11-24 **Phase 2: Webhook Endpoint & Handler Implementation** — Implement `personas/sakthai/gateway/webhooks.py` with HMAC secret verification, handlers for Auto-Retrain, Discussion Bot, Metadata Review, and Bucket Jobs, and route `/v1/webhooks/huggingface` in Gateway.
+- [x] 2026-11-24 **Phase 3: Hugging Face Hub-Sync Workflow (Wave 27)** — Pin `huggingface/hub-sync@v0.3.0` with immutable commit SHA, create `.github/workflows/hf-hub-sync.yml`, and update catalog and tests.
+- [x] 2026-11-24 **Phase 4: Artifact Attestations & Dependency Graph Hardening** — Integrate `actions/attest@v4` in build workflows, configure dependency submission, and verify cache hygiene.
+- [x] 2026-11-24 **Phase 5: Verification, Quality Gates & PR Delivery** — Run tests, ruff, mypy, bandit, ensure $\ge 96\%$ coverage, and open pull request for manual review.
+
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |

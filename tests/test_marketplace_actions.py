@@ -150,6 +150,7 @@ PINNED_ACTIONS = {
     "docker/build-push-action": "c3c9e263c25d99ce0380d002d59b67737d91b0dc",
     "docker/metadata-action": "dc802804100637a589fabce1cb79ff13a1411302",
     "cloudposse/github-action-sync-docker-repos": "a1a04d57b75e6d64c978f02f777307ad03f6f605",
+    "huggingface/hub-sync": "fdffea8e04104d0bd4e3181c5feb3025f0433ff5",
 }
 
 
@@ -435,3 +436,16 @@ def test_docker_ecosystem_actions_integration() -> None:
         f"cloudposse/github-action-sync-docker-repos@{PINNED_ACTIONS['cloudposse/github-action-sync-docker-repos']}"
         in sync_content
     )
+
+
+def test_hf_hub_sync_action_integration() -> None:
+    """Ensure Hugging Face Hub-Sync action (Wave 27) is properly integrated and pinned."""
+    workflow_path = WORKFLOWS_DIR / "hf-hub-sync.yml"
+    assert workflow_path.is_file()
+    content = workflow_path.read_text(encoding="utf-8")
+    data = yaml.safe_load(content)
+
+    assert "concurrency" in data
+    assert isinstance(data["permissions"], dict)
+    assert data["permissions"]["contents"] == "read"
+    assert f"huggingface/hub-sync@{PINNED_ACTIONS['huggingface/hub-sync']}" in content

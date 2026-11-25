@@ -19,6 +19,7 @@ class GatewayConfig:
     rate_limit_per_minute: int = 120
     default_persona: str = "sakthai"
     workspace_dir: Path | None = None
+    hf_webhook_secret: str | None = None
 
 
 def resolve_gateway_config(
@@ -30,6 +31,7 @@ def resolve_gateway_config(
     rate_limit_per_minute: int | None = None,
     default_persona: str | None = None,
     workspace_dir: Path | None = None,
+    hf_webhook_secret: str | None = None,
 ) -> GatewayConfig:
     """Resolve GatewayConfig from explicit arguments falling back to environment variables.
 
@@ -40,6 +42,7 @@ def resolve_gateway_config(
         SAKTHAI_GATEWAY_CORS_ORIGIN: Allowed CORS origin.
         SAKTHAI_GATEWAY_TIMEOUT: Request timeout in seconds.
         SAKTHAI_GATEWAY_DEFAULT_PERSONA: Default persona name.
+        HF_WEBHOOK_SECRET or WEBHOOK_SECRET: Secret for Hugging Face webhooks.
     """
     resolved_host = host or os.environ.get("SAKTHAI_GATEWAY_HOST") or "127.0.0.1"
 
@@ -75,6 +78,10 @@ def resolve_gateway_config(
         default_persona or os.environ.get("SAKTHAI_GATEWAY_DEFAULT_PERSONA") or "sakthai"
     )
 
+    resolved_webhook_secret = (
+        hf_webhook_secret or os.environ.get("HF_WEBHOOK_SECRET") or os.environ.get("WEBHOOK_SECRET")
+    )
+
     return GatewayConfig(
         host=resolved_host,
         port=resolved_port,
@@ -84,4 +91,5 @@ def resolve_gateway_config(
         rate_limit_per_minute=rate_limit_per_minute if rate_limit_per_minute is not None else 120,
         default_persona=resolved_default_persona,
         workspace_dir=workspace_dir,
+        hf_webhook_secret=resolved_webhook_secret,
     )

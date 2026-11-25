@@ -1,0 +1,68 @@
+name: Hugging Face Hub Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_repo_id:
+        description: "Target repository on Hugging Face Hub (e.g. beer-sakthai/Sak-Family-Agent)"
+        required: false
+        default: "beer-sakthai/Sak-Family-Agent"
+      repo_type:
+        description: "Hugging Face repo type (space, model, dataset)"
+        required: false
+        default: "space"
+      space_sdk:
+        description: "Space SDK if repo_type is space (docker, gradio, streamlit, static)"
+        required: false
+        default: "docker"
+  push:
+    branches:
+      - main
+    paths:
+      - "infra/sakthai-training-space/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  sync-to-hub:
+    name: Sync to Hugging Face Hub
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify Hugging Face Token Configuration
+        id: check_token
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -n "$HF_TOKEN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::HF_TOKEN secret is not configured; skipping sync to Hugging Face Hub."
+          fi
+
+      - name: Sync to Hugging Face Hub
+        if: steps.check_token.outputs.configured == 'true'
+        uses: huggingface/hub-sync@fdffea8e04104d0bd4e3181c5feb3025f0433ff5 # v0.3.0
+        with:
+          github_repo_id: ${{ github.repository }}
+          huggingface_repo_id: ${{ inputs.target_repo_id || 'beer-sakthai/Sak-Family-Agent' }}
+          hf_token: ${{ secrets.HF_TOKEN }}
+          repo_type: ${{ inputs.repo_type || 'space' }}
+          space_sdk: ${{ inputs.space_sdk || 'docker' }}
