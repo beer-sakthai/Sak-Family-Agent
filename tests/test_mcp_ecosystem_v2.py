@@ -41,16 +41,28 @@ def test_google_dev_domains_constant() -> None:
     assert "adk.dev" in GOOGLE_DEV_DOMAINS
 
 
-def test_persona_default_mcp_servers_loadout() -> None:
+def test_persona_default_mcp_servers_loadout(monkeypatch: pytest.MonkeyPatch) -> None:
+    # 1. Decoupled default: genkit is omitted from active persona loadouts
+    monkeypatch.delenv("SAKTHAI_ENABLE_GENKIT", raising=False)
+    monkeypatch.delenv("GENKIT_ENV", raising=False)
+    monkeypatch.delenv("GENKIT_PROJECT_ID", raising=False)
+    monkeypatch.delenv("FIREBASE_PROJECT_ID", raising=False)
+
     assert PERSONA_DEFAULT_MCP_SERVERS["sakthai"] == ("huggingface",)
     assert "figma" in PERSONA_DEFAULT_MCP_SERVERS["saksee"]
     assert "google_dev_knowledge" in PERSONA_DEFAULT_MCP_SERVERS["saksee"]
-    assert "genkit" in PERSONA_DEFAULT_MCP_SERVERS["sakjules"]
+    assert "genkit" not in PERSONA_DEFAULT_MCP_SERVERS["sakjules"]
     assert "google_dev_knowledge" in PERSONA_DEFAULT_MCP_SERVERS["sakjules"]
-    assert "genkit" in PERSONA_DEFAULT_MCP_SERVERS["sakking"]
+    assert "genkit" not in PERSONA_DEFAULT_MCP_SERVERS["sakking"]
     assert "google_dev_knowledge" in PERSONA_DEFAULT_MCP_SERVERS["sakking"]
     assert "huggingface" in PERSONA_DEFAULT_MCP_SERVERS["saksit"]
     assert "figma" in PERSONA_DEFAULT_MCP_SERVERS["saksit"]
+    assert "genkit" not in PERSONA_DEFAULT_MCP_SERVERS["saktan"]
+
+    # 2. Legacy fallback: when SAKTHAI_ENABLE_GENKIT=1, genkit is re-attached
+    monkeypatch.setenv("SAKTHAI_ENABLE_GENKIT", "1")
+    assert "genkit" in PERSONA_DEFAULT_MCP_SERVERS["sakjules"]
+    assert "genkit" in PERSONA_DEFAULT_MCP_SERVERS["sakking"]
     assert "genkit" in PERSONA_DEFAULT_MCP_SERVERS["saktan"]
 
 

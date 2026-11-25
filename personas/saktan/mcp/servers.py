@@ -98,14 +98,56 @@ GOOGLE_DEV_DOMAINS: tuple[str, ...] = (
     "adk.dev",
 )
 
-PERSONA_DEFAULT_MCP_SERVERS: dict[str, tuple[str, ...]] = {
-    "sakthai": ("huggingface",),
-    "saksee": ("figma", "google_dev_knowledge"),
-    "sakjules": ("genkit", "google_dev_knowledge"),
-    "sakking": ("genkit", "google_dev_knowledge"),
-    "saksit": ("huggingface", "figma"),
-    "saktan": ("genkit",),
-}
+
+def _get_default_persona_mcp_servers() -> dict[str, tuple[str, ...]]:
+    enable_genkit = bool(
+        os.getenv("SAKTHAI_ENABLE_GENKIT")
+        or os.getenv("GENKIT_ENV")
+        or os.getenv("GENKIT_PROJECT_ID")
+        or os.getenv("FIREBASE_PROJECT_ID")
+    )
+    if enable_genkit:
+        return {
+            "sakthai": ("huggingface",),
+            "saksee": ("figma", "google_dev_knowledge"),
+            "sakjules": ("genkit", "google_dev_knowledge"),
+            "sakking": ("genkit", "google_dev_knowledge"),
+            "saksit": ("huggingface", "figma"),
+            "saktan": ("genkit",),
+        }
+    return {
+        "sakthai": ("huggingface",),
+        "saksee": ("figma", "google_dev_knowledge"),
+        "sakjules": ("google_dev_knowledge",),
+        "sakking": ("google_dev_knowledge",),
+        "saksit": ("huggingface", "figma"),
+        "saktan": (),
+    }
+
+
+class _PersonaDefaultMCPServers(dict[str, tuple[str, ...]]):
+    """Dynamic mapping that honors SAKTHAI_ENABLE_GENKIT=1 legacy fallback."""
+
+    def __getitem__(self, key: str) -> tuple[str, ...]:
+        return _get_default_persona_mcp_servers()[key]
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return _get_default_persona_mcp_servers().get(key, default)
+
+    def __contains__(self, key: object) -> bool:
+        return key in _get_default_persona_mcp_servers()
+
+    def items(self) -> Any:
+        return _get_default_persona_mcp_servers().items()
+
+    def values(self) -> Any:
+        return _get_default_persona_mcp_servers().values()
+
+    def keys(self) -> Any:
+        return _get_default_persona_mcp_servers().keys()
+
+
+PERSONA_DEFAULT_MCP_SERVERS: dict[str, tuple[str, ...]] = _PersonaDefaultMCPServers()
 
 
 def builtin_genkit_server() -> MCPServerSpec:
