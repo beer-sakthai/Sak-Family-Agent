@@ -249,6 +249,23 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
 
+        # Webhook endpoints authenticate via X-Webhook-Secret rather than the Gateway bearer token
+        if path in ("/v1/webhooks/huggingface", "/webhooks/huggingface"):
+            try:
+                content_length = int(self.headers.get("Content-Length", 0))
+                raw_body = self.rfile.read(content_length) if content_length > 0 else b"{}"
+                body = json.loads(raw_body.decode("utf-8")) if raw_body else {}
+            except Exception as exc:
+                self._send_error(400, f"Malformed JSON request: {exc}")
+                return
+
+            headers = {k: v for k, v in self.headers.items()}
+            status_code, webhook_res = self.gateway_router.handle_webhook_huggingface(
+                body, headers=headers
+            )
+            self._send_json(status_code, webhook_res)
+            return
+
         if not self._check_auth():
             self._send_error(401, "Unauthorized: Invalid or missing bearer token")
             return

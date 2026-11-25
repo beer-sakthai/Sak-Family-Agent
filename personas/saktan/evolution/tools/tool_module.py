@@ -4,10 +4,18 @@ Exposes ToolSelectionModule where the instructions block houses the formatted
 tool schemas mutated by GEPA/MIPROv2.
 """
 
+from __future__ import annotations
+
 import re
 from typing import Any
 
-import dspy
+try:
+    import dspy
+    _ModuleBase = dspy.Module
+except ImportError:
+    dspy = None  # type: ignore[assignment]
+    _ModuleBase = object  # type: ignore[misc,assignment]
+
 
 
 def format_baseline_descriptions(builtin_tools: list) -> str:
@@ -82,18 +90,21 @@ def parse_evolved_descriptions(instructions_text: str) -> dict[str, dict[str, An
     return result
 
 
-class ToolSelectionModule(dspy.Module):
+class ToolSelectionModule(_ModuleBase):
     """A DSPy module that wraps the tool selection task for optimization."""
 
-    class PredictTool(dspy.Signature):
-        """Select the correct tool to execute the task from the available tools.
+    if dspy is not None:
+        class PredictTool(dspy.Signature):
+            """Select the correct tool to execute the task from the available tools.
 
-        Output the predicted tool name and arguments.
-        """
+            Output the predicted tool name and arguments.
+            """
 
-        task_input: str = dspy.InputField(desc="The user's query or task description")
-        predicted_tool: str = dspy.OutputField(desc="The predicted correct tool name")
-        predicted_args: str = dspy.OutputField(desc="JSON block containing arguments for the tool")
+            task_input: str = dspy.InputField(desc="The user's query or task description")
+            predicted_tool: str = dspy.OutputField(desc="The predicted correct tool name")
+            predicted_args: str = dspy.OutputField(desc="JSON block containing arguments for the tool")
+    else:
+        PredictTool = None  # type: ignore[assignment,misc]
 
     def __init__(self, formatted_descriptions: str):
         super().__init__()

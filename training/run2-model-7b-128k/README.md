@@ -103,16 +103,16 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 
 model = AutoModelForCausalLM.from_pretrained(
-    "Nanthasit/sakthai-context-7b-128k",
-    torch_dtype=torch.bfloat16,
-    device_map="auto"
+    "Nanthasit/sakthai-context-7b-128k", torch_dtype=torch.bfloat16, device_map="auto"
 )
 tokenizer = AutoTokenizer.from_pretrained("Nanthasit/sakthai-context-7b-128k")
 
 messages = [{"role": "user", "content": "What's the weather in Bangkok?"}]
-inputs = tokenizer.apply_chat_template(messages, add_generation_prompt=True, return_tensors="pt").to(model.device)
+inputs = tokenizer.apply_chat_template(
+    messages, add_generation_prompt=True, return_tensors="pt"
+).to(model.device)
 outputs = model.generate(**inputs, max_new_tokens=256)
-print(tokenizer.decode(outputs[0][inputs.shape[1]:], skip_special_tokens=True))
+print(tokenizer.decode(outputs[0][inputs.shape[1] :], skip_special_tokens=True))
 ```
 
 ---
@@ -126,9 +126,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 
 model = AutoModelForCausalLM.from_pretrained(
-    "Nanthasit/sakthai-context-7b-128k",
-    torch_dtype=torch.bfloat16,
-    device_map="auto"
+    "Nanthasit/sakthai-context-7b-128k", torch_dtype=torch.bfloat16, device_map="auto"
 )
 tokenizer = AutoTokenizer.from_pretrained("Nanthasit/sakthai-context-7b-128k")
 
@@ -140,28 +138,21 @@ tools = [
             "description": "Get current weather for a location",
             "parameters": {
                 "type": "object",
-                "properties": {
-                    "location": {"type": "string"}
-                },
-                "required": ["location"]
-            }
-        }
+                "properties": {"location": {"type": "string"}},
+                "required": ["location"],
+            },
+        },
     }
 ]
 
-messages = [
-    {"role": "user", "content": "What's the weather in Bangkok? Use the weather tool."}
-]
+messages = [{"role": "user", "content": "What's the weather in Bangkok? Use the weather tool."}]
 
 inputs = tokenizer.apply_chat_template(
-    messages,
-    tools=tools,
-    add_generation_prompt=True,
-    return_tensors="pt"
+    messages, tools=tools, add_generation_prompt=True, return_tensors="pt"
 ).to(model.device)
 
 outputs = model.generate(**inputs, max_new_tokens=256, temperature=0.3, top_p=0.9)
-print(tokenizer.decode(outputs[0][inputs.shape[1]:], skip_special_tokens=True))
+print(tokenizer.decode(outputs[0][inputs.shape[1] :], skip_special_tokens=True))
 ```
 
 ### Tool-calling format

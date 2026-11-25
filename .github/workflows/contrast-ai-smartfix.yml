@@ -1,0 +1,36 @@
+name: Contrast AI SmartFix
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smartfix:
+    name: Run Contrast AI SmartFix
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Run Contrast AI SmartFix
+        uses: Contrast-Security-OSS/contrast-ai-smartfix-action@7af6404d730fbc2d06c9882710497ac9321d5822 # v1.0.0
+        if: ${{ env.CONTRAST__API__API_KEY != '' }}
+        env:
+          CONTRAST__API__API_KEY: ${{ secrets.CONTRAST_API_KEY }}

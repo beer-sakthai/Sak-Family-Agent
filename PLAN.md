@@ -230,6 +230,16 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-24 **Phase 2: Decouple Genkit MCP from Active Personas & Retain Legacy Fallback** — Keep `builtin_genkit_server` behind `SAKTHAI_ENABLE_GENKIT=1`, decouple active bindings from `sakjules`, `sakking`, `saktan`, enforce 6-persona parity.
 - [x] 2026-11-24 **Phase 3: GitHub CLI Subagents & Dynamic Workflow Engine** — Implement `github-cli-auditor` and `github-cli-pr-runner` subagents, dynamic workflow scripts under `scripts/workflows/` and `personas/sakjules/workflows/`, and CLI command integration.
 - [x] 2026-11-24 **Phase 4: Verification, Linting, Parity & Quality Gates** — Run tests, ruff, mypy, bandit, verify >=96% test coverage.
+### 9. Hugging Face Webhooks Ecosystem & GitHub Actions Supply Chain
+- [x] 2026-11-24 **Phase 1: Architecture & Payload Schemas** — Define Pydantic models for HF Hub Webhook payloads (event, repo, discussion, comment) and test fixtures.
+- [x] 2026-11-24 **Phase 2: Webhook Endpoint & Handler Implementation** — Implement `personas/sakthai/gateway/webhooks.py` with HMAC secret verification, handlers for Auto-Retrain, Discussion Bot, Metadata Review, and Bucket Jobs, and route `/v1/webhooks/huggingface` in Gateway.
+- [x] 2026-11-24 **Phase 3: Hugging Face Hub-Sync Workflow (Wave 27)** — Pin `huggingface/hub-sync@v0.3.0` with immutable commit SHA, create `.github/workflows/hf-hub-sync.yml`, and update catalog and tests.
+- [x] 2026-11-24 **Phase 4: Artifact Attestations & Dependency Graph Hardening** — Integrate `actions/attest@v4` in build workflows, configure dependency submission, and verify cache hygiene.
+- [x] 2026-11-24 **Phase 5: Verification, Quality Gates & PR Delivery** — Run tests, ruff, mypy, bandit, ensure $\ge 96\%$ coverage, and open pull request for manual review.
+### 9. PatchFlow Engine MVP, Anti-Gaming Safeguards & Marketplace Actions Wave 27
+- [x] 2026-11-24 **Anti-Gaming & Holdout Isolation Safeguards** — Implement Three-Way Dataset Split (BaseEvalDataPoint), Paired Blind Judging with assets/eval-judge.prompt, Description Token Ceiling, Human Approval Gate, and Snapshot Rollback (FileSessionStore).
+- [x] 2026-11-24 **PatchFlow Automated Patching Engine Full-Stack MVP** — Scaffold services/patchflow with vulnerability scanning, AST/LLM patch generator, Anti-Gaming evaluation gate, and PR emitter.
+- [x] 2026-11-24 **Marketplace Actions Wave 27 & Cloudflare DNS Automation** — Integrate and pin Wave 27 marketplace actions with StepSecurity Harden-Runner, document in catalog, and build infra/cloudflare DNS manager.
 
 ## 📋 Sub-Plans
 

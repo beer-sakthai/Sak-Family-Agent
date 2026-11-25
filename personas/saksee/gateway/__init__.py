@@ -12,6 +12,16 @@ from .memory import GatewayMemoryManager
 from .router import GatewayRouter
 from .server import RuntimeGatewayServer
 from .voice import VOICE_PROFILES, GatewayVoiceHandler
+from .webhooks import (
+    WebhookPayload,
+    dispatch_webhook_event,
+    handle_auto_retrain,
+    handle_bucket_job,
+    handle_discussion_bot,
+    handle_metadata_review,
+    process_webhook_request,
+    verify_webhook_secret,
+)
 
 
 def create_gateway_server(
@@ -41,7 +51,15 @@ __all__ = [
     "GatewayTelemetryTracker",
     "GatewayVoiceHandler",
     "RuntimeGatewayServer",
+    "WebhookPayload",
     "create_gateway_server",
+    "dispatch_webhook_event",
+    "handle_auto_retrain",
+    "handle_bucket_job",
+    "handle_discussion_bot",
+    "handle_metadata_review",
+    "process_webhook_request",
     "resolve_gateway_config",
     "run_gateway_benchmark",
+    "verify_webhook_secret",
 ]

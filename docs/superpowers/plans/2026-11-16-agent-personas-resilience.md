@@ -42,6 +42,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+
 class TestBreakGlassProtocol(unittest.TestCase):
     def test_sakthai_soul_defines_break_glass_protocol(self) -> None:
         soul = (REPO_ROOT / "personas" / "sakthai" / "SOUL.md").read_text(encoding="utf-8")
@@ -100,6 +101,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+
 class TestIntentPreflightAndStaging(unittest.TestCase):
     def test_sakking_plan_has_intent_preflight(self) -> None:
         plan = (REPO_ROOT / "personas" / "sakking" / "PLAN.md").read_text(encoding="utf-8")
@@ -155,15 +157,19 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+
 class TestTieredScrapingAndSkills(unittest.TestCase):
     def test_saksee_web_scraping_defines_3_tiers(self) -> None:
-        skill = (REPO_ROOT / "personas" / "saksee" / "skills" / "SakSee-web-scraping" / "SKILL.md").read_text(encoding="utf-8")
+        skill = (
+            REPO_ROOT / "personas" / "saksee" / "skills" / "SakSee-web-scraping" / "SKILL.md"
+        ).read_text(encoding="utf-8")
         self.assertIn("Tier 1 (Fast & Free)", skill)
         self.assertIn("Tier 2 (Render-Only)", skill)
         self.assertIn("Tier 3 (Interactive Playwright)", skill)
 
     def test_sakthai_skills_exposes_domain_manifests(self) -> None:
         from personas.sakthai.skills import get_skill_domain_manifests
+
         manifests = get_skill_domain_manifests()
         self.assertIn("mlops", manifests)
         self.assertIn("inference", manifests)
@@ -215,17 +221,23 @@ import sys
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+
 class TestCIAutoHealAndSakTan(unittest.TestCase):
     def test_ci_auto_heal_script_exists_and_help_runs(self) -> None:
         script = REPO_ROOT / "scripts" / "ci_auto_heal.py"
         self.assertTrue(script.is_file())
-        res = subprocess.run([sys.executable, str(script), "--help"], capture_output=True, text=True)
+        res = subprocess.run(
+            [sys.executable, str(script), "--help"], capture_output=True, text=True
+        )
         self.assertEqual(res.returncode, 0)
         self.assertIn("auto-heal", res.stdout.lower())
 
     def test_saktan_config_has_guarded_cloud_fallback(self) -> None:
         import yaml
-        cfg = yaml.safe_load((REPO_ROOT / "personas" / "saktan" / "config" / "config.yaml").read_text())
+
+        cfg = yaml.safe_load(
+            (REPO_ROOT / "personas" / "saktan" / "config" / "config.yaml").read_text()
+        )
         self.assertIn("algorithmic_fallback", cfg)
 ```
 

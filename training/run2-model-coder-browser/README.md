@@ -139,19 +139,22 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 
 model = AutoModelForCausalLM.from_pretrained(
-    "Nanthasit/sakthai-coder-browser",
-    torch_dtype=torch.bfloat16,
-    device_map="auto"
+    "Nanthasit/sakthai-coder-browser", torch_dtype=torch.bfloat16, device_map="auto"
 )
 tokenizer = AutoTokenizer.from_pretrained("Nanthasit/sakthai-coder-browser")
 
 messages = [
-    {"role": "system", "content": "You are SakThai Browser Agent. Use <tool_call> blocks to control the browser."},
+    {
+        "role": "system",
+        "content": "You are SakThai Browser Agent. Use <tool_call> blocks to control the browser.",
+    },
     {"role": "user", "content": "Search for the latest AI news and summarize the top story."},
 ]
-inputs = tokenizer.apply_chat_template(messages, add_generation_prompt=True, return_tensors="pt").to(model.device)
+inputs = tokenizer.apply_chat_template(
+    messages, add_generation_prompt=True, return_tensors="pt"
+).to(model.device)
 outputs = model.generate(**inputs, max_new_tokens=256, temperature=0.3)
-print(tokenizer.decode(outputs[0][inputs.shape[1]:], skip_special_tokens=True))
+print(tokenizer.decode(outputs[0][inputs.shape[1] :], skip_special_tokens=True))
 ```
 
 Expected output format:
@@ -334,6 +337,7 @@ Important: zero-out attention-projection biases after merge if the base initiali
 
 ```python
 from transformers import AutoModelForCausalLM
+
 model = AutoModelForCausalLM.from_pretrained("repaired-merged", trust_remote_code=True)
 for name, param in model.named_parameters():
     if "bias" in name and "attn" in name and "k_proj" in name:

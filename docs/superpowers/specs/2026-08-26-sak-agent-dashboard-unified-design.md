@@ -110,7 +110,7 @@ beyond `typing`.
 class ApiEnvelope(TypedDict):
     ok: bool
     source: Literal["local", "api", "demo"]
-    generated_at: str      # ISO-8601 UTC
+    generated_at: str  # ISO-8601 UTC
     data: object
 ```
 

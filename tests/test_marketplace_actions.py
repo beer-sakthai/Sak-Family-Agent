@@ -149,6 +149,13 @@ PINNED_ACTIONS = {
     "docker/build-push-action": "c3c9e263c25d99ce0380d002d59b67737d91b0dc",
     "docker/metadata-action": "dc802804100637a589fabce1cb79ff13a1411302",
     "cloudposse/github-action-sync-docker-repos": "a1a04d57b75e6d64c978f02f777307ad03f6f605",
+    "huggingface/hub-sync": "fdffea8e04104d0bd4e3181c5feb3025f0433ff5",
+    "puntorigen/pr-rules": "d76eb519333f3ff4983b52109cbef77030385c89",
+    "pipeline-components/awesome-lint": "3a981738d96b661e6d4211cd149b534e88a63014",
+    "Pedro-Accarini/ActionsAI": "d1c04accde6afc4af96818b956bd9772a0b71195",
+    "github/ai-moderator": "637328ae48b46dcf7d38de34c2f7d6b21bb75755",
+    "Contrast-Security-OSS/contrast-ai-smartfix-action": "7af6404d730fbc2d06c9882710497ac9321d5822",
+    "microsoft/security-devops-action": "cf28f87c67770dbaa208cce3665fafc849f77507",
 }
 
 
@@ -302,6 +309,12 @@ MARKETPLACE_WORKFLOW_FILES = [
     "dependabot-lockfile-fixer.yml",
     "build.yml",
     "docker-sync-repos.yml",
+    "pr-rules-checker.yml",
+    "ai-moderator.yml",
+    "microsoft-security-devops.yml",
+    "awesome-lint.yml",
+    "actions-ai.yml",
+    "contrast-ai-smartfix.yml",
 ]
 
 
@@ -433,3 +446,16 @@ def test_docker_ecosystem_actions_integration() -> None:
         f"cloudposse/github-action-sync-docker-repos@{PINNED_ACTIONS['cloudposse/github-action-sync-docker-repos']}"
         in sync_content
     )
+
+
+def test_hf_hub_sync_action_integration() -> None:
+    """Ensure Hugging Face Hub-Sync action (Wave 27) is properly integrated and pinned."""
+    workflow_path = WORKFLOWS_DIR / "hf-hub-sync.yml"
+    assert workflow_path.is_file()
+    content = workflow_path.read_text(encoding="utf-8")
+    data = yaml.safe_load(content)
+
+    assert "concurrency" in data
+    assert isinstance(data["permissions"], dict)
+    assert data["permissions"]["contents"] == "read"
+    assert f"huggingface/hub-sync@{PINNED_ACTIONS['huggingface/hub-sync']}" in content

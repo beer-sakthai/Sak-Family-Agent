@@ -42,6 +42,9 @@ class EvolutionConfig:
     max_skill_size: int = 15_000  # 15KB default
     max_tool_desc_size: int = 500  # chars
     max_param_desc_size: int = 200  # chars
+    max_tool_desc_tokens: int = 120  # Description token ceiling
+    max_param_desc_tokens: int = 50  # Parameter token ceiling
+    forbid_few_shot_stuffing: bool = True  # Anti-Gaming safeguard
     max_prompt_growth: float = 0.2  # 20% max growth over baseline
 
     # Eval dataset

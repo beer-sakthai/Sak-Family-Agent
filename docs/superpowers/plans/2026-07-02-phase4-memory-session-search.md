@@ -572,6 +572,7 @@ def _search_sessions(args: dict[str, Any], store: MemoryStore) -> str:
 Add this `Tool` entry in `BUILTIN_TOOLS`, immediately after the `"search"` tool block (before the `"forget"` tool block):
 
 ```python
+(
     Tool(
         name="search_sessions",
         description=(
@@ -596,6 +597,7 @@ Add this `Tool` entry in `BUILTIN_TOOLS`, immediately after the `"search"` tool 
         },
         handler=_search_sessions,
     ),
+)
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
