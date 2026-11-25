@@ -22,6 +22,12 @@ paths = [
   '''^security/.*\.md$''',
   # Backup archives bundled by the HF Learn cron — not real secrets.
   '''\.curator_backups/''',
+  # PR-preview deploy copies on the `gh-pages` branch. These are rendered
+  # snapshots of docs/*.md generated per-PR by the preview action. The
+  # original source files on main are still scanned in full — allowlisting
+  # the preview copy loses no coverage and prevents every new PR preview
+  # from re-triggering the same false positives on a new path.
+  '''^pr-preview/''',
 ]
 regexes = [
   # Exact instructional sentence falsely detected as a generic API key.
