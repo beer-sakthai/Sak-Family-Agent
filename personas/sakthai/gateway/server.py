@@ -260,7 +260,9 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
                 return
 
             headers = {k: v for k, v in self.headers.items()}
-            status_code, webhook_res = self.gateway_router.handle_webhook_huggingface(body, headers=headers)
+            status_code, webhook_res = self.gateway_router.handle_webhook_huggingface(
+                body, headers=headers
+            )
             self._send_json(status_code, webhook_res)
             return
 
