@@ -80,6 +80,10 @@ updates:
       - dependency-name: "astral-sh/*"
       - dependency-name: "ossf/*"
       - dependency-name: "PyCQA/*"
+    groups:
+      codeql-action:
+        patterns:
+          - "github/codeql-action/*"
 
   - package-ecosystem: npm
     directory: /apps/sak_agent_dashboard
