@@ -21,6 +21,8 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+      id-token: write
+      attestations: write
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
@@ -40,3 +42,9 @@ jobs:
           output-file: "sbom.spdx.json"
           upload-artifact: "true"
           artifact-name: "anchore-spdx-sbom"
+
+      - name: Attest SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: "sbom.spdx.json"
+          sbom-path: "sbom.spdx.json"
