@@ -3,9 +3,10 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable
+from dataclasses import asdict, dataclass, field
 from functools import wraps
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 
@@ -169,6 +170,70 @@ process_results_yaml_validity = _make_process_results(
 process_results_yaml_key_check = _make_process_results(_parse_prediction_as_yaml, _check_yaml_key)
 
 
+@dataclass
+class BaseEvalDataPoint:
+    """Standardized dataset evaluation case with three-way partition support."""
+
+    test_case_id: str
+    split: Literal["dev", "validation", "holdout"]
+    prompt: str
+    expected_tool: str | None = None
+    max_allowed_turns: int = 5
+    simulated_tool_output: str | None = None
+    require_a2ui: bool = False
+    expected_facts: list[str] = field(default_factory=list)
+    golden_answer: str = ""
+    rubric: str = ""
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> BaseEvalDataPoint:
+        """Parse from dictionary matching dataset-template.json schema or flat structure."""
+        test_case_id = data.get("testCaseId") or data.get("test_case_id") or data.get("id", "")
+        split = data.get("split", "dev")
+        if split not in ("dev", "validation", "holdout"):
+            split = "dev"
+        inp = data.get("input", {})
+        if isinstance(inp, dict):
+            prompt = inp.get("prompt") or data.get("prompt", "")
+            expected_tool = inp.get("expectedTool") or data.get("expected_tool")
+            max_turns = inp.get("maxAllowedTurns") or data.get("max_allowed_turns", 5)
+            sim_output = inp.get("simulatedToolOutput") or data.get("simulated_tool_output")
+            require_a2ui = inp.get("requireA2ui") or data.get("require_a2ui", False)
+        else:
+            prompt = str(inp) if inp else data.get("prompt", "")
+            expected_tool = data.get("expected_tool")
+            max_turns = data.get("max_allowed_turns", 5)
+            sim_output = data.get("simulated_tool_output")
+            require_a2ui = data.get("require_a2ui", False)
+
+        ref = data.get("reference", {})
+        if isinstance(ref, dict):
+            expected_facts = ref.get("expectedFacts") or data.get("expected_facts", [])
+            golden = ref.get("goldenAnswer") or data.get("golden_answer") or data.get("golden", "")
+        else:
+            expected_facts = data.get("expected_facts", [])
+            golden = str(ref) if ref else data.get("golden_answer") or data.get("golden", "")
+
+        return cls(
+            test_case_id=str(test_case_id),
+            split=split,
+            prompt=prompt,
+            expected_tool=expected_tool,
+            max_allowed_turns=int(max_turns),
+            simulated_tool_output=sim_output,
+            require_a2ui=bool(require_a2ui),
+            expected_facts=list(expected_facts),
+            golden_answer=golden,
+            rubric=data.get("rubric", ""),
+            metadata=data.get("metadata", {}),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary representation."""
+        return asdict(self)
+
+
 def __getattr__(name: str) -> Any:
     """Lazy re-export of tri-modal graders to avoid circular imports."""
     if name in (
@@ -177,6 +242,8 @@ def __getattr__(name: str) -> Any:
         "BenchmarkSuiteResult",
         "CodeGrader",
         "ModelGrader",
+        "PairedJudgeResult",
+        "PairedBlindJudge",
         "BenchmarkSuite",
         "DEFAULT_BENCHMARK_TASKS",
         "load_benchmark_tasks",

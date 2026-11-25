@@ -253,7 +253,9 @@ SCRIPTS_DIR = REPO_ROOT / "scripts"
 def _imports_sakthai(tree: ast.Module) -> bool:
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
-            if any(alias.name == "sakthai" or alias.name.startswith("sakthai.") for alias in node.names):
+            if any(
+                alias.name == "sakthai" or alias.name.startswith("sakthai.") for alias in node.names
+            ):
                 return True
         elif isinstance(node, ast.ImportFrom):
             if node.module and (node.module == "sakthai" or node.module.startswith("sakthai.")):
@@ -495,31 +497,37 @@ git commit -m "chore(hygiene): remove 284 ephemeral subagent scratch files from 
 Append to `apps/agent_workflow_framework/tests/test_cli.py`:
 
 ```python
-    def test_cli_storage_dir_flag_isolates_runs(self):
-        """Verify --storage-dir writes and lists runs exclusively in the custom directory."""
-        with tempfile.TemporaryDirectory() as custom_dir:
-            yaml_path = str(FIXTURES_DIR / "linear_workflow.yaml")
-            code = cli_main(["--storage-dir", custom_dir, "run", yaml_path, "--run-id", "isolated-run-1"])
-            self.assertEqual(code, 0)
-            self.assertTrue((Path(custom_dir) / "isolated-run-1.json").is_file())
-
-            list_code = cli_main(["--storage-dir", custom_dir, "list"])
-            self.assertEqual(list_code, 0)
-
-            inspect_code = cli_main(["--storage-dir", custom_dir, "inspect", "isolated-run-1"])
-            self.assertEqual(inspect_code, 0)
-
-    def test_pyproject_toml_defines_console_entry_point(self):
-        """Verify pyproject.toml exists and registers agent-workflow CLI script."""
-        import tomllib
-        pyproject_path = Path(__file__).resolve().parents[1] / "pyproject.toml"
-        self.assertTrue(pyproject_path.is_file(), "apps/agent_workflow_framework/pyproject.toml must exist")
-        data = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
-        self.assertEqual(data["project"]["name"], "agent-workflow-framework")
-        self.assertEqual(
-            data["project"]["scripts"]["agent-workflow"],
-            "agent_workflow.cli:main",
+def test_cli_storage_dir_flag_isolates_runs(self):
+    """Verify --storage-dir writes and lists runs exclusively in the custom directory."""
+    with tempfile.TemporaryDirectory() as custom_dir:
+        yaml_path = str(FIXTURES_DIR / "linear_workflow.yaml")
+        code = cli_main(
+            ["--storage-dir", custom_dir, "run", yaml_path, "--run-id", "isolated-run-1"]
         )
+        self.assertEqual(code, 0)
+        self.assertTrue((Path(custom_dir) / "isolated-run-1.json").is_file())
+
+        list_code = cli_main(["--storage-dir", custom_dir, "list"])
+        self.assertEqual(list_code, 0)
+
+        inspect_code = cli_main(["--storage-dir", custom_dir, "inspect", "isolated-run-1"])
+        self.assertEqual(inspect_code, 0)
+
+
+def test_pyproject_toml_defines_console_entry_point(self):
+    """Verify pyproject.toml exists and registers agent-workflow CLI script."""
+    import tomllib
+
+    pyproject_path = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    self.assertTrue(
+        pyproject_path.is_file(), "apps/agent_workflow_framework/pyproject.toml must exist"
+    )
+    data = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+    self.assertEqual(data["project"]["name"], "agent-workflow-framework")
+    self.assertEqual(
+        data["project"]["scripts"]["agent-workflow"],
+        "agent_workflow.cli:main",
+    )
 ```
 
 - [x] **Step 2: Run test to verify it fails**
@@ -586,7 +594,9 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="subcommand", help="Available subcommands")
 
     # 1. validate
-    val_p = subparsers.add_parser("validate", help="Pre-flight validation of workflow definition files.")
+    val_p = subparsers.add_parser(
+        "validate", help="Pre-flight validation of workflow definition files."
+    )
     val_p.add_argument("file", help="Path to YAML or JSON workflow definition file.")
 
     # 2. run

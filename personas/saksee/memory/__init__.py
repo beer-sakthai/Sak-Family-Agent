@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+from .session_store import (
+    AbstractSessionStore,
+    FileSessionStore,
+    FirestoreSessionStore,
+    SessionSnapshot,
+)
 from .store import (
     Fact,
     MemoryStore,
@@ -11,9 +17,13 @@ from .store import (
 )
 
 __all__ = [
+    "AbstractSessionStore",
     "Fact",
+    "FileSessionStore",
+    "FirestoreSessionStore",
     "MemoryStore",
     "Observation",
+    "SessionSnapshot",
     "snapshot_to_csv",
     "snapshot_to_jsonl",
 ]

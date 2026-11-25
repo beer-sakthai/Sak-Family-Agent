@@ -1,0 +1,35 @@
+name: AI Issue and Comment Moderator
+
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  moderate:
+    name: Moderate Issues & Comments
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+      pull-requests: write
+      models: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: audit
+
+      - name: Run AI Moderator
+        uses: github/ai-moderator@637328ae48b46dcf7d38de34c2f7d6b21bb75755 # v1.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}

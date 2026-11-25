@@ -225,6 +225,11 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-24 **Whole-Repository Branch Consolidation & Remote Harmonization** — Audited all 7 remote branches, resolved `build.yml` missing concurrency defect on `main` via PR #2073, expanded SPDX permissive licenses in `.github/dependency-review-config.yml` via PR #2074, merged routine dependency lockfile bump via PR #2069, refreshed root documentation via PR #2071, updated dashboard dependencies via PR #2072, restored $\ge 96\%$ real coverage via PR #2075, pruned all 6 obsolete feature/release remote branches so only `main` and `gh-pages` remain, and verified 100% test and lint pass across the repo.
 - [x] 2026-11-24 **Audit All Remote Branches, Fix GitHub Action Commits to Main & Consolidate PR Reviews** — Audited all remote branches and open PRs (#2076-#2082), fixed git credential persistence in commit-to-main workflows (`activity-readme.yml`, `git-auto-commit.yml`), grouped CodeQL action upgrades in `dependabot.yml` to eliminate version mismatch failures, and compiled comprehensive PR review findings for Beer.
 
+### 9. PatchFlow Engine MVP, Anti-Gaming Safeguards & Marketplace Actions Wave 27
+- [x] 2026-11-24 **Anti-Gaming & Holdout Isolation Safeguards** — Implement Three-Way Dataset Split (BaseEvalDataPoint), Paired Blind Judging with assets/eval-judge.prompt, Description Token Ceiling, Human Approval Gate, and Snapshot Rollback (FileSessionStore).
+- [x] 2026-11-24 **PatchFlow Automated Patching Engine Full-Stack MVP** — Scaffold services/patchflow with vulnerability scanning, AST/LLM patch generator, Anti-Gaming evaluation gate, and PR emitter.
+- [x] 2026-11-24 **Marketplace Actions Wave 27 & Cloudflare DNS Automation** — Integrate and pin Wave 27 marketplace actions with StepSecurity Harden-Runner, document in catalog, and build infra/cloudflare DNS manager.
+
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |

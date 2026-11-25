@@ -23,6 +23,7 @@ Instead of standard `sqlite3`, the `MemoryStore` would use `libsql_experimental`
 ```python
 import libsql_experimental as libsql
 
+
 def connect_db(db_path, sync_url=None, auth_token=None):
     if sync_url and auth_token:
         # Replicated mode: writes sync to cloud in background

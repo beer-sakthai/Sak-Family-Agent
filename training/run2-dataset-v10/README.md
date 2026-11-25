@@ -122,6 +122,7 @@ for row in stream.take(3):
 ```python
 # pandas + hf:// direct access
 import pandas as pd
+
 df = pd.read_json("hf://datasets/Nanthasit/sakthai-combined-v10/data/train.jsonl", lines=True)
 print(df.head(1).to_dict(orient="records")[0])
 ```

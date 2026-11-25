@@ -346,7 +346,9 @@ export function GatewayPlayground() {
   const handleInspectMemory = async () => {
     setMemoryLoading(true);
     try {
-      const res = await fetch(`/api/gateway/memory?persona=${encodeURIComponent(selectedPersona)}`);
+      const res = await fetch(`/api/gateway/memory?persona=${encodeURIComponent(selectedPersona)}`, {
+        signal: AbortSignal.timeout(10000),
+      });
       const data = await res.json();
       setMemoryData(data);
     } catch (err: unknown) {
@@ -367,6 +369,7 @@ export function GatewayPlayground() {
           pipeline: selectedPipeline,
           task: `Execute ${selectedPipeline} pipeline via Gateway Console`,
         }),
+        signal: AbortSignal.timeout(30000),
       });
       const data = await res.json();
       setTeamResult(data);
@@ -390,6 +393,7 @@ export function GatewayPlayground() {
           persona: selectedPersona,
           stream: streamMode,
         }),
+        signal: AbortSignal.timeout(45000),
       });
       const data = await res.json();
       setBenchResult(data);

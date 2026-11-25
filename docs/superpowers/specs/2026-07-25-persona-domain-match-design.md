@@ -37,11 +37,24 @@ today (SakThai's own cyan theme, no label).
 ```python
 # persona_key: (domain_label, strong_keywords, weak_keywords)
 PERSONA_DOMAINS: dict[str, tuple[str, tuple[str, ...], tuple[str, ...]]] = {
-    "sakking":  ("general tasks", (), ("remind", "schedule", "task", "todo", "run this", "execute")),
-    "saksee":   ("web & browser automation", ("automate the web",), ("browser", "scrape", "website", "web page", "url")),
-    "saksit":   ("social & storytelling", ("social media", "instagram"), ("tweet", "caption", "story", "write a post")),
-    "sakjules": ("CI/CD & automation", ("ci/cd", "github actions"), ("deploy", "pipeline", "workflow", "build fails")),
+    "sakking": ("general tasks", (), ("remind", "schedule", "task", "todo", "run this", "execute")),
+    "saksee": (
+        "web & browser automation",
+        ("automate the web",),
+        ("browser", "scrape", "website", "web page", "url"),
+    ),
+    "saksit": (
+        "social & storytelling",
+        ("social media", "instagram"),
+        ("tweet", "caption", "story", "write a post"),
+    ),
+    "sakjules": (
+        "CI/CD & automation",
+        ("ci/cd", "github actions"),
+        ("deploy", "pipeline", "workflow", "build fails"),
+    ),
 }
+
 
 def match_persona(message: str) -> tuple[str, str] | None:
     """Case-insensitive keyword scoring against PERSONA_DOMAINS: a strong

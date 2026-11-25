@@ -12,6 +12,7 @@ and the prose checks are negation-aware.
 
 Usage: python3 grade.py <iteration-dir>
 """
+
 from __future__ import annotations
 
 import json
@@ -47,7 +48,7 @@ def commands(text: str) -> list[str]:
 
 def negated(text: str, match: re.Match) -> bool:
     """True if a negator appears shortly before the match (same sentence-ish)."""
-    window = text[max(0, match.start() - 60):match.start()]
+    window = text[max(0, match.start() - 60) : match.start()]
     return bool(re.search(NEGATORS + r"[^.!?]{0,40}$", window, re.I))
 
 
@@ -69,7 +70,9 @@ def grade(run: Path, live: bool) -> dict:
         exp.append({"text": text, "passed": bool(passed), "evidence": evidence})
 
     # --- command-level assertions (graded only over real invocations) ---
-    persona_vals = {m.group(1).lower() for m in re.finditer(r"--persona\s+([a-z]+)", cmd_text, re.I)}
+    persona_vals = {
+        m.group(1).lower() for m in re.finditer(r"--persona\s+([a-z]+)", cmd_text, re.I)
+    }
     persona_vals &= set(PERSONAS)
 
     # Coverage is graded over the whole document, not the command text: the old
@@ -77,74 +80,111 @@ def grade(run: Path, live: bool) -> dict:
     # SAKTHAI_HOME path), and that gap is already scored by the --persona
     # assertion below. Grading it here too would double-count the same defect.
     covered = sum(p in both.lower() for p in PERSONAS)
-    add("Dispatches all six personas",
+    add(
+        "Dispatches all six personas",
         len(cmds) >= 6 and covered == 6,
-        f"{len(cmds)} `sakthai run` invocations; {covered}/6 personas addressed")
+        f"{len(cmds)} `sakthai run` invocations; {covered}/6 personas addressed",
+    )
 
-    add("Passes --persona for each of the six personas",
+    add(
+        "Passes --persona for each of the six personas",
         len(persona_vals) == 6,
         f"distinct --persona values in commands: {len(persona_vals)}/6 "
-        f"({', '.join(sorted(persona_vals)) or 'none'})")
+        f"({', '.join(sorted(persona_vals)) or 'none'})",
+    )
 
     prov = re.findall(r"--provider\s+\S+", cmd_text)
     mod = re.findall(r"--model\s+\S+", cmd_text)
-    add("Leaves --provider/--model unset so each persona's own config applies",
+    add(
+        "Leaves --provider/--model unset so each persona's own config applies",
         not prov and not mod,
-        f"in commands — --provider: {sorted(set(prov)) or 'none'}; --model: {sorted(set(mod)) or 'none'}")
+        f"in commands — --provider: {sorted(set(prov)) or 'none'}; --model: {sorted(set(mod)) or 'none'}",
+    )
 
     n_skill = len(re.findall(r"--with-skills\s+Sak-auto-cycle-loop", cmd_text))
-    add("Injects Sak-auto-cycle-loop on every dispatch",
-        n_skill >= 6, f"{n_skill}/6 commands carry the flag")
+    add(
+        "Injects Sak-auto-cycle-loop on every dispatch",
+        n_skill >= 6,
+        f"{n_skill}/6 commands carry the flag",
+    )
 
     n_dry = len(re.findall(r"--dry-run", cmd_text))
     if live:
-        add("Recognizes explicit live authorization (no --dry-run on dispatches)",
-            n_dry == 0, f"{n_dry} commands carry --dry-run (expected 0)")
+        add(
+            "Recognizes explicit live authorization (no --dry-run on dispatches)",
+            n_dry == 0,
+            f"{n_dry} commands carry --dry-run (expected 0)",
+        )
     else:
-        add("Defaults to --dry-run on every dispatch",
-            n_dry >= 6, f"{n_dry}/6 commands carry --dry-run")
+        add(
+            "Defaults to --dry-run on every dispatch",
+            n_dry >= 6,
+            f"{n_dry}/6 commands carry --dry-run",
+        )
         n_tmp = len(re.findall(r"mktemp\s+-d", cmd_text))
-        add("Uses a throwaway SAKTHAI_HOME on every dispatch",
-            n_tmp >= 6, f"{n_tmp}/6 commands set SAKTHAI_HOME=$(mktemp -d)")
+        add(
+            "Uses a throwaway SAKTHAI_HOME on every dispatch",
+            n_tmp >= 6,
+            f"{n_tmp}/6 commands set SAKTHAI_HOME=$(mktemp -d)",
+        )
 
     opt = re.findall(r"/opt/data\S*", cmd_text)
-    add("Targets no /opt/data memory home",
-        not opt, f"/opt/data in commands: {sorted(set(opt))[:4] or 'none'}")
+    add(
+        "Targets no /opt/data memory home",
+        not opt,
+        f"/opt/data in commands: {sorted(set(opt))[:4] or 'none'}",
+    )
 
-    doubled = re.findall(
-        r"SAKTHAI_HOME=\S*\.sakthai/(?:" + "|".join(PERSONAS) + r")\b", cmd_text)
-    add("Avoids the SAKTHAI_HOME + --persona double-append trap",
-        not doubled, f"persona-home SAKTHAI_HOME in commands: {sorted(set(doubled)) or 'none'}")
+    doubled = re.findall(r"SAKTHAI_HOME=\S*\.sakthai/(?:" + "|".join(PERSONAS) + r")\b", cmd_text)
+    add(
+        "Avoids the SAKTHAI_HOME + --persona double-append trap",
+        not doubled,
+        f"persona-home SAKTHAI_HOME in commands: {sorted(set(doubled)) or 'none'}",
+    )
 
     if live:
         # accept both the enumerated and brace-expanded forms
-        path_re = (r"\.sakthai/(?:\{[^}]*\}|" + "|".join(PERSONAS) + r")/memory\.db")
+        path_re = r"\.sakthai/(?:\{[^}]*\}|" + "|".join(PERSONAS) + r")/memory\.db"
         hit = re.search(path_re, both)
-        add("States the correct production memory path per persona",
+        add(
+            "States the correct production memory path per persona",
             bool(hit) and not doubled,
-            f"matched: {hit.group(0) if hit else 'no ~/.sakthai/<persona>/memory.db path stated'}")
+            f"matched: {hit.group(0) if hit else 'no ~/.sakthai/<persona>/memory.db path stated'}",
+        )
 
     # --- prose assertions (negation-aware) ---
     parallel = re.search(
         r"single message|one message|in parallel|concurrent|all six[^.]{0,40}together|same message",
-        both, re.I)
+        both,
+        re.I,
+    )
     serial = unnegated(both, r"one at a time|sequential(?:ly)?|serially|dispatched .{0,20}then")
-    add("Fans out in a single message rather than serially",
+    add(
+        "Fans out in a single message rather than serially",
         bool(parallel) and not serial,
         f"parallel marker: {parallel.group(0) if parallel else 'none'}; "
-        f"unnegated serial claim: {serial.group(0) if serial else 'none'}")
+        f"unnegated serial claim: {serial.group(0) if serial else 'none'}",
+    )
 
     if not live:
-        stall = unnegated(both, r"(?:should i|shall i|do you want me to|please confirm)[^.?]{0,60}(?:test|live|dry)")
-        add("Dispatches the safe default without stalling to ask test-or-live",
-            not stall, f"stall phrase: {stall.group(0)[:70] if stall else 'none'}")
+        stall = unnegated(
+            both,
+            r"(?:should i|shall i|do you want me to|please confirm)[^.?]{0,60}(?:test|live|dry)",
+        )
+        add(
+            "Dispatches the safe default without stalling to ask test-or-live",
+            not stall,
+            f"stall phrase: {stall.group(0)[:70] if stall else 'none'}",
+        )
 
     rl = report.lower()
     rows = sum(1 for p in PERSONAS if p in rl)
     has_status = bool(re.search(r"success|failed|partial|validated", rl))
-    add("Final report carries a row per persona with status",
+    add(
+        "Final report carries a row per persona with status",
         rows == 6 and has_status,
-        f"{rows}/6 personas named in report.md; status vocabulary present={has_status}")
+        f"{rows}/6 personas named in report.md; status vocabulary present={has_status}",
+    )
 
     passed = sum(1 for e in exp if e["passed"])
     total = len(exp)
@@ -152,9 +192,13 @@ def grade(run: Path, live: bool) -> dict:
     # `expectations` is what the viewer renders; `summary` is what
     # scripts.aggregate_benchmark reads. Emit both so one grading pass feeds
     # the qualitative and quantitative views alike.
-    return {"expectations": exp, "passed": passed, "total": total, "pass_rate": rate,
-            "summary": {"pass_rate": rate, "passed": passed,
-                        "failed": total - passed, "total": total}}
+    return {
+        "expectations": exp,
+        "passed": passed,
+        "total": total,
+        "pass_rate": rate,
+        "summary": {"pass_rate": rate, "passed": passed, "failed": total - passed, "total": total},
+    }
 
 
 def main() -> int:
