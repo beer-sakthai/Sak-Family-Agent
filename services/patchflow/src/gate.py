@@ -79,6 +79,12 @@ class AntiGamingGate:
                     reason=f"Rejected by Description Token Ceiling: {token_res.message}",
                 )
 
+        if test_runner is None:
+            return GateVerdict(
+                passed=False,
+                reason="Rejected: no test runner supplied; patch cannot be verified.",
+            )
+
         # 3. Snapshot Checkpoint Creation before applying
         snapshot_id = f"pre_patch_{candidate.finding_id}"
         self.session_store.create_checkpoint(
@@ -89,23 +95,25 @@ class AntiGamingGate:
 
         # 4. Apply patch and test
         target_path = repo_root / candidate.target_file
-        original_disk_content = (
-            target_path.read_text(encoding="utf-8") if target_path.is_file() else ""
-        )
+        existed = target_path.is_file()
+        original_disk_content = target_path.read_text(encoding="utf-8") if existed else ""
+
+        def _restore() -> None:
+            if existed:
+                target_path.write_text(original_disk_content, encoding="utf-8")
+            elif target_path.exists():
+                target_path.unlink()
 
         try:
             target_path.parent.mkdir(parents=True, exist_ok=True)
             target_path.write_text(candidate.patched_content, encoding="utf-8")
 
             # 5. Run verification tests / holdout validation
-            tests_ok = True
-            if test_runner is not None:
-                tests_ok = test_runner()
+            tests_ok = test_runner()
 
             if not tests_ok:
                 # Regressed! Trigger Snapshot Rollback
-                if original_disk_content:
-                    target_path.write_text(original_disk_content, encoding="utf-8")
+                _restore()
                 self.session_store.revert_checkpoint(snapshot_id, memory_store=memory_store)
                 return GateVerdict(
                     passed=False,
@@ -123,8 +131,7 @@ class AntiGamingGate:
 
         except Exception as exc:
             # Revert on unexpected failure
-            if original_disk_content:
-                target_path.write_text(original_disk_content, encoding="utf-8")
+            _restore()
             self.session_store.revert_checkpoint(snapshot_id, memory_store=memory_store)
             return GateVerdict(
                 passed=False,

@@ -970,5 +970,8 @@ def load_benchmark_tasks(
 
     if split is not None:
         tasks = [t for t in tasks if t.split.lower() == split.strip().lower()]
+    else:
+        # Holdout cases are quarantined; load them only via an explicit split="holdout".
+        tasks = [t for t in tasks if t.split.lower() != "holdout"]
 
     return tasks
