@@ -195,7 +195,7 @@ def export_harness(
     default="hosted",
     help="Backend execution engine.",
 )
-@click.option("--model", "-m", default="gemini-4-hydrogen", help="Model identifier.")
+@click.option("--model", "-m", default="gemini-4-neon", help="Model identifier.")
 @click.option(
     "--tier",
     "-t",

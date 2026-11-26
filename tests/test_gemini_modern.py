@@ -31,8 +31,8 @@ def test_legacy_gemini_models_mapping() -> None:
     assert LEGACY_GEMINI_MODELS["gemini-2.5-flash"] == "gemini-4-hydrogen"
     assert LEGACY_GEMINI_MODELS["gemini-2.0-flash"] == "gemini-4-hydrogen"
     assert LEGACY_GEMINI_MODELS["gemini-1.5-flash"] == "gemini-4-hydrogen"
-    assert LEGACY_GEMINI_MODELS["gemini-1.5-pro"] == "gemini-4-carbon"
-    assert LEGACY_GEMINI_MODELS["gemini-3.1-pro-preview"] == "gemini-4-carbon"
+    assert LEGACY_GEMINI_MODELS["gemini-1.5-pro"] == "gemini-4-neon"
+    assert LEGACY_GEMINI_MODELS["gemini-3.1-pro-preview"] == "gemini-4-neon"
 
 
 def test_paid_only_gemini_models_set() -> None:
@@ -91,14 +91,20 @@ def test_resolve_model_name_substitutes_legacy_models(caplog: pytest.LogCaptureF
     caplog.clear()
     with caplog.at_level(logging.WARNING):
         resolved_pro = _resolve_model_name("gemini-1.5-pro", "google")
-        assert resolved_pro == "gemini-4-carbon"
-        assert "gemini-4-carbon" in caplog.text
+        assert resolved_pro == "gemini-4-neon"
+        assert "gemini-4-neon" in caplog.text
 
 
-def test_resolve_model_name_defaults_google_to_hydrogen() -> None:
-    """Verify default model for Google provider is gemini-4-hydrogen."""
+def test_resolve_model_name_defaults_google_to_neon_and_free_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify default Google model is gemini-4-neon, and GEMINI_FREE_ONLY falls back to hydrogen."""
     from sakthai.agent.loop import DEFAULT_MODEL
 
+    monkeypatch.delenv("GEMINI_FREE_ONLY", raising=False)
+    assert _resolve_model_name(DEFAULT_MODEL, "google") == "gemini-4-neon"
+
+    monkeypatch.setenv("GEMINI_FREE_ONLY", "true")
     assert _resolve_model_name(DEFAULT_MODEL, "google") == "gemini-4-hydrogen"
 
 
@@ -212,3 +218,27 @@ def test_call_gemini_interaction_error_handling() -> None:
 
     with pytest.raises(AgentError, match="Gemini Interactions API call failed"):
         call_gemini_interaction(client, "test input")
+
+
+def test_call_gemini_interaction_neon_free_only_fallback(
+    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify call_gemini_interaction redirects gemini-4-neon to hydrogen under GEMINI_FREE_ONLY."""
+    monkeypatch.setenv("GEMINI_FREE_ONLY", "true")
+    client = MagicMock()
+    mock_resp = MagicMock()
+    client.interactions.create.return_value = mock_resp
+
+    with caplog.at_level(logging.WARNING):
+        res = call_gemini_interaction(
+            client=client,
+            text_input="Hello Neon",
+            model="gemini-4-neon",
+        )
+
+    assert res == mock_resp
+    assert "auto-falling back to 'gemini-4-hydrogen'" in caplog.text
+    client.interactions.create.assert_called_once_with(
+        model="gemini-4-hydrogen",
+        input="Hello Neon",
+    )
