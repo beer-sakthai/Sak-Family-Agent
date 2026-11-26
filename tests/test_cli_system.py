@@ -551,3 +551,41 @@ def test_ready_with_provider_credentials_has_no_warning(
 def test_any_provider_counts_as_credentials(auth_key: str) -> None:
     assert system_mod._has_provider_credentials({auth_key: True})
     assert not system_mod._has_provider_credentials({"anthropic_ok": False})
+
+
+# ---------------------------------------------------------------------------
+# Web command error handlers
+# ---------------------------------------------------------------------------
+
+
+def test_web_serve_port_in_use_fails(runner: CliRunner) -> None:
+    """web serve exits with error when the port is already in use."""
+    from unittest.mock import patch
+
+    with patch("sakthai.web.server.serve", side_effect=OSError("Address already in use")):
+        result = runner.invoke(main, ["web", "serve", "--port", "3001"])
+    assert result.exit_code != 0
+    assert "Address already in use" in result.output
+
+
+def test_web_serve_permission_denied_fails(runner: CliRunner) -> None:
+    """web serve exits with error when attempting to bind to a privileged port."""
+    from unittest.mock import patch
+
+    with patch("sakthai.web.server.serve", side_effect=PermissionError("Permission denied")):
+        result = runner.invoke(main, ["web", "serve", "--port", "80"])
+    assert result.exit_code != 0
+    assert "Permission denied" in result.output
+
+
+def test_web_regen_token_db_failure_fails(runner: CliRunner, sakthai_home: Path) -> None:
+    """web regen-token exits with error when MemoryStore write fails."""
+    from unittest.mock import patch
+
+    runner = CliRunner()
+    with patch("sakthai.memory.store.MemoryStore") as mock_store_class:
+        mock_store = mock_store_class.return_value.__enter__.return_value
+        mock_store.delete_facts_by_key.side_effect = OSError("Disk full")
+        result = runner.invoke(main, ["web", "regen-token"], input="y\n")
+    assert result.exit_code != 0
+    assert "Failed to regenerate token:" in result.output

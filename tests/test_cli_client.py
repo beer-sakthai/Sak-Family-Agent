@@ -165,3 +165,99 @@ def test_cli_client_test_failure_exits_nonzero(
     assert res.exit_code == 1, res.output
     if extra:
         assert json.loads(res.output)["all_passed"] is False
+
+
+# ---------------------------------------------------------------------------
+# Error Handler Tests — CLI error paths that were previously unreached
+# ---------------------------------------------------------------------------
+
+
+def test_cli_client_show_nonexistent_client_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """show command exits 1 when client does not exist."""
+    monkeypatch.setenv("SAKTHAI_CLIENTS_DIR", str(tmp_path / "clients"))
+    runner = CliRunner()
+    res = runner.invoke(main, ["client", "show", "does-not-exist"])
+    assert res.exit_code == 1
+    assert "Error:" in res.output
+
+
+def test_cli_client_test_nonexistent_client_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """test command exits 1 when client does not exist."""
+    monkeypatch.setenv("SAKTHAI_CLIENTS_DIR", str(tmp_path / "clients"))
+    runner = CliRunner()
+    res = runner.invoke(main, ["client", "test", "nonexistent"])
+    assert res.exit_code == 1
+    assert "Error:" in res.output
+
+
+def test_cli_client_onboard_invalid_user_ids_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """onboard command exits 1 when allowed-users contains non-integers."""
+    monkeypatch.setenv("SAKTHAI_CLIENTS_DIR", str(tmp_path / "clients"))
+    runner = CliRunner()
+    res = runner.invoke(
+        main,
+        [
+            "client",
+            "onboard",
+            "--client-id",
+            "test-client",
+            "--company",
+            "Test Co",
+            "--allowed-users",
+            "123,not-an-id,456",
+        ],
+    )
+    assert res.exit_code == 1
+    assert "comma-separated list of integers" in res.output
+
+
+def test_cli_client_onboard_config_creation_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """onboard command exits 1 when ClientConfig creation fails."""
+    monkeypatch.setenv("SAKTHAI_CLIENTS_DIR", str(tmp_path / "clients"))
+    runner = CliRunner()
+
+    with patch("sakthai.cli.client.ClientConfig", side_effect=ValueError("Invalid config")):
+        res = runner.invoke(
+            main,
+            [
+                "client",
+                "onboard",
+                "--client-id",
+                "test-client",
+                "--company",
+                "Test Co",
+            ],
+        )
+    assert res.exit_code == 1
+    assert "Error onboarding client:" in res.output
+
+
+def test_cli_client_onboard_client_save_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """onboard command exits 1 when onboard_client raises exception."""
+    monkeypatch.setenv("SAKTHAI_CLIENTS_DIR", str(tmp_path / "clients"))
+    runner = CliRunner()
+
+    with patch("sakthai.cli.client.onboard_client", side_effect=OSError("Disk full")):
+        res = runner.invoke(
+            main,
+            [
+                "client",
+                "onboard",
+                "--client-id",
+                "test-client",
+                "--company",
+                "Test Co",
+            ],
+        )
+    assert res.exit_code == 1
+    assert "Error onboarding client:" in res.output
