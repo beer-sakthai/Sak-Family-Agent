@@ -875,10 +875,9 @@ def _run_command(args: dict[str, Any], store: MemoryStore) -> str:
     guardrail = DataLossGuardrail()
     safety_res = guardrail.verify_or_halt(command, approval_token=approval_token)
     if safety_res.blocked:
-        expected = guardrail.generate_approval_token(command)
         raise PermissionError(
             f"Potentially destructive operation blocked by DataLossGuardrail: {safety_res.reason}. "
-            f"Impact: {safety_res.impact}. To proceed, provide approval_token='{expected}'."
+            f"Impact: {safety_res.impact}. Human approval required; this operation cannot be retried with a token."
         )
 
     try:

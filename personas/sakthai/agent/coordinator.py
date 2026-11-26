@@ -160,10 +160,13 @@ def run_persona_task(
     kwargs["max_seconds"] = max_seconds
 
     if allow_mcp and not no_mcp:
-        try:
-            from ..mcp.manager import connect_servers
-            from .tools import BUILTIN_TOOLS
+        import os
+        from ..mcp.manager import connect_servers
+        from .tools import BUILTIN_TOOLS
 
+        mcp_config_backup = os.environ.get("SAKTHAI_MCP_CONFIG")
+        try:
+            os.environ.pop("SAKTHAI_MCP_CONFIG", None)
             with connect_servers(persona=persona, include_builtins=True) as mcp_tools:
                 kwargs["tools"] = (*BUILTIN_TOOLS, *mcp_tools)
                 new_chain = (*current_chain, persona)
@@ -172,10 +175,13 @@ def run_persona_task(
                     return run_agent(**kwargs)
                 finally:
                     _DELEGATION_CHAIN.reset(token)
-        except Exception as exc:
+        except (ConnectionError, TimeoutError, ImportError) as mcp_exc:
             logger.warning(
-                "Could not connect MCP servers for delegated persona %s: %s", persona, exc
+                "Could not connect MCP servers for delegated persona %s: %s. Continuing without MCP.", persona, mcp_exc
             )
+        finally:
+            if mcp_config_backup is not None:
+                os.environ["SAKTHAI_MCP_CONFIG"] = mcp_config_backup
 
     new_chain = (*current_chain, persona)
     token = _DELEGATION_CHAIN.set(new_chain)
@@ -259,10 +265,12 @@ def run_parallel_persona_tasks(
 
 def aggregate_persona_results(results: Sequence[AgentResult]) -> dict[str, Any]:
     """Aggregate individual persona task results into a consolidated summary."""
+    from .loop import _TERMINAL_STOPS
+
     total_tokens = sum(r.usage.get("total_tokens", 0) for r in results)
     total_tool_calls = sum(len(r.tool_calls) for r in results)
-    successful = [r for r in results if r.stop_reason != "error"]
-    failed = [r for r in results if r.stop_reason == "error"]
+    successful = [r for r in results if r.stop_reason in _TERMINAL_STOPS]
+    failed = [r for r in results if r.stop_reason not in _TERMINAL_STOPS]
 
     sections = []
     for i, r in enumerate(results, start=1):
