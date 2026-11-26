@@ -239,7 +239,12 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 ### 9. PatchFlow Engine MVP, Anti-Gaming Safeguards & Marketplace Actions Wave 27
 - [x] 2026-11-24 **Anti-Gaming & Holdout Isolation Safeguards** — Implement Three-Way Dataset Split (BaseEvalDataPoint), Paired Blind Judging with assets/eval-judge.prompt, Description Token Ceiling, Human Approval Gate, and Snapshot Rollback (FileSessionStore).
 - [x] 2026-11-24 **PatchFlow Automated Patching Engine Full-Stack MVP** — Scaffold services/patchflow with vulnerability scanning, AST/LLM patch generator, Anti-Gaming evaluation gate, and PR emitter.
-- [x] 2026-11-24 **Marketplace Actions Wave 27 & Cloudflare DNS Automation** — Integrate and pin Wave 27 marketplace actions with StepSecurity Harden-Runner, document in catalog, and build infra/cloudflare DNS manager.
+### 11. Frontier AI R&D Capability Lifecycle Detection & Primary CLI Transition (`sak`)
+- [x] 2026-11-26 **Phase 1: CLI Canonical Transition (`sakthai` → `sak`)** — Update Click `prog_name` resolution dynamically, set `sak` as primary in `pyproject.toml`, update help text and docstrings while preserving complete backward compatibility for `sakthai`.
+- [x] 2026-11-26 **Phase 2: Frontier AI R&D Capability Lifecycle Protocol Implementation** — Implement `CapabilityDomain` (data center scheduling, hardware design, AI training/inference, gradient algorithms & GEMM), 4-tier attainment rubric (L0-L3), probe tasks, and `evaluate_capability_attainment` in `personas/sakthai/agent/capability.py`.
+- [x] 2026-11-26 **Phase 3: Lifecycle Integration & Safety Gates** — Integrate capability evaluation into `sak eval capability` CLI, add evolutionary threshold constraint in `evolution/core/constraints.py`, and wire `DataLossGuardrail` into `tools.py::run_command`.
+- [x] 2026-11-26 **Phase 4: Subagent & Multi-Agent Enhancements** — Add opt-in `allow_mcp` tool inheritance to `run_persona_task` and `delegate_to_persona`, and add parallel task result aggregation.
+- [x] 2026-11-26 **Phase 5: Automated Verification & Quality Gates** — Add tests in `tests/test_capability_lifecycle.py`, update `tests/test_cli_modern.py`, maintain $\ge 96.0\%$ test coverage, and verify ruff and bandit clean.
 
 ### 11. Master Plan of 4: Weekly Maintenance, CI/CD Automation, Core Feature Integration & Security Governance
 - [x] 2026-11-26 **Phase 1: Weekly Maintenance, Backlog Sync & Issue #2070 Resolution** — Vacuumed and verified SQLite memory stores, executed 6-persona fleet audit (100% Grade A+), reconciled credential backlog, posted weekly status report, and cleanly closed Issue #2070.

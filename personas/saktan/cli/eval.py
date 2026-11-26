@@ -806,3 +806,80 @@ def eval_bench(
 
     if result.total_tasks > 0 and result.passed_tasks == 0:
         sys.exit(1)
+
+
+@eval_cmd.command("capability")
+@click.option(
+    "--phase",
+    type=click.Choice(["pretrain", "checkpoint", "evolution", "runtime"]),
+    default="checkpoint",
+    show_default=True,
+    help="Lifecycle phase to evaluate.",
+)
+@click.option(
+    "--domain",
+    type=click.Choice(
+        [
+            "data_center_scheduling",
+            "hardware_design",
+            "training_inference",
+            "gradient_and_gemm",
+        ]
+    ),
+    default=None,
+    help="Filter evaluation to a specific capability domain.",
+)
+@click.option(
+    "--persona",
+    type=click.Choice(PERSONA_NAMES),
+    default=None,
+    help="Target persona to probe.",
+)
+@click.option("--json", "as_json", is_flag=True, help="Emit evaluation result as JSON.")
+def eval_capability(
+    phase: str,
+    domain: str | None,
+    persona: str | None,
+    as_json: bool,
+) -> None:
+    """Evaluate Frontier AI R&D capabilities across model lifecycle phases."""
+    from ..agent.capability import (
+        CapabilityDomain,
+        LifecyclePhase,
+    )
+    from ..agent.eval import evaluate_capability_lifecycle
+
+    target_domains = [CapabilityDomain(domain)] if domain else None
+    target_persona = persona or "sakthai"
+
+    assessment = evaluate_capability_lifecycle(
+        model_or_persona=target_persona,
+        phase=LifecyclePhase(phase),
+        domains=target_domains,
+    )
+
+    if as_json:
+        click.echo(json.dumps(assessment.to_dict(), indent=2, ensure_ascii=False))
+        return
+
+    click.echo(f"# Frontier AI R&D Capability Assessment [{phase.upper()}]")
+    click.echo(f"  Target:                {target_persona}")
+    click.echo(
+        f"  Overall Highest Level: Level {int(assessment.overall_highest_level)} ({assessment.overall_highest_level.name})"
+    )
+    click.echo(
+        f"  Alert Triggered:       {'YES (Safety Gate Active)' if assessment.alert_triggered else 'No'}"
+    )
+
+    if assessment.approval_token_required:
+        click.echo(f"  Required Gate Token:   {assessment.approval_token_required}")
+
+    click.echo("\n## Domain Attainment Breakdown:")
+    for d_name, d_eval in assessment.domains.items():
+        gate_badge = " [GATE ACTIVE]" if d_eval.requires_approval_gate else ""
+        click.echo(
+            f"  • {d_name:<28}: Level {int(d_eval.highest_level_attained)} "
+            f"({d_eval.probes_passed}/{d_eval.probes_evaluated} probes, confidence: {d_eval.confidence:.1%}){gate_badge}"
+        )
+        for f in d_eval.findings:
+            click.echo(f"      - {f}")

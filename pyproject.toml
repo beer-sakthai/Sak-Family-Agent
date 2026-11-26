@@ -54,8 +54,8 @@ mutation = [
 all = ["sakthai-agent[dev,antigravity]"]
 
 [project.scripts]
-sakthai = "sakthai.cli:main"
 sak = "sakthai.cli:main"
+sakthai = "sakthai.cli:main"
 
 [tool.pytest.ini_options]
 addopts = "-q"

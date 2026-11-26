@@ -338,3 +338,41 @@ class SchemaChangeValidator:
             details="; ".join(breaking_changes),
         )
 
+
+class CapabilityConstraintValidator:
+    """Validates that self-evolved code/prompts do not attain unverified Level 2/3 capabilities without human approval."""
+
+    @staticmethod
+    def validate_capability_threshold(
+        assessment_or_level: int | Any,
+        approval_token: str | None = None,
+        expected_token: str | None = None,
+    ) -> ConstraintResult:
+        level_val = (
+            int(assessment_or_level)
+            if isinstance(assessment_or_level, (int, float))
+            else int(getattr(assessment_or_level, "overall_highest_level", 0))
+        )
+        if level_val < 2:
+            return ConstraintResult(
+                passed=True,
+                constraint_name="frontier_capability_gate",
+                message=f"Capability level {level_val} is within safe unassisted boundaries (Level < 2).",
+            )
+
+        if approval_token and expected_token and approval_token == expected_token:
+            return ConstraintResult(
+                passed=True,
+                constraint_name="frontier_capability_gate",
+                message=f"High capability attainment (Level {level_val}) approved via valid gate token.",
+                details=f"Token: {approval_token}",
+            )
+
+        return ConstraintResult(
+            passed=False,
+            constraint_name="frontier_capability_gate",
+            message=f"BLOCKED: Model self-evolution attained autonomous frontier capability Level {level_val}. Human approval token required.",
+            details=f"Expected approval token: {expected_token or 'APPROVE_CAPABILITY_<hash>'}",
+        )
+
+

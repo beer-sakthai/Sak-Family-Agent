@@ -117,6 +117,7 @@ def run_persona_task(
     model: str | None = None,
     provider: str | None = None,
     no_mcp: bool = False,
+    allow_mcp: bool = False,
     client: Any = None,
     verbose: bool = False,
 ) -> AgentResult:
@@ -125,8 +126,8 @@ def run_persona_task(
     Guards against recursion cycles and nesting beyond ``max_depth``.
     ``max_seconds`` defaults to ``DEFAULT_UNATTENDED_MAX_SECONDS``: a delegated
     run has no one watching it; pass ``None`` to lift the budget.
-    ``no_mcp`` and ``verbose`` are accepted for caller compatibility but have
-    no effect: a delegated run uses the built-in tools only.
+    When ``allow_mcp=True`` and ``no_mcp=False``, connects the target persona's
+    configured MCP servers during execution.
     """
     if persona not in PERSONA_NAMES:
         raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
@@ -158,6 +159,24 @@ def run_persona_task(
 
     kwargs["max_seconds"] = max_seconds
 
+    if allow_mcp and not no_mcp:
+        try:
+            from ..mcp.manager import connect_servers
+            from .tools import BUILTIN_TOOLS
+
+            with connect_servers(persona=persona, include_builtins=True) as mcp_tools:
+                kwargs["tools"] = (*BUILTIN_TOOLS, *mcp_tools)
+                new_chain = (*current_chain, persona)
+                token = _DELEGATION_CHAIN.set(new_chain)
+                try:
+                    return run_agent(**kwargs)
+                finally:
+                    _DELEGATION_CHAIN.reset(token)
+        except Exception as exc:
+            logger.warning(
+                "Could not connect MCP servers for delegated persona %s: %s", persona, exc
+            )
+
     new_chain = (*current_chain, persona)
     token = _DELEGATION_CHAIN.set(new_chain)
     try:
@@ -175,7 +194,7 @@ def run_parallel_persona_tasks(
     client: Any = None,
     verbose: bool = False,
 ) -> list[AgentResult]:
-    """Execute multiple persona tasks concurrently using ThreadPoolExecutor.
+    """Execute multiple persona tasks concurrently using ThreadPoolExecutor with error isolation.
 
     Each task dict should contain:
       - 'persona': target persona name (str)
@@ -186,6 +205,7 @@ def run_parallel_persona_tasks(
       - 'model': optional str
       - 'provider': optional str
       - 'no_mcp': optional bool
+      - 'allow_mcp': optional bool
     """
     if not tasks:
         return []
@@ -203,23 +223,57 @@ def run_parallel_persona_tasks(
         model = item.get("model")
         provider = item.get("provider")
         no_mcp = bool(item.get("no_mcp", False))
+        allow_mcp = bool(item.get("allow_mcp", False))
         item_store = item.get("store") or store
 
-        return run_persona_task(
-            persona=persona,
-            task=task_str,
-            with_skills=skills,
-            max_iterations=max_iters,
-            max_tokens=max_toks,
-            max_depth=max_depth,
-            store=item_store,
-            model=model,
-            provider=provider,
-            no_mcp=no_mcp,
-            client=client,
-            verbose=verbose,
-        )
+        try:
+            return run_persona_task(
+                persona=persona,
+                task=task_str,
+                with_skills=skills,
+                max_iterations=max_iters,
+                max_tokens=max_toks,
+                max_depth=max_depth,
+                store=item_store,
+                model=model,
+                provider=provider,
+                no_mcp=no_mcp,
+                allow_mcp=allow_mcp,
+                client=client,
+                verbose=verbose,
+            )
+        except Exception as exc:
+            logger.error("Delegated task for persona %s failed: %s", persona, exc)
+            return AgentResult(
+                text=f"Error executing delegated task for persona '{persona}': {exc}",
+                tool_calls=[],
+                iterations=0,
+                stop_reason="error",
+                usage={"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+            )
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
         futures = [executor.submit(_worker, t) for t in tasks]
         return [f.result() for f in futures]
+
+
+def aggregate_persona_results(results: Sequence[AgentResult]) -> dict[str, Any]:
+    """Aggregate individual persona task results into a consolidated summary."""
+    total_tokens = sum(r.usage.get("total_tokens", 0) for r in results)
+    total_tool_calls = sum(len(r.tool_calls) for r in results)
+    successful = [r for r in results if r.stop_reason != "error"]
+    failed = [r for r in results if r.stop_reason == "error"]
+
+    sections = []
+    for i, r in enumerate(results, start=1):
+        status_tag = "✓" if r.stop_reason != "error" else "✗"
+        sections.append(f"### Subtask {i} [{status_tag} - {r.stop_reason}]\n{r.text.strip()}")
+
+    return {
+        "total_tasks": len(results),
+        "successful_tasks": len(successful),
+        "failed_tasks": len(failed),
+        "total_tokens": total_tokens,
+        "total_tool_calls": total_tool_calls,
+        "summary_text": "\n\n".join(sections),
+    }
