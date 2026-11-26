@@ -77,7 +77,15 @@ jobs:
 
       - name: Initialize Family Persona Shards if Missing
         run: |
-          uv run python3 -c "from sakthai.config import PERSONA_NAMES; from sakthai.memory.store import MemoryStore; [MemoryStore(persona=p) for p in PERSONA_NAMES]"
+          uv run python3 - <<'PY'
+          from sakthai.config import PERSONA_NAMES, persona_memory_db_path
+          from sakthai.memory.store import MemoryStore
+
+          for persona in PERSONA_NAMES:
+              if not (db_path := persona_memory_db_path(persona)).exists():
+                  with MemoryStore(db_path):
+                      pass
+          PY
 
       - name: Run Memory Shard Vacuum & Integrity
         if: ${{ github.event_name == 'schedule' || inputs.vacuum_shards }}
