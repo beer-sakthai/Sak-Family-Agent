@@ -16,6 +16,13 @@ ADK / Vertex AI cloud agent is **not** part of v2: there is **no `app/` cloud
 bundle, no `sync-app-package.sh` sync step, and no `sakthai/cloud/` module** here.
 v2 is local-first — the CLI, the agent loop, and the MCP stdio server.
 
+### Claude Code-Specific Notes
+
+This file is designed for Claude Code sessions (`claude.ai/code`). Key context:
+- Always run `make sync-personas` after editing any file in `personas/sakthai/` (except `skills/`, `config/`, `evolution/`)
+- The package lives at `personas/sakthai/`, not at the repo root
+- Two required status checks in CI: `Quality gates` (ruff/mypy/pytest/coverage) and security/quality workflows
+
 ---
 
 ## Related repositories
@@ -182,6 +189,26 @@ uv run bandit -c pyproject.toml -r personas/sakthai   # security scan
 make mutation                                # mutmut on core seam modules (slow, local-only, not in CI)
 ```
 
+### Quick Command Reference (Most Common)
+
+The commands you'll run most often during development:
+
+```bash
+uv sync --all-extras              # First setup: install all dependencies
+uv run pytest tests/ -q           # Full test suite (enforces ≥96% coverage)
+uv run pytest tests/test_memory_store.py -q  # Single test file
+uv run pytest -m "not integration" -q  # CI-default: exclude network tests
+make lint                         # Ruff check + format
+uv run mypy personas/sakthai      # Strict type check
+make sync-personas                # Mirror edits from personas/sakthai/ to five persona copies
+make dashboard-dev                # Start Next.js (3000) + Python API (3001) with CORS
+sakthai run "explain docs/architecture.md"  # Try the agent
+```
+
+> **Hermetic Tests (CI default):** `uv run pytest -m "not integration" -q` excludes network tests. Integration tests are marked with `@pytest.mark.integration` and auto-skip when credentials are absent.
+
+---
+
 `uv sync --all-extras` (not plain `uv sync`) is required: `hypothesis` lives in
 the `dev` extra and `tests/test_store_properties.py` fails collection without it,
 which aborts the whole run.
@@ -198,6 +225,8 @@ deploy; deliberately not a CI gate, since skills land constantly),
 `apps/sak_agent_dashboard` npm lint/build/tsc/test chain), and `dashboard-dev`
 (runs `sakthai web serve` on :3001 with `SAKTHAI_WEB_CORS_ORIGIN` set and
 `next dev` on :3000, wiring the token through automatically).
+
+> **Dashboard Development:** Use `make dashboard-dev` to start both Next.js (port 3000) and Python API (port 3001) with CORS configured for local development. For standalone Next.js-only work, see `apps/sak_agent_dashboard/` and run `npm run dev` directly.
 
 `.githooks/` holds a `pre-commit` hook that fails if `uv.lock` is out of sync with
 `pyproject.toml`, and a `pre-push` hook. Opt in with
@@ -368,11 +397,13 @@ coverage. Three things to know before touching it:
   does `monkeypatch.delenv("SAKTHAI_HOME")` because it exercises the
   `Path.home()` fallback that `SAKTHAI_HOME` would otherwise shadow.
 
-The headroom is ~0.63pp, or about 100 statements-or-branches. Treat it as the
-working budget and raise coverage rather than lowering the floor.
+**Current coverage headroom: ~0.63pp** (about 100 statements-or-branches). Treat this as the working budget — raise coverage rather than lowering the floor. A new feature that drops coverage below 96% will fail CI.
 
 Run the lint→pytest sequence locally before pushing — a drop below the floor now
-turns CI red rather than passing quietly.
+turns CI red rather than passing quietly. The command is:
+```bash
+uv run pytest tests/ -q --cov=sakthai --cov-branch --cov-fail-under=96
+```
 
 ---
 
