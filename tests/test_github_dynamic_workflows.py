@@ -9,6 +9,8 @@ from sakthai.team.github_subagents import (
     GitHubSubagentConfig,
     GitHubSubagentRole,
     run_github_audit_pipeline,
+    run_github_maintenance_pipeline,
+    run_github_security_pipeline,
 )
 from scripts.workflows.github_cli_dynamic_workflow import (
     execute_github_workflow,
@@ -180,3 +182,84 @@ async def test_execute_github_workflow_mock(monkeypatch: pytest.MonkeyPatch) -> 
     assert res["open_prs_count"] == 1
     assert res["audited_count"] == 1
     assert res["auto_merge_blocked"] is True
+
+
+@pytest.mark.asyncio
+async def test_run_github_maintenance_pipeline(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Test vacuum on temporary sqlite db
+    db_file = tmp_path / "test.db"
+    import sqlite3
+
+    conn = sqlite3.connect(db_file)
+    conn.execute("CREATE TABLE t (id INT);")
+    conn.commit()
+    conn.close()
+
+    monkeypatch.setenv("SAKTHAI_HOME", str(tmp_path))
+
+    fw = GitHubCLISubagentFramework()
+
+    def mock_run_gh(args):
+        if "issue" in args:
+            return 0, '[{"number": 1, "title": "issue 1"}]'
+        if "pr" in args:
+            return 0, '[{"number": 2, "title": "pr 2"}]'
+        return 0, "[]"
+
+    monkeypatch.setattr(fw, "run_gh", mock_run_gh)
+    report = await run_github_maintenance_pipeline(framework=fw, vacuum=True, run_audit=True)
+
+    assert "Shard Maintenance" in report.phases_completed
+    assert "Backlog Discovery" in report.phases_completed
+    assert "Fleet Audit" in report.phases_completed
+    assert report.auto_merge_blocked is True
+    assert report.open_prs_audited == 1
+
+
+@pytest.mark.asyncio
+async def test_run_github_security_pipeline(monkeypatch: pytest.MonkeyPatch) -> None:
+    fw = GitHubCLISubagentFramework()
+
+    def mock_run_gh(args):
+        if "branches/main" in " ".join(args):
+            return 0, '{"name": "main", "protected": true}'
+        return 0, "{}"
+
+    monkeypatch.setattr(fw, "run_gh", mock_run_gh)
+    report = await run_github_security_pipeline(framework=fw)
+
+    assert "Branch Protection" in report.phases_completed
+    assert "Action Pinning" in report.phases_completed
+    assert "Credential Hygiene" in report.phases_completed
+    assert report.auto_merge_blocked is True
+
+
+def test_cli_gh_commands(monkeypatch: pytest.MonkeyPatch) -> None:
+    from click.testing import CliRunner
+
+    from sakthai.cli.team import team_cmd
+    from sakthai.team.github_subagents import GitHubCLISubagentFramework
+
+    def mock_run_gh(self, args: list[str]) -> tuple[int, str]:
+        if "pr" in args:
+            return 0, '[{"number": 101, "title": "feat: mock PR"}]'
+        if "issue" in args:
+            return 0, '[{"number": 201, "title": "mock issue"}]'
+        if "branches/main" in " ".join(args):
+            return 0, '{"name": "main", "protected": true}'
+        return 0, "[]"
+
+    monkeypatch.setattr(GitHubCLISubagentFramework, "run_gh", mock_run_gh)
+
+    runner = CliRunner()
+    res_maint = runner.invoke(team_cmd, ["gh", "maintenance", "--json"])
+    assert res_maint.exit_code == 0
+    assert "gh-dyn-maintenance-v1" in res_maint.output
+
+    res_audit = runner.invoke(team_cmd, ["gh", "audit", "--json"])
+    assert res_audit.exit_code == 0
+    assert "gh-dyn-workflow-v1" in res_audit.output
+
+    res_sec = runner.invoke(team_cmd, ["gh", "security", "--json"])
+    assert res_sec.exit_code == 0
+    assert "gh-dyn-security-v1" in res_sec.output

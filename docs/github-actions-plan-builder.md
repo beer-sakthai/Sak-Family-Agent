@@ -64,7 +64,6 @@ The plan is intentionally staged. First establish an accurate baseline and owner
 
 - `actions-usage-audit.yml`
 - `actions-version-updater.yml`
-- `activity-readme.yml`
 - `add-badges.yml`
 - `agent-self-evolution.yml`
 - `agentics-maintenance.yml`

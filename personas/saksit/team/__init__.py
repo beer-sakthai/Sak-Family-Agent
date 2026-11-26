@@ -25,6 +25,8 @@ from .github_subagents import (
     GitHubSubagentRole,
     WorkflowExecutionReport,
     run_github_audit_pipeline,
+    run_github_maintenance_pipeline,
+    run_github_security_pipeline,
 )
 from .handoff import (
     AgentName,
@@ -89,6 +91,8 @@ __all__ = [
     "load_pipeline_from_file",
     "run_pipeline",
     "run_github_audit_pipeline",
+    "run_github_maintenance_pipeline",
+    "run_github_security_pipeline",
     "stream_pipeline_events",
     "stable_handoff_fingerprint",
 ]
