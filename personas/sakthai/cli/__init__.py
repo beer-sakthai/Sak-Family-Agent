@@ -51,15 +51,25 @@ def _is_interactive() -> bool:
     return bool(sys.stdin.isatty() and sys.stdout.isatty())
 
 
+def _version_callback(ctx: click.Context, param: click.Parameter, value: bool) -> None:
+    if not value or ctx.resilient_parsing:
+        return
+    prog = ctx.find_root().info_name or "sak"
+    if prog not in ("sak", "sakthai"):
+        prog = "sak"
+    click.echo(f"{prog}, version {__version__}")
+    ctx.exit()
+
+
 class SakThaiGroup(click.Group):
-    """Smart CLI group for SakThai and Sak Family agents.
+    """Smart CLI group for Sak and Sak Family agents.
 
     Supports running like Claude Code / Gemini CLI / AGY:
     - When invoked without subcommands in an interactive terminal, launches the
       interactive agent chat directly.
     - When invoked with a task prompt or options that do not match a known subcommand,
       automatically dispatches them to `run`.
-    - `sakthai --help` or `sakthai --version` display standard CLI info.
+    - `sak --help` or `sak --version` display standard CLI info (with `sakthai` alias).
     - All existing subcommands (`status`, `doctor`, `mcp`, `gateway`, etc.) dispatch normally.
     """
 
@@ -72,10 +82,18 @@ class SakThaiGroup(click.Group):
 
 
 @click.group(cls=SakThaiGroup, invoke_without_command=True)
-@click.version_option(__version__, prog_name="sakthai")
+@click.option(
+    "--version",
+    "-V",
+    is_flag=True,
+    callback=_version_callback,
+    expose_value=False,
+    is_eager=True,
+    help="Show the version and exit.",
+)
 @click.pass_context
 def main(ctx: click.Context) -> None:
-    """SakThai — a personal learning agent with persistent memory."""
+    """Sak (House of Sak) — a personal learning agent and autonomous agent platform with persistent memory."""
     if ctx.invoked_subcommand is None:
         if _is_interactive():
             ctx.invoke(chat_cmd)

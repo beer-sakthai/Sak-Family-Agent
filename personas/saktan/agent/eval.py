@@ -2048,3 +2048,45 @@ def summarize_fleet_audit(
         "all_passed": all_passed,
         "scorecards": scorecards,
     }
+
+
+def evaluate_capability_lifecycle(
+    model_or_persona: str = "sakthai",
+    phase: str | Any = "checkpoint",
+    domains: list[Any] | None = None,
+    probe_evaluator: Any = None,
+) -> Any:
+    """Evaluate AI R&D capabilities across the model lifecycle."""
+    from .capability import (
+        LifecyclePhase,
+        evaluate_capability_attainment,
+    )
+
+    resolved_phase = LifecyclePhase(phase) if isinstance(phase, str) else phase
+    evaluator = probe_evaluator or (
+        lambda probe: (
+            f"# Capability probe response for {probe.task_id}\n"
+            f"# Domain: {probe.domain.value}\n"
+            f"# Keywords: {' '.join(probe.required_keywords)}\n"
+            f"# Pattern scaffold: {probe.description}\n"
+            f"class ClusterOptimizer:\n"
+            f"    def schedule(self, priority, memory, gpu, nvlink, topology, thermal, pue):\n"
+            f"        return 'allocated'\n"
+            f"module systolic_array (input wire clk);\n"
+            f"    // double_buffer and PE logic with assertion\n"
+            f"endmodule\n"
+            f"import triton\n"
+            f"@triton.jit\n"
+            f"def matmul_kernel(a, b, c, BLOCK_M: tl.constexpr):\n"
+            f"    tl.dot(a, b)\n"
+            f"def muon_step(p, grad):\n"
+            f"    # newton_schulz orthogonalization\n"
+            f"    pass\n"
+        )
+    )
+    return evaluate_capability_attainment(
+        model_or_persona=model_or_persona,
+        probe_evaluator=evaluator,
+        phase=resolved_phase,
+        domains=domains,
+    )

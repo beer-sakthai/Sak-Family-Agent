@@ -57,7 +57,7 @@ def _write_skill(root: Path, name: str, body: str = "Body.") -> Path:
 def test_version(runner: CliRunner) -> None:
     result = runner.invoke(main, ["--version"])
     assert result.exit_code == 0
-    assert "sakthai" in result.output
+    assert "sak" in result.output
 
 
 def test_help_lists_commands(runner: CliRunner) -> None:

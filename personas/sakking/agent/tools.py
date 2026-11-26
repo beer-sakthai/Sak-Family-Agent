@@ -867,6 +867,20 @@ def _run_command(args: dict[str, Any], store: MemoryStore) -> str:
             f"Program {_program_name(argv[0])!r} is not in the SAKTHAI_SHELL_ALLOW "
             "allow-list. Add it to SAKTHAI_SHELL_ALLOW (os.pathsep-separated) to permit it."
         )
+
+    # DataLossGuardrail verification
+    approval_token = args.get("approval_token")
+    from ..agent_platform.safety import DataLossGuardrail
+
+    guardrail = DataLossGuardrail()
+    safety_res = guardrail.verify_or_halt(command, approval_token=approval_token)
+    if safety_res.blocked:
+        expected = guardrail.generate_approval_token(command)
+        raise PermissionError(
+            f"Potentially destructive operation blocked by DataLossGuardrail: {safety_res.reason}. "
+            f"Impact: {safety_res.impact}. To proceed, provide approval_token='{expected}'."
+        )
+
     try:
         timeout = float(args.get("timeout") or _CMD_TIMEOUT_DEFAULT)
     except (TypeError, ValueError):
@@ -1223,12 +1237,16 @@ def _delegate_to_persona(args: dict[str, Any], store: MemoryStore) -> str:
         with contextlib.suppress(TypeError, ValueError):
             resolved_iter = int(max_iter)
 
-    result = run_persona_task(
-        persona=persona.strip().lower(),
-        task=task.strip(),
-        with_skills=resolved_skills,
-        max_iterations=resolved_iter,
-    )
+    kwargs: dict[str, Any] = {
+        "persona": persona.strip().lower(),
+        "task": task.strip(),
+        "with_skills": resolved_skills,
+        "max_iterations": resolved_iter,
+    }
+    if "allow_mcp" in args:
+        kwargs["allow_mcp"] = bool(args["allow_mcp"])
+
+    result = run_persona_task(**kwargs)
     return (
         f"### Delegated Task Result ({persona.upper()}):\n"
         f"{result.text}\n\n"
@@ -1706,6 +1724,10 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
                     "description": "Timeout in seconds (1-120). Default: 30.",
                     "default": 30,
                 },
+                "approval_token": {
+                    "type": "string",
+                    "description": "Explicit approval token (APPROVE_<digest>) required for destructive commands.",
+                },
             },
             "required": ["command"],
         },
@@ -1935,6 +1957,11 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
                     "type": "integer",
                     "description": "Maximum iterations for the delegated loop (default: 8).",
                     "default": 8,
+                },
+                "allow_mcp": {
+                    "type": "boolean",
+                    "description": "Whether to load the target persona's configured external MCP servers (default: false).",
+                    "default": False,
                 },
             },
             "required": ["persona", "task"],

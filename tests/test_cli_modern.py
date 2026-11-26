@@ -52,15 +52,37 @@ def test_pyproject_scripts_include_sak_and_sakthai() -> None:
     assert scripts.get("sak") == "sakthai.cli:main"
 
 
+def test_version_dynamic_prog_name_sak(runner: CliRunner) -> None:
+    """When invoked as sak, version output shows sak."""
+    result = runner.invoke(main, ["--version"], prog_name="sak")
+    assert result.exit_code == 0
+    assert result.output.strip().startswith("sak, version")
+
+
+def test_version_dynamic_prog_name_sakthai(runner: CliRunner) -> None:
+    """When invoked as sakthai, version output shows sakthai."""
+    result = runner.invoke(main, ["--version"], prog_name="sakthai")
+    assert result.exit_code == 0
+    assert result.output.strip().startswith("sakthai, version")
+
+
+def test_version_dynamic_default(runner: CliRunner) -> None:
+    """When invoked without explicit prog_name, version defaults to sak."""
+    result = runner.invoke(main, ["--version"])
+    assert result.exit_code == 0
+    assert result.output.strip().startswith("sak, version")
+
+
 def test_main_no_args_non_interactive_shows_help(
     monkeypatch: pytest.MonkeyPatch, runner: CliRunner
 ) -> None:
     """When invoked without arguments non-interactively, main should display help."""
     monkeypatch.setattr(cli_module, "_is_interactive", lambda: False)
-    result = runner.invoke(main, [])
+    result = runner.invoke(main, [], prog_name="sak")
     assert result.exit_code == 0
-    assert "Usage:" in result.output
+    assert "Usage: sak" in result.output
     assert "Commands:" in result.output
+    assert "House of Sak" in result.output
 
 
 def test_main_no_args_interactive_launches_chat(
