@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import time
@@ -518,6 +519,48 @@ class GatewayRouter:
             yield f"event: {event_name}\ndata: {json.dumps(evt, ensure_ascii=False)}\n\n"
 
         yield "event: done\ndata: [DONE]\n\n"
+
+    def handle_github_maintenance(self, body_or_params: dict[str, Any]) -> dict[str, Any]:
+        """Execute weekly maintenance and backlog sync pipeline."""
+        from ..team.github_subagents import run_github_maintenance_pipeline
+
+        vacuum = bool(body_or_params.get("vacuum", False))
+        run_audit = bool(body_or_params.get("audit", False))
+        report = asyncio.run(run_github_maintenance_pipeline(vacuum=vacuum, run_audit=run_audit))
+        return {
+            "workflow_id": report.workflow_id,
+            "phases_completed": report.phases_completed,
+            "open_prs_audited": report.open_prs_audited,
+            "details": report.details,
+            "auto_merge_blocked": report.auto_merge_blocked,
+        }
+
+    def handle_github_audit(self) -> dict[str, Any]:
+        """Execute pull request audit pipeline."""
+        from ..team.github_subagents import run_github_audit_pipeline
+
+        report = asyncio.run(run_github_audit_pipeline())
+        return {
+            "workflow_id": report.workflow_id,
+            "phases_completed": report.phases_completed,
+            "open_prs_audited": report.open_prs_audited,
+            "high_risk_detected": report.high_risk_detected,
+            "boost_triggered": report.boost_triggered,
+            "details": report.details,
+            "auto_merge_blocked": report.auto_merge_blocked,
+        }
+
+    def handle_github_security(self) -> dict[str, Any]:
+        """Execute repository security audit pipeline."""
+        from ..team.github_subagents import run_github_security_pipeline
+
+        report = asyncio.run(run_github_security_pipeline())
+        return {
+            "workflow_id": report.workflow_id,
+            "phases_completed": report.phases_completed,
+            "details": report.details,
+            "auto_merge_blocked": report.auto_merge_blocked,
+        }
 
     def handle_memory_shards(self) -> dict[str, Any]:
         """Return SQLite metadata across all 6 persona shards."""

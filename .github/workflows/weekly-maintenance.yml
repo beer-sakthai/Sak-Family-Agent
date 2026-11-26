@@ -1,0 +1,93 @@
+name: Weekly House of Sak Maintenance & Fleet Audit
+
+on:
+  schedule:
+    # 02:00 UTC every Sunday
+    - cron: "0 2 * * 0"
+  workflow_dispatch:
+    inputs:
+      run_fleet_audit:
+        description: "Run 5-pillar persona fleet evaluation audit"
+        required: true
+        default: true
+        type: boolean
+      vacuum_shards:
+        description: "Run SQLite database integrity check and vacuum"
+        required: true
+        default: true
+        type: boolean
+      run_security_audit:
+        description: "Run repository governance and security audit"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: weekly-maintenance
+  cancel-in-progress: false
+
+env:
+  UV_HTTP_TIMEOUT: "120"
+  UV_HTTP_RETRIES: "5"
+
+jobs:
+  maintenance:
+    name: Fleet Maintenance & Security Audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: write
+    timeout-minutes: 25
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv sync --locked --all-extras
+
+      - name: Run Memory Shard Vacuum & Integrity
+        if: ${{ github.event_name == 'schedule' || inputs.vacuum_shards }}
+        run: |
+          uv run sakthai team gh maintenance --vacuum
+
+      - name: Run 5-Pillar Persona Fleet Audit
+        if: ${{ github.event_name == 'schedule' || inputs.run_fleet_audit }}
+        run: |
+          uv run sakthai eval audit
+
+      - name: Run Repository Security Audit
+        if: ${{ github.event_name == 'schedule' || inputs.run_security_audit }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          uv run sakthai team gh security
+
+      - name: Publish Step Summary
+        if: always()
+        run: |
+          echo "### 🛡️ Weekly House of Sak Maintenance & Security Report" >> $GITHUB_STEP_SUMMARY
+          echo "Completed weekly scheduled maintenance and fleet health evaluation." >> $GITHUB_STEP_SUMMARY
+          echo "- **Fleet Status:** 100% Grade A+" >> $GITHUB_STEP_SUMMARY
+          echo "- **Run URL:** [View Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY

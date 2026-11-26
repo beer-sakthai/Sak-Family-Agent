@@ -179,6 +179,17 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(chunk.encode("utf-8"))
                 self.wfile.flush()
             return
+        elif path in (
+            "/v1/team/github-subagents/maintenance",
+            "/team/github-subagents/maintenance",
+        ):
+            parsed = urlparse(self.path)
+            params = {k: v[0] for k, v in parse_qs(parsed.query).items()}
+            self._send_json(200, self.gateway_router.handle_github_maintenance(params))
+        elif path in ("/v1/team/github-subagents/audit", "/team/github-subagents/audit"):
+            self._send_json(200, self.gateway_router.handle_github_audit())
+        elif path in ("/v1/team/github-subagents/security", "/team/github-subagents/security"):
+            self._send_json(200, self.gateway_router.handle_github_security())
         elif path in ("/v1/memory/shards", "/memory/shards"):
             self._send_json(200, self.gateway_router.handle_memory_shards())
         elif path in ("/v1/memory/facts", "/memory/facts"):
@@ -334,6 +345,18 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
         elif path in ("/v1/team/pipelines", "/v1/team/run", "/team/run"):
             res = self.gateway_router.handle_team_run(body)
             self._send_json(200 if res.get("ok") else 400, res)
+
+        elif path in (
+            "/v1/team/github-subagents/maintenance",
+            "/team/github-subagents/maintenance",
+        ):
+            self._send_json(200, self.gateway_router.handle_github_maintenance(body))
+
+        elif path in ("/v1/team/github-subagents/audit", "/team/github-subagents/audit"):
+            self._send_json(200, self.gateway_router.handle_github_audit())
+
+        elif path in ("/v1/team/github-subagents/security", "/team/github-subagents/security"):
+            self._send_json(200, self.gateway_router.handle_github_security())
 
         elif path in ("/v1/memory/facts", "/memory/facts"):
             res = self.gateway_router.handle_memory_add_fact(body)
