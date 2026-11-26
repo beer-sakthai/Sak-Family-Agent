@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import sys
 
@@ -188,3 +189,102 @@ def run_cmd(pipeline_name: str, task: str, verbose: bool, as_json: bool) -> None
 
     if not result.success:
         sys.exit(1)
+
+
+@team_cmd.group(name="gh")
+def gh_cmd() -> None:
+    """GitHub CLI dynamic subagents and workflow automation."""
+
+
+@gh_cmd.command(name="maintenance")
+@click.option(
+    "--vacuum", is_flag=True, default=False, help="Vacuum and check SQLite memory stores."
+)
+@click.option(
+    "--audit", is_flag=True, default=False, help="Run fleet audit alongside backlog sync."
+)
+@click.option("--json", "as_json", is_flag=True, default=False, help="Emit output as JSON.")
+def gh_maintenance_cmd(vacuum: bool, audit: bool, as_json: bool) -> None:
+    """Run weekly maintenance and backlog sync pipeline via GitHub subagent."""
+    from ..team.github_subagents import run_github_maintenance_pipeline
+
+    report = asyncio.run(run_github_maintenance_pipeline(vacuum=vacuum, run_audit=audit))
+    if as_json:
+        payload = {
+            "workflow_id": report.workflow_id,
+            "phases_completed": report.phases_completed,
+            "open_prs_audited": report.open_prs_audited,
+            "details": report.details,
+            "auto_merge_blocked": report.auto_merge_blocked,
+        }
+        click.echo(json.dumps(payload, indent=2))
+        return
+
+    console.print(
+        f"\n[bold green]✓ Weekly Maintenance Pipeline Completed:[/bold green] {report.workflow_id}"
+    )
+    console.print(f"[bold]Phases:[/bold] {' ➔ '.join(report.phases_completed)}")
+    console.print(f"[bold]Open PRs Audited:[/bold] {report.open_prs_audited}")
+    console.print(f"[bold]Auto-Merge Blocked:[/bold] {report.auto_merge_blocked}\n")
+
+
+@gh_cmd.command(name="audit")
+@click.option("--json", "as_json", is_flag=True, default=False, help="Emit output as JSON.")
+def gh_audit_cmd(as_json: bool) -> None:
+    """Run pull request and workflow audit pipeline via GitHub subagent."""
+    from ..team.github_subagents import run_github_audit_pipeline
+
+    report = asyncio.run(run_github_audit_pipeline())
+    if as_json:
+        payload = {
+            "workflow_id": report.workflow_id,
+            "phases_completed": report.phases_completed,
+            "open_prs_audited": report.open_prs_audited,
+            "high_risk_detected": report.high_risk_detected,
+            "boost_triggered": report.boost_triggered,
+            "details": report.details,
+        }
+        click.echo(json.dumps(payload, indent=2))
+        return
+
+    console.print(
+        f"\n[bold green]✓ GitHub Audit Pipeline Completed:[/bold green] {report.workflow_id}"
+    )
+    console.print(f"[bold]Phases:[/bold] {' ➔ '.join(report.phases_completed)}")
+    console.print(f"[bold]Open PRs Audited:[/bold] {report.open_prs_audited}")
+    console.print(f"[bold]High Risk Detected:[/bold] {report.high_risk_detected}")
+    console.print(f"[bold]Deep Reasoning Boost:[/bold] {report.boost_triggered}\n")
+
+
+@gh_cmd.command(name="security")
+@click.option("--json", "as_json", is_flag=True, default=False, help="Emit output as JSON.")
+def gh_security_cmd(as_json: bool) -> None:
+    """Run repository security and governance audit via GitHub subagent."""
+    from ..team.github_subagents import run_github_security_pipeline
+
+    report = asyncio.run(run_github_security_pipeline())
+    if as_json:
+        payload = {
+            "workflow_id": report.workflow_id,
+            "phases_completed": report.phases_completed,
+            "details": report.details,
+            "auto_merge_blocked": report.auto_merge_blocked,
+        }
+        click.echo(json.dumps(payload, indent=2))
+        return
+
+    console.print(
+        f"\n[bold green]✓ Repository Security Audit Completed:[/bold green] {report.workflow_id}"
+    )
+    console.print(f"[bold]Phases:[/bold] {' ➔ '.join(report.phases_completed)}")
+    for d in report.details:
+        phase = d.get("phase")
+        if phase == "branch_protection":
+            console.print(
+                f"  • Branch Protection: {'Enabled' if d.get('protected') else 'Disabled / Unconfigured'}"
+            )
+        elif phase == "action_pinning":
+            console.print(f"  • Unpinned Action References: {d.get('unpinned_count', 0)}")
+        elif phase == "credential_hygiene":
+            console.print(f"  • Credential Hygiene: {d.get('status', 'unknown').upper()}")
+    console.print(f"[bold]Auto-Merge Blocked:[/bold] {report.auto_merge_blocked}\n")
