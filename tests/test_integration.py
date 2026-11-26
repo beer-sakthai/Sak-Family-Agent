@@ -39,6 +39,10 @@ def test_anthropic_live_smoke(tmp_path: Path) -> None:
     reason="GEMINI_API_KEY / GOOGLE_API_KEY not set",
 )
 def test_gemini_live_smoke(tmp_path: Path) -> None:
+    import httpx
+
+    from sakthai.auth import AuthError
+
     try:
         from google import genai  # noqa: F401
     except Exception as exc:  # pragma: no cover - depends on native libs
@@ -55,8 +59,8 @@ def test_gemini_live_smoke(tmp_path: Path) -> None:
                 model=model,
                 max_iterations=2,
             )
-        except Exception as exc:
-            pytest.skip(f"Gemini execution failed (e.g. model unavailable or quota): {exc}")
+        except (AuthError, httpx.ConnectError, httpx.TimeoutException) as exc:
+            pytest.skip(f"Gemini unavailable (auth/quota/network): {exc}")
     finally:
         store.close()
     assert result.text.strip()
@@ -67,6 +71,10 @@ def test_gemini_live_smoke(tmp_path: Path) -> None:
     reason="SAKTHAI_GATEWAY_URL not set",
 )
 def test_gateway_live_smoke(tmp_path: Path) -> None:
+    import httpx
+
+    from sakthai.auth import AuthError
+
     # The gateway provider is OpenAI-compatible; the model name is whatever the
     # configured gateway routes (e.g. an OpenRouter/LiteLLM slug). Callers point
     # SAKTHAI_GATEWAY_MODEL at a model their gateway actually serves.
@@ -81,8 +89,8 @@ def test_gateway_live_smoke(tmp_path: Path) -> None:
                 model=model,
                 max_iterations=2,
             )
-        except Exception as exc:
-            pytest.skip(f"Gateway execution failed (e.g. bad route or auth): {exc}")
+        except (AuthError, httpx.ConnectError, httpx.TimeoutException) as exc:
+            pytest.skip(f"Gateway unavailable (auth/network): {exc}")
     finally:
         store.close()
     assert result.text.strip()
@@ -93,6 +101,10 @@ def test_gateway_live_smoke(tmp_path: Path) -> None:
     reason="OPENAI_API_BASE / OPENAI_BASE_URL not set",
 )
 def test_openai_compat_live_smoke(tmp_path: Path) -> None:
+    import httpx
+
+    from sakthai.auth import AuthError
+
     # Exercises the OpenAI-compatible HTTP path against any self-hosted or
     # third-party endpoint the operator points OPENAI_API_BASE at.
     model = os.environ.get("SAKTHAI_OPENAI_MODEL", "gpt-4o-mini")
@@ -106,8 +118,8 @@ def test_openai_compat_live_smoke(tmp_path: Path) -> None:
                 model=model,
                 max_iterations=2,
             )
-        except Exception as exc:
-            pytest.skip(f"OpenAI-compatible execution failed: {exc}")
+        except (AuthError, httpx.ConnectError, httpx.TimeoutException) as exc:
+            pytest.skip(f"OpenAI-compatible unavailable (auth/network): {exc}")
     finally:
         store.close()
     assert result.text.strip()
@@ -122,7 +134,7 @@ def test_ollama_live_smoke(tmp_path: Path) -> None:
         resp = httpx.get(f"{host}/api/tags")
         resp.raise_for_status()
         models = [m["name"] for m in resp.json().get("models", [])]
-    except Exception as exc:
+    except (httpx.ConnectError, httpx.TimeoutException) as exc:
         pytest.skip(f"Ollama server at {host} not responsive: {exc}")
 
     if not models:
@@ -140,10 +152,8 @@ def test_ollama_live_smoke(tmp_path: Path) -> None:
                 model=model,
                 max_iterations=2,
             )
-        except Exception as exc:
-            pytest.skip(
-                f"Ollama execution failed (e.g. server error or model loading error): {exc}"
-            )
+        except (httpx.ConnectError, httpx.TimeoutException) as exc:
+            pytest.skip(f"Ollama unavailable during execution (network/server error): {exc}")
     finally:
         store.close()
     assert result.text.strip()
