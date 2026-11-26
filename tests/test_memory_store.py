@@ -83,6 +83,57 @@ def test_render_prompt_block(store: MemoryStore) -> None:
     assert "works late" in block
 
 
+def test_render_prompt_block_query_ranks_relevant_fact_over_recent_one(
+    store: MemoryStore,
+) -> None:
+    """A fact relevant to the query beats a more recent irrelevant one."""
+    store.add_fact("the user's dog is named Rex", kind="preference")
+    store.add_fact("the user's favorite color is blue", kind="preference")
+    block = store.render_prompt_block(fact_limit=1, query="what is the dog's name")
+    assert "Rex" in block
+    assert "blue" not in block
+
+
+def test_render_prompt_block_query_is_case_insensitive(store: MemoryStore) -> None:
+    store.add_fact("the user's dog is named Rex", kind="preference")
+    block = store.render_prompt_block(fact_limit=1, query="REX")
+    assert "Rex" in block
+
+
+def test_render_prompt_block_blank_query_matches_no_query(store: MemoryStore) -> None:
+    store.add_fact("the user's dog is named Rex", kind="preference")
+    store.add_fact("the user's favorite color is blue", kind="preference")
+    assert store.render_prompt_block(query="   ") == store.render_prompt_block()
+    assert store.render_prompt_block(query=None) == store.render_prompt_block()
+
+
+def test_render_prompt_block_nonmatching_query_falls_back_to_recency(
+    store: MemoryStore,
+) -> None:
+    """A task unrelated to any stored fact (the common case) must match
+    today's plain recency output exactly, not come back empty or reordered."""
+    store.add_fact("the user's dog is named Rex", kind="preference")
+    store.add_fact("the user's favorite color is blue", kind="preference")
+    assert store.render_prompt_block(query="hi there") == store.render_prompt_block()
+
+
+def test_render_prompt_block_query_on_empty_store_returns_empty(
+    store: MemoryStore,
+) -> None:
+    assert store.render_prompt_block(query="anything") == ""
+
+
+def test_render_prompt_block_tied_scores_preserve_recency_order(
+    store: MemoryStore,
+) -> None:
+    """Two facts that score equally keep the newest-first order."""
+    store.add_fact("project alpha status: green", kind="status")
+    store.add_fact("project beta status: green", kind="status")
+    block = store.render_prompt_block(fact_limit=1, query="status")
+    assert "beta" in block
+    assert "alpha" not in block
+
+
 def test_deduplicate_facts(store: MemoryStore) -> None:
     store.add_fact("dark", kind="pref", key="theme")
     store.add_fact("light", kind="pref", key="theme")  # newer wins
