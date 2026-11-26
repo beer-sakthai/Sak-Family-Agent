@@ -100,14 +100,19 @@ jobs:
 
       - name: Publish Step Summary
         if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          SERVER_URL: ${{ github.server_url }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
         run: |
           {
             echo "### 🛡️ Weekly House of Sak Maintenance & Security Report"
             echo "Completed weekly scheduled maintenance and fleet health evaluation."
-            if [ "${{ job.status }}" = "success" ]; then
+            if [ "$JOB_STATUS" = "success" ]; then
               echo "- **Fleet Status:** 100% Grade A+ (All checks passed)"
             else
               echo "- **Fleet Status:** Attention Needed (One or more tasks failed)"
             fi
-            echo "- **Run URL:** [View Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+            echo "- **Run URL:** [View Run]($SERVER_URL/$REPOSITORY/actions/runs/$RUN_ID)"
           } >> "$GITHUB_STEP_SUMMARY"
