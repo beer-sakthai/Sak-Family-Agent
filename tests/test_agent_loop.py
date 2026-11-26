@@ -2366,6 +2366,24 @@ class TestUntrustedDataWrapping:
         assert "⚠️ END UNTRUSTED DATA" in block
         assert "test fact from untrusted source" in block
 
+    def test_build_system_forwards_task_as_memory_query(
+        self, sakthai_home, store: MemoryStore, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The live task must reach render_prompt_block as `query`, not be
+        dropped — this is what makes the injected memory block retrieval-
+        relevant instead of purely recency-based."""
+        captured: dict[str, object] = {}
+        original = store.render_prompt_block
+
+        def _spy(*, query: str | None = None, **kwargs: object) -> str:
+            captured["query"] = query
+            return original(query=query, **kwargs)  # type: ignore[arg-type]
+
+        monkeypatch.setattr(store, "render_prompt_block", _spy)
+        client = FakeClient([_Resp("end_turn", [_Block(type="text", text="ok")])])
+        run_agent("what is the dog's name", client=client, store=store, provider="anthropic")
+        assert captured["query"] == "what is the dog's name"
+
 
 # -- persona attribution --------------------------------------------------
 

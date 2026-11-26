@@ -48,6 +48,25 @@ def test_provider_renders_facts_after_initialize(sakthai_home: Path) -> None:
     assert p.system_prompt_block() == ""
 
 
+def test_provider_prefetch_forwards_query_to_store(sakthai_home: Path) -> None:
+    """prefetch's query parameter must reach the store, not be discarded —
+    it is the provider's half of the retrieval-augmented context."""
+    p = SakThaiMemoryProvider()
+    p.initialize()
+    captured: dict[str, object] = {}
+    original = p._store.render_prompt_block  # type: ignore[union-attr]
+
+    def _spy(*, query: str | None = None, **kwargs: object) -> str:
+        captured["query"] = query
+        return original(query=query, **kwargs)
+
+    monkeypatch_target = p._store  # type: ignore[union-attr]
+    monkeypatch_target.render_prompt_block = _spy
+    p.prefetch("find the dog")
+    assert captured["query"] == "find the dog"
+    p.shutdown()
+
+
 def test_provider_initialize_degrades_gracefully(
     sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
