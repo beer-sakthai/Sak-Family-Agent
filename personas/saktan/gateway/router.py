@@ -524,8 +524,15 @@ class GatewayRouter:
         """Execute weekly maintenance and backlog sync pipeline."""
         from ..team.github_subagents import run_github_maintenance_pipeline
 
-        vacuum = bool(body_or_params.get("vacuum", False))
-        run_audit = bool(body_or_params.get("audit", False))
+        def _to_bool(val: Any) -> bool:
+            if isinstance(val, bool):
+                return val
+            if isinstance(val, str):
+                return val.strip().lower() in ("true", "1", "yes")
+            return bool(val)
+
+        vacuum = _to_bool(body_or_params.get("vacuum", False))
+        run_audit = _to_bool(body_or_params.get("audit", False))
         report = asyncio.run(run_github_maintenance_pipeline(vacuum=vacuum, run_audit=run_audit))
         return {
             "workflow_id": report.workflow_id,

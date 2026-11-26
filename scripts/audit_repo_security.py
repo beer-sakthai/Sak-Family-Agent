@@ -12,11 +12,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import re
 import sys
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger("sakthai.audit")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -54,8 +57,6 @@ def audit_workflows(repo_root: Path) -> dict[str, Any]:
     unpinned_references: list[str] = []
 
     for yml in workflows_dir.glob("*.yml"):
-        if yml.name.endswith(".lock.yml"):
-            continue
         total_workflows += 1
         content = yml.read_text(encoding="utf-8")
 
@@ -94,7 +95,9 @@ def audit_credential_hygiene(repo_root: Path) -> dict[str, Any]:
     leaked_findings: list[dict[str, str]] = []
 
     for root, dirs, files in os.walk(repo_root):
-        dirs[:] = [d for d in dirs if d not in EXCLUDED_PATHS and not d.startswith(".")]
+        dirs[:] = [
+            d for d in dirs if d not in EXCLUDED_PATHS and (not d.startswith(".") or d == ".github")
+        ]
         for f in files:
             if f.endswith((".py", ".yml", ".yaml", ".json", ".md", ".ts", ".tsx")):
                 file_path = Path(root) / f
@@ -142,33 +145,36 @@ def run_audit(as_json: bool = False) -> int:
     }
 
     if as_json:
-        print(json.dumps(report, indent=2))
-        return 0
+        sys.stdout.write(json.dumps(report, indent=2) + "\n")
+        return 1 if cred_results.get("leak_count", 0) > 0 else 0
 
-    print("=" * 65)
-    print("  🛡️  House of Sak — Repository Security & Governance Audit")
-    print("=" * 65)
-    print(f"Total YAML Workflows Audited: {workflow_results.get('total_workflows')}")
-    print(f"Pinned Action References:    {workflow_results.get('pinned_action_references')}")
-    print(f"Unpinned References:         {workflow_results.get('unpinned_action_references')}")
-    print(f"Harden-Runner Workflows:     {workflow_results.get('harden_runner_workflows')}")
-    print("-" * 65)
-    print(
-        f"Credential Hygiene Status:   {cred_results.get('status').upper()} (Leaks: {cred_results.get('leak_count')})"
+    logger.info("=" * 65)
+    logger.info("  🛡️  House of Sak — Repository Security & Governance Audit")
+    logger.info("=" * 65)
+    logger.info("Total YAML Workflows Audited: %s", workflow_results.get("total_workflows"))
+    logger.info("Pinned Action References:    %s", workflow_results.get("pinned_action_references"))
+    logger.info("Unpinned References:         %s", workflow_results.get("unpinned_action_references"))
+    logger.info("Harden-Runner Workflows:     %s", workflow_results.get("harden_runner_workflows"))
+    logger.info("-" * 65)
+    logger.info(
+        "Credential Hygiene Status:   %s (Leaks: %s)",
+        cred_results.get("status", "").upper(),
+        cred_results.get("leak_count", 0),
     )
-    print(f"Auto-Merge Policy:           {report['auto_merge_policy']}")
-    print(f"Test Coverage Floor:         {report['coverage_floor']}")
-    print("=" * 65)
+    logger.info("Auto-Merge Policy:           %s", report["auto_merge_policy"])
+    logger.info("Test Coverage Floor:         %s", report["coverage_floor"])
+    logger.info("=" * 65)
 
     if cred_results.get("leak_count", 0) > 0:
-        print("\n❌ FAILED: Plaintext secrets detected in active code!")
+        logger.error("❌ FAILED: Plaintext secrets detected in active code!")
         return 1
 
-    print("\n✅ PASSED: Repository security & governance audit verified clean.")
+    logger.info("✅ PASSED: Repository security & governance audit verified clean.")
     return 0
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     parser = argparse.ArgumentParser(description="Audit repository security invariants.")
     parser.add_argument("--json", action="store_true", help="Emit report as JSON.")
     args = parser.parse_args()

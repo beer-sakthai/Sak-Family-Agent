@@ -11,6 +11,7 @@ import enum
 import json
 import logging
 import os
+import re
 import sqlite3
 import subprocess
 from dataclasses import dataclass, field
@@ -197,10 +198,15 @@ async def run_github_maintenance_pipeline(
                         db_p = os.path.join(root, f)
                         try:
                             conn = sqlite3.connect(db_p)
-                            conn.execute("PRAGMA integrity_check;")
-                            conn.execute("VACUUM;")
+                            cursor = conn.cursor()
+                            cursor.execute("PRAGMA integrity_check;")
+                            res = cursor.fetchone()
+                            if res and res[0] == "ok":
+                                conn.execute("VACUUM;")
+                                vacuum_count += 1
+                            else:
+                                logger.warning("Integrity check failed on %s: %s", db_p, res)
                             conn.close()
-                            vacuum_count += 1
                         except Exception as e:
                             logger.warning("Vacuum failed on %s: %s", db_p, e)
     report.details.append({"phase": "shards", "vacuumed": vacuum_count})
@@ -228,11 +234,25 @@ async def run_github_maintenance_pipeline(
     report.open_prs_audited = len(open_prs)
 
     # Phase 4: Fleet Health
-    report.phases_completed.append("Fleet Audit")
-    fleet_status = "skipped"
     if run_audit:
-        fleet_status = "audited"
-    report.details.append({"phase": "fleet", "status": fleet_status})
+        try:
+            from ..agent.eval import summarize_fleet_audit
+
+            fleet_res = summarize_fleet_audit()
+            report.phases_completed.append("Fleet Audit")
+            fleet_status = (
+                f"passed (Grade {fleet_res.get('fleet_grade', 'A+')})"
+                if fleet_res.get("all_passed")
+                else f"failed (Grade {fleet_res.get('fleet_grade', 'F')})"
+            )
+            report.details.append(
+                {"phase": "fleet", "status": fleet_status, "audit_summary": fleet_res}
+            )
+        except Exception as e:
+            logger.warning("Fleet audit failed: %s", e)
+            report.details.append({"phase": "fleet", "status": "error", "error": str(e)})
+    else:
+        report.details.append({"phase": "fleet", "status": "skipped"})
 
     # Phase 5: Execute & Verify
     report.phases_completed.append("Execute & Verify")
@@ -286,7 +306,56 @@ async def run_github_security_pipeline(
 
     # Phase 3: Credential Hygiene Check
     report.phases_completed.append("Credential Hygiene")
-    report.details.append({"phase": "credential_hygiene", "status": "clean"})
+    sensitive_patterns = [
+        re.compile(r"sk-[a-zA-Z0-9]{20,}", re.IGNORECASE),
+        re.compile(r"hf_[a-zA-Z0-9]{30,}", re.IGNORECASE),
+        re.compile(r"ghp_[a-zA-Z0-9]{30,}", re.IGNORECASE),
+    ]
+    excluded_dirs = {
+        ".git",
+        ".pytest_cache",
+        ".venv",
+        "node_modules",
+        "dist",
+        "build",
+        "__pycache__",
+        ".mypy_cache",
+        ".ruff_cache",
+        "tests",
+    }
+    leak_count = 0
+    repo_root = Path.cwd()
+    for root, dirs, files in os.walk(repo_root):
+        dirs[:] = [
+            d for d in dirs if d not in excluded_dirs and (not d.startswith(".") or d == ".github")
+        ]
+        for f in files:
+            if f.endswith((".py", ".yml", ".yaml", ".json", ".md", ".ts", ".tsx")):
+                file_p = Path(root) / f
+                try:
+                    text = file_p.read_text(encoding="utf-8", errors="ignore")
+                    for pat in sensitive_patterns:
+                        for m in pat.findall(text):
+                            m_lower = m.lower()
+                            if any(
+                                k in m_lower
+                                for k in (
+                                    "placeholder",
+                                    "example",
+                                    "dummy",
+                                    "xxx",
+                                    "your_",
+                                    "test",
+                                )
+                            ):
+                                continue
+                            leak_count += 1
+                except OSError:
+                    pass
+    cred_status = "clean" if leak_count == 0 else f"flagged ({leak_count} leaks)"
+    report.details.append(
+        {"phase": "credential_hygiene", "status": cred_status, "leak_count": leak_count}
+    )
 
     # Phase 4: Policy Enforcement
     report.phases_completed.append("Policy Enforcement")

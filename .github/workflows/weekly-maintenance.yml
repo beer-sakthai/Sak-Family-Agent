@@ -67,8 +67,22 @@ jobs:
         run: |
           uv sync --locked --all-extras
 
+      - name: Restore Persona Memory Shards Cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.sakthai
+          key: sakthai-memory-shards-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            sakthai-memory-shards-${{ runner.os }}-
+
+      - name: Initialize Family Persona Shards if Missing
+        run: |
+          uv run python3 -c "from sakthai.config import PERSONA_NAMES; from sakthai.memory.store import MemoryStore; [MemoryStore(persona=p) for p in PERSONA_NAMES]"
+
       - name: Run Memory Shard Vacuum & Integrity
         if: ${{ github.event_name == 'schedule' || inputs.vacuum_shards }}
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           uv run sakthai team gh maintenance --vacuum
 
@@ -87,7 +101,13 @@ jobs:
       - name: Publish Step Summary
         if: always()
         run: |
-          echo "### 🛡️ Weekly House of Sak Maintenance & Security Report" >> $GITHUB_STEP_SUMMARY
-          echo "Completed weekly scheduled maintenance and fleet health evaluation." >> $GITHUB_STEP_SUMMARY
-          echo "- **Fleet Status:** 100% Grade A+" >> $GITHUB_STEP_SUMMARY
-          echo "- **Run URL:** [View Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "### 🛡️ Weekly House of Sak Maintenance & Security Report"
+            echo "Completed weekly scheduled maintenance and fleet health evaluation."
+            if [ "${{ job.status }}" = "success" ]; then
+              echo "- **Fleet Status:** 100% Grade A+ (All checks passed)"
+            else
+              echo "- **Fleet Status:** Attention Needed (One or more tasks failed)"
+            fi
+            echo "- **Run URL:** [View Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          } >> "$GITHUB_STEP_SUMMARY"

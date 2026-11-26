@@ -234,10 +234,22 @@ async def test_run_github_security_pipeline(monkeypatch: pytest.MonkeyPatch) -> 
     assert report.auto_merge_blocked is True
 
 
-def test_cli_gh_commands() -> None:
+def test_cli_gh_commands(monkeypatch: pytest.MonkeyPatch) -> None:
     from click.testing import CliRunner
 
     from sakthai.cli.team import team_cmd
+    from sakthai.team.github_subagents import GitHubCLISubagentFramework
+
+    def mock_run_gh(self, args: list[str]) -> tuple[int, str]:
+        if "pr" in args:
+            return 0, '[{"number": 101, "title": "feat: mock PR"}]'
+        if "issue" in args:
+            return 0, '[{"number": 201, "title": "mock issue"}]'
+        if "branches/main" in " ".join(args):
+            return 0, '{"name": "main", "protected": true}'
+        return 0, "[]"
+
+    monkeypatch.setattr(GitHubCLISubagentFramework, "run_gh", mock_run_gh)
 
     runner = CliRunner()
     res_maint = runner.invoke(team_cmd, ["gh", "maintenance", "--json"])
