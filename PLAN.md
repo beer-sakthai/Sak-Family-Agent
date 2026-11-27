@@ -270,6 +270,12 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [ ] **Phase 3/UX: Namespace Cleanup, Config & Shell Completion** `[SakKing, SakSee, SakSit]` — Sectioned `--help`; merge duplicates (`platform skills`→`skills`, `sak serve {web,gateway,telegram,mcp,dashboard}`, `setup`→`doctor --fix`) with hidden deprecated aliases for one minor release (bare `sak mcp`/`mcp serve` stay permanent); `~/.sakthai/config.toml` with `[persona.<name>]` overrides + `sak config`; `sak completion bash|zsh|fish`.
 - [ ] **Phase 4: Mirror Noise Reduction** `[SakJules]` — Keep ADR-0001; mark persona package copies `linguist-generated` in `.gitattributes` and add a CI guard rejecting hand edits to mirrored copies; revisit single-sourcing when standalone persona repos retire.
 
+### 13. Six-Persona Role Enhancements & Multi-Agent Autonomous Capabilities (2026-11-26)
+- [x] 2026-11-26 **Phase 1: Multi-Agent Goal Delegation & Webhook Cache Invalidation** `[SakThai, SakKing]` — Implement `decompose_and_dispatch` tool for SakThai auto-delegating subtasks across all 6 personas; connect Gate 1 portfolio cache auto-refresh to Hugging Face webhook events; enforce 6-persona parity.
+- [x] 2026-11-26 **Phase 2: Media Generation, Scraping Resilience & Circuit Breaker** `[SakSit, SakSee]` — Package `generate_model_card_assets` with `hf-media` MCP for SakSit; implement domain rate-limit circuit breaker and dual-engine fallback in SakSee.
+- [x] 2026-11-26 **Phase 3: CI/CD Self-Healing, PR Feedback & WAL Compaction Daemon** `[SakJules, SakTan]` — Automated CI review bot feedback synthesizer for SakJules; idle-time SQLite WAL vacuum daemon and daily fleet drift watchdog for SakTan.
+- [x] 2026-11-26 **Phase 4: Full-Fleet Verification, Quality Gates & Sync to Main** `[SakJules]` — Run test matrix (4,200+ tests, >=96% coverage, lint, mypy, bandit) and commit to main.
+
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |
