@@ -175,7 +175,7 @@ class TestProTip3ModelSelectionPresets:
 
         reasoning_preset = resolve_model_preset("  Reasoning ")
         assert reasoning_preset.tier == ModelTier.REASONING
-        assert reasoning_preset.model_name == "gemini-4-carbon"
+        assert reasoning_preset.model_name == "gemini-4-neon"
 
         local_preset = resolve_model_preset("local")
         assert local_preset.tier == ModelTier.LOCAL
@@ -198,7 +198,7 @@ class TestProTip3ModelSelectionPresets:
 
     def test_unified_agent_config_initializes_with_tier(self) -> None:
         cfg = UnifiedAgentConfig(name="test-agent", tier=ModelTier.REASONING)
-        assert cfg.model == "gemini-4-carbon"
+        assert cfg.model == "gemini-4-neon"
 
         cfg_str = UnifiedAgentConfig(name="test-agent", tier="fast")
         assert cfg_str.model == "gemini-4-hydrogen"
@@ -280,5 +280,5 @@ class TestPlatformCLIPorTips:
                 platform_cmd, ["antigravity", "--tier", "reasoning", "Plan a refactor"]
             )
             assert res.exit_code == 0
-            assert "gemini-4-carbon" in res.output
+            assert "gemini-4-neon" in res.output
             assert "Hello from tier" in res.output

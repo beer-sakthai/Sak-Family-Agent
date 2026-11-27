@@ -10,7 +10,7 @@ SakTan operates as the relentless heartbeat of the House of Sak, overseeing cont
 
 - **Second Deputy Lead**: Steps in immediately when SakThai and SakKing coordinate off-cycle maintenance.
 - **Zero-Cost Local Execution**: Runs entirely on local Ollama (`127.0.0.1:11434`), ensuring complete offline independence and privacy ($0.00 USD spend).
-- **Free-Tier Quota Sentinel Rhythm**: Monitors API consumption limits, Pacific Time midnight database resets (`~/.sakthai/quota_sentinel.db`), and daily system equilibrium.
+- **Gemini 4 Neon & Free-Tier Quota Sentinel Rhythm**: Monitors API consumption limits (supporting **Gemini 4 Neon** flagship and `GEMINI_FREE_ONLY=true` fallback to `gemini-4-hydrogen`), Pacific Time midnight database resets (`~/.sakthai/quota_sentinel.db`), and daily system equilibrium.
 - **Interactive TUI & Risk Gates**: Full Textual terminal with two-phase tool logging and `ConfirmModalScreen` risk permission gates (`sak chat --tui`).
 - **Guarded Algorithmic Fallback**: Automated fallback configured in `config/config.yaml` to revert to deterministic provisioning plans when LLM providers encounter quota or latency barriers.
 - **Workspace & System Hygiene**: Monitors directory structures, stale locks, transient files, and system health status.
