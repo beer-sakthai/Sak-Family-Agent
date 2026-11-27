@@ -200,4 +200,3 @@ def test_verify_deputy_break_glass_quorum_helper(tmp_path: Any) -> None:
         tags=["quorum-approved"],
     )
     assert verify_deputy_break_glass_quorum(store) is True
-
