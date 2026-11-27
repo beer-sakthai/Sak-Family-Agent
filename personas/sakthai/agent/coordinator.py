@@ -177,7 +177,9 @@ def run_persona_task(
                     _DELEGATION_CHAIN.reset(token)
         except (ConnectionError, TimeoutError, ImportError) as mcp_exc:
             logger.warning(
-                "Could not connect MCP servers for delegated persona %s: %s. Continuing without MCP.", persona, mcp_exc
+                "Could not connect MCP servers for delegated persona %s: %s. Continuing without MCP.",
+                persona,
+                mcp_exc,
             )
         finally:
             if mcp_config_backup is not None:
