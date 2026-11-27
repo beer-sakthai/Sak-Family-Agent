@@ -318,6 +318,27 @@ def test_dependabot_config_avoids_known_update_failures() -> None:
             )
 
 
+def test_dependabot_config_daily_schedule() -> None:
+    """Verify all ecosystems in .github/dependabot.yml run on daily interval and omit invalid day keys."""
+    dependabot_path = REPO_ROOT / ".github" / "dependabot.yml"
+    data = yaml.safe_load(dependabot_path.read_text(encoding="utf-8"))
+    assert isinstance(data, dict)
+    assert data.get("version") == 2
+    updates = data.get("updates") or []
+    assert len(updates) >= 4, "Dependabot configuration must cover all repo ecosystems"
+
+    for entry in updates:
+        ecosystem = entry.get("package-ecosystem")
+        directory = entry.get("directory")
+        schedule = entry.get("schedule") or {}
+        assert schedule.get("interval") == "daily", (
+            f"Dependabot entry for {ecosystem} at {directory} must use daily interval"
+        )
+        assert "day" not in schedule, (
+            f"Dependabot entry for {ecosystem} at {directory} must not specify 'day' with daily interval"
+        )
+
+
 def test_gitattributes_and_scorecard_lockfile_hygiene() -> None:
     """Ensure generated workflow lockfiles are marked export-ignore to prevent Scorecard noise."""
     gitattributes_path = REPO_ROOT / ".gitattributes"

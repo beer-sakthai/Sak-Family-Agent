@@ -42,7 +42,7 @@
 - **🤗 Built-in Hugging Face Hub & Inference Engine (`huggingface_inference` & `sakthai hf`)**:
   - `sakthai hf info <repo_id>` — Live Hub model/dataset/Space inspection (Gate 1 for SakSit)
   - `sakthai hf download <repo_id>` — Safe artifact retrieval
-  - `config/mcp.json` declares `{}` (zero external npx servers; all Hub calls run through native tools)
+  - `config/mcp.json` declares active streamable HTTP MCP servers (`huggingface`, `gemini-api-docs`, `microsoft-learn`) and stdio `hf-hub-tools`
 - **⚡ MCP v2 Ecosystem Integration (`huggingface` remote MCP)**:
   - `https://huggingface.co/mcp?login&gradio=none` over the package's Streamable HTTP transport
   - Injects `Authorization: Bearer $HF_TOKEN` with graceful degradation when token is unconfigured

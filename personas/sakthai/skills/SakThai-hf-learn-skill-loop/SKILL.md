@@ -96,10 +96,10 @@ Notify only on real artifact creation:
 
 - [ ] Job created with `cronjob(action='create', schedule='...', deliver='origin')`
 - [ ] Job ID captured (so it can be paused/removed later)
-- [ ] Prompt file at `~/.hermes/cron/prompts/<name>.md` is self-contained and best-effort on supermemory writes
-- [ ] Ledger at `~/.hermes/cron/output/<name>-topics.txt` exists and is empty on first run
+- [ ] Prompt file at `~/.sakthai/cron/prompts/<name>.md` is self-contained and best-effort on supermemory writes
+- [ ] Ledger at `~/.sakthai/cron/output/<name>-topics.txt` exists and is empty on first run
 - [ ] Only the strictly-required skills are attached to the job
-- [ ] Workdir is the user's home (`/home/sakthai`) so prompt file paths resolve
+- [ ] Workdir is the user's workspace root (`$HOME` or repo root) so prompt file paths resolve
 - [ ] First tick confirmed: a SKILL.md appears under target skills dir
 - [ ] First tick delivered only the success line to Telegram, not a full report
 - [ ] On no-op tick, response is exactly `[SILENT]`
