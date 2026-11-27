@@ -34,10 +34,10 @@ When generating transient test scripts or verification artifacts, avoid hardcodi
 python3 -c "
 import tempfile, subprocess, sys
 with tempfile.NamedTemporaryFile(mode='w', suffix='.py') as f:
-    f.write('print(\"Verification successful\")\n')
+    f.write('import sys; sys.stdout.write(\"Verification successful\\n\")\n')
     f.flush()
     res = subprocess.run([sys.executable, f.name], capture_output=True, text=True)
-    print(res.stdout)
+    sys.stdout.write(res.stdout)
 "
 ```
 
@@ -47,7 +47,7 @@ When fetching telemetry, health metrics, or schema payloads:
 - Avoid piping unvalidated network responses directly into bash execution.
 - Use explicit output files or parse directly with `json.load`:
   ```bash
-  curl -sSf "https://api.example.com/health" | python3 -c "import json, sys; d=json.load(sys.stdin); print(d.get('status'))"
+  curl -sSf "https://api.example.com/health" | python3 -c "import json, sys; d=json.load(sys.stdin); sys.stdout.write(str(d.get('status')) + '\n')"
   ```
 - Set reasonable timeouts (`--max-time 10`) on all network operations to prevent hanging automated tasks.
 

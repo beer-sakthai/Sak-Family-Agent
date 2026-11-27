@@ -47,15 +47,15 @@ Query Hugging Face Hub public REST endpoints with standard headers:
 ```bash
 # 1. Fetch author model catalog
 curl -sSf "https://huggingface.co/api/models?author=Nanthasit&full=true" \
-  | python3 -c "import json, sys; models = json.load(sys.stdin); print(f'Total Models: {len(models)}')"
+  | python3 -c "import json, sys; models = json.load(sys.stdin); sys.stdout.write(f'Total Models: {len(models)}\n')"
 
 # 2. Check specific model card & sibling files
 curl -sSf "https://huggingface.co/api/models/Nanthasit/sakthai-context-7b-tools" \
-  | python3 -c "import json, sys; m = json.load(sys.stdin); print('Siblings:', [f['rfilename'] for f in m.get('siblings', [])])"
+  | python3 -c "import json, sys; m = json.load(sys.stdin); sys.stdout.write('Siblings: ' + str([f['rfilename'] for f in m.get('siblings', [])]) + '\n')"
 
 # 3. Check Space runtime status
 curl -sSf "https://huggingface.co/api/spaces/Nanthasit/sakthai-chat" \
-  | python3 -c "import json, sys; s = json.load(sys.stdin); print('Stage:', s.get('runtime', {}).get('stage'))"
+  | python3 -c "import json, sys; s = json.load(sys.stdin); sys.stdout.write('Stage: ' + str(s.get('runtime', {}).get('stage')) + '\n')"
 ```
 
 ## 3. Operational Gaps & Remediation Patterns

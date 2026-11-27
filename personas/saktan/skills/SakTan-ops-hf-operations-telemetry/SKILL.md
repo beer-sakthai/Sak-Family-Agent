@@ -42,15 +42,15 @@ Query the Hugging Face Hub REST API directly:
 ```bash
 # List all models with downloads and pipeline tag:
 curl -s "https://huggingface.co/api/models?author=Nanthasit&sort=lastModified" \
-  | python3 -c "import json, sys; [print(f\"{m['id']:45s} downloads: {m.get('downloads',0):5d} pipeline: {m.get('pipeline_tag','?'):20s}\") for m in json.load(sys.stdin)]"
+  | python3 -c "import json, sys; [sys.stdout.write(f\"{m['id']:45s} downloads: {m.get('downloads',0):5d} pipeline: {m.get('pipeline_tag','?'):20s}\n\") for m in json.load(sys.stdin)]"
 
 # List all datasets:
 curl -s "https://huggingface.co/api/datasets?author=Nanthasit" \
-  | python3 -c "import json, sys; [print(f\"{d['id']:40s} downloads: {d.get('downloads',0):5d}\") for d in json.load(sys.stdin)]"
+  | python3 -c "import json, sys; [sys.stdout.write(f\"{d['id']:40s} downloads: {d.get('downloads',0):5d}\n\") for d in json.load(sys.stdin)]"
 
 # List all Spaces:
 curl -s "https://huggingface.co/api/spaces?author=Nanthasit" \
-  | python3 -c "import json, sys; [print(f\"{s['id']:40s} stage: {s.get('runtime',{}).get('stage','?')}\") for s in json.load(sys.stdin)]"
+  | python3 -c "import json, sys; [sys.stdout.write(f\"{s['id']:40s} stage: {s.get('runtime',{}).get('stage','?')}\n\") for s in json.load(sys.stdin)]"
 ```
 
 ## 2. Card Improvement Workflow
@@ -86,7 +86,7 @@ Hugging Face Hub renders formal benchmark tables from `.eval_results/` files in 
 - Check existing eval results:
   ```bash
   curl -s "https://huggingface.co/api/models/{author}/{repo}" \
-    | python3 -c "import json, sys; d=json.load(sys.stdin); print([s['rfilename'] for s in d.get('siblings', []) if '.eval_results' in s['rfilename']])"
+    | python3 -c "import json, sys; d=json.load(sys.stdin); sys.stdout.write(str([s['rfilename'] for s in d.get('siblings', []) if '.eval_results' in s['rfilename']]) + '\n')"
   ```
 - All scores must cite concrete evaluation runs (e.g. `lm-eval`, `open-llm-leaderboard`). Never invent scores.
 
@@ -96,7 +96,7 @@ The primary family collection is `Nanthasit/sakthai-model-family-6a64745450b12d4
 - Verify collection contents:
   ```bash
   curl -s "https://huggingface.co/api/collections/Nanthasit/sakthai-model-family-6a64745450b12d421c1f9f02" \
-    | python3 -c "import json, sys; c=json.load(sys.stdin); print(f'Items in collection: {len(c.get(\"items\", []))}')"
+    | python3 -c "import json, sys; c=json.load(sys.stdin); sys.stdout.write(f'Items in collection: {len(c.get(\"items\", []))}\n')"
   ```
 
 ## 5. Security & Governance Invariants
