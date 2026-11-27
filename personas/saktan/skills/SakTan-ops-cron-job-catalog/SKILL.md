@@ -1,7 +1,7 @@
 ---
 name: SakTan-ops-cron-job-catalog
-version: 1.0.0
-description: Create, manage, heal, and debug any Hermes cron job.
+version: 1.1.0
+description: Catalog, manage, audit, and debug scheduled jobs across the House of Sak.
 category: operations
 tags:
 - automation
@@ -14,248 +14,112 @@ tags:
 - ops
 ---
 
-# Cron Job Everything
+# Cron Job Catalog & Operational Guide
 
-A single reference for all Hermes cron operations: creating, listing,
-updating, removing, pausing, running, and troubleshooting jobs. Covers
-scheduling quirks, cron-mode restrictions, self-heal patterns, tracker
-files, and zero-cost design. NOT a router — use this skill when you
-need to do anything with the `cronjob` tool or fix a cron that broke.
+A centralized reference for designing, requesting, verifying, and debugging scheduled
+jobs in the House of Sak. Covers cron expressions, systemd timers, GitHub Actions
+schedules, memory pairing contracts, and failure remediation.
 
 ## When to Use
 
-- Creating a cron job: `cronjob(action='create', ...)`
-- Jobs stopped, went silent, or show unexpected state.
-- A cron session blocked on execute_code, /tmp/ writes, or pipe patterns.
-- Scheduling: "every 1m" vs "1m" confusion.
-- A content-producing cron keeps repeating the same output.
-- "free" or "zero-cost" is a requirement.
-- Need a self-heal watchdog to keep jobs alive.
+- Defining a new recurring household schedule or maintenance cadence.
+- Auditing existing scheduled jobs for drift, timeouts, or failures.
+- Designing zero-cost (\$0.00) automated runs on local Ollama or pinned free-tier models.
+- Verifying the `schedule-request` and `schedule-confirmed` pairing protocol.
 
-## Prerequisites
+## Architecture & Delegation Boundary
 
-- Normal sessions: `cronjob` tool available.
-- Cron sessions: `cronjob` tool NOT available — access `~/profiles/sakthai/cron/jobs.json` directly via `read_file`/`write_file`.
-- UV env for Python: `uv run python3 ...` (system pip may be blocked).
+1. **SakTan (Specification)**: Owns the schedule design, cadence requirements, and memory logging.
+2. **SakJules (Implementation)**: Provisions GitHub Actions workflows, systemd unit files, or crontabs.
+3. **Target Persona (Execution)**: Runs the automated task via `sak run --persona <name>` or specific script.
 
-## Procedure
+## 1. Defining a Schedule Request
 
-### 1. Creating a Cron Job
+To request a recurring job, write a tagged observation to SakTan's memory shard:
 
-```python
-cronjob(action='create',
-        name='my-job',
-        schedule='every 1m',     # or 'every 5m', '0 9 * * *'
-        prompt='self-contained task instruction',
-        deliver='origin',         # 'local' to skip chat delivery
-        )
+```bash
+sakthai learn --persona saktan "SCHEDULE REQUEST: <job-name> | cron: <cron-expression> | why: <reason> | target-agent: <persona> | timestamp: <ISO>" \
+  --kind observation --tag schedule-request --tag saktan
 ```
 
-**Key parameters:**
-| Param | Required | Notes |
-|-------|----------|-------|
-| `schedule` | ✅ | Use `'every <N>m'` format for recurring jobs |
-| `prompt` | ✅ (unless script+no_agent) | Self-contained — cron has no conversation context |
-| `repeat` | ❌ | Omit for forever; set e.g. `5` for finite runs |
-| `deliver` | ❌ | Defaults to origin chat. `'local'` saves to files only |
-| `skills` | ❌ | Skills to load before running prompt |
-| `script` | ❌ | Path to `.py` file in `~/profiles/sakthai/scripts/` |
-| `no_agent` | ❌ | `true` = run script only, no LLM. Requires `script` |
+**Common Cron Cadences:**
+- Daily Morning Briefing: `0 8 * * *` (Daily at 08:00)
+- End-of-Day Closeout: `0 21 * * *` (Daily at 21:00)
+- Weekly Review: `0 18 * * 0` (Sundays at 18:00)
+- System Health Audit: `0 */4 * * *` (Every 4 hours)
+- Cache Hygiene: `0 2 * * *` (Nightly at 02:00)
 
-### 2. Listing Jobs
+## 2. Implementation Patterns
 
-```python
-cronjob(action='list')  # returns all jobs with status, schedule, last run
+### Pattern A: GitHub Actions Scheduled Workflow
+Ideal for cloud-hosted verification, portfolio checks, and repository maintenance:
+```yaml
+name: Scheduled Task
+on:
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv run sak run "Task instruction" --persona saktan
 ```
 
-### 3. Removing Old Jobs First (critical!)
+### Pattern B: Systemd User Service & Timer
+Ideal for local VM daemons, local Ollama execution, and offline scheduled tasks:
+- Service (`~/.config/systemd/user/sakthai-daily.service`):
+  ```ini
+  [Unit]
+  Description=SakThai Daily Operations Run
+  After=network.target
 
-Before creating new jobs for a changed requirement, always list and remove old ones.
-This prevents accidental pile-up (observed: 21 concurrent jobs instead of 11).
+  [Service]
+  Type=oneshot
+  WorkingDirectory=%h/beer-sakthai/Sak-Family-Agent
+  ExecStart=/usr/local/bin/uv run sak run "Run daily briefing" --persona saktan
+  StandardOutput=journal
+  StandardError=journal
+  ```
+- Timer (`~/.config/systemd/user/sakthai-daily.timer`):
+  ```ini
+  [Unit]
+  Description=Trigger SakThai Daily Operations
 
-```python
-# First see what exists
-cronjob(action='list')
-# Then remove each old job by ID
-cronjob(action='remove', job_id='abc123')
+  [Timer]
+  OnCalendar=*-*-* 08:00:00
+  Persistent=true
+
+  [Install]
+  WantedBy=timers.target
+  ```
+
+## 3. Auditing & Troubleshooting
+
+### Diagnostic Commands
+```bash
+# Check timer schedule and next trigger
+systemctl --user list-timers --all | grep sakthai
+
+# Inspect execution logs
+journalctl --user -u "sakthai-*.service" -n 50 --no-pager
+
+# Verify pairing in family memory
+sakthai memory family --tag schedule-request --personas saktan --limit 20
+sakthai memory family --tag schedule-confirmed --personas sakjules --limit 20
 ```
 
-### 4. Pausing / Resuming / Updating
+### Common Issues & Remedies
 
-```python
-cronjob(action='pause',  job_id='abc123')
-cronjob(action='resume', job_id='abc123')
-cronjob(action='update', job_id='abc123', schedule='every 5m')  # partial update
-cronjob(action='run',    job_id='abc123')  # trigger one immediate execution
-```
-
-### 5. Two Job Types
-
-| Type | When | Config | Behaviour |
-|------|------|--------|-----------|
-| **Agent-driven** | Task needs LLM reasoning | `prompt=...` (no script) | LLM runs prompt every tick, produces output |
-| **no_agent script** | Pure data collection, watchdog | `script='file.py'`, `no_agent=true` | Script runs directly. Stdout = message. Empty = silent |
-
-## Confirm Intent Before Building (Critical!)
-
-Before creating any fleet of cron jobs — especially 10+ — confirm the
-user's intent FIRST. This cost 3 rebuilds of the same 10-job set.
-
-**Never skip this step:**
-
-1. **State your understanding** in 1-2 sentences.
-2. **Show the job names** you plan to create.
-3. **Ask "variety or batch?"** — when user says "10 cronjob," they mean
-   10 DIFFERENT jobs (update, improve, check, debug, scan), not 10 identical
-   ones with different model names. Default to VARIETY.
-4. **Confirm replacement** — if changing from prior setup, ask "Remove old
-   ones first?" Do NOT add new jobs alongside old unless told to.
-5. **Only create after user confirms** — "yes", "ok", explicit approval.
-
-**Anti-pattern (observed: 3 rebuilds of same fleet):** Build all 10, present
-as surprise, user corrects → rebuild all 10 → user corrects again → rebuild
-10 a third time.
-
-**Pattern:**
-```
-"10 cron jobs for HF — each does something different. [list]"
-"Is this what you mean? Remove old ones first?"
-```
-
-## Delegating Cron Work to Subagents
-
-Parallelize HF cron work using `delegate_task` (up to 3 concurrent):
-
-```python
-delegate_task(tasks=[
-    {"goal": "Improve model card for Nanthasit/sakthai-context-1.5b...",
-     "context": "Add download badge, usage example, YAML metadata..."},
-    {"goal": "Health check Nanthasit/sakthai-coder-1.5b...",
-     "context": "Check README, cross-links, download stats..."},
-    {"goal": "Run benchmark on Nanthasit/sakthai-context-0.5b...",
-     "context": "Send tool-calling prompt via HF Inference API..."},
-])
-```
-
-Each subagent gets its own terminal + `HF_TOKEN`. Pass full context since
-subagents have no conversation history. Results return asynchronously.
-
-**When to delegate for HF:**
-- Improving multiple model/dataset cards simultaneously
-- Running parallel health checks across repos
-- Batch card updates across 10+ repos while monitoring results
-- Scanning trending models while uploading eval results
-
-HF Composio connection is active (OAuth, expires 2026-08-30) as backup
-auth, but subagents primarily use `HF_TOKEN` + `huggingface_hub`.
-
-## Cron-Mode Restrictions
-
-Cron sessions block certain tools. Workarounds:
-
-| Blocked | Workaround |
-|---------|------------|
-| `execute_code()` | `terminal()` with `python3 -c "..."` or heredoc |
-| `write_file(path='/tmp/...')` | Use `curl -o /tmp/...` (OS-level bypass) or write to `~/profiles/sakthai/scripts/` |
-| Pipe-to-interpreter (`curl \| python3`) | Two-step: `curl -o /tmp/file` then `python3 /tmp/file` |
-| `memory()` tool | `write_file`/`patch` on files directly |
-| `cronjob` tool | Self-heal via filesystem read/write of `jobs.json` |
-
-**Default-first approach:** `read_file`/`write_file`/`patch` → `terminal()` with inline `python3 -c "..."` → `terminal()` with heredoc → `curl -o` then `python3` — never start with blocked patterns.
-
-## Scheduling Format Pitfalls
-
-| Input | With repeat=N | Without repeat |
-|-------|--------------|----------------|
-| `'every 1m'` | ✅ Runs N times then stops | ✅ **Recurring forever** |
-| `'1m'` / `'once in 1m'` | ⚠️ UNRELIABLE — may complete at 1/N | ❌ **One-shot** |
-| `'every 5m'` | ✅ Works | ✅ Works |
-| `'0 9 * * *'` | ✅ Runs N days | ✅ Daily at 9AM |
-| `'30m'`, `'2h'`, `'1d'` | ✅ With repeat | ✅ Duration-based |
-| `'90s'` | ❌ Not supported | ❌ Not supported |
-
-**Rule:** Always use `'every <N>m'` for recurring jobs. For finite runs, add `repeat=N`. Never use bare `'1m'`.
-
-## Self-Heal Watchdog
-
-A `no_agent=True` script that re-enables cron jobs that errored or stopped:
-
-```python
-# ~/profiles/sakthai/scripts/selfheal.py
-import json, os
-JOBS = os.path.expanduser("~/profiles/sakthai/cron/jobs.json")
-data = json.load(open(JOBS))
-healed = []
-for job in data.get("jobs", []):
-    name = job.get("name", "")
-    if not name.startswith("eval-") and not name.startswith("hf-"):
-        continue
-    if job.get("state") in ("completed","error","cancelled") or not job.get("enabled"):
-        job["state"] = "scheduled"
-        job["enabled"] = True
-        healed.append(name)
-if healed:
-    json.dump(data, open(JOBS, "w"))
-    print(f"[HEALED] Restarted {len(healed)} job(s): {', '.join(healed)}")
-else:
-    print("[SILENT] All jobs healthy")
-```
-
-Create the watchdog itself as a cron job:
-```python
-cronjob(action='create', name='selfheal-watchdog',
-        script='selfheal.py', no_agent=True, schedule='every 1m')
-```
-
-## Tracking Uniqueness (No-Repeat)
-
-Content crons must produce something new each tick. Use JSON tracker files:
-
-```python
-import json, os
-TRACKER = os.path.expanduser("~/profiles/sakthai/cron/my-job-tracker.json")
-covered = json.load(open(TRACKER)) if os.path.exists(TRACKER) else []
-# Find something NOT in covered
-new_item = get_next_uncovered(covered)
-if new_item:
-    # ... process it ...
-    covered.append(new_item)
-    json.dump(covered, open(TRACKER, "w"))
-else:
-    print("[SILENT]")  # nothing new to report
-```
-
-Tracker files live in `~/profiles/sakthai/cron/`. Common names:
-- `hf-trending-covered.json`
-- `hf-papers-covered.json`
-- `hf-models-improved.json`
-- `hf-health-checked.json`
-
-## Zero-Cost Checklist
-
-Before creating any cron job that touches external APIs:
-
-- [ ] Using free Hub API (`huggingface.co/api/...`) — NOT metered Inference API
-- [ ] No GPU compute requested
-- [ ] Uploads to own repos via `huggingface_hub` — free
-- [ ] Tracker files are local JSON — zero cost
-- [ ] Self-heal uses local filesystem — zero cost
-- [ ] Inference API calls only for confirmed-supported models (`inference: true` in cardData)
-
-## Toolsets Assignment
-
-| Job Type | Toolsets |
-|----------|----------|
-| Content cron (web research) | `["web", "terminal", "file"]` |
-| Self-heal watchdog | `["file"]` |
-| HF model/dataset card upater | `["terminal", "file"]` |
-| Learning/skill-improvement | `["web", "terminal", "file", "skills"]` |
-
-## Verification
-
-After creating a cron job, confirm it works:
-
-1. `cronjob(action='list')` — job shows `state: scheduled`
-2. Wait one tick — `last_status` should become `"ok"`
-3. Check output: `ls ~/profiles/sakthai/cron/output/{job_id}/`
-4. Read latest output: `cat ~/profiles/sakthai/cron/output/{job_id}/*.md | tail -20`
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| Timer missed run | Machine suspended or service inactive | Enable `Persistent=true` in `[Timer]` section |
+| Job fails on import | Environment drift or unpinned dependencies | Use `uv run --locked` in service `ExecStart` |
+| Token / Quota error | Cloud API rate limit or depletion | Route scheduled tasks to local Ollama or free tier |
+| Unconfirmed schedule | Request not picked up by SakJules | Flag in daily briefing for SakJules review |

@@ -5,6 +5,7 @@ Six core agent personas — **sakthai**, **sakking**, **saksee**, **saksit**,
 repository.
 
 Today, they collectively host **464 specialized skills** in their overlays
+Today, they collectively host **458 specialized skills** in their overlays
 (counted as skill directories and files on disk — see the per-persona counts in the
 layout below), plus 19 shared skills. Most of that content
 lives directly within each persona's own `skills/` folder (its overlay); a
@@ -20,7 +21,7 @@ workflows, **servicequotebot**, lives under `services/servicequotebot/`.
 
 ```text
 personas/
-├── sakthai/            # Main Lead — HF master, ML, code, research (170 skills)
+├── sakthai/            # Main Lead — HF master, ML, code, research (174 skills)
 │   ├── SOUL.md         # Identity, charge system (v6), self-evaluation (v9)
 │   ├── PLAN.md         # Task decomposition & routing protocol (v7)
 │   ├── CYCLE.md        # 6-stage growth cycle & v9 self-eval rubric
@@ -28,7 +29,7 @@ personas/
 │   ├── HANDOFF.md      # Cross-persona handoff contract
 │   ├── BACKPACK.md     # Domain toolbelt & skills inventory
 │   ├── config/         # Persona config (config.yaml, workspace.yaml, mcp.json, …)
-│   ├── skills/         # Contains the 170 skills mapped to SakThai
+│   ├── skills/         # Contains the 174 skills mapped to SakThai
 │   ├── evolution/      # Persona-owned self-evolution pipeline (DSPy + GEPA)
 │   └── evolve_agent.sh # Persona self-evolution runner
 ├── sakking/            # Contains the 60 skills mapped to SakKing + self-evolution
@@ -36,6 +37,11 @@ personas/
 ├── saksit/             # Contains the 51 skills mapped to SakSit + self-evolution
 ├── sakjules/           # Contains the 48 skills mapped to SakJules + self-evolution
 └── saksee/             # Contains the 109 skills mapped to SakSee + self-evolution
+├── sakking/            # Contains the 63 skills mapped to SakKing + self-evolution
+├── saktan/             # Contains the 26 skills mapped to SakTan + self-evolution
+├── saksit/             # Contains the 44 skills mapped to SakSit + self-evolution
+├── sakjules/           # Contains the 56 skills mapped to SakJules + self-evolution
+└── saksee/             # Contains the 95 skills mapped to SakSee + self-evolution
 ```
 
 ## Agent Self-Evolution & 5-Pillar Evaluation Framework
@@ -51,7 +57,7 @@ Each of the six personas hosts its own self-evolution module and evaluates acros
    - `evolution/`: Prompt, skill, and tool mutation modules (`CompositeFitness` + `ConstraintValidator`).
    - `evolve_agent.sh`: CLI runner defaulting to the hosting persona.
    - `tests/`: Self-evolution constraint and fitness unit tests.
-8. **Free-Tier Quota Sentinel (`sakthai.agent.quota`, `sakthai quota status`)**: Hybrid in-memory sliding window rate limiter backed by SQLite persistence (`~/.sakthai/quota_sentinel.db`) with Pacific Time midnight resets, automatic 3-tier model cascading (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1`), and zero-cost protection.
+8. **Gemini 4 Neon & Free-Tier Quota Sentinel (`sakthai.agent.quota`, `sakthai quota status`)**: Supports **Gemini 4 Neon** (`gemini-4-neon`) as the flagship Google Gemini model, paired with a hybrid in-memory sliding window rate limiter backed by SQLite persistence (`~/.sakthai/quota_sentinel.db`), Pacific Time midnight resets, automatic 3-tier free-tier cascading (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1` under `GEMINI_FREE_ONLY=true`), and zero-cost protection.
 9. **Interactive TUI & Risk Permission Gates (`sak chat --tui`)**: Full-screen Textual interface with two-phase tool execution transparency (`tool_call_start` and `tool_call` with elapsed duration), live widget updates, and `ConfirmModalScreen` risk permission gates (`[y]es / [n]o / [a]lways`) for high-risk operations.
 10. **Memory Shard Studio & Gateway SSE Streaming**: Persona SQLite memory shards (`~/.sakthai/<persona>/memory.db`) inspected via `/v1/memory/shards`, filtered via `/v1/memory/facts`, and tested via prompt injection simulator (`/v1/memory/preview`) with DataLossGuardrail security. Verified across 4,155+ automated tests (3,547 pytest + 608 vitest).
 

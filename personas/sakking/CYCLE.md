@@ -47,7 +47,7 @@ flowchart LR
 ---
 
 ### Stage 2: 🌟 Hope (Feasibility, Gates & Architectural Specs)
-- **Configured Model Matrix ([`config/config.yaml`](file:///home/sak/Sak-Family-Agent/personas/sakking/config/config.yaml))**:
+- **Configured Model Matrix ([`config/config.yaml`](./config/config.yaml))**:
   - `primary`: `huggingface` / `Qwen/Qwen3-Coder-30B-A3B-Instruct`
   - `fallback`: `ollama-cloud / gpt-oss:120b`
   - `small_model`: `Nanthasit/sakthai-context-1.5b-tools-v2`
@@ -60,7 +60,7 @@ flowchart LR
 ### Stage 3: ❤️ Care (Implementation & Quality)
 - **Execution Focus**: Execute TDD red-green-refactor cycles (`sakthai-coding-tdd`, `SakKing-systematic-debugging`) inside isolated `uv` runners with `DataLossGuardrail` active.
 - **Synchronized Persona Files**:
-  - [`personas/sakking/SOUL.md`](file:///home/sak/Sak-Family-Agent/personas/sakking/SOUL.md) · [`personas/sakking/PLAN.md`](file:///home/sak/Sak-Family-Agent/personas/sakking/PLAN.md) · [`personas/sakking/CYCLE.md`](file:///home/sak/Sak-Family-Agent/personas/sakking/CYCLE.md) · [`personas/sakking/MEMORY.md`](file:///home/sak/Sak-Family-Agent/personas/sakking/MEMORY.md) · [`personas/sakking/HANDOFF.md`](file:///home/sak/Sak-Family-Agent/personas/sakking/HANDOFF.md) · [`personas/sakking/BACKPACK.md`](file:///home/sak/Sak-Family-Agent/personas/sakking/BACKPACK.md)
+  - [`SOUL.md`](./SOUL.md) · [`PLAN.md`](./PLAN.md) · [`CYCLE.md`](./CYCLE.md) · [`MEMORY.md`](./MEMORY.md) · [`HANDOFF.md`](./HANDOFF.md) · [`BACKPACK.md`](./BACKPACK.md)
 
 ---
 

@@ -72,6 +72,7 @@
   - **Progressive Skill Disclosure**: `sakthai platform skills` (`render_skills_progressive_summary`) renders lightweight skill metadata tables to prevent prompt bloat
   - **Harness Pipeline Exporter**: `sakthai platform export-harness sakking` (`harness_exporter.py`) exports declarative Harness v1 agent & pipeline specs
 - **🧰 Skill Overlay Inventory (60 Overlay Skills + 19 Shared Skills)**:
+- **🧰 Skill Overlay Inventory (63 Overlay Skills + 19 Shared Skills)**:
   - **Overlay Root**: [`personas/sakking/skills/`](./skills) (59 specialized `SakSakking-*` skills)
   - **Shared Root**: [`personas/shared/skills/`](../shared/skills) (19 shared `Sak-*` skills including `Sak-auto-cycle-loop`, `Sak-dogfood`, `Sak-ocr-and-documents`, `Sak-yuanbao`)
   - **Primary Workspace Skills** ([`config/workspace.yaml`](./config/workspace.yaml)):

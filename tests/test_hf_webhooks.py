@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from typing import Any
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -460,3 +461,20 @@ def test_gateway_server_hf_webhook_endpoint() -> None:
 
     finally:
         server.shutdown()
+
+
+def test_dispatch_webhook_event_refreshes_portfolio_cache() -> None:
+    payload = _make_payload(
+        action="update",
+        scope="repo.content",
+        repo_name="Nanthasit/sakthai-test-repo",
+        repo_type="model",
+    )
+    with patch("sakthai.team.gateway.PortfolioCacheEngine.refresh_portfolio_cache") as mock_refresh:
+        mock_refresh.return_value = {"status": "ok", "total_repos": 44}
+        summary = dispatch_webhook_event(payload)
+        assert summary["processed"] is True
+        assert "portfolio_cache_refresh" in summary["handlers"]
+        assert summary["handlers"]["portfolio_cache_refresh"]["processed"] is True
+        assert summary["handlers"]["portfolio_cache_refresh"]["total_repos"] == 44
+        mock_refresh.assert_called_once_with(owner="Nanthasit")

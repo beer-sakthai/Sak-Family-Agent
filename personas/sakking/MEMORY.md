@@ -5,10 +5,10 @@
 
 ## 🧠 1. Where My Memory Lives
 
-- **My SQLite Shard**: `~/.sakthai/sakking/memory.db` (WAL mode, `0600` permissions, owned exclusively by `MemoryStore` in [`sakthai/memory/store.py`](file:///home/sak/Sak-Family-Agent/personas/sakthai/memory/store.py)).
+- **My SQLite Shard**: `~/.sakthai/sakking/memory.db` (WAL mode, `0600` permissions, owned exclusively by `MemoryStore` in [`sakthai/memory/store.py`](../sakthai/memory/store.py)).
   - **Local CLI**: Pass `--persona sakking` to `sakthai learn`, `sakthai recall`, `sakthai memory <subcommand>`, `sakthai run`, or `sakthai chat`.
-  - **VM Deployment**: [`infra/vm-agents/sakthai-agent-run.sh`](file:///home/sak/Sak-Family-Agent/infra/vm-agents/sakthai-agent-run.sh) sets `SAKTHAI_HOME=$HOME/.sakthai/sakking`, resolving automatically to the same shard.
-- **Merged Family View**: `sakthai memory family` ([`FamilyMemoryView`](file:///home/sak/Sak-Family-Agent/personas/sakthai/memory/merged.py)) opens all 6 persona shards (`sakthai`, `sakking`, `saksee`, `saksit`, `sakjules`, `saktan`) plus the legacy `~/.sakthai/memory.db` in one read-only view.
+  - **VM Deployment**: [`infra/vm-agents/sakthai-agent-run.sh`](../../infra/vm-agents/sakthai-agent-run.sh) sets `SAKTHAI_HOME=$HOME/.sakthai/sakking`, resolving automatically to the same shard.
+- **Merged Family View**: `sakthai memory family` ([`FamilyMemoryView`](../sakthai/memory/merged.py)) opens all 6 persona shards (`sakthai`, `sakking`, `saksee`, `saksit`, `sakjules`, `saktan`) plus the legacy `~/.sakthai/memory.db` in one read-only view.
 - **Standalone Runtime**: `sakthai run --persona sakking`
 - **Active Model Matrix**:
   - `primary`: `huggingface` / `Qwen/Qwen3-Coder-30B-A3B-Instruct`
@@ -29,7 +29,7 @@ sakthai memory --persona sakking show
 sakthai memory --persona sakking stats
 ```
 
-Mandatory Pre-Task Checklist ([`SOUL.md`](file:///home/sak/Sak-Family-Agent/personas/sakking/SOUL.md)):
+Mandatory Pre-Task Checklist ([`SOUL.md`](./SOUL.md)):
 
 ```bash
 sakthai memory family "CHARGE: sakking" --tag charge-report --limit 1
@@ -85,12 +85,13 @@ Connected MCP & Platform Tools:
   - `npx -y @llmindset/mcp-hfspace@0.5.4 black-forest-labs/FLUX.1-schnell Lightricks/LTX-Video` (pinned in `config/mcp.json`)
 - **Unified Agent Platform (`sakthai.agent_platform`)**: `check_data_loss_guardrail`, `wrap_with_isolated_runner`, `render_skills_progressive_summary`, `AntigravityAgentRunner`, `harness_exporter`
 - **Skills Overlay**: 60 skills in [`personas/sakking/skills/`](file:///home/sak/Sak-Family-Agent/personas/sakking/skills) + 19 shared skills in [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills)
+- **Skills Overlay**: 63 skills in [`personas/sakking/skills/`](file:///home/sak/Sak-Family-Agent/personas/sakking/skills) + 19 shared skills in [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills)
 
 ---
 
 ## 📋 5. Verified Execution Log
 
-1. **Persona Working Files Alignment**: Verified [`personas/sakking/`](file:///home/sak/Sak-Family-Agent/personas/sakking) carries valid `SOUL.md`, `PLAN.md`, `CYCLE.md`, `MEMORY.md`, `HANDOFF.md`, and `BACKPACK.md` files with zero unpinned `@latest` npx commands.
+1. **Persona Working Files Alignment**: Verified [`personas/sakking/`](./) carries valid `SOUL.md`, `PLAN.md`, `CYCLE.md`, `MEMORY.md`, `HANDOFF.md`, and `BACKPACK.md` files with zero unpinned `@latest` npx commands.
 2. **Cross-Persona Guardrail & Web Server Parity**: Verified `agent/guardrails.py` and `web/server.py` parity checks pass (`tests/test_persona_guardrails_parity.py`, `tests/test_persona_web_server_parity.py`).
 3. **Unified Agent Platform Integration**: Verified `sakthai platform` (`detect-deps`, `check-safety`, `skills`, `export-harness`, `antigravity`, `wrap-cmd`) and `ModelTier` presets.
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shlex
 import sys
 import time
 from dataclasses import dataclass, field
@@ -173,8 +174,9 @@ class DarwinianCodeEvolver:
 
 def evolve_tool_code(
     tool_file: str | Path,
-    test_fn: Callable[[], bool] | None = None,
+    test_fn: Callable[[], bool | tuple[int, int]] | None = None,
     benchmark_fn: Callable[[], float] | None = None,
+    test_command: list[str] | None = None,
     generations: int = 5,
     population_size: int = 4,
     dry_run: bool = True,
@@ -186,6 +188,7 @@ def evolve_tool_code(
         baseline_latency_ms=10.0,
         test_fn=test_fn,
         benchmark_fn=benchmark_fn,
+        test_command=test_command,
     )
     evolver = DarwinianCodeEvolver(
         organism=organism,
@@ -202,6 +205,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--file", type=str, help="Target Python source file to evolve")
     parser.add_argument("--generations", type=int, default=5, help="Number of evolutionary generations")
     parser.add_argument("--population-size", type=int, default=4, help="Candidate variants per generation")
+    parser.add_argument("--test-cmd", type=str, default="", help="Optional pytest command to execute for test gating")
     parser.add_argument("--dry-run", action="store_true", default=False, help="Run without writing to file")
 
     args = parser.parse_args(argv)
@@ -210,10 +214,13 @@ def main(argv: list[str] | None = None) -> int:
         console.print("[red]Error: --file argument is required.[/red]")
         return 1
 
+    test_cmd_list = shlex.split(args.test_cmd) if args.test_cmd else None
+
     result = evolve_tool_code(
         tool_file=args.file,
         generations=args.generations,
         population_size=args.population_size,
+        test_command=test_cmd_list,
         dry_run=args.dry_run,
     )
 

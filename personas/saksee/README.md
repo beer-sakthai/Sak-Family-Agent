@@ -14,7 +14,7 @@ SakSee specializes in headless browser automation, complex DOM inspection, multi
   - *Tier 3*: Stealth browser with human-in-the-loop review for protected endpoints.
 - **Live Pipeline Visualizer & Memory Studio**: Next.js SVG DAG canvas implementation, token streaming terminal, and Memory Shard Studio interfaces (`apps/sak_agent_dashboard`).
 - **Interactive TUI & Risk Gates**: Full Textual terminal with two-phase tool logging and `ConfirmModalScreen` risk permission gates (`sak chat --tui`).
-- **Free-Tier Quota Sentinel**: Guarded API rate limiting with Pacific Time resets (`~/.sakthai/quota_sentinel.db`) and adaptive model fallback (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1`).
+- **Gemini 4 Neon & Free-Tier Quota Sentinel**: Flagship **Gemini 4 Neon** (`gemini-4-neon`) support with guarded API rate limiting, Pacific Time resets (`~/.sakthai/quota_sentinel.db`), and adaptive free-tier fallback (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1` under `GEMINI_FREE_ONLY=true`).
 - **Creative & Visual Generation**: Manim programmatic mathematical animations, Remotion video authoring, ComfyUI workflows, and ASCII visual art.
 - **Frontend & UI Prototyping**: Modern React, Vite, Shadcn-UI, and Tailwind design implementation.
 - **Third Deputy Lead**: Coordinates web research and visual assets across family workflows.

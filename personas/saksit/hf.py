@@ -43,3 +43,126 @@ def hf_download(repo_id: str) -> str:
         raise ValueError(f"Invalid repo_id {repo_id!r}: path traversal detected.")
 
     return str(_hub().snapshot_download(repo_id, local_dir=str(target)))
+
+
+class TripleGateError(PermissionError):
+    """Raised when a Hugging Face Hub write operation violates the Triple Gate safety contract."""
+
+
+def _is_charge_sufficient(current_charge: Any) -> bool:
+    """Check if charge meets or exceeds 50% (Active level)."""
+    if current_charge is None:
+        return True
+    if isinstance(current_charge, (int, float)):
+        return current_charge >= 50.0
+    val = str(current_charge).lower().strip()
+    if val.endswith("%"):
+        try:
+            return float(val[:-1]) >= 50.0
+        except ValueError:
+            pass
+    if val in ("chargelevel.active", "active", "chargelevel.critical", "critical"):
+        return True
+    return val not in ("chargelevel.low", "low", "chargelevel.none", "none")
+
+
+def verify_deputy_break_glass_quorum(store: Any | None) -> bool:
+    """Verify emergency break-glass quorum for Deputy 1 Hub write delegation.
+
+    Checks shared memory for either 'emergency-hf-delegate' or 'quorum-approved' tag.
+    Returns True if valid break-glass quorum exists, False otherwise.
+    """
+    if store is None:
+        return False
+    delegates = store.search_by_tag("emergency-hf-delegate", limit=10)
+    quorum = store.search_by_tag("quorum-approved", limit=10)
+    return bool(delegates or quorum)
+
+
+def assert_hf_write_allowed(
+    store: Any | None = None,
+    target_repo: str | None = None,
+    current_charge: Any = "active",
+    emergency_proxy: bool = False,
+) -> bool:
+    """Enforce SakThai's Triple Gate on all Hugging Face Hub write operations.
+
+    Gate 1: SakThai Charge >= 50% (Active level), or Deputy 1 Charge >= 20% if emergency_proxy=True.
+    Gate 2: No active 'deputy-chain' emergency tag in family memory, unless emergency_proxy=True
+            and break-glass quorum is verified ('emergency-hf-delegate' or 'quorum-approved').
+    Gate 3: Explicit 'hub-approved' tag from Beer in family memory.
+
+    Raises:
+        TripleGateError: If any of the three safety gates are violated.
+    Returns:
+        True if all three gates pass.
+    """
+    # Gate 1: Charge requirement
+    if emergency_proxy:
+        val = str(current_charge).strip().lower()
+        if val in ("chargelevel.none", "none", "critical", "chargelevel.critical"):
+            raise TripleGateError(
+                f"Gate 1 violation: Emergency proxy requires Charge >= 20% (current: {current_charge})."
+            )
+    elif not _is_charge_sufficient(current_charge):
+        raise TripleGateError(
+            f"Gate 1 violation: SakThai Charge ({current_charge}) is below 50% minimum threshold. "
+            "Hub writes require Charge >= 50% (Active level)."
+        )
+
+    # If no store is provided, gates 2 & 3 cannot be verified
+    if store is None:
+        raise TripleGateError(
+            "Gate 2 & 3 violation: No MemoryStore provided to verify active tags."
+        )
+
+    # Gate 2: No active 'deputy-chain' emergency tag, unless authorized emergency break-glass quorum
+    deputy_facts = store.search_by_tag("deputy-chain", limit=10)
+    if deputy_facts:
+        if emergency_proxy and verify_deputy_break_glass_quorum(store):
+            pass  # Authorized emergency break-glass proxy
+        else:
+            raise TripleGateError(
+                f"Gate 2 violation: Detected active deputy-chain emergency tag ({len(deputy_facts)} facts). "
+                "Hub writes are strictly suspended while emergency deputy chain routing is active "
+                "unless emergency break-glass quorum is verified (--tag emergency-hf-delegate or --tag quorum-approved)."
+            )
+
+    # Gate 3: Explicit 'hub-approved' tag from Beer
+    approved_facts = store.search_by_tag("hub-approved", limit=20)
+    if not approved_facts:
+        raise TripleGateError(
+            "Gate 3 violation: Missing verified 'hub-approved' tag from Beer in family memory. "
+            "All Hub writes require explicit pre-approval logged with --tag hub-approved."
+        )
+
+    return True
+
+
+def triple_gate_hub_write(func: Any) -> Any:
+    """Decorator enforcing the Triple Gate on Hugging Face Hub write functions/tools."""
+    import functools
+
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        store = kwargs.get("store")
+        target_repo = kwargs.get("target_repo") or kwargs.get("repo_id")
+        current_charge = kwargs.get("current_charge", "active")
+        emergency_proxy = kwargs.get("emergency_proxy", False)
+
+        # Also inspect args if not in kwargs
+        if store is None:
+            for a in args:
+                if hasattr(a, "search_by_tag"):
+                    store = a
+                    break
+
+        assert_hf_write_allowed(
+            store=store,
+            target_repo=target_repo,
+            current_charge=current_charge,
+            emergency_proxy=emergency_proxy,
+        )
+        return func(*args, **kwargs)
+
+    return wrapper

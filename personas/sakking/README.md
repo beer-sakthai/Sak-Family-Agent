@@ -11,7 +11,7 @@ SakKing handles rapid task execution, strict test-driven development (TDD), code
 - **First Deputy Lead**: Automatically steps in when SakThai needs charge regeneration or offline processing.
 - **TDD & Implementation Master**: Specializes in clean, modular code following red-green-refactor disciplines.
 - **Interactive TUI & Risk Permission Gate**: Real-time tool execution transparency and `ConfirmModalScreen` risk permission gates (`[y]es / [n]o / [a]lways`) for shell commands and sensitive modifications (`sak chat --tui`).
-- **Free-Tier Quota Sentinel**: Guarded API rate limiting with Pacific Time resets (`~/.sakthai/quota_sentinel.db`) and adaptive model fallback (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1`).
+- **Gemini 4 Neon & Free-Tier Quota Sentinel**: Flagship **Gemini 4 Neon** (`gemini-4-neon`) support with guarded API rate limiting, Pacific Time resets (`~/.sakthai/quota_sentinel.db`), and adaptive free-tier fallback (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1` under `GEMINI_FREE_ONLY=true`).
 - **3-Second Intent Preflight**: High-speed regex/keyword intent classification that stages response templates asynchronously in background loops.
 - **Break-Glass Hub Access**: Secondary governance checks for protected remote hub writes (`assert_hf_write_allowed`).
 - **Evaluator-Optimizer & Graders**: Rigorous iterative evaluation against CodeGrader & ModelGrader rubrics (`sakthai run --optimize`).

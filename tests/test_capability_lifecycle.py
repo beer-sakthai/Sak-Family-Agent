@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 
+import pytest
 from click.testing import CliRunner
 
 from sakthai.agent.capability import (
@@ -170,10 +171,26 @@ def test_evaluate_capability_attainment_full_flow(tmp_path, monkeypatch) -> None
 
 def test_evaluate_capability_lifecycle_helper() -> None:
     """Test helper in agent/eval.py."""
+
+    # Mock probe evaluator to provide realistic probe responses
+    def mock_evaluator(probe: CapabilityProbeTask) -> str:
+        if probe.target_level <= CapabilityLevel.AUTONOMOUS:
+            # Provide text satisfying the probe
+            kw_text = " ".join(probe.required_keywords)
+            patterns_text = " ".join(
+                [
+                    p.replace(r"(?i)", "").replace(r"\s+", " ").replace(r"|", " ")
+                    for p in probe.expected_patterns
+                ]
+            )
+            return f"# Response for {probe.task_id}\n{kw_text}\n{patterns_text}\n" * 5
+        return "# Blank response for frontier"
+
     assessment = evaluate_capability_lifecycle(
         model_or_persona="sakking",
         phase="evolution",
         domains=[CapabilityDomain.GRADIENT_AND_GEMM],
+        probe_evaluator=mock_evaluator,
     )
     assert assessment.model_or_persona == "sakking"
     assert assessment.phase == LifecyclePhase.EVOLUTION
@@ -224,3 +241,9 @@ def test_cli_eval_capability_json() -> None:
     assert "overall_highest_level" in data
     assert "domains" in data
     assert len(data["domains"]) == 4
+
+
+def test_evaluate_capability_lifecycle_without_evaluator_fails_closed() -> None:
+    """Without a real evaluator, no assessment is fabricated."""
+    with pytest.raises(ValueError, match="probe_evaluator is required"):
+        evaluate_capability_lifecycle(model_or_persona="sakthai")

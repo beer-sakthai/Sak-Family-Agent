@@ -5,8 +5,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 # Default model used for every role when no per-role override is set. Local
-# Ollama by default so a run is free and needs no cloud key on this laptop.
+# Ollama or free Hugging Face router by default so a run is free ($0.00 spend).
 _DEFAULT_LOCAL_MODEL = os.getenv("EVO_MODEL", "ollama_chat/qwen2.5-coder:1.5b")
+_DEFAULT_HF_ROUTER_MODEL = os.getenv(
+    "HF_ROUTER_MODEL", "huggingface/meta-llama/Llama-3.3-70B-Instruct"
+)
 
 
 @dataclass

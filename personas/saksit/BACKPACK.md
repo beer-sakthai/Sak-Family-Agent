@@ -61,6 +61,8 @@
   - **Harness Pipeline Exporter**: `sakthai platform export-harness saksit` (`harness_exporter.py`) exports declarative Harness v1 agent & pipeline specs
 - **🧰 Skill Overlay Inventory (51 Overlay Skills + 19 Shared Skills)**:
   - **Overlay Root**: [`personas/saksit/skills/`](./skills) (45 specialized `SakSaksit-*` skills)
+- **🧰 Skill Overlay Inventory (44 Overlay Skills + 19 Shared Skills)**:
+  - **Overlay Root**: [`personas/saksit/skills/`](./skills) (44 specialized `SakSit-*` skills)
   - **Shared Root**: [`personas/shared/skills/`](../shared/skills) (19 shared `Sak-*` skills including `Sak-auto-cycle-loop`, `Sak-dogfood`, `Sak-ocr-and-documents`, `Sak-yuanbao`)
   - **Primary Workspace Skills** ([`config/workspace.yaml`](./config/workspace.yaml)):
   - `SakSit-ai-seo-content-strategy-2026`

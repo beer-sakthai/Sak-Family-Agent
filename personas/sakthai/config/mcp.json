@@ -36,6 +36,22 @@
         "gemini_search_docs",
         "gemini_get_doc"
       ]
+    },
+    "huggingface": {
+      "url": "https://huggingface.co/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ${HF_TOKEN}"
+      },
+      "tool_allowlist": [
+        "hf_inspect_repo",
+        "hf_portfolio_summary",
+        "huggingface_inference"
+      ],
+      "tools": [
+        "hf_inspect_repo",
+        "hf_portfolio_summary",
+        "huggingface_inference"
+      ]
     }
   }
 }

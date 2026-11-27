@@ -66,12 +66,10 @@ def test_default_skill_roots_includes_curated_library(sakthai_home: Path) -> Non
 
 
 def test_curated_library_skill_resolves(sakthai_home: Path) -> None:
-    # Regression guard: the repo-root library/ catalog (31 skills, 11
-    # categories, legacy `sakthai-` names) must be reachable at runtime —
-    # it used to be defined but never wired into any discovery root.
+    # Regression guard: canonical skills in personas/sakthai/skills must be reachable at runtime
     from sakthai.skills import find_skill
 
-    assert find_skill("sakthai-security-red-teaming", *default_skill_roots()) is not None
+    assert find_skill("SakThai-hf-security-and-safetensors", *default_skill_roots()) is not None
 
 
 def test_resolve_skill_names_partitions_hits_and_misses(tmp_path: Path) -> None:

@@ -19,6 +19,7 @@
 | **Primary Engine** | `huggingface:deepseek-ai/DeepSeek-V4-Flash` ([`config/config.yaml`](./config/config.yaml)) |
 | **Fallback Engine** | `ollama-cloud:gpt-oss:120b` (`https://ollama.com/v1`) |
 | **Skill Inventory** | **51 Overlay Skills + 19 Shared Skills** (64 total skills) |
+| **Skill Inventory** | **44 Overlay Skills + 19 Shared Skills** (63 total skills) |
 | **Primary Workspace Skills** | `SakSit-ai-seo-content-strategy-2026`, `SakSit-b2b-saas-brand-journalism-storytelling-2026`, `SakSit-hf-hub-model-card-seo-social-meta-tags` ([`config/workspace.yaml`](./config/workspace.yaml)) |
 | **Allowed Workspace Tools** | `view_file`, `write_to_file`, `replace_file_content` |
 | **MCP Servers (`config/mcp.json`)** | `hf-media` (`@llmindset/mcp-hfspace@0.5.4` for `black-forest-labs/FLUX.1-schnell` & `Lightricks/LTX-Video`), `microsoft365` (Remote HTTP `https://microsoft365.mcp.claude.com/mcp`, read-only tool allowlist, requires `MS365_MCP_TOKEN`), `microsoft-learn` (Remote HTTP `https://learn.microsoft.com/api/mcp`, docs search/fetch only, no auth), `gemini-api-docs` (Remote HTTP `https://gemini-api-docs-mcp.dev`, docs search/fetch only, no auth) |

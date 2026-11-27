@@ -229,7 +229,9 @@ def _resolve_model_name(model: str, provider: str) -> str:
     if provider == "openai":
         return "qwen2.5-coder:7b" if os.environ.get("OLLAMA_HOST") else "gpt-4o"
     if provider == "google":
-        return "gemini-4-hydrogen"
+        if os.environ.get("GEMINI_FREE_ONLY", "").lower() in ("1", "true", "yes"):
+            return "gemini-4-hydrogen"
+        return "gemini-4-neon"
     if provider == "huggingface":
         return DEFAULT_HUGGINGFACE_MODEL
     return model

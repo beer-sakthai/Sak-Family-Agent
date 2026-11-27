@@ -68,7 +68,7 @@
 - **Persistent memory & Memory Shard Studio** — SQLite-backed facts and observations stored under `~/.sakthai`, with semantic search, tagging, consolidation, versioned JSON snapshots ([format](data/README.md)), sharded per-persona databases, and Next.js Memory Shard Studio with prompt injection simulator.
 - **Free-Tier Quota Sentinel & Adaptive Rate Limiter** — Sliding window in-memory rate limiter + Pacific Time midnight SQLite persistence (`~/.sakthai/quota_sentinel.db`), adaptive model cascading (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1`), and `sakthai quota status` CLI.
 - **Interactive TUI & Live Tool Execution Terminal (`sak chat --tui`)** — Full-screen Textual interface featuring two-phase tool logging (`tool_call_start` and `tool_call` with elapsed duration), live running timers, and `ConfirmModalScreen` risk permission gates (`[y]es / [n]o / [a]lways` session caching) for safe operations.
-- **Multiple providers** — Anthropic, Google Gemini (Gemini 4 Hydrogen default), OpenAI-compatible endpoints, Ollama, gateways, and Hugging Face inference providers.
+- **Multiple providers** — Anthropic, Google Gemini (**Gemini 4 Neon** flagship default; **Gemini 4 Hydrogen** free-tier fallback via `GEMINI_FREE_ONLY=true`), OpenAI-compatible endpoints, Ollama, gateways, and Hugging Face inference providers.
 - **MCP & Remote Servers** — dependency-light stdio server, remote HTTP/SSE client support with Streamable HTTP (`RemoteMCPClient`), resource and prompt exposing, plus discovery, tool allowlisting, and namespaced connections to external MCP servers (including Microsoft 365, Microsoft Learn, and Gemini API Docs).
 - **Six personas & resilience architecture** — SakThai, SakSee, SakJules, SakKing, SakSit, and SakTan, each with its own identity, curated skills (481 on-disk skills under the searchable `Sak<Agent>-<domain>-<topic>` taxonomy), default model, memory shard, and multi-tier resilience:
   - *Governance & Routing*: Break-glass Hugging Face Hub protocol (`assert_hf_write_allowed`) and 3-second intent preflight classification.
@@ -225,7 +225,7 @@ House of Sak features a unified, multi-threaded **Runtime Gateway** (`sakthai.ga
 ### Architecture & How It Works
 
 - **Concurrency Without Overhead**: Built directly upon Python's standard library `socketserver.ThreadingHTTPServer` (`RuntimeGatewayServer`). It requires zero external web framework dependencies (no FastAPI or Uvicorn overhead) and delivers immediate, multi-threaded request processing.
-- **Dynamic Persona & Model Routing**: The `/v1/chat/completions` endpoint dynamically routes requests to the requested persona's specialized toolset, memory shard, and model preset (e.g. `model: "sakjules"`, `model: "sakthai"`, or tier presets like `model: "gemini-2.5-flash"`).
+- **Dynamic Persona & Model Routing**: The `/v1/chat/completions` endpoint dynamically routes requests to the requested persona's specialized toolset, memory shard, and model preset (e.g. `model: "sakjules"`, `model: "sakthai"`, or tier presets like `model: "gemini-4-neon"`).
 - **Streaming Server-Sent Events (SSE)**: Full support for real-time SSE streaming (`stream: true`) returning chunked `chat.completion.chunk` events and concluding with `data: [DONE]`.
 - **Tool Execution Interception**: Exposes all registered `BUILTIN_TOOLS` (`learn`, `recall`, `search`, `read_file`, `run_command`, etc.) over `/v1/tools` with structured schemas, allowing external AI systems to invoke local runtime tools safely.
 
