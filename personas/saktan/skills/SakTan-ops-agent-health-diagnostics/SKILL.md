@@ -1,7 +1,7 @@
 ---
 name: SakTan-ops-agent-health-diagnostics
-version: 1.0.0
-description: Diagnose why a Hermes agent isn't responding — gateway status, provider
+version: 1.1.0
+description: Diagnose why a Sak Family agent isn't responding — gateway status, provider
   health, Telegram connectivity, log analysis
 category: operations
 tags:
@@ -17,94 +17,68 @@ tags:
 - sibling-agents
 - telegram
 - troubleshooting
-author: SakThai
-license: MIT
 ---
 
 # Agent Health Diagnostics
 
-Diagnose why a Hermes agent that shows as "running" (gateway up) is not actually responding to messages.
+Diagnose why a Sak Family agent that shows as "running" is not actually responding to messages.
 
-## Quick check order
+## Quick Check Order
 
-When Beer says "X isn't replying", run these in order. Each step narrows the cause.
+When Beer says "Agent X isn't replying", run these in order. Each step narrows the cause.
 
-### 1. Gateway status
+### 1. Process & Daemon State
 ```bash
-hermes -p <profile> gateway status
+# Check if the agent daemon or runner is active
+pgrep -a -f "sakthai.*<persona>" || systemctl --user status "sakthai-<persona>"
 ```
-- If down → restart with `setsid hermes -p <profile> gateway run --replace`
-- If running, note the PID
+- If down → restart via `systemctl --user restart sakthai-<persona>` or `infra/vm-agents/sakthai-agent-run.sh`
+- If running, note the PID and memory consumption
 
-### 2. Process alive?
+### 2. Dry-Run Health Preflight
 ```bash
-ps aux | grep <profile> | grep -v grep
+# Execute dry-run to confirm persona config, model, and skill resolution
+sakthai run "ping" --persona <persona> --no-mcp --dry-run
 ```
-- Gateway PID exists? Good.
-- Are there related processes (plugins, MCP servers, dashboard)?
+- If configuration errors are shown, check `personas/<persona>/config/config.yaml`
+- Confirm provider credentials and fallback settings
 
-### 3. Telegram connectivity
-Check `channel_directory.json` for the profile:
+### 3. Telegram Connectivity & Gateway Logs
+Check gateway / systemd logs for Telegram polling errors:
 ```bash
-cat ~/profiles/<profile>/channel_directory.json
+journalctl --user -u "sakthai-<persona>" -n 50 --no-pager
+# Or inspect agent runtime log:
+tail -50 ~/.sakthai/<persona>/agent.log
 ```
-- Is `telegram` platform present?
-- Is there a connected chat?
+- Look for **"Polling heartbeat probe failed"**, **"reconnecting"**, or `Conflict: terminated by other getUpdates request` (indicates multiple bot instances using the same token).
+- Look for HTTP 401 Unauthorized (token revoked) or HTTP 403 Forbidden.
 
-Then check gateway logs for disconnects:
+### 4. Provider & Quota Health
+Check `config.yaml` in the persona tree:
 ```bash
-tail -30 ~/profiles/<profile>/logs/gateway.log
-grep -i "telegram.*reconnect\|telegram.*connected\|telegram.*heartbeat" ~/profiles/<profile>/logs/gateway.log
+cat personas/<persona>/config/config.yaml
 ```
-- **"Polling heartbeat probe failed"** + **"reconnecting"** + no **"resumed"** = Telegram disconnected
-- The agent can receive/send nothing while disconnected
-- The gateway will keep trying (up to 10 attempts) but may silently stay disconnected
+- For local models (Ollama): verify `curl -s http://127.0.0.1:11434/api/tags`
+- For Hugging Face router models: check quota limits via `sakthai quota status`
+- Check for HTTP 429 (Rate Limit) or 503 (Overloaded) in logs
 
-### 4. Provider health
-Check `config.yaml`:
+### 5. Memory Shard Integrity
+Verify SQLite memory shard is not locked or corrupted:
 ```bash
-cat ~/profiles/<profile>/config.yaml | grep -A5 "provider\|model\|fallback"
-```
-- Is the primary provider paid (ollama-cloud, openai, etc.)?
-- Is there a fallback provider configured?
-
-Check provider errors in `errors.log`:
-```bash
-tail -20 ~/profiles/<profile>/logs/errors.log
-grep -i "402\|credit\|depleted\|timed out\|API call failed" ~/profiles/<profile>/logs/gateway.log
+sakthai memory --persona <persona> healthcheck
 ```
 
-### 5. Cron jobs as signal
-Check `cron/jobs.json` for patterns:
-- **Multiple jobs failing with HTTP 402** = provider credits depleted — affects chat too
-- **Jobs timing out** = provider overloaded or network issue
-- **All jobs failing with same error** = systemic provider failure
+## Common Failure Patterns
 
-### 6. Test model directly
-```bash
-cat ~/profiles/<profile>/config.yaml | grep "default:" | head -1
-```
-Try a direct API call if the tool is available.
+| Pattern | What It Means | Fix |
+|---------|---------------|-----|
+| Process alive, Telegram disconnected | Webhook/polling collision or network drop | Restart service, check single bot token |
+| HTTP 429 Rate Limit | Provider quota exhausted | Fail over to local Ollama or backup provider |
+| SQLite `database is locked` | Zombie process holding WAL lock | Terminate orphaned process, run `sakthai memory --persona <p> healthcheck` |
+| Import / Package error | Environment drift | Run `uv sync --locked` |
 
-## Common failure patterns
+## Critical Pitfalls
 
-| Pattern | What it means | Fix |
-|---------|--------------|-----|
-| Gateway running, Telegram disconnected | Network blip, reconnect failed | Restart gateway |
-| HTTP 402 "credits depleted" | Paid provider out of credits | Switch primary to free provider or top up |
-| HTTP 402 + fallback not kicking in | Fallback only covers 429/503/connection failures — NOT 402 | Acknowledge: fallback doesn't handle credit depletion. Must switch provider manually |
-| API call timed out | Provider overloaded or unreachable | Check provider status page, wait, or switch |
-| Gateway running, no errors, no responses | Telegram webhook/polling broken | Check channel_directory, restart gateway |
-
-## Critical pitfalls
-
-- **"Gateway is running" ≠ "Gateway can respond"** — The gateway process can be alive while its Telegram connection is dead and its provider is depleted. Always check both.
-- **Fallback providers do NOT handle HTTP 402** — Standard Hermes fallback triggers on rate limits (429), overload (529), service errors (503), and connection failures. Credit depletion (402) passes through unhandled.
-- **Telegram reconnection can silently fail** — The reconnect loop tries up to 10 times with increasing backoff. If all 10 fail, the agent stays disconnected with no further retry until the gateway restarts. Look for "Polling resumed" as the success signal.
-- **Gateway logs may be in `~/profiles/<profile>/logs/`** not in `~/profiles/<profile>/gateway/` — check both locations.
-- **`hermes gateway status` shows profile state but doesn't test connectivity** — it only confirms the process is alive.
-
-## References
-
-- `references/saksee-jul26-402-telegram-disconnect.md` — Reproduction case: SakSee's dual failure (Telegram drop + Ollama Cloud credits depleted)
-- `sak-family-handoff` — For delegating work to sibling agents once they're healthy again
+- **"Process is running" ≠ "Agent can respond"** — The Python process may be alive while the Telegram polling loop has disconnected or blocked on a hung socket.
+- **Bot Token Collision** — Never run a local test instance of `sakthai telegram` using the production bot token while the VM agent service is active; Telegram will reject both with HTTP 409 conflicts.
+- **Fail Closed Security** — If Tirith or data loss guardrails block a tool call, the agent halts by design. Check stdout for security intercept notices.

@@ -1,7 +1,7 @@
 ---
 name: SakTan-ops-cron-watchdog
-version: 1.0.0
-description: Auto-resume paused/disabled cron jobs across profiles.
+version: 1.1.0
+description: Auto-resume paused or failed scheduled jobs and daemons across the household fleet.
 category: operations
 tags:
 - automation
@@ -12,49 +12,53 @@ tags:
 - self
 - watchdog
 ---
-# Cron Watchdog Self-Heal
 
-Automatically detects and resumes cron jobs that have stopped, become disabled,
-paused, or entered a "completed" state when they should still be running.
+# Scheduled Job Watchdog & Self-Healing
+
+Automatically detects, audits, and self-heals scheduled jobs, daemons, and systemd
+timers that have stopped, encountered transient failures, or entered inactive states.
 
 ## When to Use
 
-- User reports "cron jobs stopped firing"
-- User asks about cron reliability or uptime
-- Routine: runs every 5 minutes via dedicated self-heal cron job
+- System status check reports "scheduled jobs or daemons stopped firing".
+- Routine Care-stage fleet diagnostic run.
+- Verifying systemd user services after an environment reboot or update.
 
 ## Procedure
 
-1. **List all jobs** via `cronjob(action='list')`
-2. **Inspect each job's state.** A job needs healing if:
-   - `enabled: false` AND state is not intentionally paused (`paused_reason` is not set)
-   - `state: "completed"` when it should be recurring
-   - `last_status` indicates an error
-3. **Re-enable** by calling `cronjob(action='update', job_id='...')` — re-posting the same config with `enabled: true`
-4. **Log the fix** — note which jobs were healed and why
-5. **Deliver a quiet report** in the chat (one line per healed job)
-
-## Jobs to watch
-
-Only recurring cron jobs (repeat: forever) should be auto-healed. One-shot or intentionally paused jobs are skipped.
-
-| Job | Profile | Should be |
-|-----|---------|-----------|
-| HF Learn & Improve Skills | sakthai | Every 1m, forever |
-| HF Trending Models | sakthai | Every 1m, forever |
-| HF Papers Daily | sakthai | Every 1m, forever |
-| HF New Cool Spaces | sakthai | Every 1m, forever |
-| Learning Loop | sakthai | Daily 2AM, forever |
+1. **Inspect Active & Inactive Timers**:
+   ```bash
+   systemctl --user list-timers --all
+   ```
+2. **Detect Failed Units**:
+   ```bash
+   systemctl --user --failed
+   ```
+3. **Inspect Failure Details**:
+   For any failed unit, inspect recent journal output:
+   ```bash
+   journalctl --user -u "<unit>.service" -n 25 --no-pager
+   ```
+4. **Self-Healing Actions**:
+   - For transient failure (network timeout, temporary file lock):
+     ```bash
+     systemctl --user reset-failed "<unit>.service"
+     systemctl --user restart "<unit>.service"
+     ```
+   - For timer disabled or stopped:
+     ```bash
+     systemctl --user enable --now "<unit>.timer"
+     ```
+5. **Log Healed Units**:
+   Write observation to SakTan's memory shard:
+   ```bash
+   sakthai learn --persona saktan "WATCHDOG HEAL: <unit> | action: restart | reason: <transient-error>" \
+     --kind observation --tag watchdog-heal --tag saktan
+   ```
+6. **Report Summary**:
+   Deliver a single-line update to Beer if any units were healed. Emit nothing if all units are healthy.
 
 ## Pitfalls
 
-- Do NOT heal intentionally paused jobs (check `paused_reason`).
-- Do NOT heal one-shot jobs.
-- If a job keeps failing immediately after heal, report it — don't loop-heal.
-- Rate-limit: only report actual changes, not "all clear" every tick.
-
-## Verification
-
-```bash
-cronjob(action='list')  # All jobs should show enabled: true, state: scheduled
-```
+- **Do Not Loop-Heal Persistent Failures**: If a service fails immediately upon restart due to missing credentials, do not repeatedly restart it. Report the root cause to Beer.
+- **Check Shard Locks Before Restarting**: If an agent process crashed, verify its SQLite shard (`~/.sakthai/<persona>/memory.db`) is intact via `sakthai memory --persona <p> healthcheck`.

@@ -40,9 +40,9 @@
 
 ## 🛠️ 3. MCP Server, Platform & Domain Tool Loadout
 
-- **🏠 100% Local Zero-Cost Execution (`config/mcp.json`: `{}`)**:
-  - Runs on local Ollama (`sakthai` model) with zero external MCP servers and zero API token spend
-  - Uses built-in memory, calendar, and mail tools (`list_calendar_events`, `create_calendar_event`, `read_outlook_mail`, `send_telegram_message`)
+- **🏠 Zero-Cost Execution & Streamable HTTP MCP (`config/mcp.json`)**:
+  - Runs on local Ollama (`sakthai` model) with zero API spend for local reasoning
+  - Remote streamable-http MCP servers (`microsoft365`, `microsoft-learn`, `gemini-api-docs`) alongside built-in memory, calendar, and mail tools (`list_calendar_events`, `create_calendar_event`, `read_outlook_mail`, `send_telegram_message`)
 - **⚡ Firebase Genkit MCP (`genkit`)**:
   - Optional local orchestration stdio MCP (`npx -y genkit mcp`) with graceful degradation when unconfigured
 - **⏰ Household Rhythm & Cron Proposal Engine (`schedule-request`)**:

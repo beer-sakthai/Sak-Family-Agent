@@ -30,15 +30,15 @@ curl -s -H "Authorization: token $GITHUB_TOKEN" \
 curl -s -H "Authorization: token $GITHUB_TOKEN" \
   -H "Accept: application/vnd.github+json" \
   "https://api.github.com/repos/beer-sakthai/Sak-Family-Agent" -o /tmp/gh_test.json && \
-python3 -c "import json; d=json.load(open('/tmp/gh_test.json')); print(d.get('full_name','FAIL'))"
+python3 -c "import json, sys; d=json.load(open('/tmp/gh_test.json')); sys.stdout.write(d.get('full_name','FAIL') + '\n')"
 ```
 
-## Method 2: grep/sed on `.git-credentials`
+## Method 2: sed on credentials file
 
 Direct file parsing — works but depends on the file format.
 
 ```bash
-GITHUB_TOKEN=$(grep 'beer-sakthai@github.com' /opt/data/.git-credentials | sed 's|.*beer-sakthai:\\(.*\\)@github.com|\\1|')
+GITHUB_TOKEN=$(sed -n 's|.*beer-sakthai:\(.*\)@github.com|\1|p' /opt/data/.git-credentials)
 ```
 
 ### When to use
