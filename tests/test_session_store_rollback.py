@@ -1,20 +1,21 @@
 import json
-import os
 import shutil
+import sys
 import tempfile
 from pathlib import Path
 
 import pytest
-import sys
 
 from sakthai.memory.session_store import FileSessionStore, FirestoreSessionStore, SessionSnapshot
 from sakthai.memory.store import MemoryStore
+
 
 @pytest.fixture
 def temp_dir():
     dir_path = Path(tempfile.mkdtemp())
     yield dir_path
     shutil.rmtree(dir_path)
+
 
 def test_file_session_store_checkpoint_and_revert(temp_dir):
     # Setup a memory store with some data
@@ -24,7 +25,9 @@ def test_file_session_store_checkpoint_and_revert(temp_dir):
     store = FileSessionStore(checkpoints_dir=temp_dir)
     snap_id = "snap1"
     # Create checkpoint
-    store.create_checkpoint(snap_id, memory_store=mem, session_data={"foo": "bar"}, metadata={"meta": 123})
+    store.create_checkpoint(
+        snap_id, memory_store=mem, session_data={"foo": "bar"}, metadata={"meta": 123}
+    )
     # Verify file exists
     checkpoint_path = temp_dir / f"{snap_id}.json"
     assert checkpoint_path.is_file()
@@ -49,6 +52,7 @@ def test_file_session_store_checkpoint_and_revert(temp_dir):
     snapshot = store.get_checkpoint(snap_id)
     assert isinstance(snapshot, SessionSnapshot)
     assert snapshot.snapshot_id == snap_id
+
 
 def test_firestore_session_store_fallback(monkeypatch):
     # Force FirestoreSessionStore to use in-memory fallback by not providing client and mocking import failure

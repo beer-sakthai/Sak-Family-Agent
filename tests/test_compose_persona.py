@@ -227,4 +227,3 @@ def test_main_compose_package_cli(tmp_path: Path, capsys: pytest.CaptureFixture[
     )
     assert exit_code == 0
     assert "OK: composed sakjules matches" in capsys.readouterr().out
-
