@@ -415,6 +415,25 @@ def dispatch_webhook_event(
     ):
         results["metadata_review"] = handle_metadata_review(payload, repo_card_data=repo_card_data)
 
+    # 5. Gate 1 Portfolio Cache Auto-Refresh (Hugging Face repo update)
+    if payload.event.scope == "repo" or payload.event.scope.startswith("repo."):
+        owner = payload.repo.owner.id if (payload.repo.owner and payload.repo.owner.id) else None
+        if not owner and "/" in payload.repo.name:
+            owner = payload.repo.name.split("/")[0]
+        try:
+            from ..team.gateway import PortfolioCacheEngine
+
+            cache_engine = PortfolioCacheEngine()
+            refresh_res = cache_engine.refresh_portfolio_cache(owner=owner or "Nanthasit")
+            results["portfolio_cache_refresh"] = {
+                "processed": True,
+                "owner": owner or "Nanthasit",
+                "total_repos": refresh_res.get("total_repos", 0),
+            }
+        except Exception as exc:
+            logger.warning("Portfolio cache auto-refresh on webhook failed: %s", exc)
+            results["portfolio_cache_refresh"] = {"processed": False, "error": str(exc)}
+
     return {
         "processed": any(r.get("processed") for r in results.values()),
         "event_scope": payload.event.scope,
