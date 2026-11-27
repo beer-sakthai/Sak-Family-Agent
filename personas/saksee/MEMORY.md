@@ -83,7 +83,7 @@ Connected MCP & Platform Tools:
 - **🔍 Chrome DevTools MCP (`chrome-devtools`)**:
   - `npx -y chrome-devtools-mcp@1.10.1` (pinned in `config/mcp.json`, never `@latest` — Security Rule 5)
 - **Unified Agent Platform (`sakthai.agent_platform`)**: `check_data_loss_guardrail`, `wrap_with_isolated_runner`, `render_skills_progressive_summary`, `AntigravityAgentRunner`, `harness_exporter`
-- **Skills Overlay**: 95 skills in [`personas/saksee/skills/`](file:///home/sak/Sak-Family-Agent/personas/saksee/skills) + 19 shared skills in [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills)
+- **Skills Overlay**: 98 skills in [`personas/saksee/skills/`](file:///home/sak/Sak-Family-Agent/personas/saksee/skills) + 19 shared skills in [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills)
 
 ---
 

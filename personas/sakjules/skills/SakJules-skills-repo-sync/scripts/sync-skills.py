@@ -1,49 +1,69 @@
 #!/usr/bin/env python3
-"""Sync SakSit skills + LEARNING_JOURNAL.md + cron-configs.json to beer-sakthai/saksit-skills.
+"""Sync SakJules skills to beer-sakthai/sakjules-skills.
 
 Usage: python3 sync-skills.py
 
-Extracts GitHub PAT from /opt/data/.git-credentials (first line).
+Extracts GitHub PAT from GH_TOKEN, GITHUB_TOKEN, gh auth token, or .git-credentials.
 Does content comparison via base64 — only pushes changed files.
 """
+
+from __future__ import annotations
 
 import base64
 import json
 import os
+import subprocess
 import sys
 import urllib.error
 import urllib.request
 from datetime import date
+from pathlib import Path
 from urllib.parse import urlparse
 
-REPO = "beer-sakthai/saksit-skills"
+REPO = os.getenv("SAKJULES_SKILLS_REPO", "beer-sakthai/sakjules-skills")
 API_BASE = f"https://api.github.com/repos/{REPO}"
-SKILLS_BASE = os.path.expanduser("/opt/data/profiles/saksit/skills")
-LJ_PATH = os.path.expanduser("/opt/data/profiles/saksit/LEARNING_JOURNAL.md")
+SCRIPT_DIR = Path(__file__).resolve().parent
+SKILL_DIR = SCRIPT_DIR.parent
+SKILLS_BASE = Path(os.getenv("SAKTHAI_SKILLS_DIR", str(SKILL_DIR.parent)))
 
 
-def get_token():
+def get_token() -> str | None:
+    # 1. Environment variables
+    token = os.getenv("GH_TOKEN") or os.getenv("GITHUB_TOKEN")
+    if token and token.strip():
+        return token.strip()
+
+    # 2. gh CLI token
     try:
-        with open("/opt/data/.git-credentials") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    parsed = urlparse(line)
-                    if parsed.hostname == "github.com":
-                        token = parsed.password or parsed.username
-                        if token:
-                            return token.strip()
-                except Exception:
-                    pass
-    except OSError as e:
-        print(f"Warning: unable to read /opt/data/.git-credentials: {e}", file=sys.stderr)
-        return None
+        res = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True, check=False)
+        if res.returncode == 0 and res.stdout.strip():
+            return res.stdout.strip()
+    except Exception:
+        pass
+
+    # 3. .git-credentials fallback
+    for cred_path in [Path.home() / ".git-credentials", Path("/opt/data/.git-credentials")]:
+        if cred_path.is_file():
+            try:
+                for line in cred_path.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        parsed = urlparse(line)
+                        if parsed.hostname == "github.com":
+                            tok = parsed.password or parsed.username
+                            if tok:
+                                return tok.strip()
+                    except Exception:
+                        pass
+            except OSError as e:
+                print(f"Warning: unable to read {cred_path}: {e}", file=sys.stderr)
+
     return None
 
 
-def gh_api(token, method, path, data=None):
+def gh_api(token: str, method: str, path: str, data: dict | None = None) -> tuple[int, dict]:
     url = f"{API_BASE}/{path.lstrip('/')}"
     body = json.dumps(data).encode() if data else None
     req = urllib.request.Request(
@@ -58,90 +78,61 @@ def gh_api(token, method, path, data=None):
         with urllib.request.urlopen(req) as resp:
             return resp.status, json.loads(resp.read().decode())
     except urllib.error.HTTPError as e:
-        body = e.read().decode()
+        resp_body = e.read().decode()
         try:
-            return e.code, json.loads(body)
-        except json.JSONDecodeError:
-            return e.code, {"message": body[:200]}
+            return e.code, json.loads(resp_body)
+        except Exception:
+            return e.code, {"message": resp_body}
 
 
-def collect_files():
-    files = []
-    for root, _dirs, filenames in os.walk(SKILLS_BASE):
-        if "SKILL.md" in filenames:
-            local = os.path.join(root, "SKILL.md")
-            remote = local.replace(f"{SKILLS_BASE}/", "")
-            files.append((local, remote))
-    if os.path.exists(LJ_PATH):
-        files.append((LJ_PATH, "LEARNING_JOURNAL.md"))
-    cron_dir = os.path.expanduser("~/.hermes/cron")
-    cfg = {"cron_jobs": [], "exported_at": date.today().isoformat()}
-    if os.path.isdir(cron_dir):
-        for fname in sorted(os.listdir(cron_dir)):
-            fp = os.path.join(cron_dir, fname)
-            if os.path.isfile(fp):
-                with open(fp) as f:
-                    try:
-                        cfg["cron_jobs"].append({fname: json.load(f)})
-                    except Exception:
-                        cfg["cron_jobs"].append({fname: f.read()})
-    tmp = "/tmp/cron-configs.json"
-    with open(tmp, "w") as f:
-        json.dump(cfg, f, indent=2)
-    files.append((tmp, "cron-configs.json"))
-    return files
-
-
-def main():
+def sync() -> int:
     token = get_token()
     if not token:
-        print("FAIL: no token")
-        sys.exit(1)
+        print("Error: GitHub token not found in GH_TOKEN, GITHUB_TOKEN, gh CLI, or .git-credentials.", file=sys.stderr)
+        return 1
 
-    files = collect_files()
-    pushed = skipped = 0
-    failed = []
+    print(f"Syncing SakJules skills from {SKILLS_BASE} to {REPO}...")
+    skill_files = list(SKILLS_BASE.rglob("SKILL.md"))
+    print(f"Found {len(skill_files)} SKILL.md files to verify.")
 
-    for local, remote in files:
-        with open(local, "rb") as f:
-            b64 = base64.b64encode(f.read()).decode()
+    pushed = 0
+    skipped = 0
+    errors = 0
 
-        status, data = gh_api(token, "GET", f"contents/{remote}")
-        exists = status == 200
+    for sf in skill_files:
+        rel = sf.relative_to(SKILLS_BASE).as_posix()
+        content_bytes = sf.read_bytes()
+        b64_content = base64.b64encode(content_bytes).decode("ascii")
 
-        if exists:
-            if data.get("content", "").replace("\n", "") == b64:
-                print(f"  ⏭️  {remote}")
+        # Check existing remote file
+        status, resp = gh_api(token, "GET", f"contents/{rel}")
+        sha = None
+        if status == 200:
+            sha = resp.get("sha")
+            remote_b64 = resp.get("content", "").replace("\n", "")
+            if remote_b64 == b64_content:
                 skipped += 1
                 continue
-            sha = data["sha"]
-        else:
-            sha = None
 
-        name = remote.replace("/SKILL.md", "").split("/")[-1]
-        if remote == "LEARNING_JOURNAL.md":
-            name = "learning-journal"
-        elif remote == "cron-configs.json":
-            name = "cron-configs"
-
-        put = {"message": f"SakSit: sync {name} — {date.today()}", "content": b64}
+        # Push updated content
+        payload = {
+            "message": f"SakJules: sync {rel} — {date.today().isoformat()}",
+            "content": b64_content,
+        }
         if sha:
-            put["sha"] = sha
+            payload["sha"] = sha
 
-        st, res = gh_api(token, "PUT", f"contents/{remote}", put)
-        if st in (200, 201):
-            print(f"  ✅ {remote}")
+        put_status, put_resp = gh_api(token, "PUT", f"contents/{rel}", payload)
+        if put_status in (200, 201):
+            print(f"  [PUSHED] {rel}")
             pushed += 1
         else:
-            print(f"  ❌ {remote}: {st} — {res.get('message', '')}")
-            failed.append(remote)
+            print(f"  [ERROR] {rel}: HTTP {put_status} — {put_resp.get('message', 'unknown error')}", file=sys.stderr)
+            errors += 1
 
-    st, tree = gh_api(token, "GET", "git/trees/main?recursive=1")
-    if st == 200:
-        print(f"\nRepo: {len(tree.get('tree', []))} entries on main")
-    print(f"\nPushed: {pushed} | Skipped: {skipped} | Failed: {len(failed)}")
-    return pushed, skipped, failed
+    print(f"Sync complete: {pushed} pushed, {skipped} unchanged, {errors} errors.")
+    return 0 if errors == 0 else 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(sync())

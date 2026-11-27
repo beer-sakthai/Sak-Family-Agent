@@ -22,7 +22,7 @@ flowchart TD
 
 #### 🔹 Task 1.1: Config, Model & Unified Platform Preflight
 - **Status**: [x] 2026-11-18
-- **Goal**: Confirm SakJules's provider (`huggingface`), model (`deepseek-ai/DeepSeek-V4.1-Flash`), 56 overlay skills, and `sakthai platform` CLI (`detect-deps`, `check-safety`, `export-harness`) resolve cleanly.
+- **Goal**: Confirm SakJules's provider (`huggingface`), model (`deepseek-ai/DeepSeek-V4.1-Flash`), 48 overlay skills, and `sakthai platform` CLI (`detect-deps`, `check-safety`, `export-harness`) resolve cleanly.
 - **Estimated Time**: 2 minutes
 - **Command**: `SAKTHAI_HOME=$(mktemp -d) sakthai run "preflight" --persona sakjules --no-mcp --dry-run && sakthai platform export-harness sakjules`
 - **Acceptance Criteria**: Preflight resolves `huggingface` → `deepseek-ai/DeepSeek-V4.1-Flash`; Harness v1 spec exports cleanly.
@@ -77,6 +77,41 @@ flowchart TD
 - **Estimated Time**: 3 minutes
 - **Command**: `sakthai learn --persona sakjules "CYCLE EVAL: sakjules | task: <name> | total: <n>/100 | grade: <S/A/B/C/D/F> | timestamp: <ISO>" --kind observation --tag cycle-eval --tag sakjules`
 - **Acceptance Criteria**: `cycle-eval` written to `~/.sakthai/sakjules/memory.db` and logged in `CYCLE.md`.
+
+---
+
+### Phase 6: SakJules Agent Comprehensive Overhaul & Role Elevation (2026-11-26)
+
+#### 🔹 Task 6.1: Skill Portfolio & Identity Hygiene
+- **Status**: [x] 2026-11-26
+- **Goal**: Repair 4 broken skills (`SakJules-skills-repo-sync` -> pointed to `sakjules-skills` without `/opt/data/profiles/saksit/`, `SakJules-teams-meeting-pipeline` -> purged of legacy framework/Turkish references, `SakJules-triage-issues` -> generalized beyond `googleapis/mcp-toolbox`, `SakJules-saas-arr-waterfall-analysis` -> description completed), and relocate/prune 10+ stray business/finance skills out of SakJules.
+- **Acceptance Criteria**: All skills in `personas/sakjules/skills/` are 100% focused on GitHub, CI/CD, DevSecOps, and Automation with valid schemas.
+
+#### 🔹 Task 6.2: Specialized DevSecOps & Governance Skills
+- **Status**: [x] 2026-11-26
+- **Goal**: Author 4 high-leverage skills:
+  1. `SakJules-workflow-security-zizmor`: GitHub Actions AST audits, SHA-pinning, and StepSecurity Harden-Runner.
+  2. `SakJules-coverage-guardian`: Pytest >=96% branch-coverage monitoring and test gap scaffolding.
+  3. `SakJules-pr-rebase-sentinel`: Preflight open PR duplicate detection (`gh pr list`), rebase checks, and conflict avoidance.
+  4. `SakJules-cron-orchestration`: Ingestion of SakTan's `schedule-request` memory tags and `schedule-confirmed` attestation.
+- **Acceptance Criteria**: All 4 skills authored, formatted to 10-factor YAML rubric, and pass `sak eval skills --persona sakjules`.
+
+#### 🔹 Task 6.3: Autonomous CI Auto-Healing Engine (`scripts/ci_auto_heal.py`)
+- **Status**: [x] 2026-11-26
+- **Goal**: Upgrade `scripts/ci_auto_heal.py` from 77 lines to a full autonomous engine:
+  - Local multi-stage remediation (Ruff format/fix, persona package parity sync `make sync-personas`, and `--run-tests` on affected files).
+  - GitHub Actions log parser (`gh run view --log-failed`), failure classifier (lint, type, test, flaky network), and automated memory tagging (`ci-failure`, `ci-stalled`).
+- **Acceptance Criteria**: `ci_auto_heal.py --run-tests` works cleanly; classification logic and memory logging verified by unit tests.
+
+#### 🔹 Task 6.4: MCP, Workspace & Configuration Alignment
+- **Status**: [x] 2026-11-26
+- **Goal**: Refine `config/mcp.json` to retain `stepsecurity`, `microsoft-learn`, and `gemini-api-docs`; decouple `microsoft365`; update `personas/sakjules/MEMORY.md` to accurately reflect active servers; expand `config/workspace.yaml` `allowed_tools` to include StepSecurity, Jules worker, and memory tools; and clean up legacy repository path variable names in `evolution/core/config.py`.
+- **Acceptance Criteria**: MCP list and tools resolve cleanly with zero documentation drift.
+
+#### 🔹 Task 6.5: Defense-in-Depth Guardrail Hardening & ADR-0001 Prototype
+- **Status**: [x]
+- **Goal**: Embed programmatic duplicate PR and auto-merge prevention into tooling; verify the 12-item overlay boundary in `personas/sakjules/`; test package composition spike via `scripts/compose_persona.py`; and run full quality gates (`pytest tests/ -q --cov=sakthai --cov-fail-under=96`, `ruff`, `mypy`, `bandit`).
+- **Acceptance Criteria**: 100% of tests pass, zero lint/type/security errors, coverage >=96.0%.
 
 ---
 

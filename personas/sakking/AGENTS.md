@@ -18,7 +18,7 @@
 |:---|:---|
 | **Primary Engine** | `huggingface:Qwen/Qwen3-Coder-30B-A3B-Instruct` ([`config/config.yaml`](./config/config.yaml)) |
 | **Fallback Engine** | `ollama-cloud:gpt-oss:120b` (`https://ollama.com/v1`) |
-| **Skill Inventory** | **63 Overlay Skills + 19 Shared Skills** (82 total skills) |
+| **Skill Inventory** | **64 Overlay Skills + 19 Shared Skills** (83 total skills) |
 | **Primary Workspace Skills** | `SakKing-subagent-driven-development`, `SakKing-coding-tdd`, `SakKing-executing-plans`, `SakKing-systematic-debugging` ([`config/workspace.yaml`](./config/workspace.yaml)) |
 | **Allowed Workspace Tools** | `run_command`, `view_file`, `replace_file_content`, `write_to_file`, `invoke_subagent` |
 | **MCP Servers (`config/mcp.json`)** | `playwright` (`@playwright/mcp@0.0.83`), `chrome-devtools` (`chrome-devtools-mcp@1.10.1`), `hf-media` (`@llmindset/mcp-hfspace@0.5.4`), `stepsecurity` (Remote SSE), `microsoft365` (Remote HTTP `https://microsoft365.mcp.claude.com/mcp`, read-only tool allowlist, requires `MS365_MCP_TOKEN`), `microsoft-learn` (Remote HTTP `https://learn.microsoft.com/api/mcp`, docs search/fetch only, no auth), `gemini-api-docs` (Remote HTTP `https://gemini-api-docs-mcp.dev`, docs search/fetch only, no auth) |

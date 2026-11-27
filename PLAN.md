@@ -304,6 +304,13 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-27 **Phase 3: Parity & Verification Across 6 Personas** — Executed `scripts/sync_personas.py` maintaining 100% byte-for-byte package parity across all 6 personas, verified clean ruff check/format (188 files), strict mypy (134 files, 0 issues), bandit security scan (0 issues), and full parity test suite.
 - [x] 2026-11-27 **Phase 4: Pull Request Delivery** — Push branch `feat/saktan-full-spectrum-upgrade` and open PR for Beer's manual review (no auto-merge).
 
+### 12. SakJules Agent Comprehensive Overhaul & Role Elevation
+- [x] 2026-11-26 **Phase 1: Skill Portfolio & Identity Hygiene** — Fix broken skills (`SakJules-skills-repo-sync`, `SakJules-teams-meeting-pipeline`, `SakJules-triage-issues`, `SakJules-saas-arr-waterfall-analysis`), and prune/relocate 10+ stray business/finance skills to restore sharp CI/CD domain boundaries.
+- [x] 2026-11-26 **Phase 2: Specialized DevSecOps & Governance Skills** — Author 4 high-leverage skills (`SakJules-workflow-security-zizmor`, `SakJules-coverage-guardian`, `SakJules-pr-rebase-sentinel`, `SakJules-cron-orchestration`).
+- [x] 2026-11-26 **Phase 3: Autonomous CI Auto-Healing Engine (`scripts/ci_auto_heal.py`)** — Upgrade `ci_auto_heal.py` with multi-stage local remediation (Ruff, parity sync, `--run-tests`) and GitHub Actions failure log parsing with automatic family memory tagging (`ci-failure`, `ci-stalled`).
+- [x] 2026-11-26 **Phase 4: MCP, Workspace & Configuration Alignment** — Streamline MCP stack to DevSecOps/Cloud (`stepsecurity`, `microsoft-learn`, `gemini-api-docs`), decouple `microsoft365`, reconcile `MEMORY.md`, expand `workspace.yaml` allowed tools, and clean up legacy `hermes_*` variables.
+- [x] 2026-11-27 **Phase 5: Defense-in-Depth Guardrail Hardening & ADR-0001 Prototype** — Embed programmatic duplicate PR and auto-merge prevention, verify the 12-item overlay boundary in `personas/sakjules/`, enhance package composer spike, and run full quality gates (`pytest >=96%`, `ruff`, `mypy`, `bandit`).
+
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |

@@ -84,7 +84,7 @@ Connected MCP & Platform Tools:
 - **🎨 Hugging Face Media Spaces MCP (`hf-media`)**:
   - `npx -y @llmindset/mcp-hfspace@0.5.4 black-forest-labs/FLUX.1-schnell Lightricks/LTX-Video` (pinned in `config/mcp.json`)
 - **Unified Agent Platform (`sakthai.agent_platform`)**: `check_data_loss_guardrail`, `wrap_with_isolated_runner`, `render_skills_progressive_summary`, `AntigravityAgentRunner`, `harness_exporter`
-- **Skills Overlay**: 63 skills in [`personas/sakking/skills/`](file:///home/sak/Sak-Family-Agent/personas/sakking/skills) + 19 shared skills in [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills)
+- **Skills Overlay**: 64 skills in [`personas/sakking/skills/`](file:///home/sak/Sak-Family-Agent/personas/sakking/skills) + 19 shared skills in [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills)
 
 ---
 

@@ -59,8 +59,8 @@
   - **Isolated Environment Runner**: `sakthai platform wrap-cmd "<cmd>"` (`dep_manager.py`) auto-wraps commands in the detected `uv` virtual environment
   - **Progressive Skill Disclosure**: `sakthai platform skills` (`render_skills_progressive_summary`) renders lightweight skill metadata tables to prevent prompt bloat
   - **Harness Pipeline Exporter**: `sakthai platform export-harness saksit` (`harness_exporter.py`) exports declarative Harness v1 agent & pipeline specs
-- **🧰 Skill Overlay Inventory (44 Overlay Skills + 19 Shared Skills)**:
-  - **Overlay Root**: [`personas/saksit/skills/`](./skills) (44 specialized `SakSit-*` skills)
+- **🧰 Skill Overlay Inventory (50 Overlay Skills + 19 Shared Skills)**:
+  - **Overlay Root**: [`personas/saksit/skills/`](./skills) (50 specialized `SakSit-*` skills)
   - **Shared Root**: [`personas/shared/skills/`](../shared/skills) (19 shared `Sak-*` skills including `Sak-auto-cycle-loop`, `Sak-dogfood`, `Sak-ocr-and-documents`, `Sak-yuanbao`)
   - **Primary Workspace Skills** ([`config/workspace.yaml`](./config/workspace.yaml)):
   - `SakSit-ai-seo-content-strategy-2026`

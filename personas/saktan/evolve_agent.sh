@@ -13,11 +13,11 @@
 #   ./evolve_agent.sh <sakthai|saksee|saksit|sakking|sakjules|saktan> --skill <name> [opts...]
 #   ./evolve_agent.sh saksit  --skill github-auth --iterations 8
 #   ./evolve_agent.sh saksee  --skill arxiv --dry-run          # validate, $0 spend
-#   ./evolve_agent.sh sakthai --skill arxiv --apply --merge    # evolve, apply live, auto-merge
+#   ./evolve_agent.sh sakthai --skill arxiv --apply            # evolve, apply live, open review PR
 #
 # Flags handled by this wrapper:
 #   --apply       also copy the evolved skill into the LIVE profile skills dir
-#   --merge       auto-squash-merge the PR after pushing (default: open PR only)
+#   --merge       prohibited by Rule #5 (leaves PR open for Beer's manual review)
 #   --no-push     do everything locally; skip GitHub push/PR
 #   --dry-run     passed through to evolve_skill (validate only, no API spend)
 #   --bootstrap   only create the repo + push current skills as baseline, then exit
@@ -190,7 +190,8 @@ if [ "$PUSH" = 1 ]; then
     2>/dev/null || true)"
   echo "[pr] ${PR_URL:-opened}"
   if [ "$MERGE" = 1 ]; then
-    gh pr merge "$BR" --repo "$FULL_REPO" --squash --delete-branch || echo "[warn] auto-merge failed; merge manually"
+    echo "[blocked] Auto-merge is strictly prohibited by House of Sak Rule #5."
+    echo "[review] PR left open for Beer's manual review: ${PR_URL:-$BR}"
   fi
 else
   echo "[local] committed on $BR (no push)"
