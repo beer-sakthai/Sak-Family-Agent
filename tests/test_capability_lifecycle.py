@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 
+import pytest
 from click.testing import CliRunner
 
 from sakthai.agent.capability import (
@@ -242,12 +243,7 @@ def test_cli_eval_capability_json() -> None:
     assert len(data["domains"]) == 4
 
 
-def test_evaluate_capability_lifecycle_default_evaluator_all_probes_pass() -> None:
-    """Verify that default capability probe evaluation passes all standardized probes cleanly."""
-    assessment = evaluate_capability_lifecycle(model_or_persona="sakthai")
-    for domain_name, d_assess in assessment.domains.items():
-        assert d_assess.probes_passed == d_assess.probes_evaluated, (
-            f"Domain {domain_name} has failing probes: {d_assess.findings}"
-        )
-        assert int(d_assess.highest_level_attained) == int(CapabilityLevel.FRONTIER)
-        assert d_assess.confidence >= 0.95
+def test_evaluate_capability_lifecycle_without_evaluator_fails_closed() -> None:
+    """Without a real evaluator, no assessment is fabricated."""
+    with pytest.raises(ValueError, match="probe_evaluator is required"):
+        evaluate_capability_lifecycle(model_or_persona="sakthai")
