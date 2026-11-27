@@ -57,7 +57,7 @@ flowchart TD
 - **Acceptance Criteria**: Zero duplicate web fetches for assets cached within 30 minutes; clean Deputy 1 handoff.
 
 #### 🔹 Task 2.2: Break-Glass Emergency Hub Proxy
-- **Status**: [ ]
+- **Status**: [x] 2026-11-26
 - **Goal**: Proxy emergency Hugging Face Hub releases when SakThai is at Critical charge or unresponsive.
 - **Protocol**:
   1. Confirm `--tag emergency-hf-delegate` in shared family memory or quorum co-signed by SakTan (`--tag quorum-approved`).

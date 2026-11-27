@@ -10,6 +10,7 @@ from sakthai.hf import (
     TripleGateError,
     assert_hf_write_allowed,
     triple_gate_hub_write,
+    verify_deputy_break_glass_quorum,
 )
 from sakthai.memory.store import MemoryStore
 from sakthai.team.handoff import ChargeLevel
@@ -109,3 +110,94 @@ def test_triple_gate_hub_write_decorator(tmp_path: Any) -> None:
     # Fails when charge drops
     with pytest.raises(TripleGateError):
         push_model("Nanthasit/model", store=store, current_charge=ChargeLevel.LOW)
+
+
+def test_deputy_break_glass_quorum_with_emergency_delegate_tag(tmp_path: Any) -> None:
+    store = MemoryStore(tmp_path / "memory.db")
+    store.add_fact(kind="decision", value="Approved", key="appr", tags=["hub-approved"])
+    store.add_fact(kind="status", value="Active deputy", key="dep", tags=["deputy-chain"])
+    store.add_fact(
+        kind="decision",
+        value="Emergency HF release delegated to SakKing",
+        key="delegation",
+        tags=["emergency-hf-delegate"],
+    )
+
+    allowed = assert_hf_write_allowed(
+        store=store,
+        target_repo="Nanthasit/sakthai-combined-v6",
+        current_charge=ChargeLevel.LOW,
+        emergency_proxy=True,
+    )
+    assert allowed is True
+
+
+def test_deputy_break_glass_quorum_with_quorum_approved_tag(tmp_path: Any) -> None:
+    store = MemoryStore(tmp_path / "memory.db")
+    store.add_fact(kind="decision", value="Approved", key="appr", tags=["hub-approved"])
+    store.add_fact(kind="status", value="Active deputy", key="dep", tags=["deputy-chain"])
+    store.add_fact(
+        kind="decision",
+        value="Quorum co-signed by SakKing and SakTan",
+        key="quorum",
+        tags=["quorum-approved"],
+    )
+
+    allowed = assert_hf_write_allowed(
+        store=store,
+        target_repo="Nanthasit/sakthai-combined-v6",
+        current_charge=ChargeLevel.ACTIVE,
+        emergency_proxy=True,
+    )
+    assert allowed is True
+
+
+def test_deputy_break_glass_fails_without_quorum_tag(tmp_path: Any) -> None:
+    store = MemoryStore(tmp_path / "memory.db")
+    store.add_fact(kind="decision", value="Approved", key="appr", tags=["hub-approved"])
+    store.add_fact(kind="status", value="Active deputy", key="dep", tags=["deputy-chain"])
+
+    with pytest.raises(TripleGateError, match=r"(?i)emergency break-glass quorum"):
+        assert_hf_write_allowed(
+            store=store,
+            target_repo="Nanthasit/sakthai-combined-v6",
+            current_charge=ChargeLevel.LOW,
+            emergency_proxy=True,
+        )
+
+
+def test_deputy_break_glass_fails_when_charge_critical(tmp_path: Any) -> None:
+    store = MemoryStore(tmp_path / "memory.db")
+    store.add_fact(kind="decision", value="Approved", key="appr", tags=["hub-approved"])
+    store.add_fact(kind="status", value="Active deputy", key="dep", tags=["deputy-chain"])
+    store.add_fact(
+        kind="decision",
+        value="Emergency delegation",
+        key="delegation",
+        tags=["emergency-hf-delegate"],
+    )
+
+    with pytest.raises(TripleGateError, match=r"(?i)Emergency proxy requires Charge >= 20%"):
+        assert_hf_write_allowed(
+            store=store,
+            target_repo="Nanthasit/sakthai-combined-v6",
+            current_charge=ChargeLevel.NONE,
+            emergency_proxy=True,
+        )
+
+
+def test_verify_deputy_break_glass_quorum_helper(tmp_path: Any) -> None:
+    assert verify_deputy_break_glass_quorum(None) is False
+
+    empty_store = MemoryStore(tmp_path / "empty.db")
+    assert verify_deputy_break_glass_quorum(empty_store) is False
+
+    store = MemoryStore(tmp_path / "quorum.db")
+    store.add_fact(
+        kind="decision",
+        value="Quorum verified",
+        key="q",
+        tags=["quorum-approved"],
+    )
+    assert verify_deputy_break_glass_quorum(store) is True
+

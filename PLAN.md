@@ -270,6 +270,12 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [ ] **Phase 3/UX: Namespace Cleanup, Config & Shell Completion** `[SakKing, SakSee, SakSit]` — Sectioned `--help`; merge duplicates (`platform skills`→`skills`, `sak serve {web,gateway,telegram,mcp,dashboard}`, `setup`→`doctor --fix`) with hidden deprecated aliases for one minor release (bare `sak mcp`/`mcp serve` stay permanent); `~/.sakthai/config.toml` with `[persona.<name>]` overrides + `sak config`; `sak completion bash|zsh|fish`.
 - [ ] **Phase 4: Mirror Noise Reduction** `[SakJules]` — Keep ADR-0001; mark persona package copies `linguist-generated` in `.gitattributes` and add a CI guard rejecting hand edits to mirrored copies; revisit single-sourcing when standalone persona repos retire.
 
+### 13. SakKing Full-Spectrum Upgrade & Deputy 1 Role Improvement (2026-11-26)
+- [x] 2026-11-26 **Phase 1: Config & Documentation Portability** — Replace hardcoded `/home/sak/` URLs with portable relative markdown links in `CYCLE.md` and `MEMORY.md`, set `workspace_root: .` in `config/workspace.yaml`, and correct SakKing role header comment in `config/mcp.json`.
+- [x] 2026-11-26 **Phase 2: Hermes Deadweight Purge & Skill Payload Optimization** — Refactor and compress `SakKing-hermes-agent`, `SakKing-hermes-agent-skill-authoring`, and `SakKing-hermes-skill-evolution` into native SakThai runner skills adhering to the $\le 15$ KB size ceiling.
+- [x] 2026-11-26 **Phase 3: Break-Glass Hub Quorum Protocol & Governance Tooling** — Implement Deputy 1 emergency hub delegation check tool in `sakthai.hf` (`assert_hf_write_allowed` support for `--tag emergency-hf-delegate` and `--tag quorum-approved`), write unit tests, and maintain 6-persona parity.
+- [x] 2026-11-26 **Phase 4: Verification, Quality Gates & Sync** — Run full quality gate (`pytest`, `ruff`, `mypy`, `bandit`, `eval personas`, `eval audit`, `eval skills`, `eval tools`), verify 100% test pass with $\ge 96.0\%$ coverage, and deliver branch/commit.
+
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |

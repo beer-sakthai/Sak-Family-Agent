@@ -1,5 +1,5 @@
 {
-  "_comment": "SakKing — Lead & Orchestrator; owns all skills/tools. Superset of every sibling's MCP servers. Load with SAKTHAI_MCP_CONFIG=personas/sakking/config/mcp.json.",
+  "_comment": "SakKing — General Assistant & Runner (Deputy 1). Load with SAKTHAI_MCP_CONFIG=personas/sakking/config/mcp.json.",
   "mcpServers": {
     "playwright": {
       "command": "npx",
