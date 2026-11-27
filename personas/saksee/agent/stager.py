@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from ..config import sakthai_home
 
@@ -62,7 +62,10 @@ class ContentTemplateStager:
         if not target.is_file():
             return None
         try:
-            return json.loads(target.read_text(encoding="utf-8"))
+            val = json.loads(target.read_text(encoding="utf-8"))
+            if isinstance(val, dict):
+                return cast(dict[str, Any], val)
+            return None
         except Exception:
             return None
 
