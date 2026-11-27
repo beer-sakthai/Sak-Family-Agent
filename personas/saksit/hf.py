@@ -166,3 +166,94 @@ def triple_gate_hub_write(func: Any) -> Any:
         return func(*args, **kwargs)
 
     return wrapper
+
+
+def hf_validate_card_metadata(card_path_or_content: str | Any) -> dict[str, Any]:
+    """Validate Hugging Face model card YAML frontmatter metadata offline.
+
+    Accepts a filepath (str or Path) or the raw string content of a README.md / model card.
+    Extracts the YAML frontmatter between `---` boundaries and verifies required and
+    recommended metadata keys (license, language, tags, pipeline_tag).
+
+    Returns:
+        dict with keys:
+            - 'valid' (bool): True if YAML is valid and required fields are present
+            - 'metadata' (dict): Extracted metadata dictionary
+            - 'errors' (list[str]): Critical schema/parsing errors
+            - 'warnings' (list[str]): Best-practice recommendations
+    """
+    import re
+    from pathlib import Path
+
+    import yaml
+
+    errors: list[str] = []
+    warnings: list[str] = []
+    metadata: dict[str, Any] = {}
+
+    content = ""
+    # Check if input is an existing file path
+    try:
+        p = Path(card_path_or_content)
+        if p.exists() and p.is_file():
+            content = p.read_text(encoding="utf-8")
+        else:
+            content = str(card_path_or_content)
+    except Exception:
+        content = str(card_path_or_content)
+
+    # Frontmatter regex: opening --- and closing ---
+    match = re.match(r"^---\s*\n(.*?)\n---\s*(\n|$)", content, re.DOTALL)
+    if not match:
+        errors.append("Missing YAML frontmatter (must start and end with '---')")
+        return {
+            "valid": False,
+            "metadata": metadata,
+            "errors": errors,
+            "warnings": warnings,
+        }
+
+    raw_yaml = match.group(1)
+    try:
+        parsed = yaml.safe_load(raw_yaml)
+        if not isinstance(parsed, dict):
+            errors.append(
+                f"Frontmatter YAML must parse to a dictionary, got {type(parsed).__name__}"
+            )
+            return {
+                "valid": False,
+                "metadata": metadata,
+                "errors": errors,
+                "warnings": warnings,
+            }
+        metadata = parsed
+    except Exception as e:
+        errors.append(f"YAML parsing error: {e}")
+        return {
+            "valid": False,
+            "metadata": metadata,
+            "errors": errors,
+            "warnings": warnings,
+        }
+
+    # Validate required fields
+    if "license" not in metadata or not metadata["license"]:
+        errors.append("Missing required metadata field: 'license'")
+
+    # Validate recommended fields / types
+    if "pipeline_tag" not in metadata and "tags" not in metadata:
+        warnings.append("Recommended metadata missing: 'pipeline_tag' or 'tags'")
+
+    if "language" in metadata:
+        lang = metadata["language"]
+        if not isinstance(lang, (str, list)):
+            warnings.append(
+                f"'language' field should be str or list of str, got {type(lang).__name__}"
+            )
+
+    return {
+        "valid": len(errors) == 0,
+        "metadata": metadata,
+        "errors": errors,
+        "warnings": warnings,
+    }
