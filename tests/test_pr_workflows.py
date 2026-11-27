@@ -175,3 +175,31 @@ def test_skipped_workflows_unblocked() -> None:
     assert "github.event_name == 'pull_request'" in lock_text, (
         "skill-pr-reviewer.lock.yml must activate on pull_request events"
     )
+
+
+def test_labeler_and_conflict_resolver_configs() -> None:
+    """Ensure .github/labeler.yml and .github/conflict-resolver.yml match monorepo structure."""
+    labeler_path = REPO_ROOT / ".github" / "labeler.yml"
+    assert labeler_path.is_file()
+    labeler_data = yaml.safe_load(labeler_path.read_text(encoding="utf-8"))
+    assert isinstance(labeler_data, dict)
+    expected_labels = {
+        "documentation",
+        "github_actions",
+        "core_python",
+        "dashboard",
+        "personas",
+        "tests",
+        "security",
+        "dependencies",
+    }
+    for label in expected_labels:
+        assert label in labeler_data, f"Missing expected label '{label}' in .github/labeler.yml"
+
+    conflict_path = REPO_ROOT / ".github" / "conflict-resolver.yml"
+    assert conflict_path.is_file()
+    conflict_text = conflict_path.read_text(encoding="utf-8")
+    assert "src/**/*.test.ts" not in conflict_text, "Found stale path 'src/**/*.test.ts' in conflict-resolver.yml"
+    assert "apps/sak_agent_dashboard" in conflict_text
+    assert "tests/" in conflict_text
+

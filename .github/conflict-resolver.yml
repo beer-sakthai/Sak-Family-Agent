@@ -1,13 +1,11 @@
-# Git Conflict Resolver Configuration Example
+# Git Conflict Resolver Configuration
 # This file defines rules for automatically resolving Git conflicts
 
 rules:
-  # Always use theirs for package-lock.json
-  # This is useful when you want to accept incoming changes for dependency lock files
+  # Always use theirs for dependency lock files
   - paths: 'package-lock.json'
     strategy: 'theirs'
 
-  # Always use theirs for yarn.lock
   - paths: 'yarn.lock'
     strategy: 'theirs'
 
@@ -25,14 +23,17 @@ rules:
   - paths: 'build/**/*'
     strategy: 'ours'
 
-  # Example with conflict_type specification
-  # Only apply this rule when both sides modified the file
-  - paths: 'src/**/*.test.ts'
+  # Dashboard tests: accept incoming if both modified
+  - paths: 'apps/sak_agent_dashboard/**/*.test.tsx'
     conflict_type: 'both-modified'
     strategy: 'theirs'
 
-  # Another example with conflict_type
-  # When a file is added by both sides, prefer theirs
+  # Core Python tests: accept incoming if both modified
+  - paths: 'tests/**/*.py'
+    conflict_type: 'both-modified'
+    strategy: 'theirs'
+
+  # Documentation: when added by both sides, prefer incoming
   - paths: 'docs/**/*.md'
     conflict_type: 'both-added'
     strategy: 'theirs'
