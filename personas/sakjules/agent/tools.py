@@ -2023,6 +2023,74 @@ def _resolve_family_conflict(args: dict[str, Any], store: MemoryStore) -> str:
     )
 
 
+def _read_url_content(args: dict[str, Any], store: MemoryStore) -> str:
+    """Fetch live web content from URL, distill HTML to Markdown, and wrap in untrusted boundary."""
+    url = str(args.get("url") or "").strip()
+    if not url:
+        raise ValueError("url is required")
+
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(
+            f"Unsupported URL scheme {parsed.scheme!r}; only http and https are allowed"
+        )
+
+    # SSRF check: block loopback and private addresses unless allow_private_urls is True
+    import yaml
+
+    from ..config import PERSONAS_DIR
+
+    persona = getattr(store, "persona", "saksee") or "saksee"
+    cfg_file = PERSONAS_DIR / persona / "config" / "config.yaml"
+    allow_private = False
+    if cfg_file.is_file():
+        try:
+            cfg_data = yaml.safe_load(cfg_file.read_text(encoding="utf-8")) or {}
+            sec = cfg_data.get("security", {})
+            if isinstance(sec, dict):
+                allow_private = bool(sec.get("allow_private_urls", False))
+        except Exception:
+            allow_private = False
+
+    hostname = (parsed.hostname or "").lower()
+
+    if not allow_private:
+        import ipaddress
+
+        is_private = False
+        if (
+            hostname in ("localhost", "127.0.0.1", "::1")
+            or hostname.endswith(".local")
+            or hostname.endswith(".internal")
+        ):
+            is_private = True
+        else:
+            try:
+                ip = ipaddress.ip_address(hostname)
+                if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                    is_private = True
+            except ValueError:
+                pass
+        if is_private:
+            raise PermissionError(f"Private/loopback URL blocked by security policy: {url}")
+
+    import urllib.request
+
+    from .web_distill import sanitize_and_distill_web_response
+
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "SakSee-Agent/2.0 (House of Sak; Web Specialist)"},
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310 - validated scheme and SSRF checks
+        raw_bytes = resp.read()
+        raw_text = raw_bytes.decode("utf-8", errors="replace")
+
+    return sanitize_and_distill_web_response(raw_text, source_url=url)
+
+
 # -- registry ------------------------------------------------------------
 
 
@@ -2902,6 +2970,25 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
         },
         handler=_check_fleet_drift,
         annotations=_annotations(read_only=True),
+    ),
+    Tool(
+        name="read_url_content",
+        description=(
+            "Fetch and distill live web page content from an HTTP/HTTPS URL into semantic Markdown, "
+            "stripping navigation and script boilerplate and wrapping in <untrusted_web_content> boundary tags."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "The HTTP or HTTPS URL of the web page to fetch.",
+                },
+            },
+            "required": ["url"],
+        },
+        handler=_read_url_content,
+        annotations=_annotations(read_only=True, open_world=True),
     ),
 )
 

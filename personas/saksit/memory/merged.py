@@ -94,11 +94,11 @@ class FamilyMemoryView:
     def __exit__(self, *_: object) -> None:
         self.close()
 
-    def list_facts(self, limit: int = 100) -> list[ShardedFact]:
+    def list_facts(self, limit: int = 100, max_age_seconds: int | None = None) -> list[ShardedFact]:
         """Merge facts across shards, newest-first, deduped by (kind, key or value)."""
         grouped: dict[tuple[str, str], ShardedFact] = {}
         for persona, store in self._stores.items():
-            for fact in store.list_facts(limit=limit):
+            for fact in store.list_facts(limit=limit, max_age_seconds=max_age_seconds):
                 gkey = (fact.kind, fact.key) if fact.key else (fact.kind, fact.value)
                 existing = grouped.get(gkey)
                 if existing is None or fact.updated_at > existing.fact.updated_at:
@@ -106,11 +106,13 @@ class FamilyMemoryView:
         merged = sorted(grouped.values(), key=lambda sf: sf.fact.updated_at, reverse=True)
         return merged[:limit]
 
-    def top_observations(self, limit: int = 20) -> list[ShardedObservation]:
+    def top_observations(
+        self, limit: int = 20, max_age_seconds: int | None = None
+    ) -> list[ShardedObservation]:
         """Merge observations across shards, deduped by exact summary, highest weight wins."""
         grouped: dict[str, ShardedObservation] = {}
         for persona, store in self._stores.items():
-            for obs in store.top_observations(limit=limit):
+            for obs in store.top_observations(limit=limit, max_age_seconds=max_age_seconds):
                 existing = grouped.get(obs.summary)
                 if existing is None or obs.weight > existing.observation.weight:
                     grouped[obs.summary] = ShardedObservation(obs, persona)
@@ -122,13 +124,13 @@ class FamilyMemoryView:
         return merged[:limit]
 
     def search(
-        self, query: str, limit: int = 50
+        self, query: str, limit: int = 50, max_age_seconds: int | None = None
     ) -> tuple[list[ShardedFact], list[ShardedObservation]]:
         """Substring-search every shard; results are NOT deduped (origin matters for search)."""
         facts: list[ShardedFact] = []
         obs: list[ShardedObservation] = []
         for persona, store in self._stores.items():
-            f, o = store.search_memory(query, limit=limit)
+            f, o = store.search_memory(query, limit=limit, max_age_seconds=max_age_seconds)
             facts.extend(ShardedFact(x, persona) for x in f)
             obs.extend(ShardedObservation(x, persona) for x in o)
         facts.sort(key=lambda sf: sf.fact.updated_at, reverse=True)
@@ -136,7 +138,11 @@ class FamilyMemoryView:
         return facts[:limit], obs[:limit]
 
     def find_facts(
-        self, query: str | None = None, tags: Sequence[str] = (), limit: int = 50
+        self,
+        query: str | None = None,
+        tags: Sequence[str] = (),
+        limit: int = 50,
+        max_age_seconds: int | None = None,
     ) -> list[ShardedFact]:
         """Facts from every shard matching ``query`` and carrying every tag in ``tags``.
 
@@ -149,14 +155,18 @@ class FamilyMemoryView:
             raise ValueError("find_facts needs a query, a tag, or both")
         # SQL applies one filter; when more remain to apply here, read every
         # candidate (SQLite treats a negative LIMIT as no limit).
-        fetch = limit if bool(query) + len(wanted) == 1 else -1
+        fetch = limit if bool(query) + len(wanted) == 1 and max_age_seconds is None else -1
         found: list[ShardedFact] = []
         for persona, store in self._stores.items():
             if query:
-                candidates, _ = store.search_memory(query, limit=fetch)
+                candidates, _ = store.search_memory(
+                    query, limit=fetch, max_age_seconds=max_age_seconds
+                )
                 rest = wanted
             else:
-                candidates = store.search_by_tag(wanted[0], limit=fetch)
+                candidates = store.search_by_tag(
+                    wanted[0], limit=fetch, max_age_seconds=max_age_seconds
+                )
                 rest = wanted[1:]
             found.extend(
                 ShardedFact(f, persona) for f in candidates if all(t in f.tags for t in rest)

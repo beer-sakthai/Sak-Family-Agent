@@ -22,7 +22,7 @@ flowchart TD
 
 #### 🔹 Task 1.1: Config & Model Preflight
 - **Status**: [x] 2026-11-21
-- **Goal**: Confirm SakSee's provider (`huggingface`), model (`deepseek-ai/DeepSeek-V4.1-Flash`), and 107 overlay skills resolve cleanly.
+- **Goal**: Confirm SakSee's provider (`huggingface`), model (`deepseek-ai/DeepSeek-V4.1-Flash`), and 95 overlay skills resolve cleanly.
 - **Estimated Time**: 2 minutes
 - **Command**: `SAKTHAI_HOME=$(mktemp -d) sakthai run "preflight" --persona saksee --no-mcp --dry-run`
 - **Acceptance Criteria**: Preflight resolves `huggingface` → `deepseek-ai/DeepSeek-V4.1-Flash`.
