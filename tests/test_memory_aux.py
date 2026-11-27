@@ -34,6 +34,7 @@ def test_provider_static_surface(sakthai_home: Path) -> None:
 def test_provider_block_empty_before_initialize(sakthai_home: Path) -> None:
     p = SakThaiMemoryProvider()
     assert p.system_prompt_block() == ""
+    assert p.prefetch("anything") == ""
 
 
 def test_provider_renders_facts_after_initialize(sakthai_home: Path) -> None:
