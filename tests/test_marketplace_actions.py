@@ -459,3 +459,20 @@ def test_hf_hub_sync_action_integration() -> None:
     assert isinstance(data["permissions"], dict)
     assert data["permissions"]["contents"] == "read"
     assert f"huggingface/hub-sync@{PINNED_ACTIONS['huggingface/hub-sync']}" in content
+
+
+CANONICAL_CHECKOUT_SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"
+
+
+def test_all_checkout_actions_use_canonical_sha() -> None:
+    """Ensure all actions/checkout invocations across all workflows use the canonical SHA."""
+    checkout_pattern = re.compile(r"actions/checkout@([a-f0-9]+)")
+    for workflow_file in sorted(WORKFLOWS_DIR.glob("*.yml")):
+        content = workflow_file.read_text(encoding="utf-8")
+        matches = checkout_pattern.findall(content)
+        for sha in matches:
+            assert sha == CANONICAL_CHECKOUT_SHA, (
+                f"{workflow_file.name} uses non-canonical actions/checkout SHA {sha}; "
+                f"expected {CANONICAL_CHECKOUT_SHA}"
+            )
+
