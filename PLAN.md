@@ -270,10 +270,20 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [ ] **Phase 3/UX: Namespace Cleanup, Config & Shell Completion** `[SakKing, SakSee, SakSit]` — Sectioned `--help`; merge duplicates (`platform skills`→`skills`, `sak serve {web,gateway,telegram,mcp,dashboard}`, `setup`→`doctor --fix`) with hidden deprecated aliases for one minor release (bare `sak mcp`/`mcp serve` stay permanent); `~/.sakthai/config.toml` with `[persona.<name>]` overrides + `sak config`; `sak completion bash|zsh|fish`.
 - [ ] **Phase 4: Mirror Noise Reduction** `[SakJules]` — Keep ADR-0001; mark persona package copies `linguist-generated` in `.gitattributes` and add a CI guard rejecting hand edits to mirrored copies; revisit single-sourcing when standalone persona repos retire.
 
+### 12. SakSit Agent Full-Spectrum Upgrade (Role, Tools, MCP, Skills, Security & Quality)
+- [x] 2026-11-26 **Phase 1: Skill Portfolio Pruning & Parity Alignment (45 → 41 Skills)** — Retired 3 duplicate skills (instagram, audiocraft, interactive-content), relocated CSS skill to SakSee (106 → 107), updated working files and verified 100% readiness and schema validity.
+- [x] 2026-11-26 **Phase 2: Security & Content Leak Linter Integration** — Implemented `scan_content_for_leaks` and `sanitize_external_content` in guardrails, preventing filesystem path, secret, IP leaks, and prompt injections with 100% 6-persona parity.
+- [x] 2026-11-26 **Phase 3: Offline Caching & Asynchronous Staging Resilience** — Implemented `ContentTemplateStager` with `{{VARIABLE}}` hydration, `[PENDING VERIFICATION]` placeholders, and local Hub metadata caching with 100% 6-persona parity.
+- [x] 2026-11-26 **Phase 4: Multimodal Social Dimension Presets & Media Tooling** — Implemented `MediaPreset` and `format_image_prompt` with social presets (9:16, 4:5, 1.91:1, 4:1) and Gemini fallback formatter with 100% 6-persona parity.
+- [x] 2026-11-26 **Phase 5: Multi-Pass Editorial & GEO Evaluator Loop** — Implemented `evaluate_editorial_quality` with Voice, Precision, and AI Citation scoring and hype detection with 100% 6-persona parity.
+- [x] 2026-11-26 **Phase 6: Hybrid Joy Approval Pipeline (Telegram 1-Tap Digest & Staged Reports)** — Implemented `format_telegram_approval_digest` with inline callback buttons and `stage_markdown_report` for staged reviews with 100% 6-persona parity.
+- [x] 2026-11-26 **Phase 7: Full Suite Verification & Quality Gates** — Verified 100% test pass (137 tests passing), 0 linter errors (make lint clean), 0 security issues (bandit clean), and 100% Grade A+ across all 6 personas.
+
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |
 |---|---|---|
+| SakSit Upgrade Plan | [`docs/plans/2026-11-26-saksit-full-spectrum-upgrade.md`](./docs/plans/2026-11-26-saksit-full-spectrum-upgrade.md) | 🟢 Complete (2026-11-26) — All 7 phases verified |
 | Whole-Repo Refactor Plan | [`docs/superpowers/plans/2026-11-13-whole-repo-refactor.md`](./docs/superpowers/plans/2026-11-13-whole-repo-refactor.md) | 🟢 Complete (2026-11-13) — All 5 TDD tasks verified |
 | Product & Monetization | [`product/PLAN.md`](./product/PLAN.md) | 🟢 Complete (2026-11-18) — Outreach & revenue tracking completed |
 | Security Fixes | [`security/SECURITY_FIXES_PLAN.md`](./security/SECURITY_FIXES_PLAN.md) | 🟢 Complete (2026-11-18) — Fix #1 and Fix #2 verified & complete |
