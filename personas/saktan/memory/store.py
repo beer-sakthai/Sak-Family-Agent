@@ -185,8 +185,65 @@ def _fact_from_row(row: sqlite3.Row) -> Fact:
     return Fact(**data)
 
 
+#: Common English function words, plus single-character tokens (filtered by
+#: length below), carry no topical signal and must not drive relevance
+#: ranking. Without this, a query like "what time is it" shares "is"/"it"
+#: with almost any stored fact and can outrank/displace recently-added,
+#: genuinely unrelated facts — defeating the anti-goal in the design spec
+#: (docs/superpowers/specs/2026-11-26-memory-rag-context-provider-design.md)
+#: that an unrelated query must fall back to plain recency.
+_STOPWORDS = {
+    "a",
+    "an",
+    "the",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being",
+    "it",
+    "its",
+    "i",
+    "you",
+    "he",
+    "she",
+    "they",
+    "we",
+    "to",
+    "of",
+    "in",
+    "on",
+    "at",
+    "for",
+    "and",
+    "or",
+    "but",
+    "with",
+    "this",
+    "that",
+    "what",
+    "who",
+    "where",
+    "when",
+    "how",
+    "do",
+    "does",
+    "did",
+}
+
+
 def _tokenize(text: str) -> set[str]:
-    return {t for t in re.split(r"[^a-z0-9]+", text.lower()) if t}
+    """Split ``text`` into lowercase alphanumeric tokens for relevance scoring.
+
+    Stopwords and single-character tokens are dropped: they appear in nearly
+    every candidate's text and the query alike, so keeping them would let
+    topically-irrelevant text "match" on function words alone. Used for both
+    the query side and the candidate side, so both see the same vocabulary.
+    """
+    tokens = {t for t in re.split(r"[^a-z0-9]+", text.lower()) if t}
+    return {t for t in tokens if t not in _STOPWORDS and len(t) > 1}
 
 
 _T = TypeVar("_T")
@@ -208,6 +265,17 @@ def _rank_by_relevance(
     candidate scores zero (the common case: a task unrelated to anything
     stored), falls back to the first ``limit`` of the unscored pool rather than
     an arbitrary (stable-but-meaningless) ordering.
+
+    Deliberate deviation from the design doc's literal "drop zero-score
+    candidates" wording: zero-score candidates are *kept* in the mixed-score
+    case below, not dropped. The final ``scored.sort()`` sorts the whole pool
+    (matches and non-matches together) by score descending, then slices to
+    ``limit`` — so one relevant match is placed first and the remaining slots
+    are filled by the next-newest non-matching candidates, rather than
+    shrinking a full block down to just the single match. This is considered
+    the better behavior (a lone match shouldn't starve the rest of the
+    context) and is pinned by
+    ``test_render_prompt_block_query_match_fills_remaining_slots_with_recency``.
     """
     scored = [(len(query_tokens & _tokenize(text_of(c))), c) for c in candidates]
     if all(score == 0 for score, _ in scored):
