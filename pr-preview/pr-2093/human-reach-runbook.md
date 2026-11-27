@@ -10,6 +10,10 @@ contact and what they may do. The agents follow it. Nothing here was decided for
 him. Background is in [`USER.md`](./USER.md) and [`STORY.md`](./STORY.md); this
 page deliberately does not repeat it.
 
+The essentials are also written into every agent's `SOUL.md` (the section "When
+Beer may not be okay"), because a page in `docs/` is not read by the agents on its
+own. This page holds the full plan; if the two ever differ, fix both.
+
 Why it exists: [`purpose.md`](./purpose.md) ranks Beer's safety first, but until
 now no document said what that means in practice. When this was written, the
 repo had no crisis or escalation handling in any persona's SOUL, the agent
@@ -58,11 +62,14 @@ nothing.
 |---|---|
 | Immediate danger | **112** or **999** |
 | Talk to someone now, any time | **Samaritans: 116 123** (free) |
-| Suicide and self-harm support | **Pieta: 1800 247 247** (free) |
+| Suicide and self-harm support | **Pieta: 1800 247 247** (free), or text **HELP** to **51444** (standard rates) |
 
 These are the same numbers `SakSit-beer-content-voice` already attaches to any
-post about Beer's story. **Re-check them against the services' own websites
-before relying on this page.** Numbers change.
+post about Beer's story. They were checked against the HSE's published
+[supports and services](https://www.hse.ie/mental-health/services-support/supports-services/)
+and [urgent help](https://www.hse.ie/eng/services/list/4/mental-health-services/connecting-for-life/urgent-help)
+pages on 2026-11-26. Numbers change, so re-check them on the services' own
+websites now and then.
 
 ## What Beer has agreed to
 
@@ -71,6 +78,7 @@ it is filled in, the default below applies.
 
 **Default (nothing agreed yet):** the agents do **not** contact anyone on his
 behalf. They stay with him and urge him to call a person or the services above.
+They say so plainly, so he is never left guessing who has been told what.
 
 Decisions for Beer:
 
@@ -79,10 +87,12 @@ Decisions for Beer:
 2. **What the agents may do.** Pick one:
    - *Only encourage me to reach out* (default).
    - *Offer to send my trusted person a message, and send it if I say yes.*
-   - *Send my trusted person a message without asking, if I am in danger and
-     have gone quiet.*
-3. **Check-ins.** Does he want SakTan's daily rhythm to include a gentle "how
-   are you today?" and what should happen if he doesn't answer for a set time?
+   - *Send my trusted person a message when I clearly ask you to, in my own
+     words in the conversation, such as "tell them I'm not safe".* An agent can't
+     reliably tell silence from sleep, so silence alone is never a trigger.
+3. **Check-ins.** Does he want a gentle "how are you today?" each day? No
+   scheduled mechanism for this exists yet, so it would need to be built first.
+   What should happen if he doesn't answer is his call.
 
 **Where the details live.** Contact details are personal. Keep them out of this
 repository. Save them to the private memory shard on Beer's own machine, for
@@ -93,20 +103,31 @@ sakthai learn "Trusted contact: <name>, <how to reach>. Agents may: <choice 1/2/
   --persona saktan --key safety-plan --tag safety-plan
 ```
 
-Agents read it with `sakthai recall` or `sakthai memory family --tag safety-plan`.
-A shard is created owner-only (`0600`) on first write.
+From the command line, read it with `sakthai memory family --tag safety-plan`,
+which looks in every persona's shard. Inside an agent run, the agent uses the
+`family_search` tool with the query `safety-plan`. Plain `sakthai recall` would
+look only in the unscoped shard and miss a note written with `--persona saktan`.
+A shard is created owner-only (`0600`, in a `0700` folder) on first write.
 
-**Technical note, only if Beer chooses option 2 or 3.** Agents can only message
-someone if the channel is set up on purpose: `send_telegram_message` needs
-`TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`, and `send_outlook_mail` refuses every
-recipient unless `SAKTHAI_MAIL_ALLOW` names them (an unset allowlist denies all,
-deliberately). Setting the allowlist to the trusted person's address is the
-explicit act of consent. See the variables table in `CLAUDE.md`. Don't widen it
-for any other reason.
+**What can actually be sent today (only relevant if Beer chooses option 2 or 3).**
+Be honest with Beer about this before he relies on it:
+
+- `send_telegram_message` has no recipient. It posts to the one chat set in
+  `TELEGRAM_CHAT_ID` (with `TELEGRAM_BOT_TOKEN`). That reaches a trusted person
+  only if that chat is theirs; otherwise it just reaches Beer.
+- `send_outlook_mail` sends from Beer's own Outlook account, so it needs the
+  Microsoft Graph credentials (`MS_GRAPH_*`, see the variables table in
+  `CLAUDE.md`). It refuses every recipient unless `SAKTHAI_MAIL_ALLOW` names
+  them; an unset allowlist denies everyone, deliberately. Adding the trusted
+  person's address to that allowlist is the explicit act of consent. Don't widen
+  it for any other reason.
+- There is no built-in "message my trusted person" tool beyond those two, so
+  Beer's own way of reaching that person is the realistic route.
 
 ## Who does what
 
-- **SakTan** (daily ops and rhythm) owns the check-in rhythm, if Beer opts in.
+- **SakTan** (daily ops and rhythm) would own the check-in rhythm if Beer opts in,
+  once a scheduled mechanism exists (none is in place today).
 - **SakThai** (lead) coordinates the family's response and makes sure the note
   reaches shared memory.
 - **Whichever agent Beer is talking to** follows "What every agent does first".
@@ -117,8 +138,8 @@ for any other reason.
 
 - Never shame, lecture, bargain ("think of everything you've built") or argue.
 - Never give information about methods, and never help plan anything.
-- Never promise to keep a secret they may need to share if he is in danger.
-  (Say honestly what they can and can't do.)
+- Never promise secrecy they can't keep, and never say they will tell someone
+  they won't. Say honestly what they can and can't do, and what he has agreed.
 - Never put his health details in public posts, commits, PR text, issues or
   content drafts. `SakSit-beer-content-voice` already forbids graphic detail;
   this extends that to everything.
