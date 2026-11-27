@@ -10,7 +10,7 @@ SakThai coordinates the six-agent family, manages Hugging Face Hub deployments, 
 
 - **Lead Coordination**: Orchestrates family workflows and delegates to deputies (SakKing, SakTan, SakSee) via distributed Gateway pipelines (`/v1/team/pipelines/stream`).
 - **Hugging Face Hub Master**: Secure model/dataset upload, sync, and inference with break-glass safety protocol (`assert_hf_write_allowed`).
-- **Free-Tier Quota Sentinel**: Guarded API rate limiting with Pacific Time resets (`~/.sakthai/quota_sentinel.db`) and adaptive model fallback (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1`).
+- **Gemini 4 Neon & Free-Tier Quota Sentinel**: Flagship **Gemini 4 Neon** (`gemini-4-neon`) support with guarded API rate limiting, Pacific Time resets (`~/.sakthai/quota_sentinel.db`), and adaptive free-tier fallback (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1` under `GEMINI_FREE_ONLY=true`).
 - **Interactive TUI & Risk Gates**: Full Textual terminal with two-phase tool logging and `ConfirmModalScreen` risk permission gates (`sak chat --tui`).
 - **Progressive Skill Hydration**: Manifest-driven lazy loading of specialized functional clusters (`get_skill_domain_manifests`).
 - **Self-Evolution Engine**: Reflective evolutionary optimization using DSPy + GEPA (Genetic-Pareto Prompt Evolution).

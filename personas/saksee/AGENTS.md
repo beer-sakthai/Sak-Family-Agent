@@ -18,7 +18,7 @@
 |:---|:---|
 | **Primary Engine** | `huggingface:deepseek-ai/DeepSeek-V4.1-Flash` ([`config/config.yaml`](./config/config.yaml)) |
 | **Fallback Engine** | `ollama-cloud:gpt-oss:120b` (`https://ollama.com/v1`) |
-| **Skill Inventory** | **109 Overlay Skills + 19 Shared Skills** (125 total skills) |
+| **Skill Inventory** | **98 Overlay Skills + 19 Shared Skills** (117 total skills) |
 | **Primary Workspace Skills** | `SakSee-chrome-devtools-cli`, `SakSee-playwright-visual-snapshot-regression`, `Sak-ocr-and-documents` ([`config/workspace.yaml`](./config/workspace.yaml)) |
 | **Allowed Workspace Tools** | `run_command`, `view_file`, `read_url_content`, `search_web` |
 | **MCP Servers (`config/mcp.json`)** | `playwright` (`@playwright/mcp@0.0.83`), `chrome-devtools` (`chrome-devtools-mcp@1.10.1`), `microsoft365` (Remote HTTP `https://microsoft365.mcp.claude.com/mcp`, read-only tool allowlist, requires `MS365_MCP_TOKEN`), `microsoft-learn` (Remote HTTP `https://learn.microsoft.com/api/mcp`, docs search/fetch only, no auth), `gemini-api-docs` (Remote HTTP `https://gemini-api-docs-mcp.dev`, docs search/fetch only, no auth) |

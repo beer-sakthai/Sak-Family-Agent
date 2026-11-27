@@ -47,7 +47,7 @@ flowchart LR
 ---
 
 ### Stage 2: 🌟 Hope (Feasibility, Gates & Architectural Specs)
-- **Configured Model Matrix ([`config/config.yaml`](file:///home/sak/Sak-Family-Agent/personas/saktan/config/config.yaml))**:
+- **Configured Model Matrix ([`config/config.yaml`](./config/config.yaml))**:
   - `primary`: `ollama` / `sakthai`
   - `fallback`: `Local Ollama (`http://127.0.0.1:11434`)`
   - `small_model`: `Nanthasit/sakthai-context-1.5b-tools-v2`
@@ -60,7 +60,7 @@ flowchart LR
 ### Stage 3: ❤️ Care (Implementation & Quality)
 - **Execution Focus**: Filter incoming alerts so Beer only hears what truly needs attention today; tally SakSee's `rate-limit-ban`s per domain; check SakSit drafts waiting > 7 days.
 - **Synchronized Persona Files**:
-  - [`personas/saktan/SOUL.md`](file:///home/sak/Sak-Family-Agent/personas/saktan/SOUL.md) · [`personas/saktan/PLAN.md`](file:///home/sak/Sak-Family-Agent/personas/saktan/PLAN.md) · [`personas/saktan/CYCLE.md`](file:///home/sak/Sak-Family-Agent/personas/saktan/CYCLE.md) · [`personas/saktan/MEMORY.md`](file:///home/sak/Sak-Family-Agent/personas/saktan/MEMORY.md) · [`personas/saktan/HANDOFF.md`](file:///home/sak/Sak-Family-Agent/personas/saktan/HANDOFF.md) · [`personas/saktan/BACKPACK.md`](file:///home/sak/Sak-Family-Agent/personas/saktan/BACKPACK.md)
+  - [`personas/saktan/SOUL.md`](./SOUL.md) · [`personas/saktan/PLAN.md`](./PLAN.md) · [`personas/saktan/CYCLE.md`](./CYCLE.md) · [`personas/saktan/MEMORY.md`](./MEMORY.md) · [`personas/saktan/HANDOFF.md`](./HANDOFF.md) · [`personas/saktan/BACKPACK.md`](./BACKPACK.md)
 
 ---
 

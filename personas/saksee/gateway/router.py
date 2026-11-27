@@ -67,9 +67,9 @@ PERSONA_METADATA: dict[str, dict[str, Any]] = {
         "name": "SakTan",
         "role": "Daily Ops · Deputy 2",
         "handle": "@saktan_agent_bot",
-        "default_model": "gpt-4o-mini",
+        "default_model": "sakthai",
         "charge_state": "Optimal",
-        "primary_skills": ["SakTan-ops-daily-rhythm", "SakTan-memory-healthcheck"],
+        "primary_skills": ["SakTan-daily-briefing", "SakTan-close-the-day", "SakTan-weekly-review"],
     },
 }
 
@@ -129,10 +129,14 @@ class GatewayRouter:
 
         # Register legacy model aliases for backward compatibility
         legacy_aliases = [
+            (
+                "gemini-4-neon",
+                "Google Gemini 4 Neon (Frontier intelligence, fast end-to-end execution)",
+            ),
             ("gemini-2.5-flash", "Legacy Google Gemini Flash (auto-routes to gemini-4-hydrogen)"),
             (
                 "gemini-3.7-flash",
-                "Legacy Google Gemini Flash Reasoning (auto-routes to gemini-4-carbon)",
+                "Legacy Google Gemini Flash Reasoning (auto-routes to gemini-4-neon)",
             ),
         ]
         registered_ids = {item["id"] for item in data}

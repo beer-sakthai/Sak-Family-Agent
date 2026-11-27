@@ -18,7 +18,7 @@
 |:---|:---|
 | **Primary Engine** | `huggingface:deepseek-ai/DeepSeek-V4.1-Flash` ([`config/config.yaml`](./config/config.yaml)) |
 | **Fallback Engine** | `ollama-cloud:gpt-oss:120b` (`https://ollama.com/v1`) |
-| **Skill Inventory** | **170 Overlay Skills + 19 Shared Skills** (189 total skills) |
+| **Skill Inventory** | **174 Overlay Skills + 19 Shared Skills** (193 total skills) |
 | **Primary Workspace Skills** | `SakThai-speckit-bridge`, `SakThai-spec-kit`, `SakThai-huggingface-cli`, `SakThai-learning-loop` ([`config/workspace.yaml`](./config/workspace.yaml)) |
 | **Allowed Workspace Tools** | `run_command`, `view_file`, `replace_file_content`, `write_to_file` |
 | **MCP Servers (`config/mcp.json`)** | `microsoft365` (Remote HTTP `https://microsoft365.mcp.claude.com/mcp`, read-only tool allowlist, requires `MS365_MCP_TOKEN`), `microsoft-learn` (Remote HTTP `https://learn.microsoft.com/api/mcp`, docs search/fetch only, no auth), `gemini-api-docs` (Remote HTTP `https://gemini-api-docs-mcp.dev`, docs search/fetch only, no auth); Hugging Face Hub & inference stay native via `sakthai hf` / `huggingface_inference` |

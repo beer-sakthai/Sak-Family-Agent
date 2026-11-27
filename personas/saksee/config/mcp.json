@@ -9,27 +9,6 @@
       "command": "npx",
       "args": ["-y", "chrome-devtools-mcp@1.10.1"]
     },
-    "microsoft365": {
-      "url": "https://microsoft365.mcp.claude.com/mcp",
-      "headers": {
-        "Authorization": "Bearer ${MS365_MCP_TOKEN}"
-      },
-      "tools": [
-        "get_me",
-        "search_people",
-        "outlook_email_search",
-        "outlook_calendar_search",
-        "outlook_find_available_time",
-        "find_meeting_availability",
-        "sharepoint_search",
-        "sharepoint_folder_search",
-        "chat_message_search",
-        "teams_list_teams",
-        "teams_list_channels",
-        "teams_list_channel_messages",
-        "teams_list_chats"
-      ]
-    },
     "microsoft-learn": {
       "url": "https://learn.microsoft.com/api/mcp",
       "tools": [

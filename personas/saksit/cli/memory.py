@@ -520,9 +520,21 @@ def memory_deduplicate(ctx: click.Context, dry_run: bool, verbose: bool) -> None
     default=None,
     help="Comma-separated personas to include (default: all six).",
 )
+@click.option(
+    "--max-age",
+    "max_age_seconds",
+    type=click.IntRange(min=1),
+    default=None,
+    help="Filter facts and observations newer than this age in seconds (e.g. 1800 for 30m).",
+)
 @click.option("--json", "as_json", is_flag=True, help="Emit the merged view as JSON.")
 def memory_family(
-    query: str | None, tags: tuple[str, ...], limit: int, personas: str | None, as_json: bool
+    query: str | None,
+    tags: tuple[str, ...],
+    limit: int,
+    personas: str | None,
+    max_age_seconds: int | None,
+    as_json: bool,
 ) -> None:
     """Show the merged, deduplicated view across every persona's memory shard.
 
@@ -547,11 +559,15 @@ def memory_family(
     filtered = bool(query) or any(t.strip() for t in tags)
     with FamilyMemoryView(personas=persona_list) as view:
         if not filtered:
-            facts = view.list_facts(limit=limit)
-            obs = view.top_observations(limit=limit)
+            facts = view.list_facts(limit=limit, max_age_seconds=max_age_seconds)
+            obs = view.top_observations(limit=limit, max_age_seconds=max_age_seconds)
         else:
-            facts = view.find_facts(query, tags, limit=limit)
-            obs = view.search(query, limit=limit)[1] if query and not tags else []
+            facts = view.find_facts(query, tags, limit=limit, max_age_seconds=max_age_seconds)
+            obs = (
+                view.search(query, limit=limit, max_age_seconds=max_age_seconds)[1]
+                if query and not tags
+                else []
+            )
 
     if as_json:
         click.echo(

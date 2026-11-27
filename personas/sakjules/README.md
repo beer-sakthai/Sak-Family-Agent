@@ -12,7 +12,7 @@ SakJules manages GitHub operations, PR attestation, repository security pipeline
 - **Supply-Chain & Workflow Security**: SHA-256 action pinning, step-security hardening, zizmor audit enforcement, and secret leak scanning.
 - **Branch & Cache Maintenance**: Automated PR cache cleanup on pull request closure (`cache-cleanup.yml`), stale ref sweeping, and pruning merged remote feature branches.
 - **Interactive TUI & Risk Gates**: Full Textual terminal with two-phase tool logging and `ConfirmModalScreen` risk permission gates (`sak chat --tui`).
-- **Free-Tier Quota Sentinel**: Guarded API rate limiting with Pacific Time resets (`~/.sakthai/quota_sentinel.db`) and adaptive model fallback (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1`).
+- **Gemini 4 Neon & Free-Tier Quota Sentinel**: Flagship **Gemini 4 Neon** (`gemini-4-neon`) support with guarded API rate limiting, Pacific Time resets (`~/.sakthai/quota_sentinel.db`), and adaptive free-tier fallback (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1` under `GEMINI_FREE_ONLY=true`).
 - **Autonomous Evolution**: Drives repository health maintenance, daily syncs, and prompt/tool evolution.
 - **Evaluator-Optimizer & Graders**: CI auto-heal loop, supply-chain verification, and CodeGrader/ModelGrader assertions (`sakthai run --optimize`).
 - **Remote MCP Security Stack**: StepSecurity remote SSE integration, Microsoft Learn, and Gemini API Docs.

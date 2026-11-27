@@ -381,12 +381,15 @@ class MemoryStore:
         kind: str | None = None,
         after_ts: int | None = None,
         before_ts: int | None = None,
+        max_age_seconds: int | None = None,
     ) -> list[Fact]:
         """Return facts ordered newest-first.
 
         Optional ``kind`` filters on ``kind``.
         Optional ``after_ts`` / ``before_ts`` are inclusive Unix timestamps
         that filter on ``created_at``.
+        Optional ``max_age_seconds`` filters facts where ``updated_at`` is within
+        the last ``max_age_seconds`` seconds.
         """
         clauses: list[str] = []
         params: list[Any] = []
@@ -399,6 +402,9 @@ class MemoryStore:
         if before_ts is not None:
             clauses.append("created_at <= ?")
             params.append(before_ts)
+        if max_age_seconds is not None:
+            clauses.append("updated_at >= ?")
+            params.append(_now() - max_age_seconds)
         where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
         params.append(limit)
         rows = self._conn.execute(
@@ -427,18 +433,28 @@ class MemoryStore:
         self._conn.commit()
         return cur.rowcount
 
-    def search_by_tag(self, tag: str, limit: int = 50) -> list[Fact]:
+    def search_by_tag(
+        self, tag: str, limit: int = 50, *, max_age_seconds: int | None = None
+    ) -> list[Fact]:
         """Return facts carrying the exact tag, newest first.
 
         Matching goes through ``json_each`` so it compares decoded tag values
         rather than doing a substring LIKE over the raw JSON text (which would
         give false positives).
         """
+        clauses = [
+            "tags IS NOT NULL",
+            "EXISTS (SELECT 1 FROM json_each(tags) WHERE value = ?)",
+        ]
+        params: list[Any] = [tag.strip()]
+        if max_age_seconds is not None:
+            clauses.append("updated_at >= ?")
+            params.append(_now() - max_age_seconds)
+        where = " AND ".join(clauses)
+        params.append(limit)
         rows = self._conn.execute(
-            "SELECT * FROM facts WHERE tags IS NOT NULL AND EXISTS ("
-            "SELECT 1 FROM json_each(tags) WHERE value = ?) "
-            "ORDER BY updated_at DESC LIMIT ?",
-            (tag.strip(), limit),
+            f"SELECT * FROM facts WHERE {where} ORDER BY updated_at DESC LIMIT ?",  # nosec B608
+            params,
         ).fetchall()
         return [_fact_from_row(r) for r in rows]
 
@@ -515,30 +531,52 @@ class MemoryStore:
         self._conn.commit()
         return cur.rowcount > 0
 
-    def top_observations(self, limit: int = 20) -> list[Observation]:
+    def top_observations(
+        self, limit: int = 20, *, max_age_seconds: int | None = None
+    ) -> list[Observation]:
+        where = ""
+        params: list[Any] = []
+        if max_age_seconds is not None:
+            where = "WHERE created_at >= ?"
+            params.append(_now() - max_age_seconds)
+        params.append(limit)
         rows = self._conn.execute(
-            "SELECT * FROM observations ORDER BY weight DESC, created_at DESC LIMIT ?",
-            (limit,),
+            f"SELECT * FROM observations {where} ORDER BY weight DESC, created_at DESC LIMIT ?",  # nosec B608
+            params,
         ).fetchall()
         return [Observation(**dict(r)) for r in rows]
 
     # -- search & rendering ----------------------------------------------
 
-    def search_memory(self, query: str, limit: int = 50) -> tuple[list[Fact], list[Observation]]:
+    def search_memory(
+        self, query: str, limit: int = 50, *, max_age_seconds: int | None = None
+    ) -> tuple[list[Fact], list[Observation]]:
         """Substring-search both tables; returns (matching facts, observations)."""
         # Escape LIKE wildcards with '=' so a literal % or _ in the query does
         # not act as a wildcard.
         escaped = query.replace("=", "==").replace("%", "=%").replace("_", "=_")
         pattern = f"%{escaped}%"
+        fact_clauses = [
+            "(value LIKE ? ESCAPE '=' OR key LIKE ? ESCAPE '=' OR kind LIKE ? ESCAPE '=')"
+        ]
+        fact_params: list[Any] = [pattern, pattern, pattern]
+        obs_clauses = ["summary LIKE ? ESCAPE '='"]
+        obs_params: list[Any] = [pattern]
+        if max_age_seconds is not None:
+            min_ts = _now() - max_age_seconds
+            fact_clauses.append("updated_at >= ?")
+            fact_params.append(min_ts)
+            obs_clauses.append("created_at >= ?")
+            obs_params.append(min_ts)
+        fact_params.append(limit)
+        obs_params.append(limit)
         fact_rows = self._conn.execute(
-            "SELECT * FROM facts WHERE value LIKE ? ESCAPE '=' OR key LIKE ? ESCAPE '=' "
-            "OR kind LIKE ? ESCAPE '=' ORDER BY updated_at DESC LIMIT ?",
-            (pattern, pattern, pattern, limit),
+            f"SELECT * FROM facts WHERE {' AND '.join(fact_clauses)} ORDER BY updated_at DESC LIMIT ?",  # nosec B608
+            fact_params,
         ).fetchall()
         obs_rows = self._conn.execute(
-            "SELECT * FROM observations WHERE summary LIKE ? ESCAPE '=' "
-            "ORDER BY weight DESC, created_at DESC LIMIT ?",
-            (pattern, limit),
+            f"SELECT * FROM observations WHERE {' AND '.join(obs_clauses)} ORDER BY weight DESC, created_at DESC LIMIT ?",  # nosec B608
+            obs_params,
         ).fetchall()
         return (
             [_fact_from_row(r) for r in fact_rows],
