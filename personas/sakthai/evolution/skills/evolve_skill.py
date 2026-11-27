@@ -49,7 +49,7 @@ from evolution.core.config import (
     EvolutionConfig,
     resolve_hermes_agent_path,
 )
-from evolution.core.constraints import ConstraintValidator
+from evolution.core.constraints import ConstraintValidator, CapabilityConstraintValidator
 from evolution.core.dataset_builder import (
     EvalDataset,
     GoldenDatasetLoader,
@@ -294,6 +294,19 @@ def evolve(
         output_path.write_text(evolved_full)
         console.print(f"  Saved failed variant to {output_path}")
         return
+
+    # Validate frontier capability constraints (Level 2/3 require human approval)
+    console.print("\n[bold]Checking frontier capability constraints[/bold]")
+    capability_validator = CapabilityConstraintValidator()
+    capability_check = capability_validator.validate_capability_threshold(0, approval_token=None)
+    if not capability_check.passed:
+        console.print(f"  [red]✗ Capability constraint FAILED[/red]: {capability_check.message}")
+        output_path = Path("output") / skill_name / "evolved_CAPABILITY_BLOCKED.md"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(evolved_full)
+        console.print(f"  Saved capability-blocked variant to {output_path}")
+        return
+    console.print(f"  [green]✓ Capability constraint PASSED[/green]")
 
     # ── 8. Evaluate on holdout set ──────────────────────────────────────
     console.print(f"\n[bold]Evaluating on holdout set ({len(dataset.holdout)} examples)[/bold]")
