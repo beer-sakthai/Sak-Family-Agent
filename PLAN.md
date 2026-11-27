@@ -275,6 +275,11 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-26 **Phase 2: Hermes Deadweight Purge & Skill Payload Optimization** — Refactor and compress `SakKing-hermes-agent`, `SakKing-hermes-agent-skill-authoring`, and `SakKing-hermes-skill-evolution` into native SakThai runner skills adhering to the $\le 15$ KB size ceiling.
 - [x] 2026-11-26 **Phase 3: Break-Glass Hub Quorum Protocol & Governance Tooling** — Implement Deputy 1 emergency hub delegation check tool in `sakthai.hf` (`assert_hf_write_allowed` support for `--tag emergency-hf-delegate` and `--tag quorum-approved`), write unit tests, and maintain 6-persona parity.
 - [x] 2026-11-26 **Phase 4: Verification, Quality Gates & Sync** — Run full quality gate (`pytest`, `ruff`, `mypy`, `bandit`, `eval personas`, `eval audit`, `eval skills`, `eval tools`), verify 100% test pass with $\ge 96.0\%$ coverage, and deliver branch/commit.
+### 13. Six-Persona Role Enhancements & Multi-Agent Autonomous Capabilities (2026-11-26)
+- [x] 2026-11-26 **Phase 1: Multi-Agent Goal Delegation & Webhook Cache Invalidation** `[SakThai, SakKing]` — Implement `decompose_and_dispatch` tool for SakThai auto-delegating subtasks across all 6 personas; connect Gate 1 portfolio cache auto-refresh to Hugging Face webhook events; enforce 6-persona parity.
+- [x] 2026-11-26 **Phase 2: Media Generation, Scraping Resilience & Circuit Breaker** `[SakSit, SakSee]` — Package `generate_model_card_assets` with `hf-media` MCP for SakSit; implement domain rate-limit circuit breaker and dual-engine fallback in SakSee.
+- [x] 2026-11-26 **Phase 3: CI/CD Self-Healing, PR Feedback & WAL Compaction Daemon** `[SakJules, SakTan]` — Automated CI review bot feedback synthesizer for SakJules; idle-time SQLite WAL vacuum daemon and daily fleet drift watchdog for SakTan.
+- [x] 2026-11-26 **Phase 4: Full-Fleet Verification, Quality Gates & Sync to Main** `[SakJules]` — Run test matrix (4,200+ tests, >=96% coverage, lint, mypy, bandit) and commit to main.
 
 ## 📋 Sub-Plans
 
