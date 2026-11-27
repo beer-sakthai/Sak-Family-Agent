@@ -474,3 +474,20 @@ def test_docker_actions_have_dockerfile() -> None:
     )
 
 
+def test_core_workflows_have_harden_runner_and_timeouts() -> None:
+    """Ensure core pipeline workflows include Harden-Runner and explicit timeouts."""
+    harden_runner_action = "step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c"
+    core_workflows = ["ci.yml", "apps.yml", "wiki-sync.yml", "semantic-tagging.yml"]
+    for filename in core_workflows:
+        content = (WORKFLOWS_DIR / filename).read_text(encoding="utf-8")
+        assert harden_runner_action in content, f"{filename} must integrate Harden-Runner"
+        assert "egress-policy: audit" in content, f"{filename} must configure 'egress-policy: audit'"
+
+    cr_data = yaml.safe_load((WORKFLOWS_DIR / "code-review.yml").read_text(encoding="utf-8"))
+    assert cr_data["jobs"]["gemini-code-review"].get("timeout-minutes") == 10
+
+    nfu_data = yaml.safe_load((WORKFLOWS_DIR / "no-free-usage.yml").read_text(encoding="utf-8"))
+    assert nfu_data["jobs"]["check-engagement"].get("timeout-minutes") == 5
+
+
+

@@ -16,6 +16,7 @@ jobs:
   check-engagement:
     name: Verify Contributor Engagement
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
       issues: write
