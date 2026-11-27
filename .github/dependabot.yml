@@ -9,7 +9,7 @@ updates:
   - package-ecosystem: "uv"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     open-pull-requests-limit: 5
     # Let a newly published version age for a week before proposing it. The
     # attack this defends against is a maintainer-account compromise that
@@ -71,7 +71,7 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     open-pull-requests-limit: 5
     allow:
       - dependency-name: "actions/*"
@@ -140,14 +140,14 @@ updates:
   - package-ecosystem: docker
     directory: /
     schedule:
-      interval: weekly
+      interval: daily
 
   - package-ecosystem: docker
     directory: /infra/sakthai-training-space
     schedule:
-      interval: weekly
+      interval: daily
 
   - package-ecosystem: docker
     directory: /infra/servicequotebot/docker
     schedule:
-      interval: weekly
+      interval: daily
