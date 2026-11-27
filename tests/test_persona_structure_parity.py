@@ -12,7 +12,6 @@ EXPECTED_PERSONA_ITEMS = {
     "BACKPACK.md",
     "CYCLE.md",
     "HANDOFF.md",
-    "LIBRARY_README.md",
     "MEMORY.md",
     "PLAN.md",
     "README.md",
@@ -22,16 +21,13 @@ EXPECTED_PERSONA_ITEMS = {
     "agent",
     "agent_platform",
     "auth.py",
-    "automation",
     "cli",
     "client",
-    "coding",
     "config",
     "config.py",
     "cycle",
     "dashboard",
     "datasets",
-    "devops",
     "evolution",
     "evolve_agent.sh",
     "extensions",
@@ -41,19 +37,13 @@ EXPECTED_PERSONA_ITEMS = {
     "hf.py",
     "lead",
     "learn",
-    "learning",
-    "llm",
     "mcp",
     "memory",
-    "observability",
     "pyproject.toml",
     "reports",
-    "research",
-    "safety",
     "sakking_skills.py",
     "sandbox.py",
     "scripts",
-    "security",
     "skills",
     "skills.py",
     "team",
@@ -67,7 +57,7 @@ EXPECTED_CONFIG_ITEMS = {
     "mcp.json",
     "workspace.yaml",
 }
-EXPECTED_LIBRARY_ITEMS = {
+LEGACY_LIBRARY_ITEMS = {
     "LIBRARY_README.md",
     "automation",
     "coding",
@@ -78,6 +68,12 @@ EXPECTED_LIBRARY_ITEMS = {
     "research",
     "safety",
     "security",
+}
+LEGACY_AGENT_SKILLS = {
+    "sakthai-agent-planning",
+    "sakthai-agent-reasoning",
+    "sakthai-agent-sessions",
+    "sakthai-agent-tools",
 }
 EXPECTED_PACKAGE_ITEMS = {
     "__init__.py",
@@ -160,7 +156,7 @@ class TestPersonaStructureParity(unittest.TestCase):
                     f"personas/{persona}/agent-self-evolution must not exist",
                 )
 
-    def test_all_personas_have_real_library_items_and_no_nested_library_folder(self) -> None:
+    def test_legacy_library_items_and_nested_library_do_not_exist(self) -> None:
         self.assertFalse((REPO_ROOT / "library").exists(), "REPO_ROOT / library must not exist")
         for persona in PERSONAS:
             with self.subTest(persona=persona):
@@ -170,12 +166,17 @@ class TestPersonaStructureParity(unittest.TestCase):
                     lib_folder.exists(),
                     f"personas/{persona}/library must not exist",
                 )
-                for item in EXPECTED_LIBRARY_ITEMS:
+                for item in LEGACY_LIBRARY_ITEMS:
                     item_path = REPO_ROOT / "personas" / persona / item
-                    self.assertTrue(item_path.exists(), f"personas/{persona}/{item} must exist")
                     self.assertFalse(
-                        item_path.is_symlink(),
-                        f"personas/{persona}/{item} must be a real file/dir, not a symlink",
+                        item_path.exists(),
+                        f"Legacy item personas/{persona}/{item} must be pruned",
+                    )
+                for item in LEGACY_AGENT_SKILLS:
+                    item_path = REPO_ROOT / "personas" / persona / "agent" / item
+                    self.assertFalse(
+                        item_path.exists(),
+                        f"Legacy agent skill personas/{persona}/agent/{item} must be pruned",
                     )
                 # Check agent and memory have DESCRIPTION.md
                 self.assertTrue(

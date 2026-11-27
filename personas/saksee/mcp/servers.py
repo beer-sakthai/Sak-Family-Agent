@@ -273,7 +273,7 @@ def _parse_server_entry(name: str, entry: dict[str, Any]) -> MCPServerSpec | Non
     raw_cwd = entry.get("cwd")
     cwd = raw_cwd if isinstance(raw_cwd, str) else None
 
-    raw_tools = entry.get("tools")
+    raw_tools = entry.get("tool_allowlist") or entry.get("tools")
     tools = [str(t) for t in raw_tools] if isinstance(raw_tools, list) else None
 
     raw_headers = entry.get("headers")

@@ -240,3 +240,14 @@ def test_cli_eval_capability_json() -> None:
     assert "overall_highest_level" in data
     assert "domains" in data
     assert len(data["domains"]) == 4
+
+
+def test_evaluate_capability_lifecycle_default_evaluator_all_probes_pass() -> None:
+    """Verify that default capability probe evaluation passes all standardized probes cleanly."""
+    assessment = evaluate_capability_lifecycle(model_or_persona="sakthai")
+    for domain_name, d_assess in assessment.domains.items():
+        assert d_assess.probes_passed == d_assess.probes_evaluated, (
+            f"Domain {domain_name} has failing probes: {d_assess.findings}"
+        )
+        assert int(d_assess.highest_level_attained) == int(CapabilityLevel.FRONTIER)
+        assert d_assess.confidence >= 0.95

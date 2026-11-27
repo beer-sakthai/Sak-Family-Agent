@@ -31,6 +31,14 @@ try:
             kw.setdefault("api_base", os.getenv("OLLAMA_API_BASE", "http://localhost:11434"))
             kw.setdefault("keep_alive", os.getenv("OLLAMA_KEEP_ALIVE", "30m"))
             kw.setdefault("num_ctx", int(os.getenv("EVO_NUM_CTX", "4096")))
+        elif isinstance(model, str) and (
+            model.startswith(("huggingface/", "hf/"))
+            or "router.huggingface.co" in str(kw.get("api_base", ""))
+        ):
+            kw.setdefault("api_base", os.getenv("HF_ROUTER_URL", "https://router.huggingface.co/v1"))
+            tok = os.getenv("HF_TOKEN")
+            if tok:
+                kw.setdefault("api_key", tok)
         return _orig_lm_init(self, model, *a, **kw)
 
     dspy.LM.__init__ = _capped_lm_init
