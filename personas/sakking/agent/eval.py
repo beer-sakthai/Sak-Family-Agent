@@ -2247,10 +2247,15 @@ def evaluate_capability_lifecycle(
     )
 
     resolved_phase = LifecyclePhase(phase) if isinstance(phase, str) else phase
+    if not probe_evaluator:
+        raise ValueError(
+            "probe_evaluator is required. No evaluator provided and cannot fabricate probe responses. "
+            "Pass an evaluator callable that runs probes against the target model/persona."
+        )
     evaluator = probe_evaluator or _synthesize_default_probe_response
     return evaluate_capability_attainment(
         model_or_persona=model_or_persona,
-        probe_evaluator=evaluator,
+        probe_evaluator=probe_evaluator,
         phase=resolved_phase,
         domains=domains,
     )
