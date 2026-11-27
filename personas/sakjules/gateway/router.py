@@ -67,9 +67,9 @@ PERSONA_METADATA: dict[str, dict[str, Any]] = {
         "name": "SakTan",
         "role": "Daily Ops · Deputy 2",
         "handle": "@saktan_agent_bot",
-        "default_model": "gpt-4o-mini",
+        "default_model": "sakthai",
         "charge_state": "Optimal",
-        "primary_skills": ["SakTan-ops-daily-rhythm", "SakTan-memory-healthcheck"],
+        "primary_skills": ["SakTan-daily-briefing", "SakTan-close-the-day", "SakTan-weekly-review"],
     },
 }
 

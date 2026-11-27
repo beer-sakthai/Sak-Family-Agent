@@ -298,6 +298,12 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-26 **Phase 3: CI/CD Self-Healing, PR Feedback & WAL Compaction Daemon** `[SakJules, SakTan]` — Automated CI review bot feedback synthesizer for SakJules; idle-time SQLite WAL vacuum daemon and daily fleet drift watchdog for SakTan.
 - [x] 2026-11-26 **Phase 4: Full-Fleet Verification, Quality Gates & Sync to Main** `[SakJules]` — Run test matrix (4,200+ tests, >=96% coverage, lint, mypy, bandit) and commit to main.
 
+### 14. SakTan Full-Spectrum Upgrade: Hermes Purge, Skills Modernization, Tool & Gateway Synchronization
+- [x] 2026-11-27 **Phase 1: Purge Hermes Legacy & Modernize Operational Skills** — Refactor `SakTan-family-health-audit`, `SakTan-ops-agent-health-diagnostics`, `SakTan-ops-cron-fleet`, `SakTan-ops-cron-job-catalog`, `SakTan-ops-cron-pitfalls`, `SakTan-ops-cronjob-auth`, and `SakTan-ops-cron-tool-workarounds` to use native `sakthai` CLI, memory tags (`schedule-request`), and systemd commands with correct persona identity.
+- [x] 2026-11-27 **Phase 2: Configuration, Tool & Gateway Synchronization** — Fixed phantom primary skills and default model in `personas/sakthai/gateway/router.py`, corrected `BACKPACK.md` and `MEMORY.md` MCP server documentation, eradicated non-portable `file:///home/sak/` links across `CYCLE.md` and `MEMORY.md`.
+- [x] 2026-11-27 **Phase 3: Parity & Verification Across 6 Personas** — Executed `scripts/sync_personas.py` maintaining 100% byte-for-byte package parity across all 6 personas, verified clean ruff check/format (188 files), strict mypy (134 files, 0 issues), bandit security scan (0 issues), and full parity test suite.
+- [x] 2026-11-27 **Phase 4: Pull Request Delivery** — Push branch `feat/saktan-full-spectrum-upgrade` and open PR for Beer's manual review (no auto-merge).
+
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |
