@@ -38,9 +38,9 @@ Google dynamically assigns project-level quotas across **RPM** (Requests Per Min
 
 An active Cloud Billing account linked to the Google Cloud / AI Studio project is **mandatory** to invoke models in these categories. Unbilled calls fail immediately with `429 RESOURCE_EXHAUSTED` (0 quota):
 
-* **Flagship & Pro Reasoning**: `gemini-4-carbon`, `gemini-4-neon`, `gemini-4-argon`, and `gemini-3.1-pro-preview` (all 1,048,576 token windows).
+* **Flagship & Pro Reasoning**: `gemini-4-neon` (primary flagship — frontier-level intelligence with fast end-to-end task completion, `low`/`medium`/`high` default/`xhigh` thinking), `gemini-4-carbon`, `gemini-4-argon`, and `gemini-3.1-pro-preview` (all 1,048,576 token windows).
 * **Image Generation**: `gemini-nano-banana-2.1`, `gemini-nano-banana-2`, `gemini-3.1-flash-image-preview`, and `gemini-3-pro-image-preview` (metered via IPM — Images Per Minute).
-* **Video & World Generation**: `gemini-omni-1.1-flash` (`gemini-omni-flash`) and `genie-4`.
+* **Video & World Generation**: `gemini-omni-1.2-flash` (`gemini-omni-1.1-flash` legacy) and `genie-4`.
 * **Text-to-Speech (TTS) & Audio**: `gemini-3.8-flash-tts`, `gemini-3.8-flash-lite-tts`, `gemini-2.5-flash-tts`, `gemini-2.5-pro-tts`, and `lyria-3.5`.
 
 ---
@@ -49,7 +49,7 @@ An active Cloud Billing account linked to the Google Cloud / AI Studio project i
 
 ### 4.1 Unified vs. Split Token Windows
 * **Gemini 3 Models**: Separate budget of 1,048,576 input tokens and 65,536 output tokens.
-* **Gemini 4 Models (`gemini-4-hydrogen`)**: Single unified pool of 1,048,576 tokens shared across input, thinking, and output tokens. Synchronous foreground calls are capped at 65,536 output tokens; background execution (`background=True`) allows long decode up to the full unified window.
+* **Gemini 4 Models (`gemini-4-neon`, `gemini-4-hydrogen`, `gemini-4-carbon`)**: Single unified pool of 1,048,576 tokens shared across input, thinking, and output tokens. Synchronous foreground calls are capped at 65,536 output tokens; background execution (`background=True`) allows long decode up to the full unified window.
 
 ### 4.2 Thinking Tokens Impact on TPM & Output
 Internal reasoning tokens count toward both your output token cap and the input/throughput TPM rate limit. For high-frequency loops or constrained free-tier projects, configuring `thinking_level="low"` or `"medium"` significantly reduces token consumption and avoids TPM throttling.
