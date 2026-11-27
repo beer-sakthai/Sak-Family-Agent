@@ -1550,4 +1550,42 @@ class GuardrailPolicy:
         return GuardrailResult(GuardrailAction.ALLOW)
 
 
+_LOCAL_PATH_PATTERN = re.compile(
+    r"(?:/home/(?:antigravity|sak|ubuntu|root)|/(?:root|etc|var/run|var/log)/[a-zA-Z0-9_\-\./]+)"
+)
+_PRIVATE_IP_PATTERN = re.compile(
+    r"\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3})\b"
+)
+_INJECTION_KEYWORDS = [
+    r"ignore\s+(?:all\s+)?previous\s+instructions",
+    r"system\s+prompt",
+    r"developer\s+mode",
+    r"jailbreak",
+    r"forget\s+everything",
+]
+_INJECTION_RE = re.compile("|".join(_INJECTION_KEYWORDS), re.IGNORECASE)
+
+
+def scan_content_for_leaks(text: str) -> list[str]:
+    """Scan content for potential secret, filesystem path, or network leaks."""
+    leaks: list[str] = []
+    if _LOCAL_PATH_PATTERN.search(text):
+        leaks.append("Detected local filesystem path in content.")
+    if re.search(SECRET_PATTERN, text):
+        leaks.append("Detected secret key pattern in content.")
+    if _PRIVATE_IP_PATTERN.search(text):
+        leaks.append("Detected private IP address in content.")
+    return leaks
+
+
+def sanitize_external_content(text: str) -> str:
+    """Sanitize untrusted external quotes or social replies against prompt injection."""
+    if not text:
+        return ""
+    # Defang common injection phrases
+    sanitized = _INJECTION_RE.sub("[DEFANGED_PROMPT_INJECTION]", text)
+    # Wrap in explicit untrusted data container
+    return f"[UNTRUSTED_CONTENT]\n{sanitized}\n[/UNTRUSTED_CONTENT]"
+
+
 DEFAULT_POLICY = GuardrailPolicy()

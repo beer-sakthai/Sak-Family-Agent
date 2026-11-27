@@ -1,9 +1,9 @@
 ---
-name: SakSit-css-content-visibility
+name: SakSee-css-content-visibility
 version: 1.0.0
 description: Use CSS content-visibility to skip off-screen rendering and improve page
   performance.
-category: content-marketing
+category: web-development
 tags:
 - content
 - css
