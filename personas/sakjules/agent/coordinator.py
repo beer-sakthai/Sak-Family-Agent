@@ -161,6 +161,7 @@ def run_persona_task(
 
     if allow_mcp and not no_mcp:
         import os
+
         from ..mcp.manager import connect_servers
         from .tools import BUILTIN_TOOLS
 
