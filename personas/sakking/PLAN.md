@@ -22,7 +22,7 @@ flowchart TD
 
 #### 🔹 Task 1.1: Config, Coder Model & Pinned MCP Preflight
 - **Status**: [x] 2026-11-21
-- **Goal**: Confirm SakKing's provider (`huggingface`), model (`Qwen/Qwen3-Coder-30B-A3B-Instruct`), 59 overlay skills, and 3 pinned MCP servers (`playwright@0.0.83`, `chrome-devtools-mcp@1.10.1`, `mcp-hfspace@0.5.4`) resolve cleanly.
+- **Goal**: Confirm SakKing's provider (`huggingface`), model (`Qwen/Qwen3-Coder-30B-A3B-Instruct`), 63 overlay skills, and 3 pinned MCP servers (`playwright@0.0.83`, `chrome-devtools-mcp@1.10.1`, `mcp-hfspace@0.5.4`) resolve cleanly.
 - **Estimated Time**: 2 minutes
 - **Command**: `SAKTHAI_HOME=$(mktemp -d) sakthai run "preflight" --persona sakking --no-mcp --dry-run && sakthai platform check-safety "pytest tests/ -q"`
 - **Acceptance Criteria**: Preflight resolves `huggingface` → `Qwen/Qwen3-Coder-30B-A3B-Instruct`; safety check reports `SAFE`.
