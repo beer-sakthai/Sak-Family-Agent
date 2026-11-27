@@ -270,3 +270,70 @@ def test_triple_gate_safety_contract(tmp_path: Any) -> None:
     assert _is_charge_sufficient("chargelevel.critical") is True
     assert _is_charge_sufficient("chargelevel.low") is False
     assert _is_charge_sufficient("chargelevel.none") is False
+
+
+def test_hf_validate_card_metadata_valid(tmp_path: Any) -> None:
+    from sakthai.hf import hf_validate_card_metadata
+
+    valid_content = """---
+language:
+- en
+- th
+license: apache-2.0
+tags:
+- text-generation
+- sakthai
+pipeline_tag: text-generation
+---
+
+# SakThai Combined Model
+This is an awesome local-first open-weight model.
+"""
+    # Test from string content
+    res = hf_validate_card_metadata(valid_content)
+    assert res["valid"] is True
+    assert res["errors"] == []
+    assert res["metadata"]["license"] == "apache-2.0"
+    assert res["metadata"]["language"] == ["en", "th"]
+
+    # Test from file path
+    card_file = tmp_path / "README.md"
+    card_file.write_text(valid_content, encoding="utf-8")
+    file_res = hf_validate_card_metadata(card_file)
+    assert file_res["valid"] is True
+    assert file_res["metadata"]["license"] == "apache-2.0"
+
+
+def test_hf_validate_card_metadata_errors_and_warnings(tmp_path: Any) -> None:
+    from sakthai.hf import hf_validate_card_metadata
+
+    # Missing frontmatter
+    no_fm = "# Just a markdown file without YAML frontmatter"
+    res1 = hf_validate_card_metadata(no_fm)
+    assert res1["valid"] is False
+    assert any("Missing YAML frontmatter" in e for e in res1["errors"])
+
+    # Invalid YAML syntax
+    bad_yaml = "---\nlicense: [unclosed list\n---\n"
+    res2 = hf_validate_card_metadata(bad_yaml)
+    assert res2["valid"] is False
+    assert any("YAML parsing error" in e for e in res2["errors"])
+
+    # Non-dictionary YAML (e.g. list)
+    list_yaml = "---\n- item1\n- item2\n---\n"
+    res3 = hf_validate_card_metadata(list_yaml)
+    assert res3["valid"] is False
+    assert any("must parse to a dictionary" in e for e in res3["errors"])
+
+    # Missing license
+    no_license = "---\nlanguage: en\ntags:\n- nlp\n---\n"
+    res4 = hf_validate_card_metadata(no_license)
+    assert res4["valid"] is False
+    assert any("Missing required metadata field: 'license'" in e for e in res4["errors"])
+
+    # Warnings: missing pipeline_tag/tags, invalid language type
+    warn_content = "---\nlicense: mit\nlanguage: 12345\n---\n"
+    res5 = hf_validate_card_metadata(warn_content)
+    assert res5["valid"] is True
+    assert any("Recommended metadata missing" in w for w in res5["warnings"])
+    assert any("'language' field should be str or list of str" in w for w in res5["warnings"])
