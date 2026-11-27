@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from personas.sakthai.agent.guardrails import (
+from sakthai.agent.guardrails import (
     sanitize_external_content,
     scan_content_for_leaks,
 )
@@ -44,6 +44,9 @@ class TestContentLeakGuardrail(unittest.TestCase):
         sanitized = sanitize_external_content(malicious_input)
         self.assertNotIn("ignore all previous instructions", sanitized.lower())
         self.assertTrue("[UNTRUSTED_CONTENT]" in sanitized or "[EXTERNAL_DATA]" in sanitized)
+
+    def test_sanitize_empty_content(self) -> None:
+        self.assertEqual(sanitize_external_content(""), "")
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from personas.sakthai.agent_platform.media_presets import (
+from sakthai.agent_platform.media_presets import (
     format_image_prompt,
     get_media_preset,
     list_media_presets,

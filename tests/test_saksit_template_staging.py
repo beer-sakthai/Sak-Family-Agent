@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from personas.sakthai.agent.stager import (
+from sakthai.agent.stager import (
     ContentTemplateStager,
 )
 
@@ -57,8 +57,32 @@ class TestContentTemplateStaging(unittest.TestCase):
 
         cached = self.stager.get_cached_hub_metadata(repo_id)
         self.assertIsNotNone(cached)
+        assert cached is not None
         self.assertEqual(cached["downloads"], 12500)
         self.assertEqual(cached["likes"], 42)
+
+    def test_detects_raw_unresolved_placeholders(self) -> None:
+        raw_text = "Checking {{RAW_VAR}} and [PENDING VERIFICATION: PENDING_VAR]"
+        unresolved = self.stager.detect_unresolved_placeholders(raw_text)
+        self.assertEqual(unresolved, ["PENDING_VAR", "RAW_VAR"])
+
+    def test_get_cached_hub_metadata_missing_or_corrupt(self) -> None:
+        self.assertIsNone(self.stager.get_cached_hub_metadata("nonexistent/repo"))
+
+        # Write corrupted json
+        corrupt_target = self.stager.metadata_dir / "corrupt_repo.json"
+        corrupt_target.write_text("NOT_VALID_JSON", encoding="utf-8")
+        self.assertIsNone(self.stager.get_cached_hub_metadata("corrupt/repo"))
+
+        # Write non-dict json
+        nondict_target = self.stager.metadata_dir / "list_repo.json"
+        nondict_target.write_text("[1, 2, 3]", encoding="utf-8")
+        self.assertIsNone(self.stager.get_cached_hub_metadata("list/repo"))
+
+    def test_save_staged_draft(self) -> None:
+        draft_path = self.stager.save_staged_draft("my-draft-post", "# Draft Content")
+        self.assertTrue(draft_path.is_file())
+        self.assertEqual(draft_path.read_text(encoding="utf-8"), "# Draft Content")
 
 
 if __name__ == "__main__":

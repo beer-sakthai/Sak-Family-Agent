@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from personas.sakthai.telegram.digest import (
+from sakthai.telegram.digest import (
     ApprovalDigest,
     format_telegram_approval_digest,
     stage_markdown_report,

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import unittest
 
-from personas.sakthai.agent.editorial_eval import (
+from sakthai.agent.editorial_eval import (
     EditorialEvalResult,
+    _calculate_grade,
     evaluate_editorial_quality,
 )
 
@@ -47,6 +48,14 @@ It destroys all competition and performs unprecedented miracles with zero flaws!
         content = "We have [PENDING VERIFICATION: UPTIME] and [PENDING VERIFICATION: USER_COUNT]."
         result: EditorialEvalResult = evaluate_editorial_quality(content)
         self.assertGreaterEqual(result.precision_score, 30.0)
+
+    def test_calculate_grade_all_tiers(self) -> None:
+        self.assertEqual(_calculate_grade(95.0), "S")
+        self.assertEqual(_calculate_grade(85.0), "A")
+        self.assertEqual(_calculate_grade(75.0), "B")
+        self.assertEqual(_calculate_grade(65.0), "C")
+        self.assertEqual(_calculate_grade(55.0), "D")
+        self.assertEqual(_calculate_grade(45.0), "F")
 
 
 if __name__ == "__main__":
