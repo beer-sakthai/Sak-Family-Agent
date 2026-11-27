@@ -454,3 +454,23 @@ def test_reconstruction_syntax_and_composite_paths() -> None:
         "reconstruction.yml must not leave trailing escaped backslashes on find command"
     )
 
+
+def test_docker_actions_have_dockerfile() -> None:
+    # Any action declaring 'using: docker' with 'image: Dockerfile' must have an existing Dockerfile
+    github_dir = REPO_ROOT / ".github"
+    for action_file in github_dir.glob("**/action.yml"):
+        data = yaml.safe_load(action_file.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            continue
+        runs = data.get("runs", {})
+        if runs.get("using") == "docker" and runs.get("image") == "Dockerfile":
+            dockerfile = action_file.parent / "Dockerfile"
+            assert dockerfile.is_file(), (
+                f"{action_file} specifies 'image: Dockerfile' but {dockerfile} does not exist"
+            )
+    # Root .github must not contain an orphaned action.yml
+    assert not (github_dir / "action.yml").exists(), (
+        "Root .github/action.yml is an orphaned action; local composite actions live in .github/actions/<name>/"
+    )
+
+
