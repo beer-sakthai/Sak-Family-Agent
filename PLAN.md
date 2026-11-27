@@ -311,6 +311,9 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-26 **Phase 4: MCP, Workspace & Configuration Alignment** — Streamline MCP stack to DevSecOps/Cloud (`stepsecurity`, `microsoft-learn`, `gemini-api-docs`), decouple `microsoft365`, reconcile `MEMORY.md`, expand `workspace.yaml` allowed tools, and clean up legacy `hermes_*` variables.
 - [x] 2026-11-27 **Phase 5: Defense-in-Depth Guardrail Hardening & ADR-0001 Prototype** — Embed programmatic duplicate PR and auto-merge prevention, verify the 12-item overlay boundary in `personas/sakjules/`, enhance package composer spike, and run full quality gates (`pytest >=96%`, `ruff`, `mypy`, `bandit`).
 
+### 16. Dependabot Daily Schedule Automation (2026-11-27)
+- [x] 2026-11-27 **Phase 1: Daily Schedule Configuration & Regression Verification** `[SakJules]` — Update all ecosystem update configs in `.github/dependabot.yml` (`uv`, `github-actions`, and `docker` entries) to `interval: "daily"`, ensure no invalid `day:` keys exist, update dependency security documentation in `docs/manage-your-dependency-security.md`, add regression test in `tests/test_workflow_cache_hygiene.py` verifying all ecosystems run daily, and verify quality gates.
+
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |

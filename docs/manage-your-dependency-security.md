@@ -130,11 +130,12 @@ Newly released package versions must age for 7 days before Dependabot generates 
 - **Threat Mitigated**: Maintainer account takeover or sudden zero-day package poisoning. Malicious releases are typically reported and yanked by package registries within 48–72 hours.
 - **Security Updates**: Dependabot automatically exempts critical security advisories from cooldown, ensuring CVE patches are opened immediately.
 
-### 2. Ecosystem Grouping & Rate Limiting
+### 2. Daily Cadence, Ecosystem Grouping & Rate Limiting
+- **Daily Cadence**: All monitored ecosystems (`uv`, `npm`, `github-actions`, `docker`) run on a daily schedule (`interval: "daily"`) to detect updates and vulnerability fixes without delay.
 - **Python**: Grouped by `minor` and `patch` to prevent PR noise.
 - **npm**: Separated directories (`/infra/pw-poc`, `/apps/sak_agent_dashboard`, and `/personas/saksee/skills/*`) with explicit `open-pull-requests-limit` caps (3 to 5 PRs max per tree) to prevent queue exhaustion.
 - **GitHub Actions**: Explicitly scoped to trusted namespaces (`actions/*`, `github/*`, `step-security/*`, `astral-sh/*`, `ossf/*`, `PyCQA/*`). Catch-all wildcards (`*`) are disallowed because grouping 115+ actions across 120+ workflows triggers an $O(N^2)$ re-parsing loop that exceeds Dependabot's 45-minute timeout.
-- **Docker**: Monitored across root and infra Dockerfiles to ensure base image digests remain current.
+- **Docker**: Monitored daily across root and infra Dockerfiles to ensure base image digests remain current.
 
 ### 3. Deliberate Version Ignores
 - **Build Backend Floors**: `setuptools` is ignored because it appears only under `[build-system] requires` as a floor (`>=83.0.0`), which Dependabot's `uv` FileUpdater cannot write.
@@ -151,8 +152,8 @@ GitHub Dependabot alerts and security updates are prioritized using risk-based c
 |---|---|---|---|---|
 | **Critical** | Runtime | Proof-of-Concept or Active | Immediate patch via Dependabot security PR or manual lockfile bump | 24 hours |
 | **High** | Runtime | Known Advisory | Auto-merge eligible if tests pass; review within 48 hours | 48 hours |
-| **Moderate** | Development | Theoretical | Grouped weekly Dependabot PR | 7 days |
-| **Low** | Any | Informational | Grouped weekly or auto-dismissed if non-reachable | 30 days |
+| **Moderate** | Development | Theoretical | Grouped daily Dependabot PR | 7 days |
+| **Low** | Any | Informational | Grouped daily or auto-dismissed if non-reachable | 30 days |
 
 ### Auto-Triage Presets:
 - **Development Tool Alerts**: Alerts in dev dependencies for npm packages with low severity and no known exploit may be snoozed or auto-triaged if reachability analysis confirms no production path.
