@@ -435,3 +435,22 @@ def test_cache_cleanup_reports_failed_deletion(tmp_path: Path) -> None:
     assert result.returncode != 0
     assert "Failed to delete cache 101" in result.stderr
     assert (tmp_path / "deletes.log").read_text(encoding="utf-8").splitlines()[0] == "101"
+
+
+def test_reconstruction_syntax_and_composite_paths() -> None:
+    # 1. No workflow should contain illegal composite path syntax 'uses: $/.github'
+    for path in sorted(WORKFLOWS_DIR.glob("*.yml")):
+        content = path.read_text(encoding="utf-8")
+        assert "uses: $/.github" not in content, (
+            f"{path.name} contains illegal syntax 'uses: $/.github'; use 'uses: ./.github'"
+        )
+
+    # 2. reconstruction.yml must not evaluate git rev-parse commit SHA as a shell command
+    recon = (WORKFLOWS_DIR / "reconstruction.yml").read_text(encoding="utf-8")
+    assert "\\`$(git rev-parse HEAD)\\`" not in recon, (
+        "reconstruction.yml must not double-escape backticks in Commit echo (causes command not found)"
+    )
+    assert "-printf '%f\\\\n' | sort" not in recon, (
+        "reconstruction.yml must not leave trailing escaped backslashes on find command"
+    )
+
