@@ -141,13 +141,16 @@ updates:
     directory: /
     schedule:
       interval: daily
+    open-pull-requests-limit: 5
 
   - package-ecosystem: docker
     directory: /infra/sakthai-training-space
     schedule:
       interval: daily
+    open-pull-requests-limit: 5
 
   - package-ecosystem: docker
     directory: /infra/servicequotebot/docker
     schedule:
       interval: daily
+    open-pull-requests-limit: 5
