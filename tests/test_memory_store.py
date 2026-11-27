@@ -134,6 +134,54 @@ def test_render_prompt_block_tied_scores_preserve_recency_order(
     assert "alpha" not in block
 
 
+def test_render_prompt_block_stopword_only_overlap_falls_back_to_recency(
+    store: MemoryStore,
+) -> None:
+    """A query like "what time is it" shares nothing but stopwords with a
+    stored fact and must not rank it above the recency window — reproduces
+    the bug where unfiltered stopwords ("is", "it") let an old, unrelated
+    fact outscore and displace truly-unrelated, newer facts."""
+    store.add_fact("the user is a vegetarian", kind="preference")
+    for i in range(30):
+        store.add_fact(f"note number {i} about something unrelated", kind="note")
+    assert store.render_prompt_block(query="what time is it") == store.render_prompt_block()
+
+
+def test_render_prompt_block_query_match_fills_remaining_slots_with_recency(
+    store: MemoryStore,
+) -> None:
+    """One query match is ranked first; the rest of ``fact_limit`` is filled
+    by the newest non-matching candidates rather than shrinking the block
+    down to just the single match (see the comment on ``_rank_by_relevance``
+    documenting this as a deliberate deviation from the design doc's literal
+    "drop zero-score candidates" wording)."""
+    store.add_fact("the user's favorite snack is pretzels", kind="preference")
+    store.add_fact("note alpha about something else", kind="note")
+    store.add_fact("note beta about something else", kind="note")
+    store.add_fact("note gamma about something else", kind="note")
+    store.add_fact("note delta about something else", kind="note")
+    block = store.render_prompt_block(fact_limit=3, query="pretzels")
+    lines = [ln for ln in block.splitlines() if ln.startswith("- [")]
+    assert len(lines) == 3
+    assert "pretzels" in lines[0]
+    assert "delta" in lines[1]
+    assert "gamma" in lines[2]
+
+
+def test_render_prompt_block_query_ranks_relevant_observation_over_heavier_one(
+    store: MemoryStore,
+) -> None:
+    """A query-relevant observation beats a higher-weight irrelevant one,
+    proving the observation-side candidate-text extraction (``o.summary``)
+    and ranking work with real ``add_observation`` data, not just the
+    empty-pool fallback."""
+    store.add_observation("user mentioned they are learning to juggle", weight=1.0)
+    store.add_observation("user seems to work late most nights", weight=9.0)
+    block = store.render_prompt_block(obs_limit=1, query="juggle")
+    assert "juggle" in block
+    assert "work late" not in block
+
+
 def test_deduplicate_facts(store: MemoryStore) -> None:
     store.add_fact("dark", kind="pref", key="theme")
     store.add_fact("light", kind="pref", key="theme")  # newer wins
