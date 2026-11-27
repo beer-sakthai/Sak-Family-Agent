@@ -475,4 +475,3 @@ def test_all_checkout_actions_use_canonical_sha() -> None:
                 f"{workflow_file.name} uses non-canonical actions/checkout SHA {sha}; "
                 f"expected {CANONICAL_CHECKOUT_SHA}"
             )
-

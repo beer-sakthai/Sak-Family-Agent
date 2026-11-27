@@ -199,7 +199,8 @@ def test_labeler_and_conflict_resolver_configs() -> None:
     conflict_path = REPO_ROOT / ".github" / "conflict-resolver.yml"
     assert conflict_path.is_file()
     conflict_text = conflict_path.read_text(encoding="utf-8")
-    assert "src/**/*.test.ts" not in conflict_text, "Found stale path 'src/**/*.test.ts' in conflict-resolver.yml"
+    assert "src/**/*.test.ts" not in conflict_text, (
+        "Found stale path 'src/**/*.test.ts' in conflict-resolver.yml"
+    )
     assert "apps/sak_agent_dashboard" in conflict_text
     assert "tests/" in conflict_text
-

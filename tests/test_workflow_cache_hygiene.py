@@ -481,13 +481,12 @@ def test_core_workflows_have_harden_runner_and_timeouts() -> None:
     for filename in core_workflows:
         content = (WORKFLOWS_DIR / filename).read_text(encoding="utf-8")
         assert harden_runner_action in content, f"{filename} must integrate Harden-Runner"
-        assert "egress-policy: audit" in content, f"{filename} must configure 'egress-policy: audit'"
+        assert "egress-policy: audit" in content, (
+            f"{filename} must configure 'egress-policy: audit'"
+        )
 
     cr_data = yaml.safe_load((WORKFLOWS_DIR / "code-review.yml").read_text(encoding="utf-8"))
     assert cr_data["jobs"]["gemini-code-review"].get("timeout-minutes") == 10
 
     nfu_data = yaml.safe_load((WORKFLOWS_DIR / "no-free-usage.yml").read_text(encoding="utf-8"))
     assert nfu_data["jobs"]["check-engagement"].get("timeout-minutes") == 5
-
-
-
