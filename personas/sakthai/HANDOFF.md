@@ -27,7 +27,7 @@ flowchart LR
 
 | Asset / Capability | Scope | Gate / Rule |
 |:---|:---|:---|
-| **11 Hub Models & 8 Datasets** | `sakthai-combined-v6`, `sakthai-context-7b-tools`, `sakthai-embedding-multilingual`, etc. | Exclusive write owner under Triple Gate (`charge >= 50%`, no deputy chain, `hub-approved`) |
+| **23 Hub Models, 15 Datasets & 6 Spaces** | `sakthai-combined-v6`, `sakthai-context-7b-tools`, `sakthai-embedding-multilingual`, etc. | Exclusive write owner under Triple Gate (`charge >= 50%`, no deputy chain, `hub-approved`) |
 | **Gate 1 Card Inspection** | `sakthai hf info <repo_id>` | Must run before SakSit drafts any model or dataset card copy |
 | **HF Jobs & QLoRA Training** | `training/sakthai-7b-lora/`, `training/hf-jobs/` | Prepared with SakJules; pushed to Hub only by SakThai |
 

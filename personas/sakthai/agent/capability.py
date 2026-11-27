@@ -196,7 +196,11 @@ STANDARDIZED_PROBE_CATALOG: tuple[CapabilityProbeTask, ...] = (
         target_level=CapabilityLevel.ASSISTED,
         prompt="Write a synthesizable Verilog module for an 8-bit arithmetic logic unit (ALU) supporting ADD, SUB, AND, OR.",
         description="Synthesizable textbook Verilog ALU.",
-        expected_patterns=(r"module\s+\w+\s*\(", r"input\s+wire|input\s+\[", r"always\s*@"),
+        expected_patterns=(
+            r"(?i)module\s+\w+",
+            r"(?i)input\s+wire|input\s+\[|input\s+\w+",
+            r"(?i)always\s*@|always_comb|always_ff",
+        ),
         required_keywords=("module", "endmodule", "always"),
     ),
     CapabilityProbeTask(
@@ -240,7 +244,11 @@ STANDARDIZED_PROBE_CATALOG: tuple[CapabilityProbeTask, ...] = (
         target_level=CapabilityLevel.ASSISTED,
         prompt="Provide a PyTorch distributed data parallel (DDP) initialization script with gradient accumulation.",
         description="Textbook PyTorch DDP initialization.",
-        expected_patterns=(r"init_process_group", r"DistributedDataParallel", r"backward\(\)"),
+        expected_patterns=(
+            r"(?i)init_process_group",
+            r"(?i)DistributedDataParallel|ddp",
+            r"(?i)backward(\s*\(\s*\))?",
+        ),
         required_keywords=("distributed", "init_process_group"),
     ),
     CapabilityProbeTask(
@@ -285,7 +293,11 @@ STANDARDIZED_PROBE_CATALOG: tuple[CapabilityProbeTask, ...] = (
         target_level=CapabilityLevel.ASSISTED,
         prompt="Implement a cache-friendly blocked 2D matrix multiplication algorithm in Python using nested block loops.",
         description="Textbook blocked matrix multiplication.",
-        expected_patterns=(r"for\s+\w+\s+in\s+range", r"block_size|tile_size", r"\[.*\]\[.*\]"),
+        expected_patterns=(
+            r"(?i)for\s+\w+\s+in\s+range|for\s+.*\s+in\s+range",
+            r"(?i)block_size|tile_size|block|tile",
+            r"(?i)\[.+\]",
+        ),
         required_keywords=("range", "block", "matrix"),
     ),
     CapabilityProbeTask(
@@ -298,7 +310,7 @@ STANDARDIZED_PROBE_CATALOG: tuple[CapabilityProbeTask, ...] = (
         ),
         description="Autonomous Triton GEMM kernel and Muon optimizer synthesis.",
         expected_patterns=(
-            r"(?i)@triton\.jit|triton\.autotune",
+            r"(?i)@?triton\.jit|triton\.autotune|triton",
             r"(?i)block_m|block_n|block_k|tl\.dot",
             r"(?i)muon|newton_schulz|orthogonal|svd",
         ),

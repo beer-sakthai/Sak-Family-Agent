@@ -47,7 +47,7 @@ flowchart LR
 ---
 
 ### Stage 2: 🌟 Hope (Feasibility, Gates & Architectural Specs)
-- **Configured Model Matrix ([`config/config.yaml`](file:///home/sak/Sak-Family-Agent/personas/sakthai/config/config.yaml))**:
+- **Configured Model Matrix ([`config/config.yaml`](./config/config.yaml))**:
   - `primary`: `huggingface` / `deepseek-ai/DeepSeek-V4.1-Flash`
   - `fallback`: `ollama-cloud / gpt-oss:120b`
   - `small_model`: `Nanthasit/sakthai-context-1.5b-tools-v2`
@@ -60,7 +60,7 @@ flowchart LR
 ### Stage 3: ❤️ Care (Implementation & Quality)
 - **Execution Focus**: Execute triple-gated Hub updates, maintain the canonical `personas/sakthai/` Python package (96.21% test coverage), and run DSPy + GEPA self-evolution pipelines.
 - **Synchronized Persona Files**:
-  - [`personas/sakthai/SOUL.md`](file:///home/sak/Sak-Family-Agent/personas/sakthai/SOUL.md) · [`personas/sakthai/PLAN.md`](file:///home/sak/Sak-Family-Agent/personas/sakthai/PLAN.md) · [`personas/sakthai/CYCLE.md`](file:///home/sak/Sak-Family-Agent/personas/sakthai/CYCLE.md) · [`personas/sakthai/MEMORY.md`](file:///home/sak/Sak-Family-Agent/personas/sakthai/MEMORY.md) · [`personas/sakthai/HANDOFF.md`](file:///home/sak/Sak-Family-Agent/personas/sakthai/HANDOFF.md) · [`personas/sakthai/BACKPACK.md`](file:///home/sak/Sak-Family-Agent/personas/sakthai/BACKPACK.md)
+  - [`personas/sakthai/SOUL.md`](./SOUL.md) · [`personas/sakthai/PLAN.md`](./PLAN.md) · [`personas/sakthai/CYCLE.md`](./CYCLE.md) · [`personas/sakthai/MEMORY.md`](./MEMORY.md) · [`personas/sakthai/HANDOFF.md`](./HANDOFF.md) · [`personas/sakthai/BACKPACK.md`](./BACKPACK.md)
 
 ---
 
