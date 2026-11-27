@@ -18,7 +18,7 @@ from sakthai.cli import main
 
 def test_runner_config_default_model() -> None:
     config = AntigravityRunnerConfig()
-    assert config.model == "gemini-4-hydrogen"
+    assert config.model == "gemini-4-neon"
 
 
 def test_runner_config_hosted(monkeypatch: pytest.MonkeyPatch) -> None:
