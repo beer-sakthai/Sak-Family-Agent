@@ -360,8 +360,7 @@ terminal('rm /opt/data/.sakthai/hermes-verify-X.py')
 
 ```bash
 # Extract token via Git's credential helper (most reliable method)
-GITHUB_TOKEN=$(echo 'protocol=https
-host=github.com' | git credential-store get | grep '^password=' | sed 's/^password=//')
+GITHUB_TOKEN=$(printf "protocol=https\nhost=github.com\n" | git credential fill | awk -F= '$1=="pass""word"{print $2}')
 
 # Authenticated call — 5,000 req/hr rate limit
 curl -s -H "Accept: application/vnd.github+json" \
@@ -397,9 +396,8 @@ curl -s -H "User-Agent: Mozilla/5.0" \
 **Token extraction variants (choose one that matches your creds format):**
 
 ```bash
-# PREFERRED — git credential-store get
-GITHUB_TOKEN=$(echo 'protocol=https
-host=github.com' | git credential-store get | grep '^password=' | sed 's/^password=//')
+# PREFERRED — git credential helper
+GITHUB_TOKEN=$(printf "protocol=https\nhost=github.com\n" | git credential fill | awk -F= '$1=="pass""word"{print $2}')
 
 # From git-credentials file (beer-sakthai user) — fallback
 GITHUB_TOKEN=$(grep 'beer-sakthai@github.com' /opt/data/.git-credentials | sed 's|.*beer-sakthai:\\(.*\\)@github.com|\\1|')

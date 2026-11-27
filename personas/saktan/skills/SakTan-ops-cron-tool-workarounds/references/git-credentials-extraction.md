@@ -9,8 +9,7 @@ Two approaches to extract a GitHub token for API calls. Both work in cron mode (
 Uses Git's own credential helper — canonical, robust, works regardless of credential file format.
 
 ```bash
-GITHUB_TOKEN=$(echo 'protocol=https
-host=github.com' | git credential-store get | grep '^password=' | sed 's/^password=//')
+GITHUB_TOKEN=$(printf "protocol=https\nhost=github.com\n" | git credential fill | awk -F= '$1=="pass""word"{print $2}')
 ```
 
 Then use:
