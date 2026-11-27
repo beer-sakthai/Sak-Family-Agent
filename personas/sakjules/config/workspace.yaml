@@ -4,6 +4,10 @@ domain: GitHub Actions, Cron Fleet, DevSecOps, Release Automation
 workspace_root: /home/sak/Sak-Family-Agent
 primary_skills:
   - SakJules-github-ci-fix
+  - SakJules-workflow-security-zizmor
+  - SakJules-coverage-guardian
+  - SakJules-pr-rebase-sentinel
+  - SakJules-cron-orchestration
   - SakJules-triage-issues
   - SakJules-workflow
 allowed_tools:

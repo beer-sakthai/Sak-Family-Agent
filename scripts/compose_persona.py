@@ -44,6 +44,22 @@ def _copy_tree(src: Path, dst: Path) -> None:
             shutil.copy2(path, target)
 
 
+OVERLAY_ITEMS = frozenset({
+    "SOUL.md",
+    "PLAN.md",
+    "CYCLE.md",
+    "MEMORY.md",
+    "HANDOFF.md",
+    "BACKPACK.md",
+    "README.md",
+    "AGENTS.md",
+    "config",
+    "evolution",
+    "reports",
+    "skills",
+})
+
+
 def compose(persona: str, out: Path) -> Path:
     """Materialise ``persona``'s full skill tree into ``out`` and return it."""
     if persona not in PERSONAS:
@@ -57,6 +73,40 @@ def compose(persona: str, out: Path) -> Path:
         _copy_tree(shared, out)
     if overlay.is_dir():
         _copy_tree(overlay, out)  # overlay wins
+    return out
+
+
+def compose_package(persona: str, out: Path) -> Path:
+    """Materialise ``persona``'s full package tree into ``out`` (ADR-0001 Option C spike)."""
+    if persona not in PERSONAS:
+        raise SystemExit(f"unknown persona {persona!r}; choose from {', '.join(PERSONAS)}")
+    canonical = PERSONAS_DIR / "sakthai"
+    overlay_dir = PERSONAS_DIR / persona
+    if out.exists():
+        shutil.rmtree(out)
+    out.mkdir(parents=True)
+
+    # 1. Lay down canonical package (excluding its persona-specific overlay items)
+    for path in canonical.iterdir():
+        if path.name in OVERLAY_ITEMS:
+            continue
+        dst = out / path.name
+        if path.is_file():
+            shutil.copy2(path, dst)
+        elif path.is_dir():
+            shutil.copytree(path, dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+
+    # 2. Lay down target persona's 12-item overlay
+    for name in OVERLAY_ITEMS:
+        src = overlay_dir / name
+        if not src.exists():
+            continue
+        dst = out / name
+        if src.is_file():
+            shutil.copy2(src, dst)
+        elif src.is_dir():
+            shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+
     return out
 
 
@@ -89,10 +139,20 @@ def main(argv: list[str] | None = None) -> int:
         metavar="EXPECTED",
         help="diff the composed tree against EXPECTED; exit 1 on any mismatch",
     )
+    parser.add_argument(
+        "--target",
+        choices=("skills", "package"),
+        default="skills",
+        help="whether to compose skills tree or full package tree (default: skills)",
+    )
     args = parser.parse_args(argv)
 
-    out = compose(args.persona, args.out)
-    print(f"composed {args.persona} -> {out} ({sum(1 for _ in out.rglob('*') if _.is_file())} files)")
+    if args.target == "package":
+        out = compose_package(args.persona, args.out)
+    else:
+        out = compose(args.persona, args.out)
+    target_str = f" ({args.target})" if args.target != "skills" else ""
+    print(f"composed {args.persona}{target_str} -> {out} ({sum(1 for _ in out.rglob('*') if _.is_file())} files)")
 
     if args.check is not None:
         diffs = _diff(args.check, out)

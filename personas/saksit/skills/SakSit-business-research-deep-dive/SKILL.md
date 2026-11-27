@@ -1,10 +1,10 @@
 ---
-name: SakJules-business-research-deep-dive
+name: SakSit-business-research-deep-dive
 version: 1.0.0
 description: Multi-angle deep-dive research workflow for House of Sak scouting. Scout
   markets, profile leads, discover digital gaps, and produce structured reports with
   ranked picks, pricing intel, and actionable opportunity maps.
-category: devops
+category: research
 tags:
 - automation
 - business

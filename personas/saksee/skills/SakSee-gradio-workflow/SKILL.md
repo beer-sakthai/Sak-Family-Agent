@@ -1,8 +1,8 @@
 ---
-name: SakJules-gradio-workflow
+name: SakSee-gradio-workflow
 version: 1.0.0
 description: A skill for Gradio Workflow.
-category: devops
+category: frontend
 tags:
 - automation
 - gradio
