@@ -4,6 +4,42 @@ Official technical documentation and architectural reference for **House of Sak*
 
 > For the interactive, categorized GitHub Wiki version, see [**Home.md**](./Home.md) and [**_Sidebar.md**](./_Sidebar.md).
 
+## 🗺️ Documentation Knowledge Graph
+
+```mermaid
+flowchart TD
+    DocsHub["Documentation Hub (docs/README.md)"]
+
+    subgraph ArchitectureSpecs ["Core Architecture & Specs"]
+        Arch["architecture.md (Monorepo Layering)"]
+        Caps["capabilities.md (Toolbelt & Memory)"]
+        Plugins["plugins.md (MCP Extensibility)"]
+        Runtimes["runtimes.md (TUI, Gateway, Sentinel)"]
+    end
+
+    subgraph IdentityGovernance ["Personas & Identity"]
+        Soul["SOUL.md & Family Guides"]
+        Contract["OPERATING_CONTRACT.md"]
+        Cycle["Sacred Soul Cycle (Dream to Growth)"]
+    end
+
+    subgraph SecurityDevOps ["Security & CI/CD"]
+        Sec["SECURITY.md & Scorecard"]
+        Actions["Marketplace Actions & Workflows"]
+        Dependabot["manage-your-dependency-security.md"]
+    end
+
+    subgraph ImplementationPlans ["Superpowers Plans & Specs"]
+        Specs["Formal Architecture Specs (specs/)"]
+        Plans["Implementation Plans (plans/)"]
+    end
+
+    DocsHub --> ArchitectureSpecs
+    DocsHub --> IdentityGovernance
+    DocsHub --> SecurityDevOps
+    DocsHub --> ImplementationPlans
+```
+
 ---
 
 ## 🏛️ Core Architecture & Reference Guides
