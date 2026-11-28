@@ -10,7 +10,7 @@
 
 ## 1. Overview & Objective
 
-Building directly upon the foundational Phase 1 upgrade (PR #2096), this Phase 2 enhancement elevates **SakSit** (`personas/saksit/`) into a fully autonomous, production-grade social operations hub for the House of Sak. 
+Building directly upon the foundational Phase 1 upgrade (PR #2096), this Phase 2 enhancement elevates **SakSit** (`personas/saksit/`) into a fully autonomous, production-grade social operations hub for the House of Sak.
 
 ### Key Pillars:
 1. **Live Hugging Face Hub Metadata Hydration**: Direct `httpx` integration with `https://huggingface.co/api/` and 1-hour TTL local caching in `~/.sakthai/cache/stager/hub_metadata/`, automatically hydrating `{{DOWNLOADS}}`, `{{LIKES}}`, and commit SHAs into copy templates with offline fallback.

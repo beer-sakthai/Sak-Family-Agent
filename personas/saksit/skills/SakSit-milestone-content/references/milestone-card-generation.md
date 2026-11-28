@@ -9,11 +9,11 @@ from PIL import Image, ImageDraw, ImageFont
 def generate_stat_card(number_str: str, label_str: str, output_path: str = "milestone_card.png"):
     img = Image.new("RGB", (1080, 1080), color=(15, 23, 42))  # Slate 900
     draw = ImageDraw.Draw(img)
-    
+
     # Primary metric
     draw.text((100, 400), number_str, fill=(56, 189, 248))    # Sky 400
     draw.text((100, 550), label_str, fill=(241, 245, 249))     # Slate 100
-    
+
     # Branding footer
     draw.text((100, 950), "Sak-Family-Agent · Beer (@beer-sakthai)", fill=(148, 163, 184))
     img.save(output_path)

@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       target_repo_id:
-        description: "Target repository on Hugging Face Hub (e.g. beer-sakthai/Sak-Family-Agent)"
+        description: "Target repository on Hugging Face Hub (e.g. Nanthasit/sakthai-training-space)"
         required: false
-        default: "beer-sakthai/Sak-Family-Agent"
+        default: "Nanthasit/sakthai-training-space"
       repo_type:
         description: "Hugging Face repo type (space, model, dataset)"
         required: false
@@ -60,9 +60,11 @@ jobs:
       - name: Sync to Hugging Face Hub
         if: steps.check_token.outputs.configured == 'true'
         uses: huggingface/hub-sync@fdffea8e04104d0bd4e3181c5feb3025f0433ff5 # v0.3.0
+        continue-on-error: true
         with:
           github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: ${{ inputs.target_repo_id || 'beer-sakthai/Sak-Family-Agent' }}
+          huggingface_repo_id: ${{ inputs.target_repo_id || 'Nanthasit/sakthai-training-space' }}
           hf_token: ${{ secrets.HF_TOKEN }}
           repo_type: ${{ inputs.repo_type || 'space' }}
           space_sdk: ${{ inputs.space_sdk || 'docker' }}
+          subdirectory: "infra/sakthai-training-space"
