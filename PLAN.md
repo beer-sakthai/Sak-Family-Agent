@@ -33,6 +33,7 @@ never duplicate content across files.
 All completed historical tasks (`✅ Done` / `[x]`) have been removed from the active plan files and consolidated here so only uncompleted work remains in one place.
 
 ### 1. Security & Repository Settings (Needs Beer / Maintainer Action)
+- [x] 2026-11-27 **Code scanning #21819 — OpenTelemetry API DoS** — Removed the unused LaunchDarkly observability package that pinned vulnerable OpenTelemetry 1.34.1, resolved the supported dependencies to patched versions, and updated the focused dependency test.
 - [x] 2026-11-16 **Repository quality review** — corrected the README's canonical package path and added a regression test for the documented validation commands.
 - [x] 2026-11-16 **Legacy and infrastructure Ruff cleanup** — removed the remaining findings in the workflow framework, infrastructure, services, and training utilities without changing behavior.
 - [x] 2026-11-16 **GitHub Agentic Workflows & Gemini Reviewer fixes** — Merged PR #1860 and PR #1861 to `main`, applied `copilot-requests: write` token auth and Gemini excluded-only PR guard, and closed the 8 open `[aw]` issues (`#1837`, `#1839`, `#1850`, `#1851`, `#1852`, `#1853`, `#1854`, `#1859`).
