@@ -54,3 +54,11 @@ rules:
       # with exact pinned versions of @google/gemini-cli, pyright, and typescript tools.
       - skill-pr-reviewer.lock.yml
       - plan.lock.yml
+
+  self-repository:
+    ignore:
+      # Local composite actions in this repository use the standard GitHub Actions
+      # runner syntax `./.github/actions/<name>` for compatibility across all runner environments.
+      - bot-check-action.yml
+      - reconstruction.yml
+
