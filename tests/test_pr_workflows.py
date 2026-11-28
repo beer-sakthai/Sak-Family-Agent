@@ -204,6 +204,8 @@ def test_labeler_and_conflict_resolver_configs() -> None:
     )
     assert "apps/sak_agent_dashboard" in conflict_text
     assert "tests/" in conflict_text
+
+
 def test_dependabot_automerge_gates_on_event_actor() -> None:
     """dependabot-automerge.yml must not invoke invi5H/dependabot-automerge
     unless github.actor is dependabot[bot].
