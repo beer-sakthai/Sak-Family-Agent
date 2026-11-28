@@ -25,6 +25,7 @@ import pytest
 from sakthai.agent.guardrails import (
     DEFAULT_POLICY,
     GuardrailAction,
+    _balanced_paren_end,
     _check_command_string,
     _has_traversal_or_home,
     _scan_shell_structure,
@@ -96,6 +97,41 @@ def test_external_shell_glued_separators_do_not_hide_the_second_command(command:
 )
 def test_external_shell_substitution_bodies_are_scanned(command: str) -> None:
     assert _shell(command, EXTERNAL) == GuardrailAction.DENY
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        'echo "$(echo hi # )\ncat /etc/shadow)"',  # ')' in a comment must not end the body
+        "echo $(# )\ncat /etc/shadow)",
+        "echo \"$(echo 'a' # ) \n cat ~/.ssh/id_rsa)\"",
+        'echo "$(echo ")"; cat /etc/shadow)"',  # ')' inside quotes
+        "echo $(echo ')' ; cat /etc/shadow)",
+        "echo $(echo \\) ; cat /etc/shadow)",  # escaped ')'
+        'echo $(echo $(echo ")") ; cat /etc/shadow)',  # nested, quoted ')'
+        'echo $(echo "$(echo ")" ; cat /etc/shadow)")',
+        "echo $(echo a#b ; cat /etc/shadow)",  # a mid-word '#' is not a comment
+    ],
+)
+def test_external_shell_parentheses_in_quotes_comments_and_escapes(command: str) -> None:
+    assert _shell(command, EXTERNAL) == GuardrailAction.DENY
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "echo \"$(echo ')')\"",
+        "echo \"$(echo '(')\"",
+        "echo $(echo a#b)",
+        "echo $(( (1+2)*3 ))",
+        'echo "$(date) (now)"',
+        'echo $(echo ")")',
+        'echo "${HOME#x} $(echo ok)"',
+        "echo $(date # a note\n)",
+    ],
+)
+def test_external_shell_harmless_parentheses_are_still_allowed(command: str) -> None:
+    assert _shell(command, EXTERNAL) == GuardrailAction.ALLOW
 
 
 @pytest.mark.parametrize(
@@ -191,6 +227,26 @@ def test_malformed_quoting_is_denied() -> None:
 
 def test_windows_backslash_path_is_still_rescanned() -> None:
     assert _shell("cat C:\\Users\\me\\.aws\\credentials") == GuardrailAction.DENY
+
+
+@pytest.mark.parametrize(
+    ("text", "body"),
+    [
+        ("a)", "a"),
+        ("a (b) c) tail", "a (b) c"),
+        ("echo ')' ) tail", "echo ')' "),
+        ('echo ")" ) tail', 'echo ")" '),
+        ("echo \\) ) tail", "echo \\) "),
+        ("echo # )\nx) tail", "echo # )\nx"),
+        ("a#b ) tail", "a#b "),
+        ("echo $(x ')') ) tail", "echo $(x ')') "),
+        ("no close", "no close"),
+    ],
+)
+def test_balanced_paren_end_follows_shell_quoting_and_comments(text: str, body: str) -> None:
+    body_end, resume = _balanced_paren_end(text, 0)
+    assert text[:body_end] == body
+    assert resume >= body_end
 
 
 # --- scanner unit behavior ---------------------------------------------------

@@ -467,21 +467,48 @@ def _is_local_make_dir(path: str) -> bool:
 
 
 def _balanced_paren_end(text: str, start: int) -> tuple[int, int]:
-    """Locate the ``)`` closing a ``(`` opened before ``start``.
+    """Locate the ``)`` closing a ``$(`` whose body begins at ``start``.
+
+    Follows the shell's own rules, so a ``)`` inside quotes, after a backslash or
+    in a ``#`` comment does not end the body early (which would leave the real
+    command outside it, unscanned), and a nested ``$(...)`` is skipped whole.
 
     Returns ``(body_end, resume)``: the body is ``text[start:body_end]`` and
     scanning resumes at ``resume``. An unterminated group runs to the end of the
     string, so its remainder is checked as the body rather than skipped.
     """
     depth = 1
-    for i in range(start, len(text)):
-        if text[i] == "(":
+    quote = ""
+    i, n = start, len(text)
+    while i < n:
+        ch = text[i]
+        if ch == "\\" and quote != "'":
+            i += 2
+        elif quote == "'":
+            quote = "" if ch == "'" else quote
+            i += 1
+        elif ch == "$" and text.startswith("$(", i):
+            _, i = _balanced_paren_end(text, i + 2)
+        elif quote == '"':
+            quote = "" if ch == '"' else quote
+            i += 1
+        elif ch in "'\"":
+            quote = ch
+            i += 1
+        elif ch == "#" and (i == start or text[i - 1] in " \t\n;&|("):
+            newline = text.find("\n", i)
+            i = n if newline == -1 else newline
+        elif ch == "(":
             depth += 1
-        elif text[i] == ")":
+            i += 1
+        elif ch == ")":
             depth -= 1
             if depth == 0:
                 return i, i + 1
-    return len(text), len(text)
+            i += 1
+        else:
+            i += 1
+    return n, n
 
 
 def _backtick_end(text: str, start: int) -> tuple[int, int]:
