@@ -15,6 +15,7 @@ import {
   X,
   RefreshCw,
   Eye,
+  Pencil,
 } from "lucide-react";
 
 import type { MemoryPayload } from "@/lib/contracts.generated";
@@ -60,6 +61,14 @@ function timestamp(epochSeconds: number): string {
   return new Date(epochSeconds * 1000).toISOString().replace("T", " ").slice(0, 16);
 }
 
+function isPrivateFact(f: FactItem): boolean {
+  const privKeywords = ["private", "secret", "credential", "confidential", "token", "password", "auth"];
+  if (f.kind === "secret" || f.kind === "credential") return true;
+  if (f.tags && f.tags.some((t) => privKeywords.includes(t.toLowerCase()))) return true;
+  if (f.key && privKeywords.some((k) => f.key!.toLowerCase().includes(k))) return true;
+  return false;
+}
+
 export function MemoryExplorer({ memory }: MemoryExplorerProps) {
   const [selectedShard, setSelectedShard] = useState<string>("all");
   const [activeTab, setActiveTab] = useState<"facts" | "observations" | "simulator">("facts");
@@ -81,6 +90,18 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
   const [guardrailBlockReason, setGuardrailBlockReason] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+
+  // Edit modal states
+  const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
+  const [factToEdit, setFactToEdit] = useState<FactItem | null>(null);
+  const [editPersona, setEditPersona] = useState<string>("sakthai");
+  const [editKind, setEditKind] = useState<string>("fact");
+  const [editKey, setEditKey] = useState<string>("");
+  const [editValue, setEditValue] = useState<string>("");
+  const [editTags, setEditTags] = useState<string>("");
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSuccess, setEditSuccess] = useState<string | null>(null);
 
   // Delete modal states
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
@@ -293,6 +314,74 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
       // Handle error
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  // Handle Open Edit Modal
+  const handleOpenEditModal = (f: FactItem) => {
+    setFactToEdit(f);
+    setEditPersona(f.persona || (selectedShard !== "all" ? selectedShard : "sakthai"));
+    setEditKind(f.kind || "fact");
+    setEditKey(f.key || "");
+    setEditValue(f.value || "");
+    setEditTags(f.tags && f.tags.length > 0 ? f.tags.join(", ") : "");
+    setEditError(null);
+    setEditSuccess(null);
+    setEditModalOpen(true);
+  };
+
+  // Handle Edit Fact Submit
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!factToEdit || !editValue.trim()) return;
+
+    setIsEditing(true);
+    setEditError(null);
+    setEditSuccess(null);
+
+    const tagsArray = editTags
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    try {
+      const res = await fetch("/api/gateway/memory/edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: factToEdit.id,
+          persona: editPersona,
+          kind: editKind,
+          key: editKey.trim() || undefined,
+          value: editValue.trim(),
+          tags: tagsArray,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        setEditError(data.error || "Failed to update memory fact");
+      } else {
+        setEditSuccess(`Fact #${factToEdit.id} updated successfully in ${editPersona} shard.`);
+        if (data.fact) {
+          setDynamicFacts((prev) =>
+            prev.map((item) =>
+              item.id === factToEdit.id ? { ...item, ...data.fact } : item
+            )
+          );
+        }
+        fetchShards();
+        fetchFactsForShard(selectedShard);
+        setTimeout(() => {
+          setEditModalOpen(false);
+          setEditSuccess(null);
+          setFactToEdit(null);
+        }, 1200);
+      }
+    } catch (err: unknown) {
+      setEditError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsEditing(false);
     }
   };
 
@@ -603,18 +692,36 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
                         title={`Kind: ${f.kind}${f.key ? `, Key: ${f.key}` : ""}`}
                         className="px-5 py-3.5 font-bold text-hue-cyan"
                       >
-                        {f.kind}
-                        {f.key && <span className="text-fg-4 font-normal"> / {f.key}</span>}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span>{f.kind}</span>
+                          {f.key && <span className="text-fg-4 font-normal">/ {f.key}</span>}
+                          {isPrivateFact(f) && (
+                            <span
+                              title="Sensitive / Guardrail-Protected Fact"
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono font-normal"
+                            >
+                              <ShieldAlert className="h-3 w-3" />
+                              Private
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td
                         title={`Fact value: ${f.value}`}
                         className="px-5 py-3.5 font-sans text-xs text-fg leading-relaxed"
                       >
-                        {f.value}
+                        <div>{f.value}</div>
                         {f.tags && f.tags.length > 0 && (
-                          <span className="ml-2 text-[10px] font-mono text-fg-4">
-                            {f.tags.map((t) => `#${t}`).join(" ")}
-                          </span>
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {f.tags.map((t) => (
+                              <span
+                                key={t}
+                                className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-raised/80 text-fg-3 border border-line/60 font-mono"
+                              >
+                                #{t}
+                              </span>
+                            ))}
+                          </div>
                         )}
                       </td>
                       <td className="px-5 py-3.5">
@@ -632,18 +739,28 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
                         {timestamp(f.updated_at)}
                       </td>
                       <td className="px-5 py-3.5 text-right">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFactToDelete(f);
-                            setDeleteConfirmed(false);
-                            setDeleteModalOpen(true);
-                          }}
-                          title="Delete memory fact"
-                          className="text-fg-4 hover:text-rose-400 transition-colors p-1 rounded cursor-pointer"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal(f)}
+                            title="Edit memory fact"
+                            className="text-fg-4 hover:text-hue-cyan transition-colors p-1 rounded cursor-pointer"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFactToDelete(f);
+                              setDeleteConfirmed(false);
+                              setDeleteModalOpen(true);
+                            }}
+                            title="Delete memory fact"
+                            className="text-fg-4 hover:text-rose-400 transition-colors p-1 rounded cursor-pointer"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -1012,6 +1129,131 @@ export function MemoryExplorer({ memory }: MemoryExplorerProps) {
                 {isDeleting ? "Deleting..." : "Permanently Delete"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Fact Modal */}
+      {editModalOpen && factToEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg bg-panel border border-line-strong rounded-2xl shadow-xl p-6 space-y-4 font-mono text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-line">
+              <h4 className="text-sm font-bold font-display text-fg flex items-center gap-2">
+                <Pencil className="h-4 w-4 text-hue-cyan" />
+                Edit Memory Fact (ID #{factToEdit.id})
+              </h4>
+              <button
+                type="button"
+                onClick={() => setEditModalOpen(false)}
+                className="text-fg-3 hover:text-fg cursor-pointer p-1"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {editError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-[11px] flex items-start gap-2">
+                <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>{editError}</span>
+              </div>
+            )}
+
+            {editSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[11px] flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>{editSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleEditSubmit} className="space-y-3 font-sans">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="edit-persona-select" className="block text-[11px] text-fg-2 mb-1">Target Persona Shard:</label>
+                  <select
+                    id="edit-persona-select"
+                    value={editPersona}
+                    onChange={(e) => setEditPersona(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-canvas border border-line text-xs font-mono text-fg focus:outline-hidden"
+                  >
+                    {SHARD_TABS.filter((t) => t.id !== "all").map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="edit-kind-select" className="block text-[11px] text-fg-2 mb-1">Fact Kind:</label>
+                  <select
+                    id="edit-kind-select"
+                    value={editKind}
+                    onChange={(e) => setEditKind(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-canvas border border-line text-xs font-mono text-fg focus:outline-hidden"
+                  >
+                    {KIND_FILTERS.filter((k) => k !== "all").map((k) => (
+                      <option key={k} value={k}>
+                        {k}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="edit-key-input" className="block text-[11px] text-fg-2 mb-1">Fact Key (Optional Identifier):</label>
+                <input
+                  id="edit-key-input"
+                  type="text"
+                  value={editKey}
+                  onChange={(e) => setEditKey(e.target.value)}
+                  placeholder="e.g. favorite_ide, git_workflow"
+                  className="w-full px-3 py-2 rounded-xl bg-canvas border border-line text-xs font-mono text-fg focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="edit-value-textarea" className="block text-[11px] text-fg-2 mb-1">Fact Content / Value:</label>
+                <textarea
+                  id="edit-value-textarea"
+                  rows={3}
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  placeholder="Enter updated fact content..."
+                  required
+                  className="w-full px-3 py-2 rounded-xl bg-canvas border border-line text-xs font-mono text-fg focus:outline-hidden focus:border-hue-cyan"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="edit-tags-input" className="block text-[11px] text-fg-2 mb-1">Tags (Comma-separated):</label>
+                <input
+                  id="edit-tags-input"
+                  type="text"
+                  value={editTags}
+                  onChange={(e) => setEditTags(e.target.value)}
+                  placeholder="e.g. ci, automation, release"
+                  className="w-full px-3 py-2 rounded-xl bg-canvas border border-line text-xs font-mono text-fg focus:outline-hidden"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-line">
+                <button
+                  type="button"
+                  onClick={() => setEditModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-line text-fg-3 hover:text-fg hover:border-line-strong transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isEditing || !editValue.trim()}
+                  className="px-4 py-2 rounded-xl bg-hue-cyan-tint/70 text-hue-cyan border border-hue-cyan-line hover:bg-hue-cyan-tint transition-colors font-bold cursor-pointer disabled:opacity-50"
+                >
+                  {isEditing ? "Updating..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

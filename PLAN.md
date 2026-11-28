@@ -367,10 +367,18 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-28 **Phase 3: Hugging Face Hub Sync Space Namespace & Resiliency Hardening** `[SakJules]` — Update `.github/workflows/hf-hub-sync.yml` to target canonical Hugging Face author namespace `Nanthasit/sakthai-training-space`, specify `subdirectory: "infra/sakthai-training-space"`, and add `continue-on-error: true` so third-party registry hiccups cannot break branch CI.
 - [x] 2026-11-28 **Phase 4: Verification, Quality Gates & Pull Request Delivery** `[SakJules]` — Verify `git diff --check`, `make lint`, full test suite, and open PR for Beer's review and manual merge.
 
+### 26. Sak Agent Dashboard Interactive Runner & Memory Curation Hub (2026-11-28)
+- [x] 2026-11-28 **Phase 1: Direct Subprocess SSE Streaming API (`/api/gateway/runner`)** `[SakJules]` — Implement `POST /api/gateway/runner` to stream `sakthai run` stdout/stderr as Server-Sent Events when standalone gateway (:8080) is offline, with robust parameter sanitization.
+- [x] 2026-11-28 **Phase 2: Universal Dockable Runner Drawer Component (`RunnerDrawer.tsx`)** `[SakJules]` — Build bottom/side dockable terminal drawer with persona selector, prompt presets, real-time log viewer, and `--dry-run` preflight switch.
+- [x] 2026-11-28 **Phase 3: Direct SQLite Memory Curation & In-Place Editing** `[SakJules]` — Implement `POST /api/gateway/memory/edit` with direct SQLite shard mutation fallback and upgrade `MemoryExplorer.tsx` with in-place fact editing and private fact shields.
+- [x] 2026-11-28 **Phase 4: Shell Integration, Keyboard Shortcuts & Lint Zero-Warning Polish** `[SakJules]` — Wire `Ctrl+\`` and command palette to open the runner, add "Run Agent" triggers to `AgentCard` and `PersonaDrawer`, and clean up `Card.tsx` unused variable warning.
+- [x] 2026-11-28 **Phase 5: Automated Testing, Quality Gates & Verification** `[SakJules]` — Author Vitest test suite for `RunnerDrawer` and memory curation, verify `npm test`, `npm run lint`, `npm run build`, and `npm run test:workflows`.
+
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |
 |---|---|---|
+| Dashboard Interactive Runner & Curation | [`docs/plans/2026-11-28-sak-agent-dashboard-interactive-runner.md`](./docs/plans/2026-11-28-sak-agent-dashboard-interactive-runner.md) | 🟢 Complete (2026-11-28) — All 5 phases verified |
 | SakSit Phase 2 Enhancements | [`docs/plans/2026-11-27-saksit-phase2-enhancements.md`](./docs/plans/2026-11-27-saksit-phase2-enhancements.md) | 🟢 Complete (2026-11-27) — All 5 TDD phases verified |
 | Sak MCP Gateway & M365 Copilot | [`docs/superpowers/plans/2026-11-27-sak-mcp-gateway-m365.md`](./docs/superpowers/plans/2026-11-27-sak-mcp-gateway-m365.md) | 🟢 Complete (2026-11-27) — All 5 phases verified |
 | Mermaid Architecture Visuals | [`docs/superpowers/plans/2026-11-27-mermaid-doc-all-readmes.md`](./docs/superpowers/plans/2026-11-27-mermaid-doc-all-readmes.md) | 🟢 Complete (2026-11-27) — All 4 phases verified |

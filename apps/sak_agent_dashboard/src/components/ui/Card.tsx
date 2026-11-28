@@ -7,14 +7,6 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
 }
 
-const accentClasses: Record<string, string> = {
-  cyan: "border-neon-cyan",
-  magenta: "border-neon-magenta",
-  purple: "border-neon-purple",
-  green: "border-neon-green",
-  orange: "border-neon-orange",
-};
-
 export function Card({
   neonBorder = true,
   techGrid = true,

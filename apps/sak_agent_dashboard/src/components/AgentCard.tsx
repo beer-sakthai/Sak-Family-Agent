@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Activity, ArrowUpRight, Award, Brain, Clock, Cpu } from "lucide-react";
+import { Activity, ArrowUpRight, Award, Brain, Clock, Cpu, Play } from "lucide-react";
 
 import { PersonaAvatar } from "@/components/PersonaAvatar";
 import type { PersonaSummary } from "@/lib/contracts.generated";
@@ -16,6 +16,8 @@ interface AgentCardProps {
   onToggle?: () => void;
   /** When given, the card grows a Details control that opens the drawer. */
   onOpenDetail?: () => void;
+  /** When given, offers a 1-click Run Agent trigger that opens the runner drawer. */
+  onRun?: () => void;
 }
 
 /**
@@ -59,6 +61,7 @@ export function AgentCard({
   selected = false,
   onToggle,
   onOpenDetail,
+  onRun,
 }: AgentCardProps) {
   const status = deriveStatus(agent);
   const glowClass = personaGlows[agent.name] ?? "border-line hover:border-line-strong";
@@ -262,13 +265,27 @@ export function AgentCard({
             {agent.errors} {agent.errors === 1 ? "error" : "errors"}
           </span>
         )}
+        {onRun && (
+          <button
+            type="button"
+            onClick={onRun}
+            aria-label={`Run agent ${agent.display_name}`}
+            title={`Run agent ${agent.display_name}`}
+            className="pointer-events-auto ml-auto inline-flex items-center gap-1 rounded-full border border-hue-emerald-line/40 bg-hue-emerald-tint/50 px-2 py-0.5 text-[10px] text-hue-emerald font-semibold transition-colors hover:bg-hue-emerald-tint/80 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <Play className="h-2.5 w-2.5" aria-hidden="true" />
+            Run
+          </button>
+        )}
         {onOpenDetail && (
           <button
             type="button"
             onClick={onOpenDetail}
             aria-label={`Open details for ${agent.display_name}`}
             title={`Open details for ${agent.display_name}`}
-            className="pointer-events-auto ml-auto inline-flex items-center gap-1 rounded-full border border-line-strong bg-raised/90 px-2 py-0.5 text-[10px] text-fg-2 transition-colors hover:border-accent/50 hover:text-accent focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+            className={`pointer-events-auto inline-flex items-center gap-1 rounded-full border border-line-strong bg-raised/90 px-2 py-0.5 text-[10px] text-fg-2 transition-colors hover:border-accent/50 hover:text-accent focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
+              onRun ? "" : "ml-auto"
+            }`}
           >
             Details
             <ArrowUpRight className="h-2.5 w-2.5" aria-hidden="true" />

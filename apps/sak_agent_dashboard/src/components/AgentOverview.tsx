@@ -15,6 +15,8 @@ interface AgentOverviewProps {
   onSelect?: (next: string[]) => void;
   /** When given, each card offers a Details control that opens the drawer. */
   onOpenDetail?: (name: string) => void;
+  /** When given, each card offers a 1-click Run Agent trigger. */
+  onRun?: (name: string) => void;
   /**
    * The recorded run history, for the activity calendar under the grid. Absent
    * until `/api/metrics` has answered, and the calendar is simply not drawn
@@ -28,6 +30,7 @@ export function AgentOverview({
   selected = [],
   onSelect,
   onOpenDetail,
+  onRun,
   trends,
 }: AgentOverviewProps) {
   const { personas: agents, unattributed_runs: unattributed } = personas;
@@ -112,6 +115,7 @@ export function AgentOverview({
             }
             selected={selected.includes(agent.name)}
             onOpenDetail={onOpenDetail ? () => onOpenDetail(agent.name) : undefined}
+            onRun={onRun ? () => onRun(agent.name) : undefined}
           />
         ))}
       </div>
