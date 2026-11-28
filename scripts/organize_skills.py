@@ -380,8 +380,8 @@ def run_organization(apply: bool = False) -> None:
                             if apply:
                                 upgraded = yaml_replace_name(src_text, target_name)
                                 tgt_md.write_text(upgraded, encoding="utf-8")
-                    except Exception:
-                        pass
+                    except OSError as err:
+                        print(f"[WARN] Failed upgrading {target_dir}: {err}")
                 print(
                     f"[DOMAIN DEDUP REMOVE] {entry.relative_to(REPO_ROOT)} "
                     f"(target {target_dir.relative_to(REPO_ROOT)} owned by {target_persona})"
@@ -420,8 +420,8 @@ def run_organization(apply: bool = False) -> None:
                 body = parts[2].strip() if len(parts) >= 3 else content.strip()
                 body_hash = hashlib.sha256(b" ".join(body.split())).hexdigest()
                 body_to_entries[body_hash].append((p, entry))
-            except Exception:
-                pass
+            except OSError as err:
+                print(f"[WARN] Failed reading {md}: {err}")
 
     for _body_hash, entries in body_to_entries.items():
         unique_personas = {e[0] for e in entries}

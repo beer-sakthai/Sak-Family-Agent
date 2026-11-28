@@ -10,8 +10,8 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
-import random
 import re
+import secrets
 import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
@@ -564,7 +564,7 @@ class PairedBlindJudge:
     ) -> PairedJudgeResult:
         """Execute paired blind evaluation with randomized A/B presentation."""
         start = time.perf_counter()
-        swapped = random.choice([True, False]) if force_swap is None else force_swap
+        swapped = secrets.choice([True, False]) if force_swap is None else force_swap
 
         resp_a = candidate_trace if swapped else baseline_trace
         resp_b = baseline_trace if swapped else candidate_trace
@@ -611,8 +611,8 @@ class PairedBlindJudge:
                     confidence = float(parsed["confidence"])
                 if "reasoning" in parsed:
                     reasoning = str(parsed["reasoning"])
-            except Exception:
-                pass
+            except (json.JSONDecodeError, ValueError, TypeError, AttributeError) as exc:
+                logger.debug("Failed to parse paired judge payload as JSON: %s", exc)
 
         if winner not in ("A", "B", "TIE"):
             raw_upper = raw.upper()

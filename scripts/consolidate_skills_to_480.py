@@ -25,7 +25,6 @@ from __future__ import annotations
 import argparse
 import re
 import shutil
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -47,7 +46,11 @@ TRANSFERS_TO_SAKTAN = [
     ("sakjules", "SakJules-cron-tool-workarounds", "SakTan-ops-cron-tool-workarounds"),
     ("sakjules", "SakJules-asset-monitor", "SakTan-ops-asset-monitor"),
     ("sakjules", "SakJules-ecosystem-improvement-cron", "SakTan-ops-ecosystem-cron"),
-    ("sakjules", "SakJules-customer-health-score-operational-framework", "SakTan-ops-customer-health"),
+    (
+        "sakjules",
+        "SakJules-customer-health-score-operational-framework",
+        "SakTan-ops-customer-health",
+    ),
     ("sakjules", "SakJules-github-security-compliance-program", "SakTan-ops-security-compliance"),
     # From SakThai (5)
     ("sakthai", "SakThai-hf-ecosystem-health-check", "SakTan-ops-hf-ecosystem-health"),
@@ -454,7 +457,9 @@ SAKTHAI_MERGES = {
 }
 
 
-def merge_skill_folders(surviving_dir: Path, absorbed_dirs: list[Path], apply: bool = False) -> None:
+def merge_skill_folders(
+    surviving_dir: Path, absorbed_dirs: list[Path], apply: bool = False
+) -> None:
     surviving_dir.mkdir(parents=True, exist_ok=True)
     surviving_md = surviving_dir / "SKILL.md"
 
@@ -467,8 +472,8 @@ def merge_skill_folders(surviving_dir: Path, absorbed_dirs: list[Path], apply: b
             try:
                 surviving_front = yaml.safe_load(parts[1]) or {}
                 surviving_body = parts[2].strip()
-            except Exception:
-                pass
+            except (yaml.YAMLError, OSError, ValueError):
+                surviving_front = {}
 
     if not surviving_front:
         surviving_front = {
@@ -493,8 +498,8 @@ def merge_skill_folders(surviving_dir: Path, absorbed_dirs: list[Path], apply: b
                     absorbed_front = yaml.safe_load(parts[1]) or {}
                     for t in absorbed_front.get("tags") or []:
                         merged_tags.add(t)
-                except Exception:
-                    pass
+                except (yaml.YAMLError, OSError, ValueError):
+                    absorbed_front = {}
 
         # Copy any references, scripts, templates into surviving_dir/references/
         for sub_name in ("references", "scripts", "templates", "examples"):
@@ -538,7 +543,9 @@ def sync_persona_documentation(counts: dict[str, int]) -> None:
     """Update personas/README.md and all BACKPACK.md files to reflect exact counts."""
     # 1. Update personas/README.md
     readme_path = PERSONAS_DIR / "README.md"
-    total_overlays = sum(counts[p] for p in ("sakthai", "saksee", "sakjules", "sakking", "saksit", "saktan"))
+    total_overlays = sum(
+        counts[p] for p in ("sakthai", "saksee", "sakjules", "sakking", "saksit", "saktan")
+    )
     text = readme_path.read_text(encoding="utf-8")
     text = re.sub(
         r"collectively host \*\*\d+ specialized skills\*\*",
@@ -636,7 +643,9 @@ def run_consolidation(apply: bool = False) -> None:
     sakjules_dir = PERSONAS_DIR / "sakjules" / "skills"
     for surviving_name, absorbed_names in SAKJULES_MERGES.items():
         surv_path = sakjules_dir / surviving_name
-        abs_paths = [sakjules_dir / name for name in absorbed_names if (sakjules_dir / name).is_dir()]
+        abs_paths = [
+            sakjules_dir / name for name in absorbed_names if (sakjules_dir / name).is_dir()
+        ]
         if abs_paths:
             print(f"[sakjules] Merge into {surviving_name}: {len(abs_paths)} skills")
             merge_skill_folders(surv_path, abs_paths, apply=apply)
@@ -663,13 +672,19 @@ def run_consolidation(apply: bool = False) -> None:
     counts = {}
     for p in ("sakthai", "saksee", "sakjules", "sakking", "saksit", "saktan", "shared"):
         sdir = PERSONAS_DIR / p / "skills"
-        cnt = sum(1 for d in sdir.iterdir() if d.is_dir() and (d / "SKILL.md").is_file()) if sdir.is_dir() else 0
+        cnt = (
+            sum(1 for d in sdir.iterdir() if d.is_dir() and (d / "SKILL.md").is_file())
+            if sdir.is_dir()
+            else 0
+        )
         counts[p] = cnt
 
     if apply:
         sync_persona_documentation(counts)
 
-    total_overlays = sum(counts[p] for p in ("sakthai", "saksee", "sakjules", "sakking", "saksit", "saktan"))
+    total_overlays = sum(
+        counts[p] for p in ("sakthai", "saksee", "sakjules", "sakking", "saksit", "saktan")
+    )
     grand_total = total_overlays + counts.get("shared", 0)
 
     print("\n=== Verified Skill Count Result ===")
@@ -681,7 +696,9 @@ def run_consolidation(apply: bool = False) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--dry-run", action="store_true", default=True, help="Simulate without changes")
+    parser.add_argument(
+        "--dry-run", action="store_true", default=True, help="Simulate without changes"
+    )
     parser.add_argument("--apply", action="store_true", help="Apply consolidations")
     args = parser.parse_args()
 

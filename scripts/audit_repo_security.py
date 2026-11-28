@@ -121,8 +121,10 @@ def audit_credential_hygiene(repo_root: Path) -> dict[str, Any]:
                                     "matched": m[:6] + "...",
                                 }
                             )
-                except Exception:
-                    pass
+                except OSError as err:
+                    logger.debug(
+                        "Skipping unreadable file %s during credential scan: %s", rel_path, err
+                    )
 
     return {
         "status": "clean" if leak_count == 0 else "flagged",
@@ -153,7 +155,9 @@ def run_audit(as_json: bool = False) -> int:
     logger.info("=" * 65)
     logger.info("Total YAML Workflows Audited: %s", workflow_results.get("total_workflows"))
     logger.info("Pinned Action References:    %s", workflow_results.get("pinned_action_references"))
-    logger.info("Unpinned References:         %s", workflow_results.get("unpinned_action_references"))
+    logger.info(
+        "Unpinned References:         %s", workflow_results.get("unpinned_action_references")
+    )
     logger.info("Harden-Runner Workflows:     %s", workflow_results.get("harden_runner_workflows"))
     logger.info("-" * 65)
     logger.info(
