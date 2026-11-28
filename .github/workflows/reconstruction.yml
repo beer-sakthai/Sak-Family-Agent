@@ -38,7 +38,7 @@ jobs:
           sparse-checkout: |
             .github/actions/check-automation-permissions
       - name: Check team authorization
-        uses: $/.github/actions/check-automation-permissions
+        uses: ./.github/actions/check-automation-permissions
         with:
           github-token: ${{ github.token }}
           required-team: ${{ inputs.team_slug }}
@@ -89,14 +89,14 @@ jobs:
           {
             echo "# Reconstruction manifest"
             echo
-            echo "Commit: \\`$(git rev-parse HEAD)\\`"
+            head_commit="$(git rev-parse HEAD)"
+            echo "Commit: \`${head_commit}\`"
             echo
             echo '## Workflow sources'
-            find .github/workflows -maxdepth 1 -type f \\
-              \( -name '*.yml' -o -name '*.yaml' -o -name '*.md' \) -printf '%f\\n' | sort
+            find .github/workflows -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' -o -name '*.md' \) -printf '%f\n' | sort
             echo
             echo '## Generated lock/source pairs'
-            find .github/workflows -maxdepth 1 -type f -name '*.lock.yml' -printf '%f\\n' | sort
+            find .github/workflows -maxdepth 1 -type f -name '*.lock.yml' -printf '%f\n' | sort
           } > artifacts/reconstruction/manifest.md
       - name: Upload reconstruction artifacts
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

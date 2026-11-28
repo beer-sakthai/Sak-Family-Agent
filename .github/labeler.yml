@@ -3,8 +3,46 @@ documentation:
   - changed-files:
       - any-glob-to-any-file:
           - "**/*.md"
+          - "docs/**/*"
 
 github_actions:
   - changed-files:
       - any-glob-to-any-file:
-          - ".github/workflows/*.yml"
+          - ".github/**/*"
+
+core_python:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "personas/sakthai/**/*.py"
+
+dashboard:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "apps/sak_agent_dashboard/**/*"
+
+personas:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "personas/**/*"
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "tests/**/*"
+
+security:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "SECURITY.md"
+          - ".github/workflows/*security*"
+          - ".github/workflows/*codeql*"
+          - ".github/workflows/*bandit*"
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "pyproject.toml"
+          - "uv.lock"
+          - "**/package.json"
+          - "**/package-lock.json"
+          - ".github/dependabot.yml"
