@@ -128,6 +128,8 @@ def test_external_shell_parentheses_in_quotes_comments_and_escapes(command: str)
         'echo $(echo ")")',
         'echo "${HOME#x} $(echo ok)"',
         "echo $(date # a note\n)",
+        "echo \"$(printf '%s' issue\\ #42)\"",  # an escaped space does not start a comment
+        'echo "$(printf %s a\\ #b)"',
     ],
 )
 def test_external_shell_harmless_parentheses_are_still_allowed(command: str) -> None:
@@ -239,6 +241,8 @@ def test_windows_backslash_path_is_still_rescanned() -> None:
         ("echo \\) ) tail", "echo \\) "),
         ("echo # )\nx) tail", "echo # )\nx"),
         ("a#b ) tail", "a#b "),
+        ("x\\ #y ) tail", "x\\ #y "),
+        ("x\\ ; #y\n) tail", "x\\ ; #y\n"),
         ("echo $(x ')') ) tail", "echo $(x ')') "),
         ("no close", "no close"),
     ],

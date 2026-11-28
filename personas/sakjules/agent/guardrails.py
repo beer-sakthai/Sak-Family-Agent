@@ -479,9 +479,11 @@ def _balanced_paren_end(text: str, start: int) -> tuple[int, int]:
     """
     depth = 1
     quote = ""
+    word_start = True
     i, n = start, len(text)
     while i < n:
         ch = text[i]
+        at_word_start, word_start = word_start, False
         if ch == "\\" and quote != "'":
             i += 2
         elif quote == "'":
@@ -495,11 +497,12 @@ def _balanced_paren_end(text: str, start: int) -> tuple[int, int]:
         elif ch in "'\"":
             quote = ch
             i += 1
-        elif ch == "#" and (i == start or text[i - 1] in " \t\n;&|("):
+        elif ch == "#" and at_word_start:
             newline = text.find("\n", i)
             i = n if newline == -1 else newline
         elif ch == "(":
             depth += 1
+            word_start = True
             i += 1
         elif ch == ")":
             depth -= 1
@@ -507,6 +510,7 @@ def _balanced_paren_end(text: str, start: int) -> tuple[int, int]:
                 return i, i + 1
             i += 1
         else:
+            word_start = ch in " \t\n;&|"
             i += 1
     return n, n
 
