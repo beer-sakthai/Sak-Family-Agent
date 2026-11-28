@@ -288,6 +288,8 @@ def output_options(fn: Any) -> Any:
             raise
         except SystemExit:
             raise
+        except (KeyboardInterrupt, click.Abort):
+            out.error("Interrupted", code="INTERRUPTED", exit_code=EXIT_INTERRUPTED)
         except Exception as exc:
             if out.json:
                 out.error(str(exc), code="INTERNAL_ERROR", exc=exc, exit_code=EXIT_ERROR)
