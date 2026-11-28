@@ -8,6 +8,17 @@ headless browser workflows (e.g., automated QA and visual verification pipelines
 
 Dependencies are kept updated via daily Dependabot scanning (`interval: "daily"`).
 
+## Architecture
+
+```mermaid
+flowchart LR
+    Runner["Node 22+ Test Runner"] --> Playwright["Playwright Headless Chromium"]
+    Playwright --> Probe["Tab-Order & Focus Visibility Probe (25x Tab)"]
+    Probe --> TargetPage["Target Web Page"]
+    Probe --> Artifacts["Artifacts: TAB_ORDER_JSON, FOCUS_VISIBILITY, last-focus.png"]
+    Artifacts --> SakSee["SakSee Accessibility Validation"]
+```
+
 ## Run (host or any Node 22+ box)
 ```bash
 npm i

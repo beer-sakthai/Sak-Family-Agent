@@ -51,21 +51,24 @@ uv run sakthai eval tools --bench --persona saksit
 
 ---
 
-## Self-Evolution & GEPA Architecture
+## Content Generation & Editorial Quality Lifecycle
 
-```
-Read current skill/prompt/tool ──► Generate eval dataset
-                                        │
-                                        ▼
-                                   GEPA Optimizer ◄── Execution traces
-                                        │                    ▲
-                                        ▼                    │
-                                   Candidate variants ──► Evaluate
-                                        │
-                                   Constraint gates (tests, size limits, benchmarks)
-                                        │
-                                        ▼
-                                   Best variant ──► PR against agent repo
+```mermaid
+flowchart LR
+    Brief["Creative Brief / Topic"] --> Drafting["Drafting (Gemini 4 Neon / HF Router)"]
+    Drafting --> Multimodal{"Multimodal Channels"}
+    Multimodal -->|X / Twitter| XPost["Thread & Hook Presets"]
+    Multimodal -->|LinkedIn| LiPost["B2B Thought Leadership"]
+    Multimodal -->|Video / Script| Script["Storyboards & Captions"]
+
+    XPost --> Evaluator["Editorial Quality Evaluator (Tone & Engagement Rubrics)"]
+    LiPost --> Evaluator
+    Script --> Evaluator
+
+    Evaluator --> Gate{"Meets 90+ Score?"}
+    Gate -->|No| Refine["Iterative Refinement"]
+    Refine --> Drafting
+    Gate -->|Yes| Publish["Ready for Publication"]
 ```
 
 Every evolved variant must pass:

@@ -16,6 +16,39 @@ monorepo base.
 The dedicated business scaffold for quote generation and lead capture
 workflows, **servicequotebot**, lives under `services/servicequotebot/`.
 
+## Architecture & Multi-Agent Routing
+
+```mermaid
+flowchart TD
+    User([User / System / CLI]) --> Router[SakThai Router & Lead]
+
+    subgraph SixPersonas ["House of Sak — The Six Personas"]
+        SakThai["SakThai (Lead)<br/>174 Skills · ML/Research/HF"]
+        SakKing["SakKing (Runner)<br/>64 Skills · Code/TDD/Quorum"]
+        SakSee["SakSee (Web Specialist)<br/>98 Skills · DOM/Playwright/Reaper"]
+        SakSit["SakSit (Content Creator)<br/>50 Skills · Editorial/Multimodal"]
+        SakTan["SakTan (Ops & Rhythm)<br/>26 Skills · SQLite/Cron/Ollama"]
+        SakJules["SakJules (CI/CD Master)<br/>48 Skills · AutoHeal/DevSecOps"]
+    end
+
+    Router --> SakThai
+    Router --> SakKing
+    Router --> SakSee
+    Router --> SakSit
+    Router --> SakTan
+    Router --> SakJules
+
+    subgraph SharedSubsystem ["Shared Foundation & Persistence"]
+        SharedSkills["Shared Skills · .agents/skills/"]
+        MemoryStore[("SQLite Memory Shards<br/>~/.sakthai/")]
+        CoreEngine["Core Engine · personas/sakthai/"]
+    end
+
+    SixPersonas --> SharedSkills
+    SixPersonas --> MemoryStore
+    SixPersonas --> CoreEngine
+```
+
 ## Layout
 
 ```text

@@ -51,21 +51,24 @@ uv run sakthai eval bench
 
 ---
 
-## Self-Evolution & GEPA Architecture
+## Dual-Runner Execution & Governance Architecture
 
-```
-Read current skill/prompt/tool ──► Generate eval dataset
-                                        │
-                                        ▼
-                                   GEPA Optimizer ◄── Execution traces
-                                        │                    ▲
-                                        ▼                    │
-                                   Candidate variants ──► Evaluate
-                                        │
-                                   Constraint gates (tests, size limits, benchmarks)
-                                        │
-                                        ▼
-                                   Best variant ──► PR against agent repo
+```mermaid
+flowchart TD
+    Task["Task Execution Request"] --> Preflight["3-Second Intent Preflight"]
+    Preflight --> ModeSelector{"Execution Mode"}
+    ModeSelector -->|Interactive / TUI| TUI["Textual TUI (Risk Permission Gate)"]
+    ModeSelector -->|CLI / Headless| CLI["sakthai CLI (Dual Runner)"]
+    ModeSelector -->|Evaluator-Optimizer| EvalOpt["Optimization Loop (CodeGrader)"]
+
+    TUI --> Gate{"Risk Gate ([y]/[n]/[a])"}
+    Gate -->|Approved| Runner["Local Subprocess Runner"]
+    Gate -->|Rejected| Abort["Safe Abort"]
+
+    CLI --> Runner
+    EvalOpt --> Runner
+
+    Runner --> Envelope["sak.cli/v1 Output Envelope (JSON / Rainbow UI)"]
 ```
 
 Every evolved variant must pass:

@@ -14,6 +14,42 @@ The dashboard provides visual telemetry, system health status, memory inspection
 
 Embedded directly within the dashboard application is the **Unified Workflow Engine** (`workflow_engine/`), providing durable DAG execution, step retries, state persistence, and verification tooling. Dependencies are kept secure via daily Dependabot automated updates (`interval: "daily"`).
 
+## Architecture & Data Flow
+
+```mermaid
+flowchart TD
+    Client([Browser Client]) --> NextApp["Next.js 16 Dashboard (App Router + React 19)"]
+
+    subgraph FrontendViews ["UI & Telemetry Views"]
+        ChatPlayground["Chat Playground (/chat)"]
+        DAGCanvas["Pipeline DAG Canvas (/pipelines)"]
+        MemoryStudio["Memory Shard Studio (/memory)"]
+        HealthOverview["System Health & Quota (/status)"]
+    end
+
+    NextApp --> FrontendViews
+
+    subgraph APIRoutes ["Next.js API Edge Proxy"]
+        StreamProxy["SSE Proxy (/api/gateway/team/stream)"]
+        ChatProxy["Chat Proxy (/api/gateway/chat)"]
+        MemoryProxy["Memory Proxy (/api/memory/shards)"]
+    end
+
+    FrontendViews --> APIRoutes
+
+    subgraph CoreBackend ["SakThai Gateway & Python Engine"]
+        Gateway["Runtime Gateway (/v1)"]
+        SSEStream["Pipeline SSE Stream"]
+        WorkflowEngine["Embedded Workflow Engine (workflow_engine/)"]
+        MemoryDB[("Sharded SQLite Memory ~/.sakthai/")]
+    end
+
+    APIRoutes --> Gateway
+    Gateway --> SSEStream
+    Gateway --> WorkflowEngine
+    Gateway --> MemoryDB
+```
+
 ---
 
 ## 🛠️ Tech Stack

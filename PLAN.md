@@ -331,10 +331,17 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-27 **Phase 1: Implementation Plan & Repository Audit** `[SakJules]` — Author `docs/superpowers/plans/2026-11-27-update-every-readme.md` using `/writing-plans` skill, auditing all 60+ tracked `README.md` files across Root, 6 Personas, Apps, Infra, Services, and Training domains against Gemini 4 Neon defaults, daily Dependabot cadence, Phase 3/F6.1 output contract with Rainbow UI, exact on-disk skill counts (460 overlay + 3 shared = 463 total), and 4,333 collected tests.
 - [x] 2026-11-27 **Phase 2: Execution & Quality Gate Verification** `[SakJules]` — Execute all plan tasks, verify on-disk parity tests (`test_soul_consistency.py`, `test_repo_hygiene.py`), zero whitespace errors (`git diff --check`), linting, Bandit, open PR, and request Beer's review.
 
+### 20. Monorepo-Wide Mermaid Visual Documentation Architecture (2026-11-27)
+- [x] 2026-11-27 **Phase 1: Visual Architecture Plan & SDD Workspace** `[SakJules]` — Author `docs/superpowers/plans/2026-11-27-mermaid-doc-all-readmes.md` following `/writing-plans` and initialize SDD workspace with ledger.
+- [x] 2026-11-27 **Phase 2: Personas & Overlays Mermaid Architecture Visuals** `[SakJules]` — Integrate Mermaid architecture diagrams into `personas/README.md` (6-persona communication/routing topology) and each persona's `README.md` (`sakthai`, `sakking`, `saksee`, `saksit`, `saktan`, `sakjules`).
+- [x] 2026-11-27 **Phase 3: Apps, Infra, Services & Docs Mermaid Architecture Visuals** `[SakJules]` — Integrate Mermaid diagrams into `apps/sak_agent_dashboard/README.md`, `services/teams-copilot-mcp/README.md`, `infra/pw-poc/README.md`, `training/README.md`, and `docs/README.md`.
+- [x] 2026-11-27 **Phase 4: Verification, Quality Gates & Pull Request Update** `[SakJules]` — Run `test_soul_consistency.py`, `test_repo_hygiene.py`, `make lint`, `git diff --check`, push to branch `docs/update-every-readme-in-repo`, update PR #2117.
+
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |
 |---|---|---|
+| Mermaid Architecture Visuals | [`docs/superpowers/plans/2026-11-27-mermaid-doc-all-readmes.md`](./docs/superpowers/plans/2026-11-27-mermaid-doc-all-readmes.md) | 🟢 Complete (2026-11-27) — All 4 phases verified |
 | Workflows & Analytics Hardening | [`docs/superpowers/plans/2026-11-27-github-workflows-and-analytics-hardening.md`](./docs/superpowers/plans/2026-11-27-github-workflows-and-analytics-hardening.md) | 🟢 Complete (2026-11-27) — All 6 tasks verified |
 | SakSit Upgrade Plan | [`docs/plans/2026-11-26-saksit-full-spectrum-upgrade.md`](./docs/plans/2026-11-26-saksit-full-spectrum-upgrade.md) | 🟢 Complete (2026-11-26) — All 7 phases verified |
 | SakSee Specialist Enhancement | [`docs/superpowers/plans/2026-11-26-saksee-specialist-enhancement.md`](./docs/superpowers/plans/2026-11-26-saksee-specialist-enhancement.md) | 🟢 Complete (2026-11-26) — All 5 phases verified |

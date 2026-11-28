@@ -51,21 +51,32 @@ uv run sakthai eval tools --bench --persona saktan
 
 ---
 
-## Self-Evolution & GEPA Architecture
+## Daily Rhythm & Operations Engine Architecture
 
-```
-Read current skill/prompt/tool ──► Generate eval dataset
-                                        │
-                                        ▼
-                                   GEPA Optimizer ◄── Execution traces
-                                        │                    ▲
-                                        ▼                    │
-                                   Candidate variants ──► Evaluate
-                                        │
-                                   Constraint gates (tests, size limits, benchmarks)
-                                        │
-                                        ▼
-                                   Best variant ──► PR against agent repo
+```mermaid
+flowchart TD
+    Clock([System Clock / Cron Schedule]) --> Dispatcher["SakTan Ops Dispatcher"]
+
+    subgraph ScheduledWorkloads ["Daily Rhythm & Maintenance Tasks"]
+        FleetAudit["Family Health Audit (sakthai eval personas)"]
+        WALCompact["SQLite WAL Compaction (~/.sakthai/*.db)"]
+        QuotaSync["Free-Tier Quota Sentinel Reset (00:00 PT)"]
+        DailyDigest["Daily Family Ops Digest"]
+    end
+
+    Dispatcher --> FleetAudit
+    Dispatcher --> WALCompact
+    Dispatcher --> QuotaSync
+    Dispatcher --> DailyDigest
+
+    subgraph ExecutionPlane ["Zero-Cost Local Execution"]
+        Ollama["Local Ollama Runner"]
+        Systemd["Systemd User Services"]
+    end
+
+    FleetAudit --> Systemd
+    WALCompact --> Systemd
+    DailyDigest --> Ollama
 ```
 
 Every evolved variant must pass:

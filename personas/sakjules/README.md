@@ -54,21 +54,34 @@ uv run sakthai eval tools --bench --persona sakjules
 
 ---
 
-## Self-Evolution & GEPA Architecture
+## CI/CD Auto-Healing & DevSecOps Pipeline Architecture
 
-```
-Read current skill/prompt/tool ──► Generate eval dataset
-                                        │
-                                        ▼
-                                   GEPA Optimizer ◄── Execution traces
-                                        │                    ▲
-                                        ▼                    │
-                                   Candidate variants ──► Evaluate
-                                        │
-                                   Constraint gates (tests, size limits, benchmarks)
-                                        │
-                                        ▼
-                                   Best variant ──► PR against agent repo
+```mermaid
+flowchart TD
+    Event([GitHub Event / PR / Push]) --> Egress["StepSecurity Harden-Runner (Egress Audit)"]
+    Egress --> Gates{"Automated Quality Gates"}
+
+    subgraph TestMatrix ["CI Pipeline Matrix"]
+        Lint["Ruff Check & Format (make lint)"]
+        Types["Mypy Strict Type Check"]
+        Security["Bandit Security Scan (B310/B311)"]
+        Tests["Pytest Suite (>=96% Coverage Floor)"]
+    end
+
+    Gates --> Lint
+    Gates --> Types
+    Gates --> Security
+    Gates --> Tests
+
+    Lint & Types & Security & Tests --> StatusCheck{All Green?}
+
+    StatusCheck -->|Failure Detected| AutoHeal["AutoHeal-CI Engine (scripts/ci_auto_heal.py)"]
+    AutoHeal --> Fix["Local Parity & Linter Fix Pass"]
+    Fix --> ReTest["Re-verify Quality Gates"]
+    ReTest --> StatusCheck
+
+    StatusCheck -->|All Checks Green| Sentinel["PR Rebase Sentinel"]
+    Sentinel --> HumanGate["Beer Manual Review Gate (No Auto-Merge)"]
 ```
 
 Every evolved variant must pass:

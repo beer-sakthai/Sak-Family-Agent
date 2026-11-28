@@ -53,19 +53,18 @@ uv run sakthai eval tools --bench --persona sakthai
 
 ## Self-Evolution & GEPA Architecture
 
-```
-Read current skill/prompt/tool ──► Generate eval dataset
-                                        │
-                                        ▼
-                                   GEPA Optimizer ◄── Execution traces
-                                        │                    ▲
-                                        ▼                    │
-                                   Candidate variants ──► Evaluate
-                                        │
-                                   Constraint gates (tests, size limits, benchmarks)
-                                        │
-                                        ▼
-                                   Best variant ──► PR against agent repo
+```mermaid
+flowchart TD
+    Inbound["Read Skill / Prompt / Tool"] --> GenData["Generate Eval Dataset"]
+    GenData --> GEPA["GEPA Optimizer (DSPy + Genetic Pareto)"]
+    Traces["Execution Traces"] --> GEPA
+    GEPA --> Candidates["Generate Candidate Variants"]
+    Candidates --> Eval["Evaluate Multi-Dimensional Rubric"]
+    Eval -->|Feedback| GEPA
+    Candidates --> Gates{"Constraint Gates"}
+    Gates -->|Fail| Discard["Discard / Mutate"]
+    Gates -->|Pass: Tests >=96%, Size <=15KB| Best["Select Best Pareto Variant"]
+    Best --> PR["Submit PR for Human Review"]
 ```
 
 Every evolved variant must pass:
