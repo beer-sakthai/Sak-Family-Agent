@@ -499,9 +499,9 @@ def _scan_shell_structure(command: str) -> tuple[list[str], list[str]]:
 
     ``shlex.split`` does not treat ``;``, ``&`` or ``|`` as operators unless
     whitespace surrounds them, so ``echo hi;cat ~/.ssh/id_rsa`` reached the
-    token checks as ``["echo", "hi;cat", ...]`` and no binary was recognised.
+    token checks as ``["echo", "hi;cat", ...]`` and no binary was recognized.
     It also leaves the body of ``$(...)`` and backticks inside one token, where
-    nothing looked at it. This scanner honours quoting: it splits only on
+    nothing looked at it. This scanner honors quoting: it splits only on
     unquoted operators, and lifts substitution bodies out (they run even inside
     double quotes, never inside single quotes) leaving a ``SUBST`` placeholder.
 
