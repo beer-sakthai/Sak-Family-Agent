@@ -22,7 +22,8 @@ Pre-installed stack:
 Every Python package is installed from a hash-pinned lock. To change a
 version, edit `requirements.in` and regenerate `requirements.lock` and
 `deepspeed.lock` with the command in their headers (`build-requirements.lock`
-has its own); pip refuses any file the locks do not list.
+has its own); pip refuses any file the locks do not list. Base Docker image digests
+and toolchain actions are checked daily via Dependabot automation (`interval: "daily"`).
 
 ## How to use
 

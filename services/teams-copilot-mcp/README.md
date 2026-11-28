@@ -11,6 +11,22 @@ apps need a remote HTTPS endpoint to call into, which a local stdio process
 can't provide. See `docs/superpowers/specs/2026-08-03-cowork-plugin-design.md`
 for that reverse leg (Copilot Cowork connectors).
 
+```mermaid
+flowchart LR
+    Agent["SakThai / Sak Family Agent"] -->|MCP stdio Protocol| MCPServer["teams-copilot-mcp Server"]
+    MCPServer -->|Azure AD App-Only Client Auth| GraphAuth["Microsoft Graph Auth Token"]
+    GraphAuth --> GraphAPI["Microsoft Graph REST API"]
+
+    subgraph M365Operations ["Teams & Copilot Operations"]
+        Channels["Teams & Channels (ChannelMessage.Send)"]
+        Meetings["Online Meetings (OnlineMeetings.Read)"]
+        Calendars["Calendars & Events (Calendars.ReadWrite)"]
+        Copilot["Copilot Interactions"]
+    end
+
+    GraphAPI --> M365Operations
+```
+
 ## Auth
 
 App-only (client-credentials) Microsoft Graph auth — no interactive login,
@@ -73,7 +89,7 @@ interactively.
 ## Register with SakThai
 
 Add to `~/.sakthai/mcp.json` (sakthai's own outbound MCP server loader —
-`servers` array format, see `sakthai/mcp/servers.py`):
+`servers` array format, see `personas/sakthai/mcp/servers.py`):
 
 ```json
 {

@@ -19,6 +19,7 @@ SakSee specializes in headless browser automation, complex DOM inspection, multi
 - **Frontend & UI Prototyping**: Modern React, Vite, Shadcn-UI, and Tailwind design implementation.
 - **Third Deputy Lead**: Coordinates web research and visual assets across family workflows.
 - **Evaluator-Optimizer Engine**: Bounded visual and technical refinement loop (`sakthai run --optimize`).
+- **CLI Output Contract & Rainbow UI**: Native `sak.cli/v1` envelope with `--json`, exit codes (0/1/2/3/130), `-q`, `--no-color`, and vibrant rainbow UI.
 - **Remote MCP Documentation**: Microsoft Learn and Gemini API Docs integration via Streamable HTTP.
 
 ---
@@ -39,6 +40,9 @@ uv run sakthai run --persona saksee --optimize "Design an accessible frontend co
 uv run sakthai chat --persona saksee
 uv run sak chat --tui --persona saksee
 
+# Inspect output contract envelope in JSON
+uv run sakthai status --json
+
 # Check Free-Tier Quota Sentinel status and token limits
 uv run sakthai quota status
 
@@ -51,21 +55,20 @@ uv run sakthai eval tools --bench --persona saksee
 
 ---
 
-## Self-Evolution & GEPA Architecture
+## 3-Tier Web Scraping Escalation & Reaper Architecture
 
-```
-Read current skill/prompt/tool ──► Generate eval dataset
-                                        │
-                                        ▼
-                                   GEPA Optimizer ◄── Execution traces
-                                        │                    ▲
-                                        ▼                    │
-                                   Candidate variants ──► Evaluate
-                                        │
-                                   Constraint gates (tests, size limits, benchmarks)
-                                        │
-                                        ▼
-                                   Best variant ──► PR against agent repo
+```mermaid
+flowchart TD
+    ScrapeReq["Web Ingestion Request"] --> Tier1["Tier 1: Static HTTP Fetch (httpx + web_distill.py)"]
+    Tier1 --> Check1{"DOM Parsed Cleanly?"}
+    Check1 -->|Yes: Zero Cost| Markdown["Distilled Markdown / Facts"]
+    Check1 -->|No: Dynamic JS / SPA| Tier2["Tier 2: Playwright Headless Browser"]
+    Tier2 --> Check2{"Execution Healthy?"}
+    Check2 -->|Yes| Extract["Extract Dynamic Content"]
+    Extract --> Markdown
+    Check2 -->|Timeout / Leak| Tier3["Tier 3: Browser Reaper (browser_reaper.py)"]
+    Tier3 --> Cleanup["Kill Leaked Chromium PIDs & Reclaim RAM"]
+    Cleanup --> Fallback["Graceful Fallback Response"]
 ```
 
 Every evolved variant must pass:
@@ -83,7 +86,7 @@ Every evolved variant must pass:
 - `CYCLE.md`: 6-stage growth cycle (Dream $\rightarrow$ Hope $\rightarrow$ Care $\rightarrow$ Joy $\rightarrow$ Trust $\rightarrow$ Growth).
 - `MEMORY.md`: Active memory and durable learnings.
 - `HANDOFF.md`: Cross-persona handoff contracts.
-- `BACKPACK.md`: Domain toolbelt and skills inventory (109 overlay skills + 19 shared).
+- `BACKPACK.md`: Domain toolbelt and skills inventory (98 overlay skills + 3 shared).
 - `config/`: Configuration files (`config.yaml`, `workspace.yaml`, `mcp.json`).
 - `evolution/`: Persona-owned self-evolution engine.
 

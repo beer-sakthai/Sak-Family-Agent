@@ -32,8 +32,8 @@
   <a href="pyproject.toml"><img alt="Package version 2.0.0 — no GitHub Release has been published yet" src="https://img.shields.io/badge/package_version-2.0.0-2563EB"></a>
   <img alt="Python 3.11 | 3.12" src="https://img.shields.io/badge/python-3.11%20%7C%203.12-3776AB?logo=python&amp;logoColor=white">
   <a href="#the-six-personas"><img alt="6 personas" src="https://img.shields.io/badge/personas-6%20online-7C3AED"></a>
-  <a href="#the-six-personas"><img alt="481 skills" src="https://img.shields.io/badge/skills-481%20standardized-10B981"></a>
-  <a href="#development--verification"><img alt="215 pytest test files + 24 dashboard suites" src="https://img.shields.io/badge/tests-215%20pytest%20files%20%2B%2024%20dashboard%20suites-brightgreen"></a>
+  <a href="#the-six-personas"><img alt="463 skills" src="https://img.shields.io/badge/skills-463%20standardized-10B981"></a>
+  <a href="#development--verification"><img alt="240 pytest test files + 24 dashboard suites" src="https://img.shields.io/badge/tests-240%20pytest%20files%20%284%2C558%20tests%29%20%2B%2024%20dashboard%20suites-brightgreen"></a>
   <a href="LICENSE"><img alt="License: custom IP license" src="https://img.shields.io/badge/license-custom%20IP%20license-4B5563"></a>
 </p>
 
@@ -41,18 +41,19 @@
 | :--- | :--- | :---: | :--- |
 | **Core Loop** | Local-first tool loop (`agent/loop.py`) | `🟢 ACTIVE` | Provider-agnostic retries, preflight & streaming |
 | **Personas** | 6 Family Agents (`personas/<name>/`) | `🟢 6/6 ONLINE` | `SakThai` · `SakSee` · `SakJules` · `SakKing` · `SakSit` · `SakTan` |
-| **Skills Catalog** | 481 On-Disk Skills (462 overlay + 19 shared) | `🟢 STANDARDIZED`| Structured `Sak<Agent>-<domain>-<topic>` taxonomy |
+| **Skills Catalog** | 463 On-Disk Skills (460 overlay + 3 shared) | `🟢 STANDARDIZED`| Structured `Sak<Agent>-<domain>-<topic>` taxonomy |
 | **Memory Store** | SQLite per Persona (`~/.sakthai/`) | `🟢 PERSISTENT` | Sharded persistence, Memory Studio & `sakthai memory family` |
 | **Interactive TUI** | Live Textual terminal (`sak chat --tui`) | `🟢 LIVE TUI` | Two-phase tool timers & `ConfirmModalScreen` risk gate |
 | **Quota Sentinel** | Free-tier rate limiter (`sakthai.agent.quota`) | `🟢 QUOTA SENTINEL` | Sliding window + SQLite PT reset & 3-tier cascade |
-| **Test Quality** | 215 pytest files (`tests/`) + 24 dashboard suites | `🟢 PASS (≥96%)` | Enforced strict coverage floor (`--cov-fail-under=96`) |
+| **CLI Output Contract** | Standard envelope, JSON schema & Rainbow UI | `🟢 CONTRACT ENFORCED` | `sak.cli/v1` envelope, exit codes (0/1/2/3/130), `--json`, `-q`, `--no-color` |
+| **Test Quality** | 240 pytest files (`tests/`, 4,558 tests) + 24 dashboard suites | `🟢 PASS (≥96%)` | Enforced strict coverage floor (`--cov-fail-under=96`) |
 | **Security Gates** | Concentric Guardrails, DLP, Secret Scan, CodeQL & Bandit | `🛡️ ENFORCED` | Safe execution, credential isolation & automated scanning |
 | **Model Training & Serving** | LoRA SFT recipes, OpenEnv GRPO RL & Ollama export (`training/`, `sakthai train`) | `🟢 OPERATIONAL` | Offline-first fine-tuning, OpenEnv RL & Ollama local deployment |
 | **OpenEnv RL Ecosystem** | 5-Workspace GRPO RL, 8 Catalog Envs, A2A Server & 149 Contract Tests (`sakthai train openenv`) | `🟢 RL INTEGRATED` | Process-isolated `uv run` bridge to `beer-sakthai/openenv-rl-training` |
 | **Runtime Gateway** | OpenAI-compatible & REST API (`sakthai.gateway`) | `🟢 RUNTIME READY` | SSE streaming, Team Visualizer, Memory Studio & DLP |
 | **Evaluation Framework** | 5-Pillar Persona Readiness & Fleet Audit (`sakthai eval`) | `🟢 5-PILLAR PARITY` | Soul, Skills, Memory, Safety & Audit composite scoring |
 | **Optimizer & Graders** | Evaluator-Optimizer Engine & Unified Graders (`sakthai run --optimize`, `eval bench`) | `🟢 INTEGRATED` | Iterative refinement rubrics, CodeGrader & ModelGrader |
-| **CI/CD Automation** | StepSecurity, AutoHeal-CI, Renovate & PR Automations | `⚙️ HARDENED` | Egress audit, dependency monitoring & manual user merge |
+| **CI/CD Automation** | StepSecurity, AutoHeal-CI, Daily Dependabot & PR Automations | `⚙️ HARDENED` | Egress audit, daily dependency updates (`interval: "daily"`) & manual user review |
 
 > **Six personas, one shared runtime.**
 > House of Sak is a local-first, provider-agnostic AI agent workspace combining a durable SQLite memory store, an extensible tool loop, Model Context Protocol (MCP) support, persona-specific skills, multi-agent coordination, and an interactive Next.js dashboard.
@@ -63,14 +64,14 @@
 
 ## What is included
 
-- **SakThai core agent** — Python 3.11+ package with a provider-agnostic tool loop, retries, streaming, usage tracking, dry-run preflight, modern CLI ergonomics (`sak` / `sakthai` entrypoints, slash commands), and iterative Evaluator-Optimizer engine (`sakthai run --optimize`).
+- **SakThai core agent** — Python 3.11+ package with a provider-agnostic tool loop, retries, streaming, usage tracking, dry-run preflight, modern CLI ergonomics (`sak` / `sakthai` entrypoints, slash commands), `sak.cli/v1` envelope output contract with Full Vibrant Spectrum Rainbow UI, and iterative Evaluator-Optimizer engine (`sakthai run --optimize`).
 - **Runtime Gateway (OpenAI-Compatible & REST API)** — Built-in multi-threaded HTTP gateway (`sakthai.gateway`, `sakthai gateway`, `scripts/serve_gateway.py`) exposing `/v1/chat/completions` (streaming SSE and non-streaming), `/v1/models`, `/v1/personas`, `/v1/tools/execute`, distributed multi-agent pipeline streaming (`/v1/team/pipelines/stream`), and Memory Shard Studio endpoints (`/v1/memory/shards`, `/v1/memory/facts`, `/v1/memory/preview`) with DataLossGuardrail security, constant-time bearer authentication, and seamless compatibility with Cursor, Claude Code, Aider, and standard OpenAI SDKs.
 - **Persistent memory & Memory Shard Studio** — SQLite-backed facts and observations stored under `~/.sakthai`, with semantic search, tagging, consolidation, versioned JSON snapshots ([format](data/README.md)), sharded per-persona databases, and Next.js Memory Shard Studio with prompt injection simulator.
 - **Free-Tier Quota Sentinel & Adaptive Rate Limiter** — Sliding window in-memory rate limiter + Pacific Time midnight SQLite persistence (`~/.sakthai/quota_sentinel.db`), adaptive model cascading (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1`), and `sakthai quota status` CLI.
 - **Interactive TUI & Live Tool Execution Terminal (`sak chat --tui`)** — Full-screen Textual interface featuring two-phase tool logging (`tool_call_start` and `tool_call` with elapsed duration), live running timers, and `ConfirmModalScreen` risk permission gates (`[y]es / [n]o / [a]lways` session caching) for safe operations.
 - **Multiple providers** — Anthropic, Google Gemini (**Gemini 4 Neon** flagship default; **Gemini 4 Hydrogen** free-tier fallback via `GEMINI_FREE_ONLY=true`), OpenAI-compatible endpoints, Ollama, gateways, and Hugging Face inference providers.
 - **MCP & Remote Servers** — dependency-light stdio server, remote HTTP/SSE client support with Streamable HTTP (`RemoteMCPClient`), resource and prompt exposing, plus discovery, tool allowlisting, and namespaced connections to external MCP servers (including Microsoft 365, Microsoft Learn, and Gemini API Docs).
-- **Six personas & resilience architecture** — SakThai, SakSee, SakJules, SakKing, SakSit, and SakTan, each with its own identity, curated skills (481 on-disk skills under the searchable `Sak<Agent>-<domain>-<topic>` taxonomy), default model, memory shard, and multi-tier resilience:
+- **Six personas & resilience architecture** — SakThai, SakSee, SakJules, SakKing, SakSit, and SakTan, each with its own identity, curated skills (463 on-disk skills under the searchable `Sak<Agent>-<domain>-<topic>` taxonomy), default model, memory shard, and multi-tier resilience:
   - *Governance & Routing*: Break-glass Hugging Face Hub protocol (`assert_hf_write_allowed`) and 3-second intent preflight classification.
   - *Performance & Scalability*: 3-tier web scraping escalation (HTTP $\rightarrow$ Headless $\rightarrow$ Stealth) and progressive domain manifest hydration.
   - *Automation & Reliability*: Autonomous CI auto-heal utility (`scripts/ci_auto_heal.py`), guarded algorithmic cloud fallback, and event-driven PR cache lifecycle management (`cache-cleanup.yml`).
@@ -81,7 +82,7 @@
 - **5-Pillar Persona Evaluation Framework (`sakthai eval`)** — comprehensive evaluation across Soul Alignment, Skill Ecosystem Health, Memory Store Integrity, Concentric Safety Compliance, and Composite Fleet Audit (`audit`, `soul`, `skills`, `safety`, `tasks`, `bench`) enforcing parity across all six personas.
 - **Repository Task Registry (`sakthai repo`)** — unified declarative task map (`sakthai repo map`) and CLI execution runner (`sakthai repo run <task>`) indexing **10 repository areas** — `scripts`, `eval`, `training`, `dashboard`, `telegram`, `hf`, `infra`, `evolution`, `ci`, and `gateway` — across **52 registered tasks** (registry: `personas/sakthai/cli/repo_registry.py`).
 - **Dashboard** — Next.js 16 frontend backed by the SakThai HTTP and Gateway APIs featuring live KPI telemetry, Pipelines tab (SVG DAG visualizer with SSE token terminal), Memory Shard Studio (6-persona SQLite inspector and injection simulator), and Gateway chat playground.
-- **Security and quality gates** — concentric guardrails for tools and file access, strict typing, linting, secret scanning, CodeQL, Bandit, Zizmor, and automated tests (215 pytest files + 24 dashboard suites, coverage floor ≥ 96%).
+- **Security and quality gates** — concentric guardrails for tools and file access, strict typing, linting, secret scanning, CodeQL, Bandit, Zizmor, and automated tests (240 pytest files, 4,558 tests + 24 dashboard suites, coverage floor ≥ 96%).
 
 ---
 
@@ -100,14 +101,14 @@
 
 | Persona | Role & Domain Specialty | Skills | Default Model |
 | :--- | :--- | :---: | :--- |
-| **SakThai** (lead) | Main Lead & Hugging Face Master (MLOps, hub, spaces) | **170** skills | `deepseek-ai/DeepSeek-V4.1-Flash` |
-| **SakSee** | Web & Browser Specialist (Playwright, scraping, web UI) | **106** skills | `deepseek-ai/DeepSeek-V4.1-Flash` |
-| **SakJules** | Master of Automation, GitHub & CI/CD Pipelines | **56** skills | `deepseek-ai/DeepSeek-V4.1-Flash` |
-| **SakKing** | General Assistant, Runner & Primary Coder (TDD) | **59** skills | `Qwen/Qwen3-Coder-30B-A3B-Instruct` |
-| **SakSit** | Social, Brand & Content Specialist | **45** skills | `deepseek-ai/DeepSeek-V4-Flash` |
+| **SakThai** (lead) | Main Lead & Hugging Face Master (MLOps, hub, spaces) | **174** skills | `deepseek-ai/DeepSeek-V4.1-Flash` |
+| **SakSee** | Web & Browser Specialist (Playwright, scraping, web UI) | **98** skills | `deepseek-ai/DeepSeek-V4.1-Flash` |
+| **SakJules** | Master of Automation, GitHub & CI/CD Pipelines | **48** skills | `deepseek-ai/DeepSeek-V4.1-Flash` |
+| **SakKing** | General Assistant, Runner & Primary Coder (TDD) | **64** skills | `Qwen/Qwen3-Coder-30B-A3B-Instruct` |
+| **SakSit** | Social, Brand & Content Specialist | **50** skills | `deepseek-ai/DeepSeek-V4-Flash` |
 | **SakTan** | Daily Ops, Daemon Watchdog & System Rhythm | **26** skills | `sakthai` on local Ollama |
 
-> The six personas collectively host **481 on-disk skills** (462 persona overlays + 19 universal shared skills) adhering to a standardized frontmatter schema and the searchable `Sak<Agent>-<domain>-<topic>` taxonomy.
+> The six personas collectively host **463 on-disk skills** (460 persona overlays + 3 universal shared skills in `.agents/skills/`) adhering to a standardized frontmatter schema and the searchable `Sak<Agent>-<domain>-<topic>` taxonomy.
 
 Every persona directory (`personas/<name>/`) carries the **6 core working files** — `SOUL.md` (identity, charge system v6, and self-evaluation v9 rubric), `PLAN.md` (v7 task decomposition and routing), `CYCLE.md` (v8 6-stage execution and v9 `CYCLE EVAL: <name>` rubric), `MEMORY.md` (active memory and lessons), `HANDOFF.md` (cross-persona handoff contract), and `BACKPACK.md` (domain toolbelt and skills inventory) — along with `config/config.yaml`, `config/workspace.yaml`, `config/mcp.json`, and its own DSPy/GEPA self-evolution engine (`personas/<name>/evolution/`).
 
@@ -170,7 +171,7 @@ flowchart TD
 
     subgraph Capabilities ["Capabilities, Training & Eval"]
         TOOLS["Shared Tool Registry<br/>agent/tools.py"]
-        SKILLS["Skills Architecture (481)<br/>personas/*/skills/ · personas/shared/skills/"]
+        SKILLS["Skills Architecture (463)<br/>personas/*/skills/ · personas/shared/skills/"]
         TRAIN["Model Training & Serving<br/>training/ (LoRA · Ollama GGUF · Datasets)"]
         OPENENV["OpenEnv RL Training<br/>openenv-rl-training (GRPO · 8 Catalog Envs · A2A)"]
         EVAL["5-Pillar Evaluation<br/>evaluation_tasks/ · personas/*/eval.py"]
@@ -383,6 +384,30 @@ The repository provides both `sakthai` and the fast alias `sak` as modern agent 
   - `/clear` & `/reset`: Clear screen or reset conversation history
   - `!<cmd>`: Execute local shell commands directly from REPL (e.g. `!git status`, `!ls -la`)
 
+### CLI Output Contract & Vibrant Rainbow UI (`sak.cli/v1`)
+
+The `sak` / `sakthai` CLI adheres to a deterministic output contract across all interactive and machine-readable commands:
+
+- **JSON Output Envelope (`--json`)**: All commands support `--json` emitting a validated envelope adhering to schema `https://schemas.sakthai.family/v1/cli-envelope.json`:
+  ```json
+  {
+    "schema": "https://schemas.sakthai.family/v1/cli-envelope.json",
+    "ok": true,
+    "data": { "status": "ok" },
+    "error": null,
+    "warnings": []
+  }
+  ```
+- **Quiet Mode (`-q` / `--quiet`)**: Suppresses decorative UI banners and prints machine-readable identifiers or payloads directly.
+- **Color Control (`--no-color`)**: Respects `--no-color` or `NO_COLOR=1` environment variables to strip all ANSI escapes cleanly.
+- **Vibrant Rainbow Spectrum UI**: In interactive TTY mode, headers and banners illuminate with full 6-stop smooth chromatic rainbow gradients (`#FF5E7E` → `#FFAA40` → `#FFE600` → `#38EF7D` → `#00D2FF` → `#9D50BB`).
+- **Standard Exit Codes**:
+  - `0`: Success (`EXIT_OK`)
+  - `1`: Unhandled failure or fatal runtime error (`EXIT_ERROR`)
+  - `2`: Bad invocation or usage syntax (`EXIT_USAGE`)
+  - `3`: Subsystem unready or dependency missing (`EXIT_NOT_READY`)
+  - `130`: Command interrupted via SIGINT/Ctrl+C (`EXIT_INTERRUPTED`)
+
 ### Essential Commands
 
 ```bash
@@ -452,8 +477,8 @@ cd apps/sak_agent_dashboard && npm ci && npm run dev
 
 ```text
 personas/sakthai/              Canonical installable Python package (agent, cli, cycle, memory, mcp, team, web)
-personas/<name>/               Persona overlays, skills (462 on-disk), evolution, and configurations
-personas/shared/               Shared skills (19), shared config, and the canonical model roster
+personas/<name>/               Persona overlays, skills (460 on-disk), evolution, and configurations
+personas/shared/               Shared skills (3), shared config, and the canonical model roster
 apps/sak_agent_dashboard/      Next.js 16 dashboard with embedded workflow engine (workflow_engine/)
 training/                      LoRA fine-tuning recipes, synthetic dataset generators, and Ollama serving
 evaluation_tasks/              Evaluation benchmarks, soul-following datasets, and scoring harnesses
@@ -472,7 +497,7 @@ security/                      Security hardening implementation plans
 assets/                        Dataset templates
 bin/                           Small operator binaries
 .specify/                      Spec-Kit constitution, architectural memory, and multi-agent presets
-tests/                         Pytest suite (215 files; coverage floor ≥ 96% across Python 3.11 & 3.12)
+tests/                         Pytest suite (240 files, 4,558 tests; coverage floor ≥ 96% across Python 3.11 & 3.12)
 docs/                          Architecture, capabilities, operations, marketplace catalog, wiki, ADR, plans, and guides
 .github/workflows/             188 GitHub Actions workflow definitions (8 are compiled gh-aw agentic workflows)
 ```

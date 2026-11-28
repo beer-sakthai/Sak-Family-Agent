@@ -15,7 +15,8 @@ SakThai coordinates the six-agent family, manages Hugging Face Hub deployments, 
 - **Progressive Skill Hydration**: Manifest-driven lazy loading of specialized functional clusters (`get_skill_domain_manifests`).
 - **Self-Evolution Engine**: Reflective evolutionary optimization using DSPy + GEPA (Genetic-Pareto Prompt Evolution).
 - **Evaluator-Optimizer Engine**: Iterative candidate generation and multi-dimensional rubric scoring (`sakthai run --optimize`).
-- **Remote MCP Integrations**: High-speed Streamable HTTP and stdio servers (Microsoft 365, Microsoft Learn, Gemini API Docs).
+- **CLI Output Contract & Rainbow UI**: Native `sak.cli/v1` envelope with `--json`, exit codes (0/1/2/3/130), `-q`, `--no-color`, and vibrant 6-stop rainbow UI.
+- **Remote MCP Integrations**: High-speed Streamable HTTP and stdio servers (Hugging Face Hub, Microsoft Learn, Gemini API Docs).
 
 ---
 
@@ -35,6 +36,9 @@ uv run sakthai run --persona sakthai --optimize "Synthesize latest ML findings"
 uv run sakthai chat --persona sakthai
 uv run sak chat --tui --persona sakthai
 
+# Inspect output contract envelope in JSON
+uv run sakthai status --json
+
 # Check Free-Tier Quota Sentinel status and token limits
 uv run sakthai quota status
 
@@ -49,19 +53,18 @@ uv run sakthai eval tools --bench --persona sakthai
 
 ## Self-Evolution & GEPA Architecture
 
-```
-Read current skill/prompt/tool ──► Generate eval dataset
-                                        │
-                                        ▼
-                                   GEPA Optimizer ◄── Execution traces
-                                        │                    ▲
-                                        ▼                    │
-                                   Candidate variants ──► Evaluate
-                                        │
-                                   Constraint gates (tests, size limits, benchmarks)
-                                        │
-                                        ▼
-                                   Best variant ──► PR against agent repo
+```mermaid
+flowchart TD
+    Inbound["Read Skill / Prompt / Tool"] --> GenData["Generate Eval Dataset"]
+    GenData --> GEPA["GEPA Optimizer (DSPy + Genetic Pareto)"]
+    Traces["Execution Traces"] --> GEPA
+    GEPA --> Candidates["Generate Candidate Variants"]
+    Candidates --> Eval["Evaluate Multi-Dimensional Rubric"]
+    Eval -->|Feedback| GEPA
+    Candidates --> Gates{"Constraint Gates"}
+    Gates -->|Fail| Discard["Discard / Mutate"]
+    Gates -->|Pass: Tests >=96%, Size <=15KB| Best["Select Best Pareto Variant"]
+    Best --> PR["Submit PR for Human Review"]
 ```
 
 Every evolved variant must pass:
@@ -79,7 +82,7 @@ Every evolved variant must pass:
 - `CYCLE.md`: 6-stage growth cycle (Dream $\rightarrow$ Hope $\rightarrow$ Care $\rightarrow$ Joy $\rightarrow$ Trust $\rightarrow$ Growth).
 - `MEMORY.md`: Active memory and durable learnings.
 - `HANDOFF.md`: Cross-persona handoff contracts.
-- `BACKPACK.md`: Domain toolbelt and skills inventory (170 overlay skills + 19 shared).
+- `BACKPACK.md`: Domain toolbelt and skills inventory (174 overlay skills + 3 shared).
 - `config/`: Configuration files (`config.yaml`, `workspace.yaml`, `mcp.json`).
 - `evolution/`: Persona-owned self-evolution engine.
 

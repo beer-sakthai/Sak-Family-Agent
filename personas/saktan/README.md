@@ -15,6 +15,7 @@ SakTan operates as the relentless heartbeat of the House of Sak, overseeing cont
 - **Guarded Algorithmic Fallback**: Automated fallback configured in `config/config.yaml` to revert to deterministic provisioning plans when LLM providers encounter quota or latency barriers.
 - **Workspace & System Hygiene**: Monitors directory structures, stale locks, transient files, and system health status.
 - **Evaluator-Optimizer Engine**: Deterministic verification and self-healing refinement loop (`sakthai run --optimize`).
+- **CLI Output Contract & Rainbow UI**: Native `sak.cli/v1` envelope with `--json`, exit codes (0/1/2/3/130), `-q`, `--no-color`, and vibrant rainbow UI.
 - **Remote MCP Infrastructure Access**: Integration with Microsoft Learn and Gemini API Docs.
 
 ---
@@ -35,6 +36,9 @@ uv run sakthai run --persona saktan --optimize "Audit cron jobs and disk hygiene
 uv run sakthai chat --persona saktan
 uv run sak chat --tui --persona saktan
 
+# Inspect output contract envelope in JSON
+uv run sakthai status --json
+
 # Check Free-Tier Quota Sentinel status and token limits
 uv run sakthai quota status
 
@@ -47,21 +51,32 @@ uv run sakthai eval tools --bench --persona saktan
 
 ---
 
-## Self-Evolution & GEPA Architecture
+## Daily Rhythm & Operations Engine Architecture
 
-```
-Read current skill/prompt/tool ──► Generate eval dataset
-                                        │
-                                        ▼
-                                   GEPA Optimizer ◄── Execution traces
-                                        │                    ▲
-                                        ▼                    │
-                                   Candidate variants ──► Evaluate
-                                        │
-                                   Constraint gates (tests, size limits, benchmarks)
-                                        │
-                                        ▼
-                                   Best variant ──► PR against agent repo
+```mermaid
+flowchart TD
+    Clock([System Clock / Cron Schedule]) --> Dispatcher["SakTan Ops Dispatcher"]
+
+    subgraph ScheduledWorkloads ["Daily Rhythm & Maintenance Tasks"]
+        FleetAudit["Family Health Audit (sakthai eval personas)"]
+        WALCompact["SQLite WAL Compaction (~/.sakthai/*.db)"]
+        QuotaSync["Free-Tier Quota Sentinel Reset (00:00 PT)"]
+        DailyDigest["Daily Family Ops Digest"]
+    end
+
+    Dispatcher --> FleetAudit
+    Dispatcher --> WALCompact
+    Dispatcher --> QuotaSync
+    Dispatcher --> DailyDigest
+
+    subgraph ExecutionPlane ["Zero-Cost Local Execution"]
+        Ollama["Local Ollama Runner"]
+        Systemd["Systemd User Services"]
+    end
+
+    FleetAudit --> Systemd
+    WALCompact --> Systemd
+    DailyDigest --> Ollama
 ```
 
 Every evolved variant must pass:
@@ -79,7 +94,7 @@ Every evolved variant must pass:
 - `CYCLE.md`: 6-stage growth cycle (Dream $\rightarrow$ Hope $\rightarrow$ Care $\rightarrow$ Joy $\rightarrow$ Trust $\rightarrow$ Growth).
 - `MEMORY.md`: Active memory and durable learnings.
 - `HANDOFF.md`: Cross-persona handoff contracts.
-- `BACKPACK.md`: Domain toolbelt and skills inventory (26 overlay skills + 19 shared).
+- `BACKPACK.md`: Domain toolbelt and skills inventory (26 overlay skills + 3 shared).
 - `config/`: Configuration files (`config.yaml`, `workspace.yaml`, `mcp.json`).
 - `evolution/`: Persona-owned self-evolution engine.
 

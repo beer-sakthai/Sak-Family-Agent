@@ -15,6 +15,7 @@ SakSit drives developer communications, technical marketing, B2B SaaS thought le
 - **Multi-Platform Publishing**: Structured delivery for GitHub Releases, community forums, technical blogs, and developer hubs.
 - **Brand Consistency**: Ensures voice, tone, and visual clarity across all family publications.
 - **Evaluator-Optimizer Engine**: Multi-pass editorial refinement against tone and publication rubrics (`sakthai run --optimize`).
+- **CLI Output Contract & Rainbow UI**: Native `sak.cli/v1` envelope with `--json`, exit codes (0/1/2/3/130), `-q`, `--no-color`, and vibrant rainbow UI.
 - **Remote MCP Knowledge Access**: Integrated Microsoft Learn and Gemini API Docs tools.
 
 ---
@@ -35,6 +36,9 @@ uv run sakthai run --persona saksit --optimize "Refine release post for technica
 uv run sakthai chat --persona saksit
 uv run sak chat --tui --persona saksit
 
+# Inspect output contract envelope in JSON
+uv run sakthai status --json
+
 # Check Free-Tier Quota Sentinel status and token limits
 uv run sakthai quota status
 
@@ -47,21 +51,24 @@ uv run sakthai eval tools --bench --persona saksit
 
 ---
 
-## Self-Evolution & GEPA Architecture
+## Content Generation & Editorial Quality Lifecycle
 
-```
-Read current skill/prompt/tool ──► Generate eval dataset
-                                        │
-                                        ▼
-                                   GEPA Optimizer ◄── Execution traces
-                                        │                    ▲
-                                        ▼                    │
-                                   Candidate variants ──► Evaluate
-                                        │
-                                   Constraint gates (tests, size limits, benchmarks)
-                                        │
-                                        ▼
-                                   Best variant ──► PR against agent repo
+```mermaid
+flowchart LR
+    Brief["Creative Brief / Topic"] --> Drafting["Drafting (Gemini 4 Neon / HF Router)"]
+    Drafting --> Multimodal{"Multimodal Channels"}
+    Multimodal -->|X / Twitter| XPost["Thread & Hook Presets"]
+    Multimodal -->|LinkedIn| LiPost["B2B Thought Leadership"]
+    Multimodal -->|Video / Script| Script["Storyboards & Captions"]
+
+    XPost --> Evaluator["Editorial Quality Evaluator (Tone & Engagement Rubrics)"]
+    LiPost --> Evaluator
+    Script --> Evaluator
+
+    Evaluator --> Gate{"Meets 90+ Score?"}
+    Gate -->|No| Refine["Iterative Refinement"]
+    Refine --> Drafting
+    Gate -->|Yes| Publish["Ready for Publication"]
 ```
 
 Every evolved variant must pass:
@@ -79,7 +86,7 @@ Every evolved variant must pass:
 - `CYCLE.md`: 6-stage growth cycle (Dream $\rightarrow$ Hope $\rightarrow$ Care $\rightarrow$ Joy $\rightarrow$ Trust $\rightarrow$ Growth).
 - `MEMORY.md`: Active memory and durable learnings.
 - `HANDOFF.md`: Cross-persona handoff contracts.
-- `BACKPACK.md`: Domain toolbelt and skills inventory (51 overlay skills + 19 shared).
+- `BACKPACK.md`: Domain toolbelt and skills inventory (50 overlay skills + 3 shared).
 - `config/`: Configuration files (`config.yaml`, `workspace.yaml`, `mcp.json`).
 - `evolution/`: Persona-owned self-evolution engine.
 

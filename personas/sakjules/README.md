@@ -9,12 +9,13 @@ SakJules manages GitHub operations, PR attestation, repository security pipeline
 ## ⚡ Core Responsibilities
 
 - **CI Auto-Healing (`scripts/ci_auto_heal.py`)**: Deterministic log parsing, classification (lint, format, typing, transient network), targeted remediation, and automatic test loops.
-- **Supply-Chain & Workflow Security**: SHA-256 action pinning, step-security hardening, zizmor audit enforcement, and secret leak scanning.
+- **Supply-Chain & Workflow Security**: SHA-256 action pinning, step-security hardening, zizmor audit enforcement, daily Dependabot schedule automation (`interval: "daily"` across all 4 ecosystems), and secret leak scanning.
 - **Branch & Cache Maintenance**: Automated PR cache cleanup on pull request closure (`cache-cleanup.yml`), stale ref sweeping, and pruning merged remote feature branches.
 - **Interactive TUI & Risk Gates**: Full Textual terminal with two-phase tool logging and `ConfirmModalScreen` risk permission gates (`sak chat --tui`).
 - **Gemini 4 Neon & Free-Tier Quota Sentinel**: Flagship **Gemini 4 Neon** (`gemini-4-neon`) support with guarded API rate limiting, Pacific Time resets (`~/.sakthai/quota_sentinel.db`), and adaptive free-tier fallback (`gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-decision-1` under `GEMINI_FREE_ONLY=true`).
 - **Autonomous Evolution**: Drives repository health maintenance, daily syncs, and prompt/tool evolution.
 - **Evaluator-Optimizer & Graders**: CI auto-heal loop, supply-chain verification, and CodeGrader/ModelGrader assertions (`sakthai run --optimize`).
+- **CLI Output Contract & Rainbow UI**: Native `sak.cli/v1` envelope with `--json`, exit codes (0/1/2/3/130), `-q`, `--no-color`, and vibrant rainbow UI.
 - **Remote MCP Security Stack**: StepSecurity remote SSE integration, Microsoft Learn, and Gemini API Docs.
 
 ---
@@ -35,6 +36,9 @@ uv run sakthai run --persona sakjules --optimize "Verify and harden workflow act
 uv run sakthai chat --persona sakjules
 uv run sak chat --tui --persona sakjules
 
+# Inspect output contract envelope in JSON
+uv run sakthai status --json
+
 # Check Free-Tier Quota Sentinel status and token limits
 uv run sakthai quota status
 
@@ -50,21 +54,34 @@ uv run sakthai eval tools --bench --persona sakjules
 
 ---
 
-## Self-Evolution & GEPA Architecture
+## CI/CD Auto-Healing & DevSecOps Pipeline Architecture
 
-```
-Read current skill/prompt/tool ──► Generate eval dataset
-                                        │
-                                        ▼
-                                   GEPA Optimizer ◄── Execution traces
-                                        │                    ▲
-                                        ▼                    │
-                                   Candidate variants ──► Evaluate
-                                        │
-                                   Constraint gates (tests, size limits, benchmarks)
-                                        │
-                                        ▼
-                                   Best variant ──► PR against agent repo
+```mermaid
+flowchart TD
+    Event([GitHub Event / PR / Push]) --> Egress["StepSecurity Harden-Runner (Egress Audit)"]
+    Egress --> Gates{"Automated Quality Gates"}
+
+    subgraph TestMatrix ["CI Pipeline Matrix"]
+        Lint["Ruff Check & Format (make lint)"]
+        Types["Mypy Strict Type Check"]
+        Security["Bandit Security Scan (B310/B311)"]
+        Tests["Pytest Suite (>=96% Coverage Floor)"]
+    end
+
+    Gates --> Lint
+    Gates --> Types
+    Gates --> Security
+    Gates --> Tests
+
+    Lint & Types & Security & Tests --> StatusCheck{All Green?}
+
+    StatusCheck -->|Failure Detected| AutoHeal["AutoHeal-CI Engine (scripts/ci_auto_heal.py)"]
+    AutoHeal --> Fix["Local Parity & Linter Fix Pass"]
+    Fix --> ReTest["Re-verify Quality Gates"]
+    ReTest --> StatusCheck
+
+    StatusCheck -->|All Checks Green| Sentinel["PR Rebase Sentinel"]
+    Sentinel --> HumanGate["Beer Manual Review Gate (No Auto-Merge)"]
 ```
 
 Every evolved variant must pass:
@@ -82,7 +99,7 @@ Every evolved variant must pass:
 - `CYCLE.md`: 6-stage growth cycle (Dream $\rightarrow$ Hope $\rightarrow$ Care $\rightarrow$ Joy $\rightarrow$ Trust $\rightarrow$ Growth).
 - `MEMORY.md`: Active memory and durable learnings.
 - `HANDOFF.md`: Cross-persona handoff contracts.
-- `BACKPACK.md`: Domain toolbelt and skills inventory (48 overlay skills + 19 shared).
+- `BACKPACK.md`: Domain toolbelt and skills inventory (48 overlay skills + 3 shared).
 - `config/`: Configuration files (`config.yaml`, `workspace.yaml`, `mcp.json`).
 - `evolution/`: Persona-owned self-evolution engine.
 
