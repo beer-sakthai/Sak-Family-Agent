@@ -254,16 +254,30 @@ _STOPWORDS = {
 }
 
 
+#: A run of characters from the Thai Unicode block (U+0E00-U+0E7F).
+_THAI_RUN = re.compile("[\u0e00-\u0e7f]+")
+
+
 def _tokenize(text: str) -> set[str]:
     """Split ``text`` into lowercase alphanumeric tokens for relevance scoring.
+
+    ASCII letters and digits split on anything else; each run of Thai script
+    additionally yields overlapping character bigrams.
 
     Stopwords and single-character tokens are dropped: they appear in nearly
     every candidate's text and the query alike, so keeping them would let
     topically-irrelevant text "match" on function words alone. Used for both
     the query side and the candidate side, so both see the same vocabulary.
     """
-    tokens = {t for t in re.split(r"[^a-z0-9]+", text.lower()) if t}
-    return {t for t in tokens if t not in _STOPWORDS and len(t) > 1}
+    lowered = text.lower()
+    tokens = {t for t in re.split(r"[^a-z0-9]+", lowered) if t}
+    result = {t for t in tokens if t not in _STOPWORDS and len(t) > 1}
+    for run in _THAI_RUN.findall(lowered):
+        # Thai has no spaces between words and no dictionary here, so overlapping
+        # character bigrams stand in for words: a query and a fact that share a
+        # word share its bigrams. A lone character stays a unigram.
+        result.update([run] if len(run) == 1 else (run[i : i + 2] for i in range(len(run) - 1)))
+    return result
 
 
 _T = TypeVar("_T")

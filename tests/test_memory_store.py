@@ -14,6 +14,7 @@ from sakthai.memory.store import (
     Fact,
     MemoryStore,
     Observation,
+    _tokenize,
     snapshot_to_csv,
     snapshot_to_jsonl,
 )
@@ -924,3 +925,31 @@ def test_merge_rolls_back_facts_when_an_observation_insert_fails(store: MemorySt
         store.import_from_dict(snapshot, mode="merge")
     assert [f.value for f in store.list_facts()] == ["existing"]
     assert store.top_observations() == []
+
+
+def test_tokenize_ascii_is_unchanged_by_thai_support() -> None:
+    assert _tokenize("The dog is named Rex, 42!") == {"dog", "named", "rex", "42"}
+
+
+def test_tokenize_thai_run_yields_overlapping_bigrams() -> None:
+    assert _tokenize("สวัสดี") == {"สว", "วั", "ัส", "สด", "ดี"}
+
+
+def test_tokenize_thai_lone_character_stays_a_unigram() -> None:
+    assert _tokenize("a ก b") == {"ก"}
+
+
+def test_tokenize_mixes_thai_and_ascii_tokens() -> None:
+    assert _tokenize("ชอบ coffee") == {"ชอ", "อบ", "coffee"}
+
+
+def test_render_prompt_block_thai_query_ranks_thai_fact_over_newer_unrelated(
+    store: MemoryStore,
+) -> None:
+    """Thai has no ASCII tokens, so before bigrams a Thai query matched nothing
+    and ranking silently fell back to recency."""
+    store.add_fact("ผู้ใช้ชอบกาแฟดำ", kind="preference")
+    store.add_fact("the user's favorite color is blue", kind="preference")
+    block = store.render_prompt_block(fact_limit=1, query="ชอบกาแฟอะไร")
+    assert "กาแฟ" in block
+    assert "blue" not in block
