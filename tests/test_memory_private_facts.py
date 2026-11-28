@@ -264,3 +264,19 @@ def test_replace_import_moves_a_colliding_private_fact_above_every_other_id(
     assert token is not None and token.value == TOKEN
     assert token.id == 8
     assert {f.value for f in store.list_facts()} == {"restored note", "third note"}
+
+
+def test_a_lookalike_kind_is_an_ordinary_fact_and_survives_a_replace_round_trip(
+    store: MemoryStore,
+) -> None:
+    _add_token(store)
+    # Kinds are stored as written; only the exact credential kind is the credential.
+    store.add_fact(value="dashboard note", kind=f"{PRIVATE_FACT_KIND} ")
+    snapshot = store.export_to_dict()
+    assert [f["value"] for f in snapshot["facts"]] == ["dashboard note"]
+
+    store.import_from_dict(snapshot, mode="replace")
+
+    assert {f.value for f in store.list_facts()} == {"dashboard note"}
+    token = store.get_fact_by_key(PRIVATE_FACT_KIND, "bearer_token")
+    assert token is not None and token.value == TOKEN

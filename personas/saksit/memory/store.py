@@ -1071,11 +1071,12 @@ class MemoryStore:
         # Private facts are local-only: an old snapshot or a crafted file must not
         # plant or resurrect one (it could carry a stale or attacker-chosen token). The
         # tag is author-controlled and stored stripped (see `_encode_tags`), so compare it
-        # the way it will be stored, and refuse the credential kind outright.
+        # the way it will be stored; the kind is stored as written, so match it exactly
+        # (as the readers and export do) and refuse the credential kind outright.
         facts = [
             f
             for f in facts
-            if str(f.get("kind", "")).strip() != PRIVATE_FACT_KIND
+            if str(f.get("kind", "")) != PRIVATE_FACT_KIND
             and PRIVATE_FACT_TAG not in {str(t).strip() for t in (f.get("tags") or [])}
         ]
 
