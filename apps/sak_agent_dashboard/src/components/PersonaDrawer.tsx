@@ -10,6 +10,7 @@ import {
   Database,
   Filter,
   MessageSquare,
+  Play,
 } from "lucide-react";
 
 import type { PersonaSummary } from "@/lib/contracts.generated";
@@ -28,6 +29,8 @@ interface PersonaDrawerProps {
   onToggleFilter: () => void;
   /** Jump to a panel already narrowed to this persona. */
   onNavigate: (tab: TabId) => void;
+  /** When given, launches the interactive agent runner for this persona. */
+  onRun?: () => void;
   onClose: () => void;
 }
 
@@ -118,6 +121,7 @@ export function PersonaDrawer({
   filtered,
   onToggleFilter,
   onNavigate,
+  onRun,
   onClose,
 }: PersonaDrawerProps) {
   const totals = family.reduce(
@@ -266,6 +270,18 @@ export function PersonaDrawer({
         </section>
 
         <section className="flex flex-wrap gap-2 border-t border-line-soft pt-4">
+          {onRun && (
+            <button
+              type="button"
+              onClick={onRun}
+              aria-label={`Run Agent - execute tasks with ${persona.display_name}`}
+              title={`Execute tasks with ${persona.display_name}`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-hue-emerald-line/40 bg-hue-emerald-tint/50 px-3 py-1.5 font-mono text-xs text-hue-emerald font-semibold transition-colors hover:bg-hue-emerald-tint/80 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent cursor-pointer"
+            >
+              <Play className="h-3 w-3" aria-hidden />
+              Run Agent
+            </button>
+          )}
           <button
             type="button"
             onClick={onToggleFilter}

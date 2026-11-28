@@ -30,6 +30,16 @@ export interface ReadonlyDatabase {
   close(): void;
 }
 
+/** The subset of better-sqlite3 for read/write operations. */
+export interface WritableDatabase {
+  prepare(sql: string): {
+    get(...params: unknown[]): Record<string, unknown> | undefined;
+    all(...params: unknown[]): Record<string, unknown>[];
+    run(...params: unknown[]): { changes: number; lastInsertRowid: number | bigint };
+  };
+  close(): void;
+}
+
 /**
  * Open `file` read-only, run `read`, and always close the handle.
  *
@@ -49,6 +59,22 @@ export function openDb<T>(file: string, read: (db: ReadonlyDatabase) => T): T | 
     return read(db);
   } finally {
     // finally, not the happy path only — the old code leaked on the error path.
+    db.close();
+  }
+}
+
+/**
+ * Open `file` read-write, run `mutate`, and always close the handle.
+ *
+ * Returns null when the shard does not exist.
+ */
+export function openWritableDb<T>(file: string, mutate: (db: WritableDatabase) => T): T | null {
+  if (!fs.existsSync(file)) return null;
+
+  const db = new Database(file, { readonly: false, fileMustExist: true }) as WritableDatabase;
+  try {
+    return mutate(db);
+  } finally {
     db.close();
   }
 }

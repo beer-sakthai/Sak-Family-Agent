@@ -17,6 +17,7 @@ interface Shortcut {
 
 const GENERAL: Shortcut[] = [
   { keys: ["⌘", "K"], description: "Open the command palette" },
+  { keys: ["Ctrl", "`"], description: "Toggle interactive agent runner drawer" },
   { keys: ["/"], description: "Focus the session search (Sessions view)" },
   { keys: ["?"], description: "Show this list" },
   { keys: ["R"], description: "Refresh every panel" },

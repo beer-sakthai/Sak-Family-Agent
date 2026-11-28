@@ -12,6 +12,7 @@ import KpiStrip from "@/components/KpiStrip";
 import MemoryExplorer from "@/components/MemoryExplorer";
 import OperationsPulse from "@/components/OperationsPulse";
 import PersonaDrawer from "@/components/PersonaDrawer";
+import { RunnerDrawer } from "@/components/RunnerDrawer";
 import SessionExplorer from "@/components/SessionExplorer";
 import Sidebar from "@/components/shell/Sidebar";
 import TopBar, { REFRESH_INTERVALS, type RefreshInterval } from "@/components/shell/TopBar";
@@ -111,6 +112,9 @@ export default function Home() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [runnerOpen, setRunnerOpen] = useState(false);
+  const [runnerPersona, setRunnerPersona] = useState<string>("sakjules");
+  const [runnerTask, setRunnerTask] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [failedEndpoints, setFailedEndpoints] = useState<string[]>([]);
@@ -352,6 +356,12 @@ export default function Home() {
     [personas, setPersonas],
   );
 
+  const openRunner = useCallback((personaName = "sakjules", initialTask = "") => {
+    setRunnerPersona(personaName);
+    setRunnerTask(initialTask);
+    setRunnerOpen(true);
+  }, []);
+
   /** What the active panel holds, as rows plus the columns a CSV should use. */
   const exportable = useMemo((): {
     rows: Record<string, unknown>[];
@@ -503,6 +513,11 @@ export default function Home() {
         setPaletteOpen((open) => !open);
         return;
       }
+      if ((event.metaKey || event.ctrlKey) && event.key === "`") {
+        event.preventDefault();
+        setRunnerOpen((open) => !open);
+        return;
+      }
       if (typing || event.metaKey || event.ctrlKey || event.altKey) return;
 
       // The digits were described in a comment here for a long time without
@@ -612,6 +627,14 @@ export default function Home() {
 
   const paletteActions = useMemo<Command[]>(
     () => [
+      {
+        id: "action-runner",
+        label: "Open Interactive Agent Runner",
+        hint: "Stream live agent tasks or dry-run prompts (Ctrl+`)",
+        group: "Actions",
+        shortcut: "Ctrl+`",
+        run: () => setRunnerOpen(true),
+      },
       {
         id: "action-refresh",
         label: "Refresh data",
@@ -878,6 +901,7 @@ export default function Home() {
                   selected={personas}
                   onSelect={setPersonas}
                   onOpenDetail={openPersona}
+                  onRun={openRunner}
                   trends={metrics?.trends}
                 />
               ) : (
@@ -965,6 +989,16 @@ export default function Home() {
             <span className="hidden sm:inline-flex items-center gap-1.5">
               <button
                 type="button"
+                onClick={() => setRunnerOpen(true)}
+                aria-label="Ctrl+` runner - Open interactive agent runner"
+                title="Open interactive agent runner (Ctrl+`)"
+                className="cursor-pointer transition-colors hover:text-fg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <kbd className="rounded border border-line px-1 py-0.5" aria-hidden="true">Ctrl+`</kbd> runner
+              </button>
+              {" · "}
+              <button
+                type="button"
                 onClick={() => setPaletteOpen(true)}
                 aria-label="⌘K commands - Open command palette"
                 title="Open command palette (⌘K)"
@@ -1009,11 +1043,19 @@ export default function Home() {
           filtered={personas.includes(activePersona.name)}
           onToggleFilter={() => togglePersona(activePersona.name)}
           onNavigate={goToTab}
+          onRun={() => openRunner(activePersona.name)}
           onClose={() => patchView({ agent: null })}
         />
       )}
 
       {shortcutsOpen && <ShortcutsOverlay onClose={() => setShortcutsOpen(false)} />}
+
+      <RunnerDrawer
+        isOpen={runnerOpen}
+        onClose={() => setRunnerOpen(false)}
+        initialPersona={runnerPersona}
+        initialTask={runnerTask}
+      />
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
