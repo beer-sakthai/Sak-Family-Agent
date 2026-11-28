@@ -44,7 +44,7 @@ def test_file_store_defaults_to_sakthai_home(
     assert sessions.checkpoints_dir.is_dir()
 
 
-def test_file_store_sanitises_snapshot_id(tmp_path: Path) -> None:
+def test_file_store_sanitizes_snapshot_id(tmp_path: Path) -> None:
     sessions = FileSessionStore(tmp_path)
     sessions.create_checkpoint("../escape/id")
     assert list(tmp_path.glob("*.json")) == [tmp_path / "___escape_id.json"]
