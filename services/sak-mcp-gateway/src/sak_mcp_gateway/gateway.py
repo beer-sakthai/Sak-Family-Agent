@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
@@ -11,6 +12,8 @@ from fastapi.responses import JSONResponse
 from sak_mcp_gateway.auth import AuthenticationError, EntraJWTValidator
 from sak_mcp_gateway.config import GatewayConfig
 from sak_mcp_gateway.tools import TOOL_DEFINITIONS, execute_tool
+
+logger = logging.getLogger(__name__)
 
 
 def create_app(config: GatewayConfig | None = None) -> FastAPI:
@@ -102,6 +105,7 @@ def create_app(config: GatewayConfig | None = None) -> FastAPI:
                     }
                 )
             except Exception as err:
+                logger.exception("Error executing tool '%s'", tool_name)
                 return JSONResponse(
                     content={
                         "jsonrpc": "2.0",
@@ -110,7 +114,7 @@ def create_app(config: GatewayConfig | None = None) -> FastAPI:
                             "content": [
                                 {
                                     "type": "text",
-                                    "text": f"Error executing tool '{tool_name}': {err}",
+                                    "text": f"Error executing tool '{tool_name}'.",
                                 }
                             ],
                             "isError": True,
