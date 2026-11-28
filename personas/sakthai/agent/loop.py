@@ -191,6 +191,7 @@ def _build_system(
     caveman: str | None,
     system_prompt_prefix: str = "",
     persona: str | None = None,
+    task: str = "",
 ) -> str:
     """Assemble the complete system prompt from all its parts."""
     parts = []
@@ -201,7 +202,7 @@ def _build_system(
         parts.append(
             "FAST-TRACK MODE: Execute the user's task directly and quickly without enforcing the 6-stage cycle (Dream/Hope/Care/Joy/Trust/Growth)."
         )
-    if not stateless and (memory_block := store.render_prompt_block()):
+    if not stateless and (memory_block := store.render_prompt_block(query=task)):
         parts.append(memory_block)
     skills_block = _build_skills_block(skills, command_system, caveman, persona)
     if skills_block:
@@ -570,6 +571,7 @@ def run_agent(
                 caveman=caveman,
                 system_prompt_prefix=system_prompt_prefix,
                 persona=persona,
+                task=task,
             )
             response = _agent_turn(
                 provider,
