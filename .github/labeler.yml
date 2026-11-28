@@ -43,6 +43,6 @@ dependencies:
       - any-glob-to-any-file:
           - "pyproject.toml"
           - "uv.lock"
-          - "package.json"
-          - "package-lock.json"
+          - "**/package.json"
+          - "**/package-lock.json"
           - ".github/dependabot.yml"
