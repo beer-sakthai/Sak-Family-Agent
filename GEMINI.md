@@ -19,7 +19,7 @@ This document serves as the foundational context and instructional guide for ope
   - `SakTan` (daily ops / rhythm, local Ollama)
 - **Memory Store**: SQLite-backed persistent memory per persona under `~/.sakthai/` (or `$SAKTHAI_HOME`).
 - **Dashboard**: Next.js app in `apps/sak_agent_dashboard/`.
-- **Integrations**: Support for Anthropic, Gemini, OpenAI-compatible APIs, Ollama, and Hugging Face router models.
+- **Integrations**: Support for Anthropic, Google Gemini (**Gemini 4 Neon** flagship default — 1M unified context, `thinking_level` up to `xhigh`, long decode; `GEMINI_FREE_ONLY=true` fallback to **Gemini 4 Hydrogen**), OpenAI-compatible APIs, Ollama, and Hugging Face router models.
 
 ---
 

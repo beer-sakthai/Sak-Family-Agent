@@ -159,3 +159,40 @@ def test_evolve_tool_code_convenience_helper() -> None:
 
         assert result.success is True
         assert result.tool_name == "tool_sample"
+
+
+def test_evolve_tool_code_with_test_command_pytest_guardrail() -> None:
+    """Verify Darwinian evolution respects test_command subprocess pytest gate."""
+    import sys
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tool_file = Path(tmp_dir) / "tool_sample.py"
+        tool_file.write_text(
+            "def run_action(payload: dict) -> bool:\n    return bool(payload)\n",
+            encoding="utf-8",
+        )
+
+        # 1. Passing test command
+        passing_cmd = [sys.executable, "-c", "import sys; sys.exit(0)"]
+        res_pass = evolve_tool_code(
+            tool_file=tool_file,
+            test_command=passing_cmd,
+            generations=2,
+            population_size=2,
+            dry_run=True,
+        )
+        assert res_pass.success is True
+        assert res_pass.final_fitness.passed_all_tests is True
+        assert res_pass.final_fitness.composite > 0.0
+
+        # 2. Failing test command
+        failing_cmd = [sys.executable, "-c", "import sys; sys.exit(1)"]
+        res_fail = evolve_tool_code(
+            tool_file=tool_file,
+            test_command=failing_cmd,
+            generations=2,
+            population_size=2,
+            dry_run=True,
+        )
+        assert res_fail.final_fitness.passed_all_tests is False
+        assert res_fail.final_fitness.composite == 0.0

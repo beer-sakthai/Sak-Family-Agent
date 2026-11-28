@@ -129,10 +129,14 @@ class GatewayRouter:
 
         # Register legacy model aliases for backward compatibility
         legacy_aliases = [
+            (
+                "gemini-4-neon",
+                "Google Gemini 4 Neon (Frontier intelligence, fast end-to-end execution)",
+            ),
             ("gemini-2.5-flash", "Legacy Google Gemini Flash (auto-routes to gemini-4-hydrogen)"),
             (
                 "gemini-3.7-flash",
-                "Legacy Google Gemini Flash Reasoning (auto-routes to gemini-4-carbon)",
+                "Legacy Google Gemini Flash Reasoning (auto-routes to gemini-4-neon)",
             ),
         ]
         registered_ids = {item["id"] for item in data}

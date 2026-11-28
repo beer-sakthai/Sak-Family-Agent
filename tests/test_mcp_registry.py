@@ -305,3 +305,57 @@ def test_unknown_servers_are_silent() -> None:
 
 def test_an_empty_cache_reports_nothing() -> None:
     assert check_configured_servers(["anything"], servers=[]) == []
+
+
+class _FakeResponse:
+    def __init__(self, body: Any, error: Exception | None = None) -> None:
+        self._body = body
+        self._error = error
+
+    def raise_for_status(self) -> None:
+        if self._error is not None:
+            raise self._error
+
+    def json(self) -> Any:
+        return self._body
+
+
+def _patch_httpx_get(
+    monkeypatch: pytest.MonkeyPatch, response: _FakeResponse
+) -> list[dict[str, Any]]:
+    import httpx
+
+    calls: list[dict[str, Any]] = []
+
+    def fake_get(url: str, **kwargs: Any) -> _FakeResponse:
+        calls.append({"url": url, **kwargs})
+        return response
+
+    monkeypatch.setattr(httpx, "get", fake_get)
+    return calls
+
+
+def test_httpx_fetcher_returns_the_decoded_object(monkeypatch: pytest.MonkeyPatch) -> None:
+    from sakthai.mcp.registry import _httpx_fetcher
+
+    calls = _patch_httpx_get(monkeypatch, _FakeResponse({"servers": []}))
+    assert _httpx_fetcher(5.0)("https://r.example/v0/servers", {"limit": 1}) == {"servers": []}
+    assert calls[0]["params"] == {"limit": 1}
+    assert calls[0]["timeout"] == 5.0
+    assert calls[0]["follow_redirects"] is True
+
+
+def test_httpx_fetcher_wraps_http_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    from sakthai.mcp.registry import _httpx_fetcher
+
+    _patch_httpx_get(monkeypatch, _FakeResponse({}, error=RuntimeError("503")))
+    with pytest.raises(RegistryError, match="failed: 503"):
+        _httpx_fetcher(1.0)("https://r.example", {})
+
+
+def test_httpx_fetcher_rejects_a_non_object_body(monkeypatch: pytest.MonkeyPatch) -> None:
+    from sakthai.mcp.registry import _httpx_fetcher
+
+    _patch_httpx_get(monkeypatch, _FakeResponse(["not", "an", "object"]))
+    with pytest.raises(RegistryError, match="non-object body"):
+        _httpx_fetcher(1.0)("https://r.example", {})

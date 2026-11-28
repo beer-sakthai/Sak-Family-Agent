@@ -2063,30 +2063,14 @@ def evaluate_capability_lifecycle(
     )
 
     resolved_phase = LifecyclePhase(phase) if isinstance(phase, str) else phase
-    evaluator = probe_evaluator or (
-        lambda probe: (
-            f"# Capability probe response for {probe.task_id}\n"
-            f"# Domain: {probe.domain.value}\n"
-            f"# Keywords: {' '.join(probe.required_keywords)}\n"
-            f"# Pattern scaffold: {probe.description}\n"
-            f"class ClusterOptimizer:\n"
-            f"    def schedule(self, priority, memory, gpu, nvlink, topology, thermal, pue):\n"
-            f"        return 'allocated'\n"
-            f"module systolic_array (input wire clk);\n"
-            f"    // double_buffer and PE logic with assertion\n"
-            f"endmodule\n"
-            f"import triton\n"
-            f"@triton.jit\n"
-            f"def matmul_kernel(a, b, c, BLOCK_M: tl.constexpr):\n"
-            f"    tl.dot(a, b)\n"
-            f"def muon_step(p, grad):\n"
-            f"    # newton_schulz orthogonalization\n"
-            f"    pass\n"
+    if not probe_evaluator:
+        raise ValueError(
+            "probe_evaluator is required. No evaluator provided and cannot fabricate probe responses. "
+            "Pass an evaluator callable that runs probes against the target model/persona."
         )
-    )
     return evaluate_capability_attainment(
         model_or_persona=model_or_persona,
-        probe_evaluator=evaluator,
+        probe_evaluator=probe_evaluator,
         phase=resolved_phase,
         domains=domains,
     )

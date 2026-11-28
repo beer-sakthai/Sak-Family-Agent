@@ -43,9 +43,9 @@ MODEL_PRESETS: dict[ModelTier, ModelPreset] = {
     ),
     ModelTier.REASONING: ModelPreset(
         tier=ModelTier.REASONING,
-        model_name="gemini-4-carbon",
+        model_name="gemini-4-neon",
         temperature=0.0,
-        description="Deep reasoning and multi-turn planning model",
+        description="Frontier-level reasoning and fast end-to-end multi-turn planning model (Gemini 4 Neon)",
         provider="google",
     ),
     ModelTier.LOCAL: ModelPreset(
@@ -97,7 +97,7 @@ def resolve_model_preset(tier: ModelTier | str) -> ModelPreset:
 class UnifiedAgentConfig:
     name: str
     engine: AgentEngineMode = AgentEngineMode.ANTIGRAVITY
-    model: str = "gemini-4-hydrogen"
+    model: str = "gemini-4-neon"
     max_turns: int = 150
     instruction: str = "You are an autonomous AI pair programming agent."
     tier: ModelTier | str | None = None

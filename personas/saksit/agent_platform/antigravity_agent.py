@@ -31,7 +31,7 @@ AI_STUDIO_KEY_URL = "https://aistudio.google.com/app/api-keys"
 @dataclass
 class AntigravityRunnerConfig:
     backend: str = "hosted"  # 'hosted', 'litert', or 'openai'
-    model: str = "gemini-4-hydrogen"
+    model: str = "gemini-4-neon"
     api_key: str | None = None
     base_url: str | None = None  # For Ollama / Local OpenAI (e.g. http://localhost:11434/v1)
     model_path: str | None = None  # For LiteRT local model
