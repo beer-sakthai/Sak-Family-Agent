@@ -15,7 +15,12 @@ import pytest
 from sakthai.agent.tools import _family_recall, _family_search, _recall, _search
 from sakthai.memory.merged import FamilyMemoryView
 from sakthai.memory.session_store import FileSessionStore
-from sakthai.memory.store import _NOT_PRIVATE_SQL, PRIVATE_FACT_TAG, MemoryStore
+from sakthai.memory.store import (
+    _NOT_PRIVATE_SQL,
+    PRIVATE_FACT_KIND,
+    PRIVATE_FACT_TAG,
+    MemoryStore,
+)
 
 TOKEN = "f3a9c1d27b5e48a0913c6d2e8b7a4f10"
 
@@ -195,3 +200,67 @@ def test_family_tools_never_return_the_token(
 
     assert TOKEN not in _family_recall({"personas": ["sakthai"], "limit": 50}, store)
     assert TOKEN not in _family_search({"personas": ["sakthai"], "query": "bearer"}, store)
+
+
+def test_sql_predicate_names_the_same_kind_as_the_constant() -> None:
+    assert f"kind <> '{PRIVATE_FACT_KIND}'" in _NOT_PRIVATE_SQL
+
+
+def test_the_credential_kind_is_private_even_without_the_tag(store: MemoryStore) -> None:
+    store.add_fact(value="stray-token", kind=PRIVATE_FACT_KIND, key="bearer_token")
+    store.add_fact(value="likes tea", kind="note")
+
+    assert [f.value for f in store.list_facts()] == ["likes tea"]
+    assert [f["value"] for f in store.export_to_dict()["facts"]] == ["likes tea"]
+    assert store.get_fact_by_key(PRIVATE_FACT_KIND, "bearer_token") is not None
+
+
+@pytest.mark.parametrize("mode", ["merge", "replace"])
+@pytest.mark.parametrize("tags", [[], ["no-export "], [" no-export"], ["system", "no-export"]])
+def test_import_cannot_plant_a_credential(store: MemoryStore, mode: str, tags: list[str]) -> None:
+    _add_token(store)
+    forged = _fact_row(9, "attacker-chosen-token", tags=tags)
+    forged.update(kind=PRIVATE_FACT_KIND, key="bearer_token")
+
+    imported_facts, _ = store.import_from_dict(_snapshot_with([forged]), mode=mode)
+
+    assert imported_facts == 0
+    token = store.get_fact_by_key(PRIVATE_FACT_KIND, "bearer_token")
+    assert token is not None and token.value == TOKEN
+    assert "attacker-chosen-token" not in {f.value for f in store.list_facts(include_private=True)}
+
+
+def test_replace_import_keeps_the_private_facts_own_id_when_it_is_free(
+    store: MemoryStore,
+) -> None:
+    token_id = _add_token(store)  # id 1
+    store.add_fact(value="kept note", kind="note")  # id 2
+    snapshot = store.export_to_dict()
+    discarded_id = store.add_fact(value="newer note", kind="note")  # id 3, not in the snapshot
+
+    store.import_from_dict(snapshot, mode="replace")
+
+    token = store.get_fact_by_key(PRIVATE_FACT_KIND, "bearer_token")
+    assert token is not None and token.id == token_id
+    # `memory forget <id>` on the discarded note must not hit the private fact.
+    assert store.get_fact(discarded_id) is None
+    assert store.forget_fact(discarded_id) is False
+    assert store.get_fact_by_key(PRIVATE_FACT_KIND, "bearer_token") is not None
+
+
+def test_replace_import_moves_a_colliding_private_fact_above_every_other_id(
+    store: MemoryStore,
+) -> None:
+    token_id = _add_token(store)  # id 1
+    for i in range(6):
+        store.add_fact(value=f"note {i}", kind="note")  # ids 2..7
+    # The snapshot reuses the token's id and tops out below the pre-import maximum (7), so
+    # the new id has to clear the old maximum, not just the incoming one.
+    snapshot = _snapshot_with([_fact_row(token_id, "restored note"), _fact_row(3, "third note")])
+
+    store.import_from_dict(snapshot, mode="replace")
+
+    token = store.get_fact_by_key(PRIVATE_FACT_KIND, "bearer_token")
+    assert token is not None and token.value == TOKEN
+    assert token.id == 8
+    assert {f.value for f in store.list_facts()} == {"restored note", "third note"}

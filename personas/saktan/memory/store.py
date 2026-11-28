@@ -54,11 +54,16 @@ MAX_MEMORY_CONTENT_CHARS = 32768
 #: ``include_private=True`` to read it.
 PRIVATE_FACT_TAG = "no-export"
 
+#: Kind of the credential facts (the web API bearer token). A fact of this kind is
+#: private whether or not it carries the tag, and is never imported: the tag is
+#: author-controlled in a snapshot, the kind is the credential's identity.
+PRIVATE_FACT_KIND = "web_auth"
+
 # SQL predicate, true for a fact that is NOT private. CASE evaluates lazily, so a row
 # whose tags column holds junk (which `_decode_tags` tolerates) counts as untagged
-# instead of making json_each raise. The tag is spelled out (a test keeps it in step).
+# instead of making json_each raise. Tag and kind are spelled out (tests keep them in step).
 _NOT_PRIVATE_SQL = (
-    "CASE WHEN tags IS NULL OR NOT json_valid(tags) THEN 1 "
+    "kind <> 'web_auth' AND CASE WHEN tags IS NULL OR NOT json_valid(tags) THEN 1 "
     "ELSE NOT EXISTS (SELECT 1 FROM json_each(tags) WHERE value = 'no-export') END"
 )
 
@@ -1064,8 +1069,15 @@ class MemoryStore:
             _validate_row(row, SNAPSHOT_OBS_FIELDS, "observation")
 
         # Private facts are local-only: an old snapshot or a crafted file must not
-        # plant or resurrect one (it could carry a stale or attacker-chosen token).
-        facts = [f for f in facts if PRIVATE_FACT_TAG not in (f.get("tags") or [])]
+        # plant or resurrect one (it could carry a stale or attacker-chosen token). The
+        # tag is author-controlled and stored stripped (see `_encode_tags`), so compare it
+        # the way it will be stored, and refuse the credential kind outright.
+        facts = [
+            f
+            for f in facts
+            if str(f.get("kind", "")).strip() != PRIVATE_FACT_KIND
+            and PRIVATE_FACT_TAG not in {str(t).strip() for t in (f.get("tags") or [])}
+        ]
 
         def fact_to_tuple(f: dict[str, Any], include_id: bool) -> tuple[Any, ...]:
             # Security: redact secrets and truncate during import.
@@ -1110,12 +1122,25 @@ class MemoryStore:
             if mode == "replace":
                 # Replace wipes the tables, but a snapshot never carries private facts,
                 # so a revert would otherwise delete the bearer token. Set them aside and
-                # put them back after the snapshot rows, under fresh ids (the snapshot
-                # may reuse their old ones, and nothing looks them up by id).
+                # put them back after the snapshot rows. Each keeps its own id: a fresh one
+                # could land on the id of a note the restore just dropped, and `memory
+                # forget <id>` would then delete the token. Only an id the snapshot uses
+                # moves, to one above every id in play.
                 kept_private = self._conn.execute(
-                    "SELECT kind, key, value, source_session, created_at, updated_at, tags "  # nosec B608
+                    "SELECT id, kind, key, value, source_session, created_at, updated_at, tags "  # nosec B608
                     f"FROM facts WHERE NOT ({_NOT_PRIVATE_SQL})"
                 ).fetchall()
+                old_max_id = self._conn.execute(
+                    "SELECT COALESCE(MAX(id), 0) FROM facts"
+                ).fetchone()[0]
+                incoming_ids = {int(f["id"]) for f in facts}
+                next_id = max([old_max_id, *incoming_ids]) + 1
+                private_rows: list[tuple[Any, ...]] = []
+                for row in kept_private:
+                    row_id = row["id"]
+                    if row_id in incoming_ids:
+                        row_id, next_id = next_id, next_id + 1
+                    private_rows.append((row_id, *tuple(row)[1:]))
                 self._conn.execute("DELETE FROM facts")
                 self._conn.execute("DELETE FROM observations")
                 with contextlib.suppress(sqlite3.OperationalError):
@@ -1129,9 +1154,9 @@ class MemoryStore:
                     [fact_to_tuple(f, True) for f in facts],
                 )
                 self._conn.executemany(
-                    "INSERT INTO facts (kind, key, value, source_session, "
-                    "created_at, updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    [tuple(row) for row in kept_private],
+                    "INSERT INTO facts (id, kind, key, value, source_session, "
+                    "created_at, updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    private_rows,
                 )
                 self._conn.executemany(
                     "INSERT INTO observations (id, summary, evidence_session_id, "
