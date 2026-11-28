@@ -26,8 +26,10 @@ flowchart LR
 
 | Deliverable | Skills / Tools | Hard Boundary |
 |:---|:---|:---|
-| **HF Model & Dataset Card Copy** | `SakSit-hf-hub-model-card-seo-social-meta-tags` | Requires Gate 1 from SakThai first; SakThai pushes to Hub, never SakSit |
-| **Social Posts & Brand Narratives** | `SakSit-b2b-saas-brand-journalism-storytelling-2026`, `SakSit-ai-seo-content-strategy-2026` | Drafts saved as `hub-draft` + `awaiting-review`; never posted without Beer's approval |
+| **HF Model & Dataset Card Copy** | `SakSit-hf-hub-model-card-seo-social-meta-tags`, `sakthai.agent.stager` | Requires Gate 1 from SakThai; hydrates live stats via 1-hr TTL cache; SakThai pushes to Hub |
+| **Social Posts & Brand Narratives** | `SakSit-b2b-saas-brand-journalism-storytelling-2026`, `SakSit-ai-seo-content-strategy-2026`, `sakthai.agent.editorial_eval` | Evaluated against Thai/English tone & GEO scoring; drafts saved as `hub-draft` + `awaiting-review` |
+| **Automated Social Asset Bundles** | `sakthai.agent.bundler` | Packages `post.md`, `prompts.json`, `metadata.json`, and `package.zip` in `reports/bundles/<slug>/` |
+| **Gated Multi-Channel Dispatch** | `sakthai.telegram.dispatcher` | Telegram broadcast & Discord webhook strictly gated by HMAC approval token; preflight with `--dry-run` |
 | **Visual & Video Assets** | `mcp-hfspace@0.5.4` (`FLUX.1-schnell`, `LTX-Video`) | Pinned MCP version only; zero paid stock/API spend |
 
 ### 1.2 Truthfulness & Verification Gates
