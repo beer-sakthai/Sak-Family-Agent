@@ -456,3 +456,58 @@ def test_cache_cleanup_reports_failed_deletion(tmp_path: Path) -> None:
     assert result.returncode != 0
     assert "Failed to delete cache 101" in result.stderr
     assert (tmp_path / "deletes.log").read_text(encoding="utf-8").splitlines()[0] == "101"
+
+
+def test_reconstruction_syntax_and_composite_paths() -> None:
+    # 1. No workflow should contain illegal composite path syntax 'uses: $/.github'
+    for path in sorted(WORKFLOWS_DIR.glob("*.yml")):
+        content = path.read_text(encoding="utf-8")
+        assert "uses: $/.github" not in content, (
+            f"{path.name} contains illegal syntax 'uses: $/.github'; use 'uses: ./.github'"
+        )
+
+    # 2. reconstruction.yml must not evaluate git rev-parse commit SHA as a shell command
+    recon = (WORKFLOWS_DIR / "reconstruction.yml").read_text(encoding="utf-8")
+    assert "\\`$(git rev-parse HEAD)\\`" not in recon, (
+        "reconstruction.yml must not double-escape backticks in Commit echo (causes command not found)"
+    )
+    assert "-printf '%f\\\\n' | sort" not in recon, (
+        "reconstruction.yml must not leave trailing escaped backslashes on find command"
+    )
+
+
+def test_docker_actions_have_dockerfile() -> None:
+    # Any action declaring 'using: docker' with 'image: Dockerfile' must have an existing Dockerfile
+    github_dir = REPO_ROOT / ".github"
+    for action_file in github_dir.glob("**/action.yml"):
+        data = yaml.safe_load(action_file.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            continue
+        runs = data.get("runs", {})
+        if runs.get("using") == "docker" and runs.get("image") == "Dockerfile":
+            dockerfile = action_file.parent / "Dockerfile"
+            assert dockerfile.is_file(), (
+                f"{action_file} specifies 'image: Dockerfile' but {dockerfile} does not exist"
+            )
+    # Root .github must not contain an orphaned action.yml
+    assert not (github_dir / "action.yml").exists(), (
+        "Root .github/action.yml is an orphaned action; local composite actions live in .github/actions/<name>/"
+    )
+
+
+def test_core_workflows_have_harden_runner_and_timeouts() -> None:
+    """Ensure core pipeline workflows include Harden-Runner and explicit timeouts."""
+    harden_runner_action = "step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c"
+    core_workflows = ["ci.yml", "apps.yml", "wiki-sync.yml", "semantic-tagging.yml"]
+    for filename in core_workflows:
+        content = (WORKFLOWS_DIR / filename).read_text(encoding="utf-8")
+        assert harden_runner_action in content, f"{filename} must integrate Harden-Runner"
+        assert "egress-policy: audit" in content, (
+            f"{filename} must configure 'egress-policy: audit'"
+        )
+
+    cr_data = yaml.safe_load((WORKFLOWS_DIR / "code-review.yml").read_text(encoding="utf-8"))
+    assert cr_data["jobs"]["gemini-code-review"].get("timeout-minutes") == 10
+
+    nfu_data = yaml.safe_load((WORKFLOWS_DIR / "no-free-usage.yml").read_text(encoding="utf-8"))
+    assert nfu_data["jobs"]["check-engagement"].get("timeout-minutes") == 5
