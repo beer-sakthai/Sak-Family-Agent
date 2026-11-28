@@ -15,6 +15,7 @@ SakSit drives developer communications, technical marketing, B2B SaaS thought le
 - **Multi-Platform Publishing**: Structured delivery for GitHub Releases, community forums, technical blogs, and developer hubs.
 - **Brand Consistency**: Ensures voice, tone, and visual clarity across all family publications.
 - **Evaluator-Optimizer Engine**: Multi-pass editorial refinement against tone and publication rubrics (`sakthai run --optimize`).
+- **CLI Output Contract & Rainbow UI**: Native `sak.cli/v1` envelope with `--json`, exit codes (0/1/2/3/130), `-q`, `--no-color`, and vibrant rainbow UI.
 - **Remote MCP Knowledge Access**: Integrated Microsoft Learn and Gemini API Docs tools.
 
 ---
@@ -34,6 +35,9 @@ uv run sakthai run --persona saksit --optimize "Refine release post for technica
 # Run with interactive chat mode (terminal or full-screen TUI)
 uv run sakthai chat --persona saksit
 uv run sak chat --tui --persona saksit
+
+# Inspect output contract envelope in JSON
+uv run sakthai status --json
 
 # Check Free-Tier Quota Sentinel status and token limits
 uv run sakthai quota status
@@ -79,7 +83,7 @@ Every evolved variant must pass:
 - `CYCLE.md`: 6-stage growth cycle (Dream $\rightarrow$ Hope $\rightarrow$ Care $\rightarrow$ Joy $\rightarrow$ Trust $\rightarrow$ Growth).
 - `MEMORY.md`: Active memory and durable learnings.
 - `HANDOFF.md`: Cross-persona handoff contracts.
-- `BACKPACK.md`: Domain toolbelt and skills inventory (51 overlay skills + 19 shared).
+- `BACKPACK.md`: Domain toolbelt and skills inventory (50 overlay skills + 3 shared).
 - `config/`: Configuration files (`config.yaml`, `workspace.yaml`, `mcp.json`).
 - `evolution/`: Persona-owned self-evolution engine.
 

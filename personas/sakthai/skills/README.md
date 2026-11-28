@@ -2,7 +2,7 @@
 
 **Curated specialized skills for the SakThai Agent — the Main Lead of the House of Sak.**
 
-This directory contains the specialized overlay skills tailored for SakThai. Every skill is a reusable, deterministic procedure with YAML frontmatter, markdown instructions, and optional templates, workflows, or scripts.
+This directory contains the 174 specialized overlay skills tailored for SakThai. Every skill is a reusable, deterministic procedure with YAML frontmatter, markdown instructions, and optional templates, workflows, or scripts.
 
 ---
 

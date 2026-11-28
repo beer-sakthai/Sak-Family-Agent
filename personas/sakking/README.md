@@ -15,7 +15,8 @@ SakKing handles rapid task execution, strict test-driven development (TDD), code
 - **3-Second Intent Preflight**: High-speed regex/keyword intent classification that stages response templates asynchronously in background loops.
 - **Break-Glass Hub Access**: Secondary governance checks for protected remote hub writes (`assert_hf_write_allowed`).
 - **Evaluator-Optimizer & Graders**: Rigorous iterative evaluation against CodeGrader & ModelGrader rubrics (`sakthai run --optimize`).
-- **Remote MCP Toolbelt**: StepSecurity remote SSE, Microsoft Learn, Microsoft 365, and Gemini API Docs.
+- **CLI Output Contract & Rainbow UI**: Native `sak.cli/v1` envelope with `--json`, exit codes (0/1/2/3/130), `-q`, `--no-color`, and vibrant rainbow UI.
+- **Remote MCP Toolbelt**: StepSecurity remote SSE, Microsoft Learn, and Gemini API Docs.
 
 ---
 
@@ -34,6 +35,9 @@ uv run sakthai run --persona sakking --optimize "Refactor cache utility for zero
 # Run with interactive chat mode (terminal or full-screen TUI)
 uv run sakthai chat --persona sakking
 uv run sak chat --tui --persona sakking
+
+# Inspect output contract envelope in JSON
+uv run sakthai status --json
 
 # Check Free-Tier Quota Sentinel status and token limits
 uv run sakthai quota status
@@ -79,7 +83,7 @@ Every evolved variant must pass:
 - `CYCLE.md`: 6-stage growth cycle (Dream $\rightarrow$ Hope $\rightarrow$ Care $\rightarrow$ Joy $\rightarrow$ Trust $\rightarrow$ Growth).
 - `MEMORY.md`: Active memory and durable learnings.
 - `HANDOFF.md`: Cross-persona handoff contracts.
-- `BACKPACK.md`: Domain toolbelt and skills inventory (60 overlay skills + 19 shared).
+- `BACKPACK.md`: Domain toolbelt and skills inventory (64 overlay skills + 3 shared).
 - `config/`: Configuration files (`config.yaml`, `workspace.yaml`, `mcp.json`).
 - `evolution/`: Persona-owned self-evolution engine.
 

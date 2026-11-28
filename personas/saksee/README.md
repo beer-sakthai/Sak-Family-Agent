@@ -19,6 +19,7 @@ SakSee specializes in headless browser automation, complex DOM inspection, multi
 - **Frontend & UI Prototyping**: Modern React, Vite, Shadcn-UI, and Tailwind design implementation.
 - **Third Deputy Lead**: Coordinates web research and visual assets across family workflows.
 - **Evaluator-Optimizer Engine**: Bounded visual and technical refinement loop (`sakthai run --optimize`).
+- **CLI Output Contract & Rainbow UI**: Native `sak.cli/v1` envelope with `--json`, exit codes (0/1/2/3/130), `-q`, `--no-color`, and vibrant rainbow UI.
 - **Remote MCP Documentation**: Microsoft Learn and Gemini API Docs integration via Streamable HTTP.
 
 ---
@@ -38,6 +39,9 @@ uv run sakthai run --persona saksee --optimize "Design an accessible frontend co
 # Run with interactive chat mode (terminal or full-screen TUI)
 uv run sakthai chat --persona saksee
 uv run sak chat --tui --persona saksee
+
+# Inspect output contract envelope in JSON
+uv run sakthai status --json
 
 # Check Free-Tier Quota Sentinel status and token limits
 uv run sakthai quota status
@@ -83,7 +87,7 @@ Every evolved variant must pass:
 - `CYCLE.md`: 6-stage growth cycle (Dream $\rightarrow$ Hope $\rightarrow$ Care $\rightarrow$ Joy $\rightarrow$ Trust $\rightarrow$ Growth).
 - `MEMORY.md`: Active memory and durable learnings.
 - `HANDOFF.md`: Cross-persona handoff contracts.
-- `BACKPACK.md`: Domain toolbelt and skills inventory (109 overlay skills + 19 shared).
+- `BACKPACK.md`: Domain toolbelt and skills inventory (98 overlay skills + 3 shared).
 - `config/`: Configuration files (`config.yaml`, `workspace.yaml`, `mcp.json`).
 - `evolution/`: Persona-owned self-evolution engine.
 
