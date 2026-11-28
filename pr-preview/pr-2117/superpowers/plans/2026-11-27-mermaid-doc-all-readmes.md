@@ -4,7 +4,7 @@
 
 **Goal:** Integrate rich, standardized, syntax-valid Mermaid visual architecture diagrams across all primary domain and persona `README.md` files in the House of Sak monorepo, providing immediate visual clarity on agent routing, 3-tier escalation, dual-runner execution, CI/CD auto-healing, and dashboard integration.
 
-**Architecture:** 
+**Architecture:**
 - Target files:
   1. `personas/README.md` (6-Persona Multi-Agent Routing Topology)
   2. `personas/sakthai/README.md` (Lead & MLOps Architecture)
