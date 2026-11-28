@@ -50,6 +50,14 @@ def test_denial_reason_names_the_setting(monkeypatch: pytest.MonkeyPatch) -> Non
         ("a@x.test, @example.com", "a@x.test", GuardrailAction.ALLOW),
         ("a@x.test", "a@x.test,attacker@evil.test", GuardrailAction.DENY),
         ("a@x.test", "Beer <attacker@evil.test>", GuardrailAction.DENY),
+        # The domain used to be read off the last '@', so an allowed address
+        # placed after the attacker's slipped a multi-recipient string through.
+        ("@example.com", "attacker@evil.test,me@example.com", GuardrailAction.DENY),
+        ("@example.com", "attacker@evil.test;me@example.com", GuardrailAction.DENY),
+        ("@example.com", "attacker@evil.test me@example.com", GuardrailAction.DENY),
+        ("@example.com", "Me <me@example.com>", GuardrailAction.DENY),
+        ("@example.com", "attacker@evil.test@example.com", GuardrailAction.DENY),
+        ("@example.com", "example.com", GuardrailAction.DENY),
     ],
 )
 def test_allowlist_matching(
