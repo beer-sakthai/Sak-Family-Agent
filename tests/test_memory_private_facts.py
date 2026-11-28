@@ -15,7 +15,7 @@ import pytest
 from sakthai.agent.tools import _family_recall, _family_search, _recall, _search
 from sakthai.memory.merged import FamilyMemoryView
 from sakthai.memory.session_store import FileSessionStore
-from sakthai.memory.store import PRIVATE_FACT_TAG, MemoryStore
+from sakthai.memory.store import _NOT_PRIVATE_SQL, PRIVATE_FACT_TAG, MemoryStore
 
 TOKEN = "f3a9c1d27b5e48a0913c6d2e8b7a4f10"
 
@@ -41,6 +41,11 @@ def _fact_row(fact_id: int, value: str, tags: list[str] | None = None) -> dict[s
         "updated_at": 1,
         "tags": tags or [],
     }
+
+
+def test_sql_predicate_names_the_same_tag_as_the_constant() -> None:
+    # The SQL spells the tag out (an f-string there trips Bandit B608), so pin the two together.
+    assert f"value = '{PRIVATE_FACT_TAG}'" in _NOT_PRIVATE_SQL
 
 
 def test_readers_hide_private_facts_unless_asked(store: MemoryStore) -> None:

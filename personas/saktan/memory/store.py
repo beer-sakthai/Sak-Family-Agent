@@ -56,10 +56,10 @@ PRIVATE_FACT_TAG = "no-export"
 
 # SQL predicate, true for a fact that is NOT private. CASE evaluates lazily, so a row
 # whose tags column holds junk (which `_decode_tags` tolerates) counts as untagged
-# instead of making json_each raise.
+# instead of making json_each raise. The tag is spelled out (a test keeps it in step).
 _NOT_PRIVATE_SQL = (
     "CASE WHEN tags IS NULL OR NOT json_valid(tags) THEN 1 "
-    f"ELSE NOT EXISTS (SELECT 1 FROM json_each(tags) WHERE value = '{PRIVATE_FACT_TAG}') END"
+    "ELSE NOT EXISTS (SELECT 1 FROM json_each(tags) WHERE value = 'no-export') END"
 )
 
 # Snapshot format version. Bump whenever the exported columns change so old
