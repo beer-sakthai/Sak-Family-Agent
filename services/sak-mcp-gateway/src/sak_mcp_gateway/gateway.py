@@ -49,13 +49,13 @@ def create_app(config: GatewayConfig | None = None) -> FastAPI:
     ) -> Response:
         try:
             body = await request.json()
-        except Exception as err:
+        except Exception:
             return JSONResponse(
                 status_code=400,
                 content={
                     "jsonrpc": "2.0",
                     "id": None,
-                    "error": {"code": -32700, "message": f"Parse error: {err}"},
+                    "error": {"code": -32700, "message": "Parse error"},
                 },
             )
 
