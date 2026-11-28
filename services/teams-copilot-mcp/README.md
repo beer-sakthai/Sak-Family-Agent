@@ -73,7 +73,7 @@ interactively.
 ## Register with SakThai
 
 Add to `~/.sakthai/mcp.json` (sakthai's own outbound MCP server loader —
-`servers` array format, see `sakthai/mcp/servers.py`):
+`servers` array format, see `personas/sakthai/mcp/servers.py`):
 
 ```json
 {
