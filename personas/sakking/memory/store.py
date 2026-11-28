@@ -834,15 +834,20 @@ class MemoryStore:
         """
         try:
             self._conn.execute("BEGIN IMMEDIATE")
+            # Private facts (the bearer token) are never duplicates to drop: they are
+            # excluded from both the candidates and the keeper pick, so a verbose run
+            # cannot print one and a private row cannot displace a public keeper.
             keyed = self._conn.execute(
-                "SELECT * FROM facts WHERE key IS NOT NULL AND id NOT IN ("
+                f"SELECT * FROM facts WHERE key IS NOT NULL AND {_NOT_PRIVATE_SQL} AND id NOT IN ("  # nosec B608
                 "SELECT id FROM facts f2 WHERE f2.kind = facts.kind AND f2.key = facts.key "
+                f"AND {_NOT_PRIVATE_SQL} "
                 "ORDER BY f2.updated_at DESC, f2.id DESC LIMIT 1)"
             ).fetchall()
             keyless = self._conn.execute(
-                "SELECT * FROM facts WHERE key IS NULL AND id NOT IN ("
+                f"SELECT * FROM facts WHERE key IS NULL AND {_NOT_PRIVATE_SQL} AND id NOT IN ("  # nosec B608
                 "SELECT id FROM facts f2 WHERE f2.kind = facts.kind AND f2.key IS NULL "
-                "AND f2.value = facts.value ORDER BY f2.updated_at DESC, f2.id DESC LIMIT 1)"
+                f"AND f2.value = facts.value AND {_NOT_PRIVATE_SQL} "
+                "ORDER BY f2.updated_at DESC, f2.id DESC LIMIT 1)"
             ).fetchall()
             deleted = [_fact_from_row(r) for r in keyed + keyless]
             if deleted and not dry_run:

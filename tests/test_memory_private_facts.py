@@ -280,3 +280,25 @@ def test_a_lookalike_kind_is_an_ordinary_fact_and_survives_a_replace_round_trip(
     assert {f.value for f in store.list_facts()} == {"dashboard note"}
     token = store.get_fact_by_key(PRIVATE_FACT_KIND, "bearer_token")
     assert token is not None and token.value == TOKEN
+
+
+def test_deduplicate_leaves_private_facts_alone(store: MemoryStore) -> None:
+    older = _add_token(store)
+    newer = _add_token(store)  # concurrent token creation leaves a duplicate row
+    store.add_fact(value="same", kind="note")
+    store.add_fact(value="same", kind="note")
+
+    removed = store.deduplicate_facts(detailed=True)
+
+    assert [f.value for f in removed] == ["same"]  # type: ignore[union-attr]
+    assert store.get_fact(older) is not None
+    assert store.get_fact(newer) is not None
+    assert store.deduplicate_facts(dry_run=True) == 0
+
+
+def test_deduplicate_private_row_does_not_displace_a_public_keeper(store: MemoryStore) -> None:
+    public = store.add_fact(value="a", kind="note", key="k")
+    store.add_fact(value="b", kind="note", key="k", tags=[PRIVATE_FACT_TAG])
+
+    assert store.deduplicate_facts() == 0
+    assert store.get_fact(public) is not None
