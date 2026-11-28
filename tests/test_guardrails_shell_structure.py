@@ -27,6 +27,7 @@ from sakthai.agent.guardrails import (
     GuardrailAction,
     _balanced_paren_end,
     _check_command_string,
+    _delete_line_continuations,
     _has_traversal_or_home,
     _scan_shell_structure,
 )
@@ -385,3 +386,41 @@ def test_single_quoted_backslash_newline_is_not_a_continuation() -> None:
 def test_balanced_paren_end_treats_a_continuation_as_transparent(text: str, body: str) -> None:
     body_end, _ = _balanced_paren_end(text, 0)
     assert text[:body_end] == body
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "echo x >\\\n&/etc/passwd",  # '>&' split by a continuation
+        "echo x >\\\n|/etc/passwd",  # '>|'
+        "echo x &\\\n>/etc/passwd",  # '&>'
+        "echo x >&\\\n/etc/passwd",
+        "echo x >\\\n/etc/passwd",
+    ],
+)
+def test_external_shell_continuation_split_redirections_keep_their_target(command: str) -> None:
+    assert _shell(command, EXTERNAL) == GuardrailAction.DENY
+
+
+@pytest.mark.parametrize("command", ["echo x 2>\\\n&1", "echo x >\\\n out.txt"])
+def test_external_shell_benign_continuation_split_redirections_are_allowed(command: str) -> None:
+    assert _shell(command, EXTERNAL) == GuardrailAction.ALLOW
+
+
+@pytest.mark.parametrize(
+    ("raw", "joined"),
+    [
+        ("ca\\\nt", "cat"),
+        ("a \\\n b", "a  b"),
+        ('"a\\\nb"', '"ab"'),  # deleted inside double quotes too
+        ("'a\\\nb'", "'a\\\nb'"),  # literal inside single quotes
+        ("a\\\\\nb", "a\\\\\nb"),  # an escaped backslash does not escape the newline
+        (
+            'it\'s \\\n "x"',
+            'it\'s \\\n "x"',
+        ),  # an apostrophe opens a quote, so what follows is literal, as in the shell
+        ("no continuation", "no continuation"),
+    ],
+)
+def test_delete_line_continuations(raw: str, joined: str) -> None:
+    assert _delete_line_continuations(raw) == joined

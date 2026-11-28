@@ -532,6 +532,31 @@ def _backtick_end(text: str, start: int) -> tuple[int, int]:
     return len(text), len(text)
 
 
+def _delete_line_continuations(command: str) -> str:
+    """Delete each ``\\<newline>`` that the shell removes before it parses.
+
+    Done once, up front, so every later check sees the text the shell sees: a
+    continuation left in place put a newline between the two halves of ``>&`` or
+    ``>|``, which read as a separator and orphaned the redirection target from
+    its operator. Inside single quotes the backslash is literal and stays.
+    """
+    out: list[str] = []
+    quote = ""
+    i, n = 0, len(command)
+    while i < n:
+        ch = command[i]
+        if ch == "\\" and quote != "'":
+            if command[i + 1 : i + 2] != "\n":
+                out.append(command[i : i + 2])
+            i += 2
+            continue
+        if ch in "'\"" and quote in ("", ch):
+            quote = "" if quote else ch
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
 def _scan_shell_structure(command: str) -> tuple[list[str], list[str]]:
     """Split a shell command into simple-command segments and substitution bodies.
 
@@ -547,6 +572,7 @@ def _scan_shell_structure(command: str) -> tuple[list[str], list[str]]:
     precedes ``>`` (``&>``) is a redirection operator, not a separator, and
     stays in its segment so the redirection-target check still sees it.
     """
+    command = _delete_line_continuations(command)
     segments: list[str] = []
     substitutions: list[str] = []
     current: list[str] = []
@@ -562,10 +588,7 @@ def _scan_shell_structure(command: str) -> tuple[list[str], list[str]]:
     while i < n:
         ch = command[i]
         if ch == "\\" and quote != "'":
-            # '\<newline>' is deleted by the shell before it parses, so 'ca\<nl>t'
-            # runs cat; shlex would instead see the word 'ca<nl>t'.
-            if command[i + 1 : i + 2] != "\n":
-                current.append(command[i : i + 2])
+            current.append(command[i : i + 2])
             i += 2
         elif quote == "'":
             current.append(ch)
