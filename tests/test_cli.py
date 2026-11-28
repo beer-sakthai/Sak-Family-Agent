@@ -546,11 +546,20 @@ def test_system_commands_json_is_deterministic_and_secret_free(
     monkeypatch.setenv("ANTHROPIC_API_KEY", "do-not-print-this-secret")
     result = runner.invoke(main, [command, "--json"])
     assert result.exit_code == 0
-    report = json.loads(result.output)
+    envelope = json.loads(result.output)
+    assert envelope["schema"] == "sak.cli/v1"
+    assert envelope["ok"] is True
+    report = envelope["data"]
     assert report["ready"] is True
     assert report["auth"]["anthropic_ok"] is True
     assert "do-not-print-this-secret" not in result.output
-    assert result.output == json.dumps(report, sort_keys=True) + "\n"
+
+    # SAK_JSON_LEGACY / --legacy-json backward compatibility
+    legacy_res = runner.invoke(main, [command, "--json", "--legacy-json"])
+    assert legacy_res.exit_code == 0
+    legacy_report = json.loads(legacy_res.output)
+    assert legacy_report["ready"] is True
+    assert legacy_report["auth"]["anthropic_ok"] is True
 
 
 @pytest.mark.parametrize("command", ["doctor", "status"])
@@ -568,8 +577,10 @@ def test_system_commands_json_exit_nonzero_when_not_ready(
     report["ready"] = False
     monkeypatch.setattr(system_mod, "check_env", lambda: report)
     result = runner.invoke(main, [command, "--json"])
-    assert result.exit_code == 1
-    assert json.loads(result.output)["ready"] is False
+    assert result.exit_code == 3
+    envelope = json.loads(result.output)
+    assert envelope["ok"] is False
+    assert envelope["data"]["ready"] is False
 
 
 # -- cycle ---------------------------------------------------------------
