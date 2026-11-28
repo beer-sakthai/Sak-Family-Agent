@@ -6,8 +6,11 @@ and continuous fleet drift monitoring across all 6 House of Sak personas.
 
 from __future__ import annotations
 
+import json
 import logging
 import sqlite3
+import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -169,4 +172,191 @@ class FleetDriftWatchdog:
             "anomalies_count": len(anomalies),
             "anomalies": anomalies,
             "personas": persona_reports,
+        }
+
+
+class FamilyHeartbeatDaemon:
+    """Daemon responsible for recording and querying periodic persona heartbeat telemetry."""
+
+    def __init__(self, db_path: Path | None = None) -> None:
+        if db_path is not None:
+            self.db_path = db_path
+        else:
+            self.db_path = sakthai_home() / "memory" / "family_heartbeat.db"
+        self._init_db()
+
+    def _init_db(self) -> None:
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(str(self.db_path))
+        try:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS heartbeats (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    persona TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    details TEXT,
+                    timestamp REAL NOT NULL
+                );
+                """
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_heartbeats_persona ON heartbeats(persona);"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_heartbeats_timestamp ON heartbeats(timestamp);"
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def record_heartbeat(
+        self,
+        persona: str,
+        status: str = "ok",
+        details: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Record a heartbeat entry for a persona."""
+        ts = time.time()
+        details_str = json.dumps(details or {})
+        conn = sqlite3.connect(str(self.db_path))
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO heartbeats (persona, status, details, timestamp) VALUES (?, ?, ?, ?)",
+                (persona.strip().lower(), status, details_str, ts),
+            )
+            record_id = cur.lastrowid or 0
+            conn.commit()
+        finally:
+            conn.close()
+
+        return {
+            "id": record_id,
+            "persona": persona.strip().lower(),
+            "status": status,
+            "timestamp": ts,
+            "details": details or {},
+        }
+
+    def get_recent_heartbeats(
+        self,
+        persona: str | None = None,
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        """Retrieve recent heartbeat entries, optionally filtered by persona."""
+        conn = sqlite3.connect(str(self.db_path))
+        try:
+            cur = conn.cursor()
+            if persona:
+                cur.execute(
+                    "SELECT id, persona, status, details, timestamp FROM heartbeats "
+                    "WHERE persona = ? ORDER BY timestamp DESC LIMIT ?",
+                    (persona.strip().lower(), limit),
+                )
+            else:
+                cur.execute(
+                    "SELECT id, persona, status, details, timestamp FROM heartbeats "
+                    "ORDER BY timestamp DESC LIMIT ?",
+                    (limit,),
+                )
+            rows = cur.fetchall()
+        finally:
+            conn.close()
+
+        results: list[dict[str, Any]] = []
+        for r in rows:
+            try:
+                parsed_details = json.loads(r[3]) if r[3] else {}
+            except Exception:
+                parsed_details = {}
+            results.append(
+                {
+                    "id": r[0],
+                    "persona": r[1],
+                    "status": r[2],
+                    "details": parsed_details,
+                    "timestamp": r[4],
+                }
+            )
+        return results
+
+    def get_fleet_health_summary(self) -> dict[str, Any]:
+        """Aggregate the latest heartbeat status for each family persona."""
+        summary: dict[str, Any] = {}
+        for p in ALL_PERSONAS:
+            recent = self.get_recent_heartbeats(persona=p, limit=1)
+            if recent:
+                summary[p] = {
+                    "status": recent[0]["status"],
+                    "last_seen": recent[0]["timestamp"],
+                    "details": recent[0]["details"],
+                }
+            else:
+                summary[p] = {
+                    "status": "unseen",
+                    "last_seen": None,
+                    "details": {},
+                }
+        return {
+            "fleet_size": len(ALL_PERSONAS),
+            "summary": summary,
+        }
+
+
+class TelegramDigestScheduler:
+    """Scheduler hooks for Telegram morning and evening family operational digests."""
+
+    def __init__(self, morning_hour: int = 8, evening_hour: int = 21) -> None:
+        self.morning_hour = morning_hour
+        self.evening_hour = evening_hour
+
+    def should_send_digest(self, current_dt: datetime | None = None) -> dict[str, Any]:
+        """Check whether the current time matches morning or evening digest schedule."""
+        dt = current_dt or datetime.now(UTC)
+        hour = dt.hour
+        if hour == self.morning_hour:
+            return {"should_send": True, "digest_type": "morning", "hour": hour}
+        if hour == self.evening_hour:
+            return {"should_send": True, "digest_type": "evening", "hour": hour}
+        return {"should_send": False, "digest_type": None, "hour": hour}
+
+    def build_digest_payload(
+        self,
+        persona_reports: dict[str, Any] | None = None,
+        heartbeats: list[dict[str, Any]] | None = None,
+        digest_type: str = "morning",
+    ) -> dict[str, Any]:
+        """Build structured Telegram notification markdown payload."""
+        now_str = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
+        if digest_type == "morning":
+            header = f"🌅 **House of Sak — Morning Briefing** ({now_str})"
+        else:
+            header = f"🌙 **House of Sak — Evening Wrap-Up** ({now_str})"
+
+        lines = [header, ""]
+        if persona_reports:
+            lines.append("### Fleet Persona Status:")
+            for persona, rep in persona_reports.items():
+                status_icon = "🟢" if rep.get("healthy", True) else "🟡"
+                lines.append(
+                    f"- {status_icon} **{persona}**: skills={rep.get('skill_count', 0)}, "
+                    f"soul={rep.get('has_soul', False)}"
+                )
+            lines.append("")
+
+        if heartbeats:
+            lines.append("### Recent Telemetry:")
+            for hb in heartbeats[:5]:
+                lines.append(f"- `[{hb.get('persona', '?')}]`: {hb.get('status', 'ok')}")
+            lines.append("")
+
+        lines.append("Ready for commands · Type `sakthai status` for full diagnostics.")
+        message_text = "\n".join(lines)
+
+        return {
+            "digest_type": digest_type,
+            "timestamp": now_str,
+            "text": message_text,
+            "channel": "telegram",
         }

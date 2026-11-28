@@ -4,11 +4,17 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
 from sakthai.agent.tools import Tool, tool_by_name
-from sakthai.cycle.ops_daemon import FleetDriftWatchdog, SQLiteWALVacuumDaemon
+from sakthai.cycle.ops_daemon import (
+    FamilyHeartbeatDaemon,
+    FleetDriftWatchdog,
+    SQLiteWALVacuumDaemon,
+    TelegramDigestScheduler,
+)
 from sakthai.memory.store import MemoryStore
 
 
@@ -177,3 +183,63 @@ def test_synthesize_ci_feedback_clean(tmp_path: Any) -> None:
     data = json.loads(out)
     assert data["status"] == "ok"
     assert data["findings"][0]["category"] == "ci_clean"
+
+
+def test_family_heartbeat_daemon(tmp_path: Any) -> None:
+    db_file = tmp_path / "heartbeats.db"
+    daemon = FamilyHeartbeatDaemon(db_path=db_file)
+
+    rec1 = daemon.record_heartbeat("sakking", status="ok", details={"load": 0.12})
+    assert rec1["persona"] == "sakking"
+    assert rec1["status"] == "ok"
+    assert rec1["details"]["load"] == 0.12
+
+    rec2 = daemon.record_heartbeat("saktan", status="idle")
+    assert rec2["persona"] == "saktan"
+
+    recent_all = daemon.get_recent_heartbeats(limit=10)
+    assert len(recent_all) == 2
+
+    recent_sakking = daemon.get_recent_heartbeats(persona="sakking", limit=10)
+    assert len(recent_sakking) == 1
+    assert recent_sakking[0]["persona"] == "sakking"
+
+    summary = daemon.get_fleet_health_summary()
+    assert summary["fleet_size"] == 6
+    assert summary["summary"]["sakking"]["status"] == "ok"
+    assert summary["summary"]["saktan"]["status"] == "idle"
+    assert summary["summary"]["sakthai"]["status"] == "unseen"
+
+
+def test_telegram_digest_scheduler() -> None:
+    from datetime import datetime
+
+    scheduler = TelegramDigestScheduler(morning_hour=8, evening_hour=21)
+
+    # 08:00 UTC
+    dt_morning = datetime(2026, 11, 28, 8, 30, tzinfo=UTC)
+    res_m = scheduler.should_send_digest(dt_morning)
+    assert res_m["should_send"] is True
+    assert res_m["digest_type"] == "morning"
+
+    # 21:00 UTC
+    dt_evening = datetime(2026, 11, 28, 21, 15, tzinfo=UTC)
+    res_e = scheduler.should_send_digest(dt_evening)
+    assert res_e["should_send"] is True
+    assert res_e["digest_type"] == "evening"
+
+    # Off-hour 14:00 UTC
+    dt_off = datetime(2026, 11, 28, 14, 0, tzinfo=UTC)
+    res_off = scheduler.should_send_digest(dt_off)
+    assert res_off["should_send"] is False
+    assert res_off["digest_type"] is None
+
+    # Payload building
+    payload = scheduler.build_digest_payload(
+        persona_reports={"sakking": {"healthy": True, "skill_count": 10, "has_soul": True}},
+        heartbeats=[{"persona": "sakking", "status": "ok"}],
+        digest_type="morning",
+    )
+    assert payload["digest_type"] == "morning"
+    assert "Morning Briefing" in payload["text"]
+    assert "sakking" in payload["text"]

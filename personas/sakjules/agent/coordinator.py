@@ -288,3 +288,141 @@ def aggregate_persona_results(results: Sequence[AgentResult]) -> dict[str, Any]:
         "total_tool_calls": total_tool_calls,
         "summary_text": "\n\n".join(sections),
     }
+
+
+def classify_intent_envelope(
+    task: str,
+    *,
+    timeout_seconds: float = 3.0,
+    forced_persona: str | None = None,
+) -> dict[str, Any]:
+    """Fast (<=3.0s) intent preflight delegation envelope for SakKing runner."""
+    import time
+
+    start = time.perf_counter()
+
+    if forced_persona and forced_persona.strip().lower() in PERSONA_NAMES:
+        chosen = forced_persona.strip().lower()
+        return {
+            "task": task,
+            "recommended_persona": chosen,
+            "confidence": 1.0,
+            "should_delegate": chosen != "sakking",
+            "specialist_domain": "forced",
+            "matched_keywords": [],
+            "latency_ms": round((time.perf_counter() - start) * 1000, 2),
+        }
+
+    lower_task = task.lower()
+    kw_map = {
+        "sakthai": (
+            "Hugging Face & ML Governance",
+            (
+                "hugging face",
+                "hf",
+                "hub",
+                "model card",
+                "safetensors",
+                "dataset",
+                "spaces",
+                "gguf",
+                "quantize",
+                "nanotron",
+            ),
+        ),
+        "saksee": (
+            "Web Browsing & Frontend Automation",
+            (
+                "browser",
+                "playwright",
+                "scrape",
+                "crawl",
+                "web page",
+                "frontend",
+                "ui",
+                "ux",
+                "inspect element",
+                "chrome",
+            ),
+        ),
+        "sakjules": (
+            "Automation, CI/CD & Workflows",
+            (
+                "ci/cd",
+                "github action",
+                "workflow",
+                "pull request",
+                "pr review",
+                "lint",
+                "bandit",
+                "auto-merge",
+                "pipeline",
+            ),
+        ),
+        "saksit": (
+            "Social Media, Content & Copywriting",
+            (
+                "social media",
+                "twitter",
+                "xurl",
+                "instagram",
+                "linkedin",
+                "post",
+                "copywriting",
+                "milestone content",
+                "announcement",
+            ),
+        ),
+        "saktan": (
+            "Daily Operations & Maintenance",
+            (
+                "wal",
+                "vacuum",
+                "heartbeat",
+                "daemon",
+                "drift",
+                "daily ops",
+                "maintenance",
+                "cron job",
+                "nightly",
+            ),
+        ),
+    }
+
+    best_persona = "sakking"
+    best_score = 0.0
+    best_domain = "General Execution & Technical Implementation"
+    matched_kws: list[str] = []
+
+    for p, (domain, keywords) in kw_map.items():
+        matches = [kw for kw in keywords if kw in lower_task]
+        if matches:
+            score = min(1.0, 0.4 + 0.2 * len(matches))
+            if score > best_score:
+                best_score = score
+                best_persona = p
+                best_domain = domain
+                matched_kws = matches
+
+    latency_ms = round((time.perf_counter() - start) * 1000, 2)
+    should_delegate = (best_persona != "sakking") and (best_score >= 0.5)
+
+    return {
+        "task": task,
+        "recommended_persona": best_persona,
+        "confidence": round(best_score if should_delegate else 1.0, 2),
+        "should_delegate": should_delegate,
+        "specialist_domain": best_domain,
+        "matched_keywords": matched_kws,
+        "latency_ms": latency_ms,
+    }
+
+
+class SakKingIntentPreflight:
+    """Preflight classifier for SakKing to identify delegation targets within 3.0s."""
+
+    def __init__(self, timeout_seconds: float = 3.0) -> None:
+        self.timeout_seconds = timeout_seconds
+
+    def evaluate(self, task: str) -> dict[str, Any]:
+        return classify_intent_envelope(task, timeout_seconds=self.timeout_seconds)

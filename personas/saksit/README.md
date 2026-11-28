@@ -26,7 +26,7 @@ SakSit drives developer communications, technical marketing, B2B SaaS thought le
 # Sync dependencies
 uv sync --all-extras
 
-# Run SakSit on default model (DeepSeek-V4-Flash)
+# Run SakSit on default model (DeepSeek-V4.1-Flash)
 uv run sakthai run --persona saksit "Draft a release announcement for 6-agent resilience architecture"
 
 # Run with bounded Evaluator-Optimizer refinement loop

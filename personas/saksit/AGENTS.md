@@ -16,7 +16,7 @@
 
 | Requirement Dimension | Configured Specification (`personas/saksit/`) |
 |:---|:---|
-| **Primary Engine** | `huggingface:deepseek-ai/DeepSeek-V4-Flash` ([`config/config.yaml`](./config/config.yaml)) |
+| **Primary Engine** | `huggingface:deepseek-ai/DeepSeek-V4.1-Flash` ([`config/config.yaml`](./config/config.yaml)) |
 | **Fallback Engine** | `ollama-cloud:gpt-oss:120b` (`https://ollama.com/v1`) |
 | **Skill Inventory** | **50 Overlay Skills + 19 Shared Skills** (69 total skills) |
 | **Primary Workspace Skills** | `SakSit-ai-seo-content-strategy-2026`, `SakSit-b2b-saas-brand-journalism-storytelling-2026`, `SakSit-hf-hub-model-card-seo-social-meta-tags` ([`config/workspace.yaml`](./config/workspace.yaml)) |

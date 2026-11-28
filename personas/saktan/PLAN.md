@@ -25,7 +25,7 @@ flowchart TD
 - **Goal**: Confirm SakTan's provider (`ollama`), local model (`sakthai`), and 26 overlay skills resolve with $0.00 API spend.
 - **Estimated Time**: 2 minutes
 - **Command**: `SAKTHAI_HOME=$(mktemp -d) sakthai run "preflight" --persona saktan --no-mcp --dry-run`
-- **Acceptance Criteria**: Preflight resolves `ollama` → `sakthai` (verify local server via `curl -s http://127.0.0.1:11434/api/tags`).
+- **Acceptance Criteria**: Preflight resolves `ollama` → `sakthai` with `ollama-cloud:gpt-oss:120b` fallback model configured.
 
 #### 🔹 Task 1.2: Pre-Task Family Reads & Shard Healthcheck
 - **Status**: [x] 2026-11-21

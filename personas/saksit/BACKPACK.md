@@ -27,9 +27,9 @@
 
 | Slot | Model ID / Identifier | Provider / Tier | Role |
 |:---|:---|:---|:---|
-| **Primary Engine** | `deepseek-ai/DeepSeek-V4-Flash` | `huggingface` | Primary persona reasoning & tool execution (`--persona saksit`) |
+| **Primary Engine** | `deepseek-ai/DeepSeek-V4.1-Flash` | `huggingface` | Primary persona reasoning & tool execution (`--persona saksit`) |
 | **Fallback Engine** | `ollama-cloud / gpt-oss:120b` | Fallback Provider | Automatic failover when primary provider is rate-limited |
-| **Unified Platform Preset** | `ModelTier.FAST (gemini-2.5-flash / deepseek-ai/DeepSeek-V4-Flash)` | `sakthai.agent_platform` | Preset tier for `sakthai platform antigravity --tier` |
+| **Unified Platform Preset** | `ModelTier.FAST (gemini-2.5-flash / deepseek-ai/DeepSeek-V4.1-Flash)` | `sakthai.agent_platform` | Preset tier for `sakthai platform antigravity --tier` |
 | **Small / Fast Model** | `Nanthasit/sakthai-context-1.5b-tools-v2` | Custom 1.5B Open-Weights | Ultra-fast triage, task classification & routing |
 | **Tools Model** | `Nanthasit/sakthai-context-7b-tools` | Custom 7B Open-Weights | JSON schema tool calling & function execution |
 | **Embedding Engine** | `Nanthasit/sakthai-embedding-multilingual` | Sentence-Transformers | Cross-lingual Thai/English vector memory & RAG retrieval |
@@ -71,7 +71,7 @@
 
 ## 🔑 4. Credential & Environment Inventory (Names Only — Never Print Values)
 
-- **`HF_TOKEN`**: Authenticated for `deepseek-ai/DeepSeek-V4-Flash` on Hugging Face Inference Providers and `FLUX.1-schnell` / `LTX-Video` Spaces
+- **`HF_TOKEN`**: Authenticated for `deepseek-ai/DeepSeek-V4.1-Flash` on Hugging Face Inference Providers and `FLUX.1-schnell` / `LTX-Video` Spaces
 - **VM Env Template (`infra/vm-agents/env-templates/saksit.env.example`)**: `SAKTHAI_FAST`, `SAKTHAI_HOME`, `SAKTHAI_PERSONA`, `SAKTHAI_MODEL`, `SAKTHAI_SYSTEM_PROMPT_FILE`, `SAKTHAI_WITH_SKILLS`, `TELEGRAM_ALLOWED_USER_IDS`, `TELEGRAM_BOT_TOKEN`
 - **Security & Approval Posture (`config/config.yaml`)**:
   - `command_allowlist: []` · `tirith_enabled: true` · `tirith_fail_open: false` · `allow_lazy_installs: false` · `redact_secrets: true` · `allow_private_urls: false` · `approvals.mode: manual` · `approvals.cron_mode: deny`
