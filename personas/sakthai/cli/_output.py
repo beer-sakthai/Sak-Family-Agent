@@ -279,6 +279,9 @@ def output_options(fn: Any) -> Any:
             no_color=no_color,
             legacy_json=legacy_json,
         )
+        ctx = click.get_current_context(silent=True)
+        if ctx is not None:
+            ctx.color = not out.no_color
         try:
             return fn(*args, out=out, **kwargs)
         except click.ClickException:
