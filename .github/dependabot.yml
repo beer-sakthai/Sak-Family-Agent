@@ -40,10 +40,6 @@ updates:
       # google-genai lifts that upper bound so Dependabot uv resolution succeeds.
       - dependency-name: "tenacity"
         versions: [">= 9.2.0"]
-      # launchdarkly-observability pins opentelemetry-api to 1.34.1; ignore > 1.34.1 until
-      # launchdarkly updates its pinned opentelemetry dependency.
-      - dependency-name: "opentelemetry-api"
-        versions: ["> 1.34.1"]
       # launchdarkly-ai-claude-messages caps anthropic at <2; ignore >= 2.0.0 until
       # launchdarkly updates its anthropic SDK support.
       - dependency-name: "anthropic"
