@@ -343,3 +343,45 @@ def test_has_traversal_or_home_detects(value: str) -> None:
 )
 def test_has_traversal_or_home_ignores_dotted_names_and_prose(value: str) -> None:
     assert _has_traversal_or_home(value) is False
+
+
+# --- line continuations: the shell deletes '\<newline>' before parsing --------
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        'echo "$(echo hi \\\n# )\ncat /etc/shadow)"',  # the '#' is a comment once joined
+        "ca\\\nt /etc/shadow",  # runs cat; shlex alone would see the word 'ca<nl>t'
+        'echo "$(ca\\\nt /etc/shadow)"',
+        "echo hi;ca\\\nt ~/.ssh/id_rsa",
+    ],
+)
+def test_external_shell_line_continuations_do_not_hide_commands(command: str) -> None:
+    assert _shell(command, EXTERNAL) == GuardrailAction.DENY
+
+
+@pytest.mark.parametrize(
+    "command",
+    ["echo a \\\n b", 'echo "a \\\nb"', "echo $(echo a \\\n b)", "ls \\\n -la"],
+)
+def test_external_shell_benign_line_continuations_are_allowed(command: str) -> None:
+    assert _shell(command, EXTERNAL) == GuardrailAction.ALLOW
+
+
+def test_single_quoted_backslash_newline_is_not_a_continuation() -> None:
+    # Inside single quotes the backslash is literal, so the newline still splits.
+    segments, _ = _scan_shell_structure("echo '\\\n'")
+    assert segments == ["echo '\\\n'"]
+
+
+@pytest.mark.parametrize(
+    ("text", "body"),
+    [
+        ("echo hi \\\n# )\nx) tail", "echo hi \\\n# )\nx"),  # '#' follows a space: a comment
+        ("x\\\n#y ) tail", "x\\\n#y "),  # '#' joins the word 'x': not a comment
+    ],
+)
+def test_balanced_paren_end_treats_a_continuation_as_transparent(text: str, body: str) -> None:
+    body_end, _ = _balanced_paren_end(text, 0)
+    assert text[:body_end] == body
