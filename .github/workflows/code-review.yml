@@ -15,6 +15,7 @@ concurrency:
 jobs:
   gemini-code-review:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: |
       github.event.issue.pull_request &&
       contains(github.event.comment.body, '/gemini-review')
@@ -23,6 +24,11 @@ jobs:
       pull-requests: write
       issues: write
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: audit
+
       - name: PR Info
         env:
           COMMENT_BODY: ${{ github.event.comment.body }}

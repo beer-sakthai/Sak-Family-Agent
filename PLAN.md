@@ -311,6 +311,7 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-26 **Phase 3: Autonomous CI Auto-Healing Engine (`scripts/ci_auto_heal.py`)** — Upgrade `ci_auto_heal.py` with multi-stage local remediation (Ruff, parity sync, `--run-tests`) and GitHub Actions failure log parsing with automatic family memory tagging (`ci-failure`, `ci-stalled`).
 - [x] 2026-11-26 **Phase 4: MCP, Workspace & Configuration Alignment** — Streamline MCP stack to DevSecOps/Cloud (`stepsecurity`, `microsoft-learn`, `gemini-api-docs`), decouple `microsoft365`, reconcile `MEMORY.md`, expand `workspace.yaml` allowed tools, and clean up legacy `hermes_*` variables.
 - [x] 2026-11-27 **Phase 5: Defense-in-Depth Guardrail Hardening & ADR-0001 Prototype** — Embed programmatic duplicate PR and auto-merge prevention, verify the 12-item overlay boundary in `personas/sakjules/`, enhance package composer spike, and run full quality gates (`pytest >=96%`, `ruff`, `mypy`, `bandit`).
+- [x] 2026-11-27 **GitHub Actions Workflows & Analytics Hardening** ([`docs/superpowers/plans/2026-11-27-github-workflows-and-analytics-hardening.md`](./docs/superpowers/plans/2026-11-27-github-workflows-and-analytics-hardening.md)) — Resolve critical active workflow defects (`reconstruction.yml`, `bot-check-action.yml`, orphaned `action.yml`), modernize `copilot-instructions.md` with 96% coverage and monorepo layout, expand labeler taxonomy, standardize checkout pins to v7.0.1, and inject StepSecurity Harden-Runner and explicit timeouts into core pipelines.
 
 ### 16. Dependabot Daily Schedule Automation (2026-11-27)
 - [x] 2026-11-27 **Phase 1: Daily Schedule Configuration & Regression Verification** `[SakJules]` — Update all ecosystem update configs in `.github/dependabot.yml` (`uv`, `github-actions`, and `docker` entries) to `interval: "daily"`, ensure no invalid `day:` keys exist, update dependency security documentation in `docs/manage-your-dependency-security.md`, add regression test in `tests/test_workflow_cache_hygiene.py` verifying all ecosystems run daily, and verify quality gates.
@@ -331,6 +332,7 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 
 | Plan | Location | Status |
 |---|---|---|
+| Workflows & Analytics Hardening | [`docs/superpowers/plans/2026-11-27-github-workflows-and-analytics-hardening.md`](./docs/superpowers/plans/2026-11-27-github-workflows-and-analytics-hardening.md) | 🟢 Complete (2026-11-27) — All 6 tasks verified |
 | SakSit Upgrade Plan | [`docs/plans/2026-11-26-saksit-full-spectrum-upgrade.md`](./docs/plans/2026-11-26-saksit-full-spectrum-upgrade.md) | 🟢 Complete (2026-11-26) — All 7 phases verified |
 | SakSee Specialist Enhancement | [`docs/superpowers/plans/2026-11-26-saksee-specialist-enhancement.md`](./docs/superpowers/plans/2026-11-26-saksee-specialist-enhancement.md) | 🟢 Complete (2026-11-26) — All 5 phases verified |
 | Whole-Repo Refactor Plan | [`docs/superpowers/plans/2026-11-13-whole-repo-refactor.md`](./docs/superpowers/plans/2026-11-13-whole-repo-refactor.md) | 🟢 Complete (2026-11-13) — All 5 TDD tasks verified |

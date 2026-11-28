@@ -41,6 +41,15 @@ class TestRepoHygiene(unittest.TestCase):
         self.assertIn("personas/sakthai/", readme)
         self.assertNotIn("personas/sakthai/sakthai/", readme)
 
+    def test_copilot_instructions_alignment(self) -> None:
+        copilot_path = REPO_ROOT / ".github" / "copilot-instructions.md"
+        self.assertTrue(copilot_path.is_file())
+        text = copilot_path.read_text(encoding="utf-8")
+        self.assertNotIn("sakthai-agent-v2", text)
+        self.assertNotIn("fail_under = 85", text)
+        self.assertIn("personas/sakthai", text)
+        self.assertIn("--cov-fail-under=96", text)
+
 
 if __name__ == "__main__":
     unittest.main()
