@@ -47,6 +47,21 @@ RELEVANCE_CANDIDATE_LIMIT = 500
 # Security: cap on the length of any single fact or observation to prevent DoS.
 MAX_MEMORY_CONTENT_CHARS = 32768
 
+#: Tag that marks a fact as local-only (the web API bearer token carries it). Such
+#: a fact is never listed or searched by default, so it never reaches a model
+#: prompt or a tool result; never exported, imported or folded into an
+#: observation. Look it up explicitly (``get_fact_by_key``) or pass
+#: ``include_private=True`` to read it.
+PRIVATE_FACT_TAG = "no-export"
+
+# SQL predicate, true for a fact that is NOT private. CASE evaluates lazily, so a row
+# whose tags column holds junk (which `_decode_tags` tolerates) counts as untagged
+# instead of making json_each raise.
+_NOT_PRIVATE_SQL = (
+    "CASE WHEN tags IS NULL OR NOT json_valid(tags) THEN 1 "
+    f"ELSE NOT EXISTS (SELECT 1 FROM json_each(tags) WHERE value = '{PRIVATE_FACT_TAG}') END"
+)
+
 # Snapshot format version. Bump whenever the exported columns change so old
 # snapshots are rejected loudly instead of importing into the wrong shape.
 # v2 requires every fact to carry ``tags``, a list of strings. v1 predates that
@@ -487,6 +502,7 @@ class MemoryStore:
         after_ts: int | None = None,
         before_ts: int | None = None,
         max_age_seconds: int | None = None,
+        include_private: bool = False,
     ) -> list[Fact]:
         """Return facts ordered newest-first.
 
@@ -495,9 +511,12 @@ class MemoryStore:
         that filter on ``created_at``.
         Optional ``max_age_seconds`` filters facts where ``updated_at`` is within
         the last ``max_age_seconds`` seconds.
+        Facts tagged `PRIVATE_FACT_TAG` are left out unless ``include_private``.
         """
         clauses: list[str] = []
         params: list[Any] = []
+        if not include_private:
+            clauses.append(_NOT_PRIVATE_SQL)
         if kind is not None:
             clauses.append("kind = ?")
             params.append(kind)
@@ -539,18 +558,26 @@ class MemoryStore:
         return cur.rowcount
 
     def search_by_tag(
-        self, tag: str, limit: int = 50, *, max_age_seconds: int | None = None
+        self,
+        tag: str,
+        limit: int = 50,
+        *,
+        max_age_seconds: int | None = None,
+        include_private: bool = False,
     ) -> list[Fact]:
         """Return facts carrying the exact tag, newest first.
 
         Matching goes through ``json_each`` so it compares decoded tag values
         rather than doing a substring LIKE over the raw JSON text (which would
-        give false positives).
+        give false positives). Facts tagged `PRIVATE_FACT_TAG` are left out
+        unless ``include_private``.
         """
         clauses = [
             "tags IS NOT NULL",
             "EXISTS (SELECT 1 FROM json_each(tags) WHERE value = ?)",
         ]
+        if not include_private:
+            clauses.append(_NOT_PRIVATE_SQL)
         params: list[Any] = [tag.strip()]
         if max_age_seconds is not None:
             clauses.append("updated_at >= ?")
@@ -654,9 +681,17 @@ class MemoryStore:
     # -- search & rendering ----------------------------------------------
 
     def search_memory(
-        self, query: str, limit: int = 50, *, max_age_seconds: int | None = None
+        self,
+        query: str,
+        limit: int = 50,
+        *,
+        max_age_seconds: int | None = None,
+        include_private: bool = False,
     ) -> tuple[list[Fact], list[Observation]]:
-        """Substring-search both tables; returns (matching facts, observations)."""
+        """Substring-search both tables; returns (matching facts, observations).
+
+        Facts tagged `PRIVATE_FACT_TAG` are left out unless ``include_private``.
+        """
         # Escape LIKE wildcards with '=' so a literal % or _ in the query does
         # not act as a wildcard.
         escaped = query.replace("=", "==").replace("%", "=%").replace("_", "=_")
@@ -664,6 +699,8 @@ class MemoryStore:
         fact_clauses = [
             "(value LIKE ? ESCAPE '=' OR key LIKE ? ESCAPE '=' OR kind LIKE ? ESCAPE '=')"
         ]
+        if not include_private:
+            fact_clauses.append(_NOT_PRIVATE_SQL)
         fact_params: list[Any] = [pattern, pattern, pattern]
         obs_clauses = ["summary LIKE ? ESCAPE '='"]
         obs_params: list[Any] = [pattern]
@@ -748,11 +785,13 @@ class MemoryStore:
 
         The insert and delete run in a single transaction so the store can never
         end up with the summary but not the deletions (or vice versa). Returns
-        the number of facts folded.
+        the number of facts folded. Facts tagged `PRIVATE_FACT_TAG` are neither
+        folded (an observation is shown to the model) nor deleted.
         """
         threshold = _now() - age_seconds
         rows = self._conn.execute(
-            "SELECT value FROM facts WHERE updated_at < ?", (threshold,)
+            f"SELECT value FROM facts WHERE updated_at < ? AND {_NOT_PRIVATE_SQL}",  # nosec B608
+            (threshold,),
         ).fetchall()
         if not rows:
             return 0
@@ -769,7 +808,10 @@ class MemoryStore:
                 "confidence, created_at) VALUES (?, ?, ?, ?, ?)",
                 (summary, None, 0.5, 0.5, _now()),
             )
-            self._conn.execute("DELETE FROM facts WHERE updated_at < ?", (threshold,))
+            self._conn.execute(
+                f"DELETE FROM facts WHERE updated_at < ? AND {_NOT_PRIVATE_SQL}",  # nosec B608
+                (threshold,),
+            )
             self._conn.commit()
         except Exception:
             self._conn.rollback()
@@ -959,11 +1001,17 @@ class MemoryStore:
 
     # -- import / export --------------------------------------------------
 
-    def export_to_dict(self) -> dict[str, Any]:
-        """Return a JSON-serialisable snapshot of all facts and observations."""
+    def export_to_dict(self, *, include_private: bool = False) -> dict[str, Any]:
+        """Return a JSON-serialisable snapshot of all facts and observations.
+
+        Facts tagged `PRIVATE_FACT_TAG` stay local, so they are left out of the
+        snapshot (which feeds memory sync, exports and session checkpoints)
+        unless ``include_private``.
+        """
+        where = "" if include_private else f"WHERE {_NOT_PRIVATE_SQL} "
         fact_rows = self._conn.execute(
-            "SELECT id, kind, key, value, source_session, created_at, updated_at, tags "
-            "FROM facts ORDER BY id"
+            "SELECT id, kind, key, value, source_session, created_at, updated_at, tags "  # nosec B608
+            f"FROM facts {where}ORDER BY id"
         ).fetchall()
         obs_rows = self._conn.execute(
             "SELECT id, summary, evidence_session_id, weight, confidence, created_at "
@@ -1015,6 +1063,10 @@ class MemoryStore:
         for row in obs:
             _validate_row(row, SNAPSHOT_OBS_FIELDS, "observation")
 
+        # Private facts are local-only: an old snapshot or a crafted file must not
+        # plant or resurrect one (it could carry a stale or attacker-chosen token).
+        facts = [f for f in facts if PRIVATE_FACT_TAG not in (f.get("tags") or [])]
+
         def fact_to_tuple(f: dict[str, Any], include_id: bool) -> tuple[Any, ...]:
             # Security: redact secrets and truncate during import.
             clean_value = redact_secrets(str(f["value"]))[:MAX_MEMORY_CONTENT_CHARS]
@@ -1056,6 +1108,14 @@ class MemoryStore:
         try:
             self._conn.execute("BEGIN IMMEDIATE")
             if mode == "replace":
+                # Replace wipes the tables, but a snapshot never carries private facts,
+                # so a revert would otherwise delete the bearer token. Set them aside and
+                # put them back after the snapshot rows, under fresh ids (the snapshot
+                # may reuse their old ones, and nothing looks them up by id).
+                kept_private = self._conn.execute(
+                    "SELECT kind, key, value, source_session, created_at, updated_at, tags "  # nosec B608
+                    f"FROM facts WHERE NOT ({_NOT_PRIVATE_SQL})"
+                ).fetchall()
                 self._conn.execute("DELETE FROM facts")
                 self._conn.execute("DELETE FROM observations")
                 with contextlib.suppress(sqlite3.OperationalError):
@@ -1067,6 +1127,11 @@ class MemoryStore:
                     "INSERT INTO facts (id, kind, key, value, source_session, "
                     "created_at, updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                     [fact_to_tuple(f, True) for f in facts],
+                )
+                self._conn.executemany(
+                    "INSERT INTO facts (kind, key, value, source_session, "
+                    "created_at, updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    [tuple(row) for row in kept_private],
                 )
                 self._conn.executemany(
                     "INSERT INTO observations (id, summary, evidence_session_id, "
