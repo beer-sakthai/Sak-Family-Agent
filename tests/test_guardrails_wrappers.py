@@ -144,14 +144,14 @@ def test_find_scan_stops_at_separator_and_allows_benign_tail(
 def test_second_find_with_sensitive_exec_target_blocked(
     run_command_tool: Tool, store: MemoryStore, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # The first find is benign and its discovery scan stops at ';', so only
-    # the -exec handler (which sees the sensitive /etc target of the second
-    # find) can catch this.
+    # The benign first find must not shield the second: each ';'-separated
+    # command is checked on its own, so the second find's sensitive /etc target
+    # is caught by its own discovery scan.
     monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
     command = "find . -name tmp ; find /etc -exec rm {} +"
     result = DEFAULT_POLICY.check_pre_execution(run_command_tool, {"command": command}, store)
     assert result.action == GuardrailAction.DENY
-    assert result.reason and "sensitive path" in result.reason
+    assert result.reason and "/etc" in result.reason
 
 
 def test_wrapped_second_find_discovering_sensitive_root_blocked(
