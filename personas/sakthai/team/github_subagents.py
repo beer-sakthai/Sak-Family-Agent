@@ -7,6 +7,7 @@ Follows House of Sak invariants: No auto-merge, 96% coverage, safe subprocess ex
 
 from __future__ import annotations
 
+import contextlib
 import enum
 import json
 import logging
@@ -113,7 +114,7 @@ class GitHubCLISubagentFramework:
     def run_gh(self, args: list[str]) -> tuple[int, str]:
         """Execute a safe, audited gh command."""
         # Enforce safety guardrails: prevent unauthorized merge or destructive commands
-        if "merge" in args and ("--auto" in args or "-y" in args):
+        if "merge" in args:
             logger.warning("Auto-merge is strictly forbidden by House of Sak operating contract.")
             return 1, "Error: Auto-merge blocked by SakJules CI/CD protocol."
 
@@ -123,6 +124,43 @@ class GitHubCLISubagentFramework:
             return res.returncode, res.stdout or res.stderr
         except FileNotFoundError:
             return 127, "gh command not found"
+
+    def check_duplicate_prs(
+        self, target_files: list[str] | None = None, branch_name: str | None = None
+    ) -> list[dict[str, Any]]:
+        """Check for existing open pull requests that overlap with the target branch or files."""
+        code, out = self.run_gh(
+            ["pr", "list", "--state", "open", "--json", "number,title,headRefName,url"]
+        )
+        if code != 0 or not out:
+            return []
+        try:
+            prs = json.loads(out)
+            if not isinstance(prs, list):
+                return []
+        except json.JSONDecodeError:
+            return []
+
+        overlaps: list[dict[str, Any]] = []
+        for pr in prs:
+            ref = pr.get("headRefName", "")
+            if branch_name and ref == branch_name:
+                overlaps.append(pr)
+                continue
+            if target_files:
+                num = str(pr.get("number", ""))
+                code_f, out_f = self.run_gh(["pr", "view", num, "--json", "files"])
+                if code_f == 0:
+                    with contextlib.suppress(Exception):
+                        data = json.loads(out_f)
+                        pr_files = {
+                            f["path"]
+                            for f in data.get("files", [])
+                            if isinstance(f, dict) and "path" in f
+                        }
+                        if any(tf in pr_files for tf in target_files):
+                            overlaps.append(pr)
+        return overlaps
 
 
 async def run_github_audit_pipeline(

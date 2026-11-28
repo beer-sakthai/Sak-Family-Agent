@@ -6,6 +6,7 @@ and docs/manage-your-dependency-security.md conform to supply chain security inv
 
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 
 import yaml
@@ -86,3 +87,27 @@ def test_dependency_security_guide_document_exists_and_covers_framework() -> Non
     assert "GHSA-fc5q-39xc-vjpf" in content
     assert "SPDX" in content
     assert "fail-on-severity" in content
+
+
+def test_opentelemetry_dependencies_are_patched_and_obsolete_exceptions_are_removed() -> None:
+    """Prevent LaunchDarkly observability's vulnerable OpenTelemetry pin from returning."""
+    project = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    dependencies = project["project"]["dependencies"]
+    assert not any("launchdarkly-observability" in dependency for dependency in dependencies)
+    assert "opentelemetry-api>=1.45.2" in dependencies
+
+    lock = tomllib.loads((REPO_ROOT / "uv.lock").read_text(encoding="utf-8"))
+    packages = lock["package"]
+    assert not any(package["name"] == "launchdarkly-observability" for package in packages)
+    api_version = next(
+        package["version"] for package in packages if package["name"] == "opentelemetry-api"
+    )
+    assert tuple(map(int, api_version.split("."))) >= (1, 45, 2)
+    sdk_version = next(
+        package["version"] for package in packages if package["name"] == "opentelemetry-sdk"
+    )
+    assert sdk_version == api_version
+    audit_workflow = (WORKFLOWS_DIR / "dependency-audit.yml").read_text(encoding="utf-8")
+    assert "--ignore-vuln CVE-2026-126360" not in audit_workflow
+    dependabot = (GITHUB_DIR / "dependabot.yml").read_text(encoding="utf-8")
+    assert 'dependency-name: "opentelemetry-api"' not in dependabot

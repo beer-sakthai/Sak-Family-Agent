@@ -10,7 +10,6 @@ The design is based on Phase 3 of the plan in ``PLAN.md``.
 
 from __future__ import annotations
 
-import contextlib
 import fnmatch
 import logging
 import os
@@ -125,6 +124,14 @@ def _block_mail_to_unlisted_recipients(
     if not isinstance(recipient, str) or not recipient.strip():
         return GuardrailResult(GuardrailAction.ALLOW)  # the handler rejects it
     recipient = recipient.strip().lower()
+    # The domain is read off the last '@', so 'evil@x.test,me@corp.example' would
+    # pass an '@corp.example' entry while the handler hands the whole string to
+    # Graph as one address. Only a single bare address is judged.
+    if recipient.count("@") != 1 or re.search(r"[\s,;<>()\"]", recipient):
+        return GuardrailResult(
+            GuardrailAction.DENY,
+            reason=f"Recipient {recipient!r} must be a single bare email address.",
+        )
     allowed = mail_allowlist()
     domain = recipient.rpartition("@")[2]
     if recipient in allowed or (domain and f"@{domain}" in allowed):
@@ -293,6 +300,28 @@ def _basename_is_sensitive(basename: str) -> bool:
     return any(lowered == stem or lowered.startswith(stem + ".") for stem in _SENSITIVE_KEY_STEMS)
 
 
+# A '..' that is a whole path component (bounded by a separator, whitespace or
+# the string edge), and a '~' that starts a tilde-prefix (``~``, ``~/x``,
+# ``~root/x``). Substring tests flagged ordinary text -- "Hmm... ok",
+# "~approximately 5" -- so a free-text tool argument could not hold an ellipsis.
+_TRAVERSAL_RE = re.compile(r"(?:^|[\s/\\])\.\.(?:[\s/\\]|$)")
+_HOME_PREFIX_RE = re.compile(r"^~[A-Za-z0-9_.+-]*(?:[/\\]|$)")
+_ATTACHED_TRAVERSAL_RE = re.compile(r"^-[^\s]*?\.\.(?:[/\\]|$)")
+
+
+def _has_traversal_or_home(path: str) -> bool:
+    """True if ``path`` climbs with ``..`` or starts at a home directory."""
+    if _TRAVERSAL_RE.search(path) or _HOME_PREFIX_RE.match(path):
+        return True
+    # A short-option group with its value attached ('-o../x', '-sT../x') has no
+    # separator before the '..', whatever the group's length.
+    return (
+        path.startswith("-")
+        and not path.startswith("--")
+        and bool(_ATTACHED_TRAVERSAL_RE.search(path))
+    )
+
+
 def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     """Return True if the path targets a sensitive system directory or uses traversal."""
     path = path.strip(" \t\n\r\"'")
@@ -315,7 +344,7 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
         path = path[1:]
 
     # Check for path traversal or home-relative paths.
-    if ".." in path or path.startswith("~"):
+    if _has_traversal_or_home(path):
         return True
 
     # Block access to known sensitive files and directories.
@@ -437,6 +466,191 @@ def _is_local_make_dir(path: str) -> bool:
     return abs_path == cwd or abs_path.startswith(cwd + os.sep)
 
 
+def _balanced_paren_end(text: str, start: int) -> tuple[int, int]:
+    """Locate the ``)`` closing a ``$(`` whose body begins at ``start``.
+
+    Follows the shell's own rules, so a ``)`` inside quotes, after a backslash or
+    in a ``#`` comment does not end the body early (which would leave the real
+    command outside it, unscanned), and a nested ``$(...)`` is skipped whole.
+
+    Returns ``(body_end, resume)``: the body is ``text[start:body_end]`` and
+    scanning resumes at ``resume``. An unterminated group runs to the end of the
+    string, so its remainder is checked as the body rather than skipped.
+    """
+    depth = 1
+    quote = ""
+    word_start = True
+    i, n = start, len(text)
+    while i < n:
+        ch = text[i]
+        at_word_start, word_start = word_start, False
+        if ch == "\\" and quote != "'":
+            if text[i + 1 : i + 2] == "\n":
+                # A line continuation is deleted before parsing: it must not
+                # change whether the next character starts a word.
+                word_start = at_word_start
+            i += 2
+        elif quote == "'":
+            quote = "" if ch == "'" else quote
+            i += 1
+        elif ch == "$" and text.startswith("$(", i):
+            _, i = _balanced_paren_end(text, i + 2)
+        elif quote == '"':
+            quote = "" if ch == '"' else quote
+            i += 1
+        elif ch in "'\"":
+            quote = ch
+            i += 1
+        elif ch == "#" and at_word_start:
+            newline = text.find("\n", i)
+            i = n if newline == -1 else newline
+        elif ch == "(":
+            depth += 1
+            word_start = True
+            i += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                return i, i + 1
+            i += 1
+        else:
+            word_start = ch in " \t\n;&|"
+            i += 1
+    return n, n
+
+
+def _backtick_end(text: str, start: int) -> tuple[int, int]:
+    """Like `_balanced_paren_end`, for a backtick opened before ``start``."""
+    i = start
+    while i < len(text):
+        if text[i] == "\\":
+            i += 2
+        elif text[i] == "`":
+            return i, i + 1
+        else:
+            i += 1
+    return len(text), len(text)
+
+
+def _scan_shell_structure(command: str) -> tuple[list[str], list[str]]:
+    """Split a shell command into simple-command segments and substitution bodies.
+
+    ``shlex.split`` does not treat ``;``, ``&`` or ``|`` as operators unless
+    whitespace surrounds them, so ``echo hi;cat ~/.ssh/id_rsa`` reached the
+    token checks as ``["echo", "hi;cat", ...]`` and no binary was recognized.
+    It also leaves the body of ``$(...)`` and backticks inside one token, where
+    nothing looked at it. This scanner honors quoting: it splits only on
+    unquoted operators, and lifts substitution bodies out (they run even inside
+    double quotes, never inside single quotes) leaving a ``SUBST`` placeholder.
+
+    A ``&`` or ``|`` fused to a ``<``/``>`` (``2>&1``, ``>|``) or a ``&`` that
+    precedes ``>`` (``&>``) is a redirection operator, not a separator, and
+    stays in its segment so the redirection-target check still sees it.
+    """
+    segments: list[str] = []
+    substitutions: list[str] = []
+    current: list[str] = []
+    quote = ""
+    i, n = 0, len(command)
+
+    def flush() -> None:
+        text = "".join(current).strip()
+        if text:
+            segments.append(text)
+        current.clear()
+
+    while i < n:
+        ch = command[i]
+        if ch == "\\" and quote != "'":
+            # '\<newline>' is deleted by the shell before it parses, so 'ca\<nl>t'
+            # runs cat; shlex would instead see the word 'ca<nl>t'.
+            if command[i + 1 : i + 2] != "\n":
+                current.append(command[i : i + 2])
+            i += 2
+        elif quote == "'":
+            current.append(ch)
+            quote = "" if ch == "'" else quote
+            i += 1
+        elif ch == "$" and command.startswith("$(", i):
+            body_end, resume = _balanced_paren_end(command, i + 2)
+            substitutions.append(command[i + 2 : body_end])
+            current.append("SUBST")
+            i = resume
+        elif ch == "`":
+            body_end, resume = _backtick_end(command, i + 1)
+            # Inside backticks '\`', '\$' and '\\' are unescaped before the body
+            # runs, so a nested backtick substitution arrives escaped.
+            substitutions.append(re.sub(r"\\([`$\\])", r"\1", command[i + 1 : body_end]))
+            current.append("SUBST")
+            i = resume
+        elif quote == '"':
+            current.append(ch)
+            quote = "" if ch == '"' else quote
+            i += 1
+        elif ch in "'\"":
+            quote = ch
+            current.append(ch)
+            i += 1
+        elif ch in ";\n()":
+            flush()
+            i += 1
+        elif ch in "&|":
+            prev = command[i - 1] if i else ""
+            fused = (prev != "" and prev in "<>") or (ch == "&" and command[i + 1 : i + 2] == ">")
+            if fused:
+                current.append(ch)
+            else:
+                flush()
+            i += 1
+        else:
+            current.append(ch)
+            i += 1
+    flush()
+    return segments, substitutions
+
+
+def _check_command_string(
+    command: str,
+    *,
+    posix: bool = True,
+    shell_syntax: bool = True,
+    context_sensitive: bool = False,
+    checked_makefiles: set[str] | None = None,
+    current_make_dir: str = ".",
+) -> GuardrailResult:
+    """Run the token checks over every segment and substitution of ``command``.
+
+    With ``shell_syntax=False`` the string is one plain argv (no operators, no
+    substitutions): that is how the built-in ``run_command`` runs it.
+    """
+    segments, substitutions = _scan_shell_structure(command) if shell_syntax else ([command], [])
+    # Bodies first: a substitution is executed before the command around it.
+    for body in substitutions:
+        res = _check_command_string(
+            body,
+            posix=posix,
+            context_sensitive=context_sensitive,
+            checked_makefiles=checked_makefiles,
+            current_make_dir=current_make_dir,
+        )
+        if res.action == GuardrailAction.DENY:
+            return res
+    for segment in segments:
+        try:
+            parts = shlex.split(segment, posix=posix)
+        except ValueError:
+            return GuardrailResult(GuardrailAction.DENY, reason="Malformed shell command.")
+        res = _check_destructive_tokens(
+            parts,
+            context_sensitive=context_sensitive,
+            checked_makefiles=checked_makefiles,
+            current_make_dir=current_make_dir,
+        )
+        if res.action == GuardrailAction.DENY:
+            return res
+    return GuardrailResult(GuardrailAction.ALLOW)
+
+
 def _check_destructive_tokens(
     parts: list[str],
     context_sensitive: bool = False,
@@ -526,23 +740,16 @@ def _check_destructive_tokens(
                                 while recipe and recipe[0] in ("@", "-", "+"):
                                     recipe = recipe[1:].strip()
                                 if recipe:
-                                    try:
-                                        recipe_parts = shlex.split(recipe)
-                                        res = _check_destructive_tokens(
-                                            recipe_parts,
-                                            context_sensitive=context_sensitive,
-                                            checked_makefiles=new_checked,
-                                            current_make_dir=make_dir,
-                                        )
-                                        if res.action == GuardrailAction.DENY:
-                                            return GuardrailResult(
-                                                GuardrailAction.DENY,
-                                                reason=f"Potentially destructive command in makefile recipe blocked: {res.reason}",
-                                            )
-                                    except ValueError:
+                                    res = _check_command_string(
+                                        recipe,
+                                        context_sensitive=context_sensitive,
+                                        checked_makefiles=new_checked,
+                                        current_make_dir=make_dir,
+                                    )
+                                    if res.action == GuardrailAction.DENY:
                                         return GuardrailResult(
                                             GuardrailAction.DENY,
-                                            reason="Malformed shell command in makefile recipe.",
+                                            reason=f"Potentially destructive command in makefile recipe blocked: {res.reason}",
                                         )
                     except Exception:  # nosec B110 — safe swallow of makefile parsing/reading errors
                         pass
@@ -568,32 +775,34 @@ def _check_destructive_tokens(
                 break  # Not a flag and not a shell
 
             if shell_idx != -1:
-                try:
-                    nested = shlex.split(parts[i + 1])
-                    res = _check_destructive_tokens(
-                        nested,
-                        context_sensitive=context_sensitive,
-                        checked_makefiles=checked_makefiles,
-                        current_make_dir=current_make_dir,
-                    )
-                    if res.action == GuardrailAction.DENY:
-                        return res
-                except ValueError:
-                    pass
+                res = _check_command_string(
+                    parts[i + 1],
+                    context_sensitive=context_sensitive,
+                    checked_makefiles=checked_makefiles,
+                    current_make_dir=current_make_dir,
+                )
+                if res.action == GuardrailAction.DENY:
+                    return res
 
         # 1b. eval "..." or exec "..."
         if _is_binary(part, ("eval", "exec")):
             rest = parts[i + 1 :]
-            # If the next token looks like a quoted command string, split it.
+            # eval joins its arguments and re-parses them as shell, so a quoted
+            # command string is scanned for operators and substitutions too.
             if len(rest) == 1 and " " in rest[0]:
-                with contextlib.suppress(ValueError):
-                    rest = shlex.split(rest[0])
-            res = _check_destructive_tokens(
-                rest,
-                context_sensitive=context_sensitive,
-                checked_makefiles=checked_makefiles,
-                current_make_dir=current_make_dir,
-            )
+                res = _check_command_string(
+                    rest[0],
+                    context_sensitive=context_sensitive,
+                    checked_makefiles=checked_makefiles,
+                    current_make_dir=current_make_dir,
+                )
+            else:
+                res = _check_destructive_tokens(
+                    rest,
+                    context_sensitive=context_sensitive,
+                    checked_makefiles=checked_makefiles,
+                    current_make_dir=current_make_dir,
+                )
             if res.action == GuardrailAction.DENY:
                 return res
 
@@ -842,8 +1051,6 @@ def _check_destructive_tokens(
             is_interpreter = _is_binary(part, interpreters)
             # Inspect tokens following the binary until a separator is hit.
             for subpart in parts[i + 1 :]:
-                if subpart in (";", "&&", "||", "|"):
-                    break
                 # For destructive binaries, we don't allow targeting the current directory.
                 # For exfiltration binaries, we allow targeting the current directory.
                 allow_local = is_exfil
@@ -873,8 +1080,6 @@ def _check_destructive_tokens(
     for i, part in enumerate(parts):
         if _is_binary(part, "dd"):
             for subpart in parts[i + 1 :]:
-                if subpart in (";", "&&", "||", "|"):
-                    break
                 if subpart.startswith("of=") or subpart.startswith("if="):
                     val = subpart[3:]
                     # of= targets are destructive; don't allow local path.
@@ -948,8 +1153,6 @@ def _check_destructive_tokens(
         # 5c. Block unauthorized discovery of sensitive system roots.
         # find [path...] [expression]
         for part in after_find:
-            if part in (";", "&&", "||", "|"):
-                break
             if part.startswith("-"):
                 continue
             if _is_sensitive_path(part, allow_local=True):
@@ -963,8 +1166,6 @@ def _check_destructive_tokens(
         if _is_binary(part, ("docker", "podman", "kubectl")):
             binary_name = os.path.basename(part)
             for j, subpart in enumerate(parts[i + 1 :], i + 1):
-                if subpart in (";", "&&", "||", "|"):
-                    break
                 # Check for volume mounts in docker/podman: -v /etc:/mnt or --mount type=bind,source=/etc,...
                 if subpart == "-v" or subpart == "--volume":
                     if j + 1 < len(parts):
@@ -1005,8 +1206,6 @@ def _check_destructive_tokens(
                 # (docker cp, podman cp, kubectl cp).
                 if subpart == "cp":
                     for k in range(j + 1, len(parts)):
-                        if parts[k] in (";", "&&", "||", "|"):
-                            break
                         if _is_sensitive_path(parts[k]):
                             return GuardrailResult(
                                 GuardrailAction.DENY,
@@ -1312,12 +1511,12 @@ def _block_dangerous_shell_commands(
     if not isinstance(command, str):
         return GuardrailResult(GuardrailAction.ALLOW)
 
-    try:
-        parts = shlex.split(command)
-    except ValueError:
-        return GuardrailResult(GuardrailAction.DENY, reason="Malformed shell command.")
-
-    result = _check_destructive_tokens(parts)
+    # The built-in run_command execs the argv with shell=False, so ';' and
+    # '$(...)' are literal text there; only an external '<server>__run_command'
+    # is assumed to hand the string to a shell. Shell-interpreted strings inside
+    # a command (a 'sh -c' script, a makefile recipe) are scanned either way.
+    shell_syntax = tool.name != _base_name(tool)
+    result = _check_command_string(command, shell_syntax=shell_syntax)
     if result.action == GuardrailAction.DENY or "\\" not in command:
         return result
 
@@ -1327,12 +1526,7 @@ def _block_dangerous_shell_commands(
     # and PowerShell would read the real file. Re-scan with the backslashes
     # preserved. Gated on the command containing one, so every backslash-free
     # command keeps its existing behavior exactly.
-    try:
-        raw_parts = shlex.split(command, posix=False)
-    except ValueError:
-        return GuardrailResult(GuardrailAction.DENY, reason="Malformed shell command.")
-
-    return _check_destructive_tokens(raw_parts)
+    return _check_command_string(command, posix=False, shell_syntax=shell_syntax)
 
 
 def _enforce_verbose_listing(
@@ -1548,6 +1742,44 @@ class GuardrailPolicy:
                 )
                 return result
         return GuardrailResult(GuardrailAction.ALLOW)
+
+
+_LOCAL_PATH_PATTERN = re.compile(
+    r"(?:/home/(?:antigravity|sak|ubuntu|root)|/(?:root|etc|var/run|var/log)/[a-zA-Z0-9_\-\./]+)"
+)
+_PRIVATE_IP_PATTERN = re.compile(
+    r"\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3})\b"
+)
+_INJECTION_KEYWORDS = [
+    r"ignore\s+(?:all\s+)?previous\s+instructions",
+    r"system\s+prompt",
+    r"developer\s+mode",
+    r"jailbreak",
+    r"forget\s+everything",
+]
+_INJECTION_RE = re.compile("|".join(_INJECTION_KEYWORDS), re.IGNORECASE)
+
+
+def scan_content_for_leaks(text: str) -> list[str]:
+    """Scan content for potential secret, filesystem path, or network leaks."""
+    leaks: list[str] = []
+    if _LOCAL_PATH_PATTERN.search(text):
+        leaks.append("Detected local filesystem path in content.")
+    if re.search(SECRET_PATTERN, text):
+        leaks.append("Detected secret key pattern in content.")
+    if _PRIVATE_IP_PATTERN.search(text):
+        leaks.append("Detected private IP address in content.")
+    return leaks
+
+
+def sanitize_external_content(text: str) -> str:
+    """Sanitize untrusted external quotes or social replies against prompt injection."""
+    if not text:
+        return ""
+    # Defang common injection phrases
+    sanitized = _INJECTION_RE.sub("[DEFANGED_PROMPT_INJECTION]", text)
+    # Wrap in explicit untrusted data container
+    return f"[UNTRUSTED_CONTENT]\n{sanitized}\n[/UNTRUSTED_CONTENT]"
 
 
 DEFAULT_POLICY = GuardrailPolicy()

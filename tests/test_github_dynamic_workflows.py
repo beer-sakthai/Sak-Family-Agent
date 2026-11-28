@@ -56,6 +56,44 @@ def test_run_gh_auto_merge_blocked() -> None:
     assert code2 == 1
     assert "Auto-merge blocked" in msg2
 
+    code3, msg3 = fw.run_gh(["pr", "merge", "123", "--squash"])
+    assert code3 == 1
+    assert "Auto-merge blocked" in msg3
+
+
+def test_check_duplicate_prs_detects_branch_and_file_overlaps(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fw = GitHubCLISubagentFramework()
+
+    def mock_run_gh(args: list[str]) -> tuple[int, str]:
+        if "list" in args:
+            return (
+                0,
+                '[{"number": 999, "title": "feat: test", "headRefName": "feat/overlap-branch", "url": "https://github.com/test/999"}]',
+            )
+        if "view" in args and "999" in args:
+            return 0, '{"files": [{"path": "personas/sakthai/agent/guardrails.py"}]}'
+        return 0, "[]"
+
+    monkeypatch.setattr(fw, "run_gh", mock_run_gh)
+
+    # Overlap by branch name
+    branch_overlaps = fw.check_duplicate_prs(branch_name="feat/overlap-branch")
+    assert len(branch_overlaps) == 1
+    assert branch_overlaps[0]["number"] == 999
+
+    # Overlap by target files
+    file_overlaps = fw.check_duplicate_prs(target_files=["personas/sakthai/agent/guardrails.py"])
+    assert len(file_overlaps) == 1
+    assert file_overlaps[0]["number"] == 999
+
+    # No overlap
+    no_overlaps = fw.check_duplicate_prs(
+        target_files=["other/unrelated/path.py"], branch_name="feat/different"
+    )
+    assert len(no_overlaps) == 0
+
 
 def test_run_gh_subprocess_execution(monkeypatch: pytest.MonkeyPatch) -> None:
     fw = GitHubCLISubagentFramework()
@@ -263,3 +301,157 @@ def test_cli_gh_commands(monkeypatch: pytest.MonkeyPatch) -> None:
     res_sec = runner.invoke(team_cmd, ["gh", "security", "--json"])
     assert res_sec.exit_code == 0
     assert "gh-dyn-security-v1" in res_sec.output
+
+
+def test_check_duplicate_prs_error_branches(monkeypatch: pytest.MonkeyPatch) -> None:
+    fw = GitHubCLISubagentFramework()
+    # code != 0
+    monkeypatch.setattr(fw, "run_gh", lambda args: (1, "error"))
+    assert fw.check_duplicate_prs() == []
+
+    # empty output
+    monkeypatch.setattr(fw, "run_gh", lambda args: (0, ""))
+    assert fw.check_duplicate_prs() == []
+
+    # non-list JSON
+    monkeypatch.setattr(fw, "run_gh", lambda args: (0, '{"error": "not a list"}'))
+    assert fw.check_duplicate_prs() == []
+
+    # invalid JSON
+    monkeypatch.setattr(fw, "run_gh", lambda args: (0, "{not valid json"))
+    assert fw.check_duplicate_prs() == []
+
+    # Branch doesn't match and target_files is None
+    monkeypatch.setattr(fw, "run_gh", lambda args: (0, '[{"number": 1, "headRefName": "other"}]'))
+    assert fw.check_duplicate_prs(branch_name="main") == []
+
+    # Target files present but view fails
+    def mock_run_gh(args):
+        if "list" in args:
+            return 0, '[{"number": 1, "headRefName": "other"}]'
+        return 1, "view error"
+
+    monkeypatch.setattr(fw, "run_gh", mock_run_gh)
+    assert fw.check_duplicate_prs(target_files=["foo.py"]) == []
+
+
+@pytest.mark.asyncio
+async def test_run_github_maintenance_pipeline_edge_cases(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # 1. DB integrity check fails
+    db_bad = tmp_path / "bad.db"
+    import sqlite3
+
+    conn = sqlite3.connect(db_bad)
+    conn.execute("CREATE TABLE t (id INT);")
+    conn.commit()
+    conn.close()
+
+    monkeypatch.setenv("SAKTHAI_HOME", str(tmp_path))
+    fw = GitHubCLISubagentFramework()
+
+    class FakeCursor:
+        def execute(self, q):
+            pass
+
+        def fetchone(self):
+            return ("corrupt",)
+
+    class FakeConn:
+        def cursor(self):
+            return FakeCursor()
+
+        def close(self):
+            pass
+
+        def execute(self, q):
+            pass
+
+    monkeypatch.setattr(sqlite3, "connect", lambda p: FakeConn())
+
+    def mock_run_gh(args):
+        if "issue" in args:
+            return 0, "not valid json"
+        if "pr" in args:
+            return 0, "not valid json"
+        return 0, "[]"
+
+    monkeypatch.setattr(fw, "run_gh", mock_run_gh)
+
+    import sakthai.agent.eval
+
+    monkeypatch.setattr(
+        sakthai.agent.eval,
+        "summarize_fleet_audit",
+        lambda: (_ for _ in ()).throw(RuntimeError("fleet err")),
+    )
+
+    report = await run_github_maintenance_pipeline(framework=fw, vacuum=True, run_audit=True)
+    assert "Shard Maintenance" in report.phases_completed
+    assert any(d.get("phase") == "fleet" and d.get("status") == "error" for d in report.details)
+
+    # 2. Vacuum execution raises exception
+    class VacuumFailConn:
+        def cursor(self):
+            class C:
+                def execute(self, q):
+                    pass
+
+                def fetchone(self):
+                    return ("ok",)
+
+            return C()
+
+        def close(self):
+            pass
+
+        def execute(self, q):
+            if "VACUUM" in q:
+                raise sqlite3.OperationalError("disk error")
+
+    monkeypatch.setattr(sqlite3, "connect", lambda p: VacuumFailConn())
+    report_vac_fail = await run_github_maintenance_pipeline(framework=fw, vacuum=True)
+    assert "Shard Maintenance" in report_vac_fail.phases_completed
+
+
+@pytest.mark.asyncio
+async def test_run_github_security_pipeline_edge_cases(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fw = GitHubCLISubagentFramework()
+
+    def mock_run_gh(args):
+        if "branches/main" in " ".join(args):
+            return 0, "invalid json"
+        return 0, "{}"
+
+    monkeypatch.setattr(fw, "run_gh", mock_run_gh)
+
+    # Create dummy workflow with unpinned action in a temporary dir
+    wf_dir = tmp_path / ".github" / "workflows"
+    wf_dir.mkdir(parents=True)
+    (wf_dir / "unpinned.yml").write_text(
+        "uses: actions/checkout@v4\nuses: actions/setup-node@v3#comment\n", encoding="utf-8"
+    )
+    # Subdirectory with .yml to trigger OSError on read_text
+    (wf_dir / "broken.yml").mkdir()
+
+    monkeypatch.chdir(tmp_path)
+
+    (tmp_path / "secret.py").write_text(
+        "fake_key = 'sk-123456789012345678901234567890'\n", encoding="utf-8"
+    )
+    # Subdirectory with .py to trigger OSError on read_text
+    (tmp_path / "broken.py").mkdir()
+
+    report = await run_github_security_pipeline(framework=fw)
+    assert "Branch Protection" in report.phases_completed
+    assert any(
+        d.get("phase") == "action_pinning" and d.get("unpinned_count", 0) >= 1
+        for d in report.details
+    )
+    assert any(
+        d.get("phase") == "credential_hygiene" and d.get("leak_count", 0) >= 1
+        for d in report.details
+    )

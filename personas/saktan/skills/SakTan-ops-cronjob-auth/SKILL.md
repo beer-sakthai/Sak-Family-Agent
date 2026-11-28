@@ -1,8 +1,7 @@
 ---
 name: SakTan-ops-cronjob-auth
-version: 1.0.0
-description: Handle authentication, authorization, and credential safety for Hermes   cron
-  jobs
+version: 1.1.0
+description: Handle authentication, authorization, and credential safety for scheduled jobs.
 category: operations
 tags:
 - auth
@@ -12,100 +11,72 @@ tags:
 - ops
 ---
 
-# Cronjob Auth
+# Scheduled Job Auth & Credential Safety
 
 ## Purpose
 
-Handle authentication, authorization, and credential safety for Hermes cron jobs. Prevent silent failures from missing/invalid secrets, and give cron jobs a safe path to act on protected resources without exposing credentials.
+Handle authentication, authorization, and credential safety for scheduled automation.
+Prevent silent failures from missing or invalid credentials, and ensure scheduled jobs
+operate safely without ever leaking secrets.
 
-## When to use
+## When to Use
 
-Load this skill when:
-- A cron job logs `credentials`, `credentials not found`, `api key`, `auth`, `token`, `unauthorized`, `403`, or `401`
-- A job needs to call an external API that requires a key/token
-- You want to add auth to a new cron job safely
-- User asks about cron security, credentials, or auth
+- A scheduled job reports `401 Unauthorized`, `403 Forbidden`, or missing token errors.
+- Configuring environment variables for a newly provisioned systemd timer or GitHub Action.
+- Auditing scheduled jobs to ensure compliance with Security Rule 1 (Secrets Stay Secret).
 
-## Credential rules
+## Credential Safety Invariants
 
-1. **Never hardcode secrets in prompts, SKILL.md, or cron prompts.**
-2. **Never expose raw credentials in cron output or Telegram delivery.**
-3. **Always read from `~/.hermes/.env` via the `env` tool or `grep` (redacted).**
-4. **If a credential is missing:**
-   - Log the missing var name (not the value)
-   - Notify Beer with the exact env var needed
-   - Do NOT auto-generate or auto-inject secrets
+1. **Secrets Stay Secret**: Never hardcode API keys, tokens, or passwords in prompts, SKILL.md files, timer definitions, or workflow files.
+2. **Never Expose Raw Credentials**: Sanitize and redact all outputs before logging to disk, writing to SQLite memory, or sending Telegram messages.
+3. **Validate Presence Hermetically**: Check that environment variables exist and are non-empty without printing their values:
+   ```bash
+   # Test presence only:
+   [ -n "$HF_TOKEN" ] && echo "HF_TOKEN: configured" || echo "HF_TOKEN: missing"
+   ```
+4. **Missing Secrets**: Log the missing variable name only; alert Beer with the exact variable needed without auto-injecting placeholder secrets.
 
-## Safe auth patterns for cron jobs
+## Safe Auth Patterns
 
-### Pattern A: Env-based (preferred)
-Cron jobs that need API keys should read them from the Hermes env:
-```bash
-grep '^ANTHROPIC_API_KEY=' ~/.hermes/.env | cut -d= -f2- | head -c 8
+### Pattern A: Environment-Scoped Provisioning (Preferred)
+Scheduled tasks run under `uv run` inherit credentials from their parent process, `.env` file, or systemd user environment:
+```ini
+# In ~/.config/systemd/user/sakthai-<job>.service
+[Service]
+EnvironmentFile=%h/.sakthai/.env
+ExecStart=/usr/local/bin/uv run sak run "<prompt>" --persona saktan
 ```
-Only check presence/length — never print the full value.
 
-### Pattern B: HF token rotation
-For Hugging Face operations:
+### Pattern B: Telegram Authorization & User ID Whitelist
+Automated notifications must only send messages to authorized users configured in `TELEGRAM_ALLOWED_USER_IDS`:
 ```bash
-grep '^HF_TOKEN=' ~/.hermes/.env | wc -c   # nonzero = present
+# Verify allowed recipients are defined:
+grep '^TELEGRAM_ALLOWED_USER_IDS=' ~/.sakthai/.env
 ```
-If write scope is needed, verify the token includes `write` by checking the HF API:
+Never dispatch messages to unverified chat IDs.
+
+### Pattern C: Hugging Face Read/Write Scope Verification
+When an automated task requires Hugging Face Hub access:
 ```bash
+# Verify token validity without echoing the token:
 curl -s -o /dev/null -w "%{http_code}" \
   -H "Authorization: Bearer $HF_TOKEN" \
   https://huggingface.co/api/whoami-v2
 ```
-`200` = valid; `401` = invalid/missing.
+`200` = valid; `401` = invalid/expired; `403` = insufficient permissions.
 
-### Pattern C: Telegram delivery only when authorized
-Cron jobs delivering to Telegram must target a verified chat ID from `~/.hermes/.env`:
-```bash
-grep '^TELEGRAM_ALLOWED_USERS=' ~/.hermes/.env
-```
-Never deliver to a chat ID not in this list.
+## Diagnosis Flow for Scheduled Failures
 
-### Pattern D: Web auth headers for Composio/MCP
-If a cron calls Composio tools, the API key must be present:
-```bash
-grep '^COMPOSIO_API_KEY=' ~/.hermes/.env | wc -c
-```
-Missing = notify Beer; do not run the MCP tool without it.
+1. **Identify the Service**: HF Hub, Telegram gateway, Microsoft Graph / 365, or local Ollama.
+2. **Check Variable Presence**: Inspect `.env` or systemd environment for the required variable name.
+3. **Verify Local Endpoints**: For Ollama ($0 spend), ensure `http://127.0.0.1:11434` responds.
+4. **Notify Beer**: If a secret is missing or revoked, provide a concise notification stating the affected job and required variable name.
 
-## Diagnosis flow
+## Common Fixes
 
-When a cron reports auth failure:
-1. **Identify the service** (HF, Telegram, Composio, OpenAI, etc.)
-2. **Check the env var** exists in `~/.hermes/.env`
-3. **Check the var is non-empty** (not just defined but blank)
-4. **Test the credential** with a minimal API call (HEAD/WHOAMI)
-5. **If invalid:** notify Beer with service + var name + test result
-6. **If missing:** notify Beer with exact var name to set
-7. **If valid but still failing:** check rate limits, IP allowlists, or token expiry
-
-## Common fixes
-
-| Symptom | Fix |
-|---------|-----|
-| `401 Unauthorized` | Token missing/expired — check env, re-auth if needed |
-| `403 Forbidden` | Token lacks required scope (e.g., HF write) — re-issue token |
-| `credentials not found` | Env var absent from `.env` — add it |
-| `no usable Supermemory baseline` | Add `supermemory` + `memory` to `enabled_toolsets` |
-| `tool not available` | Cron sandbox missing the tool — add to `enabled_toolsets` |
-
-## Notification template
-
-When notifying Beer about a credential issue:
-```
-Cron auth issue: <service>
-Job: <job_name> (<job_id>)
-Missing/invalid: <ENV_VAR>
-Action needed: <what to set or re-authenticate>
-```
-
-## Constraints
-
-- Do NOT store credentials in `~/.hermes/cron/output/` or skill files
-- Do NOT modify another user’s `.env` without explicit permission
-- Do NOT retry failed auth in a tight loop — backoff 5 minutes
-- Do NOT expose partial keys (first 8 chars is OK for presence check; never more)
+| Symptom | Cause | Remedy |
+|---------|-------|--------|
+| `401 Unauthorized` | Token expired or invalid | Refresh token in `.env` |
+| `403 Forbidden` | Insufficient token scope | Verify token role / permissions |
+| `Connection refused` | Local daemon offline | Start Ollama service (`systemctl start ollama`) |
+| Secret leaked in log | Unredacted tool output | Scrub log immediately, rotate compromised token |

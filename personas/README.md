@@ -4,7 +4,7 @@ Six core agent personas — **sakthai**, **sakking**, **saksee**, **saksit**,
 **saktan**, and **sakjules** — each formerly had its own `*-skills`
 repository.
 
-Today, they collectively host **462 specialized skills** in their overlays
+Today, they collectively host **460 specialized skills** in their overlays
 (counted as skill directories and files on disk — see the per-persona counts in the
 layout below), plus 19 shared skills. Most of that content
 lives directly within each persona's own `skills/` folder (its overlay); a
@@ -20,7 +20,7 @@ workflows, **servicequotebot**, lives under `services/servicequotebot/`.
 
 ```text
 personas/
-├── sakthai/            # Main Lead — HF master, ML, code, research (170 skills)
+├── sakthai/            # Main Lead — HF master, ML, code, research (174 skills)
 │   ├── SOUL.md         # Identity, charge system (v6), self-evaluation (v9)
 │   ├── PLAN.md         # Task decomposition & routing protocol (v7)
 │   ├── CYCLE.md        # 6-stage growth cycle & v9 self-eval rubric
@@ -28,14 +28,14 @@ personas/
 │   ├── HANDOFF.md      # Cross-persona handoff contract
 │   ├── BACKPACK.md     # Domain toolbelt & skills inventory
 │   ├── config/         # Persona config (config.yaml, workspace.yaml, mcp.json, …)
-│   ├── skills/         # Contains the 170 skills mapped to SakThai
+│   ├── skills/         # Contains the 174 skills mapped to SakThai
 │   ├── evolution/      # Persona-owned self-evolution pipeline (DSPy + GEPA)
 │   └── evolve_agent.sh # Persona self-evolution runner
-├── sakking/            # Contains the 59 skills mapped to SakKing + self-evolution
+├── sakking/            # Contains the 64 skills mapped to SakKing + self-evolution
 ├── saktan/             # Contains the 26 skills mapped to SakTan + self-evolution
-├── saksit/             # Contains the 45 skills mapped to SakSit + self-evolution
-├── sakjules/           # Contains the 56 skills mapped to SakJules + self-evolution
-└── saksee/             # Contains the 106 skills mapped to SakSee + self-evolution
+├── saksit/             # Contains the 50 skills mapped to SakSit + self-evolution
+├── sakjules/           # Contains the 48 skills mapped to SakJules + self-evolution
+└── saksee/             # Contains the 98 skills mapped to SakSee + self-evolution
 ```
 
 ## Agent Self-Evolution & 5-Pillar Evaluation Framework

@@ -81,11 +81,11 @@ sakthai memory --persona sakjules deduplicate
 Connected MCP & Platform Tools:
 - **📡 Jules Remote Asynchronous Delegation (`sakthai.agent_platform.jules_worker`)**:
   - GitHub remote resolution, asynchronous patch planning, session formatting, and patch validation (`tests/test_jules_worker.py`)
-  - `config/mcp.json` lists `{}` (no unpinned runtime npx installs — Security Rule 5)
+  - `config/mcp.json` configures 3 remote DevSecOps/docs MCP servers (`stepsecurity`, `microsoft-learn`, `gemini-api-docs`) with zero unpinned runtime npx installs (Security Rule 5)
 - **🏗️ Harness v1 AI Agent & Pipeline Exporter (`sakthai platform export-harness`)**:
   - Deterministic canonical identifier generation (`ca_<slug>`) and declarative Harness v1 agent template & pipeline step export (`sakthai/agent_platform/harness_exporter.py`)
 - **Unified Agent Platform (`sakthai.agent_platform`)**: `check_data_loss_guardrail`, `wrap_with_isolated_runner`, `render_skills_progressive_summary`, `AntigravityAgentRunner`, `harness_exporter`
-- **Skills Overlay**: 56 skills in [`personas/sakjules/skills/`](file:///home/sak/Sak-Family-Agent/personas/sakjules/skills) + 19 shared skills in [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills)
+- **Skills Overlay**: 48 skills in [`personas/sakjules/skills/`](file:///home/sak/Sak-Family-Agent/personas/sakjules/skills) + 19 shared skills in [`personas/shared/skills/`](file:///home/sak/Sak-Family-Agent/personas/shared/skills)
 
 ---
 

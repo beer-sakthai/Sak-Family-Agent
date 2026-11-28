@@ -22,7 +22,7 @@ flowchart TD
 
 #### 🔹 Task 1.1: Config, Model & `hf-media` MCP Preflight
 - **Status**: [x] 2026-11-21
-- **Goal**: Confirm SakSit's provider (`huggingface`), model (`deepseek-ai/DeepSeek-V4-Flash`), 45 overlay skills, and pinned `@llmindset/mcp-hfspace@0.5.4` resolve cleanly.
+- **Goal**: Confirm SakSit's provider (`huggingface`), model (`deepseek-ai/DeepSeek-V4-Flash`), 50 overlay skills, and pinned `@llmindset/mcp-hfspace@0.5.4` resolve cleanly.
 - **Estimated Time**: 2 minutes
 - **Command**: `SAKTHAI_HOME=$(mktemp -d) sakthai run "preflight" --persona saksit --no-mcp --dry-run`
 - **Acceptance Criteria**: Preflight resolves `huggingface` → `deepseek-ai/DeepSeek-V4-Flash`.

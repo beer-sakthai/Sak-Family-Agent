@@ -190,3 +190,40 @@ def test_main_without_check_reports_composed_file_count(
 def test_main_rejects_unknown_persona_via_argparse(tmp_path: Path) -> None:
     with pytest.raises(SystemExit):
         compose_persona.main(["not-a-real-persona", "--out", str(tmp_path / "out")])
+
+
+def test_overlay_items_contains_12_canonical_boundaries() -> None:
+    expected = {
+        "SOUL.md",
+        "PLAN.md",
+        "CYCLE.md",
+        "MEMORY.md",
+        "HANDOFF.md",
+        "BACKPACK.md",
+        "README.md",
+        "AGENTS.md",
+        "config",
+        "evolution",
+        "reports",
+        "skills",
+    }
+    assert expected == compose_persona.OVERLAY_ITEMS
+
+
+def test_compose_package_sakjules_matches_committed_source(tmp_path: Path) -> None:
+    out_dir = tmp_path / "composed-sakjules"
+    out = compose_persona.compose_package("sakjules", out_dir)
+    assert out.is_dir()
+    expected_dir = REPO_ROOT / "personas" / "sakjules"
+    diffs = compose_persona._diff(expected_dir, out)
+    assert diffs == []
+
+
+def test_main_compose_package_cli(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    out_dir = tmp_path / "composed-cli"
+    expected_dir = REPO_ROOT / "personas" / "sakjules"
+    exit_code = compose_persona.main(
+        ["sakjules", "--target", "package", "--out", str(out_dir), "--check", str(expected_dir)]
+    )
+    assert exit_code == 0
+    assert "OK: composed sakjules matches" in capsys.readouterr().out

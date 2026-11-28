@@ -42,7 +42,7 @@
 - **🤗 Built-in Hugging Face Hub & Inference Engine (`huggingface_inference` & `sakthai hf`)**:
   - `sakthai hf info <repo_id>` — Live Hub model/dataset/Space inspection (Gate 1 for SakSit)
   - `sakthai hf download <repo_id>` — Safe artifact retrieval
-  - `config/mcp.json` declares `{}` (zero external npx servers; all Hub calls run through native tools)
+  - `config/mcp.json` declares active streamable HTTP MCP servers (`huggingface`, `gemini-api-docs`, `microsoft-learn`) and stdio `hf-hub-tools`
 - **⚡ MCP v2 Ecosystem Integration (`huggingface` remote MCP)**:
   - `https://huggingface.co/mcp?login&gradio=none` over the package's Streamable HTTP transport
   - Injects `Authorization: Bearer $HF_TOKEN` with graceful degradation when token is unconfigured
@@ -62,7 +62,7 @@
   - **Isolated Environment Runner**: `sakthai platform wrap-cmd "<cmd>"` (`dep_manager.py`) auto-wraps commands in the detected `uv` virtual environment
   - **Progressive Skill Disclosure**: `sakthai platform skills` (`render_skills_progressive_summary`) renders lightweight skill metadata tables to prevent prompt bloat
   - **Harness Pipeline Exporter**: `sakthai platform export-harness sakthai` (`harness_exporter.py`) exports declarative Harness v1 agent & pipeline specs
-- **🧰 Skill Overlay Inventory (170 Overlay Skills + 19 Shared Skills)**:
+- **🧰 Skill Overlay Inventory (174 Overlay Skills + 19 Shared Skills)**:
   - **Overlay Root**: [`personas/sakthai/skills/`](./skills) (170 specialized `SakSakthai-*` skills)
   - **Shared Root**: [`personas/shared/skills/`](../shared/skills) (19 shared `Sak-*` skills including `Sak-auto-cycle-loop`, `Sak-dogfood`, `Sak-ocr-and-documents`, `Sak-yuanbao`)
   - **Primary Workspace Skills** ([`config/workspace.yaml`](./config/workspace.yaml)):
