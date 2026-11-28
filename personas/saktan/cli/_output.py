@@ -279,12 +279,17 @@ def output_options(fn: Any) -> Any:
             no_color=no_color,
             legacy_json=legacy_json,
         )
+        ctx = click.get_current_context(silent=True)
+        if ctx is not None:
+            ctx.color = not out.no_color
         try:
             return fn(*args, out=out, **kwargs)
         except click.ClickException:
             raise
         except SystemExit:
             raise
+        except (KeyboardInterrupt, click.Abort):
+            out.error("Interrupted", code="INTERRUPTED", exit_code=EXIT_INTERRUPTED)
         except Exception as exc:
             if out.json:
                 out.error(str(exc), code="INTERNAL_ERROR", exc=exc, exit_code=EXIT_ERROR)
