@@ -204,3 +204,35 @@ def test_labeler_and_conflict_resolver_configs() -> None:
     )
     assert "apps/sak_agent_dashboard" in conflict_text
     assert "tests/" in conflict_text
+def test_dependabot_automerge_gates_on_event_actor() -> None:
+    """dependabot-automerge.yml must not invoke invi5H/dependabot-automerge
+    unless github.actor is dependabot[bot].
+
+    That action's own "Verify Dependabot" step exits 1 whenever
+    github.actor != 'dependabot[bot]'. A dependabot PR's later synchronize
+    events are frequently triggered by other automation (branch
+    auto-update bots re-pushing a base-branch merge), so gating only on
+    the PR author invokes the action in a context it is guaranteed to
+    fail in, failing the job every time that happens (observed in CI runs
+    #373, #376, #380, #381).
+    """
+    data = yaml.safe_load((WORKFLOWS_DIR / "dependabot-automerge.yml").read_text(encoding="utf-8"))
+    check_step = next(
+        step for step in data["jobs"]["automerge"]["steps"] if step.get("id") == "check"
+    )
+    env_values = " ".join(check_step.get("env", {}).values())
+    assert "github.actor" in env_values, (
+        "dependabot-automerge.yml's eligibility check must read github.actor"
+    )
+    run_script = check_step["run"]
+    assert "EVENT_ACTOR" in run_script and "dependabot[bot]" in run_script, (
+        "dependabot-automerge.yml's eligibility check must require the event "
+        "actor, not just the PR author, to be dependabot[bot] before "
+        "invoking invi5H/dependabot-automerge"
+    )
+    merge_step = next(
+        step
+        for step in data["jobs"]["automerge"]["steps"]
+        if "invi5H/dependabot-automerge" in step.get("uses", "")
+    )
+    assert merge_step.get("if") == "steps.check.outputs.is_dependabot == 'true'"
