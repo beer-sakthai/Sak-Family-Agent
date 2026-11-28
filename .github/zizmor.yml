@@ -61,4 +61,3 @@ rules:
       # runner syntax `./.github/actions/<name>` for compatibility across all runner environments.
       - bot-check-action.yml
       - reconstruction.yml
-
