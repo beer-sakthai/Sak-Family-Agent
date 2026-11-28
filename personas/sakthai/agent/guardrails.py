@@ -493,8 +493,8 @@ def _balanced_paren_end(text: str, start: int) -> tuple[int, int]:
         elif quote == "'":
             quote = "" if ch == "'" else quote
             i += 1
-        elif ch == "$" and text.startswith("$(", i):
-            _, i = _balanced_paren_end(text, i + 2)
+        elif ch == "$" and (opener_end := _substitution_open(text, i)) is not None:
+            _, i = _balanced_paren_end(text, opener_end)
         elif quote == '"':
             quote = "" if ch == '"' else quote
             i += 1

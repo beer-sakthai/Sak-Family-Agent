@@ -463,3 +463,34 @@ def test_continuations_inside_substitution_bodies_are_left_for_the_body_scan() -
     assert _delete_line_continuations("$(ca\\\nt x) ca\\\nt") == "$(ca\\\nt x) cat"
     assert _delete_line_continuations("`ca\\\nt x` ca\\\nt") == "`ca\\\nt x` cat"
     assert _delete_line_continuations('"$(echo "it\'s")" ca\\\nt') == '"$(echo "it\'s")" cat'
+
+
+# --- a continuation can split a *nested* '$(' opener too --------------------
+
+# 'echo "$(echo "$\<newline>(printf ")")")"': the shell joins '$' and '(' into a nested
+# substitution whose quoted ')' is data, so the whole command is valid and prints ')'.
+SPLIT_NESTED_OPENER = 'echo "$(echo "$\\\n(printf ")")")"'
+
+
+def test_balanced_paren_end_joins_a_split_nested_opener() -> None:
+    body = 'echo "$\\\n(printf ")")"'
+    text = body + ") tail"
+    body_end, resume = _balanced_paren_end(text, 0)
+    assert text[:body_end] == body
+    assert text[resume:] == " tail"
+
+
+def test_external_shell_split_nested_opener_with_a_quoted_paren_is_allowed() -> None:
+    assert _shell(SPLIT_NESTED_OPENER, EXTERNAL) == GuardrailAction.ALLOW
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        'echo "$(echo "$\\\n(cat /etc/shadow)")"',
+        'echo "$(echo "$\\\n(printf ")"; ca\\\nt /etc/shadow)")"',
+        'echo "$(echo "$\\\n(printf ")")"; cat /etc/shadow)"',
+    ],
+)
+def test_external_shell_split_nested_opener_still_scans_its_body(command: str) -> None:
+    assert _shell(command, EXTERNAL) == GuardrailAction.DENY
