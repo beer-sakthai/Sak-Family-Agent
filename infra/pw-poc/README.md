@@ -3,10 +3,12 @@
 Playwright keyboard-focus / tab-order accessibility probe against a target page.
 `test-keyboard.js` presses Tab 25× on `https://example.com`, records the focused
 element after each press, reports the active element's outline (focus-visibility),
-and saves a screenshot. Used to validate keyboard accessibility and tab order in
+and saves a screenshot. Used by SakSee to validate keyboard accessibility and tab order in
 headless browser workflows (e.g., automated QA and visual verification pipelines).
 
-## Run (host or any Node 20 box)
+Dependencies are kept updated via daily Dependabot scanning (`interval: "daily"`).
+
+## Run (host or any Node 22+ box)
 ```bash
 npm i
 npx playwright install --with-deps chromium   # first run only
