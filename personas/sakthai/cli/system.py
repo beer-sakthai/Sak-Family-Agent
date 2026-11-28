@@ -6,10 +6,12 @@ import json
 import os
 import re
 from pathlib import Path
+from typing import Any
 
 import click
 
 from ..config import check_env
+from ._output import EXIT_NOT_READY, EXIT_OK, OutputContext, output_options
 
 _OK = "[+]"
 _WARN = "[!]"
@@ -66,25 +68,30 @@ _NO_PROVIDER_HINT = (
 
 def _exit_if_not_ready(report: dict[str, object]) -> None:
     """Return success only when the core components are usable."""
-    if not report["ready"]:
-        click.get_current_context().exit(1)
+    if not report.get("ready"):
+        click.get_current_context().exit(EXIT_NOT_READY)
 
 
 @click.command()
-@click.option(
-    "--json",
-    "json_output",
-    is_flag=True,
-    help="Emit a deterministic JSON report instead of formatted output.",
-)
-def doctor(json_output: bool) -> None:
+@output_options
+def doctor(out: OutputContext | None = None, **_kwargs: Any) -> None:
     """Report environment, paths, memory, and credential status."""
+    if out is None:
+        out = OutputContext()
     env = check_env()
-    if json_output:
-        _emit_json_report(env)
-        _exit_if_not_ready(env)
+    exit_code = EXIT_OK if env.get("ready") else EXIT_NOT_READY
+
+    if out.json:
+        out.emit(env, exit_code=exit_code)
         return
-    click.echo(click.style("\n── SakThai Doctor ──", bold=True))
+
+    if out.quiet:
+        if exit_code != EXIT_OK:
+            out.error("Core components missing", code="NOT_READY", exit_code=exit_code)
+        return
+
+    out.rainbow_header("SakThai Doctor", persona="sakthai")
+    out.rainbow_rule(width=60)
 
     paths = env["paths"]
     click.echo(click.style("\n  Paths", bold=True))
@@ -132,7 +139,8 @@ def doctor(json_output: bool) -> None:
         click.echo(click.style("  ✓ Memory is ready.", fg="green", bold=True))
         click.echo(click.style(_NO_PROVIDER_HINT, fg="yellow"))
     elif env["ready"]:
-        click.echo(click.style("  ✓ SakThai is ready.", fg="green", bold=True))
+        ready_text = out.rainbow_text("  ✓ SakThai is ready.", style="bold")
+        out.console.print(ready_text)
     else:
         click.echo(click.style("  ✗ Core components missing — see above.", fg="red", bold=True))
     click.echo()
@@ -274,20 +282,25 @@ def setup(interactive: bool) -> None:
 
 
 @click.command()
-@click.option(
-    "--json",
-    "json_output",
-    is_flag=True,
-    help="Emit a deterministic JSON report instead of formatted output.",
-)
-def status(json_output: bool) -> None:
+@output_options
+def status(out: OutputContext | None = None, **_kwargs: Any) -> None:
     """A high-level health summary of everything needed to start."""
+    if out is None:
+        out = OutputContext()
     env = check_env()
-    if json_output:
-        _emit_json_report(env)
-        _exit_if_not_ready(env)
+    exit_code = EXIT_OK if env.get("ready") else EXIT_NOT_READY
+
+    if out.json:
+        out.emit(env, exit_code=exit_code)
         return
-    click.echo(click.style("\n── SakThai Status ──", bold=True))
+
+    if out.quiet:
+        if exit_code != EXIT_OK:
+            out.error("Environment not ready", code="NOT_READY", exit_code=exit_code)
+        return
+
+    out.rainbow_header("SakThai Status", persona="sakthai")
+    out.rainbow_rule(width=60)
 
     mem = env["memory"]
     if mem["db_exists"] and mem["db_writable"]:
@@ -321,11 +334,10 @@ def status(json_output: bool) -> None:
         )
         click.echo(click.style(_NO_PROVIDER_HINT, fg="yellow"))
     elif env["ready"]:
-        click.echo(
-            click.style(
-                '  ✓ Ready — try: sakthai run "what do you know about me?"', fg="green", bold=True
-            )
+        ready_text = out.rainbow_text(
+            '  ✓ Ready — try: sakthai run "what do you know about me?"', style="bold"
         )
+        out.console.print(ready_text)
     else:
         click.echo(
             click.style(
@@ -336,15 +348,31 @@ def status(json_output: bool) -> None:
 
 
 @click.command()
-def tools() -> None:
+@output_options
+def tools(out: OutputContext | None = None, **_kwargs: Any) -> None:
     """List the built-in agent/MCP tools."""
     from ..agent.tools import BUILTIN_TOOLS
 
-    click.echo(
-        click.style("\n── Built-in SakThai tools (via `sakthai run` and `sakthai mcp`)", bold=True)
-    )
+    if out is None:
+        out = OutputContext()
+
+    if out.json:
+        tools_data = [
+            {"name": tool.name, "description": tool.description} for tool in BUILTIN_TOOLS
+        ]
+        out.emit(tools_data)
+        return
+
+    if out.quiet:
+        for tool in BUILTIN_TOOLS:
+            click.echo(tool.name)
+        return
+
+    out.rainbow_header("Built-in SakThai Tools", persona="sakthai")
+    out.rainbow_rule(width=72)
     for tool in BUILTIN_TOOLS:
-        click.echo(f"  {_ok()} {tool.name:<22} {tool.description[:66]}")
+        name_styled = click.style(f"{tool.name:<24}", bold=True, fg="cyan")
+        click.echo(f"  {_ok()} {name_styled} {tool.description[:64]}")
     click.echo()
 
 
