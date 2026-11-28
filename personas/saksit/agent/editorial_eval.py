@@ -23,6 +23,34 @@ _RAW_METRIC_RE = re.compile(
     re.IGNORECASE,
 )
 
+_THAI_CHAR_RE = re.compile(r"[\u0e00-\u0e7f]")
+_LATIN_CHAR_RE = re.compile(r"[a-zA-Z]")
+
+THAI_AUTHENTIC_PATTERNS = [
+    r"ใช้งานฟรี",
+    r"รันโลคอล",
+    r"โอเพนซอร์ส",
+    r"ไม่ต้องใช้การ์ดจอแพง",
+    r"ไม่มีค่าใช้จ่าย",
+    r"ประหยัดต้นทุน",
+    r"โมเดลภาษาไทย",
+    r"รันได้บนเครื่องตัวเอง",
+    r"ติดตั้งง่าย",
+    r"แจกฟรี",
+]
+_THAI_AUTHENTIC_RE = re.compile("|".join(THAI_AUTHENTIC_PATTERNS))
+
+THAI_ROBOTIC_PATTERNS = [
+    r"ถูกกระทำโดย",
+    r"มีความจำเป็นต้องกระทำ",
+    r"ในท้ายที่สุดของวัน",
+    r"มันเป็นสิ่งสำคัญที่จะบันทึกไว้ว่า",
+    r"ได้รับการพิสูจน์แล้วว่ามี",
+    r"ณ จุดของเวลานี้",
+    r"เพื่อที่จะทำให้แน่ใจว่า",
+]
+_THAI_ROBOTIC_RE = re.compile("|".join(THAI_ROBOTIC_PATTERNS))
+
 
 @dataclass
 class EditorialEvalResult:
@@ -33,6 +61,8 @@ class EditorialEvalResult:
     grade: str
     findings: list[str] = field(default_factory=list)
     is_publishable: bool = False
+    thai_tone_score: float = 0.0
+    is_bilingual: bool = False
 
 
 def _calculate_grade(score: float) -> str:
@@ -52,7 +82,7 @@ def _calculate_grade(score: float) -> str:
 def evaluate_editorial_quality(
     content: str, verified_facts: dict[str, Any] | None = None
 ) -> EditorialEvalResult:
-    """Evaluate content for Beer's authentic voice, technical precision, and GEO citation readiness."""
+    """Evaluate content for Beer's authentic voice, technical precision, GEO citation readiness, and Thai tone."""
     findings: list[str] = []
 
     # 1. Voice & Authenticity Score (Max 35)
@@ -65,7 +95,30 @@ def evaluate_editorial_quality(
             f"Detected excessive hype/buzzwords: {', '.join(set(hype_matches))}. Voice must remain humble and grounded."
         )
 
-    # 2. Technical Precision Score (Max 35)
+    # 2. Thai Tone & Bilingual Detection
+    has_thai = bool(_THAI_CHAR_RE.search(content))
+    has_latin = bool(_LATIN_CHAR_RE.search(content))
+    is_bilingual = has_thai and has_latin
+
+    thai_tone_score = 0.0
+    if has_thai:
+        base_thai = 70.0
+        auth_matches = _THAI_AUTHENTIC_RE.findall(content)
+        bonus = min(len(auth_matches) * 10.0, 30.0)
+
+        robotic_matches = _THAI_ROBOTIC_RE.findall(content)
+        robotic_deduction = len(robotic_matches) * 25.0
+
+        thai_tone_score = max(0.0, min(100.0, base_thai + bonus - robotic_deduction))
+
+        if robotic_matches:
+            voice_deduction = min(len(robotic_matches) * 10.0, 20.0)
+            voice_score = max(0.0, voice_score - voice_deduction)
+            findings.append(
+                f"Detected unnatural Thai machine-translation phrasing: {', '.join(set(robotic_matches))}."
+            )
+
+    # 3. Technical Precision Score (Max 35)
     precision_score = 35.0
     # Check for raw metrics that are not flagged as pending and not in verified_facts
     has_pending_flag = "[PENDING VERIFICATION" in content
@@ -76,7 +129,7 @@ def evaluate_editorial_quality(
             f"Detected raw unverified metrics ({', '.join(raw_metric_matches)}) without [PENDING VERIFICATION] flags."
         )
 
-    # 3. GEO & AI Citation Readiness Score (Max 30)
+    # 4. GEO & AI Citation Readiness Score (Max 30)
     geo_score = 15.0
     if re.search(r"^#{1,4}\s+", content, re.MULTILINE):
         geo_score += 5.0
@@ -90,7 +143,12 @@ def evaluate_editorial_quality(
 
     total = round(voice_score + precision_score + geo_score, 1)
     grade = _calculate_grade(total)
-    is_pub = total >= 70.0 and voice_score >= 25.0 and precision_score >= 25.0
+    is_pub = (
+        total >= 70.0
+        and voice_score >= 25.0
+        and precision_score >= 25.0
+        and (not has_thai or thai_tone_score >= 60.0)
+    )
 
     return EditorialEvalResult(
         voice_score=voice_score,
@@ -100,4 +158,6 @@ def evaluate_editorial_quality(
         grade=grade,
         findings=findings,
         is_publishable=is_pub,
+        thai_tone_score=thai_tone_score,
+        is_bilingual=is_bilingual,
     )
