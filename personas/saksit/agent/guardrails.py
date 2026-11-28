@@ -485,6 +485,10 @@ def _balanced_paren_end(text: str, start: int) -> tuple[int, int]:
         ch = text[i]
         at_word_start, word_start = word_start, False
         if ch == "\\" and quote != "'":
+            if text[i + 1 : i + 2] == "\n":
+                # A line continuation is deleted before parsing: it must not
+                # change whether the next character starts a word.
+                word_start = at_word_start
             i += 2
         elif quote == "'":
             quote = "" if ch == "'" else quote
@@ -558,7 +562,10 @@ def _scan_shell_structure(command: str) -> tuple[list[str], list[str]]:
     while i < n:
         ch = command[i]
         if ch == "\\" and quote != "'":
-            current.append(command[i : i + 2])
+            # '\<newline>' is deleted by the shell before it parses, so 'ca\<nl>t'
+            # runs cat; shlex would instead see the word 'ca<nl>t'.
+            if command[i + 1 : i + 2] != "\n":
+                current.append(command[i : i + 2])
             i += 2
         elif quote == "'":
             current.append(ch)
