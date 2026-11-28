@@ -424,3 +424,42 @@ def test_external_shell_benign_continuation_split_redirections_are_allowed(comma
 )
 def test_delete_line_continuations(raw: str, joined: str) -> None:
     assert _delete_line_continuations(raw) == joined
+
+
+# --- continuations next to substitutions: each body has its own quote state ---
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # An apostrophe inside the substitution's inner double quotes is not a
+        # single quote: the top-level 'ca\<newline>t' must still be joined.
+        'echo "$(echo "foo\'s string")"; ca\\\nt /etc/shadow',
+        # '$\<newline>(' is the same substitution once the shell joins it.
+        'echo "$\\\n(echo "foo\'s string")"; ca\\\nt /etc/shadow',
+    ],
+)
+def test_external_shell_substitution_quotes_do_not_hide_a_later_continuation(command: str) -> None:
+    assert _shell(command, EXTERNAL) == GuardrailAction.DENY
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # A comment ending in a backslash: the newline still ends the comment.
+        'echo "$(printf hello # note ends with a backslash \\\n)"',
+        # Inside single quotes the backslash and newline are literal text, so
+        # they cannot join '>.e' and 'nv' into a redirection to '.env'.
+        "echo \"$(printf '%s' 'example >.e\\\nnv')\"",
+    ],
+)
+def test_external_shell_substitution_bodies_keep_literal_continuations(command: str) -> None:
+    assert _shell(command, EXTERNAL) == GuardrailAction.ALLOW
+
+
+def test_continuations_inside_substitution_bodies_are_left_for_the_body_scan() -> None:
+    # The outer pass cannot know the body's quoting; the body is scanned as its
+    # own command, which deletes continuations once, in the right context.
+    assert _delete_line_continuations("$(ca\\\nt x) ca\\\nt") == "$(ca\\\nt x) cat"
+    assert _delete_line_continuations("`ca\\\nt x` ca\\\nt") == "`ca\\\nt x` cat"
+    assert _delete_line_continuations('"$(echo "it\'s")" ca\\\nt') == '"$(echo "it\'s")" cat'

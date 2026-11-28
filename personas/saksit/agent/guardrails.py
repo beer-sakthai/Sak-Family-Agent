@@ -539,6 +539,13 @@ def _delete_line_continuations(command: str) -> str:
     continuation left in place put a newline between the two halves of ``>&`` or
     ``>|``, which read as a separator and orphaned the redirection target from
     its operator. Inside single quotes the backslash is literal and stays.
+
+    Only this level's text is normalized. A ``$(...)`` or backtick body opens its
+    own quoting context, so tracking quotes straight across it let an apostrophe
+    in the body hide a later continuation, and deleted bytes the shell keeps
+    (a comment's trailing backslash, a single-quoted argument). The body is
+    copied through whole, found with the same helpers `_scan_shell_structure`
+    uses; it is normalized once, as its own command, when it is scanned.
     """
     out: list[str] = []
     quote = ""
@@ -549,12 +556,32 @@ def _delete_line_continuations(command: str) -> str:
             if command[i + 1 : i + 2] != "\n":
                 out.append(command[i : i + 2])
             i += 2
-            continue
-        if ch in "'\"" and quote in ("", ch):
-            quote = "" if quote else ch
-        out.append(ch)
-        i += 1
+        elif quote == "'":
+            out.append(ch)
+            quote = "" if ch == "'" else quote
+            i += 1
+        elif ch == "$" and (opener_end := _substitution_open(command, i)) is not None:
+            _, resume = _balanced_paren_end(command, opener_end)
+            out.append("$(" + command[opener_end:resume])
+            i = resume
+        elif ch == "`":
+            _, resume = _backtick_end(command, i + 1)
+            out.append(command[i:resume])
+            i = resume
+        else:
+            if ch in "'\"" and quote in ("", ch):
+                quote = "" if quote else ch
+            out.append(ch)
+            i += 1
     return "".join(out)
+
+
+def _substitution_open(text: str, i: int) -> int | None:
+    """Index just past the ``(`` of a ``$(`` at ``i``, joining ``$\\<newline>(``."""
+    j = i + 1
+    while text.startswith("\\\n", j):
+        j += 2
+    return j + 1 if text.startswith("(", j) else None
 
 
 def _scan_shell_structure(command: str) -> tuple[list[str], list[str]]:
