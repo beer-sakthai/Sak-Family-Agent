@@ -11,7 +11,7 @@
 - **Merged Family View**: `sakthai memory family` ([`FamilyMemoryView`](file:///home/sak/Sak-Family-Agent/personas/sakthai/memory/merged.py)) opens all 6 persona shards (`sakthai`, `sakking`, `saksee`, `saksit`, `sakjules`, `saktan`) plus the legacy `~/.sakthai/memory.db` in one read-only view.
 - **Standalone Runtime**: `sakthai run --persona saksit`
 - **Active Model Matrix**:
-  - `primary`: `huggingface` / `deepseek-ai/DeepSeek-V4-Flash`
+  - `primary`: `huggingface` / `deepseek-ai/DeepSeek-V4.1-Flash`
   - `fallback`: `ollama-cloud / gpt-oss:120b`
   - `small_model`: `Nanthasit/sakthai-context-1.5b-tools-v2`
   - `tools_model`: `Nanthasit/sakthai-context-7b-tools`

@@ -1,6 +1,10 @@
 model:
   provider: ollama
   default: sakthai
+fallback_model:
+  provider: ollama-cloud
+  model: gpt-oss:120b
+  base_url: https://ollama.com/v1
 providers: {}
 approvals:
   mode: manual

@@ -25,7 +25,7 @@ flowchart TD
 - **Goal**: Confirm SakJules's provider (`huggingface`), model (`deepseek-ai/DeepSeek-V4.1-Flash`), 48 overlay skills, and `sakthai platform` CLI (`detect-deps`, `check-safety`, `export-harness`) resolve cleanly.
 - **Estimated Time**: 2 minutes
 - **Command**: `SAKTHAI_HOME=$(mktemp -d) sakthai run "preflight" --persona sakjules --no-mcp --dry-run && sakthai platform export-harness sakjules`
-- **Acceptance Criteria**: Preflight resolves `huggingface` → `deepseek-ai/DeepSeek-V4.1-Flash`; Harness v1 spec exports cleanly.
+- **Acceptance Criteria**: Preflight resolves `huggingface` → `deepseek-ai/DeepSeek-V4.1-Flash`; GitHub stdio MCP server and Harness v1 spec configured cleanly.
 
 #### 🔹 Task 1.2: Open PR Duplicate Check & Family Memory Audit
 - **Status**: [x] 2026-11-18

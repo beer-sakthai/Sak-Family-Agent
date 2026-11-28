@@ -48,7 +48,7 @@ flowchart LR
 
 ### Stage 2: 🌟 Hope (Feasibility, Gates & Architectural Specs)
 - **Configured Model Matrix ([`config/config.yaml`](file:///home/sak/Sak-Family-Agent/personas/saksit/config/config.yaml))**:
-  - `primary`: `huggingface` / `deepseek-ai/DeepSeek-V4-Flash`
+  - `primary`: `huggingface` / `deepseek-ai/DeepSeek-V4.1-Flash`
   - `fallback`: `ollama-cloud / gpt-oss:120b`
   - `small_model`: `Nanthasit/sakthai-context-1.5b-tools-v2`
   - `tools_model`: `Nanthasit/sakthai-context-7b-tools`
