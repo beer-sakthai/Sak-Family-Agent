@@ -47,14 +47,14 @@
 - Produces: Synchronized root badges, subsystem tables, persona breakdown, CLI output contract docs, daily Dependabot cadence, and Gemini 4 Neon specifications.
 - Consumes: Test assertions in `tests/test_soul_consistency.py` and `tests/test_repo_hygiene.py`.
 
-- [ ] **Step 1: Run baseline tests to verify current status**
+- [x] **Step 1: Run baseline tests to verify current status**
 
 ```bash
 uv run pytest tests/test_soul_consistency.py::test_personas_readme_skill_counts_match_disk tests/test_repo_hygiene.py::test_readme_documents_the_real_canonical_package_path -v
 ```
 Expected: PASS.
 
-- [ ] **Step 2: Update `README.md`**
+- [x] **Step 2: Update `README.md`**
 
 In `README.md`:
 1. Update skill badges and metrics in the header:
@@ -71,7 +71,7 @@ In `README.md`:
    - Add subsection on the new **CLI Output Contract & Rainbow UI** under `CLI Ergonomics`.
 4. Ensure `personas/sakthai/` is used and `personas/sakthai/sakthai/` is absent.
 
-- [ ] **Step 3: Update `personas/README.md` and `docs/README.md`**
+- [x] **Step 3: Update `personas/README.md` and `docs/README.md`**
 
 1. In `personas/README.md`:
    - Verify layout block reflects exact disk counts: SakThai 174, SakKing 64, SakTan 26, SakSit 50, SakJules 48, SakSee 98 = 460 overlay skills (+ 3 shared in `.agents/skills/`).
@@ -80,7 +80,7 @@ In `README.md`:
 2. In `docs/README.md`:
    - Ensure all subdocument indexes link to current architecture specs and plans.
 
-- [ ] **Step 4: Run tests and whitespace check to verify compliance**
+- [x] **Step 4: Run tests and whitespace check to verify compliance**
 
 ```bash
 uv run pytest tests/test_soul_consistency.py::test_personas_readme_skill_counts_match_disk tests/test_repo_hygiene.py::test_readme_documents_the_real_canonical_package_path -v
@@ -88,7 +88,7 @@ git diff --check
 ```
 Expected: PASS, 0 whitespace errors.
 
-- [ ] **Step 5: Commit Task 1 deliverable**
+- [x] **Step 5: Commit Task 1 deliverable**
 
 ```bash
 git add README.md personas/README.md docs/README.md
@@ -115,14 +115,14 @@ git commit -m "docs: update root, personas hub, and docs index readmes"
 - Produces: 6 individual persona README files reflecting exact on-disk skill counts, Gemini 4 Neon default, daily Dependabot cadence, and `sak.cli/v1` output contract with rainbow flourishes.
 - Consumes: Test invariants in `tests/test_soul_consistency.py`.
 
-- [ ] **Step 1: Run baseline persona consistency tests**
+- [x] **Step 1: Run baseline persona consistency tests**
 
 ```bash
 uv run pytest tests/test_soul_consistency.py::test_persona_markdown_files_match_disk_skills_and_canonical_paths tests/test_soul_consistency.py::test_no_forbidden_strings_in_persona_markdown -v
 ```
 Expected: PASS.
 
-- [ ] **Step 2: Update `personas/sakthai/README.md` and `personas/sakthai/skills/README.md`**
+- [x] **Step 2: Update `personas/sakthai/README.md` and `personas/sakthai/skills/README.md`**
 
 1. In `personas/sakthai/README.md`:
    - Confirm 174 skills count.
@@ -131,7 +131,7 @@ Expected: PASS.
 2. In `personas/sakthai/skills/README.md`:
    - Update taxonomy and total overlay skill count (174).
 
-- [ ] **Step 3: Update `personas/sakking/README.md` and `personas/saksee/README.md`**
+- [x] **Step 3: Update `personas/sakking/README.md` and `personas/saksee/README.md`**
 
 1. In `personas/sakking/README.md`:
    - Confirm 64 skills count (general assistant, runner, break-glass hub quorum).
@@ -140,7 +140,7 @@ Expected: PASS.
    - Confirm 98 skills count (web, browser automation, CSS, DOM distillation).
    - Document 3-tier scraping escalation, zero-cost HTML distillation (`web_distill.py`), and Chromium reaper (`browser_reaper.py`).
 
-- [ ] **Step 4: Update `personas/saksit/README.md`, `personas/saktan/README.md`, and `personas/sakjules/README.md`**
+- [x] **Step 4: Update `personas/saksit/README.md`, `personas/saktan/README.md`, and `personas/sakjules/README.md`**
 
 1. In `personas/saksit/README.md`:
    - Confirm 50 skills count (social, content creation, editorial quality evaluator, multimodal presets).
@@ -149,11 +149,11 @@ Expected: PASS.
 3. In `personas/sakjules/README.md`:
    - Confirm 48 skills count (CI/CD master, DevSecOps, daily Dependabot, PR rebase sentinel, auto-heal).
 
-- [ ] **Step 5: Update Telegram READMEs (`personas/*/telegram/README.md`)**
+- [x] **Step 5: Update Telegram READMEs (`personas/*/telegram/README.md`)**
 
 1. Confirm all 6 persona telegram READMEs reflect Gemini 4 Neon `/model` recommendation and webhook architecture.
 
-- [ ] **Step 6: Run verification tests and whitespace checks**
+- [x] **Step 6: Run verification tests and whitespace checks**
 
 ```bash
 uv run pytest tests/test_soul_consistency.py -v
@@ -161,7 +161,7 @@ git diff --check
 ```
 Expected: PASS (all 59 tests in test_soul_consistency.py pass), 0 whitespace errors.
 
-- [ ] **Step 7: Commit Task 2 deliverable**
+- [x] **Step 7: Commit Task 2 deliverable**
 
 ```bash
 git add personas/
@@ -186,7 +186,7 @@ git commit -m "docs(personas): synchronize 6 persona readmes and skill counts"
 **Interfaces:**
 - Produces: Updated application and infrastructure READMEs aligning with Next.js 16, Gemini 4 Neon, daily Dependabot cadence, and current toolchain.
 
-- [ ] **Step 1: Update `apps/sak_agent_dashboard/README.md` and `workflow_engine/README.md`**
+- [x] **Step 1: Update `apps/sak_agent_dashboard/README.md` and `workflow_engine/README.md`**
 
 1. In `apps/sak_agent_dashboard/README.md`:
    - Verify frontend dependencies: Next.js 16, React 19, Tailwind CSS v3, TypeScript 5.8.
@@ -195,7 +195,7 @@ git commit -m "docs(personas): synchronize 6 persona readmes and skill counts"
 2. In `apps/sak_agent_dashboard/workflow_engine/README.md`:
    - Align workflow engine documentation with multi-agent DAG executor.
 
-- [ ] **Step 2: Update Infrastructure READMEs (`infra/`)**
+- [x] **Step 2: Update Infrastructure READMEs (`infra/`)**
 
 1. In `infra/pw-poc/README.md`:
    - Document Playwright accessibility probe and daily Dependabot updates.
@@ -204,7 +204,7 @@ git commit -m "docs(personas): synchronize 6 persona readmes and skill counts"
 3. In `infra/cloudflare/README.md` and `infra/vm-agents/README.md`:
    - Document DNS provisioning and VM agent deployment tooling.
 
-- [ ] **Step 3: Run linter and whitespace checks**
+- [x] **Step 3: Run linter and whitespace checks**
 
 ```bash
 make lint
@@ -212,7 +212,7 @@ git diff --check
 ```
 Expected: PASS.
 
-- [ ] **Step 4: Commit Task 3 deliverable**
+- [x] **Step 4: Commit Task 3 deliverable**
 
 ```bash
 git add apps/ infra/ .github/
@@ -244,11 +244,11 @@ git commit -m "docs(infra): update dashboard and infrastructure readmes"
 **Interfaces:**
 - Produces: Completely modernized subsystem documentation with zero broken links, accurate package paths, and OpenEnv RL references.
 
-- [ ] **Step 1: Update Services READMEs (`services/`)**
+- [x] **Step 1: Update Services READMEs (`services/`)**
 
 1. Update `services/inference-endpoint/README.md`, `services/patchflow/README.md`, and `services/teams-copilot-mcp/README.md` to reference portable `sakthai` CLI commands and current API contracts.
 
-- [ ] **Step 2: Update Shared Skills and Automation READMEs**
+- [x] **Step 2: Update Shared Skills and Automation READMEs**
 
 1. In `.agents/skills/launchdarkly-release-autopilot-onboarding/README.md`:
    - Document onboarding wizard steps, environment release plans, and AI model configuration.
@@ -257,14 +257,14 @@ git commit -m "docs(infra): update dashboard and infrastructure readmes"
 3. In `data/README.md` and `dataset-cards/sakthai-combined-v7/README.md`:
    - Document memory snapshot formats and Hugging Face dataset card sync.
 
-- [ ] **Step 3: Update Training & MLOps READMEs (`training/`)**
+- [x] **Step 3: Update Training & MLOps READMEs (`training/`)**
 
 1. In `training/README.md` and subdirectories (`training/hf-jobs/`, `run2-*/`, `sakthai-*-lora/`, `serving/`):
    - Align model architectures with SakThai 7B and 1.5B LoRA recipes.
    - Document first-class OpenEnv RL integration (`sakthai train openenv`, GRPO, A2A protocol).
    - Ensure `personas/sakthai/` is used for package references.
 
-- [ ] **Step 4: Run hygiene and consistency tests**
+- [x] **Step 4: Run hygiene and consistency tests**
 
 ```bash
 uv run pytest tests/test_repo_hygiene.py tests/test_soul_consistency.py -v
@@ -272,7 +272,7 @@ git diff --check
 ```
 Expected: PASS, 0 whitespace errors.
 
-- [ ] **Step 5: Commit Task 4 deliverable**
+- [x] **Step 5: Commit Task 4 deliverable**
 
 ```bash
 git add services/ .agents/ automation/ data/ dataset-cards/ training/
@@ -294,7 +294,7 @@ git commit -m "docs(services,training): modernize services, skills, and training
 **Interfaces:**
 - Produces: Fully verified, clean, rebased Pull Request open for Beer's review and manual merge.
 
-- [ ] **Step 1: Run comprehensive quality gates**
+- [x] **Step 1: Run comprehensive quality gates**
 
 ```bash
 make lint
@@ -306,7 +306,7 @@ git diff --check
 ```
 Expected: All checks PASS with 0 errors and 0 whitespace issues.
 
-- [ ] **Step 2: Update `PLAN.md`**
+- [x] **Step 2: Update `PLAN.md`**
 
 Find Section 17 in `PLAN.md` and mark both phases complete:
 ```markdown
