@@ -337,6 +337,10 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-27 **Phase 3: Apps, Infra, Services & Docs Mermaid Architecture Visuals** `[SakJules]` — Integrate Mermaid diagrams into `apps/sak_agent_dashboard/README.md`, `services/teams-copilot-mcp/README.md`, `infra/pw-poc/README.md`, `training/README.md`, and `docs/README.md`.
 - [x] 2026-11-27 **Phase 4: Verification, Quality Gates & Pull Request Update** `[SakJules]` — Run `test_soul_consistency.py`, `test_repo_hygiene.py`, `make lint`, `git diff --check`, push to branch `docs/update-every-readme-in-repo`, update PR #2117.
 
+### 21. Code Scanning Alerts Remediation (#21877, #21878, #21879) (2026-11-28)
+- [x] 2026-11-28 **Phase 1: Remediation & Regression Testing** `[SakJules]` — Remediate Bandit security findings uploaded to GitHub Code Scanning (alert #21877 B311 pseudo-random generation in `evaluation_tasks/graders.py`, alert #21878 B110 try-except-pass in `evaluation_tasks/graders.py`, alert #21879 B110 try-except-pass in `scripts/audit_repo_security.py`), harden companion scripts (`consolidate_skills_to_480.py`, `organize_skills.py`), author comprehensive unit tests in `tests/test_code_scanning_alerts.py`, and verify zero Bandit findings across whole repository.
+- [x] 2026-11-28 **Phase 2: Quality Gates & Pull Request Delivery** `[SakJules]` — Run full verification suite (pytest with $\ge 96\%$ coverage, ruff, mypy, bandit, zizmor, repo security audit, workflow concurrency audit), push to branch `alert-fix-21878`, open pull request for Beer's review and manual merge (never auto-merge).
+
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |
