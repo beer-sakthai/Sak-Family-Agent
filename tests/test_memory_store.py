@@ -953,3 +953,20 @@ def test_render_prompt_block_thai_query_ranks_thai_fact_over_newer_unrelated(
     block = store.render_prompt_block(fact_limit=1, query="ชอบกาแฟอะไร")
     assert "กาแฟ" in block
     assert "blue" not in block
+
+
+def test_tokenize_thai_punctuation_is_not_a_token() -> None:
+    """The repetition mark ๆ is punctuation inside the Thai block; an isolated one
+    must not become a token that matches every other fact containing it."""
+    assert _tokenize("ผู้ใช้เดินเล่นบ่อย ๆ") == _tokenize("ผู้ใช้เดินเล่นบ่อย")
+    assert "ๆ" not in _tokenize("สั้น ๆ")
+
+
+def test_render_prompt_block_thai_repetition_mark_alone_does_not_displace_recency(
+    store: MemoryStore,
+) -> None:
+    store.add_fact("ผู้ใช้เดินเล่นบ่อย ๆ", kind="note")
+    store.add_fact("the user's favorite color is blue", kind="note")
+    block = store.render_prompt_block(fact_limit=1, query="ขอคำตอบสั้น ๆ")
+    assert "blue" in block
+    assert "เดินเล่น" not in block

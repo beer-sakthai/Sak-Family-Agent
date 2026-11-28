@@ -254,8 +254,11 @@ _STOPWORDS = {
 }
 
 
-#: A run of characters from the Thai Unicode block (U+0E00-U+0E7F).
-_THAI_RUN = re.compile("[\u0e00-\u0e7f]+")
+#: A run of Thai letters, vowel and tone marks, and digits (inside U+0E00-U+0E7F).
+#: Thai punctuation (ๆ repetition mark, ฯ ellipsis, ๏ ๚ ๛ and the baht sign) is left
+#: out so it splits runs: an isolated mark identifies no topic, and as a token it would
+#: match every other fact containing it.
+_THAI_RUN = re.compile("[\u0e01-\u0e3a\u0e40-\u0e45\u0e47-\u0e4e\u0e50-\u0e59]+")
 
 
 def _tokenize(text: str) -> set[str]:
