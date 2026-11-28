@@ -18,12 +18,13 @@ import io
 import json
 import logging
 import os
+import re
 import sqlite3
 import time
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 from ..config import memory_db_path, redact_secrets
 
@@ -37,6 +38,11 @@ DB_BUSY_TIMEOUT_MS = 5000  # milliseconds, PRAGMA busy_timeout
 # Defaults for render_prompt_block().
 DEFAULT_FACT_LIMIT = 25
 DEFAULT_OBS_LIMIT = 10
+
+# Candidate pool size for query-relevance ranking in render_prompt_block(): how
+# many of the most recent facts/observations are considered before ranking and
+# truncating to fact_limit/obs_limit.
+RELEVANCE_CANDIDATE_LIMIT = 500
 
 # Security: cap on the length of any single fact or observation to prevent DoS.
 MAX_MEMORY_CONTENT_CHARS = 32768
@@ -177,6 +183,105 @@ def _fact_from_row(row: sqlite3.Row) -> Fact:
     data = dict(row)
     data["tags"] = _decode_tags(data.get("tags"))
     return Fact(**data)
+
+
+#: Common English function words, plus single-character tokens (filtered by
+#: length below), carry no topical signal and must not drive relevance
+#: ranking. Without this, a query like "what time is it" shares "is"/"it"
+#: with almost any stored fact and can outrank/displace recently-added,
+#: genuinely unrelated facts — defeating the anti-goal in the design spec
+#: (docs/superpowers/specs/2026-11-26-memory-rag-context-provider-design.md)
+#: that an unrelated query must fall back to plain recency.
+_STOPWORDS = {
+    "a",
+    "an",
+    "the",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being",
+    "it",
+    "its",
+    "i",
+    "you",
+    "he",
+    "she",
+    "they",
+    "we",
+    "to",
+    "of",
+    "in",
+    "on",
+    "at",
+    "for",
+    "and",
+    "or",
+    "but",
+    "with",
+    "this",
+    "that",
+    "what",
+    "who",
+    "where",
+    "when",
+    "how",
+    "do",
+    "does",
+    "did",
+}
+
+
+def _tokenize(text: str) -> set[str]:
+    """Split ``text`` into lowercase alphanumeric tokens for relevance scoring.
+
+    Stopwords and single-character tokens are dropped: they appear in nearly
+    every candidate's text and the query alike, so keeping them would let
+    topically-irrelevant text "match" on function words alone. Used for both
+    the query side and the candidate side, so both see the same vocabulary.
+    """
+    tokens = {t for t in re.split(r"[^a-z0-9]+", text.lower()) if t}
+    return {t for t in tokens if t not in _STOPWORDS and len(t) > 1}
+
+
+_T = TypeVar("_T")
+
+
+def _rank_by_relevance(
+    candidates: Sequence[_T],
+    query_tokens: set[str],
+    text_of: Callable[[_T], str],
+    limit: int,
+) -> list[_T]:
+    """Rank ``candidates`` by token overlap with ``query_tokens``, descending.
+
+    ``candidates`` is assumed to already be in recency/weight order. Python's
+    ``list.sort`` is stable (and stays stable with ``reverse=True``, which
+    reverses the comparison rather than the tie order), so candidates that
+    score equally keep that incoming order — load-bearing for
+    ``test_render_prompt_block_tied_scores_preserve_recency_order``. When every
+    candidate scores zero (the common case: a task unrelated to anything
+    stored), falls back to the first ``limit`` of the unscored pool rather than
+    an arbitrary (stable-but-meaningless) ordering.
+
+    Deliberate deviation from the design doc's literal "drop zero-score
+    candidates" wording: zero-score candidates are *kept* in the mixed-score
+    case below, not dropped. The final ``scored.sort()`` sorts the whole pool
+    (matches and non-matches together) by score descending, then slices to
+    ``limit`` — so one relevant match is placed first and the remaining slots
+    are filled by the next-newest non-matching candidates, rather than
+    shrinking a full block down to just the single match. This is considered
+    the better behavior (a lone match shouldn't starve the rest of the
+    context) and is pinned by
+    ``test_render_prompt_block_query_match_fills_remaining_slots_with_recency``.
+    """
+    scored = [(len(query_tokens & _tokenize(text_of(c))), c) for c in candidates]
+    if all(score == 0 for score, _ in scored):
+        return list(candidates[:limit])
+    scored.sort(key=lambda pair: pair[0], reverse=True)
+    return [c for _, c in scored][:limit]
 
 
 def _render_facts(facts: Iterable[Fact]) -> list[str]:
@@ -550,14 +655,39 @@ class MemoryStore:
         *,
         fact_limit: int = DEFAULT_FACT_LIMIT,
         obs_limit: int = DEFAULT_OBS_LIMIT,
+        query: str | None = None,
     ) -> str:
         """Render recent memory as a markdown block for a system prompt.
 
         Memory comes from untrusted sources (documents, files, user input) and is
         wrapped with explicit delimiters to prevent prompt injection.
+
+        When ``query`` is given and non-blank, facts and observations are
+        ranked by token overlap with it instead of pure recency/weight, so the
+        memory most relevant to the current task surfaces even when it isn't
+        the newest. A blank/``None`` query, or one that matches nothing stored,
+        reproduces today's plain recency/weight output exactly.
         """
-        facts = self.list_facts(limit=fact_limit)
-        obs = self.top_observations(limit=obs_limit)
+        stripped_query = query.strip() if query else ""
+        if stripped_query:
+            query_tokens = _tokenize(stripped_query)
+            fact_pool = self.list_facts(limit=RELEVANCE_CANDIDATE_LIMIT)
+            obs_pool = self.top_observations(limit=RELEVANCE_CANDIDATE_LIMIT)
+            facts = _rank_by_relevance(
+                fact_pool,
+                query_tokens,
+                lambda f: f"{f.kind} {f.key or ''} {f.value}",
+                fact_limit,
+            )
+            obs = _rank_by_relevance(
+                obs_pool,
+                query_tokens,
+                lambda o: o.summary,
+                obs_limit,
+            )
+        else:
+            facts = self.list_facts(limit=fact_limit)
+            obs = self.top_observations(limit=obs_limit)
         if not facts and not obs:
             return ""
         lines = [

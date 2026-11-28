@@ -34,6 +34,7 @@ def test_provider_static_surface(sakthai_home: Path) -> None:
 def test_provider_block_empty_before_initialize(sakthai_home: Path) -> None:
     p = SakThaiMemoryProvider()
     assert p.system_prompt_block() == ""
+    assert p.prefetch("anything") == ""
 
 
 def test_provider_renders_facts_after_initialize(sakthai_home: Path) -> None:
@@ -43,9 +44,31 @@ def test_provider_renders_facts_after_initialize(sakthai_home: Path) -> None:
     p.initialize()
     block = p.system_prompt_block()
     assert "dark mode" in block
+    # "anything" shares no (non-stopword) token with "the user prefers dark
+    # mode", so this falls back to plain recency and matches system_prompt_block().
     assert p.prefetch("anything") == block
     p.shutdown()
     assert p.system_prompt_block() == ""
+
+
+def test_provider_prefetch_forwards_query_to_store(
+    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """prefetch's query parameter must reach the store, not be discarded —
+    it is the provider's half of the retrieval-augmented context."""
+    p = SakThaiMemoryProvider()
+    p.initialize()
+    captured: dict[str, object] = {}
+    original = p._store.render_prompt_block  # type: ignore[union-attr]
+
+    def _spy(*, query: str | None = None, **kwargs: object) -> str:
+        captured["query"] = query
+        return original(query=query, **kwargs)
+
+    monkeypatch.setattr(p._store, "render_prompt_block", _spy)  # type: ignore[union-attr]
+    p.prefetch("find the dog")
+    assert captured["query"] == "find the dog"
+    p.shutdown()
 
 
 def test_provider_initialize_degrades_gracefully(

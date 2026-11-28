@@ -44,7 +44,9 @@ class SakThaiMemoryProvider:
         return self._store.render_prompt_block()
 
     def prefetch(self, query: str, *, session_id: str = "") -> str:
-        return self.system_prompt_block()
+        if self._store is None:
+            return ""
+        return self._store.render_prompt_block(query=query)
 
     def shutdown(self) -> None:
         if self._store is not None:
