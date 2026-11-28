@@ -47,6 +47,10 @@ These are exposed both to the agent loop (`sakthai run`) and over MCP
 | `family_recall` | Recall across every persona's memory shard | Read-only `FamilyMemoryView` |
 | `family_search` | Search across every persona's memory shard | Read-only `FamilyMemoryView` |
 | `delegate_to_persona` | Run a subtask as another Sak Family persona, in-process | Persona name is enum-constrained |
+| `stage_content_template` | Hydrate copy templates with live HF Hub downloads/likes & offline fallback | Live Hub API + 1-hr TTL cache |
+| `evaluate_editorial_quality` | Evaluate voice, precision, GEO readiness, and Thai/English bilingual tone | Unicode regexes + authenticity scoring |
+| `create_social_asset_bundle` | Package staged copy, multimodal prompts, and metadata into zip bundle | Python stdlib zipfile |
+| `dispatch_social_post` | Dispatch approved social post to Telegram broadcast and Discord webhook | Gated by HMAC SHA256 approval token |
 
 ## Memory operations
 

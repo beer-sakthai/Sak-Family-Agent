@@ -51,6 +51,14 @@
 - **📊 Zero-Scrape Data Request Protocol (`data-request`)**:
   - SakSit never scrapes the web directly; writes `data-request` for SakSee and cites SakSee's `monitoring-result` (`retrieved_at`)
   - Marks any unverified claim with explicit `[PENDING VERIFICATION]` (`-15` eval penalty if omitted)
+- **📦 Automated Social Asset Bundler (`sakthai.agent.bundler`)**:
+  - Compiles staged copy (`post.md`), multimodal presets (`prompts.json`), and metadata (`metadata.json`) into structured bundle folders (`personas/saksit/reports/bundles/<slug>/`) alongside an auto-generated `package.zip`.
+- **🌐 Thai/English Bilingual Tone & GEO Evaluator (`sakthai.agent.editorial_eval`)**:
+  - Multi-pass editorial analysis with Thai Unicode (`\u0e00-\u0e7f`) parsing, rewarding zero-cost framing and authentic Thai technical syntax while penalizing machine-translation artifacts.
+- **⚡ Live Hugging Face Hub Metadata Hydration (`sakthai.agent.stager`)**:
+  - Direct `httpx` integration with `https://huggingface.co/api/` and 1-hour TTL disk caching (`~/.sakthai/cache/stager/hub_metadata/`), auto-hydrating live downloads, likes, and commit SHAs with offline fallback resilience.
+- **🚀 Gated Dual-Channel Webhook Dispatcher (`sakthai.telegram.dispatcher`)**:
+  - Controlled outbound broadcast to Telegram channels (`TELEGRAM_BROADCAST_CHAT_ID`) and Discord webhooks (`DISCORD_ANNOUNCEMENT_WEBHOOK_URL`), strictly gated by HMAC SHA256 approval verification and `--dry-run` preflight mode.
 - **🎙️ Gateway Voice Mode (`config/gateway_voice_mode.json`)**:
   - Configured for `telegram:8618306046: "all"` via the OpenAI-compatible runtime gateway.
 - **🛡️ Unified Agent Platform Pro-Tips (`sakthai.agent_platform`)**:
