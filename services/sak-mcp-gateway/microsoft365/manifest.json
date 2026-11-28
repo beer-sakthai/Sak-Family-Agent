@@ -1,0 +1,39 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "11111111-2222-3333-4444-555555555555",
+  "packageName": "com.sakthai.family.mcp",
+  "developer": {
+    "name": "House of Sak",
+    "websiteUrl": "https://YOUR_DOMAIN.example",
+    "privacyUrl": "https://YOUR_DOMAIN.example/privacy",
+    "termsOfUseUrl": "https://YOUR_DOMAIN.example/terms"
+  },
+  "icons": {
+    "color": "assets/color.png",
+    "outline": "assets/outline.png"
+  },
+  "name": {
+    "short": "SakFamily",
+    "full": "Sak Family Copilot Declarative Agent"
+  },
+  "description": {
+    "short": "Connect Microsoft 365 Copilot to the Sak Family Agent gateway.",
+    "full": "Connects Microsoft 365 Copilot to the Sak Family Agent gateway via Model Context Protocol (MCP) RemoteMCPServer, providing read-only health telemetry and capability catalogs."
+  },
+  "accentColor": "#6366F1",
+  "declarativeAgents": [
+    {
+      "id": "sakFamilyAgent",
+      "file": "declarativeAgent.json"
+    }
+  ],
+  "permissions": [
+    "identity",
+    "messageTeamMembers"
+  ],
+  "validDomains": [
+    "YOUR_DOMAIN.example"
+  ]
+}

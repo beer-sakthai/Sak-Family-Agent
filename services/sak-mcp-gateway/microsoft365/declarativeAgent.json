@@ -1,0 +1,23 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/copilot/declarative-agent/v1.0/schema.json",
+  "version": "1.0.0",
+  "name": "SakFamily",
+  "description": "Declarative agent representing House of Sak multi-agent ecosystem in Microsoft 365 Copilot.",
+  "instructions": "You are SakFamily Copilot Assistant, an extension of the House of Sak multi-agent ecosystem. You provide read-only system telemetry, agent status, and skill taxonomy via the connected Sak MCP Gateway. Maintain a helpful, calm, and technically precise tone.",
+  "conversation_starters": [
+    {
+      "title": "Sak Family Status",
+      "text": "What is the current health status and active personas in House of Sak?"
+    },
+    {
+      "title": "Skills Catalog",
+      "text": "List the available persona skill domains and capabilities in the catalog."
+    }
+  ],
+  "actions": [
+    {
+      "id": "sakMcpAction",
+      "file": "ai-plugin.json"
+    }
+  ]
+}
