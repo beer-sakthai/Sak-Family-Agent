@@ -363,7 +363,7 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 
 ### 25. GitHub Actions & CI Remediation on Main (2026-11-28)
 - [x] 2026-11-28 **Phase 1: Commit Whitespace & Hygiene Remediation** `[SakJules]` — Strip trailing whitespace in `docs/plans/2026-11-27-saksit-phase2-enhancements.md`, `personas/saksit/skills/SakSit-milestone-content/references/milestone-card-generation.md`, and `.github/zizmor.yml`, unblocking `git diff --check` in `sak-family-agent-contract.yml`.
-- [x] 2026-11-28 **Phase 2: Dependabot PostCSS Override Resolution** `[SakJules]` — Resolve `dependency_file_not_resolvable` in `apps/sak_agent_dashboard/package.json` by replacing unresolvable `"postcss": "$postcss"` in `overrides` with explicit `"postcss": "^8.5.33"`, enabling clean automated daily dependency updates.
+- [x] 2026-11-28 **Phase 2: Dependabot PostCSS Override Resolution** `[SakJules]` — Resolve `dependency_file_not_resolvable` in `apps/sak_agent_dashboard/package.json` by placing `postcss` under `dependencies` and updating `package-lock.json`, allowing npm and Dependabot to cleanly resolve `$postcss` in `overrides` while preserving test hygiene assertions.
 - [x] 2026-11-28 **Phase 3: Hugging Face Hub Sync Space Namespace & Resiliency Hardening** `[SakJules]` — Update `.github/workflows/hf-hub-sync.yml` to target canonical Hugging Face author namespace `Nanthasit/sakthai-training-space`, specify `subdirectory: "infra/sakthai-training-space"`, and add `continue-on-error: true` so third-party registry hiccups cannot break branch CI.
 - [x] 2026-11-28 **Phase 4: Verification, Quality Gates & Pull Request Delivery** `[SakJules]` — Verify `git diff --check`, `make lint`, full test suite, and open PR for Beer's review and manual merge.
 
