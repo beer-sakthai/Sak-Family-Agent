@@ -30,12 +30,21 @@ jobs:
         id: check
         env:
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          EVENT_ACTOR: ${{ github.actor }}
         run: |
-          if [ "$PR_AUTHOR" = "dependabot[bot]" ]; then
+          # invi5H/dependabot-automerge's own "Verify Dependabot" step fails
+          # the job (exit 1) unless github.actor == 'dependabot[bot]'. A
+          # dependabot PR's later synchronize events are frequently
+          # triggered by other automation (e.g. branch auto-update bots)
+          # re-pushing the base branch merge, which left this check
+          # gating on PR_AUTHOR alone and invoking the action in a context
+          # it was guaranteed to fail in. Require both to match so we only
+          # ever invoke it when it can actually succeed.
+          if [ "$PR_AUTHOR" = "dependabot[bot]" ] && [ "$EVENT_ACTOR" = "dependabot[bot]" ]; then
             echo "is_dependabot=true" >> "$GITHUB_OUTPUT"
           else
             echo "is_dependabot=false" >> "$GITHUB_OUTPUT"
-            echo "PR authored by $PR_AUTHOR; Dependabot automerge action bypassed."
+            echo "PR authored by $PR_AUTHOR (event actor $EVENT_ACTOR); Dependabot automerge action bypassed."
           fi
       - name: Automatically Merge Dependabot PRs
         if: steps.check.outputs.is_dependabot == 'true'
