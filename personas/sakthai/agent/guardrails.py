@@ -306,16 +306,19 @@ def _basename_is_sensitive(basename: str) -> bool:
 # "~approximately 5" -- so a free-text tool argument could not hold an ellipsis.
 _TRAVERSAL_RE = re.compile(r"(?:^|[\s/\\])\.\.(?:[\s/\\]|$)")
 _HOME_PREFIX_RE = re.compile(r"^~[A-Za-z0-9_.+-]*(?:[/\\]|$)")
+_ATTACHED_TRAVERSAL_RE = re.compile(r"^-[^\s]*?\.\.(?:[/\\]|$)")
 
 
 def _has_traversal_or_home(path: str) -> bool:
     """True if ``path`` climbs with ``..`` or starts at a home directory."""
     if _TRAVERSAL_RE.search(path) or _HOME_PREFIX_RE.match(path):
         return True
-    # A short flag with its value attached ('-o../x') has no separator before
-    # the '..', so look again past the flag letter.
+    # A short-option group with its value attached ('-o../x', '-sT../x') has no
+    # separator before the '..', whatever the group's length.
     return (
-        path.startswith("-") and not path.startswith("--") and bool(_TRAVERSAL_RE.search(path[2:]))
+        path.startswith("-")
+        and not path.startswith("--")
+        and bool(_ATTACHED_TRAVERSAL_RE.search(path))
     )
 
 
@@ -572,12 +575,17 @@ def _check_command_string(
     command: str,
     *,
     posix: bool = True,
+    shell_syntax: bool = True,
     context_sensitive: bool = False,
     checked_makefiles: set[str] | None = None,
     current_make_dir: str = ".",
 ) -> GuardrailResult:
-    """Run the token checks over every segment and substitution of ``command``."""
-    segments, substitutions = _scan_shell_structure(command)
+    """Run the token checks over every segment and substitution of ``command``.
+
+    With ``shell_syntax=False`` the string is one plain argv (no operators, no
+    substitutions): that is how the built-in ``run_command`` runs it.
+    """
+    segments, substitutions = _scan_shell_structure(command) if shell_syntax else ([command], [])
     # Bodies first: a substitution is executed before the command around it.
     for body in substitutions:
         res = _check_command_string(
@@ -1465,7 +1473,12 @@ def _block_dangerous_shell_commands(
     if not isinstance(command, str):
         return GuardrailResult(GuardrailAction.ALLOW)
 
-    result = _check_command_string(command)
+    # The built-in run_command execs the argv with shell=False, so ';' and
+    # '$(...)' are literal text there; only an external '<server>__run_command'
+    # is assumed to hand the string to a shell. Shell-interpreted strings inside
+    # a command (a 'sh -c' script, a makefile recipe) are scanned either way.
+    shell_syntax = tool.name != _base_name(tool)
+    result = _check_command_string(command, shell_syntax=shell_syntax)
     if result.action == GuardrailAction.DENY or "\\" not in command:
         return result
 
@@ -1475,7 +1488,7 @@ def _block_dangerous_shell_commands(
     # and PowerShell would read the real file. Re-scan with the backslashes
     # preserved. Gated on the command containing one, so every backslash-free
     # command keeps its existing behavior exactly.
-    return _check_command_string(command, posix=False)
+    return _check_command_string(command, posix=False, shell_syntax=shell_syntax)
 
 
 def _enforce_verbose_listing(
