@@ -341,10 +341,18 @@ All completed historical tasks (`✅ Done` / `[x]`) have been removed from the a
 - [x] 2026-11-28 **Phase 1: Remediation & Regression Testing** `[SakJules]` — Remediate Bandit security findings uploaded to GitHub Code Scanning (alert #21877 B311 pseudo-random generation in `evaluation_tasks/graders.py`, alert #21878 B110 try-except-pass in `evaluation_tasks/graders.py`, alert #21879 B110 try-except-pass in `scripts/audit_repo_security.py`), harden companion scripts (`consolidate_skills_to_480.py`, `organize_skills.py`), author comprehensive unit tests in `tests/test_code_scanning_alerts.py`, and verify zero Bandit findings across whole repository.
 - [x] 2026-11-28 **Phase 2: Quality Gates & Pull Request Delivery** `[SakJules]` — Run full verification suite (pytest with $\ge 96\%$ coverage, ruff, mypy, bandit, zizmor, repo security audit, workflow concurrency audit), push to branch `alert-fix-21878`, open pull request for Beer's review and manual merge (never auto-merge).
 
+### 22. Sak-Family MCP Gateway & Microsoft 365 Copilot Integration (2026-11-27)
+- [x] 2026-11-27 **Phase 1: Implementation Plan & Subsystem Architecture** `[SakJules]` — Author `docs/superpowers/plans/2026-11-27-sak-mcp-gateway-m365.md` detailing Microsoft 365 declarative agent (manifest v1.17, declarativeAgent v1.0, ai-plugin v2.4 with RemoteMCPServer), Entra ID JWT validation gateway, Work IQ client, Docker Compose + Caddy HTTPS proxy, and strict memory boundary.
+- [x] 2026-11-27 **Phase 2: M365 Copilot Package Source & Packaging Utility** `[SakJules]` — Create `services/sak-mcp-gateway/microsoft365/` containing `manifest.json`, `declarativeAgent.json`, `ai-plugin.json` (MCP v2.4 schema), `package_app.py`, and color/outline icons.
+- [x] 2026-11-27 **Phase 3: Core Gateway Implementation & Work IQ Client** `[SakJules]` — Implement `services/sak-mcp-gateway/src/` with `gateway.py` (FastAPI/MCP endpoint with Entra JWT verification and read-only starter tools `sak_health_status` and `sak_family_catalog`), `work_iq_client.py` (Work IQ MCP client with delegated bearer token and read-only allowlist), and configuration.
+- [x] 2026-11-27 **Phase 4: Docker & Caddy Hardened Deployment Infrastructure** `[SakJules]` — Build `services/sak-mcp-gateway/docker-compose.yml`, `Caddyfile`, `Dockerfile`, `.env.example`, and `pyproject.toml` with read-only rootfs, dropped capabilities, and non-root user.
+- [x] 2026-11-27 **Phase 5: Automated Test Suite & Quality Verification** `[SakJules]` — Implement comprehensive unit tests in `services/sak-mcp-gateway/tests/` covering JWT validation, scope checks, tool schemas, packaging, and Work IQ allowlist. Verify with `make lint`, `bandit`, and `pytest`.
+
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |
 |---|---|---|
+| Sak MCP Gateway & M365 Copilot | [`docs/superpowers/plans/2026-11-27-sak-mcp-gateway-m365.md`](./docs/superpowers/plans/2026-11-27-sak-mcp-gateway-m365.md) | 🟢 Complete (2026-11-27) — All 5 phases verified |
 | Mermaid Architecture Visuals | [`docs/superpowers/plans/2026-11-27-mermaid-doc-all-readmes.md`](./docs/superpowers/plans/2026-11-27-mermaid-doc-all-readmes.md) | 🟢 Complete (2026-11-27) — All 4 phases verified |
 | Workflows & Analytics Hardening | [`docs/superpowers/plans/2026-11-27-github-workflows-and-analytics-hardening.md`](./docs/superpowers/plans/2026-11-27-github-workflows-and-analytics-hardening.md) | 🟢 Complete (2026-11-27) — All 6 tasks verified |
 | SakSit Upgrade Plan | [`docs/plans/2026-11-26-saksit-full-spectrum-upgrade.md`](./docs/plans/2026-11-26-saksit-full-spectrum-upgrade.md) | 🟢 Complete (2026-11-26) — All 7 phases verified |
